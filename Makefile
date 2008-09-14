@@ -1,183 +1,23 @@
-#---------------------------------------------------------------------------------
-# Generic makefile for Gamecube projects
-#
-# Tab stops set to 4
-#	|	|	|	|
-#	0	1	2	3
-#---------------------------------------------------------------------------------
-# Clear the implicit built in rules
-#---------------------------------------------------------------------------------
-.SUFFIXES:
+.PHONY = all wii gc wii-clean gc-clean wii-run gc-run
 
-HAVEDIST := $(wildcard w)
+all: wii gc
 
-#---------------------------------------------------------------------------------
-# TARGET is the name of the output
-# BUILD is the directory where object files & intermediate files will be placed
-# SOURCES is a list of directories containing source code
-# INCLUDES is a list of directories containing extra header files
-#---------------------------------------------------------------------------------
-TARGET		:=	vba172
-BUILD		:=	build
-SOURCES		:=	src/gb src src/fileio src/ngc
-INCLUDES = -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include src/gb src src/fileio src/ngc
-LIBPATHS = -L$(DEVKITPRO)/libogc/lib/wii -L$(DEVKITPRO)/libfat/libogc/lib/wii
+clean: wii-clean gc-clean
 
-#---------------------------------------------------------------------------------
-# options for code generation
-#---------------------------------------------------------------------------------
-MACHDEP	= -DGEKKO -mcpu=750 -meabi -mhard-float 
-CFLAGS  = -g -O2 -Wall $(MACHDEP) $(INCLUDE) -meabi \
-	  -DWORDS_BIGENDIAN -DPACKAGE=\"VisualBoyAdvance\" \
-	  -DVERSION=\"1.7.2\" -DC_CORE -DHAVE_ZUTIL_H \
-	  -DCHANFFS -DSDL -DWII_BUILD
-LDFLAGS	=	$(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map -Wl,--cref
-PREFIX	:=	powerpc-gekko-
+wii:
+	$(MAKE) -f Makefile.wii
 
-#export PATH:=/c/devkitPPC_r11/bin:/bin
+wii-clean:
+	$(MAKE) -f Makefile.wii clean
 
-#---------------------------------------------------------------------------------
-# any extra libraries we wish to link with
-#---------------------------------------------------------------------------------
-LIBS	:=	-lm -lz -lfat -ldb -lwiiuse -lbte -logc
+wii-run:
+	$(MAKE) -f Makefile.wii run
 
-#---------------------------------------------------------------------------------
-# no real need to edit anything past this point unless you need to add additional
-# rules for different file extensions
-#---------------------------------------------------------------------------------
-ifneq ($(BUILD),$(notdir $(CURDIR)))
-#---------------------------------------------------------------------------------
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
+gc:
+	$(MAKE) -f Makefile.gc
 
-export CC		:=	$(PREFIX)gcc
-export CXX		:=	$(PREFIX)g++
-export AR		:=	$(PREFIX)ar
-export OBJCOPY	:=	$(PREFIX)objcopy
-#---------------------------------------------------------------------------------
-# automatically build a list of object files for our project
-#---------------------------------------------------------------------------------
-CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-sFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S)))
-#---------------------------------------------------------------------------------
-# use CXX for linking C++ projects, CC for standard C
-#---------------------------------------------------------------------------------
-ifeq ($(strip $(CPPFILES)),)
-	export LD	:=	$(CC)
-else
-	export LD	:=	$(CXX)
-endif
+gc-clean:
+	$(MAKE) -f Makefile.gc clean
 
-export OFILES	:= $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
-
-#---------------------------------------------------------------------------------
-# build a list of include paths
-#---------------------------------------------------------------------------------
-export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-					-I$(CURDIR)/$(BUILD)
-
-#---------------------------------------------------------------------------------
-# build a list of library paths
-#---------------------------------------------------------------------------------
-export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
-
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-.PHONY: $(BUILD) clean
-
-#---------------------------------------------------------------------------------
-$(BUILD):
-	@[ -d $@ ] || mkdir $@
-	@make --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
-#---------------------------------------------------------------------------------
-clean:
-	@echo clean ...
-	@rm -fr $(BUILD) *.elf
-
-#---------------------------------------------------------------------------------
-run:
-	psoload $(TARGET).dol
-
-#---------------------------------------------------------------------------------
-reload:
-	psoload -r $(TARGET).dol
-
-#---------------------------------------------------------------------------------
-dist:
-	@echo Files : $(HAVEDIST)
-	ifeq ($(strip $(HAVEDIST)),)
-	rule:
-		@echo "No file"
-	else
-	rule2: A
-		@echo "Have File"
-	endif
-
-bindist:
-	@[ -f $(TARGET).7z ] || rm $(TARGET).7z 2>/dev/null
-	@7z a -mx=9 -m0=lzma $(TARGET).7z $(TARGET).dol
-
-#---------------------------------------------------------------------------------
-else
-
-DEPENDS	:=	$(OFILES:.o=.d)
-
-#---------------------------------------------------------------------------------
-# main targets
-#---------------------------------------------------------------------------------
-$(OUTPUT).dol: $(OUTPUT).elf
-	@echo "Output    ... "$(notdir $@)
-	@$(OBJCOPY)  -O binary $< $@
-
-#---------------------------------------------------------------------------------
-$(OUTPUT).elf: $(OFILES)
-	@echo "Linking   ... "$(notdir $@)
-	@$(LD)  $^ $(LDFLAGS) $(LIBPATHS) $(LIBS) -o $@
-
-#---------------------------------------------------------------------------------
-# Compile Targets for C/C++
-#---------------------------------------------------------------------------------
-
-#---------------------------------------------------------------------------------
-%.o : %.cpp
-	@echo Compiling ... $(notdir $<)
-	@$(CXX) -MMD $(CFLAGS) -o $@ -c $<
-
-#---------------------------------------------------------------------------------
-%.o : %.c
-	@echo Compiling ... $(notdir $<)
-	@$(CC) -MMD $(CFLAGS) -o $@ -c $<
-
-#---------------------------------------------------------------------------------
-%.o : %.S
-	@echo Compiling ... $(notdir $<)
-	@$(CC) -MMD $(CFLAGS) -D_LANGUAGE_ASSEMBLY -c $< -o $@
-
-#---------------------------------------------------------------------------------
-%.o : %.s
-	@echo Compiling ... $(notdir $<)
-	@$(CC) -MMD $(CFLAGS) -D_LANGUAGE_ASSEMBLY -c $< -o $@
-
-#---------------------------------------------------------------------------------
-# canned command sequence for binary data
-#---------------------------------------------------------------------------------
-define bin2o
-	cp $(<) $(*).tmp
-	$(OBJCOPY) -I binary -O elf32-powerpc -B powerpc \
-	--rename-section .data=.rodata,readonly,data,contents,alloc \
-	--redefine-sym _binary_$*_tmp_start=$*\
-	--redefine-sym _binary_$*_tmp_end=$*_end\
-	--redefine-sym _binary_$*_tmp_size=$*_size\
-	$(*).tmp $(@)
-	echo "extern const u8" $(*)"[];" > $(*).h
-	echo "extern const u32" $(*)_size[]";" >> $(*).h
-	rm $(*).tmp
-endef
-
--include $(DEPENDS)
-
-#---------------------------------------------------------------------------------
-endif
-#---------------------------------------------------------------------------------
+gc-run:
+	$(MAKE) -f Makefile.gc run

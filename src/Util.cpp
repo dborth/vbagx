@@ -40,7 +40,6 @@ extern "C"
 #include "RTC.h"
 #include "Port.h"
 
-
 extern "C"
   {
 #include "memgzio.h"
@@ -1104,7 +1103,7 @@ gzFile utilGzOpen(const char *file, const char *mode)
 
 gzFile utilMemGzOpen(char *memory, int available, char *mode)
 {
-  utilGzWriteFunc = memgzwrite;
+//  utilGzWriteFunc = memgzwrite;
   utilGzReadFunc = memgzread;
   utilGzCloseFunc = memgzclose;
 
