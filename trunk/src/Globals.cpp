@@ -38,13 +38,13 @@ bool speedup = false;
 bool synchronize = true;
 bool cpuDisableSfx = false;
 bool cpuIsMultiBoot = false;
-bool parseDebug = true;
+bool parseDebug = false;
 int layerSettings = 0xff00;
 int layerEnable = 0xff00;
 bool speedHack = false;
 int cpuSaveType = 0;
 bool cpuEnhancedDetection = true;
-bool cheatsEnabled = true;
+bool cheatsEnabled = false;
 
 u8 *bios = NULL;
 u8 *rom = NULL;
