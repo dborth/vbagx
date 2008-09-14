@@ -151,10 +151,11 @@ char *MENU_GetLoadFile( char *whichdir )
 		printf("No ROM files in %s\n", whichdir);
 		while(1);
 	}
-
+#ifdef WII_BUILD
+	setup_controllers();
+#endif
 	if ( count == 1 )
 		return (char*)direntries[0];
-
 
 	/* Do menu */
 	while ( !quit )
@@ -170,39 +171,43 @@ char *MENU_GetLoadFile( char *whichdir )
 			redraw = 0;
 		}
 #ifdef WII_BUILD
-		setup_controllers();
-		WPADData wpad;
-		WPAD_Read(0, &wpad);
-		if(isClassicAvailable)
-		{
-			int b = wpad.exp.classic.btns;
+		WPAD_ScanPads();
+		WPADData *wpad;
+		wpad = WPAD_Data(0);
+		int b = wpad->exp.classic.btns;
+		unsigned short b1 = wpad->btns_d;
+		if (isClassicAvailable){
 			if (b & CLASSIC_CTRL_BUTTON_DOWN){
 				do_DOWN = 1;
-				do{WPAD_Read(0, &wpad); b = wpad.exp.classic.btns;}while(b & CLASSIC_CTRL_BUTTON_DOWN);
+				do{WPAD_ScanPads(); wpad = WPAD_Data(0);}
+				while (WPAD_ButtonsHeld(0));	
 			}
 			else if (b & CLASSIC_CTRL_BUTTON_UP){
-				do_UP = 1;
-				do{WPAD_Read(0, &wpad); b = wpad.exp.classic.btns;}while(b & CLASSIC_CTRL_BUTTON_UP);
+				do_UP = 1; 
+				do{WPAD_ScanPads(); wpad = WPAD_Data(0);}
+				while (WPAD_ButtonsHeld(0));	
 			}
 			else if (b & CLASSIC_CTRL_BUTTON_A){
 				do_A = 1;
-				do{WPAD_Read(0, &wpad); b = wpad.exp.classic.btns;}while(b & CLASSIC_CTRL_BUTTON_A);
+				do{WPAD_ScanPads(); wpad = WPAD_Data(0);}
+				while (WPAD_ButtonsHeld(0));	
 			}
 		}
-		if(isWiimoteAvailable)
-		{
-			unsigned short b = wpad.btns_d;
-			if(b & WPAD_BUTTON_LEFT){
+		if (isWiimoteAvailable){
+			if (b1 & WPAD_BUTTON_LEFT){
 				do_DOWN = 1;
-				do{WPAD_Read(0, &wpad); b = wpad.btns_d;}while(b & WPAD_BUTTON_LEFT);
+				do{WPAD_ScanPads(); wpad = WPAD_Data(0);}
+				while (WPAD_ButtonsHeld(0));	
 			}
-			else if (b & WPAD_BUTTON_RIGHT){
-				do_UP = 1;
-				do{WPAD_Read(0, &wpad); b = wpad.btns_d;}while(b & WPAD_BUTTON_RIGHT);
+			else if (b1 & WPAD_BUTTON_RIGHT){
+				do_UP = 1;			
+				do{WPAD_ScanPads(); wpad = WPAD_Data(0);}
+				while (WPAD_ButtonsHeld(0));	
 			}
-			else if (b & WPAD_BUTTON_2){
-				do_A = 1;
-				do{WPAD_Read(0, &wpad); b = wpad.btns_d;}while(b & WPAD_BUTTON_2);
+			else if (b1 & WPAD_BUTTON_2){
+				do_A = 1;			
+				do{WPAD_ScanPads(); wpad = WPAD_Data(0);}
+				while (WPAD_ButtonsHeld(0));	
 			}
 		}
 #endif	
