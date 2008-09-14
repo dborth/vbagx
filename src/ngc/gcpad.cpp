@@ -103,7 +103,6 @@ NGCPad()
 	{
 		float mag,ang;
 		int b = wpad->exp.classic.btns;
-	/* Stolen Shamelessly out of Falco's unofficial SNES9x update */
 		ang = wpad->exp.classic.ljs.ang;
 		mag = wpad->exp.classic.ljs.mag;
 
@@ -116,7 +115,7 @@ NGCPad()
 				res |= VBA_DOWN;
 			if (ang > 203.5 & ang <= 337.5)
 				res |= VBA_LEFT;
-	}
+	      }
 
 		int x_s =  0; //getStickValue(&wpad.exp.classic.ljs, STICK_X, 127);
 		int y_s =  0; //getStickValue(&wpad.exp.classic.ljs, STICK_Y, 127);
@@ -151,25 +150,24 @@ NGCPad()
 	  	  res |= VBA_BUTTON_R;
 	  	  
 	    if (b & CLASSIC_CTRL_BUTTON_HOME)
-  		   menuCalled = 1;
+  		   menuCalled = 1;                
 
-	}
-	//user needs a GC remote
-	else
-	{
-		 p = PAD_ButtonsHeld(0);
+	}  
+	//user needs a GC remote  
+	     PAD_ScanPads();
+	     p = PAD_ButtonsHeld(0);
 	     x = PAD_StickX(0);
 	     y = PAD_StickY(0);
 		 if (x * x + y * y > padcal * padcal)
 	     {
-	       	if (x > 0 && y == 0)
+	            if (x > 0 && y == 0)
 	       	  res |= VBA_RIGHT;
 	       	if (x < 0 && y == 0)
 	       	  res |= VBA_LEFT;
 	       	if (x == 0 && y > 0)
 	       	  res |= VBA_UP;
 	       	if (x == 0 && y < 0)
-	       	  res |= VBA_DOWN;
+	       	  res |= VBA_DOWN;                   
            	
 	       	/*** Recalc left / right ***/
 	       	t = (float) y / x;
@@ -222,9 +220,9 @@ NGCPad()
 	       res |= VBA_BUTTON_R;
 	       
 	     if((p & PAD_BUTTON_X) && (p & PAD_BUTTON_Y))
-  		   menuCalled = 1;
-	 }
-#endif
+  		   menuCalled = 1;    
+
+#endif     
 
 #ifdef GC_BUILD
   p = PAD_ButtonsHeld(0);

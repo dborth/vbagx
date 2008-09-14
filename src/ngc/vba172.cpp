@@ -24,8 +24,8 @@ extern int isWiimoteAvailable;
 
 void setup_controllers()
 {	/*  Doesn't work, either always returns 
-	WiimoteAvailable or switches REALLY fast
-	between the two.  WTF.
+	WiimoteAvailable only or apparently switches 
+	REALLY fast between the two.  WTF.
 
 	WPAD_ScanPads();
 	WPADData pad;
@@ -69,6 +69,7 @@ extern "C"
   {
 #include "gx_supp.h"
 #include "tbtime.h"
+#include "sdfileio.h"
   }
 
 /** VBA **/
@@ -110,9 +111,12 @@ int srcHeight = 0;
 int destWidth = 0;
 int destHeight = 0;
 int srcPitch = 0;
+int saveExists = 0; 
 extern int menuCalled;
 #define WITHGX	1
 #define DEBUGON 0
+
+
 
 #if DEBUGON
 const char *dbg_local_ip = "192.168.1.32";
@@ -133,12 +137,7 @@ void (*dbgOutput)(char *, u32) = debuggerOutput;
 /**
  * Locals
  */
-extern "C"
-  {
-    void SDInit( void );
-    int gen_getdir( char *whichdir );
-  };
-extern char *direntries[1000];
+
 extern char *MENU_GetLoadFile( char *whichdir );
 extern void MENU_DrawString( int x, int y, char *msg, int style );
 
@@ -170,6 +169,13 @@ void doScan(u32 blah)
 	PAD_ScanPads();
 }
 
+
+int throttle = 100;
+u32 throttleLastTime = 0;
+
+char filename[1024];	//rom file name
+char batfilename[1024]; //battery save file name
+char statename[1024]; //savestate file name
 /****************************************************************************
 * Initialise Video
 *
@@ -192,6 +198,7 @@ Initialise (void)
 #ifdef WII_BUILD
   CONF_Init();
   WPAD_Init();
+  setup_controllers();
 #endif
   vmode = VIDEO_GetPreferredMode(NULL);
 
@@ -223,11 +230,11 @@ Initialise (void)
   /*** Get the PAD status updated by libogc ***/
   VIDEO_SetPreRetraceCallback (doScan);
   VIDEO_SetBlack (0);
-
+/*
   int i;
   u32 *vreg = (u32 *)0xCC002000;
   for ( i = 0; i < 64; i++ )
-	vreg[i] = vpal60[i];
+	vreg[i] = vpal60[i];   */
 
   /*** Update the video for next vblank ***/
   VIDEO_Flush ();
@@ -240,8 +247,18 @@ Initialise (void)
 
 void systemMessage(int num, const char *msg, ...)
 {
-  /*** For now ... do nothing ***/
+	  /*** For now ... do nothing ***/
 }
+
+void GC_Sleep(u32 dwMiliseconds)
+{
+	int nVBlanks = (dwMiliseconds / 16);
+	while (nVBlanks-- > 0)
+	{
+		VIDEO_WaitVSync();
+	}
+}
+
 void systemFrame()
 {}
 
@@ -252,20 +269,26 @@ void systemShowSpeed(int speed)
 {}
 static u32 autoFrameSkipLastTime = 0;
 static int frameskipadjust = 0;
-void system1Frame(int rate)
+
+void write_save()
 {
-/*	  if ( cartridgeType == 1 )
+emulator.emuWriteBattery(batfilename);
+}
+
+void system10Frames(int rate)
+{
+	  if ( cartridgeType == 1 )
 	    return;
-	
+
 	  u32 time = systemGetClock();
 	  u32 diff = time - autoFrameSkipLastTime;
 	  int speed = 100;
 	
 	  if(diff)
 	    speed = (1000000/rate)/diff;
-	  char temp[512];
+  /*	  char temp[512];
 	  sprintf(temp,"Speed: %i",speed);
-	  MENU_DrawString( -1, 450,temp , 1 );
+	  MENU_DrawString( -1, 450,temp , 1 );   */
 	  	
 	  if(speed >= 98)
 	    {
@@ -291,54 +314,30 @@ void system1Frame(int rate)
 	          if(systemFrameSkip < 9)
 	            systemFrameSkip++;
 	        }
-	    }
-	  autoFrameSkipLastTime = time;
-*/
-}
+	    }   
 
-void system10Frames(int rate)
-{
-	  if ( cartridgeType == 1 )
+if ( cartridgeType == 1 )
 	    return;
 
-	  u32 time = systemGetClock();
-	  u32 diff = time - autoFrameSkipLastTime;
-	  int speed = 100;
-	
-	  if(diff)
-	    speed = (1000000/rate)/diff;
-/*	  char temp[512];
-	  sprintf(temp,"Speed: %i",speed);
-	  MENU_DrawString( -1, 450,temp , 1 );
-*/	  	
-	  if(speed >= 98)
-	    {
-	      frameskipadjust++;
-	
-	      if(frameskipadjust >= 3)
-	        {
-	          frameskipadjust=0;
-	          if(systemFrameSkip > 0)
-	            systemFrameSkip--;
-	        }
-	    }
-	  else
-	    {
-	      if(speed  < 80)
-	        frameskipadjust -= (90 - speed)/5;
-	      else if(systemFrameSkip < 9)
-	        frameskipadjust--;
-	
-	      if(frameskipadjust <= -2)
-	        {
-	          frameskipadjust += 2;
-	          if(systemFrameSkip < 9)
-	            systemFrameSkip++;
-	        }
-	    }
-	  autoFrameSkipLastTime = time;
 
+/*
+if(systemSaveUpdateCounter) {
+      char temp[512];
+	  sprintf(temp,"Writing Save To Disk");
+	    MENU_DrawString( -1, 450,temp , 1 );
+}     */
+
+  if(systemSaveUpdateCounter) {
+    if(--systemSaveUpdateCounter <= SYSTEM_SAVE_NOT_UPDATED) {
+      write_save();
+      systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
+    }
+  }
+
+	  autoFrameSkipLastTime = time;   
 }
+
+
 
 void systemUpdateMotionSensor()
 {}
@@ -445,7 +444,9 @@ void systemDrawScreen()
   GX_Render( srcWidth, srcHeight, pix, srcPitch );
 #endif
 #ifdef WII_BUILD
+
 	VIDEO_WaitVSync ();
+
 #endif
 #ifdef GC_BUILD
   if ( cartridgeType == 1 )
@@ -470,10 +471,6 @@ int ShowDir( char *whichdir )
 	while(1);
 }
 
-char filename[1024];	//rom file name
-char batfilename[1024]; //battery save file name
-
-
 /*
 	Asks user to select a ROM
 */
@@ -490,11 +487,10 @@ void chooseRom() {
   	strncat(batfilename,fname,strlen(fname)-4);
   	strcat(batfilename,".SAV");
 
-}
-
-void askSound() {
-  soundOffFlag = false;
-  soundLowPass =  true;
+	// construct savestate name
+	strcpy(statename, "/VBA/SAVES/");
+	strncat(statename,fname,strlen(fname)-4);
+	strcat(statename,".SGM");
 }
 
 /*
@@ -502,32 +498,62 @@ void askSound() {
 	If it does, it prompts the user to load it or not
 */
 void checkSave() {
-	
-}
-void GC_Sleep(u32 dwMiliseconds)
-{
-	int nVBlanks = (dwMiliseconds / 16);
-	while (nVBlanks-- > 0)
-	{
-		VIDEO_WaitVSync();
-	}
-}
-void write_save()
-{
-	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
-   	MENU_DrawString( -1, 250,"Attempting to Save data ..." , 1 );
+    FILE* f = gen_fopen(statename, "rb");
+    if (f != NULL) {
+    gen_fclose(f);
     whichfb^=1;
-	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
-    if(emulator.emuWriteBattery(batfilename) == true) 
-		MENU_DrawString( -1, 250,"Save OK!" , 1 );
-	else
-		MENU_DrawString( -1, 250,"Either no data to save yet or error!" , 1 );
-	VIDEO_WaitVSync ();
+    VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
+    MENU_DrawString( 140, 50,"Quick Save State Exists" , 1 );
+    MENU_DrawString( 140, 80,"Do you wish to load it?" , 1 );
+    MENU_DrawString( -1, 170,"(L) or  (+)       YES" , 1 );
+    MENU_DrawString( -1, 200,"(R) or  (-)       NO" , 1 );
+    VIDEO_WaitVSync ();
     VIDEO_SetNextFramebuffer(xfb[whichfb]);
-	VIDEO_Flush();
-	GC_Sleep(2000);
-	
+    VIDEO_Flush();
+    VIDEO_WaitVSync();
+    while(1) {
+	WPADData *wpad;
+	WPAD_ScanPads();
+	wpad = WPAD_Data(0);
+	if (isWiimoteAvailable) {
+	  unsigned short b = wpad->btns_h;
+        if(b & WPAD_BUTTON_PLUS) {
+          saveExists = 1;
+          break;
+        }
+        if(b & WPAD_BUTTON_MINUS) break;
+      }
+      if (isClassicAvailable) {	  
+        unsigned short b = wpad->exp.classic.btns;
+        if(b & CLASSIC_CTRL_BUTTON_PLUS) {
+          saveExists = 1;
+          break;
+        }
+        if(b & CLASSIC_CTRL_BUTTON_MINUS) break;
+      }
+      u16 buttons = PAD_ButtonsHeld(0); 
+      if(buttons & PAD_TRIGGER_R){ 
+        break;
+    	}
+	if(buttons & PAD_TRIGGER_L){
+        saveExists = 1;   
+        break;
+    	}
+    }
+  VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
+  VIDEO_WaitVSync ();
+  VIDEO_SetNextFramebuffer(xfb[whichfb]);
+  VIDEO_Flush();
+  VIDEO_WaitVSync();
+  }
 }
+
+
+void askSound() {
+  soundOffFlag = false;
+  soundLowPass =  true;
+}
+
 
 int ingameMenu() {
 	tb_t start,end;
@@ -542,16 +568,16 @@ int ingameMenu() {
 #ifdef GC_BUILD
       MENU_DrawString( 140, 80,"Nintendo Gamecube Port" , 1 );
       MENU_DrawString( -1, 170,"(B)       - Resume play" , 1 );
-	  MENU_DrawString( -1, 200,"(L)       - Write save" , 1 );
-	  MENU_DrawString( -1, 230,"(R)       - Reset game" , 1 );
-	  MENU_DrawString( -1, 320,"(Z)       - Return to loader" , 1 );
+	MENU_DrawString( -1, 200,"(L)       - Write Quicksave" , 1 );
+      MENU_DrawString( -1, 230,"(R)       - Reset game" , 1 );
+	MENU_DrawString( -1, 320,"(Z)       - Return to loader" , 1 );
 #endif
 #ifdef WII_BUILD
       MENU_DrawString( 140, 80,"Nintendo Wii Port" , 1 );
       MENU_DrawString( -1, 170,"(B) or (Home)    - Resume play" , 1 );
-	  MENU_DrawString( -1, 200,"(L) or  (+)      - Write save" , 1 );
-	  MENU_DrawString( -1, 230,"(R) or  (-)      - Reset game" , 1 );
-	  MENU_DrawString( -1, 320,"(Z) or (A+B)     - Return to loader" , 1 );
+	MENU_DrawString( -1, 200,"(L) or  (+)      - Write Quicksave" , 1 );
+	MENU_DrawString( -1, 230,"(R) or  (-)      - Reset game" , 1 );
+	MENU_DrawString( -1, 320,"(Z) or (A+B)     - Return to loader" , 1 );
 #endif	  
 
       sprintf(temp,"Frameskip: Auto (Currently %i)",systemFrameSkip);
@@ -559,94 +585,102 @@ int ingameMenu() {
 
       VIDEO_WaitVSync ();
       VIDEO_SetNextFramebuffer(xfb[whichfb]);
-	  VIDEO_Flush();
-	  VIDEO_WaitVSync();
+	VIDEO_Flush();
+	VIDEO_WaitVSync();
 	 
 	  //wait for user to let go of menu calling button
-	  do{buttons = PAD_ButtonsHeld(0);}while((buttons & PAD_BUTTON_A)||(buttons & PAD_BUTTON_B));
+	  do{buttons = PAD_ButtonsHeld(0);}
+	    while((buttons & PAD_BUTTON_A)||(buttons & PAD_BUTTON_B));
 	  //wait for user to let go of home button
 #ifdef WII_BUILD
 		WPADData *wpad;
 		int btn;
 		if(isWiimoteAvailable)  
-			do{WPAD_ScanPads(); wpad = WPAD_Data(0); btn = wpad->btns_h;}while(btn & WPAD_BUTTON_HOME);
+		  do{WPAD_ScanPads(); wpad = WPAD_Data(0); btn = wpad->btns_h;}
+		    while(btn & WPAD_BUTTON_HOME);
 		if(isClassicAvailable)  
-			do{WPAD_ScanPads(); wpad = WPAD_Data(0); btn = wpad->exp.classic.btns;}while(btn & CLASSIC_CTRL_BUTTON_HOME);
+		  do{WPAD_ScanPads(); wpad = WPAD_Data(0); btn = wpad->exp.classic.btns;}
+		    while(btn & CLASSIC_CTRL_BUTTON_HOME);
 #endif
 
 	  while(1){
 		
 #ifdef WII_BUILD
-		WPADData *wpad;
-		WPAD_ScanPads();
-		wpad = WPAD_Data(0);
-		if (isWiimoteAvailable)
-		{
-			unsigned short b = wpad->btns_h;
-			if(b & WPAD_BUTTON_MINUS){ //Reset game
-		    	emulator.emuReset();
-		    	break;
-	    	}
-		    if(b & WPAD_BUTTON_PLUS) { //Write save
-		    	write_save();
-			    break;
-	    	}
+	    WPADData *wpad;
+	    WPAD_ScanPads();
+	    wpad = WPAD_Data(0);
+	    if (isWiimoteAvailable)
+	    {
+	      unsigned short b = wpad->btns_h;
+	      if(b & WPAD_BUTTON_MINUS){ //Reset game
+		  emulator.emuReset();
+		  break;
+	        }
+	      if(b & WPAD_BUTTON_PLUS) { //Write save
+	    	  emulator.emuWriteState(statename);
+		  GC_Sleep(1500);
+		  break;
+	        }
 	    	if((b & WPAD_BUTTON_A) && (b & WPAD_BUTTON_B)) { //Return to loader
-				void (*reload)() = (void(*)())0x80001800;
-				reload();    		
-	    	}
+		  void (*reload)() = (void(*)())0x80001800;
+		  reload();    		
+	    	  }
 	    	if(b & WPAD_BUTTON_HOME) {	//Resume play
-	    	do{WPAD_ScanPads(); wpad = WPAD_Data(0); b = wpad->btns_h;}while(b & WPAD_BUTTON_HOME);  //wait for home
-				break;
-	    	}
-    	}
-    	if (isClassicAvailable)
-    	{
-	    	int b = wpad->exp.classic.btns;
-			if(b & CLASSIC_CTRL_BUTTON_MINUS){ //Reset game
-		    	emulator.emuReset();
-		    	break;
-	    	}
-		    if(b & CLASSIC_CTRL_BUTTON_PLUS) { //Write save
-		    	write_save();
-			    break;
-	    	}
+	    	  do{WPAD_ScanPads(); wpad = WPAD_Data(0); b = wpad->btns_h;}
+		    while(b & WPAD_BUTTON_HOME);  //wait for home
+		  break;
+	    	  }
+	/*	if(b & WPAD_BUTTON_2) { //back to menu
+			INSERT BACK-TO-MENU HERE	
+    		  }  */
+	    }
+    	    if (isClassicAvailable)
+    	    {
+	      int b = wpad->exp.classic.btns;
+		if(b & CLASSIC_CTRL_BUTTON_MINUS){ //Reset game
+		  emulator.emuReset();
+		  break;
+	    	  }
+		if(b & CLASSIC_CTRL_BUTTON_PLUS) { //Write save
+		  emulator.emuWriteState(statename);
+		  break;
+	    	  }
 	    	if((b & CLASSIC_CTRL_BUTTON_A) && (b & CLASSIC_CTRL_BUTTON_B)) { //Return to loader
-				void (*reload)() = (void(*)())0x80001800;
-				reload();    		
-	    	}
+		  void (*reload)() = (void(*)())0x80001800;
+		  reload();    		
+	    	  }
 	    	if(b & CLASSIC_CTRL_BUTTON_HOME) {	//Resume play
-	    		do{WPAD_ScanPads(); wpad = WPAD_Data(0); b = wpad->exp.classic.btns;}
-			while(b & CLASSIC_CTRL_BUTTON_HOME); //wait for home button
-				break;
-	    	}
-    	}
+	    	  do{WPAD_ScanPads(); wpad = WPAD_Data(0); b = wpad->exp.classic.btns;}
+		    while(b & CLASSIC_CTRL_BUTTON_HOME); //wait for home button
+		  break;
+	    	  }
+    	      }
 #endif
 
-		u16 buttons = PAD_ButtonsHeld(0); //grab pad buttons
-
-		if(buttons & PAD_TRIGGER_R){ //Reset game
-	    	emulator.emuReset();
+	    u16 buttons = PAD_ButtonsHeld(0); //grab pad buttons
+		
+	    if(buttons & PAD_TRIGGER_R){ //Reset game
+	      emulator.emuReset();
 	    	break;
-    	}
+    	      }
 	    if(buttons & PAD_TRIGGER_L) { //Write save
-	    	write_save();
-		    break;
-    	}
-    	if(buttons & PAD_TRIGGER_Z) { //Return to loader
-			void (*reload)() = (void(*)())0x80001800;
-			reload();    		
-    	}
-    	if(buttons & PAD_BUTTON_B) {	//Resume play
-			break;
-    	}
-	}
+		emulator.emuWriteState(statename);
+            break;
+    	      }
+    	    if(buttons & PAD_TRIGGER_Z) { //Return to loader
+		void (*reload)() = (void(*)())0x80001800;
+		reload();    		
+    	      }
+    	    if(buttons & PAD_BUTTON_B) {	//Resume play
+		break;
+    		}
+	  }
 	AudioPlayer();
 	mftb(&end);
-    loadtimeradjust += tb_diff_msec(&end, &start);
-	return 0;
-		  
+      loadtimeradjust += tb_diff_msec(&end, &start);
+	return 0;	  
 }
+
 
 /****************************************************************************
 * main
@@ -666,7 +700,8 @@ int main()
 
     
     /** Kick off SD Lib **/
-    SDInit();     
+    SDInit(); 
+	
     
         /** Build GBPalette **/
 	  for( i = 0; i < 24; )
@@ -688,9 +723,6 @@ int main()
 	                             (((i & 0x7c00) >> 10) << systemBlueShift);
 	    }
     
-#ifdef WII_BUILD
-	  setup_controllers();
-#endif	    
 	//Main loop
 	while(1) {
 		cartridgeType = 0;
@@ -701,14 +733,14 @@ int main()
 		srcPitch = 0;
 	
 		chooseRom();
-		//checkSave();
+		checkSave();
 
 	  IMAGE_TYPE type = utilFindType(filename);
 	
 	  switch( type )
 	    {
 	    case IMAGE_GBA:
-//	      printf("GameBoy Advance Image\n");
+	      printf("GameBoy Advance Image\n");
 	      cartridgeType = 2;
 	      emulator = GBASystem;
 	      srcWidth = 240;
@@ -724,7 +756,7 @@ int main()
 	      break;
 	
 	    case IMAGE_GB:
-//	      printf("GameBoy Image\n");
+	      printf("GameBoy Image\n");
 	      cartridgeType = 1;
 	      emulator = GBSystem;
 	      srcWidth = 160;
@@ -739,7 +771,7 @@ int main()
 	      break;
 	
 	    default:
-//	      printf("Unknown Image\n");
+	      printf("Unknown Image\n");
 	      while(1);
 	      break;
 	
@@ -755,7 +787,9 @@ int main()
 	  /** Set GX **/
 	  GX_Start( srcWidth, srcHeight, hAspect, vAspect );
 	#endif
-	
+ 
+
+
 	  if ( cartridgeType == 1 )
 	    {
 	      gbSoundReset();
@@ -768,6 +802,12 @@ int main()
 	      CPUReset();
 	    }
 
+	  emulator.emuReadBattery(batfilename);	
+	  if (saveExists){ 
+	    emulator.emuReadState(statename);	
+	    saveExists = 0; 
+          }
+
 	  soundVolume = 0;
 	  systemSoundOn = true;
 	
@@ -778,17 +818,15 @@ int main()
 	  /** Start system clock **/
 	  mftb(&start);
 	  
-	  emulator.emuReadBattery(batfilename);
       while ( emulating )
 	  {
 	    emulator.emuMain(emulator.emuCount);
 	    if(menuCalled) {
 	      if(ingameMenu())
-	      	break;
+	        break;
 	      menuCalled = 0;
   	    }
 	  }
-
 	}
 
   /** Never **/

@@ -44,7 +44,7 @@ static Mtx view;
 static int vwidth, vheight, oldvwidth, oldvheight;
 
 #define HASPECT 80
-#define VASPECT 60
+#define VASPECT 45
 
 /* New texture based scaler */
 typedef struct tagcamera
@@ -132,16 +132,16 @@ void GX_Start(int width, int height, int haspect, int vaspect)
 {
   Mtx p;
 
-  /*** Set new aspect ***/
-  square[0] = square[9] = -haspect;
-  square[3] = square[6] = haspect;
-  square[1] = square[4] = vaspect;
-  square[7] = square[10] = -vaspect;
+  /*** Set new aspect (now with crap AR hack!) ***/
+  square[0] = square[9] = (-haspect - 7);
+  square[3] = square[6] = (haspect + 7);
+  square[1] = square[4] = (vaspect + 7);
+  square[7] = square[10] = (-vaspect - 7);
 
   /*** Allocate 32byte aligned texture memory ***/
   texturesize = (width * height) * 2;
   texturemem = (u8 *) memalign(32, texturesize);
-
+		
   GXColor gxbackground = { 0, 0, 0, 0xff };
 
   /*** Clear out FIFO area ***/
