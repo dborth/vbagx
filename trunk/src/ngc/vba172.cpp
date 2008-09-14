@@ -23,18 +23,15 @@ extern int isClassicAvailable;
 extern int isWiimoteAvailable;
 
 void setup_controllers()
-{
-	WPADData wpad;
-	WPAD_Read(0, &wpad);
-	// User will have to use a GC controller
-	if(wpad.err == WPAD_ERR_NO_CONTROLLER)
-	{
-		isClassicAvailable = 0;
-		isWiimoteAvailable = 0;
-		return;
-	}
+{	/*  Doesn't work, either always returns 
+	WiimoteAvailable or switches REALLY fast
+	between the two.  WTF.
+
+	WPAD_ScanPads();
+	WPADData pad;
+	WPAD_ReadEvent(0, &pad);
 	// User can use just wiimote
-	if(wpad.err == WPAD_ERR_NONE && wpad.exp.type == WPAD_EXP_NONE)
+	if(pad.exp.type == WPAD_EXP_NONE)
 	{
 		isClassicAvailable = 0;
 		isWiimoteAvailable = 1;
@@ -42,13 +39,23 @@ void setup_controllers()
 	}
 	
 	// User can use a Classic controller	
-	if(wpad.err == WPAD_ERR_NONE && wpad.exp.type == WPAD_EXP_CLASSIC)
+	else if(pad.exp.type == WPAD_EXP_CLASSIC)
 	{
 		isClassicAvailable = 1;
-		WPAD_SetDataFormat(0, WPAD_FMT_CORE);
+		WPAD_SetDataFormat(0, WPAD_FMT_BTNS);
 		return;
 	}
-
+	// User will have to use a GC controller
+	else	
+	{
+		isClassicAvailable = 0;
+		isWiimoteAvailable = 0;
+		return;
+	}
+	*/
+	isClassicAvailable = 1;
+	isWiimoteAvailable = 1;
+	return;
 }
 #endif
 
@@ -186,10 +193,7 @@ Initialise (void)
   CONF_Init();
   WPAD_Init();
 #endif
-  vmode = &TVNtsc480IntDf;
-
-  /*** Let libogc configure the mode ***/
-  VIDEO_Configure (vmode);
+  vmode = VIDEO_GetPreferredMode(NULL);
 
   /*** Now configure the framebuffer.
        Really a framebuffer is just a chunk of memory
@@ -205,6 +209,9 @@ Initialise (void)
   /*** Define a console ***/
   console_init (xfb[0], 20, 64, vmode->fbWidth, vmode->xfbHeight,
                 vmode->fbWidth * 2);
+
+  /*** Let libogc configure the mode ***/
+  VIDEO_Configure (vmode);
 
   /*** Clear framebuffer to black ***/
   VIDEO_ClearFrameBuffer (vmode, xfb[0], COLOR_BLACK);
@@ -559,22 +566,23 @@ int ingameMenu() {
 	  do{buttons = PAD_ButtonsHeld(0);}while((buttons & PAD_BUTTON_A)||(buttons & PAD_BUTTON_B));
 	  //wait for user to let go of home button
 #ifdef WII_BUILD
-		WPADData wpad;
+		WPADData *wpad;
 		int btn;
-		if(isWiimoteAvailable)
-			do{WPAD_Read(0, &wpad); btn = wpad.btns_d;}while(btn & WPAD_BUTTON_HOME);
-		if(isClassicAvailable)
-			do{WPAD_Read(0, &wpad); btn = wpad.exp.classic.btns;}while(btn & CLASSIC_CTRL_BUTTON_HOME);
+		if(isWiimoteAvailable)  
+			do{WPAD_ScanPads(); wpad = WPAD_Data(0); btn = wpad->btns_h;}while(btn & WPAD_BUTTON_HOME);
+		if(isClassicAvailable)  
+			do{WPAD_ScanPads(); wpad = WPAD_Data(0); btn = wpad->exp.classic.btns;}while(btn & CLASSIC_CTRL_BUTTON_HOME);
 #endif
 
 	  while(1){
 		
 #ifdef WII_BUILD
-		WPADData wpad;
-		WPAD_Read(0, &wpad);
-		if(isWiimoteAvailable)
+		WPADData *wpad;
+		WPAD_ScanPads();
+		wpad = WPAD_Data(0);
+		if (isWiimoteAvailable)
 		{
-			unsigned short b = wpad.btns_d;
+			unsigned short b = wpad->btns_h;
 			if(b & WPAD_BUTTON_MINUS){ //Reset game
 		    	emulator.emuReset();
 		    	break;
@@ -588,13 +596,13 @@ int ingameMenu() {
 				reload();    		
 	    	}
 	    	if(b & WPAD_BUTTON_HOME) {	//Resume play
-	    	do{WPAD_Read(0, &wpad); b = wpad.btns_d;}while(b & WPAD_BUTTON_HOME);  //wait for home
+	    	do{WPAD_ScanPads(); wpad = WPAD_Data(0); b = wpad->btns_h;}while(b & WPAD_BUTTON_HOME);  //wait for home
 				break;
 	    	}
     	}
-    	if(isClassicAvailable)
+    	if (isClassicAvailable)
     	{
-	    	int b = wpad.exp.classic.btns;
+	    	int b = wpad->exp.classic.btns;
 			if(b & CLASSIC_CTRL_BUTTON_MINUS){ //Reset game
 		    	emulator.emuReset();
 		    	break;
@@ -608,7 +616,8 @@ int ingameMenu() {
 				reload();    		
 	    	}
 	    	if(b & CLASSIC_CTRL_BUTTON_HOME) {	//Resume play
-	    		do{WPAD_Read(0, &wpad);}while(wpad.exp.classic.btns & CLASSIC_CTRL_BUTTON_HOME); //wait for home button
+	    		do{WPAD_ScanPads(); wpad = WPAD_Data(0); b = wpad->exp.classic.btns;}
+			while(b & CLASSIC_CTRL_BUTTON_HOME); //wait for home button
 				break;
 	    	}
     	}

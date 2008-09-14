@@ -3,6 +3,7 @@
 *
 * Nintendo GameCube Joypad Wrapper
 ****************************************************************************/
+
 #include <gccore.h>
 #include <stdio.h>
 
@@ -55,14 +56,14 @@ NGCPad()
   int             padcal = 90;
   float           t;
   
-  
 #ifdef WII_BUILD
 	//wiimote
-	if(isWiimoteAvailable)
+	WPADData *wpad;
+	WPAD_ScanPads(); 
+	wpad = WPAD_Data(0);
+	if (isWiimoteAvailable)
 	{
-		WPADData wpad;
-		WPAD_Read(0, &wpad);
-		unsigned short b = wpad.btns_d;
+		unsigned short b = wpad->btns_h;
 
 		if (b & WPAD_BUTTON_2)
 	      res |= VBA_BUTTON_A;
@@ -98,11 +99,25 @@ NGCPad()
   		   menuCalled = 1;
 	}
 	//classic controller
-	if(isClassicAvailable)
+	if (isClassicAvailable)
 	{
-		WPADData wpad;
-		WPAD_Read(0, &wpad);
-		int b = wpad.exp.classic.btns;
+		float mag,ang;
+		int b = wpad->exp.classic.btns;
+	/* Stolen Shamelessly out of Falco's unofficial SNES9x update */
+		ang = wpad->exp.classic.ljs.ang;
+		mag = wpad->exp.classic.ljs.mag;
+
+		if (mag > 0.4) {
+			if (ang > 292.5 | ang <= 67.5)
+				res |= VBA_UP;
+			if (ang > 22.5 & ang <= 157.5)
+				res |= VBA_RIGHT;
+			if (ang > 113.5 & ang <= 247.5)
+				res |= VBA_DOWN;
+			if (ang > 203.5 & ang <= 337.5)
+				res |= VBA_LEFT;
+	}
+
 		int x_s =  0; //getStickValue(&wpad.exp.classic.ljs, STICK_X, 127);
 		int y_s =  0; //getStickValue(&wpad.exp.classic.ljs, STICK_Y, 127);
 		if (b & CLASSIC_CTRL_BUTTON_A)
@@ -140,7 +155,7 @@ NGCPad()
 
 	}
 	//user needs a GC remote
-	else if((!(isWiimoteAvailable)) && (!(isClassicAvailable)))
+	else
 	{
 		 p = PAD_ButtonsHeld(0);
 	     x = PAD_StickX(0);
