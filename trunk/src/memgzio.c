@@ -10,7 +10,7 @@
  */
 
 /* @(#) $Id: memgzio.c,v 1.3 2004/01/17 23:07:32 kxu Exp $ */
-
+#include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -70,15 +70,15 @@ typedef struct mem_stream
 mem_stream;
 
 
-local gzFile gz_open      OF((char *memory, const int available, const char *mode));
-local int do_flush        OF((gzFile file, int flush));
-local int    get_byte     OF((mem_stream *s));
-local void   check_header OF((mem_stream *s));
-local int    destroy      OF((mem_stream *s));
-local void   putLong      OF((MEMFILE *file, uLong x));
-local uLong  getLong      OF((mem_stream *s));
+gzFile gz_open      OF((char *memory, const int available, const char *mode));
+int do_flush        OF((gzFile file, int flush));
+int    get_byte     OF((mem_stream *s));
+void   check_header OF((mem_stream *s));
+int    destroy      OF((mem_stream *s));
+void   putLong      OF((MEMFILE *file, uLong x));
+uLong  getLong      OF((mem_stream *s));
 
-local MEMFILE *memOpen(char *memory, int available, char mode)
+MEMFILE *memOpen(char *memory, int available, char mode)
 {
   MEMFILE *f;
 
@@ -119,7 +119,7 @@ local MEMFILE *memOpen(char *memory, int available, char mode)
   return f;
 }
 
-local size_t memWrite(const void *buffer, size_t size, size_t count,
+size_t memWrite(const void *buffer, size_t size, size_t count,
                       MEMFILE *file)
 {
   size_t total = size*count;
@@ -140,7 +140,7 @@ local size_t memWrite(const void *buffer, size_t size, size_t count,
   return total;
 }
 
-local size_t memRead(void *buffer, size_t size, size_t count,
+size_t memRead(void *buffer, size_t size, size_t count,
                      MEMFILE *file)
 {
   size_t total = size*count;
@@ -164,7 +164,7 @@ local size_t memRead(void *buffer, size_t size, size_t count,
   return total;
 }
 
-local int memPutc(int c, MEMFILE *file)
+int memPutc(int c, MEMFILE *file)
 {
   if(file->mode != 'w')
     {
@@ -183,17 +183,17 @@ local int memPutc(int c, MEMFILE *file)
   return c;
 }
 
-local long memTell(MEMFILE *f)
+long memTell(MEMFILE *f)
 {
   return (f->next - f->memory) - 8;
 }
 
-local int memError(MEMFILE *f)
+int memError(MEMFILE *f)
 {
   return f->error;
 }
 
-local int memClose(MEMFILE *f)
+int memClose(MEMFILE *f)
 {
   if(f->mode == 'w')
     {
@@ -203,7 +203,7 @@ local int memClose(MEMFILE *f)
   return 0;
 }
 
-local int memPrintf(MEMFILE *f, const char *format, ...)
+int memPrintf(MEMFILE *f, const char *format, ...)
 {
   char buffer[80];
   va_list list;
@@ -225,7 +225,7 @@ local int memPrintf(MEMFILE *f, const char *format, ...)
    can be checked to distinguish the two cases (if errno is zero, the
    zlib error is Z_MEM_ERROR).
 */
-local gzFile gz_open (memory, available, mode)
+gzFile gz_open (memory, available, mode)
 char *memory;
 const int available;
 const char *mode;
@@ -313,7 +313,7 @@ const char *mode;
     }
   s->stream.avail_out = Z_BUFSIZE;
 
-  errno = 0;
+  //errno = 0;
   s->file = memOpen(memory, available, s->mode);
 
   if (s->file == NULL)
@@ -325,8 +325,8 @@ const char *mode;
     {
       /* Write a very simple .gz header:
        */
-      memPrintf(s->file, "%c%c%c%c%c%c%c%c%c%c", gz_magic[0], gz_magic[1],
-                Z_DEFLATED, 0 /*flags*/, 0,0,0,0 /*time*/, 0 /*xflags*/, OS_CODE);
+      //memPrintf(s->file, "%c%c%c%c%c%c%c%c%c%c", gz_magic[0], gz_magic[1],
+      //          Z_DEFLATED, 0 /*flags*/, 0,0,0,0 /*time*/, 0 /*xflags*/, OS_CODE);
       s->startpos = 10L;
       /* We use 10L instead of ftell(s->file) to because ftell causes an
               * fflush on some systems. This version of the library doesn't use
@@ -359,13 +359,13 @@ const char *mode;
    for end of file.
    IN assertion: the stream s has been sucessfully opened for reading.
 */
-local int get_byte(s)
+int get_byte(s)
 mem_stream *s;
 {
   if (s->z_eof) return EOF;
   if (s->stream.avail_in == 0)
     {
-      errno = 0;
+//      errno = 0;
       s->stream.avail_in = memRead(s->inbuf, 1, Z_BUFSIZE, s->file);
       if (s->stream.avail_in == 0)
         {
@@ -388,7 +388,7 @@ mem_stream *s;
        s->stream.avail_in is zero for the first time, but may be non-zero
        for concatenated .gz files.
 */
-local void check_header(s)
+void check_header(s)
 mem_stream *s;
 {
   int method; /* method byte */
@@ -449,7 +449,7 @@ mem_stream *s;
 * Cleanup then free the given mem_stream. Return a zlib error code.
   Try freeing in the reverse order of allocations.
 */
-local int destroy (s)
+int destroy (s)
 mem_stream *s;
 {
   int err = Z_OK;
@@ -520,7 +520,7 @@ unsigned len;
           if (n > s->stream.avail_out) n = s->stream.avail_out;
           if (n > 0)
             {
-              zmemcpy(s->stream.next_out, s->stream.next_in, n);
+//              zmemcpy(s->stream.next_out, s->stream.next_in, n);
               next_out += n;
               s->stream.next_out = next_out;
               s->stream.next_in   += n;
@@ -541,7 +541,7 @@ unsigned len;
       if (s->stream.avail_in == 0 && !s->z_eof)
         {
 
-          errno = 0;
+//          errno = 0;
           s->stream.avail_in = memRead(s->inbuf, 1, Z_BUFSIZE, s->file);
           if (s->stream.avail_in == 0)
             {
@@ -637,7 +637,7 @@ unsigned len;
      Flushes all pending output into the compressed file. The parameter
    flush is as in the deflate() function.
 */
-local int do_flush (file, flush)
+int do_flush (file, flush)
 gzFile file;
 int flush;
 {
@@ -682,7 +682,7 @@ int flush;
 /* ===========================================================================
    Outputs a long in LSB order to the given file
 */
-local void putLong (file, x)
+void putLong (file, x)
 MEMFILE *file;
 uLong x;
 {
@@ -698,7 +698,7 @@ uLong x;
    Reads a long in LSB order from the given mem_stream. Sets z_err in case
    of error.
 */
-local uLong getLong (s)
+uLong getLong (s)
 mem_stream *s;
 {
   uLong x = (uLong)get_byte(s);
@@ -719,7 +719,7 @@ mem_stream *s;
 int ZEXPORT memgzclose (file)
 gzFile file;
 {
-  int err;
+//  int err;
   mem_stream *s = (mem_stream*)file;
 
   if (s == NULL) return Z_STREAM_ERROR;
