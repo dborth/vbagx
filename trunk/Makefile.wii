@@ -18,8 +18,8 @@ include $(DEVKITPPC)/wii_rules
 TARGET		:=	vba172_wii
 TARGETDIR   :=  executables
 BUILD		:=	build_wii
-SOURCES		:=	src/gb src src/fileio src/ngc
-INCLUDES 	:=  src/gb src src/fileio src/ngc
+SOURCES		:=	source/vba source/vba/gb source/ngc
+INCLUDES 	:=  source/vba source/vba/gb source/ngc
 
 #---------------------------------------------------------------------------------
 # options for code generation
