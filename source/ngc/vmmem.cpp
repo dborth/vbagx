@@ -1,4 +1,4 @@
-#ifdef WII_BUILD
+#ifdef HW_RVL
 /****************************************************************************
 * VisualBoyAdvance 1.7.2
 *
@@ -17,6 +17,8 @@
 #include "Util.h"
 #include "Port.h"
 
+#include "menudraw.h"
+
 extern "C" {
 #include "tbtime.h"
 }
@@ -33,7 +35,7 @@ static u32 GBAROMSize = 0;
 static char romfilename[1024];
 
 /**
- * GBA Memory 
+ * GBA Memory
  */
 #define WORKRAM		0x40000
 #define BIOS		0x4000
@@ -47,7 +49,7 @@ static char romfilename[1024];
 			 VRAM + OAM + PIX + IOMEM )
 
 extern void CPUUpdateRenderBuffers(bool force);
-extern void MENU_DrawString( int x, int y, char *msg, int style );
+
 /****************************************************************************
 * VMAllocGBA
 *
@@ -102,34 +104,34 @@ int VMCPULoadROM( char *filename )
   VMAllocGBA();
 
   GBAROMSize = 0;
-	
-  /*sprintf(temp,"Filename %s\n", filename);
-  MENU_DrawString( -1, 230,temp , 1 );
-  */
+
+  sprintf(temp,"Filename %s\n", filename);
+  //WaitPrompt(temp);
+
   romfile = gen_fopen(filename, "rb");
   if ( romfile == NULL )
     {
-	  MENU_DrawString( -1, 400,"Error opening file!" , 1 );
-      while(1);
+	  WaitPrompt((char*) "Error opening file!");
+      //while(1);
       VMClose();
       return 0;
     }
-    
+
 	fseek(romfile, 0, SEEK_END);
 	GBAROMSize = ftell(romfile);
 	fseek(romfile, 0, SEEK_SET);
-    
+
     sprintf(temp,"ROM Size %dMb (%dMBit)",  GBAROMSize/1024/1024,(GBAROMSize*8)/1024/1024);
-    MENU_DrawString( -1, 150,temp , 1 );
-	
+    //WaitPrompt(temp);
+
 	rom = (u8 *)MEM2Storage;
-	
+
   /* Always use MEM2, regardless of ROM size */
 	res = gen_fread(rom, 1, GBAROMSize, romfile);
 
     if ( (u32)res != GBAROMSize )
     {
-		MENU_DrawString( -1, 400,"Error reading file!" , 1 );
+    	WaitPrompt((char*) "Error reading file!");
         while(1);
     }
   strcpy( romfilename, filename );
@@ -183,7 +185,7 @@ u16 VMRead16( u32 address )
 ****************************************************************************/
 u8 VMRead8( u32 address )
 {
- 
+
   if ( address >= GBAROMSize )
   {
     return ( address >> 1 ) & 0xff;
@@ -193,8 +195,7 @@ u8 VMRead8( u32 address )
   return (u8)rom[address];
 
 }
-#endif
-#ifdef GC_BUILD
+#else
 /****************************************************************************
 * VisualBoyAdvance 1.7.2
 *
@@ -210,6 +211,8 @@ u8 VMRead8( u32 address )
 #include "Globals.h"
 #include "Util.h"
 #include "Port.h"
+
+#include "menudraw.h"
 
 extern "C" {
 #include "tbtime.h"
@@ -248,7 +251,7 @@ static u32 GBAROMSize = 0;
 static char romfilename[1024];
 
 /**
- * GBA Memory 
+ * GBA Memory
  */
 #define WORKRAM		0x40000
 #define BIOS		0x4000
@@ -376,6 +379,7 @@ static void VMClose( void )
 int VMCPULoadROM( char *filename )
 {
   int res;
+  char msg[512];
 
   /** Fix VM **/
   VMClose();
@@ -389,7 +393,7 @@ int VMCPULoadROM( char *filename )
   romfile = gen_fopen(filename, "rb");
   if ( romfile == NULL )
     {
-      printf("Error opening file!\n");
+	  WaitPrompt((char*) "Error opening file!");
       while(1);
       VMClose();
       return 0;
@@ -401,7 +405,8 @@ int VMCPULoadROM( char *filename )
       res = gen_fread(rom, 1, (1 << VMSHIFTBITS), romfile);
       if ( res != (1 << VMSHIFTBITS ) )
       {
-		printf("Error reading file! %i \n",res);
+		sprintf(msg, "Error reading file! %i \n",res);
+		WaitPrompt(msg);
         while(1);
       }
 
@@ -431,13 +436,15 @@ static void VMNewPage( int pageid )
 {
   int res;
   tb_t start,end;
+  char msg[512];
 
   mftb(&start);
 
   res = gen_fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
   if ( ! res )
     {
-      printf("Seek error! - Offset %08x %d\n", pageid << VMSHIFTBITS, res);
+      sprintf(msg, "Seek error! - Offset %08x %d\n", pageid << VMSHIFTBITS, res);
+      WaitPrompt(msg);
       while(1);
     }
 
@@ -446,7 +453,8 @@ static void VMNewPage( int pageid )
   res = gen_fread( vmpage[pageid].pageptr, 1, 1 << VMSHIFTBITS, romfile );
   if ( res != ( 1 << VMSHIFTBITS ) )
     {
-      printf("Error reading! %d bytes only\n", res);
+      sprintf(msg, "Error reading! %d bytes only\n", res);
+      WaitPrompt(msg);
       while(1);
     }
 
@@ -481,6 +489,7 @@ u32 VMRead32( u32 address )
 {
   int pageid;
   u32 badaddress;
+  char msg[512];
   //printf("VM32 : Request %08x\n", address);
 
   if ( address >= GBAROMSize )
@@ -504,8 +513,9 @@ u32 VMRead32( u32 address )
 		return READ32LE( vmpage[pageid].pageptr + ( address & VMSHIFTMASK ) );
 
 	default:
-  		printf("VM32 : Unknown page type! (%d) [%d]\n", vmpage[pageid].pagetype, pageid);
-  		while(1);
+		sprintf(msg, "VM32 : Unknown page type! (%d) [%d]", vmpage[pageid].pagetype, pageid);
+		WaitPrompt(msg);
+		while(1);
   }
 
   /* Can never get here ... but stops gcc bitchin' */
@@ -543,7 +553,7 @@ u16 VMRead16( u32 address )
 		return READ16LE( vmpage[pageid].pageptr + ( address & VMSHIFTMASK ) );
 
 	default:
-  		printf("VM16 : Unknown page type!\n");
+		WaitPrompt((char*) "VM16 : Unknown page type!");
   		while(1);
   }
 
@@ -582,7 +592,7 @@ u8 VMRead8( u32 address )
 	    	return (u8)vmpage[pageid].pageptr[ (address & VMSHIFTMASK) ];
 
 	default:
-  		printf("VM8 : Unknown page type!\n");
+		WaitPrompt((char*) "VM8 : Unknown page type!");
   		while(1);
   }
 

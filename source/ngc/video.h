@@ -1,5 +1,5 @@
 /****************************************************************************
-*   Generic GX Scaler 
+*   Generic GX Scaler
 *   softdev 2007
 *
 *   This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,10 @@
 #ifndef __GXHDR__
 #define __GXHDR__
 
-void GX_Start(int width, int height, int haspect, int vaspect);
+void InitialiseVideo ();
+void GX_Render_Init(int width, int height, int haspect, int vaspect);
 void GX_Render(int width, int height, u8 * buffer, int pitch);
+void clearscreen (int colour = COLOR_BLACK);
+void showscreen ();
 
 #endif
