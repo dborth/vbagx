@@ -50,7 +50,7 @@ int gen_fread( void *buffer, int len, int block, FILE* f )
  * SD Card fclose
  */
 void gen_fclose( FILE* f )
-{	
+{
 	fclose(f);
 }
 
@@ -73,7 +73,7 @@ int gen_fgetc( FILE* f )
 	return fgetc(f);
 }
 
-static struct stat _fstat;  
+static struct stat _fstat;
 char filename[1024];
 int fcount = 0;
 
@@ -83,15 +83,15 @@ int fcount = 0;
 int gen_getdir( char *thisdir )
 {
   memset(&direntries[0],0,MAXDIRENTRIES*255);
-  
+
   DIR_ITER* dp = diropen( thisdir );
-    
+
   if ( dp )
     {
       while ( dirnext(dp, filename, &_fstat) == 0 )
         {
-	        
-          // Skip any sub directories 
+
+          // Skip any sub directories
           if ( !(_fstat.st_mode & S_IFDIR) )
             {
               memcpy(&direntries[fcount],&filename,strlen(filename));
@@ -100,9 +100,9 @@ int gen_getdir( char *thisdir )
         }
         dirclose(dp);
     }
-    else 
+    else
     	return 0;
-	
+
 
   return fcount;
 

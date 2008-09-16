@@ -16,6 +16,8 @@ static int tail = 0;
 static u8 mixerdata[MIXBUFFSIZE];
 #define MIXERMASK ((MIXBUFFSIZE >> 2) - 1)
 
+static u8 soundbuffer[3200] ATTRIBUTE_ALIGN(32);
+
 /****************************************************************************
 * MIXER_AddSamples
 *
@@ -71,3 +73,29 @@ int MIXER_GetSamples( u8 *dstbuffer, int maxlen )
   return 3200;
 }
 
+static void AudioPlayer()
+{
+  AUDIO_StopDMA();
+  MIXER_GetSamples(soundbuffer, 3200);
+  DCFlushRange(soundbuffer,3200);
+  AUDIO_InitDMA((u32)soundbuffer,3200);
+  AUDIO_StartDMA();
+}
+
+void InitialiseSound()
+{
+	AUDIO_Init(NULL); // Start audio subsystem
+	AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ);
+	AUDIO_RegisterDMACallback(AudioPlayer);
+	memset(soundbuffer, 0, 3200);
+}
+
+void StopAudio()
+{
+	AUDIO_StopDMA();
+}
+
+void StartAudio()
+{
+	AUDIO_StartDMA();
+}
