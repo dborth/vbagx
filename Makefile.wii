@@ -24,18 +24,19 @@ INCLUDES 	:=  source/vba source/vba/gb source/ngc
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-MACHDEP	= -DGEKKO -mcpu=750 -meabi -mhard-float 
-CFLAGS  = -g -Os -Wall $(MACHDEP) $(INCLUDE) -meabi \
-	  -DNGC -DWORDS_BIGENDIAN -DPACKAGE=\"VisualBoyAdvance\" \
-	  -DVERSION=\"1.7.2\" -DC_CORE \
-	  -DCHANFFS -DSDL -DWII_BUILD -DNO_DEFLATE
-CXXFLAGS	=	$(CFLAGS)
-LDFLAGS	=	$(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map -Wl,--cref
+
+CFLAGS  = 	-g -Os -Wall $(MACHDEP) $(INCLUDE) \
+			-mcpu=750 -mhard-float -meabi \
+	  		-DNGC -DWORDS_BIGENDIAN -DPACKAGE=\"VisualBoyAdvance\" \
+	  		-DVERSION=\"1.7.2\" -DC_CORE \
+	  		-DCHANFFS -DSDL -DWII_BUILD -DNO_DEFLATE
+CXXFLAGS	= -save-temps -Xassembler -aln=$@.lst $(CFLAGS)
+LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with
 #---------------------------------------------------------------------------------
-LIBS	:=	-lm -lz -lfat -ldb -lwiiuse -lbte -logc
+LIBS	:=	-ldi -lmxml -lfat -lwiiuse -lz -lbte -logc -lm -lfreetype -ltinysmb
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
