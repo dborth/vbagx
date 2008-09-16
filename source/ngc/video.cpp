@@ -225,7 +225,7 @@ void GX_Render_Init(int width, int height, int haspect, int vaspect)
 	memset(texturemem, 0, texturesize);
 
 	/*** Setup for first call to scaler ***/
-	vwidth = vheight = -1;
+	vwidth = vheight = oldvwidth = oldvheight = -1;
 }
 /****************************************************************************
 * GX_Render
