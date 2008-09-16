@@ -2562,7 +2562,7 @@ bool gbWriteBMPFile(const char *fileName)
 
 void gbCleanUp()
 {
-  if(gbRam != NULL)
+	if(gbRam != NULL)
     {
       free(gbRam);
       gbRam = NULL;
@@ -2588,7 +2588,8 @@ void gbCleanUp()
 
   if(pix != NULL)
     {
-      free(pix);
+	  // this causes system to CRASH when switching from GB to GBA and then back to GB
+	  //free(pix);
       pix = NULL;
     }
 
@@ -3311,13 +3312,13 @@ void gbEmulate(int ticksToStop)
       if(soundOffFlag) {
         if(synchronize && !speedup) {
           synchronizeTicks -= clockTicks;
-          
+
           while(synchronizeTicks < 0) {
             synchronizeTicks += SYNCHRONIZE_CLOCK_TICKS;
-            
+
             DWORD now = timeGetTime();
             gbElapsedTime += (now - timeNow);
-            
+
             if(gbElapsedTime < 50) {
               DWORD diff = 50 - gbElapsedTime;
               Sleep(diff);

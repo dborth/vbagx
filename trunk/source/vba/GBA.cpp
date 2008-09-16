@@ -1349,7 +1349,8 @@ void CPUCleanUp()
 
   if(pix != NULL)
     {
-      free(pix);
+      // this causes system to CRASH when switching from GBA to GB and then back to GBA
+	  //free(pix);
       pix = NULL;
     }
 
