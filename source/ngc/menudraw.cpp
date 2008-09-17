@@ -1,9 +1,7 @@
 /****************************************************************************
- * Snes9x 1.51 Nintendo Wii/Gamecube Port
+ * Visual Boy Advance GX
  *
- * softdev July 2006
- * crunchy2 June 2007
- * Tantric August 2008
+ * Tantric September 2008
  *
  * menudraw.cpp
  *
@@ -229,18 +227,20 @@ Credits ()
 	else
 		ypos += 32;
 
-	DrawText (125, ypos += 22, (char*)"VBA GX GameCube/Wii Port");
-	DrawText (350, ypos, (char*)"Tantric");
-	DrawText (125, ypos += 18, (char*)"VBA GameCube Port Improvements");
-	DrawText (350, ypos, (char*)"emukidid");
-	DrawText (125, ypos += 18, (char*)"Original VBA GameCube Port");
-	DrawText (350, ypos, (char*)"SoftDev");
-	DrawText (125, ypos += 18, (char*)"Visual Boy Advance 1.7.2");
-	DrawText (350, ypos, (char*)"Forgotten");
-	DrawText (125, ypos += 18, (char*)"libogc");
-	DrawText (350, ypos, (char*)"Shagkur & wintermute");
-	DrawText (125, ypos += 18, (char*)"Testing");
-	DrawText (350, ypos, (char*)"tehskeen users");
+	setfontsize (14);
+
+	DrawText (100, ypos += 22, (char*)"Visual Boy Advance GX");
+	DrawText (375, ypos, (char*)"Tantric");
+	DrawText (100, ypos += 18, (char*)"GameCube/Wii Port Improvements");
+	DrawText (375, ypos, (char*)"emukidid");
+	DrawText (100, ypos += 18, (char*)"Original GameCube Port");
+	DrawText (375, ypos, (char*)"SoftDev");
+	DrawText (100, ypos += 18, (char*)"Visual Boy Advance 1.7.2");
+	DrawText (375, ypos, (char*)"Forgotten");
+	DrawText (100, ypos += 18, (char*)"libogc");
+	DrawText (375, ypos, (char*)"Shagkur & wintermute");
+	DrawText (100, ypos += 18, (char*)"Testing");
+	DrawText (375, ypos, (char*)"tehskeen users");
 
 	DrawText (-1, ypos += 36, (char*)"And many others who have contributed over the years!");
 
@@ -430,8 +430,8 @@ DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsiz
 		DrawText (-1, 60, title);
 	}
 
-	setfontsize (12);
-	DrawText (510, screenheight - 20, (char *)VERSIONSTR);
+	setfontsize (14);
+	DrawText (380, screenheight - 30, (char *)VERSIONSTRFULL);
 
 	// Draw menu items
 

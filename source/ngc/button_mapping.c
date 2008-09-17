@@ -1,7 +1,7 @@
 /****************************************************************************
- * Snes9x 1.51 Nintendo Wii/Gamecube Port
+ * Visual Boy Advance GX
  *
- * michniewski August 2008
+ * Tantric September 2008
  *
  * button_mapping.c
  *

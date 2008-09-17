@@ -1,5 +1,5 @@
 /****************************************************************************
- * Visual Boy Advance 1.7.2 Nintendo Wii/Gamecube Port
+ * Visual Boy Advance GX
  *
  * Tantric September 2008
  *

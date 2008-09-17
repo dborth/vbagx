@@ -1,7 +1,12 @@
 /****************************************************************************
-* Generic File I/O for VisualBoyAdvance
-*
-* Currently only supports SD
+ * Visual Boy Advance GX
+ *
+ * Tantric September 2008
+ *
+ * sdfileio.h
+ *
+ * Generic File I/O for VisualBoyAdvance
+ * Currently only supports SD/USB
 ****************************************************************************/
 #ifndef __SDFILEIO__
 #define __SDFILEIO__

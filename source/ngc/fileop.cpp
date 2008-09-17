@@ -1,9 +1,7 @@
 /****************************************************************************
- * Snes9x 1.51 Nintendo Wii/Gamecube Port
+ * Visual Boy Advance GX
  *
- * softdev July 2006
- * crunchy2 May 2007
- * Tantric August 2008
+ * Tantric September 2008
  *
  * fileop.cpp
  *
@@ -174,12 +172,12 @@ ParseFATdirectory(int method)
 int
 LoadFATFile (char *filename, int length)
 {
-/*	char zipbuffer[2048];
-	char filepath[MAXPATHLEN];
+	/*char zipbuffer[2048];
 	FILE *handle;
 	unsigned char *rbuffer;
-	u32 size;
-*/
+	u32 size;*/
+	char filepath[MAXPATHLEN];
+
 	/* Check filename length */
 	if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
 		sprintf(filepath, "%s/%s",currentdir,filelist[selection].filename);

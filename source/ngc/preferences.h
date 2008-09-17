@@ -1,5 +1,5 @@
 /****************************************************************************
- * Snes9x 1.51 Nintendo Wii/Gamecube Port
+ * Visual Boy Advance GX
  *
  * Tantric September 2008
  *

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Snes9x 1.51 Nintendo Wii/Gamecube Port
+ * Visual Boy Advance GX
  *
  * Tantric September 2008
  *
@@ -148,7 +148,7 @@ preparePrefsData (int method)
 	createXMLSetting("LoadFolder", "Load Folder", GCSettings.LoadFolder);
 	createXMLSetting("SaveFolder", "Save Folder", GCSettings.SaveFolder);
 	//createXMLSetting("CheatFolder", "Cheats Folder", GCSettings.CheatFolder);
-	createXMLSetting("VerifySaves", "Verify Memory Card Saves", toStr(GCSettings.VerifySaves));
+	//createXMLSetting("VerifySaves", "Verify Memory Card Saves", toStr(GCSettings.VerifySaves));
 
 	createXMLSection("Network", "Network Settings");
 
@@ -258,8 +258,8 @@ decodePrefsData (int method)
 	loadXMLSetting(&GCSettings.SaveMethod, "SaveMethod");
 	loadXMLSetting(GCSettings.LoadFolder, "LoadFolder");
 	loadXMLSetting(GCSettings.SaveFolder, "SaveFolder");
-	loadXMLSetting(GCSettings.CheatFolder, "CheatFolder");
-	loadXMLSetting(&GCSettings.VerifySaves, "VerifySaves");
+	//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder");
+	//loadXMLSetting(&GCSettings.VerifySaves, "VerifySaves");
 
 	// Network Settings
 

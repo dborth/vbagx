@@ -1,8 +1,13 @@
 /****************************************************************************
-* VisualBoyAdvance
-*
-* Head and tail audio mixer
-****************************************************************************/
+ * Visual Boy Advance GX
+ *
+ * Tantric September 2008
+ *
+ * audio.cpp
+ *
+ * Head and tail audio mixer
+ ***************************************************************************/
+
 #include <gccore.h>
 #include <stdio.h>
 #include <stdlib.h>

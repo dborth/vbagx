@@ -1,8 +1,12 @@
 /****************************************************************************
-* VisualBoyAdvance 1.7.2
-* Nintendo GameCube Wrapper
-****************************************************************************/
-
+ * Visual Boy Advance GX
+ *
+ * Tantric September 2008
+ *
+ * vba.cpp
+ *
+ * This file controls overall program flow. Most things start and end here!
+ ***************************************************************************/
 
 #include <gccore.h>
 #include <stdio.h>

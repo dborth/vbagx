@@ -1,11 +1,9 @@
 /****************************************************************************
- * Snes9x 1.51 Nintendo Wii/Gamecube Port
+ * Visual Boy Advance GX
  *
- * softdev July 2006
- * crunchy2 May 2007-July 2007
  * Tantric September 2008
  *
- * snes9xGX.h
+ * vba.h
  *
  * This file controls overall program flow. Most things start and end here!
  ***************************************************************************/
@@ -14,9 +12,9 @@
 #define _VBA_H_
 
 #include <gccore.h>
-
-#define VERSIONNUM "1.0.0"
-#define VERSIONSTR "VBA GX 1.0.0"
+#define VERSIONNUM 		"1.0.0"
+#define VERSIONSTR 		"VBA GX 1.0.0"
+#define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.0"
 
 #define NOTSILENT 0
 #define SILENT 1

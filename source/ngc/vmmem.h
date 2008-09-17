@@ -1,8 +1,13 @@
 /****************************************************************************
-* VisualBoyAdvance 1.7.2
-*
-* GameBoy Advance Virtual Memory Paging
-****************************************************************************/
+ * Visual Boy Advance GX
+ *
+ * Tantric September 2008
+ *
+ * vmmem.h
+ *
+ * GameBoy Advance Virtual Memory Paging
+ ***************************************************************************/
+
 #ifndef __VBAVMHDR__
 #define __VBAVMHDR__
 
