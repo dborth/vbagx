@@ -1,8 +1,6 @@
 /****************************************************************************
- * Snes9x 1.51 Nintendo Wii/Gamecube Port
+ * Visual Boy Advance GX
  *
- * softdev July 2006
- * crunchy2 May-June 2007
  * Tantric September 2008
  *
  * memcardop.cpp

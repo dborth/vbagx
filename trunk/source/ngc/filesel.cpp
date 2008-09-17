@@ -1,10 +1,7 @@
 /****************************************************************************
- * Snes9x 1.51 Nintendo Wii/Gamecube Port
+ * Visual Boy Advance GX
  *
- * softdev July 2006
- * svpe June 2007
- * crunchy2 May-July 2007
- * Tantric August 2008
+ * Tantric September 2008
  *
  * filesel.cpp
  *

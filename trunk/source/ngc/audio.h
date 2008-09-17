@@ -1,8 +1,13 @@
 /****************************************************************************
-* VisualBoyAdvance
-*
-* Head and tail audio mixer
-****************************************************************************/
+ * Visual Boy Advance GX
+ *
+ * Tantric September 2008
+ *
+ * audio.h
+ *
+ * Head and tail audio mixer
+ ***************************************************************************/
+
 #ifndef __AUDIOMIXER__
 #define __AUDIOMIXER__
 

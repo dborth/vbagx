@@ -1,5 +1,5 @@
 /****************************************************************************
- * Snes9x 1.51 Nintendo Wii/Gamecube Port
+ * Visual Boy Advance GX
  *
  * Tantric September 2008
  *
@@ -134,6 +134,7 @@ PreferencesMenu ()
 		if(GCSettings.SaveMethod == METHOD_MC_SLOTB)
 			GCSettings.SaveMethod++;
 
+		prefmenu[6][0] = '\0'; // MC saving not implemented
 
 		// no USB ports on GameCube
 		#ifndef HW_RVL
@@ -205,8 +206,7 @@ PreferencesMenu ()
 		else if (GCSettings.AutoSave == 2) sprintf (prefmenu[5],"Auto Save SNAPSHOT");
 		else if (GCSettings.AutoSave == 3) sprintf (prefmenu[5],"Auto Save BOTH");
 
-		sprintf (prefmenu[6], "Verify MC Saves %s",
-			GCSettings.VerifySaves == true ? " ON" : "OFF");
+		//sprintf (prefmenu[6], "Verify MC Saves %s", GCSettings.VerifySaves == true ? " ON" : "OFF");
 
 		ret = RunMenu (prefmenu, prefmenuCount, (char*)"Preferences", 16);
 

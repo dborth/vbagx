@@ -1,9 +1,14 @@
-#ifdef HW_RVL
 /****************************************************************************
-* VisualBoyAdvance 1.7.2
-*
-* GameBoy Advance Virtual Memory Paging
-****************************************************************************/
+ * Visual Boy Advance GX
+ *
+ * Tantric September 2008
+ *
+ * vmmem.cpp
+ *
+ * GameBoy Advance Virtual Memory Paging
+ ***************************************************************************/
+
+#ifdef HW_RVL
 #include "sdfileio.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -196,11 +201,7 @@ u8 VMRead8( u32 address )
 
 }
 #else
-/****************************************************************************
-* VisualBoyAdvance 1.7.2
-*
-* GameBoy Advance Virtual Memory Paging
-****************************************************************************/
+
 #include "sdfileio.h"
 #include <stdio.h>
 #include <stdlib.h>
