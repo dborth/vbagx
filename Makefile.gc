@@ -15,7 +15,7 @@ include $(DEVKITPPC)/gamecube_rules
 # SOURCES is a list of directories containing source code
 # INCLUDES is a list of directories containing extra header files
 #---------------------------------------------------------------------------------
-TARGET		:=	vba172_gc
+TARGET		:=	vbagx_gc
 TARGETDIR   :=  executables
 BUILD		:=	build_gc
 SOURCES		:=	source/vba source/vba/gb source/ngc

@@ -15,7 +15,7 @@ include $(DEVKITPPC)/wii_rules
 # SOURCES is a list of directories containing source code
 # INCLUDES is a list of directories containing extra header files
 #---------------------------------------------------------------------------------
-TARGET		:=	vba172_wii
+TARGET		:=	vbagx_wii
 TARGETDIR   :=  executables
 BUILD		:=	build_wii
 SOURCES		:=	source/vba source/vba/gb source/ngc
