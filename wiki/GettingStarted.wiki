@@ -1,4 +1,5 @@
 #summary Instructions for loading and running the emulator.
+#labels Featured
 
 = Setup & Installation =
 
