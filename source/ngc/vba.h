@@ -16,7 +16,7 @@
 #include <gccore.h>
 
 #define VERSIONNUM "1.0.0"
-#define VERSIONSTR "VBA 1.0.0"
+#define VERSIONSTR "VBA GX 1.0.0"
 
 #define NOTSILENT 0
 #define SILENT 1

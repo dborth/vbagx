@@ -24,6 +24,7 @@ extern "C" {
 #endif
 
 #include "vbasupport.h"
+#include "preferences.h"
 #include "audio.h"
 #include "dvd.h"
 #include "smbop.h"
@@ -44,19 +45,20 @@ extern int emulating;
 ****************************************************************************/
 int main()
 {
-#ifdef WII_DVD
+	#ifdef WII_DVD
 	DI_Init();	// first
-#endif
+	#endif
 
-	int selectedMenu = -1;
-
-	PAD_Init ();			/*** Initialise pads for input ***/
+	// Initialise controllers
 	#ifdef HW_RVL
 	WPAD_Init();
 	// read wiimote accelerometer and IR data
 	WPAD_SetDataFormat(WPAD_CHAN_ALL,WPAD_FMT_BTNS_ACC_IR);
 	WPAD_SetVRes(WPAD_CHAN_ALL,640,480);
 	#endif
+	PAD_Init ();
+
+	int selectedMenu = -1;
 
 	InitialiseVideo();
 
@@ -85,9 +87,16 @@ int main()
 	// Set defaults
 	DefaultSettings ();
 
+	// Load preferences
+	if(!LoadPrefs())
+	{
+		WaitPrompt((char*) "Preferences reset - check settings!");
+		selectedMenu = 2; // change to preferences menu
+	}
+
 	while (ROMSize == 0)
 	{
-		mainmenu (selectedMenu);
+		MainMenu (selectedMenu);
 	}
 
 	//Main loop

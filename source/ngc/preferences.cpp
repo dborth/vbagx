@@ -31,7 +31,7 @@ extern unsigned int wmpadmap[];
 extern unsigned int ccpadmap[];
 extern unsigned int ncpadmap[];
 
-#define PREFS_FILE_NAME "SNES9xGX.xml"
+#define PREFS_FILE_NAME "VBAGX.xml"
 
 char prefscomment[2][32];
 
@@ -147,7 +147,7 @@ preparePrefsData (int method)
 	createXMLSetting("SaveMethod", "Save Method", toStr(GCSettings.SaveMethod));
 	createXMLSetting("LoadFolder", "Load Folder", GCSettings.LoadFolder);
 	createXMLSetting("SaveFolder", "Save Folder", GCSettings.SaveFolder);
-	createXMLSetting("CheatFolder", "Cheats Folder", GCSettings.CheatFolder);
+	//createXMLSetting("CheatFolder", "Cheats Folder", GCSettings.CheatFolder);
 	createXMLSetting("VerifySaves", "Verify Memory Card Saves", toStr(GCSettings.VerifySaves));
 
 	createXMLSection("Network", "Network Settings");
@@ -157,7 +157,7 @@ preparePrefsData (int method)
 	createXMLSetting("smbuser", "Share Username", GCSettings.smbuser);
 	createXMLSetting("smbpwd", "Share Password", GCSettings.smbpwd);
 
-	createXMLSection("Emulation", "Emulation Settings");
+	//createXMLSection("Emulation", "Emulation Settings");
 
 	createXMLSection("Controller", "Controller Settings");
 

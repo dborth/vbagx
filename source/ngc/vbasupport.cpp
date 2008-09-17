@@ -1,10 +1,17 @@
-
+/****************************************************************************
+ * Visual Boy Advance 1.7.2 Nintendo Wii/Gamecube Port
+ *
+ * Tantric September 2008
+ *
+ * vbasupport.cpp
+ *
+ * VBA support code
+ ***************************************************************************/
 
 #include <gccore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 
 #include "GBA.h"
 #include "agbprint.h"
@@ -18,7 +25,8 @@
 #include "gb/GB.h"
 #include "gb/gbGlobals.h"
 
-
+#include "vba.h"
+#include "fileop.h"
 #include "audio.h"
 #include "vmmem.h"
 #include "pal60.h"
@@ -27,14 +35,27 @@
 #include "menudraw.h"
 
 extern "C"
-  {
+{
 #include "tbtime.h"
 #include "sdfileio.h"
-  }
+}
 
-/**
- * Globals
- */
+static tb_t start, now;
+
+u32 loadtimeradjust;
+
+int throttle = 100;
+u32 throttleLastTime = 0;
+
+static u32 autoFrameSkipLastTime = 0;
+static int frameskipadjust = 0;
+
+int vAspect = 0;
+int hAspect = 0;
+
+/****************************************************************************
+ * VBA Globals
+ ***************************************************************************/
 int RGB_LOW_BITS_MASK=0x821;
 int systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
@@ -54,7 +75,6 @@ int destWidth = 0;
 int destHeight = 0;
 int srcPitch = 0;
 int saveExists = 0;
-
 int systemRedShift = 0;
 int systemBlueShift = 0;
 int systemGreenShift = 0;
@@ -64,51 +84,43 @@ u16 systemColorMap16[0x10000];
 //u32 systemColorMap32[0x10000];
 u32 *systemColorMap32 = (u32 *)&systemColorMap16;
 
-/*** 2D Video Globals ***/
-extern u32 whichfb;
-extern u32 *xfb[2];
-extern GXRModeObj *vmode;
-
 struct EmulatedSystem emulator =
-    {
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      false,
-      0
-    };
-
-static tb_t start, now;
-
-u32 loadtimeradjust;
-
-int throttle = 100;
-u32 throttleLastTime = 0;
-
-int vAspect = 0;
-int hAspect = 0;
-
-//char filename[1024];	//rom file name
-//char batfilename[1024]; //battery save file name
-//char statename[1024]; //savestate file name
-
-void debuggerOutput(char *, u32)
-{}
-
-void (*dbgOutput)(char *, u32) = debuggerOutput;
-
-void systemMessage(int num, const char *msg, ...)
 {
-	  /*** For now ... do nothing ***/
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	false,
+	0
+};
+
+/****************************************************************************
+* systemGetClock
+*
+* Returns number of milliseconds since program start
+****************************************************************************/
+u32 systemGetClock( void )
+{
+	mftb(&now);
+	return tb_diff_msec(&now, &start) - loadtimeradjust;
+}
+
+void systemFrame() {}
+void systemScreenCapture(int a) {}
+void systemShowSpeed(int speed) {}
+void systemGbBorderOn() {}
+
+bool systemPauseOnFrame()
+{
+	return false;
 }
 
 void GC_Sleep(u32 dwMiliseconds)
@@ -120,160 +132,190 @@ void GC_Sleep(u32 dwMiliseconds)
 	}
 }
 
-void systemFrame()
-{}
-
-void systemScreenCapture(int a)
-{}
-
-void systemShowSpeed(int speed)
-{}
-static u32 autoFrameSkipLastTime = 0;
-static int frameskipadjust = 0;
-
-void write_save()
-{
-//emulator.emuWriteBattery(batfilename);
-}
-
 void system10Frames(int rate)
 {
-	  if ( cartridgeType == 1 )
-	    return;
+	if ( cartridgeType == 1 )
+		return;
 
-	  u32 time = systemGetClock();
-	  u32 diff = time - autoFrameSkipLastTime;
-	  int speed = 100;
+	u32 time = systemGetClock();
+	u32 diff = time - autoFrameSkipLastTime;
+	int speed = 100;
 
-	  if(diff)
-	    speed = (1000000/rate)/diff;
-  /*	  char temp[512];
-	  sprintf(temp,"Speed: %i",speed);
-	  MENU_DrawString( -1, 450,temp , 1 );   */
+	if(diff)
+		speed = (1000000/rate)/diff;
+	/*	  char temp[512];
+	sprintf(temp,"Speed: %i",speed);
+	MENU_DrawString( -1, 450,temp , 1 );   */
 
-	  if(speed >= 98)
-	    {
-	      frameskipadjust++;
+	if(speed >= 98)
+	{
+		frameskipadjust++;
 
-	      if(frameskipadjust >= 3)
-	        {
-	          frameskipadjust=0;
-	          if(systemFrameSkip > 0)
-	            systemFrameSkip--;
-	        }
-	    }
-	  else
-	    {
-	      if(speed  < 80)
-	        frameskipadjust -= (90 - speed)/5;
-	      else if(systemFrameSkip < 9)
-	        frameskipadjust--;
+		if(frameskipadjust >= 3)
+		{
+			frameskipadjust=0;
+			if(systemFrameSkip > 0)
+				systemFrameSkip--;
+		}
+	}
+	else
+	{
+		if(speed  < 80)
+			frameskipadjust -= (90 - speed)/5;
+		else if(systemFrameSkip < 9)
+			frameskipadjust--;
 
-	      if(frameskipadjust <= -2)
-	        {
-	          frameskipadjust += 2;
-	          if(systemFrameSkip < 9)
-	            systemFrameSkip++;
-	        }
-	    }
+		if(frameskipadjust <= -2)
+		{
+			frameskipadjust += 2;
+			if(systemFrameSkip < 9)
+				systemFrameSkip++;
+		}
+	}
 
-if ( cartridgeType == 1 )
-	    return;
-
-
-/*
-if(systemSaveUpdateCounter) {
-      char temp[512];
-	  sprintf(temp,"Writing Save To Disk");
-	    MENU_DrawString( -1, 450,temp , 1 );
-}     */
-
-  if(systemSaveUpdateCounter) {
-    if(--systemSaveUpdateCounter <= SYSTEM_SAVE_NOT_UPDATED) {
-      write_save();
-      systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
-    }
-  }
-
-	  autoFrameSkipLastTime = time;
+	autoFrameSkipLastTime = time;
 }
 
+/****************************************************************************
+* System
+****************************************************************************/
 
+void systemGbPrint(u8 *data,int pages,int feed,int palette, int contrast) {}
+void debuggerOutput(char *, u32) {}
+void (*dbgOutput)(char *, u32) = debuggerOutput;
+void systemMessage(int num, const char *msg, ...) {}
 
-void systemUpdateMotionSensor()
-{}
+/****************************************************************************
+* Saves
+****************************************************************************/
 
-void systemGbBorderOn()
-{}
+bool LoadBattery(int method, bool silent)
+{
+	char filepath[1024];
+	bool result = false;
+
+	ShowAction ((char*) "Loading...");
+
+	if(method == METHOD_AUTO)
+		method = autoSaveMethod(); // we use 'Save' because we need R/W
+
+	if(method == METHOD_SD || method == METHOD_USB)
+	{
+		ChangeFATInterface(method, NOTSILENT);
+		sprintf (filepath, "%s/%s/%s.sav", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename);
+		result = emulator.emuReadBattery(filepath);
+	}
+
+	if(!result && !silent)
+		WaitPrompt ((char*) "Save file not found");
+
+	return result;
+}
+
+bool SaveBattery(int method, bool silent)
+{
+	char filepath[1024];
+	bool result = false;
+
+	ShowAction ((char*) "Saving...");
+
+	if(method == METHOD_AUTO)
+			method = autoSaveMethod(); // we use 'Save' because we need R/W
+
+	if(method == METHOD_SD || method == METHOD_USB)
+	{
+		ChangeFATInterface(method, NOTSILENT);
+		sprintf (filepath, "%s/%s/%s.sav", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename);
+		result = emulator.emuWriteBattery(filepath);
+	}
+
+	if(!result && !silent)
+		WaitPrompt ((char*) "Save failed");
+
+	return result;
+}
+
+bool LoadState(int method, bool silent)
+{
+	char filepath[1024];
+	bool result = false;
+
+	ShowAction ((char*) "Loading...");
+
+	if(method == METHOD_AUTO)
+		method = autoSaveMethod(); // we use 'Save' because we need R/W
+
+	if(method == METHOD_SD || method == METHOD_USB)
+	{
+		ChangeFATInterface(method, NOTSILENT);
+		sprintf (filepath, "%s/%s/%s.sgm", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename);
+		result = emulator.emuReadState(filepath);
+	}
+
+	if(!result && !silent)
+		WaitPrompt ((char*) "State file not found");
+
+	return result;
+}
+
+bool SaveState(int method, bool silent)
+{
+	char filepath[1024];
+	bool result = false;
+
+	ShowAction ((char*) "Saving...");
+
+	if(method == METHOD_AUTO)
+		method = autoSaveMethod(); // we use 'Save' because we need R/W
+
+	if(method == METHOD_SD || method == METHOD_USB)
+	{
+		ChangeFATInterface(method, NOTSILENT);
+		sprintf (filepath, "%s/%s/%s.sgm", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename);
+		result = emulator.emuWriteState(filepath);
+	}
+
+	if(!result && !silent)
+		WaitPrompt ((char*) "Save failed");
+
+	return result;
+}
+
+/****************************************************************************
+* Sound
+****************************************************************************/
 
 void systemWriteDataToSoundBuffer()
 {
-  MIXER_AddSamples((u8 *)soundFinalWave, (cartridgeType == 1));
+	MIXER_AddSamples((u8 *)soundFinalWave, (cartridgeType == 1));
 }
-
-void systemSoundPause()
-{}
-
-void systemSoundResume()
-{}
-
-void systemSoundReset()
-{}
-
-void systemGbPrint(u8 *data,int pages,int feed,int palette, int contrast)
-{}
-
-void systemSoundShutdown()
-{}
 
 bool systemSoundInit()
 {
-	//memset(soundbuffer, 0, 3200);
 	return true;
-}
-
-bool systemPauseOnFrame()
-{
-  return false;
-}
-
-int systemGetSensorX()
-{
-  return sensorX;
-}
-
-int systemGetSensorY()
-{
-  return sensorY;
 }
 
 bool systemCanChangeSoundQuality()
 {
-  return true;
+	return true;
 }
+
+void systemSoundPause() {}
+void systemSoundResume() {}
+void systemSoundReset() {}
+void systemSoundShutdown() {}
 
 /****************************************************************************
 * systemReadJoypads
 ****************************************************************************/
 bool systemReadJoypads()
 {
-  return true;
+	return true;
 }
 
 u32 systemReadJoypad(int which)
 {
-  return GetJoy();
-}
-
-/****************************************************************************
-* systemGetClock
-*
-* Returns number of milliseconds since program start
-****************************************************************************/
-u32 systemGetClock( void )
-{
-  mftb(&now);
-  return tb_diff_msec(&now, &start) - loadtimeradjust;
+	return GetJoy();
 }
 
 /****************************************************************************
@@ -281,78 +323,17 @@ u32 systemGetClock( void )
 ****************************************************************************/
 void systemDrawScreen()
 {
-  /** GB / GBC Have oodles of time - so sync on VSync **/
-  GX_Render( srcWidth, srcHeight, pix, srcPitch );
+	// GB / GBC Have oodles of time - so sync on VSync
+	GX_Render( srcWidth, srcHeight, pix, srcPitch );
 
-#ifdef HW_RVL
+	#ifdef HW_RVL
 	VIDEO_WaitVSync ();
-#else
-  if ( cartridgeType == 1 )
-    {
-      VIDEO_WaitVSync();
-    }
-#endif
-}
-
-/*
-	Checks to see if a previous SRAM/Flash save exists
-	If it does, it prompts the user to load it or not
-*/
-void checkSave() {
-  /*  FILE* f = gen_fopen(statename, "rb");
-    if (f != NULL) {
-    gen_fclose(f);
-    whichfb^=1;
-    VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
-    //MENU_DrawString( 140, 50,"Quick Save State Exists" , 1 );
-    //MENU_DrawString( 140, 80,"Do you wish to load it?" , 1 );
-    //MENU_DrawString( -1, 170,"(L) or  (+)       YES" , 1 );
-    //MENU_DrawString( -1, 200,"(R) or  (-)       NO" , 1 );
-    VIDEO_WaitVSync ();
-    VIDEO_SetNextFramebuffer(xfb[whichfb]);
-    VIDEO_Flush();
-    VIDEO_WaitVSync();
-    while(1) {
-	WPADData *wpad;
-	WPAD_ScanPads();
-	wpad = WPAD_Data(0);
-	if (isWiimoteAvailable) {
-	  unsigned short b = wpad->btns_h;
-        if(b & WPAD_BUTTON_PLUS) {
-          saveExists = 1;
-          break;
-        }
-        if(b & WPAD_BUTTON_MINUS) break;
-      }
-      if (isClassicAvailable) {
-        unsigned short b = wpad->exp.classic.btns;
-        if(b & CLASSIC_CTRL_BUTTON_PLUS) {
-          saveExists = 1;
-          break;
-        }
-        if(b & CLASSIC_CTRL_BUTTON_MINUS) break;
-      }
-      u16 buttons = PAD_ButtonsHeld(0);
-      if(buttons & PAD_TRIGGER_R){
-        break;
-    	}
-	if(buttons & PAD_TRIGGER_L){
-        saveExists = 1;
-        break;
-    	}
-    }
-  VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
-  VIDEO_WaitVSync ();
-  VIDEO_SetNextFramebuffer(xfb[whichfb]);
-  VIDEO_Flush();
-  VIDEO_WaitVSync();
-  }*/
-}
-
-
-void askSound() {
-  soundOffFlag = false;
-  soundLowPass =  true;
+	#else
+	if ( cartridgeType == 1 )
+	{
+		VIDEO_WaitVSync();
+	}
+	#endif
 }
 
 int loadVBAROM(char filename[])
@@ -375,7 +356,7 @@ int loadVBAROM(char filename[])
 		srcWidth = 240;
 		srcHeight = 160;
 		VMCPULoadROM(filename);
-		/* Actual Visual Aspect is 1.57 */
+		// Actual Visual Aspect is 1.57
 		hAspect = 70;
 		vAspect = 46;
 		srcPitch = 484;
@@ -391,7 +372,7 @@ int loadVBAROM(char filename[])
 		srcWidth = 160;
 		srcHeight = 144;
 		gbLoadRom(filename);
-		/* Actual physical aspect is 1.0 */
+		// Actual physical aspect is 1.0
 		hAspect = 60;
 		vAspect = 46;
 		srcPitch = 324;
@@ -405,13 +386,14 @@ int loadVBAROM(char filename[])
 		break;
 	}
 
-	/** Set defaults **/
+	// Set defaults
 	flashSetSize(0x10000);
 	rtcEnable(true);
 	agbPrintEnable(false);
-	askSound();
+	soundOffFlag = false;
+	soundLowPass = true;
 
-	/** Setup GX **/
+	// Setup GX
 	GX_Render_Init( srcWidth, srcHeight, hAspect, vAspect );
 
 	if ( cartridgeType == 1 )
@@ -426,32 +408,42 @@ int loadVBAROM(char filename[])
 		CPUReset();
 	}
 
-//	emulator.emuReadBattery(batfilename);
-	if (saveExists)
-	{
-		//emulator.emuReadState(statename);
-		saveExists = 0;
-	}
-
 	soundVolume = 0;
 	systemSoundOn = true;
 
 	soundInit();
-	//AudioPlayer();
 
 	emulating = 1;
 
-	/** Start system clock **/
+	// Start system clock
 	mftb(&start);
 
-	//emulator.emuReset();
 	return 1;
 }
+
+/****************************************************************************
+* EEPROM
+****************************************************************************/
+int systemGetSensorX()
+{
+	return sensorX;
+}
+
+int systemGetSensorY()
+{
+	return sensorY;
+}
+
+void systemUpdateMotionSensor() {}
+
+/****************************************************************************
+* Palette
+****************************************************************************/
 
 void InitialisePalette()
 {
 	int i;
-	/** Build GBPalette **/
+	// Build GBPalette
 	for( i = 0; i < 24; )
 	{
 		systemGbPalette[i++] = (0x1f) | (0x1f << 5) | (0x1f << 10);
@@ -459,7 +451,7 @@ void InitialisePalette()
 		systemGbPalette[i++] = (0x0c) | (0x0c << 5) | (0x0c << 10);
 		systemGbPalette[i++] = 0;
 	}
-	/** Set palette etc - Fixed to RGB565 **/
+	// Set palette etc - Fixed to RGB565
 	systemColorDepth = 16;
 	systemRedShift = 11;
 	systemGreenShift = 6;

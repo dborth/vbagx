@@ -17,11 +17,9 @@
 #include <string.h>
 
 #ifdef WII_DVD
-#ifdef __cplusplus
 extern "C" {
 #include <di/di.h>
 }
-#endif
 #endif
 
 #include "menudraw.h"
