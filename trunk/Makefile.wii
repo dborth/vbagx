@@ -26,10 +26,9 @@ INCLUDES 	:=  source/vba source/vba/gb source/ngc
 #---------------------------------------------------------------------------------
 
 CFLAGS  = 	-g -Os -Wall $(MACHDEP) $(INCLUDE) \
-			-mcpu=750 -mhard-float -meabi \
 	  		-DNGC -DWORDS_BIGENDIAN -DPACKAGE=\"VisualBoyAdvance\" \
 	  		-DVERSION=\"1.7.2\" -DC_CORE \
-	  		-DCHANFFS -DSDL -DWII_BUILD -DNO_DEFLATE
+	  		-DCHANFFS -DSDL -DNO_DEFLATE
 CXXFLAGS	= -save-temps -Xassembler -aln=$@.lst $(CFLAGS)
 LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref
 

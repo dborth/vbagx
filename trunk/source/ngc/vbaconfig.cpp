@@ -22,9 +22,9 @@ DefaultSettings ()
 	/************** GameCube/Wii Settings *********************/
 	GCSettings.LoadMethod = METHOD_AUTO; // Auto, SD, DVD, USB, Network (SMB)
 	GCSettings.SaveMethod = METHOD_AUTO; // Auto, SD, Memory Card Slot A, Memory Card Slot B, USB, Network (SMB)
-	sprintf (GCSettings.LoadFolder,"vba/roms"); // Path to game files
-	sprintf (GCSettings.SaveFolder,"vba/saves"); // Path to save files
-	sprintf (GCSettings.CheatFolder,"vba/cheats"); // Path to cheat files
+	sprintf (GCSettings.LoadFolder,"vbagx/roms"); // Path to game files
+	sprintf (GCSettings.SaveFolder,"vbagx/saves"); // Path to save files
+	sprintf (GCSettings.CheatFolder,"vbagx/cheats"); // Path to cheat files
 	GCSettings.AutoLoad = 1;
 	GCSettings.AutoSave = 1;
 
