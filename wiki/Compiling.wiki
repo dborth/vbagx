@@ -1,4 +1,5 @@
 #summary Basic instructions on compiling the source.
+#labels Featured
 
 Here's some basic instructions on compiling VBAGX. You don't need to be a programmer to follow these instructions but you should have some basic computer know-how. There's a few reasons you might want to do this:
 
