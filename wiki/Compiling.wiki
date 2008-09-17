@@ -1,0 +1,16 @@
+#summary Basic instructions on compiling the source.
+
+Here's some basic instructions on compiling VBAGX. You don't need to be a programmer to follow these instructions but you should have some basic computer know-how. There's a few reasons you might want to do this:
+
+ # To use the latest version of the emulator (note that beta versions may be unstable)
+ # To access roms/saves from Windows File Sharing (SMB) - just edit vbaconfig.cpp (not yet available)
+ # Make your own custom changes
+
+= Instructions =
+
+ # Download the source either from the [http://code.google.com/p/vba-wii/downloads/list Downloads] page, or the latest directly from SVN.
+ # Download and install [http://www.devkitpro.org devkitPro]. You only need to install devkitPPC.
+ # Download the [http://vba-wii.googlecode.com/files/devkitPro.zip VBAGX devkitPro libraries] from the Downloads page, and overwrite the libraries in your devkitPro installation folder.
+ # Run Programmer's Notepad (installed with devkitPro)
+ # Find the Makefile from the source you downloaded. Click Tools > Make.
+ # You're done!
