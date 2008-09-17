@@ -1,0 +1,23 @@
+#summary Instructions for loading and running the emulator.
+
+= Setup & Installation =
+
+Download the latest version from the [http://code.google.com/p/vba-wii/downloads/list Downloads page]. Unzip the archive. You will find the following folders inside:
+
+ * apps - Contains Homebrew Channel ready files (see Homebrew Channel instructions below)
+ * executables - Contains Gamecube / Wii DOL files (for loading from other methods)
+ * vbagx - Contains the directory structure required for storing roms and saves. By default, roms are loaded from "vbagx/roms/" and saves / preferences are stored in "vbagx/saves/".
+
+== Wii - Via the Homebrew Channel ==
+
+The most popular method of running homebrew on the Wii is through the [http://hbc.hackmii.com/ Homebrew Channel]. If you already have the channel installed, just copy over the apps folder
+included in the archive into the root of your SD card.
+
+Remember to also create the vbagx directory structure required. See above.
+
+== GameCube == 
+
+You can load VBAGX via sdload and an SD card in slot A, or by streaming 
+it to your Gamecube, or by booting a bootable DVD with VBAGX on it. 
+This document doesn't cover how to do any of that. A good source for information 
+on these topics is the [http://www.tehskeen.com/forums/ TehSkeen Forums].
