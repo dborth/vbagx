@@ -52,36 +52,29 @@ executables		Contains Gamecube / Wii DOL files
 				(for loading from other methods)
 				
 vbagx			Contains the directory structure required for storing
-				roms and saves (see below)
-
-------------------------------
-Loading / Running the Emulator:
-------------------------------
+				roms and saves. By default, roms are loaded from 
+				"vbagx/roms/" and saves / preferences are stored in 
+				"vbagx/saves/".
+				
+-=[ Loading / Running the Emulator ]=-
 
 Wii - Via Homebrew Channel:
---------------------
+--------------------------------
 The most popular method of running homebrew on the Wii is through the Homebrew
 Channel. If you already have the channel installed, just copy over the apps folder
 included in the archive into the root of your SD card.
 
-Remember to also create the fceugx directory structure required. See above.
+Remember to also create the vbagx directory structure required. See above.
 
 If you haven't installed the Homebrew Channel yet, read about how to here:
 http://hbc.hackmii.com/
 
 Gamecube:
----------
+--------------------------------
 You can load VBAGX via sdload and an SD card in slot A, or by streaming 
 it to your Gamecube, or by booting a bootable DVD with VBAGX on it. 
 This document doesn't cover how to do any of that. A good source for information 
 on these topics is the tehskeen forums: http://www.tehskeen.com/forums/
-
-----------------------------
-ROMS, Preferences, and Saves:
-----------------------------
-
-By default, roms are loaded from "vbagx/roms/" and saves / preferences are 
-stored in "vbagx/saves/".
  
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
