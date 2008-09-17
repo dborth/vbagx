@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <wiiuse/wpad.h>
 
+#include "vba.h"
+#include "vbasupport.h"
 #include "button_mapping.h"
 #include "menu.h"
 #include "video.h"
@@ -44,7 +46,7 @@
 // VBA controller buttons
 // All other pads are mapped to this
 unsigned int vbapadmap[] = {
-	VBA_BUTTON_A, VBA_BUTTON_B,
+	VBA_BUTTON_B, VBA_BUTTON_A,
 	VBA_BUTTON_SELECT, VBA_BUTTON_START,
 	VBA_UP, VBA_DOWN,
 	VBA_LEFT, VBA_RIGHT,
@@ -53,7 +55,7 @@ unsigned int vbapadmap[] = {
 
 /*** Gamecube controller Padmap ***/
 unsigned int gcpadmap[] = {
-  PAD_BUTTON_A, PAD_BUTTON_B,
+  PAD_BUTTON_B, PAD_BUTTON_A,
   PAD_TRIGGER_Z, PAD_BUTTON_START,
   PAD_BUTTON_UP, PAD_BUTTON_DOWN,
   PAD_BUTTON_LEFT, PAD_BUTTON_RIGHT,
@@ -65,23 +67,23 @@ unsigned int wmpadmap[] = {
   WPAD_BUTTON_MINUS, WPAD_BUTTON_PLUS,
   WPAD_BUTTON_RIGHT, WPAD_BUTTON_LEFT,
   WPAD_BUTTON_UP, WPAD_BUTTON_DOWN,
-  0x0000, 0x0000
+  WPAD_BUTTON_B, WPAD_BUTTON_A
 };
 /*** Classic Controller Padmap ***/
 unsigned int ccpadmap[] = {
-  WPAD_CLASSIC_BUTTON_A, WPAD_CLASSIC_BUTTON_B,
+  WPAD_CLASSIC_BUTTON_Y, WPAD_CLASSIC_BUTTON_B,
   WPAD_CLASSIC_BUTTON_MINUS, WPAD_CLASSIC_BUTTON_PLUS,
   WPAD_CLASSIC_BUTTON_UP, WPAD_CLASSIC_BUTTON_DOWN,
   WPAD_CLASSIC_BUTTON_LEFT, WPAD_CLASSIC_BUTTON_RIGHT,
   WPAD_CLASSIC_BUTTON_FULL_L, WPAD_CLASSIC_BUTTON_FULL_R
 };
 /*** Nunchuk + wiimote Padmap ***/
-unsigned int ncpadmap[] = { WPAD_BUTTON_A, WPAD_BUTTON_B,
+unsigned int ncpadmap[] = {
   WPAD_NUNCHUK_BUTTON_C, WPAD_NUNCHUK_BUTTON_Z,
   WPAD_BUTTON_MINUS, WPAD_BUTTON_PLUS,
-  WPAD_BUTTON_2, WPAD_BUTTON_1,
   WPAD_BUTTON_UP, WPAD_BUTTON_DOWN,
-  WPAD_BUTTON_LEFT, WPAD_BUTTON_RIGHT
+  WPAD_BUTTON_LEFT, WPAD_BUTTON_RIGHT,
+  WPAD_BUTTON_2, WPAD_BUTTON_1
 };
 
 #ifdef HW_RVL
@@ -302,12 +304,10 @@ u32 DecodeJoy(unsigned short pad)
 }
 u32 GetJoy()
 {
-    short i;
     int pad = 0;
     u32 res = 0;
 
     s8 gc_px = PAD_SubStickX (0);
-    u32 jp = PAD_ButtonsHeld (0); // gamecube controller button info
 
     #ifdef HW_RVL
     s8 wm_sx = WPAD_StickX (0,1);
@@ -315,7 +315,7 @@ u32 GetJoy()
     #endif
 
     // request to go back to menu
-    if ((gc_px < -70) || (jp & PAD_BUTTON_START)
+    if ((gc_px < -70)
     #ifdef HW_RVL
     		 || (wm_pb & WPAD_BUTTON_HOME)
     		 || (wm_pb & WPAD_CLASSIC_BUTTON_HOME)
@@ -323,10 +323,9 @@ u32 GetJoy()
     #endif
     )
 	{
-    	/*
     	if (GCSettings.AutoSave == 1)
     	{
-    		SaveRAM(GCSettings.SaveMethod, SILENT);
+    		SaveBattery(GCSettings.SaveMethod, SILENT);
     	}
     	else if (GCSettings.AutoSave == 2)
     	{
@@ -334,11 +333,10 @@ u32 GetJoy()
     	}
     	else if(GCSettings.AutoSave == 3)
     	{
-    		SaveRAM(GCSettings.SaveMethod, SILENT);
+    		SaveBattery(GCSettings.SaveMethod, SILENT);
     		SaveState(GCSettings.SaveMethod, SILENT);
     	}
-		*/
-    	mainmenu(3);
+    	MainMenu(3);
     	return 0;
 	}
 	else

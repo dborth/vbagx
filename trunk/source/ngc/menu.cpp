@@ -1,9 +1,7 @@
 /****************************************************************************
  * Snes9x 1.51 Nintendo Wii/Gamecube Port
  *
- * softdev July 2006
- * crunchy2 May-June 2007
- * Tantric August 2008
+ * Tantric September 2008
  *
  * menu.cpp
  *
@@ -80,17 +78,14 @@ LoadManager ()
 	int loadROM = OpenROM(GCSettings.LoadMethod);
 
 	/***
-	* check for autoloadsram / freeze
+	* check for autoload battery / state
 	***/
-	if ( loadROM == 1 ) // if ROM was loaded, load the SRAM & settings
+	if ( loadROM == 1 ) // if ROM was loaded, load the battery / state
 	{
-		//if ( GCSettings.AutoLoad == 1 )
-		//	LoadSRAM(GCSettings.SaveMethod, SILENT);
-		//else if ( GCSettings.AutoLoad == 2 )
-		//	NGCUnfreezeGame (GCSettings.SaveMethod, SILENT);
-
-		// setup cheats
-		//SetupCheats();
+		if (GCSettings.AutoLoad == 1)
+			LoadBattery(GCSettings.SaveMethod, SILENT);
+		else if (GCSettings.AutoLoad == 2)
+			LoadState(GCSettings.SaveMethod, SILENT);
 	}
 
 	return loadROM;
@@ -125,7 +120,20 @@ PreferencesMenu ()
 	while (quit == 0)
 	{
 		// some load/save methods are not implemented - here's where we skip them
-		// they need to be skipped in the order they were enumerated in snes9xGX.h
+		// they need to be skipped in the order they were enumerated in vba.h
+
+		// skip
+		if(GCSettings.LoadMethod == METHOD_DVD)
+			GCSettings.LoadMethod++;
+		if(GCSettings.LoadMethod == METHOD_SMB)
+			GCSettings.LoadMethod++;
+		if(GCSettings.SaveMethod == METHOD_SMB)
+			GCSettings.SaveMethod++;
+		if(GCSettings.SaveMethod == METHOD_MC_SLOTA)
+			GCSettings.SaveMethod++;
+		if(GCSettings.SaveMethod == METHOD_MC_SLOTB)
+			GCSettings.SaveMethod++;
+
 
 		// no USB ports on GameCube
 		#ifndef HW_RVL
@@ -199,7 +207,6 @@ PreferencesMenu ()
 
 		sprintf (prefmenu[6], "Verify MC Saves %s",
 			GCSettings.VerifySaves == true ? " ON" : "OFF");
-
 
 		ret = RunMenu (prefmenu, prefmenuCount, (char*)"Preferences", 16);
 
@@ -302,21 +309,20 @@ GameMenu ()
 				quit = retval = 1;
 				break;
 
-			case 2: // Load SRAM
-				//quit = retval = LoadSRAM(GCSettings.SaveMethod, NOTSILENT);
+			case 2: // Load Battery
+				quit = retval = LoadBattery(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
-			case 3: // Save SRAM
-				//SaveSRAM(GCSettings.SaveMethod, NOTSILENT);
+			case 3: // Save Battery
+				SaveBattery(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
-			case 4: // Load Freeze
-				//quit = retval = NGCUnfreezeGame (GCSettings.SaveMethod, NOTSILENT);
+			case 4: // Load State
+				quit = retval = LoadState(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
-			case 5: // Save Freeze
-				//NGCFreezeGame (GCSettings.SaveMethod, NOTSILENT);
-				//emulator.emuWriteState(statename);
+			case 5: // Save State
+				SaveState(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
 			case -1: // Button B
@@ -334,10 +340,6 @@ GameMenu ()
 
 /****************************************************************************
  * Controller Configuration
- *
- * Snes9x 1.51 uses a cmd system to work out which button has been pressed.
- * Here, I simply move the designated value to the gcpadmaps array, which
- * saves on updating the cmd sequences.
  ***************************************************************************/
 u32
 GetInput (u16 ctrlr_type)
@@ -365,13 +367,7 @@ GetInput (u16 ctrlr_type)
 #ifdef HW_RVL
 		else
 		{
-		//	if ( WPAD_Probe( 0, &exp_type) == 0)	// check wiimote and expansion status (first if wiimote is connected & no errors)
-		//	{
-				pressed = WPAD_ButtonsHeld (0);
-
-		//		if (ctrlr_type != CTRLR_WIIMOTE && exp_type != ctrlr_type+1)	// if we need input from an expansion, and its not connected...
-		//			pressed = 0;
-		//	}
+			pressed = WPAD_ButtonsHeld (0);
 		}
 #endif
 		/*** check for exit sequence (c-stick left OR home button) ***/
@@ -429,27 +425,22 @@ GetButtonMap(u16 ctrlr_type, char* btn_name)
 
 	DrawMenu(&cfg_text[0], NULL, cfg_text_count, 1);	// display text
 
-//	while (previous != pressed && pressed == 0);	// get two consecutive button presses (which are the same)
-//	{
-//		previous = pressed;
-//		VIDEO_WaitVSync();	// slow things down a bit so we don't overread the pads
-		pressed = GetInput(ctrlr_type);
-//	}
+	pressed = GetInput(ctrlr_type);
 	return pressed;
 }	// end getButtonMap()
 
 int cfg_btns_count = 11;
 char cfg_btns_menu[][50] = {
-	"A        -         ",
 	"B        -         ",
-	"L TRIG   -         ",
-	"R TRIG   -         ",
+	"A        -         ",
 	"SELECT   -         ",
 	"START    -         ",
 	"UP       -         ",
 	"DOWN     -         ",
 	"LEFT     -         ",
 	"RIGHT    -         ",
+	"L TRIG   -         ",
+	"R TRIG   -         ",
 	"Return to previous"
 };
 
@@ -512,7 +503,7 @@ ConfigureButtons (u16 ctrlr_type)
 				strncat (temp, ctrlr_def[ctrlr_type].map[j].name, 6);		// update button map display
 			}
 			else
-				strcat (temp, (char*)"---");								// otherwise, button is 'unmapped'
+				strcat (temp, (char*)"---"); // otherwise, button is 'unmapped'
 			strncpy (cfg_btns_menu[i], temp, 19);	// move back updated information
 
 		}
@@ -531,8 +522,6 @@ ConfigureButtons (u16 ctrlr_type)
 			case 7:
 			case 8:
 			case 9:
-			case 10:
-			case 11:
 				/*** Change button map ***/
 				// wait for input
 				memset (temp, 0, sizeof(temp));
@@ -544,7 +533,7 @@ ConfigureButtons (u16 ctrlr_type)
 				break;
 
 			case -1: /*** Button B ***/
-			case 12:
+			case 10:
 				/*** Return ***/
 				quit = 1;
 				break;
@@ -634,7 +623,7 @@ char menuitems[][50] = {
 };
 
 void
-mainmenu (int selectedMenu)
+MainMenu (int selectedMenu)
 {
 	tb_t start,end;
 	mftb(&start);

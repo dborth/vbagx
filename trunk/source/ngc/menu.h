@@ -14,6 +14,6 @@
 
 #define _NGCMENU_
 
-void mainmenu (int selectedMenu);
+void MainMenu (int selectedMenu);
 
 #endif

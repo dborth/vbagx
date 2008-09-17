@@ -174,12 +174,12 @@ ParseFATdirectory(int method)
 int
 LoadFATFile (char *filename, int length)
 {
-	char zipbuffer[2048];
+/*	char zipbuffer[2048];
 	char filepath[MAXPATHLEN];
 	FILE *handle;
 	unsigned char *rbuffer;
 	u32 size;
-
+*/
 	/* Check filename length */
 	if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
 		sprintf(filepath, "%s/%s",currentdir,filelist[selection].filename);

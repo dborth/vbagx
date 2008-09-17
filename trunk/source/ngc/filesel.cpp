@@ -19,11 +19,9 @@
 #include <sys/dir.h>
 
 #ifdef WII_DVD
-#ifdef __cplusplus
 extern "C" {
 #include <di/di.h>
 }
-#endif
 #endif
 
 #include "vba.h"
@@ -31,7 +29,6 @@ extern "C" {
 #include "vmmem.h"
 #include "menudraw.h"
 #include "video.h"
-#include "filesel.h"
 #include "fileop.h"
 #include "memcardop.h"
 #include "input.h"

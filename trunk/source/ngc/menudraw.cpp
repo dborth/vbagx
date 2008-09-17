@@ -48,12 +48,6 @@ extern int screenheight;
 extern unsigned int *xfb[2];
 extern int whichfb;
 
-/*** Permanent backdrop ***/
-#ifdef HW_RVL
-u32 *backdrop;
-#else
-static u32 *backdrop;
-#endif
 unsigned int getcolour (u8 r1, u8 g1, u8 b1);
 void DrawLineFast( int startx, int endx, int y, u8 r, u8 g, u8 b );
 u32 getrgb( u32 ycbr, u32 low );
@@ -235,33 +229,23 @@ Credits ()
 	else
 		ypos += 32;
 
-	setfontsize (18);
-	DrawText (-1, ypos += 30, (char*)"Technical");
+	DrawText (125, ypos += 22, (char*)"VBA GX GameCube/Wii Port");
+	DrawText (350, ypos, (char*)"Tantric");
+	DrawText (125, ypos += 18, (char*)"VBA GameCube Port Improvements");
+	DrawText (350, ypos, (char*)"emukidid");
+	DrawText (125, ypos += 18, (char*)"Original VBA GameCube Port");
+	DrawText (350, ypos, (char*)"SoftDev");
+	DrawText (125, ypos += 18, (char*)"Visual Boy Advance 1.7.2");
+	DrawText (350, ypos, (char*)"Forgotten");
+	DrawText (125, ypos += 18, (char*)"libogc");
+	DrawText (350, ypos, (char*)"Shagkur & wintermute");
+	DrawText (125, ypos += 18, (char*)"Testing");
+	DrawText (350, ypos, (char*)"tehskeen users");
 
-	setfontsize (14);
-	DrawText (-1, ypos += 22, (char*)"Snes9x v1.5.1 - Snes9x Team");
-	DrawText (-1, ypos += 18, (char*)"GameCube Port 2.0 WIP6 and earlier - SoftDev");
-	DrawText (-1, ypos += 18, (char*)"Additional improvements to 2.0 WIP6 - eke-eke");
-	DrawText (-1, ypos += 18, (char*)"GameCube 2.0.1bx enhancements - crunchy2");
-	DrawText (-1, ypos += 18, (char*)"v00x updates - michniewski & Tantric");
-	DrawText (-1, ypos += 18, (char*)"GX - http://www.gc-linux.org");
-	DrawText (-1, ypos += 18, (char*)"libogc - Shagkur & wintermute");
-
-	setfontsize (18);
-	DrawText (-1, ypos += 30, (char*)"Testing");
-
-	setfontsize (14);
-	DrawText (-1, ypos += 22, (char*)"crunchy2 / tehskeen users / others");
-
-	setfontsize (18);
-	DrawText (-1, ypos += 30, (char*)"Documentation");
-
-	setfontsize (14);
-	DrawText (-1, ypos += 22, (char*)"brakken, crunchy2, michniewski");
+	DrawText (-1, ypos += 36, (char*)"And many others who have contributed over the years!");
 
 	setfontsize (12);
-	DrawText (-1, ypos += 50, (char*)"Snes9x - Copyright (c) Snes9x Team 1996 - 2006");
-	DrawText (-1, ypos += 15, (char*)"This software is open source and may be copied, distributed, or modified");
+	DrawText (-1, ypos += 50, (char*)"This software is open source and may be copied, distributed, or modified");
 	DrawText (-1, ypos += 15, (char*)"under the terms of the GNU General Public License (GPL) Version 2.");
 
 	showscreen ();
@@ -447,7 +431,7 @@ DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsiz
 	}
 
 	setfontsize (12);
-	DrawText (510, screenheight - 20, VERSIONSTR);
+	DrawText (510, screenheight - 20, (char *)VERSIONSTR);
 
 	// Draw menu items
 

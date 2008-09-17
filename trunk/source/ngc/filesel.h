@@ -28,6 +28,7 @@ typedef struct
 
 #define MAXFILES 2000 // Restrict to 2000 files per dir
 extern FILEENTRIES filelist[MAXFILES];
+extern char ROMFilename[512];
 
 void ClearSaveBuffer ();
 int OpenROM (int method);

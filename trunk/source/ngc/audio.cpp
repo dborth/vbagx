@@ -30,26 +30,25 @@ static u8 soundbuffer[3200] ATTRIBUTE_ALIGN(32);
 ****************************************************************************/
 void MIXER_AddSamples( u8 *sampledata, int len )
 {
-  u32 *src = (u32 *)sampledata;
-  u32 *dst = (u32 *)mixerdata;
-  u32 intlen = (3200 >> 2);
-  u32 fixofs = 0;
-  u32 fixinc;
+	u32 *src = (u32 *)sampledata;
+	u32 *dst = (u32 *)mixerdata;
+	u32 intlen = (3200 >> 2);
+	u32 fixofs = 0;
+	u32 fixinc;
 
-  if ( !len )
-  	fixinc = 30106;
-  else
-        fixinc = 60211;
+	if ( !len )
+		fixinc = 30106;
+	else
+		fixinc = 60211;
 
-  do
-    {
-	/* Do simple linear interpolate */
-	dst[head++] = src[fixofs >> 16];
-	head &= MIXERMASK;
-	fixofs += fixinc;
-    }
-  while( --intlen );
-
+	do
+	{
+		// Do simple linear interpolate
+		dst[head++] = src[fixofs >> 16];
+		head &= MIXERMASK;
+		fixofs += fixinc;
+	}
+	while( --intlen );
 }
 
 /****************************************************************************
@@ -57,29 +56,29 @@ void MIXER_AddSamples( u8 *sampledata, int len )
 ****************************************************************************/
 int MIXER_GetSamples( u8 *dstbuffer, int maxlen )
 {
-  u32 *src = (u32 *)mixerdata;
-  u32 *dst = (u32 *)dstbuffer;
-  u32 intlen = maxlen >> 2;
+	u32 *src = (u32 *)mixerdata;
+	u32 *dst = (u32 *)dstbuffer;
+	u32 intlen = maxlen >> 2;
 
-  memset(dstbuffer, 0, maxlen);
+	memset(dstbuffer, 0, maxlen);
 
-  while( ( head != tail ) && intlen )
-    {
-      *dst++ = src[tail++];
-      tail &= MIXERMASK;
-      intlen--;
-    }
+	while( ( head != tail ) && intlen )
+	{
+		*dst++ = src[tail++];
+		tail &= MIXERMASK;
+		intlen--;
+	}
 
-  return 3200;
+	return 3200;
 }
 
 static void AudioPlayer()
 {
-  AUDIO_StopDMA();
-  MIXER_GetSamples(soundbuffer, 3200);
-  DCFlushRange(soundbuffer,3200);
-  AUDIO_InitDMA((u32)soundbuffer,3200);
-  AUDIO_StartDMA();
+	AUDIO_StopDMA();
+	MIXER_GetSamples(soundbuffer, 3200);
+	DCFlushRange(soundbuffer,3200);
+	AUDIO_InitDMA((u32)soundbuffer,3200);
+	AUDIO_StartDMA();
 }
 
 void InitialiseSound()
