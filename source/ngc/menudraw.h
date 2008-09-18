@@ -19,7 +19,7 @@
 
 #include "filesel.h"
 
-#define PAGESIZE 17 // max item listing on a screen
+#define PAGESIZE 13 // max item listing on a screen
 
 int FT_Init ();
 void setfontsize (int pixelsize);

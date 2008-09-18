@@ -16,6 +16,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <wiiuse/wpad.h>
+#include "images/bg.h"
 
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
@@ -313,13 +314,7 @@ clearscreen (int c)
 
 	whichfb ^= 1;
 	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], colour);
-#ifdef HW_RVL
-	// on wii copy from memory
-	//memcpy ((char *) xfb[whichfb], (char *) backdrop, 640 * screenheight * 2);
-#else
-	// on gc copy from aram
-	//ARAMFetch ((char *) xfb[whichfb], (char *) AR_BACKDROP, 640 * screenheight * 2);
-#endif
+	memcpy (xfb[whichfb], &bg, 1280 * 480);
 }
 
 void

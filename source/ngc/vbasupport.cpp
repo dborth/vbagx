@@ -229,8 +229,13 @@ bool SaveBattery(int method, bool silent)
 		result = emulator.emuWriteBattery(filepath);
 	}
 
-	if(!result && !silent)
-		WaitPrompt ((char*) "Save failed");
+	if(!silent)
+	{
+		if(result)
+			WaitPrompt ((char*) "Save successful");
+		else
+			WaitPrompt ((char*) "Save failed");
+	}
 
 	return result;
 }
@@ -275,8 +280,13 @@ bool SaveState(int method, bool silent)
 		result = emulator.emuWriteState(filepath);
 	}
 
-	if(!result && !silent)
-		WaitPrompt ((char*) "Save failed");
+	if(!silent)
+	{
+		if(result)
+			WaitPrompt ((char*) "Save successful");
+		else
+			WaitPrompt ((char*) "Save failed");
+	}
 
 	return result;
 }

@@ -8,19 +8,14 @@
 /* memgzio.c - IO on .gz files in memory
  * Adapted from original gzio.c from zlib library by Forgotten
  */
-/*
 #ifndef HAVE_ZUTIL_H
 #include "../win32/include/zlib/zutil.h"
 #else
 #include <zutil.h>
 #endif
-*/
-
-#include <zlib.h>
 
 gzFile ZEXPORT memgzopen(char *memory, int, const char *);
 int ZEXPORT memgzread(gzFile, voidp, unsigned);
 int ZEXPORT memgzwrite(gzFile, const voidp, unsigned);
 int ZEXPORT memgzclose(gzFile);
 long ZEXPORT memtell(gzFile);
-
