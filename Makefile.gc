@@ -25,7 +25,7 @@ INCLUDES 	:=  source/vba source/vba/gb source/ngc
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS  = 	-g -Os -Wall $(MACHDEP) $(INCLUDE) -maltivec \
+CFLAGS  = 	-g -O2 -Wall $(MACHDEP) $(INCLUDE) -maltivec \
 	  		-DNGC -DWORDS_BIGENDIAN -DC_CORE \
 	  		-DCHANFFS -DSDL -DHAVE_ZUTIL_H
 CXXFLAGS	= -save-temps -Xassembler -aln=$@.lst $(CFLAGS)
