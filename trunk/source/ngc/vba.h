@@ -12,9 +12,9 @@
 #define _VBA_H_
 
 #include <gccore.h>
-#define VERSIONNUM 		"1.0.0"
-#define VERSIONSTR 		"VBA GX 1.0.0"
-#define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.0"
+#define VERSIONNUM 		"1.0.1"
+#define VERSIONSTR 		"VBA GX 1.0.1"
+#define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.1"
 
 #define NOTSILENT 0
 #define SILENT 1
