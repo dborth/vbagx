@@ -194,7 +194,7 @@ u32 DecodeJoy(unsigned short pad)
 	signed char pad_x = PAD_StickX (pad);
 	signed char pad_y = PAD_StickY (pad);
 	u32 jp = PAD_ButtonsHeld (pad);
-	unsigned char J = 0;
+	u32 J = 0;
 
 	#ifdef HW_RVL
 	signed char wm_ax = 0;
@@ -298,12 +298,16 @@ u32 DecodeJoy(unsigned short pad)
 			J |= vbapadmap[i];
 	}
 
+	if ((J & 48) == 48)
+		J &= ~16;
+	if ((J & 192) == 192)
+		J &= ~128;
+
 	return J;
 }
 u32 GetJoy()
 {
     int pad = 0;
-    u32 res = 0;
 
     s8 gc_px = PAD_SubStickX (0);
 
@@ -339,12 +343,6 @@ u32 GetJoy()
 	}
 	else
 	{
-		res = DecodeJoy(pad);
-		if ((res & 48) == 48)
-			res &= ~16;
-		if ((res & 192) == 192)
-			res &= ~128;
-
-		return res;
+		return DecodeJoy(pad);
 	}
 }

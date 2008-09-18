@@ -206,6 +206,17 @@ setfontcolour (u8 r, u8 g, u8 b)
 }
 
 /****************************************************************************
+ * Draws Version # on screen
+ ***************************************************************************/
+
+void DrawVersion()
+{
+	setfontsize (12);
+	setfontcolour (0,0,0);
+	DrawText (115, screenheight - 34, (char *)VERSIONSTRFULL);
+}
+
+/****************************************************************************
  * Display credits, legal copyright and licence
  *
  * THIS MUST NOT BE REMOVED IN ANY DERIVATIVE WORK.
@@ -217,10 +228,10 @@ Credits ()
 
 	setfontcolour (0x00, 0x00, 0x00);
 
-	setfontsize (28);
-	DrawText (-1, 60, (char*)"Credits");
+	setfontsize (26);
+	DrawText (-1, 150, (char*)"Credits");
 
-	int ypos = 25;
+	int ypos = 120;
 
 	if (screenheight == 480)
 		ypos += 52;
@@ -245,9 +256,11 @@ Credits ()
 	DrawText (-1, ypos += 36, (char*)"And many others who have contributed over the years!");
 
 	setfontsize (12);
-	DrawText (-1, ypos += 50, (char*)"This software is open source and may be copied, distributed, or modified");
-	DrawText (-1, ypos += 15, (char*)"under the terms of the GNU General Public License (GPL) Version 2.");
+	DrawText (-1, ypos += 50, (char*)"This software is open source and may be copied,");
+	DrawText (-1, ypos += 15, (char*)"distributed, or modified under the terms of");
+	DrawText (-1, ypos += 15, (char*)"the GNU General Public License (GPL) Version 2.");
 
+	DrawVersion();
 	showscreen ();
 }
 
@@ -353,9 +366,12 @@ WaitPrompt (char *msg)
 		ypos += 32;
 
 	clearscreen ();
+	setfontsize(20);
 	DrawText (-1, ypos, msg);
 	ypos += 30;
 	DrawText (-1, ypos, (char*)"Press A to continue");
+
+	DrawVersion();
 	showscreen ();
 	WaitButtonA ();
 }
@@ -375,11 +391,14 @@ WaitPromptChoice (char *msg, char *bmsg, char *amsg)
 		ypos += 17;
 
 	clearscreen ();
+	setfontsize(20);
 	DrawText (-1, ypos, msg);
 	ypos += 60;
 	char txt[80];
 	sprintf (txt, "B = %s   :   A = %s", bmsg, amsg);
 	DrawText (-1, ypos, txt);
+
+	DrawVersion();
 	showscreen ();
 	return WaitButtonAB ();
 }
@@ -398,7 +417,10 @@ ShowAction (char *msg)
 		ypos += 32;
 
 	clearscreen ();
+	setfontsize(20);
 	DrawText (-1, ypos, msg);
+
+	DrawVersion();
 	showscreen ();
 }
 
@@ -413,7 +435,7 @@ DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsiz
 	int n = 1;
 	int line_height;
 
-	ypos = 45;
+	ypos = 105;
 
 	if (screenheight == 480)
 		ypos += 52;
@@ -426,12 +448,9 @@ DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsiz
 
 	if (title != NULL)
 	{
-		setfontsize (28);
-		DrawText (-1, 60, title);
+		setfontsize (26);
+		DrawText (-1, 150, title);
 	}
-
-	setfontsize (14);
-	DrawText (380, screenheight - 30, (char *)VERSIONSTRFULL);
 
 	// Draw menu items
 
@@ -448,11 +467,11 @@ DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsiz
 			else if (i == selected)
 			{
 				for( w = 0; w < line_height; w++ )
-					DrawLineFast( 30, 610, n * line_height + (ypos-line_height+6) + w, 0x80, 0x80, 0x80 );
+					DrawLineFast( 77, 575, n * line_height + (ypos-line_height+6) + w, 0x00, 0x00, 0x00 );
 
-				setfontcolour (0xff, 0xff, 0xff);
+				//setfontcolour (0xff, 0xff, 0xff);
 				DrawText (x, n * line_height + ypos, items[i]);
-				setfontcolour (0x00, 0x00, 0x00);
+				//setfontcolour (0x00, 0x00, 0x00);
 			}
 			else
 			{
@@ -462,8 +481,8 @@ DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsiz
 		}
 	}
 
+	DrawVersion();
 	showscreen ();
-
 }
 
 /****************************************************************************
@@ -584,8 +603,8 @@ ShowFiles (FILEENTRIES filelist[], int maxfiles, int offset, int selection)
 
 	clearscreen ();
 
-	setfontsize (28);
-	DrawText (-1, 60, (char*)"Choose Game");
+	setfontsize (26);
+	DrawText (-1, 150, (char*)"Choose Game");
 
 	setfontsize(18);
 
@@ -595,6 +614,8 @@ ShowFiles (FILEENTRIES filelist[], int maxfiles, int offset, int selection)
 		ypos += 24;
 	else
 		ypos += 10;
+
+	ypos += 30;
 
 	j = 0;
 	for (i = offset; i < (offset + PAGESIZE) && (i < maxfiles); i++)
@@ -614,19 +635,18 @@ ShowFiles (FILEENTRIES filelist[], int maxfiles, int offset, int selection)
 		{
 			/*** Highlighted text entry ***/
 			for ( w = 0; w < 20; w++ )
-				DrawLineFast( 30, 610, ( j * 20 ) + (ypos-16) + w, 0x80, 0x80, 0x80 );
-
-			setfontcolour (0x00, 0x00, 0xe0);
-			DrawText (50, (j * 20) + ypos, text);
-			setfontcolour (0x00, 0x00, 0x00);
+				DrawLineFast( 77, 575, ( j * 20 ) + (ypos-16) + w, 0x00, 0x00, 0x00 );
+			DrawText (100, (j * 20) + ypos, text);
 		}
 		else
 		{
 			/*** Normal entry ***/
-			DrawText (50, (j * 20) + ypos, text);
+			DrawText (100, (j * 20) + ypos, text);
 		}
 		j++;
 	}
+
+	DrawVersion();
 	showscreen ();
 }
 
@@ -645,8 +665,8 @@ ShowCheats (char items[][50], char itemvalues[][50], int maxitems, int offset, i
 
 	clearscreen ();
 
-	setfontsize (28);
-	DrawText (-1, 60, (char*)"Cheats");
+	setfontsize (26);
+	DrawText (-1, 150, (char*)"Cheats");
 
 	setfontsize(18);
 
@@ -676,6 +696,8 @@ ShowCheats (char items[][50], char itemvalues[][50], int maxitems, int offset, i
 		}
 		j++;
 	}
+
+	DrawVersion();
 	showscreen ();
 }
 
@@ -784,6 +806,7 @@ ShowProgress (char *msg, int done, int total)
   int i;
 
   clearscreen ();
+  setfontsize(20);
   DrawText (-1, ypos, msg);
 
 	/*** Draw a white outline box ***/
@@ -796,6 +819,7 @@ ShowProgress (char *msg, int done, int total)
   for (i = 381; i < 400; i++)
     DrawLine (101, i, 101 + xpos, i, 0x00, 0x00, 0x80);
 
+  DrawVersion();
   showscreen ();
 }
 
