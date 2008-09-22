@@ -60,3 +60,5 @@
 #define MSG_INVALID_CBA_CODE               39
 #define MSG_CBA_CODE_WARNING               40
 #define MSG_OUT_OF_MEMORY                  41
+#define MSG_WRONG_GAMESHARK_CODE           42
+#define MSG_UNSUPPORTED_GAMESHARK_CODE     43

@@ -2,6 +2,7 @@
 // VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
 // Copyright (C) 1999-2003 Forgotten
 // Copyright (C) 2004 Forgotten and the VBA development team
+// Copyright (C) 2004-2006 VBA development team
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,6 +20,8 @@
 
 #ifndef VBA_SOUND_H
 #define VBA_SOUND_H
+
+#include "System.h"
 
 #define NR10 0x60
 #define NR11 0x62
@@ -47,23 +50,22 @@
 #define FIFOB_L 0xa4
 #define FIFOB_H 0xa6
 
-extern void soundTick();
-extern void soundShutdown();
-extern bool soundInit();
-extern void soundPause();
-extern void soundResume();
-extern void soundEnable(int);
-extern void soundDisable(int);
-extern int  soundGetEnable();
-extern void soundReset();
-extern void soundSaveGame(gzFile);
-extern void soundReadGame(gzFile, int);
-extern void soundEvent(u32, u8);
-extern void soundEvent(u32, u16);
-extern void soundTimerOverflow(int);
-extern void soundSetQuality(int);
+void soundTick();
+void soundShutdown();
+bool soundInit();
+void soundPause();
+void soundResume();
+void soundEnable(int);
+void soundDisable(int);
+int  soundGetEnable();
+void soundReset();
+void soundSaveGame(gzFile);
+void soundReadGame(gzFile, int);
+void soundEvent(u32, u8);
+void soundEvent(u32, u16);
+void soundTimerOverflow(int);
+void soundSetQuality(int);
 
-//extern int SOUND_TICKS;
 extern int SOUND_CLOCK_TICKS;
 extern int soundTicks;
 extern int soundPaused;

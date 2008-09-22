@@ -22,20 +22,18 @@
 
 #include "System.h"
 
-struct CheatSearchBlock
-  {
-    int size;
-    u32 offset;
-    u8 *bits;
-    u8 *data;
-    u8 *saved;
-  };
+struct CheatSearchBlock {
+  int size;
+  u32 offset;
+  u8 *bits;
+  u8 *data;
+  u8 *saved;
+};
 
-struct CheatSearchData
-  {
-    int count;
-    CheatSearchBlock *blocks;
-  };
+struct CheatSearchData {
+  int count;
+  CheatSearchBlock *blocks;
+};
 
 enum {
   SEARCH_EQ,
@@ -65,9 +63,9 @@ extern CheatSearchData cheatSearchData;
 extern void cheatSearchCleanup(CheatSearchData *cs);
 extern void cheatSearchStart(const CheatSearchData *cs);
 extern void cheatSearch(const CheatSearchData *cs, int compare, int size,
-                          bool isSigned);
+                        bool isSigned);
 extern void cheatSearchValue(const CheatSearchData *cs, int compare, int size,
-                               bool isSigned, u32 value);
+                             bool isSigned, u32 value);
 extern int cheatSearchGetCount(const CheatSearchData *cs, int size);
 extern void cheatSearchUpdateValues(const CheatSearchData *cs);
 extern s32 cheatSearchSignedRead(u8 *data, int off, int size);

@@ -33,8 +33,6 @@ static inline u32 swap32(u32 v)
 }
 
 #ifdef WORDS_BIGENDIAN
-#define __ppc__
-
 #if defined(__GNUC__) && defined(__ppc__)
 
 #define READ16LE(base) \

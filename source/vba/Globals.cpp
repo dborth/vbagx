@@ -1,6 +1,6 @@
 // VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
 // Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2004 Forgotten and the VBA development team
+// Copyright (C) 2005 Forgotten and the VBA development team
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,7 +16,12 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "GBA.h"
+#include "agb/GBA.h"
+
+#ifdef BKPT_SUPPORT
+int  oldreg[17];
+char oldbuffer[10];
+#endif
 
 reg_pair reg[45];
 memoryMap map[256];
@@ -43,8 +48,9 @@ int layerSettings = 0xff00;
 int layerEnable = 0xff00;
 bool speedHack = false;
 int cpuSaveType = 0;
-bool cpuEnhancedDetection = true;
 bool cheatsEnabled = true;
+bool mirroringEnable = false;
+bool skipSaveGameBattery = false;
 
 u8 *bios = NULL;
 u8 *rom = NULL;

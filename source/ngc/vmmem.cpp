@@ -17,7 +17,7 @@
 #include <fat.h>
 #include <sys/dir.h>
 
-#include "GBA.h"
+#include "agb/GBA.h"
 #include "Globals.h"
 #include "Util.h"
 #include "Port.h"
@@ -104,20 +104,16 @@ static void VMClose( void )
 int VMCPULoadROM( char *filename )
 {
   int res=0;
-  char temp[512];
+  //char temp[512];
   VMClose();
   VMAllocGBA();
 
   GBAROMSize = 0;
 
-  sprintf(temp,"Filename %s\n", filename);
-  //WaitPrompt(temp);
-
   romfile = gen_fopen(filename, "rb");
   if ( romfile == NULL )
     {
 	  WaitPrompt((char*) "Error opening file!");
-      //while(1);
       VMClose();
       return 0;
     }
@@ -126,7 +122,7 @@ int VMCPULoadROM( char *filename )
 	GBAROMSize = ftell(romfile);
 	fseek(romfile, 0, SEEK_SET);
 
-    sprintf(temp,"ROM Size %dMb (%dMBit)",  GBAROMSize/1024/1024,(GBAROMSize*8)/1024/1024);
+    //sprintf(temp,"ROM Size %dMb (%dMBit)",  GBAROMSize/1024/1024,(GBAROMSize*8)/1024/1024);
     //WaitPrompt(temp);
 
 	rom = (u8 *)MEM2Storage;
@@ -137,7 +133,8 @@ int VMCPULoadROM( char *filename )
     if ( (u32)res != GBAROMSize )
     {
     	WaitPrompt((char*) "Error reading file!");
-        while(1);
+    	VMClose();
+    	return 0;
     }
   strcpy( romfilename, filename );
 
@@ -208,7 +205,7 @@ u8 VMRead8( u32 address )
 #include <string.h>
 #include <malloc.h>
 
-#include "GBA.h"
+#include "agb/GBA.h"
 #include "Globals.h"
 #include "Util.h"
 #include "Port.h"
@@ -389,13 +386,12 @@ int VMCPULoadROM( char *filename )
 
   loadtimeradjust = useVM = GBAROMSize = 0;
 
-  printf("Filename %s\n", filename);
+  //printf("Filename %s\n", filename);
 
   romfile = gen_fopen(filename, "rb");
   if ( romfile == NULL )
     {
 	  WaitPrompt((char*) "Error opening file!");
-      while(1);
       VMClose();
       return 0;
     }
@@ -408,7 +404,8 @@ int VMCPULoadROM( char *filename )
       {
 		sprintf(msg, "Error reading file! %i \n",res);
 		WaitPrompt(msg);
-        while(1);
+        VMClose();
+        return 0;
       }
 
 	fseek(romfile, 0, SEEK_END);
@@ -446,7 +443,8 @@ static void VMNewPage( int pageid )
     {
       sprintf(msg, "Seek error! - Offset %08x %d\n", pageid << VMSHIFTBITS, res);
       WaitPrompt(msg);
-      while(1);
+      VMClose();
+      return;
     }
 
   VMAllocate( pageid );
@@ -456,7 +454,8 @@ static void VMNewPage( int pageid )
     {
       sprintf(msg, "Error reading! %d bytes only\n", res);
       WaitPrompt(msg);
-      while(1);
+      VMClose();
+      return;
     }
 
    mftb(&end);
@@ -516,7 +515,8 @@ u32 VMRead32( u32 address )
 	default:
 		sprintf(msg, "VM32 : Unknown page type! (%d) [%d]", vmpage[pageid].pagetype, pageid);
 		WaitPrompt(msg);
-		while(1);
+		VMClose();
+        return 0;
   }
 
   /* Can never get here ... but stops gcc bitchin' */
@@ -555,7 +555,8 @@ u16 VMRead16( u32 address )
 
 	default:
 		WaitPrompt((char*) "VM16 : Unknown page type!");
-  		while(1);
+  		VMClose();
+        return 0;
   }
 
   /* Can never get here ... but stops gcc bitchin' */
@@ -594,7 +595,8 @@ u8 VMRead8( u32 address )
 
 	default:
 		WaitPrompt((char*) "VM8 : Unknown page type!");
-  		while(1);
+  		VMClose();
+        return 0;
   }
 
   /* Can never get here ... but stops gcc bitchin' */

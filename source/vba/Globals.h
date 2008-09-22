@@ -1,7 +1,7 @@
 // -*- C++ -*-
 // VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
 // Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2004 Forgotten and the VBA development team
+// Copyright (C) 2005 Forgotten and the VBA development team
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
 #ifndef VBA_GLOBALS_H
 #define VBA_GLOBALS_H
 
+#include "agb/GBA.h"
+
 #define VERBOSE_SWI                  1
 #define VERBOSE_UNALIGNED_MEMORY     2
 #define VERBOSE_ILLEGAL_WRITE        4
@@ -30,6 +32,7 @@
 #define VERBOSE_DMA3               128
 #define VERBOSE_UNDEFINED          256
 #define VERBOSE_AGBPRINT           512
+#define VERBOSE_SOUNDOUTPUT       1024
 
 extern reg_pair reg[45];
 extern bool ioReadable[0x400];
@@ -55,8 +58,9 @@ extern int layerSettings;
 extern int layerEnable;
 extern bool speedHack;
 extern int cpuSaveType;
-extern bool cpuEnhancedDetection;
 extern bool cheatsEnabled;
+extern bool mirroringEnable;
+extern bool skipSaveGameBattery;
 
 extern u8 *bios;
 extern u8 *rom;
