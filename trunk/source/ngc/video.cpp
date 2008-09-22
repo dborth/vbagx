@@ -17,11 +17,12 @@
 #include <malloc.h>
 #include <wiiuse/wpad.h>
 #include "images/bg.h"
+#include "pal60.h"
 
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
 GXRModeObj *vmode;		/*** Graphics Mode Object ***/
-u32 *xfb[2] = { NULL, NULL };	/*** Framebuffers ***/
+unsigned int *xfb[2];	/*** Framebuffers ***/
 int whichfb = 0;		/*** Frame buffer toggle ***/
 
 int screenheight;
@@ -141,6 +142,12 @@ void InitialiseVideo ()
 
     VIDEO_SetNextFramebuffer(xfb[0]);
     VIDEO_SetBlack(FALSE);
+
+    // set timings in VI to PAL60
+	/*u32 *vreg = (u32 *)0xCC002000;
+	for (int i = 0; i < 64; i++ )
+		vreg[i] = vpal60[i];*/
+
     VIDEO_Flush();
     VIDEO_WaitVSync();
 
@@ -310,7 +317,7 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 void
 clearscreen (int c)
 {
-	int colour = COLOR_WHITE;
+	int colour = COLOR_BLACK;
 
 	whichfb ^= 1;
 	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], colour);

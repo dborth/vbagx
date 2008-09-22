@@ -21,6 +21,7 @@
 #include "fileop.h"
 #include "smbop.h"
 #include "filesel.h"
+#include "input.h"
 
 extern unsigned char savebuffer[];
 extern int currconfig[4];
@@ -76,7 +77,7 @@ void createXMLController(unsigned int controller[], const char * name, const cha
 	mxmlElementSetAttr(item, "description", description);
 
 	// create buttons
-	for(int i=0; i < 12; i++)
+	for(int i=0; i < MAXJP; i++)
 	{
 		elem = mxmlNewElement(item, "button");
 		mxmlElementSetAttr(elem, "number", toStr(i));
@@ -212,7 +213,7 @@ void loadXMLController(unsigned int controller[], const char * name)
 	if(item)
 	{
 		// populate buttons
-		for(int i=0; i < 12; i++)
+		for(int i=0; i < MAXJP; i++)
 		{
 			elem = mxmlFindElement(item, xml, "button", "number", toStr(i), MXML_DESCEND);
 			if(elem)
@@ -242,13 +243,23 @@ decodePrefsData (int method)
 	xml = mxmlLoadString(NULL, (char *)savebuffer+offset, MXML_TEXT_CALLBACK);
 
 	// check settings version
-	// we don't do anything with the version #, but we'll store it anyway
 	char * version;
 	item = mxmlFindElement(xml, xml, "file", "version", NULL, MXML_DESCEND);
 	if(item) // a version entry exists
 		version = (char *)mxmlElementGetAttr(item, "version");
 	else // version # not found, must be invalid
 		return false;
+
+	// this code assumes version in format X.X.X
+	// XX.X.X, X.XX.X, or X.X.XX will NOT work
+	char verMajor = version[7];
+	char verMinor = version[9];
+	char verPoint = version[11];
+
+	if(verPoint < '2' && verMajor == '1') // less than version 1.0.2
+		return false; // reset settings
+	else if(verMajor > '1' || verMinor > '0' || verPoint > '2') // some future version
+		return false; // reset settings
 
 	// File Settings
 

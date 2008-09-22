@@ -7,14 +7,13 @@
  *
  * This file controls overall program flow. Most things start and end here!
  ***************************************************************************/
-
 #ifndef _VBA_H_
 #define _VBA_H_
 
 #include <gccore.h>
-#define VERSIONNUM 		"1.0.1"
-#define VERSIONSTR 		"VBA GX 1.0.1"
-#define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.1"
+#define VERSIONNUM 		"1.0.2"
+#define VERSIONSTR 		"VBA GX 1.0.2"
+#define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.2"
 
 #define NOTSILENT 0
 #define SILENT 1
