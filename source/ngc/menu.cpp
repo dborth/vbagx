@@ -311,6 +311,7 @@ GameMenu ()
 
 			case 2: // Load Battery
 				quit = retval = LoadBattery(GCSettings.SaveMethod, NOTSILENT);
+				emulator.emuReset();
 				break;
 
 			case 3: // Save Battery

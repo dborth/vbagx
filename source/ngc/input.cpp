@@ -26,8 +26,6 @@
 #include "input.h"
 #include "tbtime.h"
 
-#define MAXJP 10
-
 #define VBA_BUTTON_A		1
 #define VBA_BUTTON_B		2
 #define VBA_BUTTON_SELECT	4
@@ -193,16 +191,15 @@ u32 DecodeJoy(unsigned short pad)
 {
 	signed char pad_x = PAD_StickX (pad);
 	signed char pad_y = PAD_StickY (pad);
+	signed char gc_px = PAD_SubStickX (0);
 	u32 jp = PAD_ButtonsHeld (pad);
 	u32 J = 0;
 
 	#ifdef HW_RVL
-	signed char wm_ax = 0;
-	signed char wm_ay = 0;
-	u32 wp = 0;
-	wm_ax = WPAD_StickX ((u8)pad, 0);
-	wm_ay = WPAD_StickY ((u8)pad, 0);
-	wp = WPAD_ButtonsHeld (pad);
+	signed char wm_ax = WPAD_StickX ((u8)pad, 0);
+	signed char wm_ay = WPAD_StickY ((u8)pad, 0);
+	u32 wp = WPAD_ButtonsHeld (pad);
+	signed char wm_sx = WPAD_StickX (0,1); // CC right joystick
 
 	u32 exp_type;
 	if ( WPAD_Probe(pad, &exp_type) != 0 ) exp_type = WPAD_EXP_NONE;
@@ -282,6 +279,16 @@ u32 DecodeJoy(unsigned short pad)
 		}
 	}
 #endif
+
+	// Zoom feature
+	if(
+	(gc_px > 70)
+	#ifdef HW_RVL
+	|| (wm_sx > 70)
+	|| ((wp & WPAD_BUTTON_A) && (wp & WPAD_BUTTON_B))
+	#endif
+	)
+		J |= VBA_SPEED;
 
 	/*** Report pressed buttons (gamepads) ***/
 	int i;
