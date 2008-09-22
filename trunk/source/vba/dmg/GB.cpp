@@ -2548,9 +2548,11 @@ bool gbReadSaveState(const char *name)
 
 bool gbWritePNGFile(const char *fileName)
 {
-  if(gbBorderOn)
-    return utilWritePNGFile(fileName, 256, 224, pix);
-  return utilWritePNGFile(fileName, 160, 144, pix);
+ // if(gbBorderOn)
+ //   return utilWritePNGFile(fileName, 256, 224, pix);
+//  return utilWritePNGFile(fileName, 160, 144, pix);
+
+return false;
 }
 
 bool gbWriteBMPFile(const char *fileName)

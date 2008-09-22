@@ -1,4 +1,3 @@
-// -*- C++ -*-
 // VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
 // Copyright (C) 1999-2003 Forgotten
 // Copyright (C) 2004 Forgotten and the VBA development team
@@ -17,11 +16,32 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#ifndef VBA_SRAM_H
-#define VBA_SRAM_H
+#include "../System.h"
 
-extern u8 sramRead(u32 address);
-extern void sramWrite(u32 address, u8 byte);
-extern void sramDelayedWrite(u32 address, u8 byte);
+int coeff[32] = {
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
 
-#endif // VBA_SRAM_H
+u32 line0[240];
+u32 line1[240];
+u32 line2[240];
+u32 line3[240];
+u32 lineOBJ[240];
+u32 lineOBJWin[240];
+u32 lineMix[240];
+bool gfxInWin0[240];
+bool gfxInWin1[240];
+int lineOBJpixleft[128];
+
+int gfxBG2Changed = 0;
+int gfxBG3Changed = 0;
+
+int gfxBG2X = 0;
+int gfxBG2Y = 0;
+int gfxBG2LastX = 0;
+int gfxBG2LastY = 0;
+int gfxBG3X = 0;
+int gfxBG3Y = 0;
+int gfxBG3LastX = 0;
+int gfxBG3LastY = 0;
+int gfxLastVCOUNT = 0;

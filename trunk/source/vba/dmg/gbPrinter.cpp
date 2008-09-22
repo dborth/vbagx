@@ -18,7 +18,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "../GBA.h"
+#include "../agb/GBA.h"
 
 u8 gbPrinterStatus = 0;
 int gbPrinterState = 0;

@@ -17,11 +17,11 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#ifndef VBA_SRAM_H
-#define VBA_SRAM_H
-
-extern u8 sramRead(u32 address);
-extern void sramWrite(u32 address, u8 byte);
-extern void sramDelayedWrite(u32 address, u8 byte);
-
-#endif // VBA_SRAM_H
+#ifndef VBA_AGBPRINT_H
+#define VBA_AGBPRINT_H
+extern void agbPrintEnable(bool);
+extern bool agbPrintIsEnabled();
+extern void agbPrintReset();
+extern bool agbPrintWrite(u32, u16);
+extern void agbPrintFlush();
+#endif

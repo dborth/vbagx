@@ -13,23 +13,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "GBA.h"
-#include "agbprint.h"
+#include "agb/GBA.h"
+#include "agb/agbprint.h"
 #include "Flash.h"
 #include "Port.h"
 #include "RTC.h"
 #include "Sound.h"
-#include "Text.h"
 #include "unzip.h"
 #include "Util.h"
-#include "gb/GB.h"
-#include "gb/gbGlobals.h"
+#include "dmg/GB.h"
+#include "dmg/gbGlobals.h"
 
 #include "vba.h"
 #include "fileop.h"
 #include "audio.h"
 #include "vmmem.h"
-#include "pal60.h"
 #include "input.h"
 #include "video.h"
 #include "menudraw.h"
@@ -43,9 +41,6 @@ extern "C"
 static tb_t start, now;
 
 u32 loadtimeradjust;
-
-int throttle = 100;
-u32 throttleLastTime = 0;
 
 static u32 autoFrameSkipLastTime = 0;
 static int frameskipadjust = 0;
@@ -122,7 +117,7 @@ bool systemPauseOnFrame()
 {
 	return false;
 }
-
+/*
 void GC_Sleep(u32 dwMiliseconds)
 {
 	int nVBlanks = (dwMiliseconds / 16);
@@ -131,7 +126,7 @@ void GC_Sleep(u32 dwMiliseconds)
 		VIDEO_WaitVSync();
 	}
 }
-
+*/
 void system10Frames(int rate)
 {
 	if ( cartridgeType == 1 )
@@ -181,8 +176,8 @@ void system10Frames(int rate)
 ****************************************************************************/
 
 void systemGbPrint(u8 *data,int pages,int feed,int palette, int contrast) {}
-void debuggerOutput(char *, u32) {}
-void (*dbgOutput)(char *, u32) = debuggerOutput;
+void debuggerOutput(const char *s, u32 addr) {}
+void (*dbgOutput)(const char *s, u32 addr) = debuggerOutput;
 void systemMessage(int num, const char *msg, ...) {}
 
 /****************************************************************************
@@ -397,7 +392,7 @@ int loadVBAROM(char filename[])
 	}
 
 	// Set defaults
-	flashSetSize(0x10000);
+	flashSetSize(0x20000); // 128K saves
 	rtcEnable(true);
 	agbPrintEnable(false);
 	soundOffFlag = false;
@@ -424,6 +419,9 @@ int loadVBAROM(char filename[])
 	soundInit();
 
 	emulating = 1;
+
+	// reset frameskip variables
+	autoFrameSkipLastTime = frameskipadjust = systemFrameSkip = 0;
 
 	// Start system clock
 	mftb(&start);
