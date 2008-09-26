@@ -25,6 +25,7 @@
 #include "../RTC.h"
 #include "../Sound.h"
 #include "agbprint.h"
+#include "vmmem.h" // Nintendo GC Virtual Memory
 
 extern const u32 objTilesAddress[3];
 
@@ -52,14 +53,72 @@ extern int timer3Ticks;
 extern int timer3ClockReload;
 extern int cpuTotalTicks;
 
-#define CPUReadByteQuick(addr) \
+/*****************************************************************************
+ * Nintendo GC Virtual Memory function override
+ * Tantric September 2008
+ ****************************************************************************/
+
+#define CPUReadByteQuickDef(addr) \
   map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]
 
-#define CPUReadHalfWordQuick(addr) \
+#define CPUReadHalfWordQuickDef(addr) \
   READ16LE(((u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 
-#define CPUReadMemoryQuick(addr) \
+#define CPUReadMemoryQuickDef(addr) \
   READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
+
+u8 inline CPUReadByteQuick( u32 addr )
+{
+	switch(addr >> 24 )
+	{
+		case 8:
+		case 9:
+		case 10:
+		case 12:
+			return VMRead8( addr & 0x1FFFFFF );
+
+		default:
+			return CPUReadByteQuickDef(addr);
+	}
+
+	return 0;
+}
+
+u16 inline CPUReadHalfWordQuick( u32 addr )
+{
+	switch(addr >> 24)
+	{
+		case 8:
+		case 9:
+		case 10:
+		case 12:
+			return VMRead16( addr & 0x1FFFFFF );
+		default:
+			return CPUReadHalfWordQuickDef(addr);
+	}
+
+	return 0;
+}
+
+u32 inline CPUReadMemoryQuick( u32 addr )
+{
+	switch(addr >> 24)
+	{
+		case 8:
+		case 9:
+		case 10:
+		case 12:
+			return VMRead32( addr & 0x1FFFFFF );
+		default:
+			return CPUReadMemoryQuickDef(addr);
+	}
+
+	return 0;
+}
+
+/*****************************************************************************
+ * End of NGC VM override
+ ****************************************************************************/
 
 static inline u32 CPUReadMemory(u32 address)
 {
@@ -126,7 +185,11 @@ static inline u32 CPUReadMemory(u32 address)
   case 10:
   case 11:
   case 12:
-    value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
+#ifdef USE_VM // Nintendo GC Virtual Memory
+	  value = VMRead32( address & 0x1FFFFFC );
+#else
+	  value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
+#endif
     break;
   case 13:
     if(cpuEEPROMEnabled)
@@ -151,10 +214,19 @@ static inline u32 CPUReadMemory(u32 address)
       value = cpuDmaLast;
     } else {
       if(armState) {
-        value = CPUReadMemoryQuick(reg[15].I);
+#ifdef USE_VM // Nintendo GC Virtual Memory
+    	  value = CPUReadMemoryQuick(reg[15].I);
+#else
+        value = CPUReadMemoryQuickDef(reg[15].I);
+#endif
       } else {
+#ifdef USE_VM // Nintendo GC Virtual Memory
         value = CPUReadHalfWordQuick(reg[15].I) |
           CPUReadHalfWordQuick(reg[15].I) << 16;
+#else
+        value = CPUReadHalfWordQuickDef(reg[15].I) |
+          CPUReadHalfWordQuickDef(reg[15].I) << 16;
+#endif
       }
     }
   }
@@ -265,7 +337,11 @@ static inline u32 CPUReadHalfWord(u32 address)
     if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)
       value = rtcRead(address);
     else
-      value = READ16LE(((u16 *)&rom[address & 0x1FFFFFE]));
+#ifdef USE_VM // Nintendo GC Virtual Memory
+    	value = VMRead16( address & 0x1FFFFFE );
+#else
+    	value = READ16LE(((u16 *)&rom[address & 0x1FFFFFE]));
+#endif
     break;
   case 13:
     if(cpuEEPROMEnabled)
@@ -289,9 +365,17 @@ static inline u32 CPUReadHalfWord(u32 address)
       value = cpuDmaLast & 0xFFFF;
     } else {
       if(armState) {
+#ifdef USE_VM // Nintendo GC Virtual Memory
         value = CPUReadHalfWordQuick(reg[15].I + (address & 2));
-      } else {
+#else
+        value = CPUReadHalfWordQuickDef(reg[15].I + (address & 2));
+#endif
+        } else {
+#ifdef USE_VM // Nintendo GC Virtual Memory
         value = CPUReadHalfWordQuick(reg[15].I);
+#else
+        value = CPUReadHalfWordQuickDef(reg[15].I);
+#endif
       }
     }
     break;
@@ -352,7 +436,11 @@ static inline u8 CPUReadByte(u32 address)
   case 10:
   case 11:
   case 12:
+#ifdef USE_VM // Nintendo GC Virtual Memory
+	return VMRead8( address & 0x1FFFFFF );
+#else
     return rom[address & 0x1FFFFFF];
+#endif
   case 13:
     if(cpuEEPROMEnabled)
       return eepromRead(address);
@@ -385,9 +473,17 @@ static inline u8 CPUReadByte(u32 address)
       return cpuDmaLast & 0xFF;
     } else {
       if(armState) {
+#ifdef USE_VM // Nintendo GC Virtual Memory
         return CPUReadByteQuick(reg[15].I+(address & 3));
+#else
+        return CPUReadByteQuickDef(reg[15].I+(address & 3));
+#endif
       } else {
+#ifdef USE_VM // Nintendo GC Virtual Memory
         return CPUReadByteQuick(reg[15].I+(address & 1));
+#else
+        return CPUReadByteQuickDef(reg[15].I+(address & 1));
+#endif
       }
     }
     break;
