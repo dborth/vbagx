@@ -65,6 +65,7 @@ int main()
 	int selectedMenu = -1;
 
 	InitialiseVideo();
+	GX_Start();
 
 	// Initialise freetype font system
 	if (FT_Init ())

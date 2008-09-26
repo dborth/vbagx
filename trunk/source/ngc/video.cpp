@@ -21,24 +21,23 @@
 
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
-GXRModeObj *vmode;		/*** Graphics Mode Object ***/
-unsigned int *xfb[2];	/*** Framebuffers ***/
-int whichfb = 0;		/*** Frame buffer toggle ***/
+GXRModeObj *vmode = NULL; // Graphics Mode Object
+unsigned int *xfb[2]; // Framebuffers
+int whichfb = 0; // Frame buffer toggle
 
 int screenheight;
 
 /*** 3D GX ***/
 #define DEFAULT_FIFO_SIZE ( 256 * 1024 )
-static u8 gp_fifo[DEFAULT_FIFO_SIZE] ATTRIBUTE_ALIGN(32);
+static u8 *gp_fifo;
 
 /*** Texture memory ***/
-static u8 *texturemem;
+static u8 *texturemem = NULL;
 static int texturesize;
 
 GXTexObj texobj;
 static Mtx view;
 static int vwidth, vheight, oldvwidth, oldvheight;
-unsigned int copynow = GX_FALSE;
 
 #define HASPECT 80
 #define VASPECT 45
@@ -73,6 +72,43 @@ static camera cam = { {0.0F, 0.0F, 0.0F},
                     };
 
 /****************************************************************************
+* Initialise Video
+*
+* Before doing anything in libogc, it's recommended to configure a video
+* output.
+****************************************************************************/
+void InitialiseVideo ()
+{
+    // Start VIDEO Subsystem
+    VIDEO_Init();
+
+    vmode = VIDEO_GetPreferredMode(NULL);
+    VIDEO_Configure(vmode);
+
+    screenheight = vmode->xfbHeight;
+
+    xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
+    xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
+
+    VIDEO_SetNextFramebuffer(xfb[0]);
+    VIDEO_SetBlack(FALSE);
+
+    // set timings in VI to PAL60
+	/*u32 *vreg = (u32 *)0xCC002000;
+	for (int i = 0; i < 64; i++ )
+		vreg[i] = vpal60[i];*/
+
+    VIDEO_Flush();
+    VIDEO_WaitVSync();
+
+    if(vmode->viTVMode & VI_NON_INTERLACE)
+		VIDEO_WaitVSync();
+
+    VIDEO_SetPostRetraceCallback((VIRetraceCallback)UpdatePadsCB);
+    VIDEO_SetNextFramebuffer(xfb[0]);
+}
+
+/****************************************************************************
  * StartGX
  ****************************************************************************/
 void GX_Start()
@@ -85,7 +121,7 @@ void GX_Start()
 	memset(&gp_fifo, 0, DEFAULT_FIFO_SIZE);
 
 	/*** Initialise GX ***/
-	GX_Init(&gp_fifo, DEFAULT_FIFO_SIZE);
+	GX_Init(gp_fifo, DEFAULT_FIFO_SIZE);
 	GX_SetCopyClear(gxbackground, 0x00ffffff);
 
 	GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
@@ -93,8 +129,7 @@ void GX_Start()
 	GX_SetScissor(0, 0, vmode->fbWidth, vmode->efbHeight);
 	GX_SetDispCopySrc(0, 0, vmode->fbWidth, vmode->efbHeight);
 	GX_SetDispCopyDst(vmode->fbWidth, vmode->xfbHeight);
-	GX_SetCopyFilter(vmode->aa, vmode->sample_pattern, GX_TRUE,
-				   vmode->vfilter);
+	GX_SetCopyFilter(vmode->aa, vmode->sample_pattern, GX_TRUE, vmode->vfilter);
 	GX_SetFieldMode(vmode->field_rendering,
 				  ((vmode->viHeight ==
 					2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
@@ -119,43 +154,6 @@ UpdatePadsCB ()
 	WPAD_ScanPads();
 #endif
 	PAD_ScanPads();
-}
-
-/****************************************************************************
-* Initialise Video
-*
-* Before doing anything in libogc, it's recommended to configure a video
-* output.
-****************************************************************************/
-void InitialiseVideo ()
-{
-    /*** Start VIDEO Subsystem ***/
-    VIDEO_Init();
-
-    vmode = VIDEO_GetPreferredMode(NULL);
-    VIDEO_Configure(vmode);
-
-    screenheight = vmode->xfbHeight;
-
-    xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
-    xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
-
-    VIDEO_SetNextFramebuffer(xfb[0]);
-    VIDEO_SetBlack(FALSE);
-
-    // set timings in VI to PAL60
-	/*u32 *vreg = (u32 *)0xCC002000;
-	for (int i = 0; i < 64; i++ )
-		vreg[i] = vpal60[i];*/
-
-    VIDEO_Flush();
-    VIDEO_WaitVSync();
-
-    if(vmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
-    VIDEO_SetPostRetraceCallback((VIRetraceCallback)UpdatePadsCB);
-    VIDEO_SetNextFramebuffer(xfb[0]);
-
-    GX_Start();
 }
 
 /****************************************************************************
@@ -218,8 +216,11 @@ void GX_Render_Init(int width, int height, int haspect, int vaspect)
 
 	/*** Allocate 32byte aligned texture memory ***/
 	texturesize = (width * height) * 2;
-	texturemem = (u8 *) memalign(32, texturesize);
 
+	if (texturemem)
+		free(texturemem);
+
+	texturemem = (u8 *) memalign(32, texturesize);
 	memset(texturemem, 0, texturesize);
 
 	/*** Setup for first call to scaler ***/
@@ -307,7 +308,6 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	VIDEO_SetNextFramebuffer(xfb[whichfb]);
 	VIDEO_Flush();
-	//VIDEO_WaitVSync();
 }
 
 
