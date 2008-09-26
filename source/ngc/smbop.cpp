@@ -33,14 +33,6 @@ unsigned int SMBTimer = 0;
 SMBCONN smbconn;
 #define ZIPCHUNK 16384
 
-extern unsigned char savebuffer[];
-extern char output[16384];
-extern int offset;
-extern int selection;
-extern char currentdir[MAXPATHLEN];
-extern FILEENTRIES filelist[MAXFILES];
-
-
 /****************************************************************************
  * InitializeNetwork
  * Initializes the Wii/GameCube network interface
@@ -222,7 +214,7 @@ ParseSMBdirectory ()
  * Load SMB file
  ****************************************************************************/
 int
-LoadSMBFile (char *filename, int length)
+LoadSMBFile (char * rom)
 {
 	char filepath[MAXPATHLEN];
 
@@ -234,8 +226,7 @@ LoadSMBFile (char *filename, int length)
 		WaitPrompt((char*) "Maximum filepath length reached!");
 		return -1;
 	}
-	return 0;
-	//return LoadBufferFromSMB((char *)Memory.ROM, SMBPath(filepath), NOTSILENT);
+	return LoadBufferFromSMB(rom, SMBPath(filepath), NOTSILENT);
 }
 
 /****************************************************************************

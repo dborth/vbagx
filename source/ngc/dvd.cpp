@@ -22,11 +22,8 @@ extern "C" {
 
 #include "menudraw.h"
 #include "gcunzip.h"
+#include "filesel.h"
 
-extern int offset;
-extern int selection;
-extern FILEENTRIES filelist[MAXFILES];
-extern int maxfiles;
 u64 dvddir = 0;
 u64 dvdrootdir = 0;
 int dvddirlength = 0;

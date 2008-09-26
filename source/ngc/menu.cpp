@@ -125,10 +125,6 @@ PreferencesMenu ()
 		// skip
 		if(GCSettings.LoadMethod == METHOD_DVD)
 			GCSettings.LoadMethod++;
-		if(GCSettings.LoadMethod == METHOD_SMB)
-			GCSettings.LoadMethod++;
-		if(GCSettings.SaveMethod == METHOD_SMB)
-			GCSettings.SaveMethod++;
 		if(GCSettings.SaveMethod == METHOD_MC_SLOTA)
 			GCSettings.SaveMethod++;
 		if(GCSettings.SaveMethod == METHOD_MC_SLOTB)

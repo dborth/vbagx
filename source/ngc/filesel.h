@@ -11,7 +11,9 @@
 #ifndef _NGCFILESEL_
 #define _NGCFILESEL_
 
-#define SAVEBUFFERSIZE ((512 * 1024) + 2048 + 64 + 4 + 4)
+#include <unistd.h> 
+
+#define SAVEBUFFERSIZE (512 * 1024)
 #define MAXJOLIET 255
 #define MAXDISPLAY 44
 
@@ -26,6 +28,12 @@ typedef struct
 
 #define MAXFILES 2000 // Restrict to 2000 files per dir
 extern FILEENTRIES filelist[MAXFILES];
+extern unsigned char *savebuffer;
+extern int offset;
+extern int selection;
+extern char currentdir[MAXPATHLEN];
+extern int maxfiles;
+
 extern char ROMFilename[512];
 
 void ClearSaveBuffer ();

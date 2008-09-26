@@ -23,7 +23,6 @@
 #include "filesel.h"
 #include "input.h"
 
-extern unsigned char savebuffer[];
 extern int currconfig[4];
 
 // button map configurations
@@ -117,7 +116,7 @@ int
 preparePrefsData (int method)
 {
 	int offset = 0;
-	memset (savebuffer, 0, SAVEBUFFERSIZE);
+	ClearSaveBuffer();
 
 	// add save icon and comments for Memory Card saves
 	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)

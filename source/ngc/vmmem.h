@@ -11,7 +11,7 @@
 #ifndef __VBAVMHDR__
 #define __VBAVMHDR__
 
-int VMCPULoadROM( char *filename );
+int VMCPULoadROM(int method);
 u32 VMRead32( u32 address );
 u16 VMRead16( u32 address );
 u8 VMRead8( u32 address );

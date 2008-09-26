@@ -24,14 +24,20 @@
 #include "filesel.h"
 #include "preferences.h"
 
-FILE * filehandle;
+// temporary
+#include "vmmem.h"
+#include "agb/GBA.h"
+#include "agb/agbprint.h"
+#include "Flash.h"
+#include "Port.h"
+#include "RTC.h"
+#include "Sound.h"
+#include "unzip.h"
+#include "Util.h"
+#include "dmg/GB.h"
+#include "dmg/gbGlobals.h"
 
-extern unsigned char savebuffer[];
-extern char output[16384];
-extern int offset;
-extern int selection;
-extern char currentdir[MAXPATHLEN];
-extern FILEENTRIES filelist[MAXFILES];
+FILE * filehandle;
 
 /****************************************************************************
  * fat_is_mounted
@@ -170,13 +176,12 @@ ParseFATdirectory(int method)
  * LoadFATFile
  ***************************************************************************/
 int
-LoadFATFile (char *filename, int length)
+LoadFATFile (char * rbuffer)
 {
-	/*char zipbuffer[2048];
-	FILE *handle;
-	unsigned char *rbuffer;
-	u32 size;*/
+	char zipbuffer[2048];
 	char filepath[MAXPATHLEN];
+	FILE *handle;
+	u32 size;
 
 	/* Check filename length */
 	if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
@@ -186,8 +191,7 @@ LoadFATFile (char *filename, int length)
 		WaitPrompt((char*) "Maximum filepath length reached!");
 		return -1;
 	}
-	return loadVBAROM(filepath);
-/*
+
 	handle = fopen (filepath, "rb");
 	if (handle > 0)
 	{
@@ -195,17 +199,16 @@ LoadFATFile (char *filename, int length)
 
 		if (IsZipFile (zipbuffer))
 		{
-			size = UnZipFile (rbuffer, handle);	// unzip from FAT
+			size = UnZipFile ((unsigned char *)rbuffer, handle);	// unzip from FAT
 		}
 		else
 		{
 			// Just load the file up
 			fseek(handle, 0, SEEK_END);
-			length = ftell(handle);				// get filesize
+			size = ftell(handle);				// get filesize
 			fseek(handle, 2048, SEEK_SET);		// seek back to point where we left off
 			memcpy (rbuffer, zipbuffer, 2048);	// copy what we already read
-			fread (rbuffer + 2048, 1, length - 2048, handle);
-			size = length;
+			fread (rbuffer + 2048, 1, size - 2048, handle);
 		}
 		fclose (handle);
 		return size;
@@ -216,7 +219,7 @@ LoadFATFile (char *filename, int length)
 		return 0;
 	}
 
-	return 0;*/
+	return 0;
 }
 
 /****************************************************************************

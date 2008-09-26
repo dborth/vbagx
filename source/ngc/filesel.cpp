@@ -14,6 +14,7 @@
 #include <string.h>
 #include <wiiuse/wpad.h>
 #include <sys/dir.h>
+#include <malloc.h>
 
 #ifdef WII_DVD
 extern "C" {
@@ -47,19 +48,23 @@ int hasloaded = 0;
 // Global file entry table
 FILEENTRIES filelist[MAXFILES];
 
-unsigned char savebuffer[SAVEBUFFERSIZE] ATTRIBUTE_ALIGN (32);
-
 char ROMFilename[512];
 int ROMSize = 0;
 
+unsigned char *savebuffer = NULL;
+
 /****************************************************************************
  * ClearSaveBuffer ()
- * Clear the savebuffer
+ * Allocate and clear the savebuffer
  ***************************************************************************/
 void
 ClearSaveBuffer ()
 {
-    memset (savebuffer, 0, SAVEBUFFERSIZE);
+	if (savebuffer)
+		free(savebuffer);
+
+	savebuffer = (unsigned char *) memalign(32, SAVEBUFFERSIZE);
+	memset (savebuffer, 0, SAVEBUFFERSIZE);
 }
 
 /****************************************************************************
@@ -309,27 +314,17 @@ int FileSelector (int method)
 
 				ShowAction ((char *)"Loading...");
 
-				switch (method)
+				// setup variables for DVD loading
+				if(method == METHOD_DVD)
 				{
-					case METHOD_SD:
-					case METHOD_USB:
-					ROMSize = LoadFATFile (filelist[selection].filename, filelist[selection].length);
-					break;
-
-					case METHOD_DVD:
 					dvddir = filelist[selection].offset;
 					dvddirlength = filelist[selection].length;
-					//ROMSize = LoadDVDFile (Memory.ROM);
-					break;
-
-					case METHOD_SMB:
-					//ROMSize = LoadSMBFile (filelist[selection].filename, filelist[selection].length);
-					break;
 				}
+
+				ROMSize = loadVBAROM(method);
 
 				if (ROMSize > 0)
 				{
-
 					return 1;
 				}
 				else
