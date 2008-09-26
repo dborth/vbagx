@@ -19,6 +19,8 @@
 #include "images/bg.h"
 #include "pal60.h"
 
+extern unsigned int SMBTimer; // timer to reset SMB connection
+
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
 GXRModeObj *vmode = NULL; // Graphics Mode Object
@@ -29,7 +31,7 @@ int screenheight;
 
 /*** 3D GX ***/
 #define DEFAULT_FIFO_SIZE ( 256 * 1024 )
-static u8 *gp_fifo;
+static u8 gp_fifo[DEFAULT_FIFO_SIZE] ATTRIBUTE_ALIGN(32);
 
 /*** Texture memory ***/
 static u8 *texturemem = NULL;
@@ -72,43 +74,6 @@ static camera cam = { {0.0F, 0.0F, 0.0F},
                     };
 
 /****************************************************************************
-* Initialise Video
-*
-* Before doing anything in libogc, it's recommended to configure a video
-* output.
-****************************************************************************/
-void InitialiseVideo ()
-{
-    // Start VIDEO Subsystem
-    VIDEO_Init();
-
-    vmode = VIDEO_GetPreferredMode(NULL);
-    VIDEO_Configure(vmode);
-
-    screenheight = vmode->xfbHeight;
-
-    xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
-    xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
-
-    VIDEO_SetNextFramebuffer(xfb[0]);
-    VIDEO_SetBlack(FALSE);
-
-    // set timings in VI to PAL60
-	/*u32 *vreg = (u32 *)0xCC002000;
-	for (int i = 0; i < 64; i++ )
-		vreg[i] = vpal60[i];*/
-
-    VIDEO_Flush();
-    VIDEO_WaitVSync();
-
-    if(vmode->viTVMode & VI_NON_INTERLACE)
-		VIDEO_WaitVSync();
-
-    VIDEO_SetPostRetraceCallback((VIRetraceCallback)UpdatePadsCB);
-    VIDEO_SetNextFramebuffer(xfb[0]);
-}
-
-/****************************************************************************
  * StartGX
  ****************************************************************************/
 void GX_Start()
@@ -121,7 +86,7 @@ void GX_Start()
 	memset(&gp_fifo, 0, DEFAULT_FIFO_SIZE);
 
 	/*** Initialise GX ***/
-	GX_Init(gp_fifo, DEFAULT_FIFO_SIZE);
+	GX_Init(&gp_fifo, DEFAULT_FIFO_SIZE);
 	GX_SetCopyClear(gxbackground, 0x00ffffff);
 
 	GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
@@ -154,6 +119,44 @@ UpdatePadsCB ()
 	WPAD_ScanPads();
 #endif
 	PAD_ScanPads();
+}
+
+/****************************************************************************
+* Initialise Video
+*
+* Before doing anything in libogc, it's recommended to configure a video
+* output.
+****************************************************************************/
+void InitialiseVideo ()
+{
+    /*** Start VIDEO Subsystem ***/
+    VIDEO_Init();
+
+    vmode = VIDEO_GetPreferredMode(NULL);
+    VIDEO_Configure(vmode);
+
+    screenheight = vmode->xfbHeight;
+
+    xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
+    xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
+
+    VIDEO_SetNextFramebuffer(xfb[0]);
+    VIDEO_SetBlack(FALSE);
+
+    // set timings in VI to PAL60
+	/*u32 *vreg = (u32 *)0xCC002000;
+	for (int i = 0; i < 64; i++ )
+		vreg[i] = vpal60[i];*/
+
+    VIDEO_Flush();
+    VIDEO_WaitVSync();
+
+    if(vmode->viTVMode&VI_NON_INTERLACE)
+    	VIDEO_WaitVSync();
+    VIDEO_SetPostRetraceCallback((VIRetraceCallback)UpdatePadsCB);
+    VIDEO_SetNextFramebuffer(xfb[0]);
+
+    GX_Start();
 }
 
 /****************************************************************************
@@ -216,11 +219,12 @@ void GX_Render_Init(int width, int height, int haspect, int vaspect)
 
 	/*** Allocate 32byte aligned texture memory ***/
 	texturesize = (width * height) * 2;
-
+	
 	if (texturemem)
 		free(texturemem);
-
+		
 	texturemem = (u8 *) memalign(32, texturesize);
+
 	memset(texturemem, 0, texturesize);
 
 	/*** Setup for first call to scaler ***/
@@ -308,6 +312,8 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	VIDEO_SetNextFramebuffer(xfb[whichfb]);
 	VIDEO_Flush();
+
+	SMBTimer++;
 }
 
 
@@ -327,8 +333,8 @@ clearscreen (int c)
 void
 showscreen ()
 {
-	copynow = GX_FALSE;
 	VIDEO_SetNextFramebuffer (xfb[whichfb]);
 	VIDEO_Flush ();
 	VIDEO_WaitVSync ();
 }
+

@@ -23,6 +23,7 @@
 #include "menudraw.h"
 #include "filesel.h"
 #include "preferences.h"
+#include "sdfileio.h"
 
 // temporary
 #include "vmmem.h"

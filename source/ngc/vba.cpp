@@ -65,7 +65,6 @@ int main()
 	int selectedMenu = -1;
 
 	InitialiseVideo();
-	GX_Start();
 
 	// Initialise freetype font system
 	if (FT_Init ())
@@ -78,7 +77,7 @@ int main()
 	fatInitDefault();
 
 	// Initialize DVD subsystem (GameCube only)
-	#ifndef HW_RVL
+	#ifdef HW_DOL
 	DVD_Init ();
 	#endif
 

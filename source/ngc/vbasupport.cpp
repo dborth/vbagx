@@ -342,7 +342,34 @@ void systemDrawScreen()
 	#endif
 }
 
-int loadVBAROM(int method)
+extern bool gbUpdateSizes();
+bool LoadGBROM()
+{
+	char filepath[1024];
+	sprintf(filepath, "%s/%s",currentdir,filelist[selection].filename);
+
+	int size = 0;
+
+	if(gbRom != NULL)
+	{
+		gbCleanUp();
+	}
+
+	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
+
+	gbRom = utilLoad(filepath,
+		utilIsGBImage,
+		NULL,
+		size);
+		if(!gbRom)
+			return false;
+
+	gbRomSize = size;
+
+	return gbUpdateSizes();
+}
+
+int LoadVBAROM(int method)
 {
 	int type = 2;
 
@@ -383,7 +410,7 @@ int loadVBAROM(int method)
 		emulator = GBSystem;
 		srcWidth = 160;
 		srcHeight = 144;
-		//gbLoadRom(filepath);
+		LoadGBROM();
 		// Actual physical aspect is 1.0
 		hAspect = 60;
 		vAspect = 46;

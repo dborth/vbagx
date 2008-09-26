@@ -321,7 +321,7 @@ int FileSelector (int method)
 					dvddirlength = filelist[selection].length;
 				}
 
-				ROMSize = loadVBAROM(method);
+				ROMSize = LoadVBAROM(method);
 
 				if (ROMSize > 0)
 				{
