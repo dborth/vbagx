@@ -23,6 +23,7 @@
 #include "Util.h"
 #include "dmg/GB.h"
 #include "dmg/gbGlobals.h"
+//#include "dmg/gbSound.h"
 
 #include "vba.h"
 #include "fileop.h"
@@ -341,8 +342,16 @@ void systemDrawScreen()
 	#endif
 }
 
-int loadVBAROM(char filename[])
+int loadVBAROM(int method)
 {
+	int type = 2;
+
+	// image type (checks file extension)
+/*	if(utilIsGBAImage(filename))
+		type = 2;
+	else if(utilIsGBImage(filename))
+		type = 1;
+*/
 	cartridgeType = 0;
 	srcWidth = 0;
 	srcHeight = 0;
@@ -350,17 +359,15 @@ int loadVBAROM(char filename[])
 	destHeight = 0;
 	srcPitch = 0;
 
-	IMAGE_TYPE type = utilFindType(filename);
-
 	switch( type )
 	{
-		case IMAGE_GBA:
+		case 2:
 		//WaitPrompt("GameBoy Advance Image");
 		cartridgeType = 2;
 		emulator = GBASystem;
 		srcWidth = 240;
 		srcHeight = 160;
-		VMCPULoadROM(filename);
+		VMCPULoadROM(method);
 		// Actual Visual Aspect is 1.57
 		hAspect = 70;
 		vAspect = 46;
@@ -370,13 +377,13 @@ int loadVBAROM(char filename[])
 		cpuSaveType = 0;
 		break;
 
-		case IMAGE_GB:
+		case 1:
 		//WaitPrompt("GameBoy Image");
 		cartridgeType = 1;
 		emulator = GBSystem;
 		srcWidth = 160;
 		srcHeight = 144;
-		gbLoadRom(filename);
+		//gbLoadRom(filepath);
 		// Actual physical aspect is 1.0
 		hAspect = 60;
 		vAspect = 46;

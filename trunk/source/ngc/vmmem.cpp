@@ -22,6 +22,10 @@
 #include "Util.h"
 #include "Port.h"
 
+#include "vba.h"
+#include "smbop.h"
+#include "fileop.h"
+#include "dvd.h"
 #include "menudraw.h"
 
 extern "C" {
@@ -37,7 +41,7 @@ unsigned int MEM2Storage = 0x91000000;
 static char *gbabase = NULL;
 static FILE *romfile = NULL;
 static u32 GBAROMSize = 0;
-static char romfilename[1024];
+//static char romfilename[1024];
 
 /**
  * GBA Memory
@@ -101,46 +105,41 @@ static void VMClose( void )
 *
 * MEM2 version of GBA CPULoadROM
 ****************************************************************************/
-int VMCPULoadROM( char *filename )
+
+int VMCPULoadROM(int method)
 {
-  int res=0;
-  //char temp[512];
-  VMClose();
-  VMAllocGBA();
+	int res=0;
+	VMClose();
+	VMAllocGBA();
 
-  GBAROMSize = 0;
-
-  romfile = gen_fopen(filename, "rb");
-  if ( romfile == NULL )
-    {
-	  WaitPrompt((char*) "Error opening file!");
-      VMClose();
-      return 0;
-    }
-
-	fseek(romfile, 0, SEEK_END);
-	GBAROMSize = ftell(romfile);
-	fseek(romfile, 0, SEEK_SET);
-
-    //sprintf(temp,"ROM Size %dMb (%dMBit)",  GBAROMSize/1024/1024,(GBAROMSize*8)/1024/1024);
-    //WaitPrompt(temp);
-
+	GBAROMSize = 0;
 	rom = (u8 *)MEM2Storage;
 
-  /* Always use MEM2, regardless of ROM size */
-	res = gen_fread(rom, 1, GBAROMSize, romfile);
+	if(method == METHOD_AUTO)
+		method = autoLoadMethod();
 
-    if ( (u32)res != GBAROMSize )
-    {
-    	WaitPrompt((char*) "Error reading file!");
-    	VMClose();
-    	return 0;
-    }
-  strcpy( romfilename, filename );
+	switch (method)
+	{
+		case METHOD_SD:
+		case METHOD_USB:
+		res = LoadFATFile ((char *)rom);
+		break;
 
-  CPUUpdateRenderBuffers( true );
+		case METHOD_DVD:
+		res = LoadDVDFile ((unsigned char *)rom);
+		break;
 
-  return 1;
+		case METHOD_SMB:
+		res = LoadSMBFile ((char *)rom);
+		break;
+	}
+
+	if(res)
+		CPUUpdateRenderBuffers( true );
+	else
+		VMClose();
+
+	return res;
 }
 
 
