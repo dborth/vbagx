@@ -27,6 +27,7 @@
 #include "fileop.h"
 #include "dvd.h"
 #include "menudraw.h"
+#include "filesel.h"
 
 extern "C" {
 #include "tbtime.h"
@@ -39,9 +40,7 @@ extern "C" {
 unsigned int MEM2Storage = 0x91000000;
 
 static char *gbabase = NULL;
-static FILE *romfile = NULL;
 static u32 GBAROMSize = 0;
-//static char romfilename[1024];
 
 /**
  * GBA Memory
@@ -92,12 +91,7 @@ static void VMClose( void )
   if ( gbabase != NULL )
     free(gbabase);
 
-  if ( romfile != NULL )
-    gen_fclose(romfile);
-
   gbabase = NULL;
-  romfile = NULL;
-
 }
 
 /****************************************************************************
@@ -108,10 +102,8 @@ static void VMClose( void )
 
 int VMCPULoadROM(int method)
 {
-	int res=0;
 	VMClose();
 	VMAllocGBA();
-
 	GBAROMSize = 0;
 	rom = (u8 *)MEM2Storage;
 
@@ -122,24 +114,24 @@ int VMCPULoadROM(int method)
 	{
 		case METHOD_SD:
 		case METHOD_USB:
-		res = LoadFATFile ((char *)rom);
+		GBAROMSize = LoadFATFile ((char *)rom);
 		break;
 
 		case METHOD_DVD:
-		res = LoadDVDFile ((unsigned char *)rom);
+		GBAROMSize = LoadDVDFile ((unsigned char *)rom);
 		break;
 
 		case METHOD_SMB:
-		res = LoadSMBFile ((char *)rom);
+		GBAROMSize = LoadSMBFile ((char *)rom);
 		break;
 	}
 
-	if(res)
+	if(GBAROMSize)
 		CPUUpdateRenderBuffers( true );
 	else
 		VMClose();
 
-	return res;
+	return GBAROMSize;
 }
 
 
