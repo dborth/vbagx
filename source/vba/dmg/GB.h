@@ -59,4 +59,7 @@ extern bool gbReadGSASnapshot(const char *);
 
 extern struct EmulatedSystem GBSystem;
 
+bool MemgbReadBatteryFile(char * membuffer, int read);
+int MemgbWriteBatteryFile(char * membuffer);
+
 #endif

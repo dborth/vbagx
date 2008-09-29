@@ -434,7 +434,7 @@ bool SwitchDVDFolder(char origdir[])
  ***************************************************************************/
 
 int
-LoadDVDFile (unsigned char *buffer)
+LoadDVDFile (unsigned char *buffer, int length)
 {
 	int offset;
 	int blocks;
@@ -447,29 +447,37 @@ LoadDVDFile (unsigned char *buffer)
 	offset = 0;
 	discoffset = dvddir;
 	ShowAction ((char*) "Loading...");
-	dvd_read (readbuffer, 2048, discoffset);
 
-	if (!IsZipFile (readbuffer))
+	if(length > 0)
 	{
-		for (i = 0; i < blocks; i++)
-		{
-			dvd_read (readbuffer, 2048, discoffset);
-			memcpy (buffer + offset, readbuffer, 2048);
-			offset += 2048;
-			discoffset += 2048;
-		}
-
-		/*** And final cleanup ***/
-		if (dvddirlength % 2048)
-		{
-			i = dvddirlength % 2048;
-			dvd_read (readbuffer, 2048, discoffset);
-			memcpy (buffer + offset, readbuffer, i);
-		}
+		dvd_read (buffer, length, discoffset);
 	}
-	else
+	else // load whole file
 	{
-		return UnZipFile (buffer, discoffset);	// unzip from dvd
+		dvd_read (readbuffer, 2048, discoffset);
+
+		if (!IsZipFile (readbuffer))
+		{
+			for (i = 0; i < blocks; i++)
+			{
+				dvd_read (readbuffer, 2048, discoffset);
+				memcpy (buffer + offset, readbuffer, 2048);
+				offset += 2048;
+				discoffset += 2048;
+			}
+
+			/*** And final cleanup ***/
+			if (dvddirlength % 2048)
+			{
+				i = dvddirlength % 2048;
+				dvd_read (readbuffer, 2048, discoffset);
+				memcpy (buffer + offset, readbuffer, i);
+			}
+		}
+		else
+		{
+			return UnZipFile (buffer, discoffset);	// unzip from dvd
+		}
 	}
 	return dvddirlength;
 }

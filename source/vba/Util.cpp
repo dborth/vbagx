@@ -609,7 +609,7 @@ IMAGE_TYPE utilFindType(const char *file)
   return IMAGE_UNKNOWN;
 }
 
-static int utilGetSize(int size)
+int utilGetSize(int size)
 {
   int res = 1;
   while(res < size)

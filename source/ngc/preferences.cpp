@@ -25,12 +25,6 @@
 
 extern int currconfig[4];
 
-// button map configurations
-extern unsigned int gcpadmap[];
-extern unsigned int wmpadmap[];
-extern unsigned int ccpadmap[];
-extern unsigned int ncpadmap[];
-
 #define PREFS_FILE_NAME "VBAGX.xml"
 
 char prefscomment[2][32];
@@ -46,7 +40,7 @@ mxml_node_t *section;
 mxml_node_t *item;
 mxml_node_t *elem;
 
-char temp[200];
+char temp[20];
 
 const char * toStr(int i)
 {
@@ -116,7 +110,6 @@ int
 preparePrefsData (int method)
 {
 	int offset = 0;
-	ClearSaveBuffer();
 
 	// add save icon and comments for Memory Card saves
 	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
@@ -305,6 +298,8 @@ SavePrefs (int method, bool silent)
 	int datasize;
 	int offset = 0;
 
+	AllocSaveBuffer ();
+
 	datasize = preparePrefsData (method);
 
 	if (!silent)
@@ -332,6 +327,8 @@ SavePrefs (int method, bool silent)
 		offset = SaveBufferToMC (savebuffer, CARD_SLOTB, (char *)PREFS_FILE_NAME, datasize, silent);
 	}
 
+	FreeSaveBuffer ();
+
 	if (offset > 0)
 	{
 		if (!silent)
@@ -350,6 +347,8 @@ LoadPrefsFromMethod (int method)
 	bool retval = false;
 	char filepath[1024];
 	int offset = 0;
+
+	AllocSaveBuffer ();
 
 	if(method == METHOD_SD || method == METHOD_USB)
 	{
@@ -375,6 +374,8 @@ LoadPrefsFromMethod (int method)
 
 	if (offset > 0)
 		retval = decodePrefsData (method);
+
+	FreeSaveBuffer ();
 
 	return retval;
 }

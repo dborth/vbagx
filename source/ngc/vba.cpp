@@ -38,7 +38,7 @@ extern "C" {
 #include "video.h"
 #include "vbaconfig.h"
 
-extern int ROMSize;
+extern bool ROMLoaded;
 extern int emulating;
 
 
@@ -98,7 +98,7 @@ int main()
 		selectedMenu = 2; // change to preferences menu
 	}
 
-	while (ROMSize == 0)
+	while (!ROMLoaded)
 	{
 		MainMenu (selectedMenu);
 	}

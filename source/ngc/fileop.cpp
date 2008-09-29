@@ -23,20 +23,6 @@
 #include "menudraw.h"
 #include "filesel.h"
 #include "preferences.h"
-#include "sdfileio.h"
-
-// temporary
-#include "vmmem.h"
-#include "agb/GBA.h"
-#include "agb/agbprint.h"
-#include "Flash.h"
-#include "Port.h"
-#include "RTC.h"
-#include "Sound.h"
-#include "unzip.h"
-#include "Util.h"
-#include "dmg/GB.h"
-#include "dmg/gbGlobals.h"
 
 FILE * filehandle;
 
@@ -177,7 +163,7 @@ ParseFATdirectory(int method)
  * LoadFATFile
  ***************************************************************************/
 int
-LoadFATFile (char * rbuffer)
+LoadFATFile (char * rbuffer, int length)
 {
 	char zipbuffer[2048];
 	char filepath[MAXPATHLEN];
@@ -196,20 +182,28 @@ LoadFATFile (char * rbuffer)
 	handle = fopen (filepath, "rb");
 	if (handle > 0)
 	{
-		fread (zipbuffer, 1, 2048, handle);
-
-		if (IsZipFile (zipbuffer))
+		if(length > 0)
 		{
-			size = UnZipFile ((unsigned char *)rbuffer, handle);	// unzip from FAT
+			fread (rbuffer, 1, length, handle);
+			size = length;
 		}
-		else
+		else // load whole file
 		{
-			// Just load the file up
-			fseek(handle, 0, SEEK_END);
-			size = ftell(handle);				// get filesize
-			fseek(handle, 2048, SEEK_SET);		// seek back to point where we left off
-			memcpy (rbuffer, zipbuffer, 2048);	// copy what we already read
-			fread (rbuffer + 2048, 1, size - 2048, handle);
+			fread (zipbuffer, 1, 2048, handle);
+
+			if (IsZipFile (zipbuffer))
+			{
+				size = UnZipFile ((unsigned char *)rbuffer, handle);	// unzip from FAT
+			}
+			else
+			{
+				// Just load the file up
+				fseek(handle, 0, SEEK_END);
+				size = ftell(handle);				// get filesize
+				fseek(handle, 2048, SEEK_SET);		// seek back to point where we left off
+				memcpy (rbuffer, zipbuffer, 2048);	// copy what we already read
+				fread (rbuffer + 2048, 1, size - 2048, handle);
+			}
 		}
 		fclose (handle);
 		return size;
@@ -219,8 +213,6 @@ LoadFATFile (char * rbuffer)
 		WaitPrompt((char*) "Error opening file");
 		return 0;
 	}
-
-	return 0;
 }
 
 /****************************************************************************
@@ -232,8 +224,6 @@ LoadBufferFromFAT (char *filepath, bool silent)
 	FILE *handle;
     int boffset = 0;
     int read = 0;
-
-    ClearSaveBuffer ();
 
     handle = fopen (filepath, "rb");
 
@@ -282,7 +272,5 @@ SaveBufferToFAT (char *filepath, int datasize, bool silent)
         fwrite (savebuffer, 1, datasize, handle);
         fclose (handle);
     }
-
-    ClearSaveBuffer ();
     return datasize;
 }

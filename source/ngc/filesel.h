@@ -11,7 +11,7 @@
 #ifndef _NGCFILESEL_
 #define _NGCFILESEL_
 
-#include <unistd.h> 
+#include <unistd.h>
 
 #define SAVEBUFFERSIZE (512 * 1024)
 #define MAXJOLIET 255
@@ -36,7 +36,8 @@ extern int maxfiles;
 
 extern char ROMFilename[512];
 
-void ClearSaveBuffer ();
+void AllocSaveBuffer();
+void FreeSaveBuffer();
 int OpenROM (int method);
 int autoLoadMethod();
 int autoSaveMethod();

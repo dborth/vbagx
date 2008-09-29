@@ -13,7 +13,7 @@
 
 int getpvd ();
 int ParseDVDdirectory ();
-int LoadDVDFile (unsigned char *buffer);
+int LoadDVDFile (unsigned char *buffer, int length);
 bool TestDVD();
 int dvd_read (void *dst, unsigned int len, u64 offset);
 bool SwitchDVDFolder(char dir[]);

@@ -366,7 +366,7 @@ WaitPrompt (char *msg)
 		ypos += 32;
 
 	clearscreen ();
-	setfontsize(20);
+	setfontsize(16);
 	DrawText (-1, ypos, msg);
 	ypos += 30;
 	DrawText (-1, ypos, (char*)"Press A to continue");
