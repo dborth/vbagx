@@ -49,22 +49,35 @@ int hasloaded = 0;
 FILEENTRIES filelist[MAXFILES];
 
 char ROMFilename[512];
-int ROMSize = 0;
+bool ROMLoaded = false;
 
 unsigned char *savebuffer = NULL;
 
 /****************************************************************************
- * ClearSaveBuffer ()
- * Allocate and clear the savebuffer
+ * AllocSaveBuffer ()
+ * Clear and allocate the savebuffer
  ***************************************************************************/
 void
-ClearSaveBuffer ()
+AllocSaveBuffer ()
 {
-	if (savebuffer)
+	if (savebuffer != NULL)
 		free(savebuffer);
 
 	savebuffer = (unsigned char *) memalign(32, SAVEBUFFERSIZE);
 	memset (savebuffer, 0, SAVEBUFFERSIZE);
+}
+
+/****************************************************************************
+ * FreeSaveBuffer ()
+ * Free the savebuffer memory
+ ***************************************************************************/
+void
+FreeSaveBuffer ()
+{
+	if (savebuffer != NULL)
+		free(savebuffer);
+
+	savebuffer = NULL;
 }
 
 /****************************************************************************
@@ -216,7 +229,7 @@ void StripExt(char* returnstring, char * inputstring)
 	strcpy (returnstring, inputstring);
 	loc_dot = strrchr(returnstring,'.');
 	if (loc_dot != NULL)
-		*loc_dot = '\0';	// strip file extension
+		*loc_dot = 0;	// strip file extension
 }
 
 /****************************************************************************
@@ -321,9 +334,9 @@ int FileSelector (int method)
 					dvddirlength = filelist[selection].length;
 				}
 
-				ROMSize = LoadVBAROM(method);
+				ROMLoaded = LoadVBAROM(method);
 
-				if (ROMSize > 0)
+				if (ROMLoaded)
 				{
 					return 1;
 				}

@@ -16,9 +16,11 @@
 
 #include "dvd.h"
 #include "smbop.h"
+#include "fileop.h"
 #include "video.h"
 #include "menudraw.h"
 #include "gcunzip.h"
+#include "vba.h"
 
 /*
   * PKWare Zip Header - adopted into zip standard
@@ -59,7 +61,7 @@ FLIP16 (u16 b)
  * IsZipFile
  *
  * Returns TRUE when PKZIPID is first four characters of buffer
- ****************************************************************************/
+ ***************************************************************************/
 int
 IsZipFile (char *buffer)
 {
@@ -77,7 +79,7 @@ IsZipFile (char *buffer)
  * unzip
  *
  * It should be noted that there is a limit of 5MB total size for any ROM
- ******************************************************************************/
+ *****************************************************************************/
 FILE* fatfile; // FAT
 u64 discoffset; // DVD
 SMBFILE smbfile; // SMB
@@ -119,8 +121,7 @@ UnZipBuffer (unsigned char *outbuffer, short where)
 
 	pkzip.uncompressedSize = FLIP32 (pkzip.uncompressedSize);
 
-	sprintf (msg, "Unzipping %d bytes ... Wait",
-	pkzip.uncompressedSize);
+	sprintf (msg, "Unzipping %d bytes ... Wait", pkzip.uncompressedSize);
 	ShowAction (msg);
 
 	/*** Prepare the zip stream ***/
@@ -226,4 +227,42 @@ UnZipFile (unsigned char *outbuffer, SMBFILE infile)
 {
 	smbfile = infile;
 	return UnZipBuffer(outbuffer, 2);
+}
+
+/****************************************************************************
+ * GetFirstZipFilename
+ *
+ * Returns the filename of the first file in the zipped archive
+ * The idea here is to do the least amount of work required
+ ***************************************************************************/
+
+char *
+GetFirstZipFilename (int method)
+{
+	char testbuffer[ZIPCHUNK];
+
+	// read start of ZIP
+	switch (method)
+	{
+		case METHOD_SD:	// SD Card
+		case METHOD_USB: // USB
+		LoadFATFile (testbuffer, ZIPCHUNK);
+		break;
+
+		case METHOD_DVD: // DVD
+		LoadDVDFile ((unsigned char *)testbuffer, ZIPCHUNK);
+		break;
+
+		case METHOD_SMB: // From SMB
+		LoadSMBFile (testbuffer, ZIPCHUNK);
+		break;
+	}
+
+	testbuffer[28] = 0; // truncate - filename length is 2 bytes long (bytes 26-27)
+	int namelength = testbuffer[26]; // filename length starts 26 bytes in
+
+	char * firstFilename = &testbuffer[30]; // first filename of a ZIP starts 31 bytes in
+	firstFilename[namelength] = 0; // truncate at filename length
+
+	return firstFilename;
 }

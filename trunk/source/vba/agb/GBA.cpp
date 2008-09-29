@@ -653,6 +653,8 @@ bool CPUWriteState(const char *file)
   return res;
 }
 
+extern void SetFileBytesWritten(int bytes); // Tantric - Wii/GameCube addition - store # bytes written
+
 bool CPUWriteMemState(char *memory, int available)
 {
   gzFile gzFile = utilMemGzOpen(memory, available, "w");
@@ -667,6 +669,8 @@ bool CPUWriteMemState(char *memory, int available)
 
   if(pos >= (available))
     res = false;
+
+  SetFileBytesWritten((int)pos); // Tantric - Wii/GameCube addition - store # bytes written
 
   utilGzClose(gzFile);
 

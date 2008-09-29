@@ -334,16 +334,16 @@ u32 GetJoy()
 	{
     	if (GCSettings.AutoSave == 1)
     	{
-    		SaveBattery(GCSettings.SaveMethod, SILENT);
+    		SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
     	}
     	else if (GCSettings.AutoSave == 2)
     	{
-			SaveState(GCSettings.SaveMethod, SILENT);
+			SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
     	}
     	else if(GCSettings.AutoSave == 3)
     	{
-    		SaveBattery(GCSettings.SaveMethod, SILENT);
-    		SaveState(GCSettings.SaveMethod, SILENT);
+    		SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
+    		SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
     	}
     	MainMenu(3);
     	return 0;

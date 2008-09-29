@@ -44,7 +44,7 @@ extern "C"
 extern void DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsize);
 
 extern int menu;
-extern int ROMSize;
+extern bool ROMLoaded;
 
 #define SOFTRESET_ADR ((volatile u32*)0xCC003024)
 
@@ -83,9 +83,9 @@ LoadManager ()
 	if ( loadROM == 1 ) // if ROM was loaded, load the battery / state
 	{
 		if (GCSettings.AutoLoad == 1)
-			LoadBattery(GCSettings.SaveMethod, SILENT);
+			LoadBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // load battery
 		else if (GCSettings.AutoLoad == 2)
-			LoadState(GCSettings.SaveMethod, SILENT);
+			LoadBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // load state
 	}
 
 	return loadROM;
@@ -123,8 +123,6 @@ PreferencesMenu ()
 		// they need to be skipped in the order they were enumerated in vba.h
 
 		// skip
-		if(GCSettings.LoadMethod == METHOD_DVD)
-			GCSettings.LoadMethod++;
 		if(GCSettings.SaveMethod == METHOD_MC_SLOTA)
 			GCSettings.SaveMethod++;
 		if(GCSettings.SaveMethod == METHOD_MC_SLOTB)
@@ -138,12 +136,6 @@ PreferencesMenu ()
 			GCSettings.LoadMethod++;
 		if(GCSettings.SaveMethod == METHOD_USB)
 			GCSettings.SaveMethod++;
-		#endif
-
-		// check if DVD access in Wii mode is disabled
-		#ifndef WII_DVD
-		if(GCSettings.LoadMethod == METHOD_DVD)
-			GCSettings.LoadMethod++;
 		#endif
 
 		// saving to DVD is impossible
@@ -306,20 +298,20 @@ GameMenu ()
 				break;
 
 			case 2: // Load Battery
-				quit = retval = LoadBattery(GCSettings.SaveMethod, NOTSILENT);
+				quit = retval = LoadBatteryOrState(GCSettings.SaveMethod, 0, NOTSILENT);
 				emulator.emuReset();
 				break;
 
 			case 3: // Save Battery
-				SaveBattery(GCSettings.SaveMethod, NOTSILENT);
+				SaveBatteryOrState(GCSettings.SaveMethod, 0, NOTSILENT);
 				break;
 
 			case 4: // Load State
-				quit = retval = LoadState(GCSettings.SaveMethod, NOTSILENT);
+				quit = retval = LoadBatteryOrState(GCSettings.SaveMethod, 1, NOTSILENT);
 				break;
 
 			case 5: // Save State
-				SaveState(GCSettings.SaveMethod, NOTSILENT);
+				SaveBatteryOrState(GCSettings.SaveMethod, 1, NOTSILENT);
 				break;
 
 			case -1: // Button B
@@ -630,7 +622,7 @@ MainMenu (int selectedMenu)
 	int ret;
 
 	// disable game-specific menu items if a ROM isn't loaded
-	if (ROMSize == 0 )
+	if (!ROMLoaded)
     	menuitems[3][0] = '\0';
 	else
 		sprintf (menuitems[3], "Game Menu");
@@ -697,7 +689,8 @@ MainMenu (int selectedMenu)
 
 			case -1: // Button B
 				// Return to Game
-				quit = 1;
+				if(ROMLoaded)
+					quit = 1;
 				break;
 		}
 	}

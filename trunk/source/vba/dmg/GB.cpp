@@ -2303,6 +2303,8 @@ static bool gbWriteSaveState(gzFile gzFile)
   return true;
 }
 
+extern void SetFileBytesWritten(int bytes); // Tantric - Wii/GameCube addition - store # bytes written
+
 bool gbWriteMemSaveState(char *memory, int available)
 {
   gzFile gzFile = utilMemGzOpen(memory, available, "w");
@@ -2318,6 +2320,8 @@ bool gbWriteMemSaveState(char *memory, int available)
 
   if(pos >= (available))
     res = false;
+
+  SetFileBytesWritten((int)pos); // Tantric - Wii/GameCube addition - store # bytes written
 
   utilGzClose(gzFile);
 
@@ -3469,3 +3473,320 @@ struct EmulatedSystem GBSystem =
       1000,
 #endif
     };
+
+/****************************************************************************
+ * Nintendo Wii/Gamecube Port Additions
+ *
+ * Duplicate versions of save functions above, using memory
+ * I want to kill whoever wrote so many stupid functions, and did so without
+ * doing it memory-based
+ * Tantric - October 2008
+ ***************************************************************************/
+
+int MemgbWriteSaveMBC1(char * membuffer) {
+	if (gbRam) {
+		memcpy(membuffer, gbRam, (gbRamSizeMask + 1));
+		return (gbRamSizeMask + 1);
+	}
+	return 0;
+}
+
+int MemgbWriteSaveMBC2(char * membuffer) {
+	if (gbRam) {
+		memcpy(membuffer, &gbMemory[0xa000], 256);
+		return 256;
+	}
+	return 0;
+}
+
+int MemgbWriteSaveMBC3(char * membuffer, bool extendedSave) {
+	int offset = 0;
+	if (gbRam || extendedSave) {
+		if (gbRam) {
+			memcpy(membuffer, gbRam, (gbRamSizeMask + 1));
+			offset += (gbRamSizeMask + 1);
+		}
+
+		if (extendedSave)
+		{
+			memcpy(membuffer+offset, &gbDataMBC3.mapperSeconds, (10 * sizeof(int)
+					+ sizeof(time_t)));
+			offset += (10 * sizeof(int)	+ sizeof(time_t));
+		}
+	}
+	return offset;
+}
+
+int MemgbWriteSaveMBC5(char * membuffer) {
+	if (gbRam) {
+		memcpy(membuffer, gbRam, (gbRamSizeMask + 1));
+		return (gbRamSizeMask + 1);
+	}
+	return 0;
+}
+
+int MemgbWriteSaveMBC7(char * membuffer) {
+	if (gbRam) {
+		memcpy(membuffer, &gbMemory[0xa000], 256);
+		return 256;
+	}
+	return 0;
+}
+
+int MemgbWriteSaveTAMA5(char * membuffer, bool extendedSave) {
+	int offset = 0;
+
+/*	if (gbRam)
+	{
+		memcpy(membuffer, gbRam, (gbRamSizeMask + 1));
+		offset += (gbRamSizeMask + 1);
+	}
+
+	memcpy(membuffer+offset, gbTAMA5ram, (gbTAMA5ramSize));
+	offset += (gbTAMA5ramSize);
+
+	if (extendedSave)
+	{
+		memcpy(membuffer+offset, &gbDataTAMA5.mapperSeconds, (14 * sizeof(int) + sizeof(time_t)));
+		offset += (14 * sizeof(int) + sizeof(time_t));
+	}*/
+	return offset;
+}
+
+int MemgbWriteSaveMMM01(char * membuffer) {
+	if (gbRam) {
+		memcpy(membuffer, gbRam, (gbRamSizeMask + 1));
+		return (gbRamSizeMask + 1);
+	}
+	return 0;
+}
+
+bool MemgbReadSaveMBC1(char * membuffer, int read) {
+	if (gbRam)
+	{
+		if (read != (gbRamSizeMask + 1))
+			return false;
+		else
+			memcpy(gbRam, membuffer, read);
+		return true;
+	}
+	return false;
+}
+
+bool MemgbReadSaveMBC2(char * membuffer, int read) {
+	if (gbRam)
+	{
+		if (read != 256)
+			return false;
+		else
+			memcpy(&gbMemory[0xa000], membuffer, read);
+		return true;
+	}
+	return false;
+}
+
+bool MemgbReadSaveMBC3(char * membuffer, int read) {
+	int offset = 0;
+
+	if (gbRam)
+	{
+		if(read < (gbRamSizeMask + 1))
+			return false;
+		memcpy(gbRam, membuffer, (gbRamSizeMask + 1));
+		offset += (gbRamSizeMask + 1);
+	}
+
+	int gbRomType = gbRom[0x147];
+
+	if ((gbRomType == 0xf) || (gbRomType == 0x10))
+	{
+		if((uint)read < (offset + sizeof(int) * 10 + sizeof(time_t)))
+			return false;
+		memcpy(&gbDataMBC3.mapperSeconds, membuffer+offset, sizeof(int) * 10 + sizeof(time_t));
+	}
+	return true;
+}
+
+bool MemgbReadSaveMBC5(char * membuffer, int read) {
+	if (gbRam)
+	{
+		if (read != (gbRamSizeMask + 1))
+			return false;
+		else
+			memcpy(gbRam, membuffer, read);
+		return true;
+	}
+	return false;
+}
+
+bool MemgbReadSaveMBC7(char * membuffer, int read) {
+	if (gbRam)
+	{
+		if (read != 256)
+			return false;
+		else
+			memcpy(&gbMemory[0xa000], membuffer, read);
+		return true;
+	}
+	return false;
+}
+
+bool MemgbReadSaveTAMA5(char * membuffer, int read) {
+/*	if (gbRam)
+	{
+		if (gbRamSizeMask + gbTAMA5ramSize + 1)
+			return false;
+
+		memcpy(gbRam, membuffer, (gbRamSizeMask + 1));
+		int offset = (gbRamSizeMask + 1);
+		memcpy(&gbDataTAMA5.mapperSeconds, membuffer+offset, sizeof(int) * 14 + sizeof(time_t));
+		return true;
+	}*/
+	return false;
+}
+
+bool MemgbReadSaveMMM01(char * membuffer, int read) {
+	if (gbRam)
+	{
+		if (read != (gbRamSizeMask + 1))
+			return false;
+		else
+			memcpy(gbRam, membuffer, read);
+		return true;
+	}
+	return false;
+}
+
+int MemgbWriteBatteryFile(char * membuffer)
+{
+	int result = 0;
+	if(gbBattery)
+	{
+		int type = gbRom[0x147];
+		bool extendedSave = true;
+
+		switch(type)
+		{
+			case 0x03:
+				result = MemgbWriteSaveMBC1(membuffer);
+				break;
+			case 0x06:
+				result = MemgbWriteSaveMBC2(membuffer);
+				break;
+			case 0x0d:
+				result = MemgbWriteSaveMMM01(membuffer);
+				break;
+			case 0x0f:
+			case 0x10:
+				result = MemgbWriteSaveMBC3(membuffer, extendedSave);
+				break;
+			case 0x13:
+			case 0xfc:
+				result = MemgbWriteSaveMBC3(membuffer, false);
+			case 0x1b:
+			case 0x1e:
+				result = MemgbWriteSaveMBC5(membuffer);
+				break;
+			case 0x22:
+				result = MemgbWriteSaveMBC7(membuffer);
+				break;
+			case 0xfd:
+				result = MemgbWriteSaveTAMA5(membuffer, extendedSave);
+				break;
+			case 0xff:
+				result = MemgbWriteSaveMBC1(membuffer);
+				break;
+		}
+	}
+	return result;
+}
+
+bool MemgbReadBatteryFile(char * membuffer, int read)
+{
+	bool res = false;
+	if (gbBattery) {
+		int type = gbRom[0x147];
+		switch (type) {
+		case 0x03:
+			res = MemgbReadSaveMBC1(membuffer, read);
+			break;
+		case 0x06:
+			res = MemgbReadSaveMBC2(membuffer, read);
+			break;
+		case 0x0d:
+			res = MemgbReadSaveMMM01(membuffer, read);
+			break;
+		case 0x0f:
+		case 0x10:
+			res = MemgbReadSaveMBC3(membuffer, read);
+			if (!res) {
+				time(&gbDataMBC3.mapperLastTime);
+				struct tm *lt;
+				lt = localtime(&gbDataMBC3.mapperLastTime);
+				gbDataMBC3.mapperSeconds = lt->tm_sec;
+				gbDataMBC3.mapperMinutes = lt->tm_min;
+				gbDataMBC3.mapperHours = lt->tm_hour;
+				gbDataMBC3.mapperDays = lt->tm_yday & 255;
+				gbDataMBC3.mapperControl = (gbDataMBC3.mapperControl & 0xfe)
+						| (lt->tm_yday > 255 ? 1 : 0);
+				res = 0;
+				break;
+			}
+			break;
+		case 0x13:
+		case 0xfc:
+			res = MemgbReadSaveMBC3(membuffer, read);
+			break;
+		case 0x1b:
+		case 0x1e:
+			res = MemgbReadSaveMBC5(membuffer, read);
+			break;
+		case 0x22:
+			res = MemgbReadSaveMBC7(membuffer, read);
+			break;
+		case 0xfd:
+/*			res = MemgbReadSaveTAMA5(membuffer, read);
+			if (!res) {
+				u8 gbDaysinMonth[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30,
+						31, 30, 31 };
+				time(&gbDataTAMA5.mapperLastTime);
+				struct tm *lt;
+				lt = localtime(&gbDataTAMA5.mapperLastTime);
+				gbDataTAMA5.mapperSeconds = lt->tm_sec;
+				gbDataTAMA5.mapperMinutes = lt->tm_min;
+				gbDataTAMA5.mapperHours = lt->tm_hour;
+				gbDataTAMA5.mapperDays = 1;
+				gbDataTAMA5.mapperMonths = 1;
+				gbDataTAMA5.mapperYears = 1970;
+				int days = lt->tm_yday + 365 * 3;
+				while (days) {
+					gbDataTAMA5.mapperDays++;
+					days--;
+					if (gbDataTAMA5.mapperDays
+							> gbDaysinMonth[gbDataTAMA5.mapperMonths - 1]) {
+						gbDataTAMA5.mapperDays = 1;
+						gbDataTAMA5.mapperMonths++;
+						if (gbDataTAMA5.mapperMonths > 12) {
+							gbDataTAMA5.mapperMonths = 1;
+							gbDataTAMA5.mapperYears++;
+							if ((gbDataTAMA5.mapperYears & 3) == 0)
+								gbDaysinMonth[1] = 29;
+							else
+								gbDaysinMonth[1] = 28;
+						}
+					}
+				}
+				gbDataTAMA5.mapperControl = (gbDataTAMA5.mapperControl & 0xfe)
+						| (lt->tm_yday > 255 ? 1 : 0);
+				res = false;
+				break;
+			}*/
+			break;
+		case 0xff:
+			res = MemgbReadSaveMBC1(membuffer, read);
+			break;
+		}
+	}
+	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
+	return res;
+}

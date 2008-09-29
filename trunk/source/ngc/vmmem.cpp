@@ -100,7 +100,7 @@ static void VMClose( void )
 * MEM2 version of GBA CPULoadROM
 ****************************************************************************/
 
-int VMCPULoadROM(int method)
+bool VMCPULoadROM(int method)
 {
 	VMClose();
 	VMAllocGBA();
@@ -114,24 +114,28 @@ int VMCPULoadROM(int method)
 	{
 		case METHOD_SD:
 		case METHOD_USB:
-		GBAROMSize = LoadFATFile ((char *)rom);
+		GBAROMSize = LoadFATFile ((char *)rom, 0);
 		break;
 
 		case METHOD_DVD:
-		GBAROMSize = LoadDVDFile ((unsigned char *)rom);
+		GBAROMSize = LoadDVDFile ((unsigned char *)rom, 0);
 		break;
 
 		case METHOD_SMB:
-		GBAROMSize = LoadSMBFile ((char *)rom);
+		GBAROMSize = LoadSMBFile ((char *)rom, 0);
 		break;
 	}
 
 	if(GBAROMSize)
+	{
 		CPUUpdateRenderBuffers( true );
+		return true;
+	}
 	else
+	{
 		VMClose();
-
-	return GBAROMSize;
+		return false;
+	}
 }
 
 
@@ -202,6 +206,9 @@ u8 VMRead8( u32 address )
 #include "Port.h"
 
 #include "menudraw.h"
+#include "filesel.h"
+#include "vba.h"
+#include "fileop.h"
 
 extern "C" {
 #include "tbtime.h"
@@ -237,7 +244,6 @@ static char *gbabase = NULL;
 static FILE* romfile = NULL;
 static int useVM = 0;
 static u32 GBAROMSize = 0;
-static char romfilename[1024];
 
 /**
  * GBA Memory
@@ -365,54 +371,86 @@ static void VMClose( void )
 *
 * VM version of GBA CPULoadROM
 ****************************************************************************/
-int VMCPULoadROM( char *filename )
+
+int VMCPULoadROM(int method)
 {
-  int res;
-  char msg[512];
+	int res;
+	char msg[512];
+	char filepath[MAXPATHLEN];
 
-  /** Fix VM **/
-  VMClose();
-  VMInit();
-  VMAllocGBA();
+	/** Fix VM **/
+	VMClose();
+	VMInit();
+	VMAllocGBA();
 
-  loadtimeradjust = useVM = GBAROMSize = 0;
+	loadtimeradjust = useVM = GBAROMSize = 0;
 
-  //printf("Filename %s\n", filename);
+	if(method == METHOD_AUTO)
+		method = autoLoadMethod();
 
-  romfile = gen_fopen(filename, "rb");
-  if ( romfile == NULL )
-    {
-	  WaitPrompt((char*) "Error opening file!");
-      VMClose();
-      return 0;
-    }
+	switch (method)
+	{
+		case METHOD_SD:
+		case METHOD_USB:
+			if(!ChangeFATInterface(method, NOTSILENT))
+			{
+				VMClose();
+				return 0;
+			}
+		break;
 
-   // printf("ROM Size %d\n", romfile->fsize);
+		case METHOD_DVD:
+			VMClose();
+			return 0; // not implemented
+		break;
 
-  /* Always use VM, regardless of ROM size */
-      res = gen_fread(rom, 1, (1 << VMSHIFTBITS), romfile);
-      if ( res != (1 << VMSHIFTBITS ) )
-      {
+		case METHOD_SMB:
+			VMClose();
+			return 0; // not implemented
+		break;
+	}
+
+	/* Check filename length */
+	if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
+		sprintf(filepath, "%s/%s",currentdir,filelist[selection].filename);
+	else
+	{
+		WaitPrompt((char*) "Maximum filepath length reached!");
+		return -1;
+	}
+
+	romfile = fopen(filepath, "rb");
+	if ( romfile == NULL )
+	{
+		WaitPrompt((char*) "Error opening file!");
+		VMClose();
+		return 0;
+	}
+
+	// printf("ROM Size %d\n", romfile->fsize);
+
+	/* Always use VM, regardless of ROM size */
+	res = gen_fread(rom, 1, (1 << VMSHIFTBITS), romfile);
+	if ( res != (1 << VMSHIFTBITS ) )
+	{
 		sprintf(msg, "Error reading file! %i \n",res);
 		WaitPrompt(msg);
-        VMClose();
-        return 0;
-      }
+		VMClose();
+		return 0;
+	}
 
 	fseek(romfile, 0, SEEK_END);
 	GBAROMSize = ftell(romfile);
 	fseek(romfile, 0, SEEK_SET);
-      vmpageno = 0;
-      vmpage[0].pageptr = rombase;
-      vmpage[0].pageno = 0;
-      vmpage[0].pagetype = MEM_VM;
-      useVM = 1;
+	vmpageno = 0;
+	vmpage[0].pageptr = rombase;
+	vmpage[0].pageno = 0;
+	vmpage[0].pagetype = MEM_VM;
+	useVM = 1;
 
-  strcpy( romfilename, filename );
+	CPUUpdateRenderBuffers( true );
 
-  CPUUpdateRenderBuffers( true );
-
-  return 1;
+	return 1;
 }
 
 /****************************************************************************

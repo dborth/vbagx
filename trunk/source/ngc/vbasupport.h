@@ -12,9 +12,7 @@
 
 extern struct EmulatedSystem emulator;
 extern u32 loadtimeradjust;
-int LoadVBAROM(int method);
+bool LoadVBAROM(int method);
 void InitialisePalette();
-bool LoadBattery(int method, bool silent);
-bool SaveBattery(int method, bool silent);
-bool LoadState(int method, bool silent);
-bool SaveState(int method, bool silent);
+bool LoadBatteryOrState(int method, int action, bool silent);
+bool SaveBatteryOrState(int method, int action, bool silent);
