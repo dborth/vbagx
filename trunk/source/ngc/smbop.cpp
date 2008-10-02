@@ -85,7 +85,7 @@ ConnectShare (bool silent)
 		strlen(GCSettings.smbip) == 0)
 	{
 		if(!silent)
-			WaitPrompt((char*) "Invalid network settings. Check SNES9xGX.xml.");
+			WaitPrompt((char*) "Invalid network settings. Check VBAGX.xml.");
 		return false;
 	}
 
@@ -319,7 +319,6 @@ LoadBufferFromSMB (char * sbuffer, char *filepath, int length, bool silent)
 
 		if (IsZipFile (sbuffer))
 		{
-			WaitPrompt("In a ZIP");
 			boffset = UnZipFile ((unsigned char *)sbuffer, smbfile); // unzip from SMB
 		}
 		else

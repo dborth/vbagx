@@ -81,7 +81,7 @@ int systemColorDepth = 0;
 u16 systemGbPalette[24];
 u16 systemColorMap16[0x10000];
 //u32 systemColorMap32[0x10000];
-u32 *systemColorMap32 = (u32 *)&systemColorMap16;
+u32 *systemColorMap32 = NULL;
 
 struct EmulatedSystem emulator =
 {
@@ -508,9 +508,6 @@ bool LoadGBROM(int method)
 	gbRom = (u8 *)malloc(1024*1024*4); // allocate 4 MB to GB ROM
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
-
-	if(method == METHOD_AUTO)
-		method = autoLoadMethod();
 
 	switch (method)
 	{

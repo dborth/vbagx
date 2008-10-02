@@ -107,9 +107,6 @@ bool VMCPULoadROM(int method)
 	GBAROMSize = 0;
 	rom = (u8 *)MEM2Storage;
 
-	if(method == METHOD_AUTO)
-		method = autoLoadMethod();
-
 	switch (method)
 	{
 		case METHOD_SD:
@@ -385,18 +382,10 @@ int VMCPULoadROM(int method)
 
 	loadtimeradjust = useVM = GBAROMSize = 0;
 
-	if(method == METHOD_AUTO)
-		method = autoLoadMethod();
-
 	switch (method)
 	{
 		case METHOD_SD:
 		case METHOD_USB:
-			if(!ChangeFATInterface(method, NOTSILENT))
-			{
-				VMClose();
-				return 0;
-			}
 		break;
 
 		case METHOD_DVD:
