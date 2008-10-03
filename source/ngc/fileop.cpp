@@ -182,7 +182,7 @@ LoadFATFile (char * rbuffer, int length)
 	handle = fopen (filepath, "rb");
 	if (handle > 0)
 	{
-		if(length > 0)
+		if(length > 0) // do a partial read (eg: to check file header)
 		{
 			fread (rbuffer, 1, length, handle);
 			size = length;

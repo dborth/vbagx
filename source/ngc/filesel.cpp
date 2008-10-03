@@ -536,7 +536,7 @@ OpenFAT (int method)
 {
 	if(ChangeFATInterface(method, NOTSILENT))
 	{
-		// change current dir to snes roms directory
+		// change current dir to vba roms directory
 		sprintf ( currentdir, "%s/%s", ROOTFATDIR, GCSettings.LoadFolder );
 
 		// Parse initial root directory and get entries list
