@@ -9,7 +9,6 @@
  ***************************************************************************/
 
 #ifdef HW_RVL
-#include "sdfileio.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -191,7 +190,6 @@ u8 VMRead8( u32 address )
 }
 #else
 
-#include "sdfileio.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -356,7 +354,7 @@ static void VMClose( void )
     free(gbabase);
 
   if ( romfile != NULL )
-    gen_fclose(romfile);
+    fclose(romfile);
 
   rombase = gbabase = NULL;
   romfile = NULL;
@@ -419,7 +417,7 @@ int VMCPULoadROM(int method)
 	// printf("ROM Size %d\n", romfile->fsize);
 
 	/* Always use VM, regardless of ROM size */
-	res = gen_fread(rom, 1, (1 << VMSHIFTBITS), romfile);
+	res = fread(rom, 1, (1 << VMSHIFTBITS), romfile);
 	if ( res != (1 << VMSHIFTBITS ) )
 	{
 		sprintf(msg, "Error reading file! %i \n",res);
@@ -456,7 +454,7 @@ static void VMNewPage( int pageid )
 
   mftb(&start);
 
-  res = gen_fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
+  res = fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
   if ( ! res )
     {
       sprintf(msg, "Seek error! - Offset %08x %d\n", pageid << VMSHIFTBITS, res);
@@ -467,7 +465,7 @@ static void VMNewPage( int pageid )
 
   VMAllocate( pageid );
 
-  res = gen_fread( vmpage[pageid].pageptr, 1, 1 << VMSHIFTBITS, romfile );
+  res = fread( vmpage[pageid].pageptr, 1, 1 << VMSHIFTBITS, romfile );
   if ( res != ( 1 << VMSHIFTBITS ) )
     {
       sprintf(msg, "Error reading! %d bytes only\n", res);

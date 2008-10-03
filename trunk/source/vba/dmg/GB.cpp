@@ -16,7 +16,6 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "sdfileio.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1777,7 +1776,7 @@ void gbReset()
 
 void gbWriteSaveMBC1(const char * name)
 {
-  FILE* gzFile = gen_fopen(name,"wb");
+  FILE* gzFile = fopen(name,"wb");
 
   if(gzFile == NULL)
     {
@@ -1785,17 +1784,17 @@ void gbWriteSaveMBC1(const char * name)
       return;
     }
 
-  gen_fwrite(gbRam,
+  fwrite(gbRam,
              1,
              gbRamSize,
              gzFile);
 
-  gen_fclose(gzFile);
+  fclose(gzFile);
 }
 
 void gbWriteSaveMBC2(const char * name)
 {
-  FILE* file = gen_fopen(name, "wb");
+  FILE* file = fopen(name, "wb");
 
   if(file == NULL)
     {
@@ -1803,17 +1802,17 @@ void gbWriteSaveMBC2(const char * name)
       return;
     }
 
-  gen_fwrite(&gbMemory[0xa000],
+  fwrite(&gbMemory[0xa000],
              1,
              256,
              file);
 
-  gen_fclose(file);
+  fclose(file);
 }
 
 void gbWriteSaveMBC3(const char * name, bool extendedSave)
 {
-  FILE* gzFile = gen_fopen(name,"wb");
+  FILE* gzFile = fopen(name,"wb");
 
   if(gzFile == NULL)
     {
@@ -1821,23 +1820,23 @@ void gbWriteSaveMBC3(const char * name, bool extendedSave)
       return;
     }
 
-  gen_fwrite(gbRam,
+  fwrite(gbRam,
              1,
              gbRamSize,
              gzFile);
 
   if(extendedSave)
-    gen_fwrite(&gbDataMBC3.mapperSeconds,
+    fwrite(&gbDataMBC3.mapperSeconds,
                1,
                10*sizeof(int) + sizeof(time_t),
                gzFile);
 
-  gen_fclose(gzFile);
+  fclose(gzFile);
 }
 
 void gbWriteSaveMBC5(const char * name)
 {
-  FILE* gzFile = gen_fopen(name,"wb");
+  FILE* gzFile = fopen(name,"wb");
 
   if(gzFile == NULL)
     {
@@ -1845,17 +1844,17 @@ void gbWriteSaveMBC5(const char * name)
       return;
     }
 
-  gen_fwrite(gbRam,
+  fwrite(gbRam,
              1,
              gbRamSize,
              gzFile);
 
-  gen_fclose(gzFile);
+  fclose(gzFile);
 }
 
 void gbWriteSaveMBC7(const char * name)
 {
-  FILE* file = gen_fopen(name, "wb");
+  FILE* file = fopen(name, "wb");
 
   if(file == NULL)
     {
@@ -1863,12 +1862,12 @@ void gbWriteSaveMBC7(const char * name)
       return;
     }
 
-  gen_fwrite(&gbMemory[0xa000],
+  fwrite(&gbMemory[0xa000],
              1,
              256,
              file);
 
-  gen_fclose(file);
+  fclose(file);
 }
 
 bool gbReadSaveMBC1(const char * name)
@@ -1897,14 +1896,14 @@ bool gbReadSaveMBC1(const char * name)
 
 bool gbReadSaveMBC2(const char * name)
 {
-  FILE* file = gen_fopen(name, "rb");
+  FILE* file = fopen(name, "rb");
 
   if(file == NULL)
     {
       return false;
     }
 
-  int read = gen_fread(&gbMemory[0xa000],
+  int read = fread(&gbMemory[0xa000],
                        1,
                        256,
                        file);
@@ -1913,11 +1912,11 @@ bool gbReadSaveMBC2(const char * name)
     {
       systemMessage(MSG_FAILED_TO_READ_SGM,
                     N_("Failed to read complete save game %s (%d)"), name, read);
-      gen_fclose(file);
+      fclose(file);
       return false;
     }
 
-  gen_fclose(file);
+  fclose(file);
   return true;
 }
 
@@ -1987,14 +1986,14 @@ bool gbReadSaveMBC5(const char * name)
 
 bool gbReadSaveMBC7(const char * name)
 {
-  FILE* file = gen_fopen(name, "rb");
+  FILE* file = fopen(name, "rb");
 
   if(file == NULL)
     {
       return false;
     }
 
-  int read = gen_fread(&gbMemory[0xa000],
+  int read = fread(&gbMemory[0xa000],
                        1,
                        256,
                        file);
@@ -2003,11 +2002,11 @@ bool gbReadSaveMBC7(const char * name)
     {
       systemMessage(MSG_FAILED_TO_READ_SGM,
                     N_("Failed to read complete save game %s (%d)"), name, read);
-      gen_fclose(file);
+      fclose(file);
       return false;
     }
 
-  gen_fclose(file);
+  fclose(file);
   return true;
 }
 
@@ -2115,7 +2114,7 @@ bool gbReadBatteryFile(const char *file)
 
 bool gbReadGSASnapshot(const char *fileName)
 {
-  FILE* file = gen_fopen(fileName, "rb");
+  FILE* file = fopen(fileName, "rb");
 
   if(!file)
     {
@@ -2124,10 +2123,10 @@ bool gbReadGSASnapshot(const char *fileName)
     }
 
   //  long size = ftell(file);
-  gen_fseek(file, 0x4, SEEK_SET);
+  fseek(file, 0x4, SEEK_SET);
   char buffer[16];
   char buffer2[16];
-  gen_fread(buffer, 1, 15, file);
+  fread(buffer, 1, 15, file);
   buffer[15] = 0;
   memcpy(buffer2, &gbRom[0x134], 15);
   buffer2[15] = 0;
@@ -2137,10 +2136,10 @@ bool gbReadGSASnapshot(const char *fileName)
                     N_("Cannot import snapshot for %s. Current game is %s"),
                     buffer,
                     buffer2);
-      gen_fclose(file);
+      fclose(file);
       return false;
     }
-  gen_fseek(file, 0x13, SEEK_SET);
+  fseek(file, 0x13, SEEK_SET);
   int read = 0;
   int toRead = 0;
   switch(gbRom[0x147])
@@ -2152,22 +2151,22 @@ bool gbReadGSASnapshot(const char *fileName)
     case 0x1b:
     case 0x1e:
     case 0xff:
-      read = gen_fread(gbRam, 1, gbRamSize, file);
+      read = fread(gbRam, 1, gbRamSize, file);
       toRead = gbRamSize;
       break;
     case 0x06:
     case 0x22:
-      read = gen_fread(&gbMemory[0xa000],1,256,file);
+      read = fread(&gbMemory[0xa000],1,256,file);
       toRead = 256;
       break;
     default:
       systemMessage(MSG_UNSUPPORTED_SNAPSHOT_FILE,
                     N_("Unsupported snapshot file %s"),
                     fileName);
-      gen_fclose(file);
+      fclose(file);
       return false;
     }
-  gen_fclose(file);
+  fclose(file);
   gbReset();
   return true;
 }
