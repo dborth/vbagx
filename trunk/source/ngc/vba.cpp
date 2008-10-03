@@ -74,7 +74,7 @@ int main()
 	}
 
 	// Initialize libFAT for SD and USB
-	fatInitDefault();
+	fatInit (8, false);
 
 	// Initialize DVD subsystem (GameCube only)
 	#ifdef HW_DOL
