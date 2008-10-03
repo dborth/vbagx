@@ -16,7 +16,6 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "sdfileio.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,16 +102,16 @@ void gbCheatsSaveCheatList(const char *file)
 {
   if(gbCheatNumber == 0)
     return;
-  FILE* f = gen_fopen(file, "wb");
+  FILE* f = fopen(file, "wb");
   if(f == NULL)
     return;
   int version = 1;
-  gen_fwrite(&version, 1, sizeof(version), f);
+  fwrite(&version, 1, sizeof(version), f);
   int type = 1;
-  gen_fwrite(&type, 1, sizeof(type), f);
-  gen_fwrite(&gbCheatNumber, 1, sizeof(gbCheatNumber), f);
-  gen_fwrite(gbCheatList, 1, sizeof(gbCheatList), f);
-  gen_fclose(f);
+  fwrite(&type, 1, sizeof(type), f);
+  fwrite(&gbCheatNumber, 1, sizeof(gbCheatNumber), f);
+  fwrite(gbCheatList, 1, sizeof(gbCheatList), f);
+  fclose(f);
 }
 
 bool gbCheatsLoadCheatList(const char *file)
@@ -123,16 +122,16 @@ bool gbCheatsLoadCheatList(const char *file)
 
   int count = 0;
 
-  FILE* f = gen_fopen(file, "rb");
+  FILE* f = fopen(file, "rb");
 
   if(f == NULL)
     return false;
 
   int version = 0;
 
-  if(gen_fread(&version, 1, sizeof(version), f) != sizeof(version))
+  if(fread(&version, 1, sizeof(version), f) != sizeof(version))
     {
-      gen_fclose(f);
+      fclose(f);
       return false;
     }
 
@@ -140,14 +139,14 @@ bool gbCheatsLoadCheatList(const char *file)
     {
       systemMessage(MSG_UNSUPPORTED_CHEAT_LIST_VERSION,
                     N_("Unsupported cheat list version %d"), version);
-      gen_fclose(f);
+      fclose(f);
       return false;
     }
 
   int type = 0;
-  if(gen_fread(&type, 1, sizeof(type), f) != sizeof(type))
+  if(fread(&type, 1, sizeof(type), f) != sizeof(type))
     {
-      gen_fclose(f);
+      fclose(f);
       return false;
     }
 
@@ -155,19 +154,19 @@ bool gbCheatsLoadCheatList(const char *file)
     {
       systemMessage(MSG_UNSUPPORTED_CHEAT_LIST_TYPE,
                     N_("Unsupported cheat list type %d"), type);
-      gen_fclose(f);
+      fclose(f);
       return false;
     }
 
-  if(gen_fread(&count, 1, sizeof(count), f) != sizeof(count))
+  if(fread(&count, 1, sizeof(count), f) != sizeof(count))
     {
-      gen_fclose(f);
+      fclose(f);
       return false;
     }
 
-  if(gen_fread(gbCheatList, 1, sizeof(gbCheatList), f) != sizeof(gbCheatList))
+  if(fread(gbCheatList, 1, sizeof(gbCheatList), f) != sizeof(gbCheatList))
     {
-      gen_fclose(f);
+      fclose(f);
       return false;
     }
 
@@ -423,7 +422,7 @@ void gbCheatDisable(int i)
 
 bool gbCheatReadGSCodeFile(const char *fileName)
 {
-  FILE* file = gen_fopen(fileName, "rb");
+  FILE* file = fopen(fileName, "rb");
 
   if(!file)
     {
@@ -431,9 +430,9 @@ bool gbCheatReadGSCodeFile(const char *fileName)
       return false;
     }
 
-  gen_fseek(file, 0x18, SEEK_SET);
+  fseek(file, 0x18, SEEK_SET);
   int count = 0;
-  gen_fread(&count, 1, 2, file);
+  fread(&count, 1, 2, file);
   int dummy = 0;
   gbCheatRemoveAll();
   char desc[13];
@@ -441,10 +440,10 @@ bool gbCheatReadGSCodeFile(const char *fileName)
   int i;
   for(i = 0; i < count; i++)
     {
-      gen_fread(&dummy, 1, 2, file);
-      gen_fread(desc, 1, 12, file);
+      fread(&dummy, 1, 2, file);
+      fread(desc, 1, 12, file);
       desc[12] = 0;
-      gen_fread(code, 1, 8, file);
+      fread(code, 1, 8, file);
       code[8] = 0;
       gbAddGsCheat(code, desc);
     }
@@ -452,7 +451,7 @@ bool gbCheatReadGSCodeFile(const char *fileName)
   for(i = 0; i < gbCheatNumber; i++)
     gbCheatDisable(i);
 
-  gen_fclose(file);
+  fclose(file);
   return true;
 }
 

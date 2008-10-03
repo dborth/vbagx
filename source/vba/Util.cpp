@@ -16,7 +16,6 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "sdfileio.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -76,7 +75,7 @@ bool utilWritePNGFile(const char *fileName, int w, int h, u8 *pix)
                                                 NULL,
                                                 NULL);
   if(!png_ptr) {
-    gen_fclose(fp);
+    fclose(fp);
     return false;
   }
 
@@ -84,13 +83,13 @@ bool utilWritePNGFile(const char *fileName, int w, int h, u8 *pix)
 
   if(!info_ptr) {
     png_destroy_write_struct(&png_ptr,NULL);
-    gen_fclose(fp);
+    fclose(fp);
     return false;
   }
 
   if(setjmp(png_ptr->jmpbuf)) {
     png_destroy_write_struct(&png_ptr,NULL);
-    gen_fclose(fp);
+    fclose(fp);
     return false;
   }
 
@@ -183,7 +182,7 @@ bool utilWritePNGFile(const char *fileName, int w, int h, u8 *pix)
 
   png_destroy_write_struct(&png_ptr, &info_ptr);
 
-  gen_fclose(fp);
+  fclose(fp);
 
   return true;
 #else
@@ -209,7 +208,7 @@ bool utilWriteBMPFile(const char *fileName, int w, int h, u8 *pix)
 {
   u8 writeBuffer[512 * 3];
 
-  FILE *fp = gen_fopen(fileName,"wb");
+  FILE *fp = fopen(fileName,"wb");
 
   if(!fp) {
     systemMessage(MSG_ERROR_CREATING_FILE, N_("Error creating file %s"), fileName);
@@ -249,7 +248,7 @@ bool utilWriteBMPFile(const char *fileName, int w, int h, u8 *pix)
   utilPutDword(bmpheader.bitsperpixel, 24);
   utilPutDword(bmpheader.datasize, 3*w*h);
 
-  gen_fwrite(&bmpheader, 1, sizeof(bmpheader), fp);
+  fwrite(&bmpheader, 1, sizeof(bmpheader), fp);
 
   u8 *b = writeBuffer;
 
@@ -271,7 +270,7 @@ bool utilWriteBMPFile(const char *fileName, int w, int h, u8 *pix)
         p++; // skip black pixel for filters
         p++; // skip black pixel for filters
         p -= 2*(w+2);
-        gen_fwrite(writeBuffer, 1, 3*w, fp);
+        fwrite(writeBuffer, 1, 3*w, fp);
 
         b = writeBuffer;
       }
@@ -297,7 +296,7 @@ bool utilWriteBMPFile(const char *fileName, int w, int h, u8 *pix)
           }
         }
         pixU8 -= 2*3*w;
-        gen_fwrite(writeBuffer, 1, 3*w, fp);
+        fwrite(writeBuffer, 1, 3*w, fp);
 
         b = writeBuffer;
       }
@@ -317,7 +316,7 @@ bool utilWriteBMPFile(const char *fileName, int w, int h, u8 *pix)
         pixU32++;
         pixU32 -= 2*(w+1);
 
-        gen_fwrite(writeBuffer, 1, 3*w, fp);
+        fwrite(writeBuffer, 1, 3*w, fp);
 
         b = writeBuffer;
       }
@@ -325,7 +324,7 @@ bool utilWriteBMPFile(const char *fileName, int w, int h, u8 *pix)
     break;
   }
 
-  gen_fclose(fp);
+  fclose(fp);
 
   return true;
 }
@@ -333,11 +332,11 @@ bool utilWriteBMPFile(const char *fileName, int w, int h, u8 *pix)
 static int utilReadInt2(FILE *f)
 {
   int res = 0;
-  int c = gen_fgetc(f);
+  int c = fgetc(f);
   if(c == EOF)
     return -1;
   res = c;
-  c = gen_fgetc(f);
+  c = fgetc(f);
   if(c == EOF)
     return -1;
   return c + (res<<8);
@@ -346,15 +345,15 @@ static int utilReadInt2(FILE *f)
 static int utilReadInt3(FILE *f)
 {
   int res = 0;
-  int c = gen_fgetc(f);
+  int c = fgetc(f);
   if(c == EOF)
     return -1;
   res = c;
-  c = gen_fgetc(f);
+  c = fgetc(f);
   if(c == EOF)
     return -1;
   res = c + (res<<8);
-  c = gen_fgetc(f);
+  c = fgetc(f);
   if(c == EOF)
     return -1;
   return c + (res<<8);
@@ -363,16 +362,16 @@ static int utilReadInt3(FILE *f)
 void utilApplyIPS(const char *ips, u8 **r, int *s)
 {
   // from the IPS spec at http://zerosoft.zophar.net/ips.htm
-  FILE *f = gen_fopen(ips, "rb");
+  FILE *f = fopen(ips, "rb");
   if(!f)
     return;
   u8 *rom = *r;
   int size = *s;
-  if(gen_fgetc(f) == 'P' &&
-     gen_fgetc(f) == 'A' &&
-     gen_fgetc(f) == 'T' &&
-     gen_fgetc(f) == 'C' &&
-     gen_fgetc(f) == 'H') {
+  if(fgetc(f) == 'P' &&
+     fgetc(f) == 'A' &&
+     fgetc(f) == 'T' &&
+     fgetc(f) == 'C' &&
+     fgetc(f) == 'H') {
     int b;
     int offset;
     int len;
@@ -388,7 +387,7 @@ void utilApplyIPS(const char *ips, u8 **r, int *s)
         // len == 0, RLE block
         len = utilReadInt2(f);
         // byte to fill
-        int c = gen_fgetc(f);
+        int c = fgetc(f);
         if(c == -1)
           break;
         b = (u8)c;
@@ -403,7 +402,7 @@ void utilApplyIPS(const char *ips, u8 **r, int *s)
       }
       if(b == -1) {
         // normal block, just read the data
-        if(gen_fread(&rom[offset], 1, len, f) != (int)len)
+        if(fread(&rom[offset], 1, len, f) != (uint)len)
           break;
       } else {
         // fill the region with the given byte
@@ -414,7 +413,7 @@ void utilApplyIPS(const char *ips, u8 **r, int *s)
     }
   }
   // close the file
-  gen_fclose(f);
+  fclose(f);
 }
 
 //TODO: Modify ZSNES code for this
@@ -738,7 +737,7 @@ static u8 *utilLoadGzipFile(const char *file,
                             u8 *data,
                             int &size)
 {
-  FILE* f = gen_fopen(file, "rb");
+  FILE* f = fopen(file, "rb");
 
   if(f == NULL)
     {
@@ -748,9 +747,9 @@ static u8 *utilLoadGzipFile(const char *file,
       return NULL;
     }
 
-  gen_fseek(f, -4, SEEK_END);
-  int fileSize = gen_fgetc(f) | (gen_fgetc(f) << 8) | (gen_fgetc(f) << 16) | (gen_fgetc(f) << 24);
-  gen_fclose(f);
+  fseek(f, -4, SEEK_END);
+  int fileSize = fgetc(f) | (fgetc(f) << 8) | (fgetc(f) << 16) | (fgetc(f) << 24);
+  fclose(f);
 
 
   if(size == 0)
@@ -774,7 +773,7 @@ static u8 *utilLoadGzipFile(const char *file,
         {
           systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
                         "data");
-          gen_fclose(f);
+          fclose(f);
           return NULL;
         }
       size = fileSize;
@@ -813,7 +812,7 @@ u8 *utilLoad(const char *file,
 
   u8 *image = data;
 
-  FILE* f = gen_fopen(file, "rb");
+  FILE* f = fopen(file, "rb");
 
   if(!f)
     {
@@ -821,10 +820,10 @@ u8 *utilLoad(const char *file,
       return NULL;
     }
 
-  gen_fseek(f,0,SEEK_END);
+  fseek(f,0,SEEK_END);
   int fileSize = ftell(f);
 
-  gen_fseek(f,0,SEEK_SET);
+  fseek(f,0,SEEK_SET);
   if(size == 0)
     size = fileSize;
 
@@ -839,14 +838,14 @@ u8 *utilLoad(const char *file,
 
           systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
                         "data");
-          gen_fclose(f);
+          fclose(f);
           return NULL;
         }
       size = fileSize;
     }
   int read = fileSize <= size ? fileSize : size;
-  int r = gen_fread(image, 1, read, f);
-  gen_fclose(f);
+  int r = fread(image, 1, read, f);
+  fclose(f);
 
   if(r != (int)read)
     {
