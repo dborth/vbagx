@@ -22,7 +22,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
-[What's New 1.0.2]
+[What's New 1.0.2 - October, 2008]
 * New core! The core is a modified version of VBA-M and VBA 1.80 beta 3
 * Better emulation speeds. Should now be nearly full speed all the time
 * Turbo speed feature. Mapped to right C-stick (classic controller & 
@@ -32,12 +32,12 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Fix a frameskipping bug
 * Some tweaks behind the scenes
 
-[What's New 1.0.1]
+[What's New 1.0.1 - September 18, 2008]
 * GBA games now run at full speed
 * Menu improvements, with spiffy new background - thanks brakken!
 * Fixed L/R buttons - they work now
 
-[What's New 1.0.0]
+[What's New 1.0.0 - September 16, 2008]
 
 * Now compiles with devkitpro r15
 * One makefile to make all versions
