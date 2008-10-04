@@ -238,7 +238,7 @@ LoadSMBFile (char * rom, int length)
 int
 SaveBufferToSMB (char *filepath, int datasize, bool silent)
 {
-	return SaveBufferFromSMB(savebuffer, filepath, datasize, silent);
+	return SaveBufferToSMB((char *)savebuffer, filepath, datasize, silent);
 }
 
 int
