@@ -21,5 +21,5 @@ int LoadSMBFile (char * fbuffer, int length);
 int LoadBufferFromSMB (char *filepath, bool silent);
 int LoadBufferFromSMB (char * sbuffer, char *filepath, int length, bool silent);
 int SaveBufferToSMB (char *filepath, int datasize, bool silent);
-
+int SaveBufferToSMB (char * sbuffer, char *filepath, int datasize, bool silent);
 #endif

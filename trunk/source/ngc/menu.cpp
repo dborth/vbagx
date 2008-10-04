@@ -695,14 +695,18 @@ MainMenu (int selectedMenu)
 		}
 	}
 
-	/*** Remove any still held buttons ***/
-	#ifdef HW_RVL
-		while( PAD_ButtonsHeld(0) || WPAD_ButtonsHeld(0) )
-		    VIDEO_WaitVSync();
-	#else
-		while( PAD_ButtonsHeld(0) )
-		    VIDEO_WaitVSync();
-	#endif
+	// Wait for buttons to be released
+	int count = 0; // how long we've been waiting for the user to release the button
+	while(count < 50 && (
+		PAD_ButtonsHeld(0)
+		#ifdef HW_RVL
+		|| WPAD_ButtonsHeld(0)
+		#endif
+	))
+	{
+		VIDEO_WaitVSync();
+		count++;
+	}
 
 	StartAudio();
 	mftb(&end);
