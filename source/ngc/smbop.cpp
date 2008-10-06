@@ -317,7 +317,7 @@ LoadBufferFromSMB (char * sbuffer, char *filepath, int length, bool silent)
 		return 0;
 	}
 
-	if(length > 0)
+	if(length > 0) // do a partial read (eg: to check file header)
 	{
 		boffset = SMB_ReadFile (sbuffer, length, 0, smbfile);
 	}
