@@ -122,14 +122,6 @@ PreferencesMenu ()
 		// some load/save methods are not implemented - here's where we skip them
 		// they need to be skipped in the order they were enumerated in vba.h
 
-		// skip
-		if(GCSettings.SaveMethod == METHOD_MC_SLOTA)
-			GCSettings.SaveMethod++;
-		if(GCSettings.SaveMethod == METHOD_MC_SLOTB)
-			GCSettings.SaveMethod++;
-
-		prefmenu[6][0] = '\0'; // MC saving not implemented
-
 		// no USB ports on GameCube
 		#ifndef HW_RVL
 		if(GCSettings.LoadMethod == METHOD_USB)

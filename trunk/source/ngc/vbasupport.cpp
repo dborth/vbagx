@@ -23,6 +23,7 @@
 #include "Util.h"
 #include "dmg/GB.h"
 #include "dmg/gbGlobals.h"
+#include "images/saveicon.h"
 //#include "dmg/gbSound.h"
 
 #include "vba.h"
@@ -314,6 +315,12 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 			offset = LoadBufferFromMC (savebuffer, CARD_SLOTA, filepath, silent);
 		else
 			offset = LoadBufferFromMC (savebuffer, CARD_SLOTB, filepath, silent);
+
+		// skip save icon and comments for Memory Card saves
+		int skip = sizeof (saveicon);
+		skip += 64; // sizeof savecomment
+		memmove(savebuffer, savebuffer+skip, offset-skip);
+		offset -= skip;
 	}
 
 	// load savebuffer into VBA memory
@@ -365,15 +372,23 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 bool SaveBatteryOrState(int method, int action, bool silent)
 {
 	char filepath[1024];
+	char savecomment[2][32];
 	bool result = false;
 	int offset = 0;
 	char ext[4];
+	char savetype[10];
 	int datasize = 0; // we need the actual size of the data written
 
 	if(action == 0)
+	{
 		sprintf(ext, "sav");
+		sprintf(savetype, "SRAM");
+	}
 	else
+	{
 		sprintf(ext, "sgm");
+		sprintf(savetype, "Freeze");
+	}
 
 	ShowAction ((char*) "Saving...");
 
@@ -382,21 +397,37 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 
 	AllocSaveBuffer();
 
+	// add save icon and comments for Memory Card saves
+	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
+	{
+		offset = sizeof (saveicon);
+
+		// Copy in save icon
+		memcpy (savebuffer, saveicon, offset);
+
+		// And the comments
+		sprintf (savecomment[0], "%s %s", VERSIONSTR, savetype);
+		strncpy(savecomment[1], ROMFilename, 31); // truncate filename to 31 chars
+		savecomment[1][31] = 0; // make sure last char is null byte
+		memcpy (savebuffer + offset, savecomment, 64);
+		offset += 64;
+	}
+
 	// put VBA memory into savebuffer, sets datasize to size of memory written
 	if(action == 0)
 	{
 		if(cartridgeType == 1)
-			datasize = MemgbWriteBatteryFile((char *)savebuffer);
+			datasize = MemgbWriteBatteryFile((char *)savebuffer+offset);
 		else
-			datasize = MemCPUWriteBatteryFile((char *)savebuffer);
+			datasize = MemCPUWriteBatteryFile((char *)savebuffer+offset);
 	}
 	else
 	{
-		bool written = emulator.emuWriteMemState((char *)savebuffer, SAVEBUFFERSIZE);
+		bool written = emulator.emuWriteMemState((char *)savebuffer+offset, SAVEBUFFERSIZE-offset);
 		// we really should set datasize to the exact memory size written
 		// but instead we'll set it at 128K - although much of it will go unused
 		if(written)
-			datasize = (512*256);
+			datasize = (1024*128);
 	}
 
 	// write savebuffer into file
@@ -420,9 +451,9 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 			sprintf (filepath, "%s.%s", ROMFilename, ext);
 
 			if(method == METHOD_MC_SLOTA)
-				offset = SaveBufferToMC (savebuffer, CARD_SLOTA, filepath, datasize, silent);
+				offset = SaveBufferToMC (savebuffer, CARD_SLOTA, filepath, datasize+offset, silent);
 			else
-				offset = SaveBufferToMC (savebuffer, CARD_SLOTB, filepath, datasize, silent);
+				offset = SaveBufferToMC (savebuffer, CARD_SLOTB, filepath, datasize+offset, silent);
 		}
 
 		if(offset > 0)

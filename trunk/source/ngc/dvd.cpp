@@ -420,11 +420,11 @@ bool SwitchDVDFolder(char origdir[])
 
 /****************************************************************************
  * LoadDVDFile
- * This function will load a file from DVD, in BIN, SMD or ZIP format.
+ * This function will load a file from DVD
  * The values for offset and length are inherited from dvddir and
  * dvddirlength.
  *
- * The buffer parameter should re-use the initial ROM buffer.
+ * The buffer parameter should re-use the initial ROM buffer
  ***************************************************************************/
 
 int
@@ -442,7 +442,7 @@ LoadDVDFile (unsigned char *buffer, int length)
 	discoffset = dvddir;
 	ShowAction ((char*) "Loading...");
 
-	if(length > 0)
+	if(length > 0) // do a partial read (eg: to check file header)
 	{
 		dvd_read (buffer, length, discoffset);
 	}

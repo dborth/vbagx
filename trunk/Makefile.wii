@@ -26,7 +26,7 @@ INCLUDES 	:=  source/vba source/ngc
 #---------------------------------------------------------------------------------
 
 CFLAGS  = 	-g -O3 -Wall $(MACHDEP) $(INCLUDE) \
-	  		-DNGC -DWII_DVD -DWORDS_BIGENDIAN -DC_CORE -DFINAL_VERSION \
+	  		-DNGC -DWII_DVD -DWORDS_BIGENDIAN -DC_CORE -D__ppc__ -DFINAL_VERSION \
 	  		-DSDL -DNO_PNG -DHAVE_ZUTIL_H
 CXXFLAGS	= $(CFLAGS)
 LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref
