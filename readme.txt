@@ -8,7 +8,7 @@
  
 -=[ Explanation ]=-
  
-Visual Boy Advance GX is a port of Visual Boy Advance 1.7.2.
+Visual Boy Advance GX is a modified port of VBA-M / VBA 1.7.2.
 With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 -=[ Features ]=-
@@ -16,21 +16,27 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Wiimote, Nunchuk, Classic, and Gamecube controller support
 * SRAM and State saving
 * Custom controller configurations
-* SD and USB support
+* SD, USB, DVD, SMB, GC Memory Card, and Zip support
+* GBA compatiblity based on VBA-M r750, GB compatibility based on VBA 1.7.2
+* Turbo speed feature
 
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
 
-[What's New 1.0.2 - October, 2008]
-* New core! The core is a modified version of VBA-M and VBA 1.80 beta 3
+[What's New 1.0.2 - October 6, 2008]
+* New core! The core is now a custom combination of VBA-M and VBA 1.72
+* Added DVD, SMB, ZIP, GameCube MC support
+* Faster USB/SD speeds
+* Screen alignment and flickering problems fixed
+* 128K save support added
 * Better emulation speeds. Should now be nearly full speed all the time
+  for most games.
 * Turbo speed feature. Mapped to right C-stick (classic controller & 
   Gamecube controller), and A+B for wiimote
 * Controller mapping preferences bug fixed. Your preferences will reset
   automatically to correct any problems in your preferences file
-* Fix a frameskipping bug
-* Some tweaks behind the scenes
+* Many other tweaks behind the scenes
 
 [What's New 1.0.1 - September 18, 2008]
 * GBA games now run at full speed
