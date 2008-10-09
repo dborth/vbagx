@@ -18,7 +18,9 @@ void InitialiseVideo ();
 void GX_Start();
 void GX_Render_Init(int width, int height, int haspect, int vaspect);
 void GX_Render(int width, int height, u8 * buffer, int pitch);
-void clearscreen (int colour = COLOR_BLACK);
+void clearscreen ();
 void showscreen ();
+void zoom (float speed);
+void zoom_reset ();
 
 #endif
