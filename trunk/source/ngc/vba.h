@@ -45,6 +45,7 @@ struct SGCSettings{
 	char	smbgcid[20];
 	char	smbsvid[20];
 	char	smbshare[20];
+    int		NGCZoom; // 0 - off, 1 - on
 	int		VerifySaves;
 };
 

@@ -40,6 +40,8 @@ static int texturesize;
 GXTexObj texobj;
 static Mtx view;
 static int vwidth, vheight, oldvwidth, oldvheight;
+static int video_vaspect, video_haspect;
+float zoom_level = 1;
 
 #define HASPECT 80
 #define VASPECT 45
@@ -72,6 +74,27 @@ static camera cam = { {0.0F, 0.0F, 0.0F},
                       {0.0F, 0.5F, 0.0F},
                       {0.0F, 0.0F, -0.5F}
                     };
+
+/****************************************************************************
+ * Drawing screen
+ ***************************************************************************/
+void
+clearscreen ()
+{
+	int colour = COLOR_BLACK;
+
+	whichfb ^= 1;
+	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], colour);
+	memcpy (xfb[whichfb], &bg, 1280 * 480);
+}
+
+void
+showscreen ()
+{
+	VIDEO_SetNextFramebuffer (xfb[whichfb]);
+	VIDEO_Flush ();
+	VIDEO_WaitVSync ();
+}
 
 /****************************************************************************
  * StartGX
@@ -157,6 +180,7 @@ void InitialiseVideo ()
     VIDEO_SetNextFramebuffer(xfb[0]);
 
     GX_Start();
+    clearscreen();
 }
 
 /****************************************************************************
@@ -211,24 +235,20 @@ static void draw_square(Mtx v)
 
 void GX_Render_Init(int width, int height, int haspect, int vaspect)
 {
-	/*** Set new aspect (now with crap AR hack!) ***/
-	square[0] = square[9] = (-haspect - 7);
-	square[3] = square[6] = (haspect + 7);
-	square[1] = square[4] = (vaspect + 7);
-	square[7] = square[10] = (-vaspect - 7);
-
 	/*** Allocate 32byte aligned texture memory ***/
 	texturesize = (width * height) * 2;
-	
+
 	if (texturemem)
 		free(texturemem);
-		
+
 	texturemem = (u8 *) memalign(32, texturesize);
 
 	memset(texturemem, 0, texturesize);
 
 	/*** Setup for first call to scaler ***/
 	vwidth = vheight = oldvwidth = oldvheight = -1;
+	video_vaspect = vaspect;
+	video_haspect = haspect;
 }
 /****************************************************************************
 * GX_Render
@@ -254,7 +274,22 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	if ((oldvheight != vheight) || (oldvwidth != vwidth))
 	{
-		/** Update scaling **/
+		// Update scaling
+		int xscale = video_haspect;
+		int yscale = video_vaspect;
+
+		// change zoom
+		xscale *= zoom_level;
+		yscale *= zoom_level;
+
+		// Set new aspect (now with crap AR hack!)
+		square[0] = square[9] = (-xscale - 7);
+		square[3] = square[6] = (xscale + 7);
+		square[1] = square[4] = (yscale + 7);
+		square[7] = square[10] = (-yscale - 7);
+
+		GX_InvVtxCache ();	// update vertex cache
+
 		oldvwidth = vwidth;
 		oldvheight = vheight;
 		draw_init();
@@ -263,7 +298,6 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 		GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
 	}
 
-	GX_InvVtxCache();
 	GX_InvalidateTexAll();
 	GX_SetTevOp(GX_TEVSTAGE0, GX_DECAL);
 	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
@@ -316,25 +350,27 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	SMBTimer++;
 }
 
-
 /****************************************************************************
- * Drawing screen
+ * Zoom Functions
  ***************************************************************************/
 void
-clearscreen (int c)
+zoom (float speed)
 {
-	int colour = COLOR_BLACK;
+	if (zoom_level > 1)
+		zoom_level += (speed / -100.0);
+	else
+		zoom_level += (speed / -200.0);
 
-	whichfb ^= 1;
-	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], colour);
-	memcpy (xfb[whichfb], &bg, 1280 * 480);
+	if (zoom_level < 0.5) zoom_level = 0.5;
+	else if (zoom_level > 10.0) zoom_level = 10.0;
+
+	oldvheight = 0;	// update video
 }
 
 void
-showscreen ()
+zoom_reset ()
 {
-	VIDEO_SetNextFramebuffer (xfb[whichfb]);
-	VIDEO_Flush ();
-	VIDEO_WaitVSync ();
-}
+	zoom_level = 1.0;
 
+	oldvheight = 0;	// update video
+}

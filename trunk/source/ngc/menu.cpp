@@ -94,7 +94,7 @@ LoadManager ()
 /****************************************************************************
  * Preferences Menu
  ***************************************************************************/
-static int prefmenuCount = 9;
+static int prefmenuCount = 10;
 static char prefmenu[][50] = {
 
 	"Load Method",
@@ -105,6 +105,7 @@ static char prefmenu[][50] = {
 	"Auto Load",
 	"Auto Save",
 	"Verify MC Saves",
+	"Enable Zooming",
 
 	"Save Preferences",
 	"Back to Main Menu"
@@ -148,6 +149,9 @@ PreferencesMenu ()
 			GCSettings.SaveMethod++;
 		if(GCSettings.SaveMethod == METHOD_MC_SLOTB)
 			GCSettings.SaveMethod++;
+		prefmenu[6][0] = 0;
+		#else
+		sprintf (prefmenu[6], "Verify MC Saves %s", GCSettings.VerifySaves == true ? " ON" : "OFF");
 		#endif
 
 		// correct load/save methods out of bounds
@@ -186,7 +190,8 @@ PreferencesMenu ()
 		else if (GCSettings.AutoSave == 2) sprintf (prefmenu[5],"Auto Save SNAPSHOT");
 		else if (GCSettings.AutoSave == 3) sprintf (prefmenu[5],"Auto Save BOTH");
 
-		//sprintf (prefmenu[6], "Verify MC Saves %s", GCSettings.VerifySaves == true ? " ON" : "OFF");
+		sprintf (prefmenu[7], "Enable Zooming %s",
+			GCSettings.NGCZoom == true ? " ON" : "OFF");
 
 		ret = RunMenu (prefmenu, prefmenuCount, (char*)"Preferences", 16);
 
@@ -223,11 +228,15 @@ PreferencesMenu ()
 				break;
 
 			case 7:
+				GCSettings.NGCZoom ^= 1;
+				break;
+
+			case 8:
 				SavePrefs(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
 			case -1: /*** Button B ***/
-			case 8:
+			case 9:
 				quit = 1;
 				break;
 
@@ -243,12 +252,13 @@ PreferencesMenu ()
 int
 GameMenu ()
 {
-	int gamemenuCount = 7;
+	int gamemenuCount = 8;
 	char gamemenu[][50] = {
 	  "Return to Game",
 	  "Reset Game",
 	  "Load SRAM", "Save SRAM",
 	  "Load Game Snapshot", "Save Game Snapshot",
+	  "Reset Zoom",
 	  "Back to Main Menu"
 	};
 
@@ -275,6 +285,9 @@ GameMenu ()
 			gamemenu[3][0] = '\0';
 			gamemenu[5][0] = '\0';
 		}
+		// disable Reset Zoom if Zooming is off
+		if(!GCSettings.NGCZoom)
+			gamemenu[6][0] = '\0';
 
 		ret = RunMenu (gamemenu, gamemenuCount, (char*)"Game Menu");
 
@@ -306,8 +319,13 @@ GameMenu ()
 				SaveBatteryOrState(GCSettings.SaveMethod, 1, NOTSILENT);
 				break;
 
+			case 6:	// Reset Zoom
+				zoom_reset ();
+				quit = retval = 1;
+				break;
+
 			case -1: // Button B
-			case 6: // Return to previous menu
+			case 7: // Return to previous menu
 				retval = 0;
 				quit = 1;
 				break;

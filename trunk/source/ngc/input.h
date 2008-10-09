@@ -22,8 +22,7 @@ extern unsigned int wmpadmap[];
 extern unsigned int ccpadmap[];
 extern unsigned int ncpadmap[];
 
-s8 WPAD_StickX(u8 chan,u8 right);
-s8 WPAD_StickY(u8 chan, u8 right);
+s8 WPAD_Stick(u8 chan,u8 right, int axis);
 
 u32 GetJoy();
 
