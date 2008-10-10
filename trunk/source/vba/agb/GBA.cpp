@@ -3361,7 +3361,7 @@ void CPUReset()
 
   cpuDmaHack = false;
 
-  lastTime = systemGetClock();
+  //lastTime = systemGetClock();
 
   SWITicks = 0;
 }
@@ -3550,13 +3550,13 @@ void CPULoop(int ticks)
                 system10Frames(60);
               }
               if(count == 60) {
-                u32 time = systemGetClock();
+                /*u32 time = systemGetClock();
                 if(time != lastTime) {
                   u32 t = 100000/(time - lastTime);
                   systemShowSpeed(t);
                 } else
                   systemShowSpeed(0);
-                lastTime = time;
+                lastTime = time;*/
                 count = 0;
               }
               u32 joy = 0;

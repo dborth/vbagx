@@ -96,7 +96,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
 
-#ifndef C_CORE
+#if 1 // Wii port override
+//#ifndef C_CORE
 #ifdef __GNUC__
 #ifdef __POWERPC__
   #define ADD_RD_RS_RN(N) \
@@ -171,7 +172,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
                 C_FLAG = (Flags >> 25) & 1;			\
                 V_FLAG = (Flags >> 26) & 1;			\
             }
-  #define ADC_RD_RS \
+// Wii port - doesn't compile!
+/*  #define ADC_RD_RS \
             {\
                 register int Flags;					\
                 register int Result;				\
@@ -190,7 +192,7 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
                 N_FLAG = (Flags >> 31) & 1;			\
                 C_FLAG = (Flags >> 25) & 1;			\
                 V_FLAG = (Flags >> 26) & 1;			\
-            }
+            }*/
   #define SUB_RD_RS_RN(N) \
             {\
                 register int Flags;					\
@@ -263,7 +265,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
                 C_FLAG = (Flags >> 25) & 1;			\
                 V_FLAG = (Flags >> 26) & 1;			\
             }
-  #define SBC_RD_RS \
+// Wii port - doesn't compile for some reason
+/*  #define SBC_RD_RS \
             {\
                 register int Flags;					\
                 register int Result;				\
@@ -282,7 +285,7 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
                 N_FLAG = (Flags >> 31) & 1;			\
                 C_FLAG = (Flags >> 25) & 1;			\
                 V_FLAG = (Flags >> 26) & 1;			\
-            }
+            }*/
   #define NEG_RD_RS \
             {\
                 register int Flags;					\
