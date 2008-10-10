@@ -22,5 +22,6 @@ void clearscreen ();
 void showscreen ();
 void zoom (float speed);
 void zoom_reset ();
+void ResetVideo_Menu ();
 
 #endif

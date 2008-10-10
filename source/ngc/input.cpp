@@ -313,6 +313,8 @@ u32 GetJoy()
     		SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
     		SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
     	}
+    	// change to menu video mode
+		ResetVideo_Menu ();
     	MainMenu(3);
     	return 0;
 	}

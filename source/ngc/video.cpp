@@ -11,15 +11,18 @@
  * These are pretty standard functions to setup and use GX scaling.
  ***************************************************************************/
 #include <gccore.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <malloc.h>
 #include <wiiuse/wpad.h>
 #include "images/bg.h"
-#include "pal60.h"
+#include "vba.h"
+//#include "pal60.h"
 
 extern unsigned int SMBTimer; // timer to reset SMB connection
+u32 FrameTimer = 0;
 
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
@@ -32,6 +35,7 @@ int screenheight;
 /*** 3D GX ***/
 #define DEFAULT_FIFO_SIZE ( 256 * 1024 )
 static u8 gp_fifo[DEFAULT_FIFO_SIZE] ATTRIBUTE_ALIGN(32);
+unsigned int copynow = GX_FALSE;
 
 /*** Texture memory ***/
 static u8 *texturemem = NULL;
@@ -75,6 +79,75 @@ static camera cam = { {0.0F, 0.0F, 0.0F},
                       {0.0F, 0.0F, -0.5F}
                     };
 
+#ifdef VIDEO_THREADING
+/****************************************************************************
+ * VideoThreading
+ ***************************************************************************/
+#define TSTACK 16384
+lwpq_t videoblankqueue;
+lwp_t vbthread;
+static unsigned char vbstack[TSTACK];
+
+/****************************************************************************
+ * vbgetback
+ *
+ * This callback enables the emulator to keep running while waiting for a
+ * vertical blank.
+ *
+ * Putting LWP to good use :)
+ ***************************************************************************/
+static void *
+vbgetback (void *arg)
+{
+	while (1)
+	{
+		VIDEO_WaitVSync ();	 /**< Wait for video vertical blank */
+		LWP_SuspendThread (vbthread);
+	}
+
+	return NULL;
+
+}
+
+/****************************************************************************
+ * InitVideoThread
+ *
+ * libOGC provides a nice wrapper for LWP access.
+ * This function sets up a new local queue and attaches the thread to it.
+ ***************************************************************************/
+void
+InitVideoThread ()
+{
+	/*** Initialise a new queue ***/
+	LWP_InitQueue (&videoblankqueue);
+
+	/*** Create the thread on this queue ***/
+	LWP_CreateThread (&vbthread, vbgetback, NULL, vbstack, TSTACK, 80);
+}
+
+#endif
+
+/****************************************************************************
+ * copy_to_xfb
+ *
+ * Stock code to copy the GX buffer to the current display mode.
+ * Also increments the frameticker, as it's called for each vb.
+ ***************************************************************************/
+static void
+copy_to_xfb (u32 arg)
+{
+
+	if (copynow == GX_TRUE)
+	{
+		GX_CopyDisp (xfb[whichfb], GX_TRUE);
+		GX_Flush ();
+		copynow = GX_FALSE;
+	}
+
+	FrameTimer++;
+	SMBTimer++;
+}
+
 /****************************************************************************
  * Drawing screen
  ***************************************************************************/
@@ -94,6 +167,56 @@ showscreen ()
 	VIDEO_SetNextFramebuffer (xfb[whichfb]);
 	VIDEO_Flush ();
 	VIDEO_WaitVSync ();
+}
+
+/****************************************************************************
+ * Scaler Support Functions
+ ****************************************************************************/
+static void draw_init(void)
+{
+	GX_ClearVtxDesc();
+	GX_SetVtxDesc(GX_VA_POS, GX_INDEX8);
+	GX_SetVtxDesc(GX_VA_CLR0, GX_INDEX8);
+	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+
+	GX_SetArray(GX_VA_POS, square, 3 * sizeof(s16));
+
+	GX_SetNumTexGens(1);
+	GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+
+	GX_InvalidateTexAll();
+
+	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565,
+				GX_CLAMP, GX_CLAMP, GX_FALSE);
+}
+
+static void draw_vert(u8 pos, u8 c, f32 s, f32 t)
+{
+	GX_Position1x8(pos);
+	GX_Color1x8(c);
+	GX_TexCoord2f32(s, t);
+}
+
+static void draw_square(Mtx v)
+{
+	Mtx m;			// model matrix.
+	Mtx mv;			// modelview matrix.
+
+	guMtxIdentity(m);
+	guMtxTransApply(m, m, 0, 0, -100);
+	guMtxConcat(v, m, mv);
+
+	GX_LoadPosMtxImm(mv, GX_PNMTX0);
+	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+	draw_vert(0, 0, 0.0, 0.0);
+	draw_vert(1, 0, 1.0, 0.0);
+	draw_vert(2, 0, 1.0, 1.0);
+	draw_vert(3, 0, 0.0, 1.0);
+	GX_End();
 }
 
 /****************************************************************************
@@ -158,85 +281,47 @@ UpdatePadsCB ()
 ****************************************************************************/
 void InitialiseVideo ()
 {
-    /*** Start VIDEO Subsystem ***/
-    VIDEO_Init();
+	/*** Start VIDEO Subsystem ***/
+	VIDEO_Init();
 
-    vmode = VIDEO_GetPreferredMode(NULL);
-    VIDEO_Configure(vmode);
+	vmode = VIDEO_GetPreferredMode(NULL);
+	VIDEO_Configure(vmode);
 
-    screenheight = vmode->xfbHeight;
+	screenheight = vmode->xfbHeight;
 
-    xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
-    xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
+	xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
+	xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
 
-    VIDEO_SetNextFramebuffer(xfb[0]);
-    VIDEO_SetBlack(FALSE);
+	// Clear framebuffers etc.
+	VIDEO_ClearFrameBuffer (vmode, xfb[0], COLOR_BLACK);
+	VIDEO_ClearFrameBuffer (vmode, xfb[1], COLOR_BLACK);
+	VIDEO_SetNextFramebuffer (xfb[0]);
 
-    // set timings in VI to PAL60
+	// video callbacks
+	VIDEO_SetPostRetraceCallback ((VIRetraceCallback)UpdatePadsCB);
+	VIDEO_SetPreRetraceCallback ((VIRetraceCallback)copy_to_xfb);
+
+	VIDEO_SetNextFramebuffer(xfb[0]);
+	VIDEO_SetBlack(FALSE);
+
+	// set timings in VI to PAL60
 	/*u32 *vreg = (u32 *)0xCC002000;
 	for (int i = 0; i < 64; i++ )
 		vreg[i] = vpal60[i];*/
 
-    VIDEO_Flush();
-    VIDEO_WaitVSync();
+	VIDEO_Flush();
+	VIDEO_WaitVSync();
 
-    if(vmode->viTVMode&VI_NON_INTERLACE)
-    	VIDEO_WaitVSync();
-    VIDEO_SetPostRetraceCallback((VIRetraceCallback)UpdatePadsCB);
-    VIDEO_SetNextFramebuffer(xfb[0]);
+	if(vmode->viTVMode&VI_NON_INTERLACE)
+		VIDEO_WaitVSync();
 
-    GX_Start();
-    clearscreen();
-}
+	copynow = GX_FALSE;
+	GX_Start();
+	draw_init();
 
-/****************************************************************************
- * Scaler Support Functions
- ****************************************************************************/
-static void draw_init(void)
-{
-	GX_ClearVtxDesc();
-	GX_SetVtxDesc(GX_VA_POS, GX_INDEX8);
-	GX_SetVtxDesc(GX_VA_CLR0, GX_INDEX8);
-	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
-
-	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
-	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
-	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
-
-	GX_SetArray(GX_VA_POS, square, 3 * sizeof(s16));
-
-	GX_SetNumTexGens(1);
-	GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
-
-	GX_InvalidateTexAll();
-
-	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565,
-				GX_CLAMP, GX_CLAMP, GX_FALSE);
-}
-
-static void draw_vert(u8 pos, u8 c, f32 s, f32 t)
-{
-	GX_Position1x8(pos);
-	GX_Color1x8(c);
-	GX_TexCoord2f32(s, t);
-}
-
-static void draw_square(Mtx v)
-{
-	Mtx m;			// model matrix.
-	Mtx mv;			// modelview matrix.
-
-	guMtxIdentity(m);
-	guMtxTransApply(m, m, 0, 0, -100);
-	guMtxConcat(v, m, mv);
-
-	GX_LoadPosMtxImm(mv, GX_PNMTX0);
-	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-	draw_vert(0, 0, 0.0, 0.0);
-	draw_vert(1, 0, 1.0, 0.0);
-	draw_vert(2, 0, 1.0, 1.0);
-	draw_vert(3, 0, 0.0, 1.0);
-	GX_End();
+	#ifdef VIDEO_THREADING
+	InitVideoThread ();
+	#endif
 }
 
 void GX_Render_Init(int width, int height, int haspect, int vaspect)
@@ -255,6 +340,73 @@ void GX_Render_Init(int width, int height, int haspect, int vaspect)
 	vwidth = vheight = oldvwidth = oldvheight = -1;
 	video_vaspect = vaspect;
 	video_haspect = haspect;
+}
+
+/****************************************************************************
+ * ResetVideo_Emu
+ *
+ * Reset the video/rendering mode for the emulator rendering
+****************************************************************************/
+void
+ResetVideo_Emu ()
+{
+	GXRModeObj *rmode;
+	Mtx p;
+
+	rmode = vmode; // same mode as menu
+
+	VIDEO_Configure (rmode);
+	VIDEO_ClearFrameBuffer (rmode, xfb[whichfb], COLOR_BLACK);
+	VIDEO_Flush();
+	VIDEO_WaitVSync();
+	if (rmode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
+	else while (VIDEO_GetNextField())  VIDEO_WaitVSync();
+
+	GX_SetViewport (0, 0, rmode->fbWidth, rmode->efbHeight, 0, 1);
+	GX_SetDispCopyYScale ((f32) rmode->xfbHeight / (f32) rmode->efbHeight);
+	GX_SetScissor (0, 0, rmode->fbWidth, rmode->efbHeight);
+
+	GX_SetDispCopySrc (0, 0, rmode->fbWidth, rmode->efbHeight);
+	GX_SetDispCopyDst (rmode->fbWidth, rmode->xfbHeight);
+	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render == 0) ? GX_TRUE : GX_FALSE, rmode->vfilter);	// AA on only for filtered mode
+
+	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
+	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+	/*
+	guOrtho(p, rmode->efbHeight/2, -(rmode->efbHeight/2), -(rmode->fbWidth/2), rmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);*/
+}
+
+/****************************************************************************
+ * ResetVideo_Menu
+ *
+ * Reset the video/rendering mode for the menu
+****************************************************************************/
+void
+ResetVideo_Menu ()
+{
+	Mtx p;
+
+	VIDEO_Configure (vmode);
+	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
+	VIDEO_Flush();
+	VIDEO_WaitVSync();
+	if (vmode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
+	else while (VIDEO_GetNextField())  VIDEO_WaitVSync();
+
+	GX_SetViewport (0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
+	GX_SetDispCopyYScale ((f32) vmode->xfbHeight / (f32) vmode->efbHeight);
+	GX_SetScissor (0, 0, vmode->fbWidth, vmode->efbHeight);
+
+	GX_SetDispCopySrc (0, 0, vmode->fbWidth, vmode->efbHeight);
+	GX_SetDispCopyDst (vmode->fbWidth, vmode->xfbHeight);
+	GX_SetCopyFilter (vmode->aa, vmode->sample_pattern, GX_TRUE, vmode->vfilter);
+
+	GX_SetFieldMode (vmode->field_rendering, ((vmode->viHeight == 2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
+	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+	/*
+	guOrtho(p, vmode->efbHeight/2, -(vmode->efbHeight/2), -(vmode->fbWidth/2), vmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);*/
 }
 
 /****************************************************************************
@@ -309,7 +461,7 @@ MakeTexture (const void *src, void *dst, s32 width, s32 height)
 ****************************************************************************/
 void GX_Render(int width, int height, u8 * buffer, int pitch)
 {
-	/*int h, w;
+	int h, w;
 	long long int *dst = (long long int *) texturemem;
 	long long int *src1 = (long long int *) buffer;
 	long long int *src2 = (long long int *) (buffer + pitch);
@@ -317,10 +469,20 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	long long int *src4 = (long long int *) (buffer + (pitch * 3));
 	int rowpitch = (pitch >> 3) * 3;
 	int rowadjust = ( pitch % 8 ) * 4;
-	char *ra = NULL;*/
+	char *ra = NULL;
 
 	vwidth = width;
 	vheight = height;
+
+	#ifdef VIDEO_THREADING
+	// Ensure previous vb has complete
+	while ((LWP_ThreadIsSuspended (vbthread) == 0) || (copynow == GX_TRUE))
+	#else
+	while (copynow == GX_TRUE)
+	#endif
+	{
+	  usleep (50);
+	}
 
 	whichfb ^= 1;
 
@@ -329,6 +491,8 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 		// Update scaling
 		int xscale = video_haspect;
 		int yscale = video_vaspect;
+
+		ResetVideo_Emu ();	// reset video to emulator rendering settings
 
 		// change zoom
 		xscale *= zoom_level;
@@ -350,11 +514,9 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 		GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
 	}
 
-	GX_InvalidateTexAll();
+	//MakeTexture ((char *) buffer, (char *) texturemem, vwidth, vheight);	// convert image to texture
 
-	MakeTexture ((char *) buffer, (char *) texturemem, vwidth, vheight);	// convert image to texture
-
-	/*for (h = 0; h < vheight; h += 4)
+	for (h = 0; h < vheight; h += 4)
 	{
 		for (w = 0; w < (vwidth >> 2); w++)
 		{
@@ -380,9 +542,10 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 			ra = (char *)src4;
 			src4 = (long long int *)(ra + rowadjust);
 		}
-	}*/
+	}
 
 	DCFlushRange(texturemem, texturesize);
+	GX_InvalidateTexAll ();
 
 	GX_SetNumChans(1);
 	GX_LoadTexObj(&texobj, GX_TEXMAP0);
@@ -391,13 +554,14 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	GX_DrawDone();
 
-	GX_CopyDisp(xfb[whichfb], GX_TRUE);
-	GX_Flush();
-
 	VIDEO_SetNextFramebuffer(xfb[whichfb]);
 	VIDEO_Flush();
+	copynow = GX_TRUE;
 
-	SMBTimer++;
+#ifdef VIDEO_THREADING
+	// Return to caller, don't waste time waiting for vb
+	LWP_ResumeThread (vbthread);
+#endif
 }
 
 /****************************************************************************

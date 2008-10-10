@@ -519,14 +519,14 @@ void systemDrawScreen()
 	// GB / GBC Have oodles of time - so sync on VSync
 	GX_Render( srcWidth, srcHeight, pix, srcPitch );
 
-	#ifdef HW_RVL
+	/*#ifdef HW_RVL
 	VIDEO_WaitVSync ();
 	#else
 	if ( cartridgeType == 1 )
 	{
 		VIDEO_WaitVSync();
 	}
-	#endif
+	#endif*/
 }
 
 extern bool gbUpdateSizes();
