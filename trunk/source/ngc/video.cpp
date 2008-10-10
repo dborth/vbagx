@@ -128,6 +128,12 @@ void GX_Start()
 
 	guPerspective(p, 60, 1.33F, 10.0F, 1000.0F);
 	GX_LoadProjectionMtx(p, GX_PERSPECTIVE);
+
+	GX_SetTevOp(GX_TEVSTAGE0, GX_DECAL);
+	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+
+	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
+	GX_SetColorUpdate(GX_TRUE);
 }
 
 /****************************************************************************
@@ -250,6 +256,52 @@ void GX_Render_Init(int width, int height, int haspect, int vaspect)
 	video_vaspect = vaspect;
 	video_haspect = haspect;
 }
+
+/****************************************************************************
+ * MakeTexture
+ *
+ * Proper GNU Asm rendition of the above, converted by shagkur. - Thanks!
+ ***************************************************************************/
+void
+MakeTexture (const void *src, void *dst, s32 width, s32 height)
+{
+  register u32 tmp0 = 0, tmp1 = 0, tmp2 = 0, tmp3 = 0;
+
+  __asm__ __volatile__ ("	srwi		%6,%6,2\n"
+			"	srwi		%7,%7,2\n"
+			"	subi		%3,%4,4\n"
+			"	mr		%4,%3\n"
+			"	subi		%4,%4,4\n"
+			"2:	mtctr		%6\n"
+			"	mr			%0,%5\n"
+			//
+			"1:	lwz			%1,0(%5)\n"
+			"	stwu		%1,8(%4)\n"
+			"	lwz			%2,4(%5)\n"
+			"	stwu		%2,8(%3)\n"
+			"	lwz			%1,1024(%5)\n"
+			"	stwu		%1,8(%4)\n"
+			"	lwz			%2,1028(%5)\n"
+			"	stwu		%2,8(%3)\n"
+			"	lwz			%1,2048(%5)\n"
+			"	stwu		%1,8(%4)\n"
+			"	lwz			%2,2052(%5)\n"
+			"	stwu		%2,8(%3)\n"
+			"	lwz			%1,3072(%5)\n"
+			"	stwu		%1,8(%4)\n"
+			"	lwz			%2,3076(%5)\n"
+			"	stwu		%2,8(%3)\n"
+			"	addi		%5,%5,8\n"
+			"	bdnz		1b\n"
+			"	addi		%5,%0,4096\n"
+			"	subic.		%7,%7,1\n"
+			"	bne			2b"
+			//              0                        1                        2                        3              4                      5                 6               7
+			:"=&r" (tmp0), "=&r" (tmp1), "=&r" (tmp2),
+			"=&r" (tmp3), "+r" (dst):"r" (src), "r" (width),
+			"r" (height));
+}
+
 /****************************************************************************
 * GX_Render
 *
@@ -257,7 +309,7 @@ void GX_Render_Init(int width, int height, int haspect, int vaspect)
 ****************************************************************************/
 void GX_Render(int width, int height, u8 * buffer, int pitch)
 {
-	int h, w;
+	/*int h, w;
 	long long int *dst = (long long int *) texturemem;
 	long long int *src1 = (long long int *) buffer;
 	long long int *src2 = (long long int *) (buffer + pitch);
@@ -265,7 +317,7 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	long long int *src4 = (long long int *) (buffer + (pitch * 3));
 	int rowpitch = (pitch >> 3) * 3;
 	int rowadjust = ( pitch % 8 ) * 4;
-	char *ra = NULL;
+	char *ra = NULL;*/
 
 	vwidth = width;
 	vheight = height;
@@ -299,10 +351,10 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	}
 
 	GX_InvalidateTexAll();
-	GX_SetTevOp(GX_TEVSTAGE0, GX_DECAL);
-	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
 
-	for (h = 0; h < vheight; h += 4)
+	MakeTexture ((char *) buffer, (char *) texturemem, vwidth, vheight);	// convert image to texture
+
+	/*for (h = 0; h < vheight; h += 4)
 	{
 		for (w = 0; w < (vwidth >> 2); w++)
 		{
@@ -328,7 +380,7 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 			ra = (char *)src4;
 			src4 = (long long int *)(ra + rowadjust);
 		}
-	}
+	}*/
 
 	DCFlushRange(texturemem, texturesize);
 
@@ -339,8 +391,6 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	GX_DrawDone();
 
-	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
-	GX_SetColorUpdate(GX_TRUE);
 	GX_CopyDisp(xfb[whichfb], GX_TRUE);
 	GX_Flush();
 
