@@ -248,9 +248,9 @@ decodePrefsData (int method)
 	char verMinor = version[9];
 	char verPoint = version[11];
 
-	if(verPoint < '2' && verMajor == '1') // less than version 1.0.2
+	if(verPoint < '3' && verMajor == '1') // less than version 1.0.3
 		return false; // reset settings
-	else if(verMajor > '1' || verMinor > '0' || verPoint > '2') // some future version
+	else if(verMajor > '1' || verMinor > '0' || verPoint > '3') // some future version
 		return false; // reset settings
 
 	// File Settings

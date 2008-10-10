@@ -19,6 +19,7 @@
 #include <wiiuse/wpad.h>
 #include "images/bg.h"
 #include "vba.h"
+#include "menudraw.h"
 //#include "pal60.h"
 
 extern unsigned int SMBTimer; // timer to reset SMB connection
@@ -45,6 +46,7 @@ GXTexObj texobj;
 static Mtx view;
 static int vwidth, vheight, oldvwidth, oldvheight;
 static int video_vaspect, video_haspect;
+int updateScaling;
 float zoom_level = 1;
 
 #define HASPECT 80
@@ -106,7 +108,6 @@ vbgetback (void *arg)
 	}
 
 	return NULL;
-
 }
 
 /****************************************************************************
@@ -136,7 +137,6 @@ InitVideoThread ()
 static void
 copy_to_xfb (u32 arg)
 {
-
 	if (copynow == GX_TRUE)
 	{
 		GX_CopyDisp (xfb[whichfb], GX_TRUE);
@@ -174,24 +174,26 @@ showscreen ()
  ****************************************************************************/
 static void draw_init(void)
 {
-	GX_ClearVtxDesc();
-	GX_SetVtxDesc(GX_VA_POS, GX_INDEX8);
-	GX_SetVtxDesc(GX_VA_CLR0, GX_INDEX8);
-	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+	GX_ClearVtxDesc ();
+	GX_SetVtxDesc (GX_VA_POS, GX_INDEX8);
+	GX_SetVtxDesc (GX_VA_CLR0, GX_INDEX8);
+	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
 
-	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
-	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
-	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
+	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
 
-	GX_SetArray(GX_VA_POS, square, 3 * sizeof(s16));
+	GX_SetArray (GX_VA_POS, square, 3 * sizeof (s16));
 
-	GX_SetNumTexGens(1);
-	GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+	GX_SetNumTexGens (1);
+	GX_SetNumChans (0);
+
+	GX_SetTexCoordGen (GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
 
 	GX_InvalidateTexAll();
-
-	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565,
-				GX_CLAMP, GX_CLAMP, GX_FALSE);
+	memset (&view, 0, sizeof (Mtx));
+	guLookAt(view, &cam.pos, &cam.up, &cam.view);
+	GX_LoadPosMtxImm (view, GX_PNMTX0);
 }
 
 static void draw_vert(u8 pos, u8 c, f32 s, f32 t)
@@ -226,28 +228,31 @@ void GX_Start()
 {
 	Mtx p;
 
-	GXColor gxbackground = { 0, 0, 0, 0xff };
+	GXColor background = { 0, 0, 0, 0xff };
 
 	/*** Clear out FIFO area ***/
-	memset(&gp_fifo, 0, DEFAULT_FIFO_SIZE);
+	memset (&gp_fifo, 0, DEFAULT_FIFO_SIZE);
 
 	/*** Initialise GX ***/
-	GX_Init(&gp_fifo, DEFAULT_FIFO_SIZE);
-	GX_SetCopyClear(gxbackground, 0x00ffffff);
+	GX_Init (&gp_fifo, DEFAULT_FIFO_SIZE);
+	GX_SetCopyClear (background, 0x00ffffff);
 
-	GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
-	GX_SetDispCopyYScale((f32) vmode->xfbHeight / (f32) vmode->efbHeight);
-	GX_SetScissor(0, 0, vmode->fbWidth, vmode->efbHeight);
-	GX_SetDispCopySrc(0, 0, vmode->fbWidth, vmode->efbHeight);
-	GX_SetDispCopyDst(vmode->fbWidth, vmode->xfbHeight);
-	GX_SetCopyFilter(vmode->aa, vmode->sample_pattern, GX_TRUE, vmode->vfilter);
-	GX_SetFieldMode(vmode->field_rendering,
-				  ((vmode->viHeight ==
-					2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
-	GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
-	GX_SetCullMode(GX_CULL_NONE);
-	GX_CopyDisp(xfb[whichfb ^ 1], GX_TRUE);
-	GX_SetDispCopyGamma(GX_GM_1_0);
+
+	GX_SetViewport (0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
+	GX_SetDispCopyYScale ((f32) vmode->xfbHeight / (f32) vmode->efbHeight);
+	GX_SetScissor (0, 0, vmode->fbWidth, vmode->efbHeight);
+
+	GX_SetDispCopySrc (0, 0, vmode->fbWidth, vmode->efbHeight);
+	GX_SetDispCopyDst (vmode->fbWidth, vmode->xfbHeight);
+	GX_SetCopyFilter (vmode->aa, vmode->sample_pattern, GX_TRUE, vmode->vfilter);
+
+	GX_SetFieldMode (vmode->field_rendering, ((vmode->viHeight == 2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
+
+	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+	GX_SetCullMode (GX_CULL_NONE);
+	GX_SetDispCopyGamma (GX_GM_1_0);
+	GX_SetZMode (GX_TRUE, GX_LEQUAL, GX_TRUE);
+	GX_SetColorUpdate (GX_TRUE);
 
 	guPerspective(p, 60, 1.33F, 10.0F, 1000.0F);
 	GX_LoadProjectionMtx(p, GX_PERSPECTIVE);
@@ -255,8 +260,10 @@ void GX_Start()
 	GX_SetTevOp(GX_TEVSTAGE0, GX_DECAL);
 	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
 
-	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
-	GX_SetColorUpdate(GX_TRUE);
+	//guOrtho(p, vmode->efbHeight/2, -(vmode->efbHeight/2), -(vmode->fbWidth/2), vmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	//GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
+
+	GX_CopyDisp (xfb[whichfb], GX_TRUE); // reset xfb
 }
 
 /****************************************************************************
@@ -285,6 +292,15 @@ void InitialiseVideo ()
 	VIDEO_Init();
 
 	vmode = VIDEO_GetPreferredMode(NULL);
+
+#ifdef HW_DOL
+/* we have component cables, but the preferred mode is interlaced
+ * why don't we switch into progressive?
+ * on the Wii, the user can do this themselves on their Wii Settings */
+	if(VIDEO_HaveComponentCable() && vmode == &TVNtsc480IntDf)
+		vmode = &TVNtsc480Prog;
+#endif
+
 	VIDEO_Configure(vmode);
 
 	screenheight = vmode->xfbHeight;
@@ -317,29 +333,10 @@ void InitialiseVideo ()
 
 	copynow = GX_FALSE;
 	GX_Start();
-	draw_init();
 
 	#ifdef VIDEO_THREADING
 	InitVideoThread ();
 	#endif
-}
-
-void GX_Render_Init(int width, int height, int haspect, int vaspect)
-{
-	/*** Allocate 32byte aligned texture memory ***/
-	texturesize = (width * height) * 2;
-
-	if (texturemem)
-		free(texturemem);
-
-	texturemem = (u8 *) memalign(32, texturesize);
-
-	memset(texturemem, 0, texturesize);
-
-	/*** Setup for first call to scaler ***/
-	vwidth = vheight = oldvwidth = oldvheight = -1;
-	video_vaspect = vaspect;
-	video_haspect = haspect;
 }
 
 /****************************************************************************
@@ -372,9 +369,9 @@ ResetVideo_Emu ()
 
 	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
-	/*
-	guOrtho(p, rmode->efbHeight/2, -(rmode->efbHeight/2), -(rmode->fbWidth/2), rmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
-	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);*/
+
+	//guOrtho(p, rmode->efbHeight/2, -(rmode->efbHeight/2), -(rmode->fbWidth/2), rmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	//GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
 }
 
 /****************************************************************************
@@ -404,9 +401,61 @@ ResetVideo_Menu ()
 
 	GX_SetFieldMode (vmode->field_rendering, ((vmode->viHeight == 2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
-	/*
-	guOrtho(p, vmode->efbHeight/2, -(vmode->efbHeight/2), -(vmode->fbWidth/2), vmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
-	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);*/
+
+	//guOrtho(p, vmode->efbHeight/2, -(vmode->efbHeight/2), -(vmode->fbWidth/2), vmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	//GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
+}
+
+void UpdateScaling()
+{
+	// Update scaling
+	int xscale = video_haspect;
+	int yscale = video_vaspect;
+
+	// change zoom
+	xscale *= zoom_level;
+	yscale *= zoom_level;
+
+	// Set new aspect (now with crap AR hack!)
+	square[0] = square[9] = (-xscale - 7);
+	square[3] = square[6] = (xscale + 7);
+	square[1] = square[4] = (yscale + 7);
+	square[7] = square[10] = (-yscale - 7);
+
+	GX_InvVtxCache ();	// update vertex cache
+
+	GX_InitTexObj (&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);	// initialize the texture obj we are going to use
+
+	if (GCSettings.render == 1)
+		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
+
+	GX_LoadTexObj (&texobj, GX_TEXMAP0);	// load texture object so its ready to use
+
+	draw_init();
+	updateScaling = 0;
+}
+
+void GX_Render_Init(int width, int height, int haspect, int vaspect)
+{
+	ResetVideo_Emu ();	// reset video to emulator rendering settings
+
+	if (texturemem)
+		free(texturemem);
+
+	/*** Allocate 32byte aligned texture memory ***/
+	texturesize = (width * height) * 2;
+
+	texturemem = (u8 *) memalign(32, texturesize);
+
+	memset(texturemem, 0, texturesize);
+
+	/*** Setup for first call to scaler ***/
+	vwidth = vheight = oldvwidth = oldvheight = -1;
+	updateScaling = 1;
+	video_vaspect = vaspect;
+	video_haspect = haspect;
+
+	UpdateScaling();
 }
 
 /****************************************************************************
@@ -486,32 +535,16 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	whichfb ^= 1;
 
+	if(updateScaling)
+	{
+		UpdateScaling();
+	}
+
 	if ((oldvheight != vheight) || (oldvwidth != vwidth))
 	{
-		// Update scaling
-		int xscale = video_haspect;
-		int yscale = video_vaspect;
-
-		ResetVideo_Emu ();	// reset video to emulator rendering settings
-
-		// change zoom
-		xscale *= zoom_level;
-		yscale *= zoom_level;
-
-		// Set new aspect (now with crap AR hack!)
-		square[0] = square[9] = (-xscale - 7);
-		square[3] = square[6] = (xscale + 7);
-		square[1] = square[4] = (yscale + 7);
-		square[7] = square[10] = (-yscale - 7);
-
-		GX_InvVtxCache ();	// update vertex cache
-
 		oldvwidth = vwidth;
 		oldvheight = vheight;
-		draw_init();
-		memset(&view, 0, sizeof(Mtx));
-		guLookAt(view, &cam.pos, &cam.up, &cam.view);
-		GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
+		updateScaling = 1;
 	}
 
 	//MakeTexture ((char *) buffer, (char *) texturemem, vwidth, vheight);	// convert image to texture
@@ -546,9 +579,6 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	DCFlushRange(texturemem, texturesize);
 	GX_InvalidateTexAll ();
-
-	GX_SetNumChans(1);
-	GX_LoadTexObj(&texobj, GX_TEXMAP0);
 
 	draw_square(view);
 
