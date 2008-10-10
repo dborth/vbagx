@@ -94,7 +94,7 @@ LoadManager ()
 /****************************************************************************
  * Preferences Menu
  ***************************************************************************/
-static int prefmenuCount = 10;
+static int prefmenuCount = 11;
 static char prefmenu[][50] = {
 
 	"Load Method",
@@ -106,6 +106,7 @@ static char prefmenu[][50] = {
 	"Auto Save",
 	"Verify MC Saves",
 	"Enable Zooming",
+	"Video Rendering",
 
 	"Save Preferences",
 	"Back to Main Menu"
@@ -193,6 +194,11 @@ PreferencesMenu ()
 		sprintf (prefmenu[7], "Enable Zooming %s",
 			GCSettings.NGCZoom == true ? " ON" : "OFF");
 
+		if ( GCSettings.render == 0)
+			sprintf (prefmenu[8], "Video Rendering Filtered");
+		if ( GCSettings.render == 1)
+			sprintf (prefmenu[8], "Video Rendering Unfiltered");
+
 		ret = RunMenu (prefmenu, prefmenuCount, (char*)"Preferences", 16);
 
 		switch (ret)
@@ -232,11 +238,19 @@ PreferencesMenu ()
 				break;
 
 			case 8:
+				GCSettings.render++;
+				if (GCSettings.render > 1 )
+					GCSettings.render = 0;
+				// reset zoom
+				zoom_reset ();
+				break;
+
+			case 9:
 				SavePrefs(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
 			case -1: /*** Button B ***/
-			case 9:
+			case 10:
 				quit = 1;
 				break;
 

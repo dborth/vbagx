@@ -47,4 +47,5 @@ DefaultSettings ()
 
 	GCSettings.VerifySaves = 0;
 	GCSettings.NGCZoom = 0;	// zooming default off
+	GCSettings.render = 0; // Unfiltered
 }
