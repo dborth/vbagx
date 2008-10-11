@@ -47,9 +47,6 @@ static tb_t start, now;
 
 u32 loadtimeradjust;
 
-static u32 autoFrameSkipLastTime = 0;
-static int frameskipadjust = 0;
-
 int vAspect = 0;
 int hAspect = 0;
 
@@ -132,20 +129,38 @@ void GC_Sleep(u32 dwMiliseconds)
 	}
 }
 */
+
+static u32 autoFrameSkipLastTime = 0;
+
 void system10Frames(int rate)
 {
-	if ( cartridgeType == 1 )
+	if (cartridgeType == 1)
 		return;
 
 	u32 time = systemGetClock();
 	u32 diff = time - autoFrameSkipLastTime;
+
+	// difference should be 1/6 second or (1/6)*1000 ms or 167 ms
+	int timeOff = (167 - diff);
+
+	if(timeOff > 3 && timeOff < 60) // we're running ahead!
+		usleep(timeOff*1000); // let's take a nap
+	else
+		timeOff = 0; // timeoff was not valid
+
+	if(diff > 175 && systemFrameSkip < 9)
+		systemFrameSkip++;
+	else if(diff < 150 && systemFrameSkip > 0)
+		systemFrameSkip--;
+
+	autoFrameSkipLastTime = time + timeOff; // total time = processing time + sleep time
+
+	/*
+	// Original VBA SDL frameskip algorithm
 	int speed = 100;
 
 	if(diff)
 		speed = (1000000/rate)/diff;
-	/*	  char temp[512];
-	sprintf(temp,"Speed: %i",speed);
-	MENU_DrawString( -1, 450,temp , 1 );   */
 
 	if(speed >= 98)
 	{
@@ -174,6 +189,7 @@ void system10Frames(int rate)
 	}
 
 	autoFrameSkipLastTime = time;
+	*/
 }
 
 /****************************************************************************
@@ -518,15 +534,6 @@ void systemDrawScreen()
 {
 	// GB / GBC Have oodles of time - so sync on VSync
 	GX_Render( srcWidth, srcHeight, pix, srcPitch );
-
-	/*#ifdef HW_RVL
-	VIDEO_WaitVSync ();
-	#else
-	if ( cartridgeType == 1 )
-	{
-		VIDEO_WaitVSync();
-	}
-	#endif*/
 }
 
 extern bool gbUpdateSizes();
