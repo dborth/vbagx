@@ -151,8 +151,6 @@ u32 VMRead32( u32 address )
   }
 
   return READ32LE((rom + address));
-
-
 }
 
 /****************************************************************************
@@ -237,7 +235,7 @@ static int vmpageno = 0;
 static char *rombase = NULL;
 static char *gbabase = NULL;
 static FILE* romfile = NULL;
-static int useVM = 0;
+static int useVM = 1;
 static u32 GBAROMSize = 0;
 
 /**
@@ -378,7 +376,7 @@ int VMCPULoadROM(int method)
 	VMInit();
 	VMAllocGBA();
 
-	loadtimeradjust = useVM = GBAROMSize = 0;
+	loadtimeradjust = GBAROMSize = 0;
 
 	switch (method)
 	{
@@ -433,7 +431,6 @@ int VMCPULoadROM(int method)
 	vmpage[0].pageptr = rombase;
 	vmpage[0].pageno = 0;
 	vmpage[0].pagetype = MEM_VM;
-	useVM = 1;
 
 	CPUUpdateRenderBuffers( true );
 

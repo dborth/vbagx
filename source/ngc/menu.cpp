@@ -125,7 +125,7 @@ PreferencesMenu ()
 		// they need to be skipped in the order they were enumerated in vba.h
 
 		// no USB ports on GameCube
-		#ifndef HW_RVL
+		#ifdef HW_DOL
 		if(GCSettings.LoadMethod == METHOD_USB)
 			GCSettings.LoadMethod++;
 		if(GCSettings.SaveMethod == METHOD_USB)
@@ -136,8 +136,14 @@ PreferencesMenu ()
 		if(GCSettings.SaveMethod == METHOD_DVD)
 			GCSettings.SaveMethod++;
 
+		// disable DVD in GC mode (not implemented)
+		#ifdef HW_DOL
+		if(GCSettings.LoadMethod == METHOD_DVD)
+			GCSettings.LoadMethod++;
+		#endif
+
 		// disable SMB in GC mode (stalls out)
-		#ifndef HW_RVL
+		#ifdef HW_DOL
 		if(GCSettings.LoadMethod == METHOD_SMB)
 			GCSettings.LoadMethod++;
 		if(GCSettings.SaveMethod == METHOD_SMB)

@@ -246,6 +246,8 @@ Credits ()
 	DrawText (375, ypos, (char*)"emukidid");
 	DrawText (100, ypos += 18, (char*)"Original GameCube Port");
 	DrawText (375, ypos, (char*)"SoftDev");
+	DrawText (100, ypos += 18, (char*)"Visual Boy Advance - M");
+	DrawText (375, ypos, (char*)"VBA-M Team");
 	DrawText (100, ypos += 18, (char*)"Visual Boy Advance 1.7.2");
 	DrawText (375, ypos, (char*)"Forgotten");
 	DrawText (100, ypos += 18, (char*)"libogc");
@@ -256,7 +258,7 @@ Credits ()
 	DrawText (-1, ypos += 36, (char*)"And many others who have contributed over the years!");
 
 	setfontsize (12);
-	DrawText (-1, ypos += 50, (char*)"This software is open source and may be copied,");
+	DrawText (-1, ypos += 40, (char*)"This software is open source and may be copied,");
 	DrawText (-1, ypos += 15, (char*)"distributed, or modified under the terms of");
 	DrawText (-1, ypos += 15, (char*)"the GNU General Public License (GPL) Version 2.");
 

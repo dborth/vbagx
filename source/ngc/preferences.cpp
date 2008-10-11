@@ -141,7 +141,7 @@ preparePrefsData (int method)
 	createXMLSetting("LoadFolder", "Load Folder", GCSettings.LoadFolder);
 	createXMLSetting("SaveFolder", "Save Folder", GCSettings.SaveFolder);
 	//createXMLSetting("CheatFolder", "Cheats Folder", GCSettings.CheatFolder);
-	//createXMLSetting("VerifySaves", "Verify Memory Card Saves", toStr(GCSettings.VerifySaves));
+	createXMLSetting("VerifySaves", "Verify Memory Card Saves", toStr(GCSettings.VerifySaves));
 
 	createXMLSection("Network", "Network Settings");
 
@@ -150,7 +150,10 @@ preparePrefsData (int method)
 	createXMLSetting("smbuser", "Share Username", GCSettings.smbuser);
 	createXMLSetting("smbpwd", "Share Password", GCSettings.smbpwd);
 
-	//createXMLSection("Emulation", "Emulation Settings");
+	createXMLSection("Emulation", "Emulation Settings");
+
+	createXMLSetting("NGCZoom", "Enable Zoom", toStr(GCSettings.NGCZoom));
+	createXMLSetting("render", "Video Rendering", toStr(GCSettings.render));
 
 	createXMLSection("Controller", "Controller Settings");
 
@@ -272,6 +275,9 @@ decodePrefsData (int method)
 	loadXMLSetting(GCSettings.smbpwd, "smbpwd");
 
 	// Emulation Settings
+
+	loadXMLSetting(&GCSettings.NGCZoom, "NGCZoom");
+	loadXMLSetting(&GCSettings.render, "render");
 
 	// Controller Settings
 
