@@ -532,7 +532,6 @@ u32 systemReadJoypad(int which)
 ****************************************************************************/
 void systemDrawScreen()
 {
-	// GB / GBC Have oodles of time - so sync on VSync
 	GX_Render( srcWidth, srcHeight, pix, srcPitch );
 }
 
@@ -678,7 +677,7 @@ bool LoadVBAROM(int method)
 		emulating = 1;
 
 		// reset frameskip variables
-		autoFrameSkipLastTime = frameskipadjust = systemFrameSkip = 0;
+		autoFrameSkipLastTime = systemFrameSkip = 0;
 
 		// Start system clock
 		mftb(&start);
