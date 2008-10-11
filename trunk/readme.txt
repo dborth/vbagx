@@ -24,6 +24,13 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[What's New 1.0.3]
+* New timing / frameskip algorithm - should (hopefully) work 100% better!
+* Video code improvements - speed boost
+* Video zooming option
+* Unfiltered video option
+* 7z support
+
 [What's New 1.0.2 - October 6, 2008]
 * New core! The core is now a custom combination of VBA-M and VBA 1.72
 * Added DVD, SMB, ZIP, GameCube MC support
