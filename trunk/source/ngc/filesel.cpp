@@ -32,10 +32,12 @@ extern "C" {
 #include "input.h"
 #include "dvd.h"
 #include "smbop.h"
+#include "gcunzip.h"
 
 int offset;
 int selection;
 char currentdir[MAXPATHLEN];
+char szpath[MAXPATHLEN];
 int maxfiles;
 extern int screenheight;
 
@@ -47,6 +49,7 @@ int hasloaded = 0;
 
 // Global file entry table
 FILEENTRIES filelist[MAXFILES];
+bool inSz = false;
 
 char ROMFilename[512];
 bool ROMLoaded = false;
@@ -189,6 +192,28 @@ int UpdateDirName(int method)
 	}
 }
 
+bool MakeROMPath(char filepath[], int method)
+{
+	char temppath[MAXPATHLEN];
+
+	// Check filename length
+	if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
+	{
+		sprintf(temppath, "%s/%s",currentdir,filelist[selection].filename);
+
+		if(method == METHOD_SMB)
+			strcpy(filepath, SMBPath(temppath));
+		else
+			strcpy(filepath, temppath);
+		return true;
+	}
+	else
+	{
+		filepath[0] = 0;
+		return false;
+	}
+}
+
 /****************************************************************************
  * FileSortCallback
  *
@@ -214,6 +239,25 @@ int FileSortCallback(const void *f1, const void *f2)
 	if(!(((FILEENTRIES *)f1)->flags) && ((FILEENTRIES *)f2)->flags) return 1;
 
 	return stricmp(((FILEENTRIES *)f1)->filename, ((FILEENTRIES *)f2)->filename);
+}
+
+/****************************************************************************
+ * IsSz
+ *
+ * Checks if the specified file is a 7z
+ ***************************************************************************/
+
+bool IsSz()
+{
+	if (strlen(filelist[selection].filename) > 4)
+	{
+		char * p = strrchr(filelist[selection].filename, '.');
+
+		if (p != NULL)
+			if(stricmp(p, ".7z") == 0)
+				return true;
+	}
+	return false;
 }
 
 /****************************************************************************
@@ -290,7 +334,24 @@ int FileSelector (int method)
 			if (filelist[selection].flags) // This is directory
 			{
 				/* update current directory and set new entry list if directory has changed */
-				int status = UpdateDirName(method);
+				int status;
+
+				if(inSz && selection == 0) // inside a 7z, requesting to leave
+				{
+					if(method == METHOD_DVD)
+					{
+						dvddir = filelist[0].offset;
+						dvddirlength = filelist[0].length;
+					}
+					inSz = false;
+					status = 1;
+					SzClose();
+				}
+				else
+				{
+					status = UpdateDirName(method);
+				}
+
 				if (status == 1) // ok, open directory
 				{
 					switch (method)
@@ -322,27 +383,42 @@ int FileSelector (int method)
 			}
 			else	// this is a file
 			{
-				// store the filename (w/o ext) - used for sram/freeze naming
-				StripExt(ROMFilename, filelist[selection].filename);
-
-				ShowAction ((char *)"Loading...");
-
-				// setup variables for DVD loading
-				if(method == METHOD_DVD)
+				// 7z file - let's open it up to select a file inside
+				if(IsSz())
 				{
-					dvddir = filelist[selection].offset;
-					dvddirlength = filelist[selection].length;
-				}
-
-				ROMLoaded = LoadVBAROM(method);
-
-				if (ROMLoaded)
-				{
-					return 1;
+					// we'll store the 7z filepath for extraction later
+					if(!MakeROMPath(szpath, method))
+					{
+						WaitPrompt((char*) "Maximum filepath length reached!");
+						return -1;
+					}
+					int szfiles = SzParse(szpath, method);
+					if(szfiles)
+					{
+						maxfiles = szfiles;
+						inSz = true;
+					}
+					else
+						WaitPrompt((char*) "Error opening archive!");
 				}
 				else
 				{
-					WaitPrompt((char*) "Error loading ROM!");
+					// store the filename (w/o ext) - used for sram/freeze naming
+					StripExt(ROMFilename, filelist[selection].filename);
+
+					ShowAction ((char *)"Loading...");
+
+					ROMLoaded = LoadVBAROM(method);
+					inSz = false;
+
+					if (ROMLoaded)
+					{
+						return 1;
+					}
+					else
+					{
+						WaitPrompt((char*) "Error loading ROM!");
+					}
 				}
 			}
 			redraw = 1;

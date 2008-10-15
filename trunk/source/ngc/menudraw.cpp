@@ -797,32 +797,43 @@ DrawLine (int x1, int y1, int x2, int y2, u8 r, u8 g, u8 b)
 void
 ShowProgress (char *msg, int done, int total)
 {
-  int ypos = (screenheight - 30) >> 1;
+	if(total <= 0) // division by 0 is bad!
+		return;
+	else if(done > total) // this shouldn't happen
+		done = total;
 
-  if (screenheight == 480)
-    ypos += 52;
-  else
-    ypos += 32;
+	int xpos, ypos;
+	int i;
 
-  int xpos;
-  int i;
+	if(done < 5000) // we just started!
+	{
+		ypos = (screenheight - 30) >> 1;
 
-  clearscreen ();
-  setfontsize(20);
-  DrawText (-1, ypos, msg);
+		if (screenheight == 480)
+			ypos += 52;
+		else
+			ypos += 32;
 
-	/*** Draw a white outline box ***/
-  for (i = 380; i < 401; i++)
-    DrawLine (100, i, 540, i, 0xff, 0xff, 0xff);
+		clearscreen ();
+		setfontsize(20);
+		DrawText (-1, ypos, msg);
+
+		/*** Draw a white outline box ***/
+		for (i = 380; i < 401; i++)
+			DrawLine (100, i, 540, i, 0xff, 0xff, 0xff);
+	}
 
 	/*** Show progess ***/
-  xpos = (int) (((float) done / (float) total) * 438);
+	xpos = (int) (((float) done / (float) total) * 438);
 
-  for (i = 381; i < 400; i++)
-    DrawLine (101, i, 101 + xpos, i, 0x00, 0x00, 0x80);
+	for (i = 381; i < 400; i++)
+		DrawLine (101, i, 101 + xpos, i, 0x00, 0x00, 0x80);
 
-  DrawVersion();
-  showscreen ();
+	if(done < 5000) // we just started!
+	{
+		DrawVersion();
+		showscreen ();
+	}
 }
 
 /****************************************************************************

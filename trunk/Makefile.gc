@@ -18,7 +18,7 @@ include $(DEVKITPPC)/gamecube_rules
 TARGET		:=	vbagx_gc
 TARGETDIR   :=  executables
 BUILD		:=	build_gc
-SOURCES		:=	source/vba source/vba/agb source/vba/dmg source/ngc
+SOURCES		:=	source/vba source/vba/agb source/vba/dmg source/ngc source/sz
 INCLUDES 	:=  source/vba source/ngc
 
 #---------------------------------------------------------------------------------
@@ -28,7 +28,8 @@ INCLUDES 	:=  source/vba source/ngc
 CFLAGS  = 	-g -O3 -Wall $(MACHDEP) $(INCLUDE) \
 	  		-DNGC -DUSE_VM -DWORDS_BIGENDIAN \
 	  		-DC_CORE -D__ppc__ -D__POWERPC__ -DFINAL_VERSION \
-	  		-DSDL -DNO_PNG -DHAVE_ZUTIL_H
+	  		-DSDL -DNO_PNG -DHAVE_ZUTIL_H \
+	  		-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ
 CXXFLAGS	= $(CFLAGS)
 LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
