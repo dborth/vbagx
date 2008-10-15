@@ -27,6 +27,7 @@
 #include "dvd.h"
 #include "menudraw.h"
 #include "filesel.h"
+#include "gcunzip.h"
 
 extern "C" {
 #include "tbtime.h"
@@ -110,16 +111,25 @@ bool VMCPULoadROM(int method)
 	{
 		case METHOD_SD:
 		case METHOD_USB:
-		GBAROMSize = LoadFATFile ((char *)rom, 0);
-		break;
+			if(inSz)
+				GBAROMSize = LoadFATSzFile(szpath, (unsigned char *)rom);
+			else
+				GBAROMSize = LoadFATFile((char *)rom, filelist[selection].length);
+			break;
 
 		case METHOD_DVD:
-		GBAROMSize = LoadDVDFile ((unsigned char *)rom, 0);
-		break;
+			if(inSz)
+				GBAROMSize = SzExtractFile(filelist[selection].offset, (unsigned char *)rom);
+			else
+				GBAROMSize = LoadDVDFile((unsigned char *)rom, filelist[selection].length);
+			break;
 
 		case METHOD_SMB:
-		GBAROMSize = LoadSMBFile ((char *)rom, 0);
-		break;
+			if(inSz)
+				GBAROMSize = LoadSMBSzFile(szpath, (unsigned char *)rom);
+			else
+				GBAROMSize = LoadSMBFile((char *)rom, filelist[selection].length);
+			break;
 	}
 
 	if(GBAROMSize)

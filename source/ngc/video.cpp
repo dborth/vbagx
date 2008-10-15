@@ -345,7 +345,6 @@ void
 ResetVideo_Emu ()
 {
 	GXRModeObj *rmode;
-	Mtx p;
 
 	rmode = vmode; // same mode as menu
 
@@ -377,8 +376,6 @@ ResetVideo_Emu ()
 void
 ResetVideo_Menu ()
 {
-	Mtx p;
-
 	VIDEO_Configure (vmode);
 	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
 	VIDEO_Flush();
