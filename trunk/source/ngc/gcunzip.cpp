@@ -189,7 +189,7 @@ UnZipBuffer (unsigned char *outbuffer, int method)
 
 			case METHOD_DVD:
 				readoffset += ZIPCHUNK;
-				dvd_read (readbuffer, ZIPCHUNK, discoffset+readoffset);
+				dvd_safe_read (readbuffer, ZIPCHUNK, discoffset+readoffset);
 				break;
 
 			case METHOD_SMB:
