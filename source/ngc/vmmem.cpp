@@ -27,7 +27,6 @@
 #include "dvd.h"
 #include "menudraw.h"
 #include "filesel.h"
-#include "gcunzip.h"
 
 extern "C" {
 #include "tbtime.h"
@@ -111,25 +110,16 @@ bool VMCPULoadROM(int method)
 	{
 		case METHOD_SD:
 		case METHOD_USB:
-			if(inSz)
-				GBAROMSize = LoadFATSzFile(szpath, (unsigned char *)rom);
-			else
-				GBAROMSize = LoadFATFile((char *)rom, filelist[selection].length);
-			break;
+		GBAROMSize = LoadFATFile ((char *)rom, 0);
+		break;
 
 		case METHOD_DVD:
-			if(inSz)
-				GBAROMSize = SzExtractFile(filelist[selection].offset, (unsigned char *)rom);
-			else
-				GBAROMSize = LoadDVDFile((unsigned char *)rom, filelist[selection].length);
-			break;
+		GBAROMSize = LoadDVDFile ((unsigned char *)rom, 0);
+		break;
 
 		case METHOD_SMB:
-			if(inSz)
-				GBAROMSize = LoadSMBSzFile(szpath, (unsigned char *)rom);
-			else
-				GBAROMSize = LoadSMBFile((char *)rom, filelist[selection].length);
-			break;
+		GBAROMSize = LoadSMBFile ((char *)rom, 0);
+		break;
 	}
 
 	if(GBAROMSize)
@@ -161,6 +151,8 @@ u32 VMRead32( u32 address )
   }
 
   return READ32LE((rom + address));
+
+
 }
 
 /****************************************************************************
@@ -245,7 +237,7 @@ static int vmpageno = 0;
 static char *rombase = NULL;
 static char *gbabase = NULL;
 static FILE* romfile = NULL;
-static int useVM = 1;
+static int useVM = 0;
 static u32 GBAROMSize = 0;
 
 /**
@@ -386,7 +378,7 @@ int VMCPULoadROM(int method)
 	VMInit();
 	VMAllocGBA();
 
-	loadtimeradjust = GBAROMSize = 0;
+	loadtimeradjust = useVM = GBAROMSize = 0;
 
 	switch (method)
 	{
@@ -441,6 +433,7 @@ int VMCPULoadROM(int method)
 	vmpage[0].pageptr = rombase;
 	vmpage[0].pageno = 0;
 	vmpage[0].pagetype = MEM_VM;
+	useVM = 1;
 
 	CPUUpdateRenderBuffers( true );
 

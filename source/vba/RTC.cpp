@@ -72,11 +72,8 @@ u16 rtcRead(u32 address)
       break;
     }
   }
-#ifdef USE_VM
+  //return READ16LE((&rom[address & 0x1FFFFFE]));
   return VMRead16( address & 0x1FFFFFE );
-#else
-  return READ16LE((&rom[address & 0x1FFFFFE]));
-#endif
 }
 
 static u8 toBCD(u8 value)
