@@ -1,12 +1,11 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 1.0.2   
+                                  Version 1.0.3
+                         http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
- 
--=[ Explanation ]=-
  
 Visual Boy Advance GX is a modified port of VBA-M / VBA 1.7.2.
 With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
@@ -16,7 +15,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Wiimote, Nunchuk, Classic, and Gamecube controller support
 * SRAM and State saving
 * Custom controller configurations
-* SD, USB, DVD, SMB, GC Memory Card, and Zip support
+* SD, USB, DVD, SMB, GC Memory Card, Zip, and 7z support
 * GBA compatiblity based on VBA-M r750, GB compatibility based on VBA 1.7.2
 * Turbo speed feature
 
@@ -24,12 +23,13 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
 
-[What's New 1.0.3]
+[What's New 1.0.3 - October 15, 2008]
 * New timing / frameskip algorithm - should (hopefully) work 100% better!
-* Video code improvements - speed boost
+* Performance improvements - video threading, PPC core partly activated
 * Video zooming option
 * Unfiltered video option
 * 7z support
+* Loading progress bars added
 
 [What's New 1.0.2 - October 6, 2008]
 * New core! The core is now a custom combination of VBA-M and VBA 1.72
