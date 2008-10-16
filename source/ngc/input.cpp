@@ -26,6 +26,8 @@
 #include "input.h"
 #include "tbtime.h"
 
+#define MAXJP 10
+
 #define VBA_BUTTON_A		1
 #define VBA_BUTTON_B		2
 #define VBA_BUTTON_SELECT	4
@@ -82,13 +84,14 @@ unsigned int ncpadmap[] = {
   WPAD_BUTTON_2, WPAD_BUTTON_1
 };
 
+#ifdef HW_RVL
 /****************************************************************************
- * WPAD_Stick
+ * WPAD_StickX
  *
- * Get X/Y value from Wii Joystick (classic, nunchuk) input
+ * Get X value from Wii Joystick (classic, nunchuk) input
  ***************************************************************************/
 
-s8 WPAD_Stick(u8 chan, u8 right, int axis)
+s8 WPAD_StickX(u8 chan,u8 right)
 {
 	float mag = 0.0;
 	float ang = 0.0;
@@ -122,18 +125,62 @@ s8 WPAD_Stick(u8 chan, u8 right, int axis)
 			break;
 	}
 
-	/* calculate x/y value (angle need to be converted into radian) */
+	/* calculate X value (angle need to be converted into radian) */
 	if (mag > 1.0) mag = 1.0;
 	else if (mag < -1.0) mag = -1.0;
-	double val;
-
-	if(axis == 0) // x-axis
-		val = mag * sin((PI * ang)/180.0f);
-	else // y-axis
-		val = mag * cos((PI * ang)/180.0f);
+	double val = mag * sin((PI * ang)/180.0f);
 
 	return (s8)(val * 128.0f);
 }
+
+/****************************************************************************
+ * WPAD_StickY
+ *
+ * Get Y value from Wii Joystick (classic, nunchuk) input
+ ***************************************************************************/
+
+s8 WPAD_StickY(u8 chan, u8 right)
+{
+	float mag = 0.0;
+	float ang = 0.0;
+	WPADData *data = WPAD_Data(chan);
+
+	switch (data->exp.type)
+	{
+		case WPAD_EXP_NUNCHUK:
+		case WPAD_EXP_GUITARHERO3:
+			if (right == 0)
+			{
+				mag = data->exp.nunchuk.js.mag;
+				ang = data->exp.nunchuk.js.ang;
+			}
+			break;
+
+			case WPAD_EXP_CLASSIC:
+			if (right == 0)
+			{
+				mag = data->exp.classic.ljs.mag;
+				ang = data->exp.classic.ljs.ang;
+			}
+			else
+			{
+				mag = data->exp.classic.rjs.mag;
+				ang = data->exp.classic.rjs.ang;
+			}
+			break;
+
+		default:
+			break;
+	}
+
+	/* calculate X value (angle need to be converted into radian) */
+	if (mag > 1.0) mag = 1.0;
+	else if (mag < -1.0) mag = -1.0;
+	double val = mag * cos((PI * ang)/180.0f);
+
+	return (s8)(val * 128.0f);
+}
+#endif
 
 /****************************************************************************
  * DecodeJoy
@@ -146,15 +193,16 @@ u32 DecodeJoy(unsigned short pad)
 {
 	signed char pad_x = PAD_StickX (pad);
 	signed char pad_y = PAD_StickY (pad);
-	signed char gc_px = PAD_SubStickX (0);
 	u32 jp = PAD_ButtonsHeld (pad);
 	u32 J = 0;
 
 	#ifdef HW_RVL
-	signed char wm_ax = WPAD_Stick ((u8)pad, 0, 0);
-	signed char wm_ay = WPAD_Stick ((u8)pad, 0, 1);
-	u32 wp = WPAD_ButtonsHeld (pad);
-	signed char wm_sx = WPAD_Stick (0,1,0); // CC right joystick
+	signed char wm_ax = 0;
+	signed char wm_ay = 0;
+	u32 wp = 0;
+	wm_ax = WPAD_StickX ((u8)pad, 0);
+	wm_ay = WPAD_StickY ((u8)pad, 0);
+	wp = WPAD_ButtonsHeld (pad);
 
 	u32 exp_type;
 	if ( WPAD_Probe(pad, &exp_type) != 0 ) exp_type = WPAD_EXP_NONE;
@@ -235,16 +283,6 @@ u32 DecodeJoy(unsigned short pad)
 	}
 #endif
 
-	// Turbo feature
-	if(
-	(gc_px > 70)
-	#ifdef HW_RVL
-	|| (wm_sx > 70)
-	|| ((wp & WPAD_BUTTON_A) && (wp & WPAD_BUTTON_B))
-	#endif
-	)
-		J |= VBA_SPEED;
-
 	/*** Report pressed buttons (gamepads) ***/
 	int i;
 
@@ -272,24 +310,11 @@ u32 GetJoy()
     int pad = 0;
 
     s8 gc_px = PAD_SubStickX (0);
-    s8 gc_py = PAD_SubStickY (0);
 
     #ifdef HW_RVL
-    s8 wm_sx = WPAD_Stick (0,1,0);
-    s8 wm_sy = WPAD_Stick (0,1,1);
+    s8 wm_sx = WPAD_StickX (0,1);
     u32 wm_pb = WPAD_ButtonsHeld (0); // wiimote / expansion button info
     #endif
-
-    // Check for video zoom
-	if (GCSettings.NGCZoom)
-	{
-		if (gc_py < -36 || gc_py > 36)
-			zoom ((float) gc_py / -36);
-		#ifdef HW_RVL
-			if (wm_sy < -36 || wm_sy > 36)
-				zoom ((float) wm_sy / -36);
-		#endif
-	}
 
     // request to go back to menu
     if ((gc_px < -70)
@@ -302,19 +327,17 @@ u32 GetJoy()
 	{
     	if (GCSettings.AutoSave == 1)
     	{
-    		SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
+    		SaveBattery(GCSettings.SaveMethod, SILENT);
     	}
     	else if (GCSettings.AutoSave == 2)
     	{
-			SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
+			SaveState(GCSettings.SaveMethod, SILENT);
     	}
     	else if(GCSettings.AutoSave == 3)
     	{
-    		SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
-    		SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
+    		SaveBattery(GCSettings.SaveMethod, SILENT);
+    		SaveState(GCSettings.SaveMethod, SILENT);
     	}
-    	// change to menu video mode
-		ResetVideo_Menu ();
     	MainMenu(3);
     	return 0;
 	}

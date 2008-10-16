@@ -44,7 +44,7 @@ extern "C"
 extern void DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsize);
 
 extern int menu;
-extern bool ROMLoaded;
+extern int ROMSize;
 
 #define SOFTRESET_ADR ((volatile u32*)0xCC003024)
 
@@ -83,9 +83,9 @@ LoadManager ()
 	if ( loadROM == 1 ) // if ROM was loaded, load the battery / state
 	{
 		if (GCSettings.AutoLoad == 1)
-			LoadBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // load battery
+			LoadBattery(GCSettings.SaveMethod, SILENT);
 		else if (GCSettings.AutoLoad == 2)
-			LoadBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // load state
+			LoadState(GCSettings.SaveMethod, SILENT);
 	}
 
 	return loadROM;
@@ -94,7 +94,7 @@ LoadManager ()
 /****************************************************************************
  * Preferences Menu
  ***************************************************************************/
-static int prefmenuCount = 11;
+static int prefmenuCount = 9;
 static char prefmenu[][50] = {
 
 	"Load Method",
@@ -105,8 +105,6 @@ static char prefmenu[][50] = {
 	"Auto Load",
 	"Auto Save",
 	"Verify MC Saves",
-	"Enable Zooming",
-	"Video Rendering",
 
 	"Save Preferences",
 	"Back to Main Menu"
@@ -124,26 +122,40 @@ PreferencesMenu ()
 		// some load/save methods are not implemented - here's where we skip them
 		// they need to be skipped in the order they were enumerated in vba.h
 
+		// skip
+		if(GCSettings.LoadMethod == METHOD_DVD)
+			GCSettings.LoadMethod++;
+		if(GCSettings.LoadMethod == METHOD_SMB)
+			GCSettings.LoadMethod++;
+		if(GCSettings.SaveMethod == METHOD_SMB)
+			GCSettings.SaveMethod++;
+		if(GCSettings.SaveMethod == METHOD_MC_SLOTA)
+			GCSettings.SaveMethod++;
+		if(GCSettings.SaveMethod == METHOD_MC_SLOTB)
+			GCSettings.SaveMethod++;
+
+		prefmenu[6][0] = '\0'; // MC saving not implemented
+
 		// no USB ports on GameCube
-		#ifdef HW_DOL
+		#ifndef HW_RVL
 		if(GCSettings.LoadMethod == METHOD_USB)
 			GCSettings.LoadMethod++;
 		if(GCSettings.SaveMethod == METHOD_USB)
 			GCSettings.SaveMethod++;
 		#endif
 
-		// saving to DVD is impossible
-		if(GCSettings.SaveMethod == METHOD_DVD)
-			GCSettings.SaveMethod++;
-
-		// disable DVD in GC mode (not implemented)
-		#ifdef HW_DOL
+		// check if DVD access in Wii mode is disabled
+		#ifndef WII_DVD
 		if(GCSettings.LoadMethod == METHOD_DVD)
 			GCSettings.LoadMethod++;
 		#endif
 
+		// saving to DVD is impossible
+		if(GCSettings.SaveMethod == METHOD_DVD)
+			GCSettings.SaveMethod++;
+
 		// disable SMB in GC mode (stalls out)
-		#ifdef HW_DOL
+		#ifndef HW_RVL
 		if(GCSettings.LoadMethod == METHOD_SMB)
 			GCSettings.LoadMethod++;
 		if(GCSettings.SaveMethod == METHOD_SMB)
@@ -156,9 +168,6 @@ PreferencesMenu ()
 			GCSettings.SaveMethod++;
 		if(GCSettings.SaveMethod == METHOD_MC_SLOTB)
 			GCSettings.SaveMethod++;
-		prefmenu[6][0] = 0;
-		#else
-		sprintf (prefmenu[6], "Verify MC Saves %s", GCSettings.VerifySaves == true ? " ON" : "OFF");
 		#endif
 
 		// correct load/save methods out of bounds
@@ -197,13 +206,7 @@ PreferencesMenu ()
 		else if (GCSettings.AutoSave == 2) sprintf (prefmenu[5],"Auto Save SNAPSHOT");
 		else if (GCSettings.AutoSave == 3) sprintf (prefmenu[5],"Auto Save BOTH");
 
-		sprintf (prefmenu[7], "Enable Zooming %s",
-			GCSettings.NGCZoom == true ? " ON" : "OFF");
-
-		if ( GCSettings.render == 0)
-			sprintf (prefmenu[8], "Video Rendering Filtered");
-		if ( GCSettings.render == 1)
-			sprintf (prefmenu[8], "Video Rendering Unfiltered");
+		//sprintf (prefmenu[6], "Verify MC Saves %s", GCSettings.VerifySaves == true ? " ON" : "OFF");
 
 		ret = RunMenu (prefmenu, prefmenuCount, (char*)"Preferences", 16);
 
@@ -240,23 +243,11 @@ PreferencesMenu ()
 				break;
 
 			case 7:
-				GCSettings.NGCZoom ^= 1;
-				break;
-
-			case 8:
-				GCSettings.render++;
-				if (GCSettings.render > 1 )
-					GCSettings.render = 0;
-				// reset zoom
-				zoom_reset ();
-				break;
-
-			case 9:
 				SavePrefs(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
 			case -1: /*** Button B ***/
-			case 10:
+			case 8:
 				quit = 1;
 				break;
 
@@ -272,13 +263,12 @@ PreferencesMenu ()
 int
 GameMenu ()
 {
-	int gamemenuCount = 8;
+	int gamemenuCount = 7;
 	char gamemenu[][50] = {
 	  "Return to Game",
 	  "Reset Game",
 	  "Load SRAM", "Save SRAM",
 	  "Load Game Snapshot", "Save Game Snapshot",
-	  "Reset Zoom",
 	  "Back to Main Menu"
 	};
 
@@ -305,9 +295,6 @@ GameMenu ()
 			gamemenu[3][0] = '\0';
 			gamemenu[5][0] = '\0';
 		}
-		// disable Reset Zoom if Zooming is off
-		if(!GCSettings.NGCZoom)
-			gamemenu[6][0] = '\0';
 
 		ret = RunMenu (gamemenu, gamemenuCount, (char*)"Game Menu");
 
@@ -323,29 +310,23 @@ GameMenu ()
 				break;
 
 			case 2: // Load Battery
-				quit = retval = LoadBatteryOrState(GCSettings.SaveMethod, 0, NOTSILENT);
-				emulator.emuReset();
+				quit = retval = LoadBattery(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
 			case 3: // Save Battery
-				SaveBatteryOrState(GCSettings.SaveMethod, 0, NOTSILENT);
+				SaveBattery(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
 			case 4: // Load State
-				quit = retval = LoadBatteryOrState(GCSettings.SaveMethod, 1, NOTSILENT);
+				quit = retval = LoadState(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
 			case 5: // Save State
-				SaveBatteryOrState(GCSettings.SaveMethod, 1, NOTSILENT);
-				break;
-
-			case 6:	// Reset Zoom
-				zoom_reset ();
-				quit = retval = 1;
+				SaveState(GCSettings.SaveMethod, NOTSILENT);
 				break;
 
 			case -1: // Button B
-			case 7: // Return to previous menu
+			case 6: // Return to previous menu
 				retval = 0;
 				quit = 1;
 				break;
@@ -652,7 +633,7 @@ MainMenu (int selectedMenu)
 	int ret;
 
 	// disable game-specific menu items if a ROM isn't loaded
-	if (!ROMLoaded)
+	if (ROMSize == 0 )
     	menuitems[3][0] = '\0';
 	else
 		sprintf (menuitems[3], "Game Menu");
@@ -719,24 +700,19 @@ MainMenu (int selectedMenu)
 
 			case -1: // Button B
 				// Return to Game
-				if(ROMLoaded)
-					quit = 1;
+				quit = 1;
 				break;
 		}
 	}
 
-	// Wait for buttons to be released
-	int count = 0; // how long we've been waiting for the user to release the button
-	while(count < 50 && (
-		PAD_ButtonsHeld(0)
-		#ifdef HW_RVL
-		|| WPAD_ButtonsHeld(0)
-		#endif
-	))
-	{
-		VIDEO_WaitVSync();
-		count++;
-	}
+	/*** Remove any still held buttons ***/
+	#ifdef HW_RVL
+		while( PAD_ButtonsHeld(0) || WPAD_ButtonsHeld(0) )
+		    VIDEO_WaitVSync();
+	#else
+		while( PAD_ButtonsHeld(0) )
+		    VIDEO_WaitVSync();
+	#endif
 
 	StartAudio();
 	mftb(&end);

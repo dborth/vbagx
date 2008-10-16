@@ -24,8 +24,14 @@
 #include "filesel.h"
 #include "preferences.h"
 
-// FAT file pointer - the only one we should ever use!
-FILE * fatfile;
+FILE * filehandle;
+
+extern unsigned char savebuffer[];
+extern char output[16384];
+extern int offset;
+extern int selection;
+extern char currentdir[MAXPATHLEN];
+extern FILEENTRIES filelist[MAXFILES];
 
 /****************************************************************************
  * fat_is_mounted
@@ -61,17 +67,18 @@ bool ChangeFATInterface(int method, bool silent)
 		{
 			devFound = true;
 			fatSetDefaultInterface(PI_INTERNAL_SD);
-			fatEnableReadAhead (PI_INTERNAL_SD, 6, 64);
 		}
 		#endif
 
 		if (!devFound && FatIsMounted(PI_SDGECKO_A))
 		{
 			devFound = true;
+			fatSetDefaultInterface(PI_SDGECKO_A);
 		}
 		if(!devFound && FatIsMounted(PI_SDGECKO_B))
 		{
 			devFound = true;
+			fatSetDefaultInterface(PI_SDGECKO_B);
 		}
 		if(!devFound)
 		{
@@ -86,7 +93,6 @@ bool ChangeFATInterface(int method, bool silent)
 		{
 			devFound = true;
 			fatSetDefaultInterface(PI_USBSTORAGE);
-			fatEnableReadAhead (PI_USBSTORAGE, 6, 64);
 		}
 		else
 		{
@@ -164,54 +170,44 @@ ParseFATdirectory(int method)
  * LoadFATFile
  ***************************************************************************/
 int
-LoadFATFile (char * rbuffer, int length)
+LoadFATFile (char *filename, int length)
 {
-	char zipbuffer[2048];
+	/*char zipbuffer[2048];
+	FILE *handle;
+	unsigned char *rbuffer;
+	u32 size;*/
 	char filepath[MAXPATHLEN];
-	u32 size;
 
 	/* Check filename length */
-	if (!MakeROMPath(filepath, METHOD_SD))
+	if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
+		sprintf(filepath, "%s/%s",currentdir,filelist[selection].filename);
+	else
 	{
 		WaitPrompt((char*) "Maximum filepath length reached!");
 		return -1;
 	}
-
-	fatfile = fopen (filepath, "rb");
-	if (fatfile > 0)
+	return loadVBAROM(filepath);
+/*
+	handle = fopen (filepath, "rb");
+	if (handle > 0)
 	{
-		if(length > 0 && length <= 2048) // do a partial read (eg: to check file header)
+		fread (zipbuffer, 1, 2048, handle);
+
+		if (IsZipFile (zipbuffer))
 		{
-			fread (rbuffer, 1, length, fatfile);
+			size = UnZipFile (rbuffer, handle);	// unzip from FAT
+		}
+		else
+		{
+			// Just load the file up
+			fseek(handle, 0, SEEK_END);
+			length = ftell(handle);				// get filesize
+			fseek(handle, 2048, SEEK_SET);		// seek back to point where we left off
+			memcpy (rbuffer, zipbuffer, 2048);	// copy what we already read
+			fread (rbuffer + 2048, 1, length - 2048, handle);
 			size = length;
 		}
-		else // load whole file
-		{
-			fread (zipbuffer, 1, 2048, fatfile);
-
-			if (IsZipFile (zipbuffer))
-			{
-				size = UnZipBuffer ((unsigned char *)rbuffer, METHOD_SD);	// unzip from FAT
-			}
-			else
-			{
-				// Just load the file up
-				fseek(fatfile, 0, SEEK_END);
-				size = ftell(fatfile);				// get filesize
-				fseek(fatfile, 2048, SEEK_SET);		// seek back to point where we left off
-				memcpy (rbuffer, zipbuffer, 2048);	// copy what we already read
-
-				ShowProgress ((char *)"Loading...", 2048, size);
-
-				u32 offset = 2048;
-				while(offset < size)
-				{
-					offset += fread (rbuffer + offset, 1, (1024*512), fatfile); // read in 512K chunks
-					ShowProgress ((char *)"Loading...", offset, size);
-				}
-			}
-		}
-		fclose (fatfile);
+		fclose (handle);
 		return size;
 	}
 	else
@@ -219,29 +215,8 @@ LoadFATFile (char * rbuffer, int length)
 		WaitPrompt((char*) "Error opening file");
 		return 0;
 	}
-}
 
-/****************************************************************************
- * LoadFATSzFile
- * Loads the selected file # from the specified 7z into rbuffer
- * Returns file size
- ***************************************************************************/
-int
-LoadFATSzFile(char * filepath, unsigned char * rbuffer)
-{
-	u32 size;
-	fatfile = fopen (filepath, "rb");
-	if (fatfile > 0)
-	{
-		size = SzExtractFile(filelist[selection].offset, rbuffer);
-		fclose (fatfile);
-		return size;
-	}
-	else
-	{
-		WaitPrompt((char*) "Error opening file");
-		return 0;
-	}
+	return 0;*/
 }
 
 /****************************************************************************
@@ -250,11 +225,15 @@ LoadFATSzFile(char * filepath, unsigned char * rbuffer)
 int
 LoadBufferFromFAT (char *filepath, bool silent)
 {
-    int size = 0;
+	FILE *handle;
+    int boffset = 0;
+    int read = 0;
 
-    fatfile = fopen (filepath, "rb");
+    ClearSaveBuffer ();
 
-    if (fatfile <= 0)
+    handle = fopen (filepath, "rb");
+
+    if (handle <= 0)
     {
         if ( !silent )
         {
@@ -265,13 +244,15 @@ LoadBufferFromFAT (char *filepath, bool silent)
         return 0;
     }
 
-	fseek(fatfile, 0, SEEK_END); // go to end of file
-	size = ftell(fatfile); // get filesize
-	fseek(fatfile, 0, SEEK_SET); // go to start of file
-	fread (savebuffer, 1, size, fatfile);
-	fclose (fatfile);
+    /*** This is really nice, just load the file and decode it ***/
+    while ((read = fread (savebuffer + boffset, 1, 1024, handle)) > 0)
+    {
+        boffset += read;
+    }
 
-    return size;
+    fclose (handle);
+
+    return boffset;
 }
 
 /****************************************************************************
@@ -280,11 +261,13 @@ LoadBufferFromFAT (char *filepath, bool silent)
 int
 SaveBufferToFAT (char *filepath, int datasize, bool silent)
 {
-	if (datasize)
-    {
-        fatfile = fopen (filepath, "wb");
+	FILE *handle;
 
-        if (fatfile <= 0)
+    if (datasize)
+    {
+        handle = fopen (filepath, "wb");
+
+        if (handle <= 0)
         {
             char msg[100];
             sprintf(msg, "Couldn't save %s", filepath);
@@ -292,8 +275,10 @@ SaveBufferToFAT (char *filepath, int datasize, bool silent)
             return 0;
         }
 
-        fwrite (savebuffer, 1, datasize, fatfile);
-        fclose (fatfile);
+        fwrite (savebuffer, 1, datasize, handle);
+        fclose (handle);
     }
+
+    ClearSaveBuffer ();
     return datasize;
 }

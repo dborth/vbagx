@@ -38,7 +38,7 @@ extern "C" {
 #include "video.h"
 #include "vbaconfig.h"
 
-extern bool ROMLoaded;
+extern int ROMSize;
 extern int emulating;
 
 
@@ -74,10 +74,10 @@ int main()
 	}
 
 	// Initialize libFAT for SD and USB
-	fatInit (8, false);
+	fatInitDefault();
 
 	// Initialize DVD subsystem (GameCube only)
-	#ifdef HW_DOL
+	#ifndef HW_RVL
 	DVD_Init ();
 	#endif
 
@@ -98,7 +98,7 @@ int main()
 		selectedMenu = 2; // change to preferences menu
 	}
 
-	while (!ROMLoaded)
+	while (ROMSize == 0)
 	{
 		MainMenu (selectedMenu);
 	}

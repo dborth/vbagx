@@ -21,9 +21,15 @@
 #include "fileop.h"
 #include "smbop.h"
 #include "filesel.h"
-#include "input.h"
 
+extern unsigned char savebuffer[];
 extern int currconfig[4];
+
+// button map configurations
+extern unsigned int gcpadmap[];
+extern unsigned int wmpadmap[];
+extern unsigned int ccpadmap[];
+extern unsigned int ncpadmap[];
 
 #define PREFS_FILE_NAME "VBAGX.xml"
 
@@ -40,7 +46,7 @@ mxml_node_t *section;
 mxml_node_t *item;
 mxml_node_t *elem;
 
-char temp[20];
+char temp[200];
 
 const char * toStr(int i)
 {
@@ -70,7 +76,7 @@ void createXMLController(unsigned int controller[], const char * name, const cha
 	mxmlElementSetAttr(item, "description", description);
 
 	// create buttons
-	for(int i=0; i < MAXJP; i++)
+	for(int i=0; i < 12; i++)
 	{
 		elem = mxmlNewElement(item, "button");
 		mxmlElementSetAttr(elem, "number", toStr(i));
@@ -110,6 +116,7 @@ int
 preparePrefsData (int method)
 {
 	int offset = 0;
+	memset (savebuffer, 0, SAVEBUFFERSIZE);
 
 	// add save icon and comments for Memory Card saves
 	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
@@ -141,7 +148,7 @@ preparePrefsData (int method)
 	createXMLSetting("LoadFolder", "Load Folder", GCSettings.LoadFolder);
 	createXMLSetting("SaveFolder", "Save Folder", GCSettings.SaveFolder);
 	//createXMLSetting("CheatFolder", "Cheats Folder", GCSettings.CheatFolder);
-	createXMLSetting("VerifySaves", "Verify Memory Card Saves", toStr(GCSettings.VerifySaves));
+	//createXMLSetting("VerifySaves", "Verify Memory Card Saves", toStr(GCSettings.VerifySaves));
 
 	createXMLSection("Network", "Network Settings");
 
@@ -150,10 +157,7 @@ preparePrefsData (int method)
 	createXMLSetting("smbuser", "Share Username", GCSettings.smbuser);
 	createXMLSetting("smbpwd", "Share Password", GCSettings.smbpwd);
 
-	createXMLSection("Emulation", "Emulation Settings");
-
-	createXMLSetting("NGCZoom", "Enable Zoom", toStr(GCSettings.NGCZoom));
-	createXMLSetting("render", "Video Rendering", toStr(GCSettings.render));
+	//createXMLSection("Emulation", "Emulation Settings");
 
 	createXMLSection("Controller", "Controller Settings");
 
@@ -208,7 +212,7 @@ void loadXMLController(unsigned int controller[], const char * name)
 	if(item)
 	{
 		// populate buttons
-		for(int i=0; i < MAXJP; i++)
+		for(int i=0; i < 12; i++)
 		{
 			elem = mxmlFindElement(item, xml, "button", "number", toStr(i), MXML_DESCEND);
 			if(elem)
@@ -238,23 +242,13 @@ decodePrefsData (int method)
 	xml = mxmlLoadString(NULL, (char *)savebuffer+offset, MXML_TEXT_CALLBACK);
 
 	// check settings version
+	// we don't do anything with the version #, but we'll store it anyway
 	char * version;
 	item = mxmlFindElement(xml, xml, "file", "version", NULL, MXML_DESCEND);
 	if(item) // a version entry exists
 		version = (char *)mxmlElementGetAttr(item, "version");
 	else // version # not found, must be invalid
 		return false;
-
-	// this code assumes version in format X.X.X
-	// XX.X.X, X.XX.X, or X.X.XX will NOT work
-	char verMajor = version[7];
-	char verMinor = version[9];
-	char verPoint = version[11];
-
-	if(verPoint < '3' && verMajor == '1') // less than version 1.0.3
-		return false; // reset settings
-	else if(verMajor > '1' || verMinor > '0' || verPoint > '3') // some future version
-		return false; // reset settings
 
 	// File Settings
 
@@ -276,9 +270,6 @@ decodePrefsData (int method)
 
 	// Emulation Settings
 
-	loadXMLSetting(&GCSettings.NGCZoom, "NGCZoom");
-	loadXMLSetting(&GCSettings.render, "render");
-
 	// Controller Settings
 
 	loadXMLController(gcpadmap, "gcpadmap");
@@ -297,16 +288,12 @@ decodePrefsData (int method)
 bool
 SavePrefs (int method, bool silent)
 {
-	// there's no point in saving SMB settings TO SMB, because then we'll have no way to load them the next time!
-	// so instead we'll save using whatever other method is available (eg: SD)
-	if(method == METHOD_AUTO || method == METHOD_SMB)
+	if(method == METHOD_AUTO)
 		method = autoSaveMethod();
 
 	char filepath[1024];
 	int datasize;
 	int offset = 0;
-
-	AllocSaveBuffer ();
 
 	datasize = preparePrefsData (method);
 
@@ -335,8 +322,6 @@ SavePrefs (int method, bool silent)
 		offset = SaveBufferToMC (savebuffer, CARD_SLOTB, (char *)PREFS_FILE_NAME, datasize, silent);
 	}
 
-	FreeSaveBuffer ();
-
 	if (offset > 0)
 	{
 		if (!silent)
@@ -355,8 +340,6 @@ LoadPrefsFromMethod (int method)
 	bool retval = false;
 	char filepath[1024];
 	int offset = 0;
-
-	AllocSaveBuffer ();
 
 	if(method == METHOD_SD || method == METHOD_USB)
 	{
@@ -382,8 +365,6 @@ LoadPrefsFromMethod (int method)
 
 	if (offset > 0)
 		retval = decodePrefsData (method);
-
-	FreeSaveBuffer ();
 
 	return retval;
 }

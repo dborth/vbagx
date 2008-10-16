@@ -18,19 +18,17 @@ include $(DEVKITPPC)/wii_rules
 TARGET		:=	vbagx_wii
 TARGETDIR   :=  executables
 BUILD		:=	build_wii
-SOURCES		:=	source/vba source/vba/agb source/vba/dmg source/ngc source/sz
-INCLUDES 	:=  source/vba source/ngc
+SOURCES		:=	source/vba source/vba/gb source/ngc
+INCLUDES 	:=  source/vba source/vba/gb source/ngc
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS  = 	-g -O3 -Wall $(MACHDEP) $(INCLUDE) \
-	  		-DNGC -DWII_DVD -DWORDS_BIGENDIAN -DVIDEO_THREADING \
-	  		-DC_CORE -D__ppc__ -D__POWERPC__ -DFINAL_VERSION \
-	  		-DSDL -DNO_PNG -DHAVE_ZUTIL_H \
-	  		-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ
-CXXFLAGS	= $(CFLAGS)
+CFLAGS  = 	-g -O2 -Wall $(MACHDEP) $(INCLUDE) -maltivec \
+	  		-DNGC -DWORDS_BIGENDIAN -DC_CORE \
+	  		-DCHANFFS -DSDL -DHAVE_ZUTIL_H
+CXXFLAGS	= -save-temps -Xassembler -aln=$@.lst $(CFLAGS)
 LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref
 
 #---------------------------------------------------------------------------------

@@ -25,6 +25,7 @@
 
 #define VERIFBUFFERSIZE 65536
 static u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
+extern unsigned char savebuffer[];
 unsigned char verifbuffer[VERIFBUFFERSIZE] ATTRIBUTE_ALIGN (32);
 card_dir CardDir;
 card_file CardFile;
@@ -67,7 +68,7 @@ bool TestCard(int slot, bool silent)
 
 	/*** Initialize Card System ***/
 	memset (SysArea, 0, CARD_WORKAREA);
-	CARD_Init ("VBA0", "00");
+	CARD_Init ("SNES", "00");
 
 	/*** Try to mount the card ***/
 	if (MountCard(slot, silent) == 0)
@@ -135,7 +136,7 @@ VerifyMCFile (unsigned char *buf, int slot, char *filename, int datasize)
 
 	/*** Initialize Card System ***/
 	memset (SysArea, 0, CARD_WORKAREA);
-	CARD_Init ("VBA0", "00");
+	CARD_Init ("SNES", "00");
 
 	/*** Try to mount the card ***/
 	CardError = MountCard(slot, NOTSILENT);
@@ -214,7 +215,7 @@ LoadBufferFromMC (unsigned char *buf, int slot, char *filename, bool silent)
 
 	/*** Initialize Card System ***/
 	memset (SysArea, 0, CARD_WORKAREA);
-	CARD_Init ("VBA0", "00");
+	CARD_Init ("SNES", "00");
 
 	/*** Try to mount the card ***/
 	CardError = MountCard(slot, NOTSILENT);
@@ -278,7 +279,7 @@ SaveBufferToMC (unsigned char *buf, int slot, char *filename, int datasize, bool
 
 	/*** Initialize Card System ***/
 	memset (SysArea, 0, CARD_WORKAREA);
-	CARD_Init ("VBA0", "00");
+	CARD_Init ("SNES", "00");
 
 	/*** Try to mount the card ***/
 	CardError = MountCard(slot, NOTSILENT);

@@ -30,11 +30,16 @@ bool networkShareInit = false;
 unsigned int SMBTimer = 0;
 #define SMBTIMEOUT ( 3600 ) // Some implementations timeout in 10 minutes
 
-// SMB connection/file handles - the only ones we should ever use!
 SMBCONN smbconn;
-SMBFILE smbfile;
-
 #define ZIPCHUNK 16384
+
+extern unsigned char savebuffer[];
+extern char output[16384];
+extern int offset;
+extern int selection;
+extern char currentdir[MAXPATHLEN];
+extern FILEENTRIES filelist[MAXFILES];
+
 
 /****************************************************************************
  * InitializeNetwork
@@ -88,7 +93,7 @@ ConnectShare (bool silent)
 		strlen(GCSettings.smbip) == 0)
 	{
 		if(!silent)
-			WaitPrompt((char*) "Invalid network settings. Check VBAGX.xml.");
+			WaitPrompt((char*) "Invalid network settings. Check SNES9xGX.xml.");
 		return false;
 	}
 
@@ -214,75 +219,35 @@ ParseSMBdirectory ()
 }
 
 /****************************************************************************
- * Open SMB file
- ***************************************************************************/
-
-SMBFILE OpenSMBFile(char * filepath)
-{
-	return SMB_OpenFile (SMBPath(filepath), SMB_OPEN_READING, SMB_OF_OPEN, smbconn);
-}
-
-/****************************************************************************
  * Load SMB file
- * rom - pointer to memory where ROM will be stored
- * length - # bytes to read (0 for all)
  ****************************************************************************/
 int
-LoadSMBFile (char * rom, int length)
+LoadSMBFile (char *filename, int length)
 {
 	char filepath[MAXPATHLEN];
 
 	/* Check filename length */
-	if (!MakeROMPath(filepath, METHOD_SMB))
+	if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
+		sprintf(filepath, "%s/%s",currentdir,filelist[selection].filename);
+	else
 	{
 		WaitPrompt((char*) "Maximum filepath length reached!");
 		return -1;
 	}
-	return LoadBufferFromSMB(rom, filepath, length, NOTSILENT);
-}
-
-/****************************************************************************
- * LoadSMBSzFile
- * Loads the selected file # from the specified 7z into rbuffer
- * Returns file size
- ***************************************************************************/
-int
-LoadSMBSzFile(char * filepath, unsigned char * rbuffer)
-{
-	if(!ConnectShare (NOTSILENT))
-		return 0;
-
-	smbfile = OpenSMBFile(filepath);
-
-	if (smbfile)
-	{
-		u32 size = SzExtractFile(filelist[selection].offset, rbuffer);
-		SMB_CloseFile (smbfile);
-		return size;
-	}
-	else
-	{
-		WaitPrompt((char*) "Error opening file");
-		return 0;
-	}
+	return 0;
+	//return LoadBufferFromSMB((char *)Memory.ROM, SMBPath(filepath), NOTSILENT);
 }
 
 /****************************************************************************
  * Write savebuffer to SMB file
  ****************************************************************************/
-// no buffer specified, use savebuffer
 int
 SaveBufferToSMB (char *filepath, int datasize, bool silent)
-{
-	return SaveBufferToSMB((char *)savebuffer, filepath, datasize, silent);
-}
-
-int
-SaveBufferToSMB (char * sbuffer, char *filepath, int datasize, bool silent)
 {
 	if(!ConnectShare (NOTSILENT))
 		return 0;
 
+	SMBFILE smbfile;
 	int dsize = datasize;
 	int wrote = 0;
 	int boffset = 0;
@@ -297,10 +262,10 @@ SaveBufferToSMB (char * sbuffer, char *filepath, int datasize, bool silent)
 		{
 			if (dsize > 1024)
 				wrote =
-					SMB_WriteFile ((char *) sbuffer + boffset, 1024, boffset, smbfile);
+					SMB_WriteFile ((char *) savebuffer + boffset, 1024, boffset, smbfile);
 			else
 				wrote =
-					SMB_WriteFile ((char *) sbuffer + boffset, dsize, boffset, smbfile);
+					SMB_WriteFile ((char *) savebuffer + boffset, dsize, boffset, smbfile);
 
 			boffset += wrote;
 			dsize -= wrote;
@@ -314,6 +279,7 @@ SaveBufferToSMB (char * sbuffer, char *filepath, int datasize, bool silent)
 		WaitPrompt (msg);
 	}
 
+	ClearSaveBuffer ();
 	return boffset;
 }
 
@@ -325,19 +291,22 @@ SaveBufferToSMB (char * sbuffer, char *filepath, int datasize, bool silent)
 int
 LoadBufferFromSMB (char *filepath, bool silent)
 {
-	return LoadBufferFromSMB((char *)savebuffer, filepath, 0, silent);
+	ClearSaveBuffer ();
+	return LoadBufferFromSMB((char *)savebuffer, filepath, silent);
 }
 
 int
-LoadBufferFromSMB (char * sbuffer, char *filepath, int length, bool silent)
+LoadBufferFromSMB (char * sbuffer, char *filepath, bool silent)
 {
 	if(!ConnectShare (NOTSILENT))
 		return 0;
 
+	SMBFILE smbfile;
 	int ret;
 	int boffset = 0;
 
-	smbfile = OpenSMBFile(filepath);
+	smbfile =
+	SMB_OpenFile (SMBPath(filepath), SMB_OPEN_READING, SMB_OF_OPEN, smbconn);
 
 	if (!smbfile)
 	{
@@ -350,27 +319,17 @@ LoadBufferFromSMB (char * sbuffer, char *filepath, int length, bool silent)
 		return 0;
 	}
 
-	if(length > 0 && length <= 2048) // do a partial read (eg: to check file header)
-	{
-		boffset = SMB_ReadFile (sbuffer, length, 0, smbfile);
-	}
-	else // load whole file
-	{
-		ret = SMB_ReadFile (sbuffer, 2048, boffset, smbfile);
+	ret = SMB_ReadFile (sbuffer, 1024, boffset, smbfile);
 
-		if (IsZipFile (sbuffer))
-		{
-			boffset = UnZipBuffer ((unsigned char *)sbuffer, METHOD_SMB); // unzip from SMB
-		}
-		else
-		{
-			// Just load the file up
-			while ((ret = SMB_ReadFile (sbuffer + boffset, 2048, boffset, smbfile)) > 0)
-			{
-				boffset += ret;
-				ShowProgress ((char *)"Loading...", boffset, length);
-			}
-		}
+	if (IsZipFile (sbuffer))
+	{
+		boffset = UnZipFile ((unsigned char *)sbuffer, smbfile); // unzip from SMB
+	}
+	else
+	{
+		// Just load the file up
+		while ((ret = SMB_ReadFile (sbuffer + boffset, 1024, boffset, smbfile)) > 0)
+			boffset += ret;
 	}
 	SMB_CloseFile (smbfile);
 

@@ -13,39 +13,42 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "agb/GBA.h"
-#include "agb/agbprint.h"
+#include "GBA.h"
+#include "agbprint.h"
 #include "Flash.h"
 #include "Port.h"
 #include "RTC.h"
 #include "Sound.h"
+#include "Text.h"
 #include "unzip.h"
 #include "Util.h"
-#include "dmg/GB.h"
-#include "dmg/gbGlobals.h"
-#include "images/saveicon.h"
-//#include "dmg/gbSound.h"
+#include "gb/GB.h"
+#include "gb/gbGlobals.h"
 
 #include "vba.h"
 #include "fileop.h"
-#include "dvd.h"
-#include "smbop.h"
-#include "memcardop.h"
 #include "audio.h"
 #include "vmmem.h"
+#include "pal60.h"
 #include "input.h"
 #include "video.h"
 #include "menudraw.h"
-#include "gcunzip.h"
 
 extern "C"
 {
 #include "tbtime.h"
+#include "sdfileio.h"
 }
 
 static tb_t start, now;
 
 u32 loadtimeradjust;
+
+int throttle = 100;
+u32 throttleLastTime = 0;
+
+static u32 autoFrameSkipLastTime = 0;
+static int frameskipadjust = 0;
 
 int vAspect = 0;
 int hAspect = 0;
@@ -79,7 +82,7 @@ int systemColorDepth = 0;
 u16 systemGbPalette[24];
 u16 systemColorMap16[0x10000];
 //u32 systemColorMap32[0x10000];
-u32 *systemColorMap32 = NULL;
+u32 *systemColorMap32 = (u32 *)&systemColorMap16;
 
 struct EmulatedSystem emulator =
 {
@@ -119,7 +122,7 @@ bool systemPauseOnFrame()
 {
 	return false;
 }
-/*
+
 void GC_Sleep(u32 dwMiliseconds)
 {
 	int nVBlanks = (dwMiliseconds / 16);
@@ -128,39 +131,21 @@ void GC_Sleep(u32 dwMiliseconds)
 		VIDEO_WaitVSync();
 	}
 }
-*/
-
-static u32 autoFrameSkipLastTime = 0;
 
 void system10Frames(int rate)
 {
-	if (cartridgeType == 1)
+	if ( cartridgeType == 1 )
 		return;
 
 	u32 time = systemGetClock();
 	u32 diff = time - autoFrameSkipLastTime;
-
-	// difference should be 1/6 second or (1/6)*1000 ms or 167 ms
-	int timeOff = (167 - diff);
-
-	if(timeOff > 3 && timeOff < 60) // we're running ahead!
-		usleep(timeOff*1000); // let's take a nap
-	else
-		timeOff = 0; // timeoff was not valid
-
-	if(diff > 175 && systemFrameSkip < 9)
-		systemFrameSkip++;
-	else if(diff < 150 && systemFrameSkip > 0)
-		systemFrameSkip--;
-
-	autoFrameSkipLastTime = time + timeOff; // total time = processing time + sleep time
-
-	/*
-	// Original VBA SDL frameskip algorithm
 	int speed = 100;
 
 	if(diff)
 		speed = (1000000/rate)/diff;
+	/*	  char temp[512];
+	sprintf(temp,"Speed: %i",speed);
+	MENU_DrawString( -1, 450,temp , 1 );   */
 
 	if(speed >= 98)
 	{
@@ -189,7 +174,6 @@ void system10Frames(int rate)
 	}
 
 	autoFrameSkipLastTime = time;
-	*/
 }
 
 /****************************************************************************
@@ -197,295 +181,112 @@ void system10Frames(int rate)
 ****************************************************************************/
 
 void systemGbPrint(u8 *data,int pages,int feed,int palette, int contrast) {}
-void debuggerOutput(const char *s, u32 addr) {}
-void (*dbgOutput)(const char *s, u32 addr) = debuggerOutput;
+void debuggerOutput(char *, u32) {}
+void (*dbgOutput)(char *, u32) = debuggerOutput;
 void systemMessage(int num, const char *msg, ...) {}
 
-bool MemCPUReadBatteryFile(char * membuffer, int size)
-{
-	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
-
-	if(size == 512 || size == 0x2000)
-	{
-		memcpy(eepromData, membuffer, size);
-	}
-	else
-	{
-		if(size == 0x20000)
-		{
-			memcpy(flashSaveMemory, membuffer, 0x20000);
-			flashSetSize(0x20000);
-		}
-		else
-		{
-			memcpy(flashSaveMemory, membuffer, 0x10000);
-			flashSetSize(0x10000);
-		}
-	}
-	return true;
-}
-
-extern int gbaSaveType;
-
-int MemCPUWriteBatteryFile(char * membuffer)
-{
-	int result = 0;
-	if(gbaSaveType == 0)
-	{
-		if(eepromInUse)
-			gbaSaveType = 3;
-		else
-			switch(saveType)
-			{
-			case 1:
-				gbaSaveType = 1;
-				break;
-			case 2:
-				gbaSaveType = 2;
-				break;
-			}
-	}
-
-	if((gbaSaveType) && (gbaSaveType!=5))
-	{
-		// only save if Flash/Sram in use or EEprom in use
-		if(gbaSaveType != 3)
-		{
-			if(gbaSaveType == 2)
-			{
-				memcpy(membuffer, flashSaveMemory, flashSize);
-				result = flashSize;
-			}
-			else
-			{
-				memcpy(membuffer, flashSaveMemory, 0x10000);
-				result = 0x10000;
-			}
-		}
-		else
-		{
-			memcpy(membuffer, eepromData, eepromSize);
-			result = eepromSize;
-		}
-	}
-	return result;
-}
-
 /****************************************************************************
-* SetFileBytesWritten
-* Sets the # of bytes written into a file
-* Used by GBA.cpp and GB.cpp
+* Saves
 ****************************************************************************/
 
-void SetFileBytesWritten(int bytes)
-{
-	//datasize = bytes;
-}
-
-/****************************************************************************
-* LoadBatteryOrState
-* Load Battery/State file into memory
-* action = 0 - Load battery
-* action = 1 - Load state
-****************************************************************************/
-
-bool LoadBatteryOrState(int method, int action, bool silent)
+bool LoadBattery(int method, bool silent)
 {
 	char filepath[1024];
 	bool result = false;
-	int offset = 0;
-	char ext[4];
-
-	if(action == 0)
-		sprintf(ext, "sav");
-	else
-		sprintf(ext, "sgm");
 
 	ShowAction ((char*) "Loading...");
 
 	if(method == METHOD_AUTO)
 		method = autoSaveMethod(); // we use 'Save' because we need R/W
 
-	AllocSaveBuffer();
-
-	// load the file into savebuffer
-
 	if(method == METHOD_SD || method == METHOD_USB)
 	{
-		if(ChangeFATInterface(method, NOTSILENT))
-		{
-			sprintf (filepath, "%s/%s/%s.%s", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename, ext);
-			offset = LoadBufferFromFAT (filepath, silent);
-		}
-	}
-	else if(method == METHOD_SMB)
-	{
-		sprintf (filepath, "%s/%s.%s", GCSettings.SaveFolder, ROMFilename, ext);
-		offset = LoadBufferFromSMB (filepath, silent);
-	}
-	else if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
-	{
-		sprintf (filepath, "%s.%s", ROMFilename, ext);
-
-		if(method == METHOD_MC_SLOTA)
-			offset = LoadBufferFromMC (savebuffer, CARD_SLOTA, filepath, silent);
-		else
-			offset = LoadBufferFromMC (savebuffer, CARD_SLOTB, filepath, silent);
-
-		// skip save icon and comments for Memory Card saves
-		int skip = sizeof (saveicon);
-		skip += 64; // sizeof savecomment
-		memmove(savebuffer, savebuffer+skip, offset-skip);
-		offset -= skip;
+		ChangeFATInterface(method, NOTSILENT);
+		sprintf (filepath, "%s/%s/%s.sav", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename);
+		result = emulator.emuReadBattery(filepath);
 	}
 
-	// load savebuffer into VBA memory
-	if (offset > 0)
-	{
-		if(action == 0)
-		{
-			if(cartridgeType == 1)
-				result = MemgbReadBatteryFile((char *)savebuffer, offset);
-			else
-				result = MemCPUReadBatteryFile((char *)savebuffer, offset);
-		}
-		else
-		{
-			result = emulator.emuReadMemState((char *)savebuffer, offset);
-		}
-	}
+	if(!result && !silent)
+		WaitPrompt ((char*) "Save file not found");
 
-	FreeSaveBuffer();
-
-	if(!silent && !result)
-	{
-		if(offset == 0)
-		{
-			if(action == 0)
-				WaitPrompt ((char*) "Save file not found");
-			else
-				WaitPrompt ((char*) "State file not found");
-		}
-		else
-		{
-			if(action == 0)
-				WaitPrompt ((char*) "Invalid save file");
-			else
-				WaitPrompt ((char*) "Invalid state file");
-		}
-	}
 	return result;
 }
 
-
-/****************************************************************************
-* SaveBatteryOrState
-* Save Battery/State file into memory
-* action = 0 - Save battery
-* action = 1 - Save state
-****************************************************************************/
-
-bool SaveBatteryOrState(int method, int action, bool silent)
+bool SaveBattery(int method, bool silent)
 {
 	char filepath[1024];
-	char savecomment[2][32];
 	bool result = false;
-	int offset = 0;
-	char ext[4];
-	char savetype[10];
-	int datasize = 0; // we need the actual size of the data written
 
-	if(action == 0)
+	ShowAction ((char*) "Saving...");
+
+	if(method == METHOD_AUTO)
+			method = autoSaveMethod(); // we use 'Save' because we need R/W
+
+	if(method == METHOD_SD || method == METHOD_USB)
 	{
-		sprintf(ext, "sav");
-		sprintf(savetype, "SRAM");
+		ChangeFATInterface(method, NOTSILENT);
+		sprintf (filepath, "%s/%s/%s.sav", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename);
+		result = emulator.emuWriteBattery(filepath);
 	}
-	else
+
+	if(!silent)
 	{
-		sprintf(ext, "sgm");
-		sprintf(savetype, "Freeze");
+		if(result)
+			WaitPrompt ((char*) "Save successful");
+		else
+			WaitPrompt ((char*) "Save failed");
 	}
+
+	return result;
+}
+
+bool LoadState(int method, bool silent)
+{
+	char filepath[1024];
+	bool result = false;
+
+	ShowAction ((char*) "Loading...");
+
+	if(method == METHOD_AUTO)
+		method = autoSaveMethod(); // we use 'Save' because we need R/W
+
+	if(method == METHOD_SD || method == METHOD_USB)
+	{
+		ChangeFATInterface(method, NOTSILENT);
+		sprintf (filepath, "%s/%s/%s.sgm", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename);
+		result = emulator.emuReadState(filepath);
+	}
+
+	if(!result && !silent)
+		WaitPrompt ((char*) "State file not found");
+
+	return result;
+}
+
+bool SaveState(int method, bool silent)
+{
+	char filepath[1024];
+	bool result = false;
 
 	ShowAction ((char*) "Saving...");
 
 	if(method == METHOD_AUTO)
 		method = autoSaveMethod(); // we use 'Save' because we need R/W
 
-	AllocSaveBuffer();
-
-	// add save icon and comments for Memory Card saves
-	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
+	if(method == METHOD_SD || method == METHOD_USB)
 	{
-		offset = sizeof (saveicon);
-
-		// Copy in save icon
-		memcpy (savebuffer, saveicon, offset);
-
-		// And the comments
-		sprintf (savecomment[0], "%s %s", VERSIONSTR, savetype);
-		strncpy(savecomment[1], ROMFilename, 31); // truncate filename to 31 chars
-		savecomment[1][31] = 0; // make sure last char is null byte
-		memcpy (savebuffer + offset, savecomment, 64);
-		offset += 64;
+		ChangeFATInterface(method, NOTSILENT);
+		sprintf (filepath, "%s/%s/%s.sgm", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename);
+		result = emulator.emuWriteState(filepath);
 	}
 
-	// put VBA memory into savebuffer, sets datasize to size of memory written
-	if(action == 0)
+	if(!silent)
 	{
-		if(cartridgeType == 1)
-			datasize = MemgbWriteBatteryFile((char *)savebuffer+offset);
+		if(result)
+			WaitPrompt ((char*) "Save successful");
 		else
-			datasize = MemCPUWriteBatteryFile((char *)savebuffer+offset);
+			WaitPrompt ((char*) "Save failed");
 	}
-	else
-	{
-		bool written = emulator.emuWriteMemState((char *)savebuffer+offset, SAVEBUFFERSIZE-offset);
-		// we really should set datasize to the exact memory size written
-		// but instead we'll set it at 128K - although much of it will go unused
-		if(written)
-			datasize = (1024*128);
-	}
-
-	// write savebuffer into file
-	if(datasize > 0)
-	{
-		if(method == METHOD_SD || method == METHOD_USB)
-		{
-			if(ChangeFATInterface(method, NOTSILENT))
-			{
-				sprintf (filepath, "%s/%s/%s.%s", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename, ext);
-				offset = SaveBufferToFAT (filepath, datasize, silent);
-			}
-		}
-		else if(method == METHOD_SMB)
-		{
-			sprintf (filepath, "%s/%s.%s", GCSettings.SaveFolder, ROMFilename, ext);
-			offset = SaveBufferToSMB (filepath, datasize, silent);
-		}
-		else if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
-		{
-			sprintf (filepath, "%s.%s", ROMFilename, ext);
-
-			if(method == METHOD_MC_SLOTA)
-				offset = SaveBufferToMC (savebuffer, CARD_SLOTA, filepath, datasize+offset, silent);
-			else
-				offset = SaveBufferToMC (savebuffer, CARD_SLOTB, filepath, datasize+offset, silent);
-		}
-
-		if(offset > 0)
-		{
-			if(!silent)
-				WaitPrompt ((char*) "Save successful");
-			result = true;
-		}
-	}
-	else
-	{
-		if(!silent)
-			WaitPrompt((char *)"No data to save!");
-	}
-
-	FreeSaveBuffer();
 
 	return result;
 }
@@ -532,73 +333,21 @@ u32 systemReadJoypad(int which)
 ****************************************************************************/
 void systemDrawScreen()
 {
+	// GB / GBC Have oodles of time - so sync on VSync
 	GX_Render( srcWidth, srcHeight, pix, srcPitch );
+
+	#ifdef HW_RVL
+	VIDEO_WaitVSync ();
+	#else
+	if ( cartridgeType == 1 )
+	{
+		VIDEO_WaitVSync();
+	}
+	#endif
 }
 
-extern bool gbUpdateSizes();
-bool LoadGBROM(int method)
+int loadVBAROM(char filename[])
 {
-	// cleanup GB memory
-	if(gbRom != NULL)
-		gbCleanUp();
-
-	gbRom = (u8 *)malloc(1024*1024*4); // allocate 4 MB to GB ROM
-
-	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
-
-	switch (method)
-	{
-		case METHOD_SD:
-		case METHOD_USB:
-		gbRomSize = LoadFATFile ((char *)gbRom, 0);
-		break;
-
-		case METHOD_DVD:
-		gbRomSize = LoadDVDFile ((unsigned char *)gbRom, 0);
-		break;
-
-		case METHOD_SMB:
-		gbRomSize = LoadSMBFile ((char *)gbRom, 0);
-		break;
-	}
-
-	if(!gbRom)
-		return false;
-
-	return gbUpdateSizes();
-}
-
-bool LoadVBAROM(int method)
-{
-	int type = 0;
-	bool loaded = false;
-
-	// image type (checks file extension)
-	if(utilIsGBAImage(filelist[selection].filename))
-		type = 2;
-	else if(utilIsGBImage(filelist[selection].filename))
-		type = 1;
-	else if(utilIsZipFile(filelist[selection].filename))
-	{
-		// we need to check the file extension of the first file in the archive
-		char * zippedFilename = GetFirstZipFilename (method);
-
-		if(strlen(zippedFilename) > 0)
-		{
-			if(utilIsGBAImage(zippedFilename))
-				type = 2;
-			else if(utilIsGBImage(zippedFilename))
-				type = 1;
-		}
-	}
-
-	// leave before we do anything
-	if(type != 1 && type != 2)
-	{
-		WaitPrompt((char *)"Unknown game image!");
-		return false;
-	}
-
 	cartridgeType = 0;
 	srcWidth = 0;
 	srcHeight = 0;
@@ -606,15 +355,17 @@ bool LoadVBAROM(int method)
 	destHeight = 0;
 	srcPitch = 0;
 
+	IMAGE_TYPE type = utilFindType(filename);
+
 	switch( type )
 	{
-		case 2:
+		case IMAGE_GBA:
 		//WaitPrompt("GameBoy Advance Image");
 		cartridgeType = 2;
 		emulator = GBASystem;
 		srcWidth = 240;
 		srcHeight = 160;
-		loaded = VMCPULoadROM(method);
+		VMCPULoadROM(filename);
 		// Actual Visual Aspect is 1.57
 		hAspect = 70;
 		vAspect = 46;
@@ -624,13 +375,13 @@ bool LoadVBAROM(int method)
 		cpuSaveType = 0;
 		break;
 
-		case 1:
+		case IMAGE_GB:
 		//WaitPrompt("GameBoy Image");
 		cartridgeType = 1;
 		emulator = GBSystem;
 		srcWidth = 160;
 		srcHeight = 144;
-		loaded = LoadGBROM(method);
+		gbLoadRom(filename);
 		// Actual physical aspect is 1.0
 		hAspect = 60;
 		vAspect = 46;
@@ -638,52 +389,46 @@ bool LoadVBAROM(int method)
 		soundQuality = 1;
 		soundBufferLen = 1470 * 2;
 		break;
+
+		default:
+		WaitPrompt((char *)"Unknown Image");
+		return 0;
+		break;
 	}
 
-	if(!loaded)
+	// Set defaults
+	flashSetSize(0x10000);
+	rtcEnable(true);
+	agbPrintEnable(false);
+	soundOffFlag = false;
+	soundLowPass = true;
+
+	// Setup GX
+	GX_Render_Init( srcWidth, srcHeight, hAspect, vAspect );
+
+	if ( cartridgeType == 1 )
 	{
-		WaitPrompt((char *)"Error loading game!");
-		return false;
+		gbSoundReset();
+		gbSoundSetQuality(soundQuality);
 	}
 	else
 	{
-		// Set defaults
-		flashSetSize(0x20000); // 128K saves
-		rtcEnable(true);
-		agbPrintEnable(false);
-		soundOffFlag = false;
-		soundLowPass = true;
-
-		// Setup GX
-		GX_Render_Init( srcWidth, srcHeight, hAspect, vAspect );
-
-		if ( cartridgeType == 1 )
-		{
-			gbSoundReset();
-			gbSoundSetQuality(soundQuality);
-		}
-		else
-		{
-			soundSetQuality(soundQuality);
-			CPUInit("/VBA/BIOS/BIOS.GBA", 1);
-			CPUReset();
-		}
-
-		soundVolume = 0;
-		systemSoundOn = true;
-
-		soundInit();
-
-		emulating = 1;
-
-		// reset frameskip variables
-		autoFrameSkipLastTime = systemFrameSkip = 0;
-
-		// Start system clock
-		mftb(&start);
-
-		return true;
+		soundSetQuality(soundQuality);
+		CPUInit("/VBA/BIOS/BIOS.GBA", 1);
+		CPUReset();
 	}
+
+	soundVolume = 0;
+	systemSoundOn = true;
+
+	soundInit();
+
+	emulating = 1;
+
+	// Start system clock
+	mftb(&start);
+
+	return 1;
 }
 
 /****************************************************************************
