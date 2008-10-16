@@ -1,0 +1,30 @@
+¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
+ 
+                            - Visual Boy Advance GX -
+                               (Under GPL License)
+ 
+¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
+
+-=[ Compiling ]=-
+
+This thing is a bugger to compile, at least for now. You can compile 
+everything using -Os, but gameplay will run slow. Compiling with -O2 
+using devkitppc 15 will crash on GBA.cpp. This must be due to some change in
+gcc 4.x that sets a compiler flag that the assembly code in thumb.h can't
+handle.
+
+To get around this:
+
+-use a precompiled GBA.o
+
+OR
+
+-compile a GBA.o and GBA.d using devkitpcc 13 (gcc 3.4.6)
+-copy these precompiled files to the build dir, and compile everything else
+with -O2 on devkitppc 15 (gcc 4.2.3)
+
+It would be really nice to automate this messy build process, or preferably
+to find out how to get gcc 4.x to play nice.
+
+
+-- Tantric, September 2008
