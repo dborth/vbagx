@@ -206,17 +206,6 @@ setfontcolour (u8 r, u8 g, u8 b)
 }
 
 /****************************************************************************
- * Draws Version # on screen
- ***************************************************************************/
-
-void DrawVersion()
-{
-	setfontsize (12);
-	setfontcolour (0,0,0);
-	DrawText (115, screenheight - 34, (char *)VERSIONSTRFULL);
-}
-
-/****************************************************************************
  * Display credits, legal copyright and licence
  *
  * THIS MUST NOT BE REMOVED IN ANY DERIVATIVE WORK.
@@ -228,10 +217,10 @@ Credits ()
 
 	setfontcolour (0x00, 0x00, 0x00);
 
-	setfontsize (26);
-	DrawText (-1, 150, (char*)"Credits");
+	setfontsize (28);
+	DrawText (-1, 60, (char*)"Credits");
 
-	int ypos = 120;
+	int ypos = 25;
 
 	if (screenheight == 480)
 		ypos += 52;
@@ -246,8 +235,6 @@ Credits ()
 	DrawText (375, ypos, (char*)"emukidid");
 	DrawText (100, ypos += 18, (char*)"Original GameCube Port");
 	DrawText (375, ypos, (char*)"SoftDev");
-	DrawText (100, ypos += 18, (char*)"Visual Boy Advance - M");
-	DrawText (375, ypos, (char*)"VBA-M Team");
 	DrawText (100, ypos += 18, (char*)"Visual Boy Advance 1.7.2");
 	DrawText (375, ypos, (char*)"Forgotten");
 	DrawText (100, ypos += 18, (char*)"libogc");
@@ -258,11 +245,9 @@ Credits ()
 	DrawText (-1, ypos += 36, (char*)"And many others who have contributed over the years!");
 
 	setfontsize (12);
-	DrawText (-1, ypos += 40, (char*)"This software is open source and may be copied,");
-	DrawText (-1, ypos += 15, (char*)"distributed, or modified under the terms of");
-	DrawText (-1, ypos += 15, (char*)"the GNU General Public License (GPL) Version 2.");
+	DrawText (-1, ypos += 50, (char*)"This software is open source and may be copied, distributed, or modified");
+	DrawText (-1, ypos += 15, (char*)"under the terms of the GNU General Public License (GPL) Version 2.");
 
-	DrawVersion();
 	showscreen ();
 }
 
@@ -368,12 +353,9 @@ WaitPrompt (char *msg)
 		ypos += 32;
 
 	clearscreen ();
-	setfontsize(16);
 	DrawText (-1, ypos, msg);
 	ypos += 30;
 	DrawText (-1, ypos, (char*)"Press A to continue");
-
-	DrawVersion();
 	showscreen ();
 	WaitButtonA ();
 }
@@ -393,14 +375,11 @@ WaitPromptChoice (char *msg, char *bmsg, char *amsg)
 		ypos += 17;
 
 	clearscreen ();
-	setfontsize(20);
 	DrawText (-1, ypos, msg);
 	ypos += 60;
 	char txt[80];
 	sprintf (txt, "B = %s   :   A = %s", bmsg, amsg);
 	DrawText (-1, ypos, txt);
-
-	DrawVersion();
 	showscreen ();
 	return WaitButtonAB ();
 }
@@ -419,10 +398,7 @@ ShowAction (char *msg)
 		ypos += 32;
 
 	clearscreen ();
-	setfontsize(20);
 	DrawText (-1, ypos, msg);
-
-	DrawVersion();
 	showscreen ();
 }
 
@@ -437,12 +413,12 @@ DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsiz
 	int n = 1;
 	int line_height;
 
-	ypos = 105;
+	ypos = 45;
 
 	if (screenheight == 480)
 		ypos += 52;
 	else
-		ypos += 42;
+		ypos += 32;
 
 	clearscreen ();
 
@@ -450,9 +426,12 @@ DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsiz
 
 	if (title != NULL)
 	{
-		setfontsize (26);
-		DrawText (-1, 150, title);
+		setfontsize (28);
+		DrawText (-1, 60, title);
 	}
+
+	setfontsize (14);
+	DrawText (380, screenheight - 30, (char *)VERSIONSTRFULL);
 
 	// Draw menu items
 
@@ -469,11 +448,11 @@ DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsiz
 			else if (i == selected)
 			{
 				for( w = 0; w < line_height; w++ )
-					DrawLineFast( 77, 575, n * line_height + (ypos-line_height+6) + w, 0x00, 0x00, 0x00 );
+					DrawLineFast( 30, 610, n * line_height + (ypos-line_height+6) + w, 0x80, 0x80, 0x80 );
 
-				//setfontcolour (0xff, 0xff, 0xff);
+				setfontcolour (0xff, 0xff, 0xff);
 				DrawText (x, n * line_height + ypos, items[i]);
-				//setfontcolour (0x00, 0x00, 0x00);
+				setfontcolour (0x00, 0x00, 0x00);
 			}
 			else
 			{
@@ -483,8 +462,8 @@ DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsiz
 		}
 	}
 
-	DrawVersion();
 	showscreen ();
+
 }
 
 /****************************************************************************
@@ -540,7 +519,7 @@ RunMenu (char items[][50], int maxitems, char *title, int fontsize, int x)
 		gc_ay = PAD_StickY (0);
         p = PAD_ButtonsDown (0);
 #ifdef HW_RVL
-		wm_ay = WPAD_Stick (0,0,1);
+		wm_ay = WPAD_StickY (0,0);
 		wp = WPAD_ButtonsDown (0);
 #endif
 
@@ -605,8 +584,8 @@ ShowFiles (FILEENTRIES filelist[], int maxfiles, int offset, int selection)
 
 	clearscreen ();
 
-	setfontsize (26);
-	DrawText (-1, 150, (char*)"Choose Game");
+	setfontsize (28);
+	DrawText (-1, 60, (char*)"Choose Game");
 
 	setfontsize(18);
 
@@ -616,8 +595,6 @@ ShowFiles (FILEENTRIES filelist[], int maxfiles, int offset, int selection)
 		ypos += 24;
 	else
 		ypos += 10;
-
-	ypos += 30;
 
 	j = 0;
 	for (i = offset; i < (offset + PAGESIZE) && (i < maxfiles); i++)
@@ -637,18 +614,19 @@ ShowFiles (FILEENTRIES filelist[], int maxfiles, int offset, int selection)
 		{
 			/*** Highlighted text entry ***/
 			for ( w = 0; w < 20; w++ )
-				DrawLineFast( 77, 575, ( j * 20 ) + (ypos-16) + w, 0x00, 0x00, 0x00 );
-			DrawText (100, (j * 20) + ypos, text);
+				DrawLineFast( 30, 610, ( j * 20 ) + (ypos-16) + w, 0x80, 0x80, 0x80 );
+
+			setfontcolour (0x00, 0x00, 0xe0);
+			DrawText (50, (j * 20) + ypos, text);
+			setfontcolour (0x00, 0x00, 0x00);
 		}
 		else
 		{
 			/*** Normal entry ***/
-			DrawText (100, (j * 20) + ypos, text);
+			DrawText (50, (j * 20) + ypos, text);
 		}
 		j++;
 	}
-
-	DrawVersion();
 	showscreen ();
 }
 
@@ -667,8 +645,8 @@ ShowCheats (char items[][50], char itemvalues[][50], int maxitems, int offset, i
 
 	clearscreen ();
 
-	setfontsize (26);
-	DrawText (-1, 150, (char*)"Cheats");
+	setfontsize (28);
+	DrawText (-1, 60, (char*)"Cheats");
 
 	setfontsize(18);
 
@@ -698,8 +676,6 @@ ShowCheats (char items[][50], char itemvalues[][50], int maxitems, int offset, i
 		}
 		j++;
 	}
-
-	DrawVersion();
 	showscreen ();
 }
 
@@ -797,43 +773,30 @@ DrawLine (int x1, int y1, int x2, int y2, u8 r, u8 g, u8 b)
 void
 ShowProgress (char *msg, int done, int total)
 {
-	if(total <= 0) // division by 0 is bad!
-		return;
-	else if(done > total) // this shouldn't happen
-		done = total;
+  int ypos = (screenheight - 30) >> 1;
 
-	int xpos, ypos;
-	int i;
+  if (screenheight == 480)
+    ypos += 52;
+  else
+    ypos += 32;
 
-	if(done < 5000) // we just started!
-	{
-		ypos = (screenheight - 30) >> 1;
+  int xpos;
+  int i;
 
-		if (screenheight == 480)
-			ypos += 52;
-		else
-			ypos += 32;
+  clearscreen ();
+  DrawText (-1, ypos, msg);
 
-		clearscreen ();
-		setfontsize(20);
-		DrawText (-1, ypos, msg);
-
-		/*** Draw a white outline box ***/
-		for (i = 380; i < 401; i++)
-			DrawLine (100, i, 540, i, 0xff, 0xff, 0xff);
-	}
+	/*** Draw a white outline box ***/
+  for (i = 380; i < 401; i++)
+    DrawLine (100, i, 540, i, 0xff, 0xff, 0xff);
 
 	/*** Show progess ***/
-	xpos = (int) (((float) done / (float) total) * 438);
+  xpos = (int) (((float) done / (float) total) * 438);
 
-	for (i = 381; i < 400; i++)
-		DrawLine (101, i, 101 + xpos, i, 0x00, 0x00, 0x80);
+  for (i = 381; i < 400; i++)
+    DrawLine (101, i, 101 + xpos, i, 0x00, 0x00, 0x80);
 
-	if(done < 5000) // we just started!
-	{
-		DrawVersion();
-		showscreen ();
-	}
+  showscreen ();
 }
 
 /****************************************************************************

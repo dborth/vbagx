@@ -14,7 +14,6 @@
 #include <string.h>
 #include <wiiuse/wpad.h>
 #include <sys/dir.h>
-#include <malloc.h>
 
 #ifdef WII_DVD
 extern "C" {
@@ -32,12 +31,10 @@ extern "C" {
 #include "input.h"
 #include "dvd.h"
 #include "smbop.h"
-#include "gcunzip.h"
 
 int offset;
 int selection;
 char currentdir[MAXPATHLEN];
-char szpath[MAXPATHLEN];
 int maxfiles;
 extern int screenheight;
 
@@ -49,38 +46,20 @@ int hasloaded = 0;
 
 // Global file entry table
 FILEENTRIES filelist[MAXFILES];
-bool inSz = false;
+
+unsigned char savebuffer[SAVEBUFFERSIZE] ATTRIBUTE_ALIGN (32);
 
 char ROMFilename[512];
-bool ROMLoaded = false;
-
-unsigned char *savebuffer = NULL;
+int ROMSize = 0;
 
 /****************************************************************************
- * AllocSaveBuffer ()
- * Clear and allocate the savebuffer
+ * ClearSaveBuffer ()
+ * Clear the savebuffer
  ***************************************************************************/
 void
-AllocSaveBuffer ()
+ClearSaveBuffer ()
 {
-	if (savebuffer != NULL)
-		free(savebuffer);
-
-	savebuffer = (unsigned char *) memalign(32, SAVEBUFFERSIZE);
-	memset (savebuffer, 0, SAVEBUFFERSIZE);
-}
-
-/****************************************************************************
- * FreeSaveBuffer ()
- * Free the savebuffer memory
- ***************************************************************************/
-void
-FreeSaveBuffer ()
-{
-	if (savebuffer != NULL)
-		free(savebuffer);
-
-	savebuffer = NULL;
+    memset (savebuffer, 0, SAVEBUFFERSIZE);
 }
 
 /****************************************************************************
@@ -192,28 +171,6 @@ int UpdateDirName(int method)
 	}
 }
 
-bool MakeROMPath(char filepath[], int method)
-{
-	char temppath[MAXPATHLEN];
-
-	// Check filename length
-	if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
-	{
-		sprintf(temppath, "%s/%s",currentdir,filelist[selection].filename);
-
-		if(method == METHOD_SMB)
-			strcpy(filepath, SMBPath(temppath));
-		else
-			strcpy(filepath, temppath);
-		return true;
-	}
-	else
-	{
-		filepath[0] = 0;
-		return false;
-	}
-}
-
 /****************************************************************************
  * FileSortCallback
  *
@@ -242,25 +199,6 @@ int FileSortCallback(const void *f1, const void *f2)
 }
 
 /****************************************************************************
- * IsSz
- *
- * Checks if the specified file is a 7z
- ***************************************************************************/
-
-bool IsSz()
-{
-	if (strlen(filelist[selection].filename) > 4)
-	{
-		char * p = strrchr(filelist[selection].filename, '.');
-
-		if (p != NULL)
-			if(stricmp(p, ".7z") == 0)
-				return true;
-	}
-	return false;
-}
-
-/****************************************************************************
  * StripExt
  *
  * Strips an extension from a filename
@@ -273,7 +211,7 @@ void StripExt(char* returnstring, char * inputstring)
 	strcpy (returnstring, inputstring);
 	loc_dot = strrchr(returnstring,'.');
 	if (loc_dot != NULL)
-		*loc_dot = 0;	// strip file extension
+		*loc_dot = '\0';	// strip file extension
 }
 
 /****************************************************************************
@@ -315,8 +253,8 @@ int FileSelector (int method)
         p = PAD_ButtonsDown (0);
 		ph = PAD_ButtonsHeld (0);
 #ifdef HW_RVL
-		wm_ay = WPAD_Stick (0, 0, 0);
-		wm_sx = WPAD_Stick (0, 1, 1);
+		wm_ay = WPAD_StickY (0, 0);
+		wm_sx = WPAD_StickX (0, 1);
 
 		wp = WPAD_ButtonsDown (0);
 		wh = WPAD_ButtonsHeld (0);
@@ -334,25 +272,7 @@ int FileSelector (int method)
 			if (filelist[selection].flags) // This is directory
 			{
 				/* update current directory and set new entry list if directory has changed */
-				int status;
-
-				if(inSz && selection == 0) // inside a 7z, requesting to leave
-				{
-					if(method == METHOD_DVD)
-					{
-						// go to directory the 7z was in
-						dvddir = filelist[0].offset;
-						dvddirlength = filelist[0].length;
-					}
-					inSz = false;
-					status = 1;
-					SzClose();
-				}
-				else
-				{
-					status = UpdateDirName(method);
-				}
-
+				int status = UpdateDirName(method);
 				if (status == 1) // ok, open directory
 				{
 					switch (method)
@@ -384,42 +304,37 @@ int FileSelector (int method)
 			}
 			else	// this is a file
 			{
-				// 7z file - let's open it up to select a file inside
-				if(IsSz())
+				// store the filename (w/o ext) - used for sram/freeze naming
+				StripExt(ROMFilename, filelist[selection].filename);
+
+				ShowAction ((char *)"Loading...");
+
+				switch (method)
 				{
-					// we'll store the 7z filepath for extraction later
-					if(!MakeROMPath(szpath, method))
-					{
-						WaitPrompt((char*) "Maximum filepath length reached!");
-						return -1;
-					}
-					int szfiles = SzParse(szpath, method);
-					if(szfiles)
-					{
-						maxfiles = szfiles;
-						inSz = true;
-					}
-					else
-						WaitPrompt((char*) "Error opening archive!");
+					case METHOD_SD:
+					case METHOD_USB:
+					ROMSize = LoadFATFile (filelist[selection].filename, filelist[selection].length);
+					break;
+
+					case METHOD_DVD:
+					dvddir = filelist[selection].offset;
+					dvddirlength = filelist[selection].length;
+					//ROMSize = LoadDVDFile (Memory.ROM);
+					break;
+
+					case METHOD_SMB:
+					//ROMSize = LoadSMBFile (filelist[selection].filename, filelist[selection].length);
+					break;
+				}
+
+				if (ROMSize > 0)
+				{
+
+					return 1;
 				}
 				else
 				{
-					// store the filename (w/o ext) - used for sram/freeze naming
-					StripExt(ROMFilename, filelist[selection].filename);
-
-					ShowAction ((char *)"Loading...");
-
-					ROMLoaded = LoadVBAROM(method);
-					inSz = false;
-
-					if (ROMLoaded)
-					{
-						return 1;
-					}
-					else
-					{
-						WaitPrompt((char*) "Error loading ROM!");
-					}
+					WaitPrompt((char*) "Error loading ROM!");
 				}
 			}
 			redraw = 1;
@@ -613,7 +528,7 @@ OpenFAT (int method)
 {
 	if(ChangeFATInterface(method, NOTSILENT))
 	{
-		// change current dir to vba roms directory
+		// change current dir to snes roms directory
 		sprintf ( currentdir, "%s/%s", ROOTFATDIR, GCSettings.LoadFolder );
 
 		// Parse initial root directory and get entries list

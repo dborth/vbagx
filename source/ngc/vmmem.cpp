@@ -9,6 +9,7 @@
  ***************************************************************************/
 
 #ifdef HW_RVL
+#include "sdfileio.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,18 +17,12 @@
 #include <fat.h>
 #include <sys/dir.h>
 
-#include "agb/GBA.h"
+#include "GBA.h"
 #include "Globals.h"
 #include "Util.h"
 #include "Port.h"
 
-#include "vba.h"
-#include "smbop.h"
-#include "fileop.h"
-#include "dvd.h"
 #include "menudraw.h"
-#include "filesel.h"
-#include "gcunzip.h"
 
 extern "C" {
 #include "tbtime.h"
@@ -40,7 +35,9 @@ extern "C" {
 unsigned int MEM2Storage = 0x91000000;
 
 static char *gbabase = NULL;
+static FILE *romfile = NULL;
 static u32 GBAROMSize = 0;
+static char romfilename[1024];
 
 /**
  * GBA Memory
@@ -91,7 +88,12 @@ static void VMClose( void )
   if ( gbabase != NULL )
     free(gbabase);
 
+  if ( romfile != NULL )
+    gen_fclose(romfile);
+
   gbabase = NULL;
+  romfile = NULL;
+
 }
 
 /****************************************************************************
@@ -99,49 +101,49 @@ static void VMClose( void )
 *
 * MEM2 version of GBA CPULoadROM
 ****************************************************************************/
-
-bool VMCPULoadROM(int method)
+int VMCPULoadROM( char *filename )
 {
-	VMClose();
-	VMAllocGBA();
-	GBAROMSize = 0;
+  int res=0;
+  char temp[512];
+  VMClose();
+  VMAllocGBA();
+
+  GBAROMSize = 0;
+
+  sprintf(temp,"Filename %s\n", filename);
+  //WaitPrompt(temp);
+
+  romfile = gen_fopen(filename, "rb");
+  if ( romfile == NULL )
+    {
+	  WaitPrompt((char*) "Error opening file!");
+      //while(1);
+      VMClose();
+      return 0;
+    }
+
+	fseek(romfile, 0, SEEK_END);
+	GBAROMSize = ftell(romfile);
+	fseek(romfile, 0, SEEK_SET);
+
+    sprintf(temp,"ROM Size %dMb (%dMBit)",  GBAROMSize/1024/1024,(GBAROMSize*8)/1024/1024);
+    //WaitPrompt(temp);
+
 	rom = (u8 *)MEM2Storage;
 
-	switch (method)
-	{
-		case METHOD_SD:
-		case METHOD_USB:
-			if(inSz)
-				GBAROMSize = LoadFATSzFile(szpath, (unsigned char *)rom);
-			else
-				GBAROMSize = LoadFATFile((char *)rom, filelist[selection].length);
-			break;
+  /* Always use MEM2, regardless of ROM size */
+	res = gen_fread(rom, 1, GBAROMSize, romfile);
 
-		case METHOD_DVD:
-			if(inSz)
-				GBAROMSize = SzExtractFile(filelist[selection].offset, (unsigned char *)rom);
-			else
-				GBAROMSize = LoadDVDFile((unsigned char *)rom, filelist[selection].length);
-			break;
+    if ( (u32)res != GBAROMSize )
+    {
+    	WaitPrompt((char*) "Error reading file!");
+        while(1);
+    }
+  strcpy( romfilename, filename );
 
-		case METHOD_SMB:
-			if(inSz)
-				GBAROMSize = LoadSMBSzFile(szpath, (unsigned char *)rom);
-			else
-				GBAROMSize = LoadSMBFile((char *)rom, filelist[selection].length);
-			break;
-	}
+  CPUUpdateRenderBuffers( true );
 
-	if(GBAROMSize)
-	{
-		CPUUpdateRenderBuffers( true );
-		return true;
-	}
-	else
-	{
-		VMClose();
-		return false;
-	}
+  return 1;
 }
 
 
@@ -161,6 +163,8 @@ u32 VMRead32( u32 address )
   }
 
   return READ32LE((rom + address));
+
+
 }
 
 /****************************************************************************
@@ -198,20 +202,18 @@ u8 VMRead8( u32 address )
 }
 #else
 
+#include "sdfileio.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <malloc.h>
 
-#include "agb/GBA.h"
+#include "GBA.h"
 #include "Globals.h"
 #include "Util.h"
 #include "Port.h"
 
 #include "menudraw.h"
-#include "filesel.h"
-#include "vba.h"
-#include "fileop.h"
 
 extern "C" {
 #include "tbtime.h"
@@ -245,8 +247,9 @@ static int vmpageno = 0;
 static char *rombase = NULL;
 static char *gbabase = NULL;
 static FILE* romfile = NULL;
-static int useVM = 1;
+static int useVM = 0;
 static u32 GBAROMSize = 0;
+static char romfilename[1024];
 
 /**
  * GBA Memory
@@ -362,7 +365,7 @@ static void VMClose( void )
     free(gbabase);
 
   if ( romfile != NULL )
-    fclose(romfile);
+    gen_fclose(romfile);
 
   rombase = gbabase = NULL;
   romfile = NULL;
@@ -374,77 +377,54 @@ static void VMClose( void )
 *
 * VM version of GBA CPULoadROM
 ****************************************************************************/
-
-int VMCPULoadROM(int method)
+int VMCPULoadROM( char *filename )
 {
-	int res;
-	char msg[512];
-	char filepath[MAXPATHLEN];
+  int res;
+  char msg[512];
 
-	/** Fix VM **/
-	VMClose();
-	VMInit();
-	VMAllocGBA();
+  /** Fix VM **/
+  VMClose();
+  VMInit();
+  VMAllocGBA();
 
-	loadtimeradjust = GBAROMSize = 0;
+  loadtimeradjust = useVM = GBAROMSize = 0;
 
-	switch (method)
-	{
-		case METHOD_SD:
-		case METHOD_USB:
-		break;
+  printf("Filename %s\n", filename);
 
-		case METHOD_DVD:
-			VMClose();
-			return 0; // not implemented
-		break;
+  romfile = gen_fopen(filename, "rb");
+  if ( romfile == NULL )
+    {
+	  WaitPrompt((char*) "Error opening file!");
+      while(1);
+      VMClose();
+      return 0;
+    }
 
-		case METHOD_SMB:
-			VMClose();
-			return 0; // not implemented
-		break;
-	}
+   // printf("ROM Size %d\n", romfile->fsize);
 
-	/* Check filename length */
-	if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
-		sprintf(filepath, "%s/%s",currentdir,filelist[selection].filename);
-	else
-	{
-		WaitPrompt((char*) "Maximum filepath length reached!");
-		return -1;
-	}
-
-	romfile = fopen(filepath, "rb");
-	if ( romfile == NULL )
-	{
-		WaitPrompt((char*) "Error opening file!");
-		VMClose();
-		return 0;
-	}
-
-	// printf("ROM Size %d\n", romfile->fsize);
-
-	/* Always use VM, regardless of ROM size */
-	res = fread(rom, 1, (1 << VMSHIFTBITS), romfile);
-	if ( res != (1 << VMSHIFTBITS ) )
-	{
+  /* Always use VM, regardless of ROM size */
+      res = gen_fread(rom, 1, (1 << VMSHIFTBITS), romfile);
+      if ( res != (1 << VMSHIFTBITS ) )
+      {
 		sprintf(msg, "Error reading file! %i \n",res);
 		WaitPrompt(msg);
-		VMClose();
-		return 0;
-	}
+        while(1);
+      }
 
 	fseek(romfile, 0, SEEK_END);
 	GBAROMSize = ftell(romfile);
 	fseek(romfile, 0, SEEK_SET);
-	vmpageno = 0;
-	vmpage[0].pageptr = rombase;
-	vmpage[0].pageno = 0;
-	vmpage[0].pagetype = MEM_VM;
+      vmpageno = 0;
+      vmpage[0].pageptr = rombase;
+      vmpage[0].pageno = 0;
+      vmpage[0].pagetype = MEM_VM;
+      useVM = 1;
 
-	CPUUpdateRenderBuffers( true );
+  strcpy( romfilename, filename );
 
-	return 1;
+  CPUUpdateRenderBuffers( true );
+
+  return 1;
 }
 
 /****************************************************************************
@@ -461,24 +441,22 @@ static void VMNewPage( int pageid )
 
   mftb(&start);
 
-  res = fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
+  res = gen_fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
   if ( ! res )
     {
       sprintf(msg, "Seek error! - Offset %08x %d\n", pageid << VMSHIFTBITS, res);
       WaitPrompt(msg);
-      VMClose();
-      return;
+      while(1);
     }
 
   VMAllocate( pageid );
 
-  res = fread( vmpage[pageid].pageptr, 1, 1 << VMSHIFTBITS, romfile );
+  res = gen_fread( vmpage[pageid].pageptr, 1, 1 << VMSHIFTBITS, romfile );
   if ( res != ( 1 << VMSHIFTBITS ) )
     {
       sprintf(msg, "Error reading! %d bytes only\n", res);
       WaitPrompt(msg);
-      VMClose();
-      return;
+      while(1);
     }
 
    mftb(&end);
@@ -538,8 +516,7 @@ u32 VMRead32( u32 address )
 	default:
 		sprintf(msg, "VM32 : Unknown page type! (%d) [%d]", vmpage[pageid].pagetype, pageid);
 		WaitPrompt(msg);
-		VMClose();
-        return 0;
+		while(1);
   }
 
   /* Can never get here ... but stops gcc bitchin' */
@@ -578,8 +555,7 @@ u16 VMRead16( u32 address )
 
 	default:
 		WaitPrompt((char*) "VM16 : Unknown page type!");
-  		VMClose();
-        return 0;
+  		while(1);
   }
 
   /* Can never get here ... but stops gcc bitchin' */
@@ -618,8 +594,7 @@ u8 VMRead8( u32 address )
 
 	default:
 		WaitPrompt((char*) "VM8 : Unknown page type!");
-  		VMClose();
-        return 0;
+  		while(1);
   }
 
   /* Can never get here ... but stops gcc bitchin' */

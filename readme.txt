@@ -1,13 +1,14 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 1.0.3
-                         http://code.google.com/p/vba-wii   
+                                  Version 1.0.0   
                                (Under GPL License)
  
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
-Visual Boy Advance GX is a modified port of VBA-M / VBA 1.7.2.
+-=[ Explanation ]=-
+ 
+Visual Boy Advance GX is a port of Visual Boy Advance 1.7.2.
 With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 -=[ Features ]=-
@@ -15,42 +16,13 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Wiimote, Nunchuk, Classic, and Gamecube controller support
 * SRAM and State saving
 * Custom controller configurations
-* SD, USB, DVD, SMB, GC Memory Card, Zip, and 7z support
-* GBA compatiblity based on VBA-M r750, GB compatibility based on VBA 1.7.2
-* Turbo speed feature
+* SD and USB support
 
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
 
-[What's New 1.0.3 - October 15, 2008]
-* New timing / frameskip algorithm - should (hopefully) work 100% better!
-* Performance improvements - video threading, PPC core partly activated
-* Video zooming option
-* Unfiltered video option
-* 7z support
-* Loading progress bars added
-
-[What's New 1.0.2 - October 6, 2008]
-* New core! The core is now a custom combination of VBA-M and VBA 1.72
-* Added DVD, SMB, ZIP, GameCube MC support
-* Faster USB/SD speeds
-* Screen alignment and flickering problems fixed
-* 128K save support added
-* Better emulation speeds. Should now be nearly full speed all the time
-  for most games.
-* Turbo speed feature. Mapped to right C-stick (classic controller & 
-  Gamecube controller), and A+B for wiimote
-* Controller mapping preferences bug fixed. Your preferences will reset
-  automatically to correct any problems in your preferences file
-* Many other tweaks behind the scenes
-
-[What's New 1.0.1 - September 18, 2008]
-* GBA games now run at full speed
-* Menu improvements, with spiffy new background - thanks brakken!
-* Fixed L/R buttons - they work now
-
-[What's New 1.0.0 - September 16, 2008]
+[What's New 1.0.0]
 
 * Now compiles with devkitpro r15
 * One makefile to make all versions
