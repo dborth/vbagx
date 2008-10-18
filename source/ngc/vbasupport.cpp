@@ -552,11 +552,8 @@ void systemDrawScreen()
 extern bool gbUpdateSizes();
 bool LoadGBROM(int method)
 {
-	// cleanup GB memory
-	if(gbRom != NULL)
-		gbCleanUp();
-
 	gbRom = (u8 *)malloc(1024*1024*4); // allocate 4 MB to GB ROM
+	bios = (u8 *)calloc(1,0x100);
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
@@ -617,6 +614,9 @@ bool LoadVBAROM(int method)
 	srcWidth = 0;
 	srcHeight = 0;
 	srcPitch = 0;
+
+	VMClose(); // cleanup GBA memory
+	gbCleanUp(); // cleanup GB memory
 
 	switch( type )
 	{

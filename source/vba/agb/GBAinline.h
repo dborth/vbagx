@@ -75,8 +75,9 @@ u8 inline CPUReadByteQuick( u32 addr )
 		case 9:
 		case 10:
 		case 12:
+#ifdef USE_VM
 			return VMRead8( addr & 0x1FFFFFF );
-
+#endif
 		default:
 			return CPUReadByteQuickDef(addr);
 	}
@@ -92,7 +93,9 @@ u16 inline CPUReadHalfWordQuick( u32 addr )
 		case 9:
 		case 10:
 		case 12:
+#ifdef USE_VM
 			return VMRead16( addr & 0x1FFFFFF );
+#endif
 		default:
 			return CPUReadHalfWordQuickDef(addr);
 	}
@@ -108,7 +111,9 @@ u32 inline CPUReadMemoryQuick( u32 addr )
 		case 9:
 		case 10:
 		case 12:
+#ifdef USE_VM
 			return VMRead32( addr & 0x1FFFFFF );
+#endif
 		default:
 			return CPUReadMemoryQuickDef(addr);
 	}
