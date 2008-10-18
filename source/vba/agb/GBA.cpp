@@ -3740,7 +3740,7 @@ void CPULoop(int ticks)
       // mute sound
       soundTicks -= clockTicks;
       if(soundTicks <= 0) {
-        soundTick(); // psoundTickfn();
+        psoundTickfn();
         soundTicks += SOUND_CLOCK_TICKS;
       }
 

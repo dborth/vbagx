@@ -1,84 +1,83 @@
-// -*- C++ -*-
-// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
-// Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2004 Forgotten and the VBA development team
-// Copyright (C) 2004-2006 VBA development team
-
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2, or(at your option)
-// any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+// Sound emulation setup/options and GBA sound emulation
 
 #ifndef VBA_SOUND_H
 #define VBA_SOUND_H
 
 #include "System.h"
 
-#define NR10 0x60
-#define NR11 0x62
-#define NR12 0x63
-#define NR13 0x64
-#define NR14 0x65
-#define NR21 0x68
-#define NR22 0x69
-#define NR23 0x6c
-#define NR24 0x6d
-#define NR30 0x70
-#define NR31 0x72
-#define NR32 0x73
-#define NR33 0x74
-#define NR34 0x75
-#define NR41 0x78
-#define NR42 0x79
-#define NR43 0x7c
-#define NR44 0x7d
-#define NR50 0x80
-#define NR51 0x81
-#define NR52 0x84
+//// Setup/options (these affect GBA and GB sound)
+
+// Initializes sound and returns true if successful. Sets sound quality to
+// current value in soundQuality global.
+bool soundInit();
+
+// Manages sound volume, where 1.0 is normal
+void soundSetVolume( float );
+float soundGetVolume();
+
+// Manages muting bitmask. The bits control the following channels:
+// 0x001 Pulse 1
+// 0x002 Pulse 2
+// 0x004 Wave
+// 0x008 Noise
+// 0x100 PCM 1
+// 0x200 PCM 2
+void soundSetEnable( int mask );
+int  soundGetEnable();
+
+// Pauses/resumes system sound output
+void soundPause();
+void soundResume();
+extern bool soundPaused; // current paused state
+
+// Cleans up sound. Afterwards, soundInit() can be called again.
+void soundShutdown();
+
+// Sound buffering
+extern int soundBufferLen;      // size of sound buffer in BYTES
+extern u16 soundFinalWave[1470];// 16-bit SIGNED stereo sample buffer
+
+
+//// GBA sound options
+
+// Sets sample rate to 44100 / quality
+void soundSetQuality( int quality );
+extern int soundQuality; // current sound quality
+
+// Sound settings
+extern bool soundInterpolation; // 1 if PCM should have low-pass filtering
+extern float soundFiltering;    // 0.0 = none, 1.0 = max
+
+
+//// GBA sound emulation
+
+// GBA sound registers
 #define SGCNT0_H 0x82
 #define FIFOA_L 0xa0
 #define FIFOA_H 0xa2
 #define FIFOB_L 0xa4
 #define FIFOB_H 0xa6
 
-void soundTick();
-void soundShutdown();
-bool soundInit();
-void soundPause();
-void soundResume();
-void soundEnable(int);
-void soundDisable(int);
-int  soundGetEnable();
+// Resets emulated sound hardware
 void soundReset();
-void soundSaveGame(gzFile);
-void soundReadGame(gzFile, int);
-void soundEvent(u32, u8);
-void soundEvent(u32, u16);
-void soundTimerOverflow(int);
-void soundSetQuality(int);
 
-extern int SOUND_CLOCK_TICKS;
-extern int soundTicks;
-extern int soundPaused;
-extern bool soundOffFlag;
-extern int soundQuality;
-extern int soundBufferLen;
-extern int soundBufferTotalLen;
-extern u32 soundNextPosition;
-extern u16 soundFinalWave[1470];
-extern int soundVolume;
+// Emulates write to sound hardware
+void soundEvent( u32 addr, u8  data );
+void soundEvent( u32 addr, u16 data ); // TODO: error-prone to overload like this
 
-extern bool soundEcho;
-extern bool soundLowPass;
-extern bool soundReverse;
+// Notifies emulator that a timer has overflowed
+void soundTimerOverflow( int which );
+
+// Notifies emulator that PCM rate may have changed
+void interp_rate();
+
+// Notifies emulator that SOUND_CLOCK_TICKS clocks have passed
+void psoundTickfn();
+extern int SOUND_CLOCK_TICKS;   // Number of 16.8 MHz clocks between calls to soundTick()
+extern int soundTicks;          // Number of 16.8 MHz clocks until soundTick() will be called
+
+// Saves/loads emulator state
+void soundSaveGame( gzFile );
+void soundReadGame( gzFile, int version );
 
 #endif // VBA_SOUND_H

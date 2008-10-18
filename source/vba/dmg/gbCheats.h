@@ -22,36 +22,38 @@
 
 #include "../System.h"
 
-struct gbXxCheat
-  {
-    char cheatDesc[100];
-    char cheatCode[20];
-  };
+struct gbXxCheat {
+  char cheatDesc[100];
+  char cheatCode[20];
+};
 
-struct gbCheat
-  {
-    char cheatCode[20];
-    char cheatDesc[32];
-    u16 address;
-    int code;
-    u8 compare;
-    u8 value;
-    bool enabled;
-  };
+struct gbCheat {
+  char cheatCode[20];
+  char cheatDesc[32];
+  u16 address;
+  int code;
+  u8 compare;
+  u8 value;
+  bool enabled;
+};
 
-extern void gbCheatsSaveGame(gzFile);
-extern void gbCheatsReadGame(gzFile, int);
-extern void gbCheatsSaveCheatList(const char *);
-extern bool gbCheatsLoadCheatList(const char *);
-extern bool gbCheatReadGSCodeFile(const char *);
+void gbCheatsSaveGame(gzFile);
+void gbCheatsReadGame(gzFile, int);
+void gbCheatsSaveCheatList(const char *);
+bool gbCheatsLoadCheatList(const char *);
+bool gbCheatReadGSCodeFile(const char *);
 
-extern void gbAddGsCheat(const char *, const char*);
-extern void gbAddGgCheat(const char *, const char*);
-extern void gbCheatRemove(int);
-extern void gbCheatRemoveAll();
-extern void gbCheatEnable(int);
-extern void gbCheatDisable(int);
-extern u8 gbCheatRead(u16);
+bool gbAddGsCheat(const char *, const char*);
+bool gbAddGgCheat(const char *, const char*);
+void gbCheatRemove(int);
+void gbCheatRemoveAll();
+void gbCheatEnable(int);
+void gbCheatDisable(int);
+u8 gbCheatRead(u16);
+void gbCheatWrite(bool);
+bool gbVerifyGsCode(const char *code);
+bool gbVerifyGgCode(const char *code);
+
 
 extern int gbCheatNumber;
 extern gbCheat gbCheatList[100];

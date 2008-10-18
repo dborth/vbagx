@@ -13,18 +13,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "agb/GBA.h"
-#include "agb/agbprint.h"
+#include "unzip.h"
+#include "Util.h"
 #include "Flash.h"
 #include "Port.h"
 #include "RTC.h"
 #include "Sound.h"
-#include "unzip.h"
-#include "Util.h"
-#include "dmg/GB.h"
+#include "Cheats.h"
+#include "agb/GBA.h"
+#include "agb/agbprint.h"
+#include "dmg/gb.h"
 #include "dmg/gbGlobals.h"
-#include "images/saveicon.h"
-//#include "dmg/gbSound.h"
+#include "dmg/gbCheats.h"
+#include "dmg/gbSound.h"
 
 #include "vba.h"
 #include "fileop.h"
@@ -37,6 +38,7 @@
 #include "video.h"
 #include "menudraw.h"
 #include "gcunzip.h"
+#include "images/saveicon.h"
 
 extern "C"
 {
@@ -63,22 +65,17 @@ int sensorX = 2047;
 int sensorY = 2047;
 
 int systemFrameSkip = 0;
-bool systemSoundOn = false;
 int systemVerbose = 0;
 int cartridgeType = 0;
 int srcWidth = 0;
 int srcHeight = 0;
-int destWidth = 0;
-int destHeight = 0;
 int srcPitch = 0;
-int saveExists = 0;
 int systemRedShift = 0;
 int systemBlueShift = 0;
 int systemGreenShift = 0;
 int systemColorDepth = 0;
 u16 systemGbPalette[24];
 u16 systemColorMap16[0x10000];
-//u32 systemColorMap32[0x10000];
 u32 *systemColorMap32 = NULL;
 
 struct EmulatedSystem emulator =
@@ -148,7 +145,7 @@ void system10Frames(int rate)
 	else
 		timeOff = 0; // timeoff was not valid
 
-	if(diff > 175 && systemFrameSkip < 9)
+	if(diff > 170 && systemFrameSkip < 9)
 		systemFrameSkip++;
 	else if(diff < 150 && systemFrameSkip > 0)
 		systemFrameSkip--;
@@ -602,42 +599,58 @@ bool LoadVBAROM(int method)
 	cartridgeType = 0;
 	srcWidth = 0;
 	srcHeight = 0;
-	destWidth = 0;
-	destHeight = 0;
 	srcPitch = 0;
 
 	switch( type )
 	{
 		case 2:
-		//WaitPrompt("GameBoy Advance Image");
-		cartridgeType = 2;
-		emulator = GBASystem;
-		srcWidth = 240;
-		srcHeight = 160;
-		loaded = VMCPULoadROM(method);
-		// Actual Visual Aspect is 1.57
-		hAspect = 70;
-		vAspect = 46;
-		srcPitch = 484;
-		soundQuality = 2;
-		soundBufferLen = 1470;
-		cpuSaveType = 0;
-		break;
+			//WaitPrompt("GameBoy Advance Image");
+			cartridgeType = 2;
+			emulator = GBASystem;
+			srcWidth = 240;
+			srcHeight = 160;
+			loaded = VMCPULoadROM(method);
+			// Actual Visual Aspect is 1.57
+			hAspect = 70;
+			vAspect = 46;
+			srcPitch = 484;
+			soundQuality = 2;
+			soundBufferLen = 736 * 2;
+			cpuSaveType = 0;
+			break;
 
 		case 1:
-		//WaitPrompt("GameBoy Image");
-		cartridgeType = 1;
-		emulator = GBSystem;
-		srcWidth = 160;
-		srcHeight = 144;
-		loaded = LoadGBROM(method);
-		// Actual physical aspect is 1.0
-		hAspect = 60;
-		vAspect = 46;
-		srcPitch = 324;
-		soundQuality = 1;
-		soundBufferLen = 1470 * 2;
-		break;
+			//WaitPrompt("GameBoy Image");
+			cartridgeType = 1;
+			emulator = GBSystem;
+			
+			gbBorderOn = 0;
+
+			if(gbBorderOn)
+			{
+				srcWidth = 256;
+				srcHeight = 224;
+				gbBorderLineSkip = 256;
+				gbBorderColumnSkip = 48;
+				gbBorderRowSkip = 40;
+			}
+			else
+			{
+				srcWidth = 160;
+				srcHeight = 144;
+				gbBorderLineSkip = 160;
+				gbBorderColumnSkip = 0;
+				gbBorderRowSkip = 0;
+			}
+
+			loaded = LoadGBROM(method);
+			// Actual physical aspect is 1.0
+			hAspect = 60;
+			vAspect = 46;
+			srcPitch = 324;
+			soundQuality = 1;
+			soundBufferLen = 1470 * 2;
+			break;
 	}
 
 	if(!loaded)
@@ -651,26 +664,29 @@ bool LoadVBAROM(int method)
 		flashSetSize(0x20000); // 128K saves
 		rtcEnable(true);
 		agbPrintEnable(false);
-		soundOffFlag = false;
-		soundLowPass = true;
 
 		// Setup GX
 		GX_Render_Init( srcWidth, srcHeight, hAspect, vAspect );
 
 		if ( cartridgeType == 1 )
 		{
+			gbGetHardwareType();
+
+			// used for the handling of the gb Boot Rom
+			//if (gbHardware & 5)
+			//gbCPUInit(gbBiosFileName, useBios);
+			
 			gbSoundReset();
 			gbSoundSetQuality(soundQuality);
+			gbReset();
 		}
 		else
 		{
+			soundReset();
 			soundSetQuality(soundQuality);
 			CPUInit("/VBA/BIOS/BIOS.GBA", 1);
 			CPUReset();
 		}
-
-		soundVolume = 0;
-		systemSoundOn = true;
 
 		soundInit();
 
