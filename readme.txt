@@ -17,7 +17,9 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Custom controller configurations
 * SD, USB, DVD, SMB, GC Memory Card, Zip, and 7z support
 * GBA compatiblity based on VBA-M r750, GB compatibility based on VBA 1.7.2
-* Turbo speed feature
+* MEM2 ROM Storage for fast access
+* Auto frame skip for those core heavy games
+* Turbo speed, video zooming, and unfiltered video options
 
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
