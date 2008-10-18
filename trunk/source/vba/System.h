@@ -21,7 +21,8 @@
 #define VBA_SYSTEM_H
 
 #include <stdint.h>
-#include "unzip.h"
+
+#include <zlib.h>
 
 #ifndef NULL
 #define NULL 0
@@ -38,11 +39,6 @@ typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
 
-
-
-typedef unsigned char u8;
-typedef unsigned short u16;
-typedef unsigned int u32;
 
 struct EmulatedSystem {
   // main emulation function
@@ -113,7 +109,6 @@ extern void winlog(const char *,...);
 extern void (*dbgOutput)(const char *s, u32 addr);
 extern void (*dbgSignal)(int sig,int number);
 
-extern bool systemSoundOn; // old sound system
 extern u16 systemColorMap16[0x10000];
 //extern u32 systemColorMap32[0x10000];
 extern u32 *systemColorMap32;

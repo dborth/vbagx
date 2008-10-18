@@ -35,6 +35,7 @@ extern "C" {
 #include "Globals.h"
 #include "RTC.h"
 #include "Port.h"
+#include "unzip.h"
 
 extern "C" {
 #include "memgzio.h"
