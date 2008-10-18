@@ -40,6 +40,7 @@ extern "C" {
 
 extern bool ROMLoaded;
 extern int emulating;
+int ConfigRequested = 0;
 
 
 /****************************************************************************
@@ -98,23 +99,22 @@ int main()
 		selectedMenu = 2; // change to preferences menu
 	}
 
-	while (!ROMLoaded)
-	{
-		MainMenu (selectedMenu);
-	}
-
 	//Main loop
 	while(1)
 	{
+		ResetVideo_Menu (); // change to menu video mode
+		MainMenu(selectedMenu);
+		selectedMenu = 3; // return to game menu from now on
+
 		while (emulating)
 		{
 			emulator.emuMain(emulator.emuCount);
+
+			if(ConfigRequested)
+			{
+				ConfigRequested = 0;
+				break;
+			}
 		}
 	}
-
-  // Never leaving here
-  while(1);
-
-  return 0;
 }
-

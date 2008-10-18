@@ -94,6 +94,11 @@ void InitialiseSound()
 	memset(soundbuffer, 0, 3200);
 }
 
+void ResetAudio()
+{
+	memset(soundbuffer, 0, 3200);
+}
+
 void StopAudio()
 {
 	AUDIO_StopDMA();

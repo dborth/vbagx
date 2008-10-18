@@ -24,6 +24,6 @@ extern unsigned int ncpadmap[];
 
 s8 WPAD_Stick(u8 chan,u8 right, int axis);
 
-u32 GetJoy();
+u32 GetJoy(int which);
 
 #endif

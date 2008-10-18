@@ -267,9 +267,9 @@ u32 DecodeJoy(unsigned short pad)
 
 	return J;
 }
-u32 GetJoy()
+u32 GetJoy(int pad)
 {
-    int pad = 0;
+    pad = 0;
 
     s8 gc_px = PAD_SubStickX (0);
     s8 gc_py = PAD_SubStickY (0);
@@ -313,9 +313,7 @@ u32 GetJoy()
     		SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
     		SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
     	}
-    	// change to menu video mode
-		ResetVideo_Menu ();
-    	MainMenu(3);
+    	ConfigRequested = 1;
     	return 0;
 	}
 	else

@@ -515,6 +515,7 @@ void systemWriteDataToSoundBuffer()
 
 bool systemSoundInit()
 {
+	ResetAudio();
 	return true;
 }
 
@@ -538,7 +539,7 @@ bool systemReadJoypads()
 
 u32 systemReadJoypad(int which)
 {
-	return GetJoy();
+	return GetJoy(which);
 }
 
 /****************************************************************************

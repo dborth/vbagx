@@ -51,5 +51,6 @@ struct SGCSettings{
 };
 
 extern struct SGCSettings GCSettings;
+extern int ConfigRequested;
 
 #endif
