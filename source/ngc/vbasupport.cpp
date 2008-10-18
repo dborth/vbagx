@@ -140,15 +140,32 @@ void system10Frames(int rate)
 	// difference should be 1/6 second or (1/6)*1000 ms or 167 ms
 	int timeOff = (167 - diff);
 
-	if(timeOff > 3 && timeOff < 60) // we're running ahead!
+	if(timeOff > 0 && timeOff < 100) // we're running ahead!
 		usleep(timeOff*1000); // let's take a nap
 	else
 		timeOff = 0; // timeoff was not valid
 
-	if(diff > 170 && systemFrameSkip < 9)
-		systemFrameSkip++;
-	else if(diff < 150 && systemFrameSkip > 0)
-		systemFrameSkip--;
+	// consider increasing skip
+	if(diff >= 230)
+		systemFrameSkip += 3;
+	else if(diff >= 200)
+		systemFrameSkip += 2;
+	else if(diff >= 170)
+		systemFrameSkip += 1;
+
+	// consider decreasing skip
+	else if(diff <= 90)
+		systemFrameSkip -= 3;
+	else if(diff <= 120)
+		systemFrameSkip -= 2;
+	else if(diff <= 150)
+		systemFrameSkip -= 1;
+
+	// correct invalid frame skip values
+	if(systemFrameSkip > 20)
+		systemFrameSkip = 20;
+	else if(systemFrameSkip < 0)
+		systemFrameSkip = 0;
 
 	autoFrameSkipLastTime = time + timeOff; // total time = processing time + sleep time
 
@@ -623,7 +640,7 @@ bool LoadVBAROM(int method)
 			//WaitPrompt("GameBoy Image");
 			cartridgeType = 1;
 			emulator = GBSystem;
-			
+
 			gbBorderOn = 0;
 
 			if(gbBorderOn)
@@ -675,9 +692,10 @@ bool LoadVBAROM(int method)
 			// used for the handling of the gb Boot Rom
 			//if (gbHardware & 5)
 			//gbCPUInit(gbBiosFileName, useBios);
-			
+
 			gbSoundReset();
 			gbSoundSetQuality(soundQuality);
+			gbSoundSetDeclicking(true);
 			gbReset();
 		}
 		else
