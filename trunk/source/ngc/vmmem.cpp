@@ -8,7 +8,6 @@
  * GameBoy Advance Virtual Memory Paging
  ***************************************************************************/
 
-#ifdef HW_RVL
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,24 +38,98 @@ extern "C" {
 
 unsigned int MEM2Storage = 0x91000000;
 
-static char *gbabase = NULL;
 static u32 GBAROMSize = 0;
 
-/**
- * GBA Memory
- */
-#define WORKRAM		0x40000
-#define BIOS		0x4000
-#define INTERNALRAM	0x8000
-#define PALETTERAM	0x400
-#define VRAM		0x20000
-#define OAM		0x400
-#define PIX		(4 * 241 * 162)
-#define IOMEM		0x400
-#define GBATOTAL	(WORKRAM + BIOS + INTERNALRAM + PALETTERAM + \
-			 VRAM + OAM + PIX + IOMEM )
+#ifdef USE_VM
+extern u32 loadtimeradjust;
+
+/** Setup VM to use small 16kb windows **/
+#define VMSHIFTBITS 14
+#define VMSHIFTMASK 0x3FFF
+#define MAXGBAROM ( 32 * 1024 * 1024 )
+#define MAXROM  (4 * 1024 * 1024)
+#define MAXVMPAGE ( MAXGBAROM >> VMSHIFTBITS )
+#define MAXVMMASK ( ( MAXROM >> VMSHIFTBITS ) - 1 )
+
+typedef struct
+  {
+    char *pageptr;
+    int pagetype;
+    int pageno;
+  }
+VMPAGE;
+
+static VMPAGE vmpage[MAXVMPAGE];
+static int vmpageno = 0;
+static FILE* romfile = NULL;
+static char *rombase = NULL;
+#endif
 
 extern void CPUUpdateRenderBuffers(bool force);
+
+/****************************************************************************
+* VMClose
+****************************************************************************/
+void VMClose()
+{
+	if(vram != NULL)
+	{
+		free(vram);
+		vram = NULL;
+	}
+
+	if(paletteRAM != NULL)
+	{
+		free(paletteRAM);
+		paletteRAM = NULL;
+	}
+
+	if(internalRAM != NULL)
+	{
+		free(internalRAM);
+		internalRAM = NULL;
+	}
+
+	if(workRAM != NULL)
+	{
+		free(workRAM);
+		workRAM = NULL;
+	}
+
+	if(bios != NULL)
+	{
+		free(bios);
+		bios = NULL;
+	}
+
+	if(pix != NULL)
+	{
+		free(pix);
+		pix = NULL;
+	}
+
+	if(oam != NULL)
+	{
+		free(oam);
+		oam = NULL;
+	}
+
+	if(ioMem != NULL)
+	{
+		free(ioMem);
+		ioMem = NULL;
+	}
+
+	#ifdef USE_VM
+	if (rombase != NULL)
+		free(rombase);
+	if (romfile != NULL)
+	{
+		fclose(romfile);
+		romfile = NULL;
+	}
+	#endif
+}
 
 /****************************************************************************
 * VMAllocGBA
@@ -65,35 +138,25 @@ extern void CPUUpdateRenderBuffers(bool force);
 ****************************************************************************/
 static void VMAllocGBA( void )
 {
-  gbabase = (char *)memalign(32, GBATOTAL);
-  memset(gbabase, 0, GBATOTAL);
+	workRAM = (u8 *)calloc(1, 0x40000);
+	bios = (u8 *)calloc(1,0x4000);
+	internalRAM = (u8 *)calloc(1,0x8000);
+	paletteRAM = (u8 *)calloc(1,0x400);
+	vram = (u8 *)calloc(1, 0x20000);
+	oam = (u8 *)calloc(1, 0x400);
+	pix = (u8 *)calloc(1, 4 * 241 * 162);
+	ioMem = (u8 *)calloc(1, 0x400);
 
-  /* Assign to internal GBA variables */
-  workRAM = (u8 *)gbabase;
-  bios = (u8 *)(gbabase + WORKRAM);
-  internalRAM = (u8 *)(bios + BIOS);
-  paletteRAM = (u8 *)(internalRAM + INTERNALRAM);
-  vram = (u8 *)(paletteRAM + PALETTERAM);
-  oam = (u8 *)(vram + VRAM);
-  pix = (u8 *)(oam + OAM);
-  ioMem = (u8 *)(pix + PIX);
+	if(workRAM == NULL || bios == NULL || internalRAM == NULL ||
+		paletteRAM == NULL || vram == NULL || oam == NULL ||
+		pix == NULL || ioMem == NULL)
+	{
+		WaitPrompt((char *)"Out of memory!");
+		VMClose();
+	}
 }
 
-
-/****************************************************************************
-* VMClose
-****************************************************************************/
-static void VMClose( void )
-{
-/*  if ( rombase != NULL )
-    free(rombase);
-*/
-  if ( gbabase != NULL )
-    free(gbabase);
-
-  gbabase = NULL;
-}
-
+#ifndef USE_VM
 /****************************************************************************
 * VMCPULoadROM
 *
@@ -134,6 +197,8 @@ bool VMCPULoadROM(int method)
 
 	if(GBAROMSize)
 	{
+		flashInit();
+		eepromInit();
 		CPUUpdateRenderBuffers( true );
 		return true;
 	}
@@ -143,147 +208,7 @@ bool VMCPULoadROM(int method)
 		return false;
 	}
 }
-
-
-/****************************************************************************
-* VMRead32
-*
-* Return a 32bit value
-****************************************************************************/
-u32 VMRead32( u32 address )
-{
-  u32 badaddress;
-
-  if ( address >= GBAROMSize )
-  {
-    badaddress = ( ( ( address >> 1 ) & 0xffff ) << 16 ) | ( ( ( address + 2 ) >> 1 ) & 0xffff );
-    return badaddress;
-  }
-
-  return READ32LE((rom + address));
-}
-
-/****************************************************************************
-* VMRead16
-*
-* Return a 16bit value
-****************************************************************************/
-u16 VMRead16( u32 address )
-{
-  if ( address >= GBAROMSize )
-  {
-    return ( address >> 1 ) & 0xffff;
-  }
-
-  return READ16LE((rom + address));
-
-}
-
-/****************************************************************************
-* VMRead8
-*
-* Return 8bit value
-****************************************************************************/
-u8 VMRead8( u32 address )
-{
-
-  if ( address >= GBAROMSize )
-  {
-    return ( address >> 1 ) & 0xff;
-  }
-
-
-  return (u8)rom[address];
-
-}
 #else
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <malloc.h>
-
-#include "agb/GBA.h"
-#include "Globals.h"
-#include "Util.h"
-#include "Port.h"
-
-#include "menudraw.h"
-#include "filesel.h"
-#include "vba.h"
-#include "fileop.h"
-
-extern "C" {
-#include "tbtime.h"
-}
-
-/** Globals **/
-extern u32 loadtimeradjust;
-
-#define MEM_BAD	0xff
-#define MEM_VM  0x01
-#define MEM_UN  0x80
-
-/** Setup VM to use small 16kb windows **/
-#define VMSHIFTBITS 14
-#define VMSHIFTMASK 0x3FFF
-#define MAXGBAROM ( 32 * 1024 * 1024 )
-#define MAXROM  (4 * 1024 * 1024)
-#define MAXVMPAGE ( MAXGBAROM >> VMSHIFTBITS )
-#define MAXVMMASK ( ( MAXROM >> VMSHIFTBITS ) - 1 )
-
-typedef struct
-  {
-    char *pageptr;
-    int pagetype;
-    int pageno;
-  }
-VMPAGE;
-
-static VMPAGE vmpage[MAXVMPAGE];
-static int vmpageno = 0;
-static char *rombase = NULL;
-static char *gbabase = NULL;
-static FILE* romfile = NULL;
-static int useVM = 1;
-static u32 GBAROMSize = 0;
-
-/**
- * GBA Memory
- */
-#define WORKRAM		0x40000
-#define BIOS		0x4000
-#define INTERNALRAM	0x8000
-#define PALETTERAM	0x400
-#define VRAM		0x20000
-#define OAM		0x400
-#define PIX		(4 * 241 * 162)
-#define IOMEM		0x400
-#define GBATOTAL	(WORKRAM + BIOS + INTERNALRAM + PALETTERAM + \
-			 VRAM + OAM + PIX + IOMEM )
-
-extern void CPUUpdateRenderBuffers(bool force);
-
-/****************************************************************************
-* VMAllocGBA
-*
-* Allocate the memory required for GBA.
-****************************************************************************/
-static void VMAllocGBA( void )
-{
-  gbabase = (char *)memalign(32, GBATOTAL);
-  memset(gbabase, 0, GBATOTAL);
-
-  /* Assign to internal GBA variables */
-  workRAM = (u8 *)gbabase;
-  bios = (u8 *)(gbabase + WORKRAM);
-  internalRAM = (u8 *)(bios + BIOS);
-  paletteRAM = (u8 *)(internalRAM + INTERNALRAM);
-  vram = (u8 *)(paletteRAM + PALETTERAM);
-  oam = (u8 *)(vram + VRAM);
-  pix = (u8 *)(oam + OAM);
-  ioMem = (u8 *)(pix + PIX);
-}
 
 /****************************************************************************
 * VMFindFree
@@ -292,23 +217,23 @@ static void VMAllocGBA( void )
 ****************************************************************************/
 static void VMFindFree( void )
 {
-  int i;
+	int i;
 
-  vmpageno++;
-  vmpageno &= MAXVMMASK;
-  if ( vmpageno == 0 ) vmpageno++;
+	vmpageno++;
+	vmpageno &= MAXVMMASK;
+	if ( vmpageno == 0 ) vmpageno++;
 
-  for ( i = 1; i < MAXVMPAGE; i++ )
-    {
-      /** Remove any other pointer to this vmpage **/
-      if ( vmpage[i].pageno == vmpageno )
-        {
-          vmpage[i].pageptr = NULL;
-          vmpage[i].pagetype = MEM_UN;
-          vmpage[i].pageno = -1;
-          break;
-        }
-    }
+	for ( i = 1; i < MAXVMPAGE; i++ )
+	{
+		/** Remove any other pointer to this vmpage **/
+		if ( vmpage[i].pageno == vmpageno )
+		{
+			vmpage[i].pageptr = NULL;
+			vmpage[i].pagetype = MEM_UN;
+			vmpage[i].pageno = -1;
+			break;
+		}
+	}
 }
 
 /****************************************************************************
@@ -318,11 +243,10 @@ static void VMFindFree( void )
 ****************************************************************************/
 static void VMAllocate( int pageid )
 {
-  VMFindFree();
-  vmpage[pageid].pageptr = rombase + ( vmpageno << VMSHIFTBITS );
-  vmpage[pageid].pagetype = MEM_VM;
-  vmpage[pageid].pageno = vmpageno;
-
+	VMFindFree();
+	vmpage[pageid].pageptr = rombase + ( vmpageno << VMSHIFTBITS );
+	vmpage[pageid].pagetype = MEM_VM;
+	vmpage[pageid].pageno = vmpageno;
 }
 
 /****************************************************************************
@@ -332,41 +256,22 @@ static void VMAllocate( int pageid )
 ****************************************************************************/
 static void VMInit( void )
 {
-  int i;
+	int i;
 
-  /** Clear down pointers **/
-  memset(&vmpage, 0, sizeof(VMPAGE) * MAXVMPAGE);
-  for ( i = 0; i < MAXVMPAGE; i++ )
-    {
-      vmpage[i].pageno = -1;
-      vmpage[i].pagetype = MEM_UN;
-    }
+	/** Clear down pointers **/
+	memset(&vmpage, 0, sizeof(VMPAGE) * MAXVMPAGE);
+	for ( i = 0; i < MAXVMPAGE; i++ )
+	{
+		vmpage[i].pageno = -1;
+		vmpage[i].pagetype = MEM_UN;
+	}
 
-  /** Allocate physical **/
-  if ( rombase == NULL )
-    rombase = (char *)memalign(32, MAXROM);
+	/** Allocate physical **/
+	if ( rombase == NULL )
+		rombase = (char *)memalign(32, MAXROM);
 
-  vmpageno = 0;
-  rom = (u8 *)rombase;
-}
-
-/****************************************************************************
-* VMClose
-****************************************************************************/
-static void VMClose( void )
-{
-  if ( rombase != NULL )
-    free(rombase);
-
-  if ( gbabase != NULL )
-    free(gbabase);
-
-  if ( romfile != NULL )
-    fclose(romfile);
-
-  rombase = gbabase = NULL;
-  romfile = NULL;
-
+	vmpageno = 0;
+	rom = (u8 *)rombase;
 }
 
 /****************************************************************************
@@ -424,7 +329,6 @@ int VMCPULoadROM(int method)
 
 	// printf("ROM Size %d\n", romfile->fsize);
 
-	/* Always use VM, regardless of ROM size */
 	res = fread(rom, 1, (1 << VMSHIFTBITS), romfile);
 	if ( res != (1 << VMSHIFTBITS ) )
 	{
@@ -442,6 +346,8 @@ int VMCPULoadROM(int method)
 	vmpage[0].pageno = 0;
 	vmpage[0].pagetype = MEM_VM;
 
+	flashInit();
+	eepromInit();
 	CPUUpdateRenderBuffers( true );
 
 	return 1;
@@ -455,175 +361,165 @@ int VMCPULoadROM(int method)
 ****************************************************************************/
 static void VMNewPage( int pageid )
 {
-  int res;
-  tb_t start,end;
-  char msg[512];
+	int res;
+	tb_t start,end;
+	char msg[512];
 
-  mftb(&start);
+	mftb(&start);
 
-  res = fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
-  if ( ! res )
-    {
-      sprintf(msg, "Seek error! - Offset %08x %d\n", pageid << VMSHIFTBITS, res);
-      WaitPrompt(msg);
-      VMClose();
-      return;
-    }
+	res = fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
+	if ( ! res )
+	{
+		sprintf(msg, "Seek error! - Offset %08x %d\n", pageid << VMSHIFTBITS, res);
+		WaitPrompt(msg);
+		VMClose();
+		return;
+	}
 
-  VMAllocate( pageid );
+	VMAllocate( pageid );
 
-  res = fread( vmpage[pageid].pageptr, 1, 1 << VMSHIFTBITS, romfile );
-  if ( res != ( 1 << VMSHIFTBITS ) )
-    {
-      sprintf(msg, "Error reading! %d bytes only\n", res);
-      WaitPrompt(msg);
-      VMClose();
-      return;
-    }
+	res = fread( vmpage[pageid].pageptr, 1, 1 << VMSHIFTBITS, romfile );
+	if ( res != ( 1 << VMSHIFTBITS ) )
+	{
+		sprintf(msg, "Error reading! %d bytes only\n", res);
+		WaitPrompt(msg);
+		VMClose();
+		return;
+	}
 
-   mftb(&end);
+	mftb(&end);
 
-   loadtimeradjust += tb_diff_msec(&end, &start);
+	loadtimeradjust += tb_diff_msec(&end, &start);
 
 #if 0
-  if ( pageid == 0x1FE )
-    {
-      vmpage[pageid].pageptr[0x209C] = 0xDF;
-      vmpage[pageid].pageptr[0x209D] = 0xFA;
-      vmpage[pageid].pageptr[0x209E] = 0x47;
-      vmpage[pageid].pageptr[0x209F] = 0x70;
-    }
+	if ( pageid == 0x1FE )
+	{
+		vmpage[pageid].pageptr[0x209C] = 0xDF;
+		vmpage[pageid].pageptr[0x209D] = 0xFA;
+		vmpage[pageid].pageptr[0x209E] = 0x47;
+		vmpage[pageid].pageptr[0x209F] = 0x70;
+	}
 
-  printf("VMNP : %02x %04x %08x [%02x%02x%02x%02x] [%02x%02x%02x%02x]\n", vmpageno, pageid,
-         (u32)(vmpage[pageid].pageptr - rombase), vmpage[pageid].pageptr[0], vmpage[pageid].pageptr[1],
-         vmpage[pageid].pageptr[2], vmpage[pageid].pageptr[3],
-         vmpage[pageid].pageptr[0xfffc], vmpage[pageid].pageptr[0xfffd],
-         vmpage[pageid].pageptr[0xfffe], vmpage[pageid].pageptr[0xffff]	);
+	printf("VMNP : %02x %04x %08x [%02x%02x%02x%02x] [%02x%02x%02x%02x]\n", vmpageno, pageid,
+			(u32)(vmpage[pageid].pageptr - rombase), vmpage[pageid].pageptr[0], vmpage[pageid].pageptr[1],
+			vmpage[pageid].pageptr[2], vmpage[pageid].pageptr[3],
+			vmpage[pageid].pageptr[0xfffc], vmpage[pageid].pageptr[0xfffd],
+			vmpage[pageid].pageptr[0xfffe], vmpage[pageid].pageptr[0xffff] );
 #endif
 
 }
 
 /****************************************************************************
-* VMRead32
-*
-* Return a 32bit value
-****************************************************************************/
+ * VMRead32
+ *
+ * Return a 32bit value
+ ****************************************************************************/
 u32 VMRead32( u32 address )
 {
-  int pageid;
-  u32 badaddress;
-  char msg[512];
-  //printf("VM32 : Request %08x\n", address);
+	int pageid;
+	u32 badaddress;
+	char msg[512];
+	//printf("VM32 : Request %08x\n", address);
 
-  if ( address >= GBAROMSize )
-  {
-    badaddress = ( ( ( address >> 1 ) & 0xffff ) << 16 ) | ( ( ( address + 2 ) >> 1 ) & 0xffff );
-    return badaddress;
-  }
+	if ( address >= GBAROMSize )
+	{
+		badaddress = ( ( ( address >> 1 ) & 0xffff ) << 16 ) | ( ( ( address + 2 ) >> 1 ) & 0xffff );
+		return badaddress;
+	}
 
-  if ( !useVM )
-    return READ32LE((rom + address));
+	pageid = address >> VMSHIFTBITS;
 
-  /** Use VM **/
-  pageid = address >> VMSHIFTBITS;
-
-  switch( vmpage[pageid].pagetype )
-  {
-	case MEM_UN:
+	switch( vmpage[pageid].pagetype )
+	{
+		case MEM_UN:
 		VMNewPage(pageid);
 
-	case MEM_VM:
+		case MEM_VM:
 		return READ32LE( vmpage[pageid].pageptr + ( address & VMSHIFTMASK ) );
 
-	default:
+		default:
 		sprintf(msg, "VM32 : Unknown page type! (%d) [%d]", vmpage[pageid].pagetype, pageid);
 		WaitPrompt(msg);
 		VMClose();
-        return 0;
-  }
+		return 0;
+	}
 
-  /* Can never get here ... but stops gcc bitchin' */
-  return 0;
+	/* Can never get here ... but stops gcc bitchin' */
+	return 0;
 
 }
 
 /****************************************************************************
-* VMRead16
-*
-* Return a 16bit value
-****************************************************************************/
+ * VMRead16
+ *
+ * Return a 16bit value
+ ****************************************************************************/
 u16 VMRead16( u32 address )
 {
-  int pageid;
+	int pageid;
 
-  //printf("VM16 : Request %08x\n", address);
+	//printf("VM16 : Request %08x\n", address);
 
-  if ( address >= GBAROMSize )
-  {
-    return ( address >> 1 ) & 0xffff;
-  }
+	if ( address >= GBAROMSize )
+	{
+		return ( address >> 1 ) & 0xffff;
+	}
 
-  if ( !useVM )
-    return READ16LE((rom + address));
+	pageid = address >> VMSHIFTBITS;
 
-  pageid = address >> VMSHIFTBITS;
-
-  switch( vmpage[pageid].pagetype )
-  {
-	case MEM_UN:
+	switch( vmpage[pageid].pagetype )
+	{
+		case MEM_UN:
 		VMNewPage(pageid);
 
-	case MEM_VM:
+		case MEM_VM:
 		return READ16LE( vmpage[pageid].pageptr + ( address & VMSHIFTMASK ) );
 
-	default:
+		default:
 		WaitPrompt((char*) "VM16 : Unknown page type!");
-  		VMClose();
-        return 0;
-  }
+		VMClose();
+		return 0;
+	}
 
-  /* Can never get here ... but stops gcc bitchin' */
-  return 0;
+	/* Can never get here ... but stops gcc bitchin' */
+	return 0;
 
 }
 
 /****************************************************************************
-* VMRead8
-*
-* Return 8bit value
-****************************************************************************/
+ * VMRead8
+ *
+ * Return 8bit value
+ ****************************************************************************/
 u8 VMRead8( u32 address )
 {
-  int pageid;
+	int pageid;
 
-  //printf("VM8 : Request %08x\n", address);
+	//printf("VM8 : Request %08x\n", address);
 
-  if ( address >= GBAROMSize )
-  {
-    return ( address >> 1 ) & 0xff;
-  }
+	if ( address >= GBAROMSize )
+	{
+		return ( address >> 1 ) & 0xff;
+	}
 
-  if ( !useVM )
-    return (u8)rom[address];
+	pageid = address >> VMSHIFTBITS;
 
-  pageid = address >> VMSHIFTBITS;
-
-  switch( vmpage[pageid].pagetype )
-  {
-	case MEM_UN:
+	switch( vmpage[pageid].pagetype )
+	{
+		case MEM_UN:
 		VMNewPage(pageid);
 
-	case MEM_VM:
-	    	return (u8)vmpage[pageid].pageptr[ (address & VMSHIFTMASK) ];
+		case MEM_VM:
+		return (u8)vmpage[pageid].pageptr[ (address & VMSHIFTMASK) ];
 
-	default:
+		default:
 		WaitPrompt((char*) "VM8 : Unknown page type!");
-  		VMClose();
-        return 0;
-  }
+		VMClose();
+		return 0;
+	}
 
-  /* Can never get here ... but stops gcc bitchin' */
-  return 0;
+	/* Can never get here ... but stops gcc bitchin' */
+	return 0;
 
 }
 
