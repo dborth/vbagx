@@ -646,7 +646,6 @@ MainMenu (int selectedMenu)
 {
 	tb_t start,end;
 	mftb(&start);
-	StopAudio();
 
 	int quit = 0;
 	int ret;
@@ -738,7 +737,6 @@ MainMenu (int selectedMenu)
 		count++;
 	}
 
-	StartAudio();
 	mftb(&end);
 	loadtimeradjust += tb_diff_msec(&end, &start);
 }
