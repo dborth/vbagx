@@ -19,9 +19,7 @@
 #include <wiiuse/wpad.h>
 
 #include "vba.h"
-#include "vbasupport.h"
 #include "button_mapping.h"
-#include "menu.h"
 #include "video.h"
 #include "input.h"
 #include "tbtime.h"
@@ -300,19 +298,6 @@ u32 GetJoy(int pad)
     #endif
     )
 	{
-    	if (GCSettings.AutoSave == 1)
-    	{
-    		SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
-    	}
-    	else if (GCSettings.AutoSave == 2)
-    	{
-			SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
-    	}
-    	else if(GCSettings.AutoSave == 3)
-    	{
-    		SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
-    		SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
-    	}
     	ConfigRequested = 1;
     	return 0;
 	}

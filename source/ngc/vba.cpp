@@ -27,6 +27,7 @@ extern "C" {
 }
 #endif
 
+#include "vba.h"
 #include "vbasupport.h"
 #include "preferences.h"
 #include "audio.h"
@@ -112,6 +113,19 @@ int main()
 
 			if(ConfigRequested)
 			{
+				if (GCSettings.AutoSave == 1)
+				{
+					SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
+				}
+				else if (GCSettings.AutoSave == 2)
+				{
+					SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
+				}
+				else if(GCSettings.AutoSave == 3)
+				{
+					SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
+					SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
+				}
 				ConfigRequested = 0;
 				break;
 			}
