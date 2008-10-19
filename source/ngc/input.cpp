@@ -20,6 +20,7 @@
 
 #include "vba.h"
 #include "button_mapping.h"
+#include "audio.h"
 #include "video.h"
 #include "input.h"
 #include "tbtime.h"
@@ -298,6 +299,7 @@ u32 GetJoy(int pad)
     #endif
     )
 	{
+    	StopAudio();
     	ConfigRequested = 1;
     	return 0;
 	}

@@ -21,7 +21,50 @@ static int tail = 0;
 static u8 mixerdata[MIXBUFFSIZE];
 #define MIXERMASK ((MIXBUFFSIZE >> 2) - 1)
 
-static u8 soundbuffer[3200] ATTRIBUTE_ALIGN(32);
+static u8 soundbuffer[2][3840] ATTRIBUTE_ALIGN(32);
+extern int ConfigRequested;
+static int whichab = 0;
+int IsPlaying = 0;
+
+/****************************************************************************
+ * MIXER_GetSamples
+ ***************************************************************************/
+static int MIXER_GetSamples( u8 *dstbuffer, int maxlen )
+{
+	u32 *src = (u32 *)mixerdata;
+	u32 *dst = (u32 *)dstbuffer;
+	u32 intlen = maxlen >> 2;
+
+	memset(dstbuffer, 0, maxlen);
+
+	while( ( head != tail ) && intlen )
+	{
+		*dst++ = src[tail++];
+		tail &= MIXERMASK;
+		intlen--;
+	}
+
+	return 3200;
+}
+
+/****************************************************************************
+ * MIXER_GetSamples
+ ***************************************************************************/
+
+static void AudioPlayer()
+{
+	if ( !ConfigRequested )
+	{
+		int len = MIXER_GetSamples(soundbuffer[whichab], 3200);
+		DCFlushRange(soundbuffer[whichab],len);
+		AUDIO_InitDMA((u32)soundbuffer[whichab],len);
+		AUDIO_StartDMA();
+		whichab ^= 1;
+		IsPlaying = 1;
+	}
+	else
+		IsPlaying = 0;
+}
 
 /****************************************************************************
 * MIXER_AddSamples
@@ -54,57 +97,44 @@ void MIXER_AddSamples( u8 *sampledata, int len )
 		fixofs += fixinc;
 	}
 	while( --intlen );
+
+	// Restart Sound Processing if stopped
+	if (IsPlaying == 0)
+	{
+		ConfigRequested = 0;
+		AudioPlayer();
+	}
 }
 
 /****************************************************************************
-* MIXER_GetSamples
-****************************************************************************/
-int MIXER_GetSamples( u8 *dstbuffer, int maxlen )
-{
-	u32 *src = (u32 *)mixerdata;
-	u32 *dst = (u32 *)dstbuffer;
-	u32 intlen = maxlen >> 2;
-
-	memset(dstbuffer, 0, maxlen);
-
-	while( ( head != tail ) && intlen )
-	{
-		*dst++ = src[tail++];
-		tail &= MIXERMASK;
-		intlen--;
-	}
-
-	return 3200;
-}
-
-static void AudioPlayer()
-{
-	AUDIO_StopDMA();
-	MIXER_GetSamples(soundbuffer, 3200);
-	DCFlushRange(soundbuffer,3200);
-	AUDIO_InitDMA((u32)soundbuffer,3200);
-	AUDIO_StartDMA();
-}
+ * MIXER_GetSamples
+ ***************************************************************************/
 
 void InitialiseSound()
 {
 	AUDIO_Init(NULL); // Start audio subsystem
 	AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ);
 	AUDIO_RegisterDMACallback(AudioPlayer);
-	memset(soundbuffer, 0, 3200);
+	memset(soundbuffer, 0, 3840*2);
+	memset(mixerdata, 0, MIXBUFFSIZE);
 }
+
+/****************************************************************************
+ * MIXER_GetSamples
+ ***************************************************************************/
 
 void ResetAudio()
 {
-	memset(soundbuffer, 0, 3200);
+	memset(soundbuffer, 0, 3840*2);
+	memset(mixerdata, 0, MIXBUFFSIZE);
 }
+
+/****************************************************************************
+ * MIXER_GetSamples
+ ***************************************************************************/
 
 void StopAudio()
 {
 	AUDIO_StopDMA();
-}
-
-void StartAudio()
-{
-	AUDIO_StartDMA();
+	IsPlaying = 0;
 }
