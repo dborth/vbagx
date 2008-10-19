@@ -38,6 +38,7 @@
 #include "video.h"
 #include "menudraw.h"
 #include "gcunzip.h"
+#include "gamesettings.h"
 #include "images/saveicon.h"
 
 extern "C"
@@ -550,7 +551,44 @@ void systemDrawScreen()
 	GX_Render( srcWidth, srcHeight, pix, srcPitch );
 }
 
+/****************************************************************************
+ * ApplyPerImagePreferences
+ * Apply game specific settings, originally from vba-over.ini
+ ***************************************************************************/
+
+static void ApplyPerImagePreferences()
+{
+	// look for matching game setting
+	int snum = -1;
+
+	for(int i=0; i < gameSettingsCount; i++)
+	{
+		if(gameSettings[i].gameID[0] == rom[0xac] &&
+			gameSettings[i].gameID[1] == rom[0xad] &&
+			gameSettings[i].gameID[2] == rom[0xae] &&
+			gameSettings[i].gameID[3] == rom[0xaf])
+		{
+			snum = i;
+			break;
+		}
+	}
+
+	// match found!
+	if(snum >= 0)
+	{
+		if(gameSettings[snum].rtcEnabled >= 0)
+			rtcEnable(gameSettings[snum].rtcEnabled);
+		if(gameSettings[snum].flashSize > 0)
+			flashSetSize(gameSettings[snum].flashSize);
+		if(gameSettings[snum].saveType >= 0)
+			cpuSaveType = gameSettings[snum].saveType;
+		if(gameSettings[snum].mirroringEnabled >= 0)
+			mirroringEnable = gameSettings[snum].mirroringEnabled;
+	}
+}
+
 extern bool gbUpdateSizes();
+
 bool LoadGBROM(int method)
 {
 	gbRom = (u8 *)malloc(1024*1024*4); // allocate 4 MB to GB ROM
@@ -678,11 +716,6 @@ bool LoadVBAROM(int method)
 	}
 	else
 	{
-		// Set defaults
-		flashSetSize(0x20000); // 128K saves
-		rtcEnable(true);
-		agbPrintEnable(false);
-
 		// Setup GX
 		GX_Render_Init( srcWidth, srcHeight, hAspect, vAspect );
 
@@ -694,6 +727,8 @@ bool LoadVBAROM(int method)
 			//if (gbHardware & 5)
 			//gbCPUInit(gbBiosFileName, useBios);
 
+			//applyPatch(patch, &gbRom, &size);
+
 			gbSoundReset();
 			gbSoundSetQuality(soundQuality);
 			gbSoundSetDeclicking(true);
@@ -701,9 +736,21 @@ bool LoadVBAROM(int method)
 		}
 		else
 		{
+			// Set defaults
+			cpuSaveType = 0; // automatic
+			flashSetSize(0x10000); // 64K saves
+			rtcEnable(false);
+			agbPrintEnable(false);
+			mirroringEnable = false;
+
+			// Apply preferences specific to this game
+			ApplyPerImagePreferences();
+			doMirroring(mirroringEnable);
+
 			soundReset();
 			soundSetQuality(soundQuality);
-			CPUInit("/VBA/BIOS/BIOS.GBA", 1);
+			CPUInit("BIOS.GBA", 1);
+			//applyPatch(patch, &gbRom, &size);
 			CPUReset();
 		}
 
