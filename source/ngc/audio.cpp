@@ -20,6 +20,7 @@ static int tail = 0;
 #define MIXBUFFSIZE 0x10000
 static u8 mixerdata[MIXBUFFSIZE];
 #define MIXERMASK ((MIXBUFFSIZE >> 2) - 1)
+#define SWAP(x) ((x>>16)|(x<<16)) // for reversing stereo channels
 
 static u8 soundbuffer[2][3840] ATTRIBUTE_ALIGN(32);
 extern int ConfigRequested;
@@ -91,8 +92,8 @@ void MIXER_AddSamples( u8 *sampledata, int len )
 
 	do
 	{
-		// Do simple linear interpolate
-		dst[head++] = src[fixofs >> 16];
+		// Do simple linear interpolate, and swap channels from L-R to R-L
+		dst[head++] = SWAP(src[fixofs >> 16]);
 		head &= MIXERMASK;
 		fixofs += fixinc;
 	}

@@ -327,8 +327,6 @@ int VMCPULoadROM(int method)
 		return 0;
 	}
 
-	// printf("ROM Size %d\n", romfile->fsize);
-
 	res = fread(rom, 1, (1 << VMSHIFTBITS), romfile);
 	if ( res != (1 << VMSHIFTBITS ) )
 	{
@@ -368,9 +366,9 @@ static void VMNewPage( int pageid )
 	mftb(&start);
 
 	res = fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
-	if ( ! res )
+	if (res) // fseek returns non-zero on a failure
 	{
-		sprintf(msg, "Seek error! - Offset %08x %d\n", pageid << VMSHIFTBITS, res);
+		sprintf(msg, "Seek error! - Offset %d / %08x %d\n", pageid, pageid << VMSHIFTBITS, res);
 		WaitPrompt(msg);
 		VMClose();
 		return;
@@ -390,23 +388,6 @@ static void VMNewPage( int pageid )
 	mftb(&end);
 
 	loadtimeradjust += tb_diff_msec(&end, &start);
-
-#if 0
-	if ( pageid == 0x1FE )
-	{
-		vmpage[pageid].pageptr[0x209C] = 0xDF;
-		vmpage[pageid].pageptr[0x209D] = 0xFA;
-		vmpage[pageid].pageptr[0x209E] = 0x47;
-		vmpage[pageid].pageptr[0x209F] = 0x70;
-	}
-
-	printf("VMNP : %02x %04x %08x [%02x%02x%02x%02x] [%02x%02x%02x%02x]\n", vmpageno, pageid,
-			(u32)(vmpage[pageid].pageptr - rombase), vmpage[pageid].pageptr[0], vmpage[pageid].pageptr[1],
-			vmpage[pageid].pageptr[2], vmpage[pageid].pageptr[3],
-			vmpage[pageid].pageptr[0xfffc], vmpage[pageid].pageptr[0xfffd],
-			vmpage[pageid].pageptr[0xfffe], vmpage[pageid].pageptr[0xffff] );
-#endif
-
 }
 
 /****************************************************************************
@@ -419,7 +400,6 @@ u32 VMRead32( u32 address )
 	int pageid;
 	u32 badaddress;
 	char msg[512];
-	//printf("VM32 : Request %08x\n", address);
 
 	if ( address >= GBAROMSize )
 	{
@@ -443,10 +423,6 @@ u32 VMRead32( u32 address )
 		VMClose();
 		return 0;
 	}
-
-	/* Can never get here ... but stops gcc bitchin' */
-	return 0;
-
 }
 
 /****************************************************************************
@@ -457,8 +433,6 @@ u32 VMRead32( u32 address )
 u16 VMRead16( u32 address )
 {
 	int pageid;
-
-	//printf("VM16 : Request %08x\n", address);
 
 	if ( address >= GBAROMSize )
 	{
@@ -480,10 +454,6 @@ u16 VMRead16( u32 address )
 		VMClose();
 		return 0;
 	}
-
-	/* Can never get here ... but stops gcc bitchin' */
-	return 0;
-
 }
 
 /****************************************************************************
@@ -494,8 +464,6 @@ u16 VMRead16( u32 address )
 u8 VMRead8( u32 address )
 {
 	int pageid;
-
-	//printf("VM8 : Request %08x\n", address);
 
 	if ( address >= GBAROMSize )
 	{
@@ -517,11 +485,6 @@ u8 VMRead8( u32 address )
 		VMClose();
 		return 0;
 	}
-
-	/* Can never get here ... but stops gcc bitchin' */
-	return 0;
-
 }
 
 #endif
-
