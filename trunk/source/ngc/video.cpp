@@ -81,7 +81,6 @@ static camera cam = { {0.0F, 0.0F, 0.0F},
                       {0.0F, 0.0F, -0.5F}
                     };
 
-#ifdef VIDEO_THREADING
 /****************************************************************************
  * VideoThreading
  ***************************************************************************/
@@ -125,8 +124,6 @@ InitVideoThread ()
 	/*** Create the thread on this queue ***/
 	LWP_CreateThread (&vbthread, vbgetback, NULL, vbstack, TSTACK, 80);
 }
-
-#endif
 
 /****************************************************************************
  * copy_to_xfb
@@ -331,9 +328,7 @@ void InitialiseVideo ()
 	copynow = GX_FALSE;
 	GX_Start();
 
-	#ifdef VIDEO_THREADING
 	InitVideoThread ();
-	#endif
 }
 
 /****************************************************************************
@@ -469,12 +464,8 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	vwidth = width;
 	vheight = height;
 
-	#ifdef VIDEO_THREADING
 	// Ensure previous vb has complete
 	while ((LWP_ThreadIsSuspended (vbthread) == 0) || (copynow == GX_TRUE))
-	#else
-	while (copynow == GX_TRUE)
-	#endif
 	{
 	  usleep (50);
 	}
@@ -532,10 +523,8 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	VIDEO_Flush();
 	copynow = GX_TRUE;
 
-#ifdef VIDEO_THREADING
 	// Return to caller, don't waste time waiting for vb
 	LWP_ResumeThread (vbthread);
-#endif
 }
 
 /****************************************************************************
