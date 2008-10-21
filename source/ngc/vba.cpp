@@ -43,7 +43,6 @@ extern bool ROMLoaded;
 extern int emulating;
 int ConfigRequested = 0;
 
-
 /****************************************************************************
 * main
 *
@@ -100,14 +99,13 @@ int main()
 		selectedMenu = 2; // change to preferences menu
 	}
 
-	//Main loop
-	while(1)
+	while(1) // main loop
 	{
 		ResetVideo_Menu (); // change to menu video mode
 		MainMenu(selectedMenu);
 		selectedMenu = 3; // return to game menu from now on
 
-		while (emulating)
+		while (emulating) // emulation loop
 		{
 			emulator.emuMain(emulator.emuCount);
 

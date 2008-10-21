@@ -41,7 +41,7 @@ unsigned int MEM2Storage = 0x91000000;
 static u32 GBAROMSize = 0;
 
 #ifdef USE_VM
-extern u32 loadtimeradjust;
+//extern u32 loadtimeradjust;
 
 /** Setup VM to use small 16kb windows **/
 #define VMSHIFTBITS 14
@@ -291,7 +291,7 @@ int VMCPULoadROM(int method)
 	VMInit();
 	VMAllocGBA();
 
-	loadtimeradjust = GBAROMSize = 0;
+	GBAROMSize = 0;
 
 	switch (method)
 	{
@@ -363,7 +363,7 @@ static void VMNewPage( int pageid )
 	tb_t start,end;
 	char msg[512];
 
-	mftb(&start);
+	//mftb(&start);
 
 	res = fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
 	if (res) // fseek returns non-zero on a failure
@@ -385,9 +385,9 @@ static void VMNewPage( int pageid )
 		return;
 	}
 
-	mftb(&end);
+	//mftb(&end);
 
-	loadtimeradjust += tb_diff_msec(&end, &start);
+	//loadtimeradjust += tb_diff_msec(&end, &start);
 }
 
 /****************************************************************************
