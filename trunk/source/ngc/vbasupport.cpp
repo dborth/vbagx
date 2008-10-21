@@ -147,9 +147,11 @@ void system10Frames(int rate)
 		timeOff = 0; // timeoff was not valid
 
 	// consider increasing skip
-	if(diff >= 230)
+	if(diff >= 270)
+		systemFrameSkip += 4;
+	else if(diff >= 240)
 		systemFrameSkip += 3;
-	else if(diff >= 200)
+	else if(diff >= 210)
 		systemFrameSkip += 2;
 	else if(diff >= 170)
 		systemFrameSkip += 1;
@@ -159,7 +161,7 @@ void system10Frames(int rate)
 		systemFrameSkip -= 3;
 	else if(diff <= 120)
 		systemFrameSkip -= 2;
-	else if(diff <= 150)
+	else if(diff <= 135)
 		systemFrameSkip -= 1;
 
 	// correct invalid frame skip values

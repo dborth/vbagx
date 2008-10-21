@@ -23,7 +23,6 @@
 #include "audio.h"
 #include "video.h"
 #include "input.h"
-#include "tbtime.h"
 
 #define VBA_BUTTON_A		1
 #define VBA_BUTTON_B		2
@@ -301,7 +300,7 @@ u32 GetJoy(int pad)
 	{
     	StopAudio();
     	ConfigRequested = 1;
-    	return 0;
+		return 0;
 	}
 	else
 	{
