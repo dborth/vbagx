@@ -35,6 +35,7 @@ extern "C" {
 #include "button_mapping.h"
 #include "menudraw.h"
 #include "input.h"
+#include "vbaconfig.h"
 
 extern "C"
 {
@@ -68,6 +69,20 @@ void Reboot()
 #endif
 }
 
+void ExitToLoader()
+{
+	// Exit to Loader
+	#ifdef HW_RVL
+		#ifdef WII_DVD
+		DI_Close();
+		#endif
+		exit(0);
+	#else	// gamecube
+		if (psoid[0] == PSOSDLOADID)
+			PSOReload ();
+	#endif
+}
+
 /****************************************************************************
  * Load Manager
  ***************************************************************************/
@@ -94,7 +109,7 @@ LoadManager ()
 /****************************************************************************
  * Preferences Menu
  ***************************************************************************/
-static int prefmenuCount = 11;
+static int prefmenuCount = 12;
 static char prefmenu[][50] = {
 
 	"Load Method",
@@ -107,8 +122,9 @@ static char prefmenu[][50] = {
 	"Verify MC Saves",
 	"Enable Zooming",
 	"Video Rendering",
+	"Video Scaling",
 
-	"Save Preferences",
+	"Reset Preferences",
 	"Back to Main Menu"
 };
 
@@ -198,12 +214,15 @@ PreferencesMenu ()
 		else if (GCSettings.AutoSave == 3) sprintf (prefmenu[5],"Auto Save BOTH");
 
 		sprintf (prefmenu[7], "Enable Zooming %s",
-			GCSettings.NGCZoom == true ? " ON" : "OFF");
+			GCSettings.Zoom == true ? " ON" : "OFF");
 
 		if ( GCSettings.render == 0)
 			sprintf (prefmenu[8], "Video Rendering Filtered");
 		if ( GCSettings.render == 1)
 			sprintf (prefmenu[8], "Video Rendering Unfiltered");
+
+		sprintf (prefmenu[9], "Video Scaling %s",
+			GCSettings.widescreen == true ? "16:9 Correction" : "Default");
 
 		ret = RunMenu (prefmenu, prefmenuCount, (char*)"Preferences", 16);
 
@@ -240,7 +259,7 @@ PreferencesMenu ()
 				break;
 
 			case 7:
-				GCSettings.NGCZoom ^= 1;
+				GCSettings.Zoom ^= 1;
 				break;
 
 			case 8:
@@ -252,11 +271,17 @@ PreferencesMenu ()
 				break;
 
 			case 9:
-				SavePrefs(GCSettings.SaveMethod, NOTSILENT);
+				GCSettings.widescreen ^= 1;
 				break;
 
-			case -1: /*** Button B ***/
 			case 10:
+				DefaultSettings ();
+				WaitPrompt((char *)"Preferences Reset");
+				break;
+
+			case 11:
+			case -1: /*** Button B ***/
+				SavePrefs(GCSettings.SaveMethod, SILENT);
 				quit = 1;
 				break;
 
@@ -306,7 +331,7 @@ GameMenu ()
 			gamemenu[5][0] = '\0';
 		}
 		// disable Reset Zoom if Zooming is off
-		if(!GCSettings.NGCZoom)
+		if(!GCSettings.Zoom)
 			gamemenu[6][0] = '\0';
 
 		ret = RunMenu (gamemenu, gamemenuCount, (char*)"Game Menu");
@@ -704,16 +729,7 @@ MainMenu (int selectedMenu)
                 break;
 
 			case 6:
-				// Exit to Loader
-				#ifdef HW_RVL
-					#ifdef WII_DVD
-					DI_Close();
-					#endif
-					exit(0);
-				#else	// gamecube
-					if (psoid[0] == PSOSDLOADID)
-						PSOReload ();
-				#endif
+				ExitToLoader();
 				break;
 
 			case -1: // Button B

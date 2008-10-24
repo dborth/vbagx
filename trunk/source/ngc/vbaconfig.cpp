@@ -46,6 +46,8 @@ DefaultSettings ()
 	GCSettings.smbgcid[0] = 0;
 
 	GCSettings.VerifySaves = 0;
-	GCSettings.NGCZoom = 0;	// zooming default off
-	GCSettings.render = 0; // Unfiltered
+	GCSettings.Zoom = 0;	// zooming default off
+	GCSettings.ZoomLevel = 1.0; // zoom level
+	GCSettings.render = 2; // Unfiltered
+	GCSettings.widescreen = 0; // no aspect ratio correction
 }

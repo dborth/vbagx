@@ -133,6 +133,8 @@ int main()
 		MainMenu(selectedMenu);
 		selectedMenu = 3; // return to game menu from now on
 
+		ResetVideo_Emu();
+
 		while (emulating) // emulation loop
 		{
 			emulator.emuMain(emulator.emuCount);
