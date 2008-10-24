@@ -47,6 +47,11 @@ const char * toStr(int i)
 	sprintf(temp, "%d", i);
 	return temp;
 }
+const char * FtoStr(float i)
+{
+	sprintf(temp, "%.2f", i);
+	return temp;
+}
 
 void createXMLSection(const char * name, const char * description)
 {
@@ -152,8 +157,10 @@ preparePrefsData (int method)
 
 	createXMLSection("Emulation", "Emulation Settings");
 
-	createXMLSetting("NGCZoom", "Enable Zoom", toStr(GCSettings.NGCZoom));
-	createXMLSetting("render", "Video Rendering", toStr(GCSettings.render));
+	createXMLSetting("Zoom", "Zoom On/Off", toStr(GCSettings.Zoom));
+	createXMLSetting("ZoomLevel", "Zoom Level", FtoStr(GCSettings.ZoomLevel));
+	createXMLSetting("render", "Video Filtering", toStr(GCSettings.render));
+	createXMLSetting("widescreen", "Aspect Ratio Correction", toStr(GCSettings.widescreen));
 
 	createXMLSection("Controller", "Controller Settings");
 
@@ -187,6 +194,12 @@ void loadXMLSetting(int * var, const char * name)
 	item = mxmlFindElement(xml, xml, "setting", "name", name, MXML_DESCEND);
 	if(item)
 		*var = atoi(mxmlElementGetAttr(item, "value"));
+}
+void loadXMLSetting(float * var, const char * name)
+{
+	item = mxmlFindElement(xml, xml, "setting", "name", name, MXML_DESCEND);
+	if(item)
+		*var = atof(mxmlElementGetAttr(item, "value"));
 }
 void loadXMLSetting(bool * var, const char * name)
 {
@@ -265,7 +278,7 @@ decodePrefsData (int method)
 	loadXMLSetting(GCSettings.LoadFolder, "LoadFolder");
 	loadXMLSetting(GCSettings.SaveFolder, "SaveFolder");
 	//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder");
-	//loadXMLSetting(&GCSettings.VerifySaves, "VerifySaves");
+	loadXMLSetting(&GCSettings.VerifySaves, "VerifySaves");
 
 	// Network Settings
 
@@ -276,8 +289,10 @@ decodePrefsData (int method)
 
 	// Emulation Settings
 
-	loadXMLSetting(&GCSettings.NGCZoom, "NGCZoom");
+	loadXMLSetting(&GCSettings.Zoom, "Zoom");
+	loadXMLSetting(&GCSettings.ZoomLevel, "ZoomLevel");
 	loadXMLSetting(&GCSettings.render, "render");
+	loadXMLSetting(&GCSettings.widescreen, "widescreen");
 
 	// Controller Settings
 

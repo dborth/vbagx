@@ -47,7 +47,6 @@ static Mtx view;
 static int vwidth, vheight, oldvwidth, oldvheight;
 static int video_vaspect, video_haspect;
 int updateScaling;
-float zoom_level = 1;
 
 #define HASPECT 80
 #define VASPECT 45
@@ -361,6 +360,8 @@ ResetVideo_Emu ()
 
 	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+
+	updateScaling = 1;
 }
 
 /****************************************************************************
@@ -396,9 +397,12 @@ void UpdateScaling()
 	int xscale = video_haspect;
 	int yscale = video_vaspect;
 
+	if (GCSettings.widescreen)
+		xscale = (3*xscale)/4;
+
 	// change zoom
-	xscale *= zoom_level;
-	yscale *= zoom_level;
+	xscale *= GCSettings.ZoomLevel;
+	yscale *= GCSettings.ZoomLevel;
 
 	// Set new aspect (now with crap AR hack!)
 	square[0] = square[9] = (-xscale - 7);
@@ -473,9 +477,7 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	whichfb ^= 1;
 
 	if(updateScaling)
-	{
 		UpdateScaling();
-	}
 
 	if ((oldvheight != vheight) || (oldvwidth != vwidth))
 	{
@@ -533,21 +535,22 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 void
 zoom (float speed)
 {
-	if (zoom_level > 1)
-		zoom_level += (speed / -100.0);
+	if (GCSettings.ZoomLevel > 1)
+		GCSettings.ZoomLevel += (speed / -100.0);
 	else
-		zoom_level += (speed / -200.0);
+		GCSettings.ZoomLevel += (speed / -200.0);
 
-	if (zoom_level < 0.5) zoom_level = 0.5;
-	else if (zoom_level > 10.0) zoom_level = 10.0;
+	if (GCSettings.ZoomLevel < 0.5)
+		GCSettings.ZoomLevel = 0.5;
+	else if (GCSettings.ZoomLevel > 2.0)
+		GCSettings.ZoomLevel = 2.0;
 
-	oldvheight = 0;	// update video
+	updateScaling = 1;	// update video
 }
 
 void
 zoom_reset ()
 {
-	zoom_level = 1.0;
-
-	oldvheight = 0;	// update video
+	GCSettings.ZoomLevel = 1.0;
+	updateScaling = 1;	// update video
 }

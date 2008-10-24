@@ -682,7 +682,7 @@ bool LoadVBAROM(int method)
 			cartridgeType = 1;
 			emulator = GBSystem;
 
-			gbBorderOn = 0;
+			gbBorderOn = 0; // GB borders always off
 
 			if(gbBorderOn)
 			{

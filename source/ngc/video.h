@@ -23,5 +23,6 @@ void showscreen ();
 void zoom (float speed);
 void zoom_reset ();
 void ResetVideo_Menu ();
+void ResetVideo_Emu ();
 
 #endif
