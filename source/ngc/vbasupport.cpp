@@ -132,9 +132,6 @@ static u32 autoFrameSkipLastTime = 0;
 
 void system10Frames(int rate)
 {
-	if (cartridgeType == 1)
-		return;
-
 	u32 time = systemGetClock();
 	u32 diff = time - autoFrameSkipLastTime;
 
@@ -146,29 +143,32 @@ void system10Frames(int rate)
 	else
 		timeOff = 0; // timeoff was not valid
 
-	// consider increasing skip
-	if(diff >= 270)
-		systemFrameSkip += 4;
-	else if(diff >= 240)
-		systemFrameSkip += 3;
-	else if(diff >= 210)
-		systemFrameSkip += 2;
-	else if(diff >= 170)
-		systemFrameSkip += 1;
+	if (cartridgeType == 2) // GBA games require frameskipping
+	{
+		// consider increasing skip
+		if(diff >= 270)
+			systemFrameSkip += 4;
+		else if(diff >= 240)
+			systemFrameSkip += 3;
+		else if(diff >= 210)
+			systemFrameSkip += 2;
+		else if(diff >= 170)
+			systemFrameSkip += 1;
 
-	// consider decreasing skip
-	else if(diff <= 90)
-		systemFrameSkip -= 3;
-	else if(diff <= 120)
-		systemFrameSkip -= 2;
-	else if(diff <= 135)
-		systemFrameSkip -= 1;
+		// consider decreasing skip
+		else if(diff <= 90)
+			systemFrameSkip -= 3;
+		else if(diff <= 120)
+			systemFrameSkip -= 2;
+		else if(diff <= 135)
+			systemFrameSkip -= 1;
 
-	// correct invalid frame skip values
-	if(systemFrameSkip > 20)
-		systemFrameSkip = 20;
-	else if(systemFrameSkip < 0)
-		systemFrameSkip = 0;
+		// correct invalid frame skip values
+		if(systemFrameSkip > 20)
+			systemFrameSkip = 20;
+		else if(systemFrameSkip < 0)
+			systemFrameSkip = 0;
+	}
 
 	autoFrameSkipLastTime = time + timeOff; // total time = processing time + sleep time
 
