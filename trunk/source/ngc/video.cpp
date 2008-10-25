@@ -44,12 +44,11 @@ static int texturesize;
 
 GXTexObj texobj;
 static Mtx view;
-static int vwidth, vheight, oldvwidth, oldvheight;
+static int vwidth, vheight;
 static int video_vaspect, video_haspect;
 int updateScaling;
-
-#define HASPECT 80
-#define VASPECT 45
+bool progressive = false;
+int vmode_60hz = 0;
 
 /* New texture based scaler */
 typedef struct tagcamera
@@ -62,17 +61,16 @@ camera;
 
 /*** Square Matrix
      This structure controls the size of the image on the screen.
-	 Think of the output as a -80 x 80 by -60 x 60 graph.
 ***/
 static s16 square[] ATTRIBUTE_ALIGN(32) = {
       /*
        * X,   Y,  Z
        * Values set are for roughly 4:3 aspect
        */
-      -HASPECT, VASPECT, 0,	// 0
-      HASPECT, VASPECT, 0,	// 1
-      HASPECT, -VASPECT, 0,	// 2
-      -HASPECT, -VASPECT, 0,	// 3
+      -200, 200, 0,	// 0
+      200, 200, 0,	// 1
+      200, -200, 0,	// 2
+      -200, -200, 0,	// 3
     };
 
 static camera cam = { {0.0F, 0.0F, 0.0F},
@@ -286,6 +284,30 @@ void InitialiseVideo ()
 
 	vmode = VIDEO_GetPreferredMode(NULL);
 
+	switch (vmode->viTVMode >> 2)
+	{
+		case VI_PAL:
+			// 576 lines (PAL 50Hz)
+			// display should be centered vertically (borders)
+			vmode = &TVPal574IntDfScale;
+			vmode->xfbHeight = 480;
+			vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - 480)/2;
+			vmode->viHeight = 480;
+
+			vmode_60hz = 0;
+			break;
+
+		case VI_NTSC:
+			// 480 lines (NTSC 60hz)
+			vmode_60hz = 1;
+			break;
+
+		default:
+			// 480 lines (PAL 60Hz)
+			vmode_60hz = 1;
+			break;
+	}
+
 #ifdef HW_DOL
 /* we have component cables, but the preferred mode is interlaced
  * why don't we switch into progressive?
@@ -293,6 +315,10 @@ void InitialiseVideo ()
 	if(VIDEO_HaveComponentCable() && vmode == &TVNtsc480IntDf)
 		vmode = &TVNtsc480Prog;
 #endif
+
+	// check for progressive scan
+	if (vmode->viTVMode == VI_TVMODE_NTSC_PROG)
+		progressive = true;
 
 	VIDEO_Configure(vmode);
 
@@ -310,7 +336,6 @@ void InitialiseVideo ()
 	VIDEO_SetPostRetraceCallback ((VIRetraceCallback)UpdatePadsCB);
 	VIDEO_SetPreRetraceCallback ((VIRetraceCallback)copy_to_xfb);
 
-	VIDEO_SetNextFramebuffer(xfb[0]);
 	VIDEO_SetBlack(FALSE);
 
 	// set timings in VI to PAL60
@@ -326,69 +351,9 @@ void InitialiseVideo ()
 
 	copynow = GX_FALSE;
 	GX_Start();
+	draw_init();
 
 	InitVideoThread ();
-}
-
-/****************************************************************************
- * ResetVideo_Emu
- *
- * Reset the video/rendering mode for the emulator rendering
-****************************************************************************/
-void
-ResetVideo_Emu ()
-{
-	GXRModeObj *rmode;
-
-	rmode = vmode; // same mode as menu
-
-	VIDEO_Configure (rmode);
-	VIDEO_ClearFrameBuffer (rmode, xfb[0], COLOR_BLACK);
-	VIDEO_ClearFrameBuffer (rmode, xfb[1], COLOR_BLACK);
-	VIDEO_Flush();
-	VIDEO_WaitVSync();
-	if (rmode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
-	else while (VIDEO_GetNextField())  VIDEO_WaitVSync();
-
-	GX_SetViewport (0, 0, rmode->fbWidth, rmode->efbHeight, 0, 1);
-	GX_SetDispCopyYScale ((f32) rmode->xfbHeight / (f32) rmode->efbHeight);
-	GX_SetScissor (0, 0, rmode->fbWidth, rmode->efbHeight);
-
-	GX_SetDispCopySrc (0, 0, rmode->fbWidth, rmode->efbHeight);
-	GX_SetDispCopyDst (rmode->fbWidth, rmode->xfbHeight);
-	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render == 0) ? GX_TRUE : GX_FALSE, rmode->vfilter);	// AA on only for filtered mode
-
-	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
-	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
-
-	updateScaling = 1;
-}
-
-/****************************************************************************
- * ResetVideo_Menu
- *
- * Reset the video/rendering mode for the menu
-****************************************************************************/
-void
-ResetVideo_Menu ()
-{
-	VIDEO_Configure (vmode);
-	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
-	VIDEO_Flush();
-	VIDEO_WaitVSync();
-	if (vmode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
-	else while (VIDEO_GetNextField())  VIDEO_WaitVSync();
-
-	GX_SetViewport (0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
-	GX_SetDispCopyYScale ((f32) vmode->xfbHeight / (f32) vmode->efbHeight);
-	GX_SetScissor (0, 0, vmode->fbWidth, vmode->efbHeight);
-
-	GX_SetDispCopySrc (0, 0, vmode->fbWidth, vmode->efbHeight);
-	GX_SetDispCopyDst (vmode->fbWidth, vmode->xfbHeight);
-	GX_SetCopyFilter (vmode->aa, vmode->sample_pattern, GX_TRUE, vmode->vfilter);
-
-	GX_SetFieldMode (vmode->field_rendering, ((vmode->viHeight == 2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
-	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
 }
 
 void UpdateScaling()
@@ -419,14 +384,86 @@ void UpdateScaling()
 
 	GX_LoadTexObj (&texobj, GX_TEXMAP0);	// load texture object so its ready to use
 
-	draw_init();
-	updateScaling = 0;
+	updateScaling--;
+}
+
+/****************************************************************************
+ * ResetVideo_Emu
+ *
+ * Reset the video/rendering mode for the emulator rendering
+****************************************************************************/
+void
+ResetVideo_Emu ()
+{
+	GXRModeObj *rmode;
+	Mtx p;
+
+	rmode = vmode; // same mode as menu
+
+	VIDEO_Configure (rmode);
+	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
+	VIDEO_Flush();
+	VIDEO_WaitVSync();
+	if (rmode->viTVMode & VI_NON_INTERLACE)
+		VIDEO_WaitVSync();
+	else
+		while (VIDEO_GetNextField())
+			VIDEO_WaitVSync();
+
+	GX_SetViewport (0, 0, rmode->fbWidth, rmode->efbHeight, 0, 1);
+	GX_SetDispCopyYScale ((f32) rmode->xfbHeight / (f32) rmode->efbHeight);
+	GX_SetScissor (0, 0, rmode->fbWidth, rmode->efbHeight);
+
+	GX_SetDispCopySrc (0, 0, rmode->fbWidth, rmode->efbHeight);
+	GX_SetDispCopyDst (rmode->fbWidth, rmode->xfbHeight);
+	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render == 0) ? GX_TRUE : GX_FALSE, rmode->vfilter);	// AA on only for filtered mode
+
+	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
+	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+
+	guPerspective(p, 60, 1.33F, 10.0F, 1000.0F);
+	GX_LoadProjectionMtx(p, GX_PERSPECTIVE);
+
+	updateScaling = 20;
+}
+
+/****************************************************************************
+ * ResetVideo_Menu
+ *
+ * Reset the video/rendering mode for the menu
+****************************************************************************/
+void
+ResetVideo_Menu ()
+{
+	Mtx p;
+
+	VIDEO_Configure (vmode);
+	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
+	VIDEO_Flush();
+	VIDEO_WaitVSync();
+	if (vmode->viTVMode & VI_NON_INTERLACE)
+		VIDEO_WaitVSync();
+	else
+		while (VIDEO_GetNextField())
+			VIDEO_WaitVSync();
+
+	GX_SetViewport (0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
+	GX_SetDispCopyYScale ((f32) vmode->xfbHeight / (f32) vmode->efbHeight);
+	GX_SetScissor (0, 0, vmode->fbWidth, vmode->efbHeight);
+
+	GX_SetDispCopySrc (0, 0, vmode->fbWidth, vmode->efbHeight);
+	GX_SetDispCopyDst (vmode->fbWidth, vmode->xfbHeight);
+	GX_SetCopyFilter (vmode->aa, vmode->sample_pattern, GX_TRUE, vmode->vfilter);
+
+	GX_SetFieldMode (vmode->field_rendering, ((vmode->viHeight == 2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
+	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+
+	guPerspective(p, 60, 1.33F, 10.0F, 1000.0F);
+	GX_LoadProjectionMtx(p, GX_PERSPECTIVE);
 }
 
 void GX_Render_Init(int width, int height, int haspect, int vaspect)
 {
-	ResetVideo_Emu ();	// reset video to emulator rendering settings
-
 	if (texturemem)
 		free(texturemem);
 
@@ -440,12 +477,9 @@ void GX_Render_Init(int width, int height, int haspect, int vaspect)
 	/*** Setup for first call to scaler ***/
 	vwidth = width;
 	vheight = height;
-	oldvwidth = oldvheight = -1;
 
 	video_vaspect = vaspect;
 	video_haspect = haspect;
-
-	UpdateScaling();
 }
 
 /****************************************************************************
@@ -470,21 +504,12 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	// Ensure previous vb has complete
 	while ((LWP_ThreadIsSuspended (vbthread) == 0) || (copynow == GX_TRUE))
-	{
-	  usleep (50);
-	}
+		usleep (50);
 
 	whichfb ^= 1;
 
 	if(updateScaling)
 		UpdateScaling();
-
-	if ((oldvheight != vheight) || (oldvwidth != vwidth))
-	{
-		oldvwidth = vwidth;
-		oldvheight = vheight;
-		updateScaling = 1;
-	}
 
 	for (h = 0; h < vheight; h += 4)
 	{
@@ -545,12 +570,12 @@ zoom (float speed)
 	else if (GCSettings.ZoomLevel > 2.0)
 		GCSettings.ZoomLevel = 2.0;
 
-	updateScaling = 1;	// update video
+	updateScaling = 60;	// update video
 }
 
 void
 zoom_reset ()
 {
 	GCSettings.ZoomLevel = 1.0;
-	updateScaling = 1;	// update video
+	updateScaling = 60;	// update video
 }
