@@ -16,6 +16,7 @@
 #include "unzip.h"
 #include "Util.h"
 #include "Flash.h"
+#include "Patch.h"
 #include "Port.h"
 #include "RTC.h"
 #include "Sound.h"
@@ -589,6 +590,80 @@ static void ApplyPerImagePreferences()
 	}
 }
 
+void LoadPatch(int method)
+{
+	int patchsize = 0;
+	int patchtype = -1;
+
+	AllocSaveBuffer ();
+
+	char patchpath[3][512];
+	memset(patchpath, 0, sizeof(patchpath));
+	sprintf(patchpath[0], "%s/%s.ips",currentdir,ROMFilename);
+	sprintf(patchpath[1], "%s/%s.ups",currentdir,ROMFilename);
+	sprintf(patchpath[2], "%s/%s.ppf",currentdir,ROMFilename);
+
+	ShowAction((char *)"Loading patch...");
+
+	switch (method)
+	{
+		case METHOD_SD:
+		case METHOD_USB:
+			for(int i=0; i<3; i++)
+			{
+				patchsize = LoadBufferFromFAT (patchpath[i], SILENT);
+
+				if(patchsize)
+				{
+					patchtype = i;
+					break;
+				}
+			}
+			break;
+
+		case METHOD_SMB:
+			for(int i=0; i<3; i++)
+			{
+				patchsize = LoadBufferFromSMB (patchpath[i], SILENT);
+
+				if(patchsize)
+				{
+					patchtype = i;
+					break;
+				}
+			}
+	}
+
+	if(patchsize > 0)
+	{
+		// create memory file
+		MFILE * mf = memfopen((char *)savebuffer, patchsize);
+
+		if(cartridgeType == 1)
+		{
+			if(patchtype == 0)
+				patchApplyIPS(mf, &gbRom, &gbRomSize);
+			else if(patchtype == 1)
+				patchApplyUPS(mf, &gbRom, &gbRomSize);
+			else
+				patchApplyPPF(mf, &gbRom, &gbRomSize);
+		}
+		else
+		{
+			if(patchtype == 0)
+				patchApplyIPS(mf, &rom, &GBAROMSize);
+			else if(patchtype == 1)
+				patchApplyUPS(mf, &rom, &GBAROMSize);
+			else
+				patchApplyPPF(mf, &rom, &GBAROMSize);
+		}
+
+		memfclose(mf); // close memory file
+	}
+
+	FreeSaveBuffer ();
+}
+
 extern bool gbUpdateSizes();
 
 bool LoadGBROM(int method)
@@ -721,7 +796,7 @@ bool LoadVBAROM(int method)
 		// Setup GX
 		GX_Render_Init( srcWidth, srcHeight, hAspect, vAspect );
 
-		if ( cartridgeType == 1 )
+		if (cartridgeType == 1)
 		{
 			gbGetHardwareType();
 
@@ -729,7 +804,7 @@ bool LoadVBAROM(int method)
 			//if (gbHardware & 5)
 			//gbCPUInit(gbBiosFileName, useBios);
 
-			//applyPatch(patch, &gbRom, &size);
+			LoadPatch(method);
 
 			gbSoundReset();
 			gbSoundSetQuality(soundQuality);
@@ -752,7 +827,7 @@ bool LoadVBAROM(int method)
 			soundReset();
 			soundSetQuality(soundQuality);
 			CPUInit("BIOS.GBA", 1);
-			//applyPatch(patch, &gbRom, &size);
+			LoadPatch(method);
 			CPUReset();
 		}
 

@@ -38,7 +38,7 @@ extern "C" {
 
 unsigned int MEM2Storage = 0x91000000;
 
-static u32 GBAROMSize = 0;
+int GBAROMSize = 0;
 
 #ifdef USE_VM
 //extern u32 loadtimeradjust;

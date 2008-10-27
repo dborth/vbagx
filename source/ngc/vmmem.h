@@ -20,5 +20,7 @@ u16 VMRead16( u32 address );
 u8 VMRead8( u32 address );
 #endif
 
+extern int GBAROMSize;
+
 #endif
 
