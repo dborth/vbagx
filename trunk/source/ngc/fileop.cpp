@@ -250,6 +250,15 @@ LoadFATSzFile(char * filepath, unsigned char * rbuffer)
 int
 LoadBufferFromFAT (char *filepath, bool silent)
 {
+	return LoadBufferFromFAT((char *)savebuffer, filepath, silent);
+}
+
+/****************************************************************************
+ * Load buffer from FAT file
+ ***************************************************************************/
+int
+LoadBufferFromFAT (char * buffer, char *filepath, bool silent)
+{
     int size = 0;
 
     fatfile = fopen (filepath, "rb");
