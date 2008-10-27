@@ -171,8 +171,12 @@ bool patchApplyIPS(MFILE * f, u8 **r, int *s) {
 				b = -1;
 			// check if we need to reallocate our ROM
 			if ((offset + len) >= size) {
+#ifdef NGC
+				size = offset + len;
+#else
 				size *= 2;
 				rom = (u8 *) realloc(rom, size);
+#endif
 				*r = rom;
 				*s = size;
 			}
