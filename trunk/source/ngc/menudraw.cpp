@@ -231,7 +231,7 @@ Credits ()
 	setfontsize (26);
 	DrawText (-1, 150, (char*)"Credits");
 
-	int ypos = 120;
+	int ypos = 110;
 
 	if (screenheight == 480)
 		ypos += 52;
@@ -240,7 +240,9 @@ Credits ()
 
 	setfontsize (14);
 
-	DrawText (100, ypos += 22, (char*)"Visual Boy Advance GX");
+	DrawText (-1, ypos += 18, (char*)"Official Site: http://code.google.com/p/vba-wii/");
+
+	DrawText (100, ypos += 36, (char*)"Visual Boy Advance GX");
 	DrawText (375, ypos, (char*)"Tantric");
 	DrawText (100, ypos += 18, (char*)"GameCube/Wii Port Improvements");
 	DrawText (375, ypos, (char*)"emukidid");
@@ -258,7 +260,7 @@ Credits ()
 	DrawText (-1, ypos += 36, (char*)"And many others who have contributed over the years!");
 
 	setfontsize (12);
-	DrawText (-1, ypos += 40, (char*)"This software is open source and may be copied,");
+	DrawText (-1, ypos += 30, (char*)"This software is open source and may be copied,");
 	DrawText (-1, ypos += 15, (char*)"distributed, or modified under the terms of");
 	DrawText (-1, ypos += 15, (char*)"the GNU General Public License (GPL) Version 2.");
 

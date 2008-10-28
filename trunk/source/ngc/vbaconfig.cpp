@@ -48,6 +48,6 @@ DefaultSettings ()
 	GCSettings.VerifySaves = 0;
 	GCSettings.Zoom = 0;	// zooming default off
 	GCSettings.ZoomLevel = 1.0; // zoom level
-	GCSettings.render = 2; // Unfiltered
+	GCSettings.render = 1; // Filtered
 	GCSettings.widescreen = 0; // no aspect ratio correction
 }
