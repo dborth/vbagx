@@ -184,10 +184,14 @@ static void draw_init(void)
 
 	GX_SetTexCoordGen (GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
 
-	GX_InvalidateTexAll();
+	GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
+	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
+
 	memset (&view, 0, sizeof (Mtx));
 	guLookAt(view, &cam.pos, &cam.up, &cam.view);
 	GX_LoadPosMtxImm (view, GX_PNMTX0);
+
+	GX_InvVtxCache ();	// update vertex cache
 }
 
 static void draw_vert(u8 pos, u8 c, f32 s, f32 t)
@@ -250,9 +254,6 @@ void GX_Start()
 
 	guPerspective(p, 60, 1.33F, 10.0F, 1000.0F);
 	GX_LoadProjectionMtx(p, GX_PERSPECTIVE);
-
-	GX_SetTevOp(GX_TEVSTAGE0, GX_DECAL);
-	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
 
 	GX_CopyDisp (xfb[whichfb], GX_TRUE); // reset xfb
 }
@@ -327,6 +328,9 @@ void InitialiseVideo ()
 	xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
 	xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
 
+	// A console is always useful while debugging
+	console_init (xfb[0], 20, 64, vmode->fbWidth, vmode->xfbHeight, vmode->fbWidth * 2);
+
 	// Clear framebuffers etc.
 	VIDEO_ClearFrameBuffer (vmode, xfb[0], COLOR_BLACK);
 	VIDEO_ClearFrameBuffer (vmode, xfb[1], COLOR_BLACK);
@@ -370,21 +374,15 @@ void UpdateScaling()
 	yscale *= GCSettings.ZoomLevel;
 
 	// Set new aspect (now with crap AR hack!)
-	square[0] = square[9] = (-xscale - 7);
-	square[3] = square[6] = (xscale + 7);
-	square[1] = square[4] = (yscale + 7);
+	square[0] = square[9] =  (-xscale - 7);
+	square[3] = square[6] =  ( xscale + 7);
+	square[1] = square[4] =  ( yscale + 7);
 	square[7] = square[10] = (-yscale - 7);
 
-	GX_InvVtxCache ();	// update vertex cache
+	draw_init ();
 
-	GX_InitTexObj (&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);	// initialize the texture obj we are going to use
-
-	if (GCSettings.render == 1)
-		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
-
-	GX_LoadTexObj (&texobj, GX_TEXMAP0);	// load texture object so its ready to use
-
-	updateScaling--;
+	if(updateScaling)
+		updateScaling--;
 }
 
 /****************************************************************************
@@ -400,6 +398,7 @@ ResetVideo_Emu ()
 
 	rmode = vmode; // same mode as menu
 
+	// reconfigure VI
 	VIDEO_Configure (rmode);
 	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
 	VIDEO_Flush();
@@ -410,21 +409,27 @@ ResetVideo_Emu ()
 		while (VIDEO_GetNextField())
 			VIDEO_WaitVSync();
 
+	// reconfigure GX
 	GX_SetViewport (0, 0, rmode->fbWidth, rmode->efbHeight, 0, 1);
 	GX_SetDispCopyYScale ((f32) rmode->xfbHeight / (f32) rmode->efbHeight);
 	GX_SetScissor (0, 0, rmode->fbWidth, rmode->efbHeight);
-
 	GX_SetDispCopySrc (0, 0, rmode->fbWidth, rmode->efbHeight);
 	GX_SetDispCopyDst (rmode->fbWidth, rmode->xfbHeight);
-	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render == 0) ? GX_TRUE : GX_FALSE, rmode->vfilter);	// AA on only for filtered mode
-
+	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render == 1) ? GX_TRUE : GX_FALSE, rmode->vfilter);	// deflickering filter only for filtered mode
 	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
 
 	guPerspective(p, 60, 1.33F, 10.0F, 1000.0F);
 	GX_LoadProjectionMtx(p, GX_PERSPECTIVE);
 
-	updateScaling = 20;
+	// reinitialize texture
+	GX_InvalidateTexAll ();
+	GX_InitTexObj (&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);	// initialize the texture obj we are going to use
+	if (!(GCSettings.render&1))
+		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
+
+	// set aspect ratio
+	updateScaling = 5;
 }
 
 /****************************************************************************
@@ -511,6 +516,9 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	if(updateScaling)
 		UpdateScaling();
 
+	// clear texture objects
+	GX_InvalidateTexAll();
+
 	for (h = 0; h < vheight; h += 4)
 	{
 		for (w = 0; w < (vwidth >> 2); w++)
@@ -539,13 +547,15 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 		}
 	}
 
+	// load texture into GX
 	DCFlushRange(texturemem, texturesize);
-	GX_InvalidateTexAll ();
+	GX_LoadTexObj (&texobj, GX_TEXMAP0);
 
+	// render textured quad
 	draw_square(view);
-
 	GX_DrawDone();
 
+	// EFB is ready to be copied into XFB
 	VIDEO_SetNextFramebuffer(xfb[whichfb]);
 	VIDEO_Flush();
 	copynow = GX_TRUE;
@@ -570,12 +580,12 @@ zoom (float speed)
 	else if (GCSettings.ZoomLevel > 2.0)
 		GCSettings.ZoomLevel = 2.0;
 
-	updateScaling = 60;	// update video
+	updateScaling = 5;	// update video
 }
 
 void
 zoom_reset ()
 {
 	GCSettings.ZoomLevel = 1.0;
-	updateScaling = 60;	// update video
+	updateScaling = 5;	// update video
 }
