@@ -14,24 +14,29 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 * Wiimote, Nunchuk, Classic, and Gamecube controller support
 * SRAM and State saving
+* IPS/UPS/PPF patch support
 * Custom controller configurations
 * SD, USB, DVD, SMB, GC Memory Card, Zip, and 7z support
-* Compatiblity based on VBA-M r750
+* Compatiblity based on VBA-M r778
 * MEM2 ROM Storage for fast access
 * Auto frame skip for those core heavy games
-* Turbo speed, video zooming, and unfiltered video options
+* Turbo speed, video zooming, widescreen, and unfiltered video options
 
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
 
-[What's New 1.0.4]
-* Sound processing improved - L-R channel reversal corrected, skipping fixed
+[What's New 1.0.4 - October 28, 2008]
 * Complete port of VBA-M - now uses blaarg's new audio core, latest GB core
 * Frameskipping improvements
-* Save file problems fixed, game compatibility improved
-* IPS/UPS patching support
-* GameCube support is back!
+* Sound processing improved - L-R channel reversal corrected, skipping fixed
+* Saving problems fixed, game compatibility improved
+* IPS/UPS/PPF patch support
+* SD/USB hot-swapping!
+* SDHC support
+* Zoom setting saved
+* Widescreen correction option
+* GameCube support is back, including Qoob support!
 
 [What's New 1.0.3 - October 15, 2008]
 * New timing / frameskip algorithm - should (hopefully) work 100% better!

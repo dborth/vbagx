@@ -11,9 +11,9 @@
 #define _VBA_H_
 
 #include <gccore.h>
-#define VERSIONNUM 		"1.0.3"
-#define VERSIONSTR 		"VBA GX 1.0.3"
-#define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.3"
+#define VERSIONNUM 		"1.0.4"
+#define VERSIONSTR 		"VBA GX 1.0.4"
+#define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.4"
 
 #define NOTSILENT 0
 #define SILENT 1
@@ -48,7 +48,7 @@ struct SGCSettings{
     int		Zoom; // 0 - off, 1 - on
     float	ZoomLevel; // zoom amount
     int		widescreen;
-	int		render;		// 0 - filtered, 1 - unfiltered
+	int		render;		// 0 - original, 1 - filtered, 2 - unfiltered
 	int		VerifySaves;
 };
 

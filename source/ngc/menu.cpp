@@ -216,9 +216,15 @@ PreferencesMenu ()
 		sprintf (prefmenu[7], "Enable Zooming %s",
 			GCSettings.Zoom == true ? " ON" : "OFF");
 
-		if ( GCSettings.render == 0)
+		// original mode not implemented
+		if(GCSettings.render == 0)
+			GCSettings.render++;
+
+		if (GCSettings.render == 0)
+			sprintf (prefmenu[8], "Video Rendering Original");
+		if (GCSettings.render == 1)
 			sprintf (prefmenu[8], "Video Rendering Filtered");
-		if ( GCSettings.render == 1)
+		if (GCSettings.render == 2)
 			sprintf (prefmenu[8], "Video Rendering Unfiltered");
 
 		sprintf (prefmenu[9], "Video Scaling %s",
@@ -264,7 +270,7 @@ PreferencesMenu ()
 
 			case 8:
 				GCSettings.render++;
-				if (GCSettings.render > 1 )
+				if (GCSettings.render > 2)
 					GCSettings.render = 0;
 				// reset zoom
 				zoom_reset ();
