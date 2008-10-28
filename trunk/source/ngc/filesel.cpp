@@ -373,7 +373,7 @@ int FileSelector (int method)
 
 					if (!maxfiles)
 					{
-						WaitPrompt ((char*) "Error reading directory !");
+						WaitPrompt ((char*) "Error reading directory!");
 						haverom = 1; // quit menu
 					}
 				}
@@ -384,6 +384,11 @@ int FileSelector (int method)
 			}
 			else	// this is a file
 			{
+				// better do another unmount/remount, just in case
+				if(method == METHOD_SD || method == METHOD_USB)
+					if(!ChangeFATInterface(method, NOTSILENT))
+						return 0;
+
 				// 7z file - let's open it up to select a file inside
 				if(IsSz())
 				{
@@ -391,7 +396,7 @@ int FileSelector (int method)
 					if(!MakeROMPath(szpath, method))
 					{
 						WaitPrompt((char*) "Maximum filepath length reached!");
-						return -1;
+						return 0;
 					}
 					int szfiles = SzParse(szpath, method);
 					if(szfiles)
