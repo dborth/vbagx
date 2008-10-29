@@ -48,7 +48,6 @@ static int vwidth, vheight;
 static int video_vaspect, video_haspect;
 int updateScaling;
 bool progressive = false;
-int vmode_60hz = 0;
 
 /* New texture based scaler */
 typedef struct tagcamera
@@ -287,25 +286,17 @@ void InitialiseVideo ()
 
 	switch (vmode->viTVMode >> 2)
 	{
-		case VI_PAL:
-			// 576 lines (PAL 50Hz)
-			// display should be centered vertically (borders)
-			vmode = &TVPal574IntDfScale;
-			vmode->xfbHeight = 480;
-			vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - 480)/2;
-			vmode->viHeight = 480;
-
-			vmode_60hz = 0;
+		case VI_PAL: // 576 lines (PAL 50Hz)
+			// force PAL60
+			vmode = &TVEurgb60Hz480IntDf;
 			break;
 
 		case VI_NTSC:
 			// 480 lines (NTSC 60hz)
-			vmode_60hz = 1;
 			break;
 
 		default:
 			// 480 lines (PAL 60Hz)
-			vmode_60hz = 1;
 			break;
 	}
 
