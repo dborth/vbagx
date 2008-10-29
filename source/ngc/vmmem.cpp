@@ -360,7 +360,7 @@ int VMCPULoadROM(int method)
 static void VMNewPage( int pageid )
 {
 	int res;
-	tb_t start,end;
+	//tb_t start,end;
 	char msg[512];
 
 	//mftb(&start);
@@ -401,7 +401,7 @@ u32 VMRead32( u32 address )
 	u32 badaddress;
 	char msg[512];
 
-	if ( address >= GBAROMSize )
+	if ( address >= (u32)GBAROMSize )
 	{
 		badaddress = ( ( ( address >> 1 ) & 0xffff ) << 16 ) | ( ( ( address + 2 ) >> 1 ) & 0xffff );
 		return badaddress;
@@ -434,7 +434,7 @@ u16 VMRead16( u32 address )
 {
 	int pageid;
 
-	if ( address >= GBAROMSize )
+	if ( address >= (u32)GBAROMSize )
 	{
 		return ( address >> 1 ) & 0xffff;
 	}
@@ -465,7 +465,7 @@ u8 VMRead8( u32 address )
 {
 	int pageid;
 
-	if ( address >= GBAROMSize )
+	if ( address >= (u32)GBAROMSize )
 	{
 		return ( address >> 1 ) & 0xff;
 	}

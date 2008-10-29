@@ -612,9 +612,9 @@ ConfigureControllers ()
 
 	// disable unavailable controller options if in GC mode
 	#ifndef HW_RVL
-		ctlrmenu[4][0] = '\0';
-		ctlrmenu[5][0] = '\0';
-		ctlrmenu[6][0] = '\0';
+		ctlrmenu[0][0] = 0;
+		ctlrmenu[1][0] = 0;
+		ctlrmenu[2][0] = 0;
 	#endif
 
 	while (quit == 0)
