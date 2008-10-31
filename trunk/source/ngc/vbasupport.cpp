@@ -417,9 +417,9 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 	{
 		bool written = emulator.emuWriteMemState((char *)savebuffer+offset, SAVEBUFFERSIZE-offset);
 		// we really should set datasize to the exact memory size written
-		// but instead we'll set it at 128K - although much of it will go unused
+		// but instead we'll set it at 192K - although much of it will go unused
 		if(written)
-			datasize = (1024*128);
+			datasize = (1024*192);
 	}
 
 	// write savebuffer into file
