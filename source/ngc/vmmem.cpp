@@ -122,7 +122,10 @@ void VMClose()
 
 	#ifdef USE_VM
 	if (rombase != NULL)
+	{
 		free(rombase);
+		rombase = NULL;
+	}
 	if (romfile != NULL)
 	{
 		fclose(romfile);

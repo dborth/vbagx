@@ -20,7 +20,6 @@
 #include "images/bg.h"
 #include "vba.h"
 #include "menudraw.h"
-//#include "pal60.h"
 
 extern unsigned int SMBTimer; // timer to reset SMB connection
 u32 FrameTimer = 0;
@@ -332,11 +331,6 @@ void InitialiseVideo ()
 	VIDEO_SetPreRetraceCallback ((VIRetraceCallback)copy_to_xfb);
 
 	VIDEO_SetBlack(FALSE);
-
-	// set timings in VI to PAL60
-	/*u32 *vreg = (u32 *)0xCC002000;
-	for (int i = 0; i < 64; i++ )
-		vreg[i] = vpal60[i];*/
 
 	VIDEO_Flush();
 	VIDEO_WaitVSync();
