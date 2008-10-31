@@ -78,6 +78,10 @@ void UnmountAllFAT()
  ***************************************************************************/
 bool ChangeFATInterface(int method, bool silent)
 {
+	#ifdef USE_VM
+	return true; // we don't want to unmount/remount since a file is loaded!
+	#endif
+
 	bool mounted = false;
 
 	// unmount all FAT devices
