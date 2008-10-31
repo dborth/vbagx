@@ -45,6 +45,8 @@
 extern "C"
 {
 #include "tbtime.h"
+long long gettime();
+u32 diff_usec(long long start,long long end);
 }
 
 static tb_t start, now;
@@ -118,50 +120,43 @@ bool systemPauseOnFrame()
 {
 	return false;
 }
-/*
-void GC_Sleep(u32 dwMiliseconds)
-{
-	int nVBlanks = (dwMiliseconds / 16);
-	while (nVBlanks-- > 0)
-	{
-		VIDEO_WaitVSync();
-	}
-}
-*/
 
-static u32 autoFrameSkipLastTime = 0;
+static u32 lastTime = 0;
+#define RATE60HZ 166666.67 // 1/6 second or 166666.67 usec
 
 void system10Frames(int rate)
 {
-	u32 time = systemGetClock();
-	u32 diff = time - autoFrameSkipLastTime;
+	u32 time = gettime();
+	u32 diff = diff_usec(lastTime, time);
 
-	// difference should be 1/6 second or (1/6)*1000 ms or 167 ms
-	int timeOff = (167 - diff);
+	// expected diff - actual diff
+	u32 timeOff = RATE60HZ - diff;
 
-	if(timeOff > 0 && timeOff < 100) // we're running ahead!
-		usleep(timeOff*1000); // let's take a nap
+	if(timeOff > 0 && timeOff < 100000) // we're running ahead!
+		usleep(timeOff); // let's take a nap
 	else
 		timeOff = 0; // timeoff was not valid
+
+	int speed = (RATE60HZ/diff)*100;
 
 	if (cartridgeType == 2) // GBA games require frameskipping
 	{
 		// consider increasing skip
-		if(diff >= 270)
-			systemFrameSkip += 4;
-		else if(diff >= 240)
-			systemFrameSkip += 3;
-		else if(diff >= 210)
-			systemFrameSkip += 2;
-		else if(diff >= 170)
+		if(speed < 98)
 			systemFrameSkip += 1;
+		else if(speed < 80)
+			systemFrameSkip += 2;
+		else if(speed < 70)
+			systemFrameSkip += 3;
+		else if(speed < 60)
+			systemFrameSkip += 4;
 
 		// consider decreasing skip
-		else if(diff <= 90)
+		else if(speed > 185)
 			systemFrameSkip -= 3;
-		else if(diff <= 120)
+		else if(speed > 145)
 			systemFrameSkip -= 2;
-		else if(diff <= 135)
+		else if(speed > 125)
 			systemFrameSkip -= 1;
 
 		// correct invalid frame skip values
@@ -170,44 +165,7 @@ void system10Frames(int rate)
 		else if(systemFrameSkip < 0)
 			systemFrameSkip = 0;
 	}
-
-	autoFrameSkipLastTime = time + timeOff; // total time = processing time + sleep time
-
-	/*
-	// Original VBA SDL frameskip algorithm
-	int speed = 100;
-
-	if(diff)
-		speed = (1000000/rate)/diff;
-
-	if(speed >= 98)
-	{
-		frameskipadjust++;
-
-		if(frameskipadjust >= 3)
-		{
-			frameskipadjust=0;
-			if(systemFrameSkip > 0)
-				systemFrameSkip--;
-		}
-	}
-	else
-	{
-		if(speed  < 80)
-			frameskipadjust -= (90 - speed)/5;
-		else if(systemFrameSkip < 9)
-			frameskipadjust--;
-
-		if(frameskipadjust <= -2)
-		{
-			frameskipadjust += 2;
-			if(systemFrameSkip < 9)
-				systemFrameSkip++;
-		}
-	}
-
-	autoFrameSkipLastTime = time;
-	*/
+	lastTime = gettime();
 }
 
 /****************************************************************************
@@ -836,7 +794,7 @@ bool LoadVBAROM(int method)
 		emulating = 1;
 
 		// reset frameskip variables
-		autoFrameSkipLastTime = systemFrameSkip = 0;
+		lastTime = systemFrameSkip = 0;
 
 		// Start system clock
 		mftb(&start);
