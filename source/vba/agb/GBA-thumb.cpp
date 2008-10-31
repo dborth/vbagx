@@ -172,12 +172,11 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
                 C_FLAG = (Flags >> 25) & 1;			\
                 V_FLAG = (Flags >> 26) & 1;			\
             }
-// Wii port - doesn't compile!
-/*  #define ADC_RD_RS \
+  #define ADC_RD_RS \
             {\
                 register int Flags;					\
                 register int Result;				\
-                asm volatile("mtspr xer, %4\n"		\
+                asm volatile("mtspr 1, %4\n"		\
                              "addeo. %0, %2, %3\n"	\
                              "mcrxr cr1\n"			\
                              "mfcr	%1\n"			\
@@ -192,7 +191,7 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
                 N_FLAG = (Flags >> 31) & 1;			\
                 C_FLAG = (Flags >> 25) & 1;			\
                 V_FLAG = (Flags >> 26) & 1;			\
-            }*/
+            }
   #define SUB_RD_RS_RN(N) \
             {\
                 register int Flags;					\
@@ -265,12 +264,11 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
                 C_FLAG = (Flags >> 25) & 1;			\
                 V_FLAG = (Flags >> 26) & 1;			\
             }
-// Wii port - doesn't compile for some reason
-/*  #define SBC_RD_RS \
+  #define SBC_RD_RS \
             {\
                 register int Flags;					\
                 register int Result;				\
-                asm volatile("mtspr xer, %4\n"		\
+                asm volatile("mtspr 1, %4\n"		\
                              "subfeo. %0, %3, %2\n"	\
                              "mcrxr cr1\n"			\
                              "mfcr	%1\n"			\
@@ -285,7 +283,7 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
                 N_FLAG = (Flags >> 31) & 1;			\
                 C_FLAG = (Flags >> 25) & 1;			\
                 V_FLAG = (Flags >> 26) & 1;			\
-            }*/
+            }
   #define NEG_RD_RS \
             {\
                 register int Flags;					\
