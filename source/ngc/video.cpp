@@ -306,8 +306,11 @@ void InitialiseVideo ()
 		progressive = true;
 
 	// widescreen fix
-	vmode->viWidth = 678;
-	vmode->viXOrigin = (VI_MAX_WIDTH_PAL - 678) / 2;
+	if(CONF_GetAspectRatio())
+	{
+		vmode->viWidth = 678;
+		vmode->viXOrigin = (VI_MAX_WIDTH_PAL - 678) / 2;
+	}
 
 	VIDEO_Configure(vmode);
 
@@ -347,7 +350,7 @@ void UpdateScaling()
 {
 	int xscale;
 	int yscale;
-	
+
 	// keep correct aspect ratio
 	// and use entire screen
 	if(vwidth == 240) // GBA
