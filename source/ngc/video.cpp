@@ -61,14 +61,14 @@ camera;
      This structure controls the size of the image on the screen.
 ***/
 static s16 square[] ATTRIBUTE_ALIGN(32) = {
-      /*
-       * X,   Y,  Z
-       * Values set are for roughly 4:3 aspect
-       */
-      -200, 200, 0,	// 0
-      200, 200, 0,	// 1
-      200, -200, 0,	// 2
-      -200, -200, 0,	// 3
+	/*
+	* X,   Y,  Z
+	* Values set are for roughly 4:3 aspect
+	*/
+	-200,  200, 0,	// 0
+	 200,  200, 0,	// 1
+	 200, -200, 0,	// 2
+	-200, -200, 0	// 3
     };
 
 static camera cam = { {0.0F, 0.0F, 0.0F},
@@ -178,18 +178,14 @@ static void draw_init(void)
 	GX_SetArray (GX_VA_POS, square, 3 * sizeof (s16));
 
 	GX_SetNumTexGens (1);
-	GX_SetNumChans (0);
-
 	GX_SetTexCoordGen (GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
 
-	GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
-	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
-
-	memset (&view, 0, sizeof (Mtx));
-	guLookAt(view, &cam.pos, &cam.up, &cam.view);
-	GX_LoadPosMtxImm (view, GX_PNMTX0);
-
 	GX_InvVtxCache ();	// update vertex cache
+
+	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565,
+		GX_CLAMP, GX_CLAMP, GX_FALSE);
+	if (!(GCSettings.render&1))
+		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
 }
 
 static void draw_vert(u8 pos, u8 c, f32 s, f32 t)
@@ -227,12 +223,11 @@ void GX_Start()
 	GXColor background = { 0, 0, 0, 0xff };
 
 	/*** Clear out FIFO area ***/
-	memset (&gp_fifo, 0, DEFAULT_FIFO_SIZE);
+	memset (gp_fifo, 0, DEFAULT_FIFO_SIZE);
 
 	/*** Initialise GX ***/
 	GX_Init (&gp_fifo, DEFAULT_FIFO_SIZE);
 	GX_SetCopyClear (background, 0x00ffffff);
-
 
 	GX_SetViewport (0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
 	GX_SetDispCopyYScale ((f32) vmode->xfbHeight / (f32) vmode->efbHeight);
@@ -247,13 +242,12 @@ void GX_Start()
 	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
 	GX_SetCullMode (GX_CULL_NONE);
 	GX_SetDispCopyGamma (GX_GM_1_0);
-	GX_SetZMode (GX_TRUE, GX_LEQUAL, GX_TRUE);
-	GX_SetColorUpdate (GX_TRUE);
 
-	guPerspective(p, 60, 1.33F, 10.0F, 1000.0F);
-	GX_LoadProjectionMtx(p, GX_PERSPECTIVE);
+	guOrtho(p, vmode->efbHeight/2, -(vmode->efbHeight/2), -(vmode->fbWidth/2), vmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
 
 	GX_CopyDisp (xfb[whichfb], GX_TRUE); // reset xfb
+	GX_Flush();
 }
 
 /****************************************************************************
@@ -311,6 +305,10 @@ void InitialiseVideo ()
 	if (vmode->viTVMode == VI_TVMODE_NTSC_PROG)
 		progressive = true;
 
+	// widescreen fix
+	vmode->viWidth = 678;
+	vmode->viXOrigin = (VI_MAX_WIDTH_PAL - 678) / 2;
+
 	VIDEO_Configure(vmode);
 
 	screenheight = vmode->xfbHeight;
@@ -347,9 +345,21 @@ void InitialiseVideo ()
 
 void UpdateScaling()
 {
-	// Update scaling
-	int xscale = video_haspect;
-	int yscale = video_vaspect;
+	int xscale;
+	int yscale;
+	
+	// keep correct aspect ratio
+	// and use entire screen
+	if(vwidth == 240) // GBA
+	{
+		xscale = 320;
+		yscale = 213;
+	}
+	else // GB
+	{
+		xscale = 266;
+		yscale = 240;
+	}
 
 	if (GCSettings.widescreen)
 		xscale = (3*xscale)/4;
@@ -358,16 +368,19 @@ void UpdateScaling()
 	xscale *= GCSettings.ZoomLevel;
 	yscale *= GCSettings.ZoomLevel;
 
-	// Set new aspect (now with crap AR hack!)
-	square[0] = square[9] =  (-xscale - 7);
-	square[3] = square[6] =  ( xscale + 7);
-	square[1] = square[4] =  ( yscale + 7);
-	square[7] = square[10] = (-yscale - 7);
+	// Set new aspect
+	square[0] = square[9]  = -xscale;
+	square[3] = square[6]  =  xscale;
+	square[1] = square[4]  =  yscale;
+	square[7] = square[10] = -yscale;
 
 	draw_init ();
 
-	if(updateScaling)
-		updateScaling--;
+	memset(&view, 0, sizeof(Mtx));
+	guLookAt(view, &cam.pos, &cam.up, &cam.view);
+	GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
+
+	updateScaling = 0;
 }
 
 /****************************************************************************
@@ -398,14 +411,19 @@ ResetVideo_Emu ()
 	GX_SetViewport (0, 0, rmode->fbWidth, rmode->efbHeight, 0, 1);
 	GX_SetDispCopyYScale ((f32) rmode->xfbHeight / (f32) rmode->efbHeight);
 	GX_SetScissor (0, 0, rmode->fbWidth, rmode->efbHeight);
+
 	GX_SetDispCopySrc (0, 0, rmode->fbWidth, rmode->efbHeight);
 	GX_SetDispCopyDst (rmode->fbWidth, rmode->xfbHeight);
 	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render == 1) ? GX_TRUE : GX_FALSE, rmode->vfilter);	// deflickering filter only for filtered mode
-	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
-	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
 
-	guPerspective(p, 60, 1.33F, 10.0F, 1000.0F);
-	GX_LoadProjectionMtx(p, GX_PERSPECTIVE);
+	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
+
+	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+	GX_SetCullMode (GX_CULL_NONE);
+	GX_SetDispCopyGamma (GX_GM_1_0);
+
+	guOrtho(p, rmode->efbHeight/2, -(rmode->efbHeight/2), -(rmode->fbWidth/2), rmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
 
 	// reinitialize texture
 	GX_InvalidateTexAll ();
@@ -413,8 +431,10 @@ ResetVideo_Emu ()
 	if (!(GCSettings.render&1))
 		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
 
+	GX_Flush();
+
 	// set aspect ratio
-	updateScaling = 5;
+	updateScaling = 1;
 }
 
 /****************************************************************************
@@ -448,8 +468,8 @@ ResetVideo_Menu ()
 	GX_SetFieldMode (vmode->field_rendering, ((vmode->viHeight == 2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
 
-	guPerspective(p, 60, 1.33F, 10.0F, 1000.0F);
-	GX_LoadProjectionMtx(p, GX_PERSPECTIVE);
+	guOrtho(p, vmode->efbHeight/2, -(vmode->efbHeight/2), -(vmode->fbWidth/2), vmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
 }
 
 void GX_Render_Init(int width, int height, int haspect, int vaspect)
@@ -502,7 +522,10 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 		UpdateScaling();
 
 	// clear texture objects
+	GX_InvVtxCache();
 	GX_InvalidateTexAll();
+	GX_SetTevOp(GX_TEVSTAGE0, GX_DECAL);
+	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
 
 	for (h = 0; h < vheight; h += 4)
 	{
@@ -534,11 +557,16 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	// load texture into GX
 	DCFlushRange(texturemem, texturesize);
-	GX_LoadTexObj (&texobj, GX_TEXMAP0);
+
+	GX_SetNumChans(1);
+	GX_LoadTexObj(&texobj, GX_TEXMAP0);
 
 	// render textured quad
 	draw_square(view);
 	GX_DrawDone();
+
+	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
+	GX_SetColorUpdate(GX_TRUE);
 
 	// EFB is ready to be copied into XFB
 	VIDEO_SetNextFramebuffer(xfb[whichfb]);
@@ -565,12 +593,12 @@ zoom (float speed)
 	else if (GCSettings.ZoomLevel > 2.0)
 		GCSettings.ZoomLevel = 2.0;
 
-	updateScaling = 5;	// update video
+	updateScaling = 1;	// update video
 }
 
 void
 zoom_reset ()
 {
 	GCSettings.ZoomLevel = 1.0;
-	updateScaling = 5;	// update video
+	updateScaling = 1;	// update video
 }
