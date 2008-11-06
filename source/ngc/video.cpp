@@ -362,8 +362,8 @@ void UpdateScaling()
 	}
 	else // GB
 	{
-		xscale = 266;
-		yscale = 240;
+		xscale = 256;
+		yscale = 230;
 	}
 
 	if (GCSettings.widescreen)
@@ -378,6 +378,7 @@ void UpdateScaling()
 	square[3] = square[6]  =  xscale;
 	square[1] = square[4]  =  yscale;
 	square[7] = square[10] = -yscale;
+	DCFlushRange (square, sizeof(square)); // update memory BEFORE the GPU accesses it!
 
 	draw_init ();
 
