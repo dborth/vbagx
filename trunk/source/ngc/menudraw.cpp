@@ -242,20 +242,20 @@ Credits ()
 
 	DrawText (-1, ypos += 18, (char*)"Official Site: http://code.google.com/p/vba-wii/");
 
-	DrawText (100, ypos += 36, (char*)"Visual Boy Advance GX");
-	DrawText (375, ypos, (char*)"Tantric");
-	DrawText (100, ypos += 18, (char*)"GameCube/Wii Port Improvements");
-	DrawText (375, ypos, (char*)"emukidid");
-	DrawText (100, ypos += 18, (char*)"Original GameCube Port");
-	DrawText (375, ypos, (char*)"SoftDev");
-	DrawText (100, ypos += 18, (char*)"Visual Boy Advance - M");
-	DrawText (375, ypos, (char*)"VBA-M Team");
-	DrawText (100, ypos += 18, (char*)"Visual Boy Advance 1.7.2");
-	DrawText (375, ypos, (char*)"Forgotten");
-	DrawText (100, ypos += 18, (char*)"libogc");
-	DrawText (375, ypos, (char*)"Shagkur & wintermute");
-	DrawText (100, ypos += 18, (char*)"Testing");
-	DrawText (375, ypos, (char*)"tehskeen users");
+	DrawText (90, ypos += 36, (char*)"Visual Boy Advance GX");
+	DrawText (380, ypos, (char*)"Tantric");
+	DrawText (90, ypos += 18, (char*)"GameCube/Wii Port Improvements");
+	DrawText (380, ypos, (char*)"emukidid");
+	DrawText (90, ypos += 18, (char*)"Original GameCube Port");
+	DrawText (380, ypos, (char*)"SoftDev");
+	DrawText (90, ypos += 18, (char*)"Visual Boy Advance - M");
+	DrawText (380, ypos, (char*)"VBA-M Team");
+	DrawText (90, ypos += 18, (char*)"Visual Boy Advance 1.7.2");
+	DrawText (380, ypos, (char*)"Forgotten");
+	DrawText (90, ypos += 18, (char*)"libogc");
+	DrawText (380, ypos, (char*)"Shagkur & wintermute");
+	DrawText (90, ypos += 18, (char*)"Testing");
+	DrawText (380, ypos, (char*)"tehskeen users");
 
 	DrawText (-1, ypos += 36, (char*)"And many others who have contributed over the years!");
 
