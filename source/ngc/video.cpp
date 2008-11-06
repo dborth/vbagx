@@ -305,12 +305,14 @@ void InitialiseVideo ()
 	if (vmode->viTVMode == VI_TVMODE_NTSC_PROG)
 		progressive = true;
 
+#ifdef HW_RVL
 	// widescreen fix
 	if(CONF_GetAspectRatio())
 	{
 		vmode->viWidth = 678;
 		vmode->viXOrigin = (VI_MAX_WIDTH_PAL - 678) / 2;
 	}
+#endif
 
 	VIDEO_Configure(vmode);
 
