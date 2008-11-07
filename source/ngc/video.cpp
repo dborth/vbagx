@@ -378,7 +378,7 @@ void UpdateScaling()
 	square[3] = square[6]  =  xscale;
 	square[1] = square[4]  =  yscale;
 	square[7] = square[10] = -yscale;
-	DCFlushRange (square, sizeof(square)); // update memory BEFORE the GPU accesses it!
+	DCFlushRange (square, 32); // update memory BEFORE the GPU accesses it!
 
 	draw_init ();
 
