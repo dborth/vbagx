@@ -124,7 +124,7 @@ int MountCard(int cslot, bool silent)
  * Verify Memory Card file against buffer
  ***************************************************************************/
 int
-VerifyMCFile (unsigned char *buf, int slot, char *filename, int datasize)
+VerifyMCFile (char *buf, int slot, char *filename, int datasize)
 {
 	int CardError;
 	unsigned int blocks;
@@ -201,10 +201,11 @@ VerifyMCFile (unsigned char *buf, int slot, char *filename, int datasize)
 }
 
 /****************************************************************************
+ * LoadMCFile
  * Load savebuffer from Memory Card file
  ***************************************************************************/
 int
-LoadBufferFromMC (unsigned char *buf, int slot, char *filename, bool silent)
+LoadMCFile (char *buf, int slot, char *filename, bool silent)
 {
 	int CardError;
 	unsigned int blocks;
@@ -266,10 +267,11 @@ LoadBufferFromMC (unsigned char *buf, int slot, char *filename, bool silent)
 
 
 /****************************************************************************
+ * SaveMCFile
  * Write savebuffer to Memory Card file
  ***************************************************************************/
 int
-SaveBufferToMC (unsigned char *buf, int slot, char *filename, int datasize, bool silent)
+SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
 {
 	int CardError;
 	unsigned int blocks;

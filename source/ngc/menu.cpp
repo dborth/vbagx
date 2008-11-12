@@ -98,9 +98,9 @@ LoadManager ()
 	if ( loadROM == 1 ) // if ROM was loaded, load the battery / state
 	{
 		if (GCSettings.AutoLoad == 1)
-			LoadBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // load battery
+			LoadBatteryOrState(GCSettings.SaveMethod, FILE_SRAM, SILENT); // load battery
 		else if (GCSettings.AutoLoad == 2)
-			LoadBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // load state
+			LoadBatteryOrState(GCSettings.SaveMethod, FILE_SNAPSHOT, SILENT); // load state
 	}
 
 	return loadROM;
@@ -354,20 +354,20 @@ GameMenu ()
 				break;
 
 			case 2: // Load Battery
-				quit = retval = LoadBatteryOrState(GCSettings.SaveMethod, 0, NOTSILENT);
+				quit = retval = LoadBatteryOrState(GCSettings.SaveMethod, FILE_SRAM, NOTSILENT);
 				emulator.emuReset();
 				break;
 
 			case 3: // Save Battery
-				SaveBatteryOrState(GCSettings.SaveMethod, 0, NOTSILENT);
+				SaveBatteryOrState(GCSettings.SaveMethod, FILE_SRAM, NOTSILENT);
 				break;
 
 			case 4: // Load State
-				quit = retval = LoadBatteryOrState(GCSettings.SaveMethod, 1, NOTSILENT);
+				quit = retval = LoadBatteryOrState(GCSettings.SaveMethod, FILE_SNAPSHOT, NOTSILENT);
 				break;
 
 			case 5: // Save State
-				SaveBatteryOrState(GCSettings.SaveMethod, 1, NOTSILENT);
+				SaveBatteryOrState(GCSettings.SaveMethod, FILE_SNAPSHOT, NOTSILENT);
 				break;
 
 			case 6:	// Reset Zoom

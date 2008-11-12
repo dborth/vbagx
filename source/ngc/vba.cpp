@@ -143,16 +143,16 @@ int main()
 			{
 				if (GCSettings.AutoSave == 1)
 				{
-					SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
+					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SRAM, SILENT); // save battery
 				}
 				else if (GCSettings.AutoSave == 2)
 				{
-					SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
+					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SNAPSHOT, SILENT); // save state
 				}
 				else if(GCSettings.AutoSave == 3)
 				{
-					SaveBatteryOrState(GCSettings.SaveMethod, 0, SILENT); // save battery
-					SaveBatteryOrState(GCSettings.SaveMethod, 1, SILENT); // save state
+					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SRAM, SILENT); // save battery
+					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SNAPSHOT, SILENT); // save state
 				}
 				ConfigRequested = 0;
 				break;

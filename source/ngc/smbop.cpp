@@ -223,25 +223,6 @@ SMBFILE OpenSMBFile(char * filepath)
 }
 
 /****************************************************************************
- * Load SMB file
- * rom - pointer to memory where ROM will be stored
- * length - # bytes to read (0 for all)
- ****************************************************************************/
-int
-LoadSMBFile (char * rom, int length)
-{
-	char filepath[MAXPATHLEN];
-
-	/* Check filename length */
-	if (!MakeROMPath(filepath, METHOD_SMB))
-	{
-		WaitPrompt((char*) "Maximum filepath length reached!");
-		return -1;
-	}
-	return LoadBufferFromSMB(rom, filepath, length, NOTSILENT);
-}
-
-/****************************************************************************
  * LoadSMBSzFile
  * Loads the selected file # from the specified 7z into rbuffer
  * Returns file size
@@ -268,17 +249,12 @@ LoadSMBSzFile(char * filepath, unsigned char * rbuffer)
 }
 
 /****************************************************************************
- * Write savebuffer to SMB file
+ * SaveSMBFile
+ * Write buffer to SMB file
  ****************************************************************************/
-// no buffer specified, use savebuffer
-int
-SaveBufferToSMB (char *filepath, int datasize, bool silent)
-{
-	return SaveBufferToSMB((char *)savebuffer, filepath, datasize, silent);
-}
 
 int
-SaveBufferToSMB (char * sbuffer, char *filepath, int datasize, bool silent)
+SaveSMBFile (char * sbuffer, char *filepath, int datasize, bool silent)
 {
 	if(!ConnectShare (NOTSILENT))
 		return 0;
@@ -318,18 +294,12 @@ SaveBufferToSMB (char * sbuffer, char *filepath, int datasize, bool silent)
 }
 
 /****************************************************************************
+ * LoadSMBFile
  * Load up a buffer from SMB file
  ****************************************************************************/
 
-// no buffer is specified - so use savebuffer
 int
-LoadBufferFromSMB (char *filepath, bool silent)
-{
-	return LoadBufferFromSMB((char *)savebuffer, filepath, 0, silent);
-}
-
-int
-LoadBufferFromSMB (char * sbuffer, char *filepath, int length, bool silent)
+LoadSMBFile (char * sbuffer, char *filepath, int length, bool silent)
 {
 	if(!ConnectShare (NOTSILENT))
 		return 0;
