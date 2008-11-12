@@ -250,8 +250,8 @@ int MemCPUWriteBatteryFile(char * membuffer)
 /****************************************************************************
 * LoadBatteryOrState
 * Load Battery/State file into memory
-* action = 0 - Load battery
-* action = 1 - Load state
+* action = FILE_SRAM - Load battery
+* action = FILE_SNAPSHOT - Load state
 ****************************************************************************/
 
 bool LoadBatteryOrState(int method, int action, bool silent)
@@ -259,44 +259,22 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 	char filepath[1024];
 	bool result = false;
 	int offset = 0;
-	char ext[4];
-
-	if(action == 0)
-		sprintf(ext, "sav");
-	else
-		sprintf(ext, "sgm");
-
-	ShowAction ((char*) "Loading...");
 
 	if(method == METHOD_AUTO)
 		method = autoSaveMethod(); // we use 'Save' because we need R/W
 
+	if(!MakeFilePath(filepath, action, method))
+		return false;
+
+	ShowAction ((char*) "Loading...");
+
 	AllocSaveBuffer();
 
 	// load the file into savebuffer
+	offset = LoadFile(filepath, method, silent);
 
-	if(method == METHOD_SD || method == METHOD_USB)
+	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
 	{
-		if(ChangeFATInterface(method, NOTSILENT))
-		{
-			sprintf (filepath, "%s/%s/%s.%s", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename, ext);
-			offset = LoadBufferFromFAT (filepath, silent);
-		}
-	}
-	else if(method == METHOD_SMB)
-	{
-		sprintf (filepath, "%s/%s.%s", GCSettings.SaveFolder, ROMFilename, ext);
-		offset = LoadBufferFromSMB (filepath, silent);
-	}
-	else if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
-	{
-		sprintf (filepath, "%s.%s", ROMFilename, ext);
-
-		if(method == METHOD_MC_SLOTA)
-			offset = LoadBufferFromMC (savebuffer, CARD_SLOTA, filepath, silent);
-		else
-			offset = LoadBufferFromMC (savebuffer, CARD_SLOTB, filepath, silent);
-
 		// skip save icon and comments for Memory Card saves
 		int skip = sizeof (saveicon);
 		skip += 64; // sizeof savecomment
@@ -307,7 +285,7 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 	// load savebuffer into VBA memory
 	if (offset > 0)
 	{
-		if(action == 0)
+		if(action == FILE_SRAM)
 		{
 			if(cartridgeType == 1)
 				result = MemgbReadBatteryFile((char *)savebuffer, offset);
@@ -326,14 +304,14 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 	{
 		if(offset == 0)
 		{
-			if(action == 0)
+			if(action == FILE_SRAM)
 				WaitPrompt ((char*) "Save file not found");
 			else
 				WaitPrompt ((char*) "State file not found");
 		}
 		else
 		{
-			if(action == 0)
+			if(action == FILE_SRAM)
 				WaitPrompt ((char*) "Invalid save file");
 			else
 				WaitPrompt ((char*) "Invalid state file");
@@ -353,40 +331,37 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 bool SaveBatteryOrState(int method, int action, bool silent)
 {
 	char filepath[1024];
-	char savecomment[2][32];
 	bool result = false;
 	int offset = 0;
-	char ext[4];
-	char savetype[10];
 	int datasize = 0; // we need the actual size of the data written
 
-	if(action == 0)
-	{
-		sprintf(ext, "sav");
-		sprintf(savetype, "SRAM");
-	}
-	else
-	{
-		sprintf(ext, "sgm");
-		sprintf(savetype, "Freeze");
-	}
+	if(method == METHOD_AUTO)
+		method = autoSaveMethod();
+
+	if(!MakeFilePath(filepath, FILE_SRAM, method))
+		return false;
 
 	ShowAction ((char*) "Saving...");
-
-	if(method == METHOD_AUTO)
-		method = autoSaveMethod(); // we use 'Save' because we need R/W
 
 	AllocSaveBuffer();
 
 	// add save icon and comments for Memory Card saves
 	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
 	{
+		char savecomment[2][32];
+		char savetype[10];
+
 		offset = sizeof (saveicon);
 
 		// Copy in save icon
 		memcpy (savebuffer, saveicon, offset);
 
 		// And the comments
+		if(action == FILE_SRAM)
+			sprintf(savetype, "SRAM");
+		else
+			sprintf(savetype, "Freeze");
+
 		sprintf (savecomment[0], "%s %s", VERSIONSTR, savetype);
 		strncpy(savecomment[1], ROMFilename, 31); // truncate filename to 31 chars
 		savecomment[1][31] = 0; // make sure last char is null byte
@@ -395,7 +370,7 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 	}
 
 	// put VBA memory into savebuffer, sets datasize to size of memory written
-	if(action == 0)
+	if(action == FILE_SRAM)
 	{
 		if(cartridgeType == 1)
 			datasize = MemgbWriteBatteryFile((char *)savebuffer+offset);
@@ -445,28 +420,7 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 	// write savebuffer into file
 	if(datasize > 0)
 	{
-		if(method == METHOD_SD || method == METHOD_USB)
-		{
-			if(ChangeFATInterface(method, NOTSILENT))
-			{
-				sprintf (filepath, "%s/%s/%s.%s", ROOTFATDIR, GCSettings.SaveFolder, ROMFilename, ext);
-				offset = SaveBufferToFAT (filepath, datasize, silent);
-			}
-		}
-		else if(method == METHOD_SMB)
-		{
-			sprintf (filepath, "%s/%s.%s", GCSettings.SaveFolder, ROMFilename, ext);
-			offset = SaveBufferToSMB (filepath, datasize, silent);
-		}
-		else if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
-		{
-			sprintf (filepath, "%s.%s", ROMFilename, ext);
-
-			if(method == METHOD_MC_SLOTA)
-				offset = SaveBufferToMC (savebuffer, CARD_SLOTA, filepath, datasize+offset, silent);
-			else
-				offset = SaveBufferToMC (savebuffer, CARD_SLOTB, filepath, datasize+offset, silent);
-		}
+		offset = SaveFile(filepath, datasize, method, silent);
 
 		if(offset > 0)
 		{
@@ -525,6 +479,110 @@ u32 systemReadJoypad(int which)
 }
 
 /****************************************************************************
+* Motion/Tilt sensor
+* Used for games like:
+* - Yoshi's Universal Gravitation
+* - Kirby's Tilt-N-Tumble
+* - Wario Ware Twisted!
+*
+****************************************************************************/
+int systemGetSensorX()
+{
+	return sensorX;
+}
+
+int systemGetSensorY()
+{
+	return sensorY;
+}
+
+void systemUpdateMotionSensor()
+{
+	int chan = 0; // first wiimote
+/*
+	WPADData *Data = WPAD_Data(chan);
+	WPADData data = *Data;
+
+	WPAD_Orientation(chan, &data.orient);
+	WPAD_GForce(chan, &data.gforce);
+	WPAD_Accel(chan, &data.accel);
+
+	//rotz = (float)orient.roll;
+	//roty = (float)orient.pitch;
+	//rotx = (float)orient.yaw;
+
+	//rotz = (float)(2.0*3.14159*((int)orient.roll/360.0));//Removing extra stuff fails too
+	//roty = (float)(2.0*3.14159*((int)orient.pitch/360.0));
+	//rotx = (float)(2.0*3.14159*((int)orient.yaw/360.0));
+
+	//rotz = (float)accel.z;
+	//roty = (float)accel.y;
+	//rotx = (float)accel.x;
+
+	//rotz = 200-(gforce.z*50);//Even doing this without the extra stuff fails
+	//roty = 200-(gforce.y*50);
+	//rotx = 200-(gforce.x*50);
+
+	printf("ACCEL X %d             \n", (int)Data->accel.x);
+	printf("ACCEL Y %d             \n", (int)Data->accel.y);
+	printf("ACCEL Z %d             \n", (int)Data->accel.z);
+
+	printf("HORIENT ROLL %1.3f             ", (float)Data->orient.roll);
+	printf("HORIENT PITCH %1.3f             ", (float)Data->orient.pitch);
+	printf("HORIENT YAW %1.3f             ", (float)Data->orient.yaw);
+
+	printf("GFORCE X %1.3f             \n", (float)data.gforce.x);
+	printf("GFORCE Y %1.3f             \n", (float)data.gforce.y);
+	printf("GFORCE Z %1.3f             \n", (float)data.gforce.z);
+*/
+/*
+if(sdlMotionButtons[KEY_LEFT]) {
+    sensorX += 3;
+    if(sensorX > 2197)
+      sensorX = 2197;
+    if(sensorX < 2047)
+      sensorX = 2057;
+  } else if(sdlMotionButtons[KEY_RIGHT]) {
+    sensorX -= 3;
+    if(sensorX < 1897)
+      sensorX = 1897;
+    if(sensorX > 2047)
+      sensorX = 2037;
+  } else if(sensorX > 2047) {
+    sensorX -= 2;
+    if(sensorX < 2047)
+      sensorX = 2047;
+  } else {
+    sensorX += 2;
+    if(sensorX > 2047)
+      sensorX = 2047;
+  }
+
+  if(sdlMotionButtons[KEY_UP]) {
+    sensorY += 3;
+    if(sensorY > 2197)
+      sensorY = 2197;
+    if(sensorY < 2047)
+      sensorY = 2057;
+  } else if(sdlMotionButtons[KEY_DOWN]) {
+    sensorY -= 3;
+    if(sensorY < 1897)
+      sensorY = 1897;
+    if(sensorY > 2047)
+      sensorY = 2037;
+  } else if(sensorY > 2047) {
+    sensorY -= 2;
+    if(sensorY < 2047)
+      sensorY = 2047;
+  } else {
+    sensorY += 2;
+    if(sensorY > 2047)
+      sensorY = 2047;
+  }
+ */
+}
+
+/****************************************************************************
 * systemDrawScreen
 ****************************************************************************/
 void systemDrawScreen()
@@ -571,7 +629,9 @@ static void ApplyPerImagePreferences()
 void LoadPatch(int method)
 {
 	int patchsize = 0;
-	int patchtype = -1;
+	int patchtype;
+
+	ShowAction((char *)"Loading patch...");
 
 	AllocSaveBuffer ();
 
@@ -581,35 +641,12 @@ void LoadPatch(int method)
 	sprintf(patchpath[1], "%s/%s.ups",currentdir,ROMFilename);
 	sprintf(patchpath[2], "%s/%s.ppf",currentdir,ROMFilename);
 
-	ShowAction((char *)"Loading patch...");
-
-	switch (method)
+	for(patchtype=0; patchtype<3; patchtype++)
 	{
-		case METHOD_SD:
-		case METHOD_USB:
-			for(int i=0; i<3; i++)
-			{
-				patchsize = LoadBufferFromFAT (patchpath[i], SILENT);
+		patchsize = LoadFile(patchpath[patchtype], method, SILENT);
 
-				if(patchsize)
-				{
-					patchtype = i;
-					break;
-				}
-			}
+		if(patchsize)
 			break;
-
-		case METHOD_SMB:
-			for(int i=0; i<3; i++)
-			{
-				patchsize = LoadBufferFromSMB (patchpath[i], SILENT);
-
-				if(patchsize)
-				{
-					patchtype = i;
-					break;
-				}
-			}
 	}
 
 	if(patchsize > 0)
@@ -651,23 +688,33 @@ bool LoadGBROM(int method)
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-	switch (method)
+	if(!inSz)
 	{
-		case METHOD_SD:
-		case METHOD_USB:
-		gbRomSize = LoadFATFile ((char *)gbRom, 0);
-		break;
+		char filepath[1024];
 
-		case METHOD_DVD:
-		gbRomSize = LoadDVDFile ((unsigned char *)gbRom, 0);
-		break;
+		if(!MakeFilePath(filepath, FILE_ROM, method))
+			return false;
 
-		case METHOD_SMB:
-		gbRomSize = LoadSMBFile ((char *)gbRom, 0);
-		break;
+		gbRomSize = LoadFile ((char *)gbRom, filepath, filelist[selection].length, method, NOTSILENT);
+	}
+	else
+	{
+		switch (method)
+		{
+			case METHOD_SD:
+			case METHOD_USB:
+				gbRomSize = LoadFATSzFile(szpath, (unsigned char *)gbRom);
+				break;
+			case METHOD_DVD:
+				gbRomSize = SzExtractFile(filelist[selection].offset, (unsigned char *)gbRom);
+				break;
+			case METHOD_SMB:
+				gbRomSize = LoadSMBSzFile(szpath,  (unsigned char *)gbRom);
+				break;
+		}
 	}
 
-	if(!gbRom)
+	if(gbRomSize <= 0)
 		return false;
 
 	return gbUpdateSizes();
@@ -822,21 +869,6 @@ bool LoadVBAROM(int method)
 		return true;
 	}
 }
-
-/****************************************************************************
-* EEPROM
-****************************************************************************/
-int systemGetSensorX()
-{
-	return sensorX;
-}
-
-int systemGetSensorY()
-{
-	return sensorY;
-}
-
-void systemUpdateMotionSensor() {}
 
 /****************************************************************************
 * Palette

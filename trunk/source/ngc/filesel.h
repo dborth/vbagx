@@ -39,7 +39,11 @@ extern char ROMFilename[512];
 
 void AllocSaveBuffer();
 void FreeSaveBuffer();
-bool MakeROMPath(char filepath[], int method);
+bool MakeFilePath(char filepath[], int type, int method);
+int LoadFile(char * buffer, char filepath[], int length, int method, bool silent);
+int LoadFile(char filepath[], int method, bool silent);
+int SaveFile(char * buffer, char filepath[], int datasize, int method, bool silent);
+int SaveFile(char filepath[], int datasize, int method, bool silent);
 int OpenROM (int method);
 int autoLoadMethod();
 int autoSaveMethod();

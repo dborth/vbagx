@@ -14,6 +14,7 @@
 #define VERSIONNUM 		"1.0.4"
 #define VERSIONSTR 		"VBA GX 1.0.4"
 #define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.4"
+#define PREF_FILE_NAME 	"VBAGX.xml"
 
 #define NOTSILENT 0
 #define SILENT 1
@@ -26,6 +27,14 @@ enum {
 	METHOD_SMB,
 	METHOD_MC_SLOTA,
 	METHOD_MC_SLOTB
+};
+
+enum {
+	FILE_ROM,
+	FILE_SRAM,
+	FILE_SNAPSHOT,
+	FILE_CHEAT,
+	FILE_PREF
 };
 
 struct SGCSettings{

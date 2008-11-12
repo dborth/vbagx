@@ -173,29 +173,30 @@ bool VMCPULoadROM(int method)
 	GBAROMSize = 0;
 	rom = (u8 *)MEM2Storage;
 
-	switch (method)
+	if(!inSz)
 	{
-		case METHOD_SD:
-		case METHOD_USB:
-			if(inSz)
+		char filepath[1024];
+
+		if(!MakeFilePath(filepath, FILE_ROM, method))
+			return false;
+
+		GBAROMSize = LoadFile ((char *)rom, filepath, filelist[selection].length, method, NOTSILENT);
+	}
+	else
+	{
+		switch (method)
+		{
+			case METHOD_SD:
+			case METHOD_USB:
 				GBAROMSize = LoadFATSzFile(szpath, (unsigned char *)rom);
-			else
-				GBAROMSize = LoadFATFile((char *)rom, filelist[selection].length);
-			break;
-
-		case METHOD_DVD:
-			if(inSz)
+				break;
+			case METHOD_DVD:
 				GBAROMSize = SzExtractFile(filelist[selection].offset, (unsigned char *)rom);
-			else
-				GBAROMSize = LoadDVDFile((unsigned char *)rom, filelist[selection].length);
-			break;
-
-		case METHOD_SMB:
-			if(inSz)
-				GBAROMSize = LoadSMBSzFile(szpath, (unsigned char *)rom);
-			else
-				GBAROMSize = LoadSMBFile((char *)rom, filelist[selection].length);
-			break;
+				break;
+			case METHOD_SMB:
+				GBAROMSize = LoadSMBSzFile(szpath,  (unsigned char *)rom);
+				break;
+		}
 	}
 
 	if(GBAROMSize)
