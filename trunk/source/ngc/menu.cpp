@@ -665,11 +665,16 @@ ConfigureControllers ()
 /****************************************************************************
  * Main Menu
  ***************************************************************************/
-int menucount = 7;
+int menucount = 8;
 char menuitems[][50] = {
-  "Choose Game", "Controller Configuration", "Preferences",
+  "Choose Game",
+  "Controller Configuration",
+  "Preferences",
   "Game Menu",
-  "Credits", "Reset System", "Return to Loader"
+  "Credits",
+  "DVD Motor Off",
+  "Reset System",
+  "Return to Loader"
 };
 
 void
@@ -680,6 +685,14 @@ MainMenu (int selectedMenu)
 
 	int quit = 0;
 	int ret;
+
+	#ifdef HW_RVL
+	// don't show dvd motor off on the wii
+	menuitems[5][0] = 0;
+	// rename reset/exit items
+	sprintf (menuitems[6], "Return to Wii Menu");
+	sprintf (menuitems[7], "Return to Homebrew Channel");
+	#endif
 
 	// disable game-specific menu items if a ROM isn't loaded
 	if (!ROMLoaded)
@@ -730,11 +743,17 @@ MainMenu (int selectedMenu)
                 break;
 
 			case 5:
+				// turn the dvd motor off (GC only)
+				#ifdef HW_DOL
+				dvd_motor_off ();
+				#endif
+
+			case 6:
 				// Reset the Gamecube/Wii
 			    Reboot();
                 break;
 
-			case 6:
+			case 7:
 				ExitToLoader();
 				break;
 
