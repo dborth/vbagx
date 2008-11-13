@@ -26,6 +26,17 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[What's New 1.0.5]
+* SDHC works now
+* Frameskipping tweaks
+* Fix snapshot loading issue
+* Full widescreen support
+* Change scaling
+* Zooming fixed (thanks eke-eke!)
+* Add DVD motor off option for GameCube users
+* Fixed GameCube GBA loading issue
+* PAL timing changes - EURGB60 mode forced
+
 [What's New 1.0.4 - October 28, 2008]
 * Complete port of VBA-M - now uses blaarg's new audio core, latest GB core
 * Frameskipping improvements
