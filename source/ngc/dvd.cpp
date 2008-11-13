@@ -217,8 +217,6 @@ int dvd_safe_read(void *dst_v, u32 len, u64 offset)
             ret |= dvd_buffered_read(buffer, DVD_MAX_READ_LENGTH, currentOffset); // read 32 byte from the dvd
             memcpy(&dst[bufferOffset], buffer, bytesToRead); // copy bytes to output buffer
         }
-
-        //free(tmp);
         return ret;
     }
 }
@@ -506,6 +504,7 @@ int DirectorySearch(char dir[512])
  * SwitchDVDFolder
  *
  * Recursively searches for any directory path 'dir' specified
+ * Also can be used to find and set the offset for a file
  * Also loads the directory contents via ParseDVDdirectory()
  * It relies on dvddir, dvddirlength, and filelist being pre-populated
  ***************************************************************************/
@@ -531,7 +530,10 @@ bool SwitchDVDFolder(char * dir, int maxDepth)
 	{
 		dvddir = filelist[dirindex].offset;
 		dvddirlength = filelist[dirindex].length;
-		maxfiles = ParseDVDdirectory();
+		selection = dirindex;
+
+		if(filelist[dirindex].flags) // only parse directories
+			maxfiles = ParseDVDdirectory();
 
 		if(lastdir)
 			return true;
