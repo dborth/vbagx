@@ -11,10 +11,10 @@
 #define _VBA_H_
 
 #include <gccore.h>
-#define VERSIONNUM 		"1.0.4"
-#define VERSIONSTR 		"VBA GX 1.0.4"
-#define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.4"
-#define PREF_FILE_NAME 	"VBAGX.xml"
+#define VERSIONNUM 		"1.0.5"
+#define VERSIONSTR 		"VBA GX 1.0.5"
+#define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.5"
+#define PREF_FILE_NAME 	"settings.xml"
 
 #define NOTSILENT 0
 #define SILENT 1
@@ -67,5 +67,6 @@ void ShutdownWii();
 extern struct SGCSettings GCSettings;
 extern int ConfigRequested;
 extern int ShutdownRequested;
+extern char appPath[];
 
 #endif
