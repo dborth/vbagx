@@ -229,7 +229,7 @@ bool MakeFilePath(char filepath[], int type, int method)
 				sprintf(file, "%s.cht", ROMFilename);
 				break;
 			case FILE_PREF:
-				sprintf(folder, GCSettings.SaveFolder);
+				sprintf(folder, appPath);
 				sprintf(file, "%s", PREF_FILE_NAME);
 				break;
 		}
