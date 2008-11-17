@@ -32,7 +32,7 @@ extern "C" {
 #include "preferences.h"
 #include "audio.h"
 #include "dvd.h"
-#include "smbop.h"
+#include "fileop.h"
 #include "menu.h"
 #include "menudraw.h"
 #include "input.h"
@@ -42,7 +42,63 @@ extern "C" {
 extern bool ROMLoaded;
 extern int emulating;
 int ConfigRequested = 0;
+int ShutdownRequested = 0;
+int ResetRequested = 0;
 
+/****************************************************************************
+ * Shutdown / Reboot / Exit
+ ***************************************************************************/
+
+#ifdef HW_DOL
+	#define PSOSDLOADID 0x7c6000a6
+	int *psoid = (int *) 0x80001800;
+	void (*PSOReload) () = (void (*)()) 0x80001800;
+#endif
+
+void Reboot()
+{
+	UnmountAllFAT();
+#ifdef HW_RVL
+	DI_Close();
+    SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+#else
+	#define SOFTRESET_ADR ((volatile u32*)0xCC003024)
+	*SOFTRESET_ADR = 0x00000000;
+#endif
+}
+
+void ExitToLoader()
+{
+	UnmountAllFAT();
+	// Exit to Loader
+	#ifdef HW_RVL
+		DI_Close();
+		exit(0);
+	#else	// gamecube
+		if (psoid[0] == PSOSDLOADID)
+			PSOReload ();
+	#endif
+}
+
+#ifdef HW_RVL
+void ShutdownCB()
+{
+	ConfigRequested = 1;
+	ShutdownRequested = 1;
+}
+void ResetCB()
+{
+	ResetRequested = 1;
+}
+void ShutdownWii()
+{
+	UnmountAllFAT();
+	DI_Close();
+	SYS_ResetSystem(SYS_POWEROFF, 0, 0);
+}
+#endif
+
+#ifdef HW_DOL
 /****************************************************************************
  * ipl_set_config
  * lowlevel Qoob Modchip disable
@@ -66,6 +122,7 @@ void ipl_set_config(unsigned char c)
 
 	exi[0] &= 0x405;	//deselect IPL
 }
+#endif
 
 /****************************************************************************
 * main
@@ -91,9 +148,17 @@ int main()
 	#endif
 	PAD_Init ();
 
+	// Wii Power/Reset buttons
+#ifdef HW_RVL
+	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
+	SYS_SetPowerCallback(ShutdownCB);
+	SYS_SetResetCallback(ResetCB);
+#endif
+
 	int selectedMenu = -1;
 
 	InitialiseVideo();
+	ResetVideo_Menu (); // change to menu video mode
 
 	// Initialise freetype font system
 	if (FT_Init ())
@@ -129,7 +194,11 @@ int main()
 
 	while(1) // main loop
 	{
-		ResetVideo_Menu (); // change to menu video mode
+		#ifdef HW_RVL
+		if(ShutdownRequested)
+			ShutdownWii();
+		#endif
+
 		MainMenu(selectedMenu);
 		selectedMenu = 3; // return to game menu from now on
 
@@ -139,8 +208,16 @@ int main()
 		{
 			emulator.emuMain(emulator.emuCount);
 
+			if(ResetRequested)
+			{
+				emulator.emuReset(); // reset game
+				ResetRequested = 0;
+			}
+
 			if(ConfigRequested)
 			{
+				ResetVideo_Menu (); // change to menu video mode
+
 				if (GCSettings.AutoSave == 1)
 				{
 					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SRAM, SILENT); // save battery

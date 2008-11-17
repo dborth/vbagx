@@ -21,6 +21,7 @@
 
 #define ROOTFATDIR "fat:/"
 
+void UnmountAllFAT();
 bool ChangeFATInterface(int method, bool silent);
 int ParseFATdirectory(int method);
 int LoadFATSzFile(char * filepath, unsigned char * rbuffer);

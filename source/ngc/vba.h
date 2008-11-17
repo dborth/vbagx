@@ -61,7 +61,11 @@ struct SGCSettings{
 	int		VerifySaves;
 };
 
+void ExitToLoader();
+void Reboot();
+void ShutdownWii();
 extern struct SGCSettings GCSettings;
 extern int ConfigRequested;
+extern int ShutdownRequested;
 
 #endif
