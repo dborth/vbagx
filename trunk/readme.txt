@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 1.0.4
+                                  Version 1.0.5
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -26,16 +26,20 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
 
-[What's New 1.0.5]
+[What's New 1.0.5 - November 19, 2008]
 * SDHC works now
 * Frameskipping tweaks
-* Fix snapshot loading issue
+* Fixed snapshot loading issue
 * Full widescreen support
-* Change scaling
+* Changed scaling
 * Zooming fixed (thanks eke-eke!)
-* Add DVD motor off option for GameCube users
-* Fixed GameCube GBA loading issue
 * PAL timing changes - EURGB60 mode forced
+* Wii - Added console/remote power button support
+* Wii - Added reset button support (resets game)
+* Wii - Settings file is now named settings.xml and is stored in the same
+  folder as the DOL (eg: apps/vbagx/settings.xml)
+* GameCube - Added DVD motor off option
+* GameCube - Fixed GBA loading issue
 
 [What's New 1.0.4 - October 28, 2008]
 * Complete port of VBA-M - now uses blaarg's new audio core, latest GB core
@@ -102,8 +106,7 @@ Unzip the archive. You will find the following folders inside:
 apps			Contains Homebrew Channel ready files
 				(see Homebrew Channel instructions below)
 				
-executables		Contains Gamecube / Wii DOL files
-				(for loading from other methods)
+gamecube		Contains GameCube DOL file (not required for Wii)
 				
 vbagx			Contains the directory structure required for storing
 				roms and saves. By default, roms are loaded from 
