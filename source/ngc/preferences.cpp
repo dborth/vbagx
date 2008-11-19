@@ -264,7 +264,7 @@ decodePrefsData (int method)
 
 	if(verPoint < '4' && verMajor == '1') // less than version 1.0.4
 		return false; // reset settings
-	else if(verMajor > '1' || verMinor > '0' || verPoint > '4') // some future version
+	else if(verMajor > '1' || verMinor > '0' || verPoint > '5') // some future version
 		return false; // reset settings
 
 	// File Settings

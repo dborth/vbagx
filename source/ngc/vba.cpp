@@ -261,6 +261,10 @@ int main(int argc, char *argv[])
 					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SRAM, SILENT); // save battery
 					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SNAPSHOT, SILENT); // save state
 				}
+
+				// save zoom level
+				SavePrefs(GCSettings.SaveMethod, SILENT);
+
 				ConfigRequested = 0;
 				break;
 			}
