@@ -338,7 +338,7 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 	if(method == METHOD_AUTO)
 		method = autoSaveMethod();
 
-	if(!MakeFilePath(filepath, FILE_SRAM, method))
+	if(!MakeFilePath(filepath, action, method))
 		return false;
 
 	ShowAction ((char*) "Saving...");
