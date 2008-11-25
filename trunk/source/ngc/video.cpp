@@ -281,7 +281,7 @@ void InitialiseVideo ()
 	{
 		case VI_PAL: // 576 lines (PAL 50Hz)
 			// force PAL60
-			vmode = &TVEurgb60Hz480IntDf;
+			//vmode = &TVEurgb60Hz480IntDf;
 			break;
 
 		case VI_NTSC:
@@ -294,10 +294,9 @@ void InitialiseVideo ()
 	}
 
 #ifdef HW_DOL
-/* we have component cables, but the preferred mode is interlaced
- * why don't we switch into progressive?
+/* we have component cables, why don't we switch into progressive?
  * on the Wii, the user can do this themselves on their Wii Settings */
-	if(VIDEO_HaveComponentCable() && vmode == &TVNtsc480IntDf)
+	if(VIDEO_HaveComponentCable())
 		vmode = &TVNtsc480Prog;
 #endif
 
