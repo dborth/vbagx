@@ -144,13 +144,14 @@ char * SMBPath(char * path)
  * Load the directory and put in the filelist array
  *****************************************************************************/
 int
-ParseSMBdirectory ()
+ParseSMBdirectory (bool silent)
 {
 	if(!ConnectShare (NOTSILENT))
 		return 0;
 
 	int filecount = 0;
 	char searchpath[1024];
+	char tmpname[MAXJOLIET];
 	SMBDIRENTRY smbdir;
 
 	// initialize selection
@@ -167,13 +168,17 @@ ParseSMBdirectory ()
 	if (SMB_FindFirst
 	(SMBPath(searchpath), SMB_SRCH_READONLY | SMB_SRCH_DIRECTORY, &smbdir, smbconn) != SMB_SUCCESS)
 	{
-		char msg[200];
-		sprintf(msg, "Could not open %s", currentdir);
-		WaitPrompt (msg);
+		if(!silent)
+		{
+			char msg[200];
+			sprintf(msg, "Could not open %s", currentdir);
+			WaitPrompt (msg);
+		}
 
 		// if we can't open the dir, open root dir
 		sprintf(searchpath, "/");
 		sprintf(searchpath,"*");
+		sprintf(currentdir,"/");
 
 		if (SMB_FindFirst
 		(SMBPath(searchpath), SMB_SRCH_READONLY | SMB_SRCH_DIRECTORY, &smbdir, smbconn) != SMB_SUCCESS)
@@ -195,8 +200,8 @@ ParseSMBdirectory ()
 			else
 				filelist[filecount].flags = 0;
 
-			// Update display name
-			memcpy (&filelist[filecount].displayname, smbdir.name, MAXDISPLAY);
+			StripExt(tmpname, smbdir.name); // hide file extension
+			memcpy (&filelist[filecount].displayname, tmpname, MAXDISPLAY);
 			filelist[filecount].displayname[MAXDISPLAY] = 0;
 
 			strcpy (filelist[filecount].filename, smbdir.name);
