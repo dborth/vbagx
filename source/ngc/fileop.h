@@ -32,5 +32,6 @@ u32 SaveFile(char filepath[], u32 datasize, int method, bool silent);
 extern char currdir[MAXPATHLEN];
 extern FILE * file;
 extern bool unmountRequired[];
+extern lwp_t devicethread;
 
 #endif

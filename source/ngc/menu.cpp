@@ -251,7 +251,7 @@ PreferencesMenu ()
 
 			case 11:
 			case -1: /*** Button B ***/
-				SavePrefs(GCSettings.SaveMethod, SILENT);
+				SavePrefs(SILENT);
 				quit = 1;
 				break;
 
@@ -612,7 +612,7 @@ ConfigureControllers ()
 
 			case 4:
 				/*** Save Preferences Now ***/
-				SavePrefs(GCSettings.SaveMethod, NOTSILENT);
+				SavePrefs(NOTSILENT);
 				break;
 
 			case -1: /*** Button B ***/

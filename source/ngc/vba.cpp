@@ -233,8 +233,16 @@ int main(int argc, char *argv[])
 			ShutdownWii();
 		#endif
 
+		// go back to checking if devices were inserted/removed
+		// since we're entering the menu
+		LWP_ResumeThread (devicethread);
+
 		MainMenu(selectedMenu);
 		selectedMenu = 3; // return to game menu from now on
+
+		// stop checking if devices were removed/inserted
+		// since we're starting emulation again
+		LWP_SuspendThread (devicethread);
 
 		ResetVideo_Emu();
 
@@ -267,7 +275,7 @@ int main(int argc, char *argv[])
 				}
 
 				// save zoom level
-				SavePrefs(GCSettings.SaveMethod, SILENT);
+				SavePrefs(SILENT);
 
 				ConfigRequested = 0;
 				break;
