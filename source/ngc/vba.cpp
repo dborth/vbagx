@@ -12,14 +12,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
-#include <sdcard/card_cmn.h>
-#include <sdcard/wiisd_io.h>
-#include <sdcard/card_io.h>
-#include <fat.h>
 
 #ifdef WII_DVD
 extern "C" {
@@ -32,6 +27,7 @@ extern "C" {
 #include "preferences.h"
 #include "audio.h"
 #include "dvd.h"
+#include "smbop.h"
 #include "fileop.h"
 #include "menu.h"
 #include "menudraw.h"
@@ -50,6 +46,16 @@ char appPath[1024];
  * Shutdown / Reboot / Exit
  ***************************************************************************/
 
+void ExitCleanup()
+{
+	UnmountAllFAT();
+	CloseShare();
+
+#ifdef HW_RVL
+	DI_Close();
+#endif
+}
+
 #ifdef HW_DOL
 	#define PSOSDLOADID 0x7c6000a6
 	int *psoid = (int *) 0x80001800;
@@ -58,9 +64,8 @@ char appPath[1024];
 
 void Reboot()
 {
-	UnmountAllFAT();
+	ExitCleanup();
 #ifdef HW_RVL
-	DI_Close();
     SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
 #else
 	#define SOFTRESET_ADR ((volatile u32*)0xCC003024)
@@ -70,14 +75,13 @@ void Reboot()
 
 void ExitToLoader()
 {
-	UnmountAllFAT();
+	ExitCleanup();
 	// Exit to Loader
 	#ifdef HW_RVL
-		DI_Close();
 		exit(0);
 	#else	// gamecube
 		if (psoid[0] == PSOSDLOADID)
-			PSOReload ();
+			PSOReload();
 	#endif
 }
 
@@ -93,8 +97,7 @@ void ResetCB()
 }
 void ShutdownWii()
 {
-	UnmountAllFAT();
-	DI_Close();
+	ExitCleanup();
 	SYS_ResetSystem(SYS_POWEROFF, 0, 0);
 }
 #endif
@@ -193,7 +196,8 @@ int main(int argc, char *argv[])
 	}
 
 	// Initialize libFAT for SD and USB
-	fatInit (8, false);
+	MountAllFAT();
+	InitDeviceThread();
 
 	// Initialize DVD subsystem (GameCube only)
 	#ifdef HW_DOL
@@ -218,7 +222,7 @@ int main(int argc, char *argv[])
 	// Load preferences
 	if(!LoadPrefs())
 	{
-		WaitPrompt((char*) "Preferences reset - check settings!");
+		WaitPrompt("Preferences reset - check settings!");
 		selectedMenu = 2; // change to preferences menu
 	}
 

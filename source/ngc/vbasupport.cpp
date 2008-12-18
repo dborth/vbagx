@@ -266,7 +266,7 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 	if(!MakeFilePath(filepath, action, method))
 		return false;
 
-	ShowAction ((char*) "Loading...");
+	ShowAction ("Loading...");
 
 	AllocSaveBuffer();
 
@@ -305,16 +305,16 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 		if(offset == 0)
 		{
 			if(action == FILE_SRAM)
-				WaitPrompt ((char*) "Save file not found");
+				WaitPrompt ("Save file not found");
 			else
-				WaitPrompt ((char*) "State file not found");
+				WaitPrompt ("State file not found");
 		}
 		else
 		{
 			if(action == FILE_SRAM)
-				WaitPrompt ((char*) "Invalid save file");
+				WaitPrompt ("Invalid save file");
 			else
-				WaitPrompt ((char*) "Invalid state file");
+				WaitPrompt ("Invalid state file");
 		}
 	}
 	return result;
@@ -341,7 +341,7 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 	if(!MakeFilePath(filepath, action, method))
 		return false;
 
-	ShowAction ((char*) "Saving...");
+	ShowAction ("Saving...");
 
 	AllocSaveBuffer();
 
@@ -425,14 +425,14 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 		if(offset > 0)
 		{
 			if(!silent)
-				WaitPrompt ((char*) "Save successful");
+				WaitPrompt ("Save successful");
 			result = true;
 		}
 	}
 	else
 	{
 		if(!silent)
-			WaitPrompt((char *)"No data to save!");
+			WaitPrompt("No data to save!");
 	}
 
 	FreeSaveBuffer();
@@ -498,8 +498,8 @@ int systemGetSensorY()
 
 void systemUpdateMotionSensor()
 {
-	int chan = 0; // first wiimote
-/*
+	/*	int chan = 0; // first wiimote
+
 	WPADData *Data = WPAD_Data(chan);
 	WPADData data = *Data;
 
@@ -631,7 +631,7 @@ void LoadPatch(int method)
 	int patchsize = 0;
 	int patchtype;
 
-	ShowAction((char *)"Loading patch...");
+	ShowAction("Loading patch...");
 
 	AllocSaveBuffer ();
 
@@ -703,13 +703,11 @@ bool LoadGBROM(int method)
 		{
 			case METHOD_SD:
 			case METHOD_USB:
-				gbRomSize = LoadFATSzFile(szpath, (unsigned char *)gbRom);
+			case METHOD_SMB:
+				gbRomSize = LoadSzFile(szpath, (unsigned char *)gbRom);
 				break;
 			case METHOD_DVD:
 				gbRomSize = SzExtractFile(filelist[selection].offset, (unsigned char *)gbRom);
-				break;
-			case METHOD_SMB:
-				gbRomSize = LoadSMBSzFile(szpath,  (unsigned char *)gbRom);
 				break;
 		}
 	}
@@ -735,19 +733,23 @@ bool LoadVBAROM(int method)
 		// we need to check the file extension of the first file in the archive
 		char * zippedFilename = GetFirstZipFilename (method);
 
-		if(strlen(zippedFilename) > 0)
+		if(zippedFilename != NULL)
 		{
 			if(utilIsGBAImage(zippedFilename))
 				type = 2;
 			else if(utilIsGBImage(zippedFilename))
 				type = 1;
 		}
+		else // loading the file failed
+		{
+			return false;
+		}
 	}
 
 	// leave before we do anything
 	if(type != 1 && type != 2)
 	{
-		WaitPrompt((char *)"Unknown game image!");
+		WaitPrompt("Unknown game image!");
 		return false;
 	}
 
@@ -813,7 +815,7 @@ bool LoadVBAROM(int method)
 
 	if(!loaded)
 	{
-		WaitPrompt((char *)"Error loading game!");
+		WaitPrompt("Error loading game!");
 		return false;
 	}
 	else

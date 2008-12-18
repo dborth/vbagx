@@ -7,8 +7,8 @@
  *
  * This file controls overall program flow. Most things start and end here!
  ***************************************************************************/
-#ifndef _VBA_H_
-#define _VBA_H_
+#ifndef _VBAGX_H_
+#define _VBAGX_H_
 
 #include <gccore.h>
 #define VERSIONNUM 		"1.0.5"
@@ -26,7 +26,9 @@ enum {
 	METHOD_DVD,
 	METHOD_SMB,
 	METHOD_MC_SLOTA,
-	METHOD_MC_SLOTB
+	METHOD_MC_SLOTB,
+	METHOD_SD_SLOTA,
+	METHOD_SD_SLOTB
 };
 
 enum {
@@ -45,15 +47,12 @@ struct SGCSettings{
 	char	LoadFolder[200]; // Path to game files
 	char	SaveFolder[200]; // Path to save files
 	char	CheatFolder[200]; // Path to cheat files
-	char	gcip[16];
-	char	gwip[16];
-	char	mask[16];
+
 	char	smbip[16];
 	char	smbuser[20];
 	char	smbpwd[20];
-	char	smbgcid[20];
-	char	smbsvid[20];
 	char	smbshare[20];
+
     int		Zoom; // 0 - off, 1 - on
     float	ZoomLevel; // zoom amount
     int		widescreen;
