@@ -21,7 +21,6 @@
 #include "vba.h"
 #include "menudraw.h"
 
-extern unsigned int SMBTimer; // timer to reset SMB connection
 u32 FrameTimer = 0;
 
 /*** External 2D Video ***/
@@ -137,7 +136,6 @@ copy_to_xfb (u32 arg)
 	}
 
 	FrameTimer++;
-	SMBTimer++;
 }
 
 /****************************************************************************

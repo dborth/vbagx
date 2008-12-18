@@ -154,7 +154,7 @@ static void VMAllocGBA( void )
 		paletteRAM == NULL || vram == NULL || oam == NULL ||
 		pix == NULL || ioMem == NULL)
 	{
-		WaitPrompt((char *)"Out of memory!");
+		WaitPrompt("Out of memory!");
 		VMClose();
 	}
 }
@@ -188,13 +188,11 @@ bool VMCPULoadROM(int method)
 		{
 			case METHOD_SD:
 			case METHOD_USB:
-				GBAROMSize = LoadFATSzFile(szpath, (unsigned char *)rom);
+			case METHOD_SMB:
+				GBAROMSize = LoadSzFile(szpath, (unsigned char *)rom);
 				break;
 			case METHOD_DVD:
 				GBAROMSize = SzExtractFile(filelist[selection].offset, (unsigned char *)rom);
-				break;
-			case METHOD_SMB:
-				GBAROMSize = LoadSMBSzFile(szpath,  (unsigned char *)rom);
 				break;
 		}
 	}
@@ -319,14 +317,14 @@ int VMCPULoadROM(int method)
 		sprintf(filepath, "%s/%s",currentdir,filelist[selection].filename);
 	else
 	{
-		WaitPrompt((char*) "Maximum filepath length reached!");
+		WaitPrompt("Maximum filepath length reached!");
 		return -1;
 	}
 
 	romfile = fopen(filepath, "rb");
 	if ( romfile == NULL )
 	{
-		WaitPrompt((char*) "Error opening file!");
+		WaitPrompt("Error opening file!");
 		VMClose();
 		return 0;
 	}
@@ -340,9 +338,10 @@ int VMCPULoadROM(int method)
 		return 0;
 	}
 
-	fseek(romfile, 0, SEEK_END);
-	GBAROMSize = ftell(romfile);
-	fseek(romfile, 0, SEEK_SET);
+	struct stat fileinfo;
+	fstat(romfile->_file, &fileinfo);
+	GBAROMSize = fileinfo.st_size;
+
 	vmpageno = 0;
 	vmpage[0].pageptr = rombase;
 	vmpage[0].pageno = 0;
@@ -454,7 +453,7 @@ u16 VMRead16( u32 address )
 		return READ16LE( vmpage[pageid].pageptr + ( address & VMSHIFTMASK ) );
 
 		default:
-		WaitPrompt((char*) "VM16 : Unknown page type!");
+		WaitPrompt("VM16 : Unknown page type!");
 		VMClose();
 		return 0;
 	}
@@ -485,7 +484,7 @@ u8 VMRead8( u32 address )
 		return (u8)vmpage[pageid].pageptr[ (address & VMSHIFTMASK) ];
 
 		default:
-		WaitPrompt((char*) "VM8 : Unknown page type!");
+		WaitPrompt("VM8 : Unknown page type!");
 		VMClose();
 		return 0;
 	}

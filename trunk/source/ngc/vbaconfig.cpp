@@ -12,7 +12,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "vba.h"
-#include "smbop.h"
 
 struct SGCSettings GCSettings;
 
@@ -38,12 +37,6 @@ DefaultSettings ()
 	GCSettings.smbuser[19] = 0;
 	GCSettings.smbpwd[19] = 0;
 	GCSettings.smbshare[19] = 0;
-
-	GCSettings.gcip[0] = 0;
-	GCSettings.gwip[0] = 0;
-	GCSettings.mask[0] = 0;
-	GCSettings.smbsvid[0] = 0;
-	GCSettings.smbgcid[0] = 0;
 
 	GCSettings.VerifySaves = 0;
 	GCSettings.Zoom = 0;	// zooming default off

@@ -194,7 +194,7 @@ PreferencesMenu ()
 		sprintf (prefmenu[9], "Video Scaling %s",
 			GCSettings.widescreen == true ? "16:9 Correction" : "Default");
 
-		ret = RunMenu (prefmenu, prefmenuCount, (char*)"Preferences", 16);
+		ret = RunMenu (prefmenu, prefmenuCount, "Preferences", 16);
 
 		switch (ret)
 		{
@@ -246,7 +246,7 @@ PreferencesMenu ()
 
 			case 10:
 				DefaultSettings ();
-				WaitPrompt((char *)"Preferences Reset");
+				WaitPrompt("Preferences Reset");
 				break;
 
 			case 11:
@@ -304,7 +304,7 @@ GameMenu ()
 		if(!GCSettings.Zoom)
 			gamemenu[6][0] = '\0';
 
-		ret = RunMenu (gamemenu, gamemenuCount, (char*)"Game Menu");
+		ret = RunMenu (gamemenu, gamemenuCount, "Game Menu");
 
 		switch (ret)
 		{
@@ -418,21 +418,21 @@ GetButtonMap(u16 ctrlr_type, char* btn_name)
 
 	switch (ctrlr_type) {
 		case CTRLR_NUNCHUK:
-			strncpy (cfg_text[3], (char*)"NUNCHUK", 7);
+			strncpy (cfg_text[3], "NUNCHUK", 7);
 			break;
 		case CTRLR_CLASSIC:
-			strncpy (cfg_text[3], (char*)"CLASSIC", 7);
+			strncpy (cfg_text[3], "CLASSIC", 7);
 			break;
 		case CTRLR_GCPAD:
-			strncpy (cfg_text[3], (char*)"GC PAD", 7);
+			strncpy (cfg_text[3], "GC PAD", 7);
 			break;
 		case CTRLR_WIIMOTE:
-			strncpy (cfg_text[3], (char*)"WIIMOTE", 7);
+			strncpy (cfg_text[3], "WIIMOTE", 7);
 			break;
 	};
 
 	/*** note which button we are remapping ***/
-	sprintf (temp, (char*)"Remapping ");
+	sprintf (temp, "Remapping ");
 	for (k=0; k<9-strlen(btn_name); k++) strcat(temp, " "); // add whitespace padding to align text
 	strncat (temp, btn_name, 9);		// snes button we are remapping
 	strncpy (cfg_text[0], temp, 19);	// copy this all back to the text we wish to display
@@ -470,7 +470,7 @@ ConfigureButtons (u16 ctrlr_type)
 	int ret = 0;
 	int oldmenu = menu;
 	menu = 0;
-	char* menu_title = NULL;
+	char menu_title[50];
 	u32 pressed;
 
 	unsigned int* currentpadmap = 0;
@@ -481,19 +481,19 @@ ConfigureButtons (u16 ctrlr_type)
 	/*** Update Menu Title (based on controller we're configuring) ***/
 	switch (ctrlr_type) {
 		case CTRLR_NUNCHUK:
-			menu_title = (char*)"VBA     -  NUNCHUK";
+			sprintf(menu_title, "VBA     -  NUNCHUK");
 			currentpadmap = ncpadmap;
 			break;
 		case CTRLR_CLASSIC:
-			menu_title = (char*)"VBA     -  CLASSIC";
+			sprintf(menu_title, "VBA     -  CLASSIC");
 			currentpadmap = ccpadmap;
 			break;
 		case CTRLR_GCPAD:
-			menu_title = (char*)"VBA     -   GC PAD";
+			sprintf(menu_title, "VBA     -   GC PAD");
 			currentpadmap = gcpadmap;
 			break;
 		case CTRLR_WIIMOTE:
-			menu_title = (char*)"VBA     -  WIIMOTE";
+			sprintf(menu_title, "VBA     -  WIIMOTE");
 			currentpadmap = wmpadmap;
 			break;
 	};
@@ -517,7 +517,7 @@ ConfigureButtons (u16 ctrlr_type)
 				strncat (temp, ctrlr_def[ctrlr_type].map[j].name, 6);		// update button map display
 			}
 			else
-				strcat (temp, (char*)"---"); // otherwise, button is 'unmapped'
+				strcat (temp, "---"); // otherwise, button is 'unmapped'
 			strncpy (cfg_btns_menu[i], temp, 19);	// move back updated information
 
 		}
@@ -585,7 +585,7 @@ ConfigureControllers ()
 	{
 
 		/*** Controller Config Menu ***/
-        ret = RunMenu (ctlrmenu, ctlrmenucount, (char*)"Configure Controllers");
+        ret = RunMenu (ctlrmenu, ctlrmenucount, "Configure Controllers");
 
 		switch (ret)
 		{
@@ -675,7 +675,7 @@ MainMenu (int selectedMenu)
 		}
 		else
 		{
-			ret = RunMenu (menuitems, menucount, (char*)"Main Menu");
+			ret = RunMenu (menuitems, menucount, "Main Menu");
 		}
 
 		switch (ret)

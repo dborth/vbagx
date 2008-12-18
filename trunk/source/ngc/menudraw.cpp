@@ -133,7 +133,7 @@ DrawCharacter (FT_Bitmap * bmp, FT_Int x, FT_Int y)
  * Place the font bitmap on the screen
  ***************************************************************************/
 void
-DrawText (int x, int y, char *text)
+DrawText (int x, int y, const char *text)
 {
   int px, n;
   int i;
@@ -222,7 +222,7 @@ Credits ()
 	setfontcolour (0x00, 0x00, 0x00);
 
 	setfontsize (26);
-	DrawText (-1, 150, (char*)"Credits");
+	DrawText (-1, 150, "Credits");
 
 	int ypos = 110;
 
@@ -233,29 +233,29 @@ Credits ()
 
 	setfontsize (14);
 
-	DrawText (-1, ypos += 18, (char*)"Official Site: http://code.google.com/p/vba-wii/");
+	DrawText (-1, ypos += 18, "Official Site: http://code.google.com/p/vba-wii/");
 
-	DrawText (90, ypos += 36, (char*)"Visual Boy Advance GX");
-	DrawText (380, ypos, (char*)"Tantric");
-	DrawText (90, ypos += 18, (char*)"GameCube/Wii Port Improvements");
-	DrawText (380, ypos, (char*)"emukidid");
-	DrawText (90, ypos += 18, (char*)"Original GameCube Port");
-	DrawText (380, ypos, (char*)"SoftDev");
-	DrawText (90, ypos += 18, (char*)"Visual Boy Advance - M");
-	DrawText (380, ypos, (char*)"VBA-M Team");
-	DrawText (90, ypos += 18, (char*)"Visual Boy Advance 1.7.2");
-	DrawText (380, ypos, (char*)"Forgotten");
-	DrawText (90, ypos += 18, (char*)"libogc");
-	DrawText (380, ypos, (char*)"Shagkur & wintermute");
-	DrawText (90, ypos += 18, (char*)"Testing");
-	DrawText (380, ypos, (char*)"tehskeen users");
+	DrawText (90, ypos += 36, "Visual Boy Advance GX");
+	DrawText (380, ypos, "Tantric");
+	DrawText (90, ypos += 18, "GameCube/Wii Port Improvements");
+	DrawText (380, ypos, "emukidid");
+	DrawText (90, ypos += 18, "Original GameCube Port");
+	DrawText (380, ypos, "SoftDev");
+	DrawText (90, ypos += 18, "Visual Boy Advance - M");
+	DrawText (380, ypos, "VBA-M Team");
+	DrawText (90, ypos += 18, "Visual Boy Advance 1.7.2");
+	DrawText (380, ypos, "Forgotten");
+	DrawText (90, ypos += 18, "libogc");
+	DrawText (380, ypos, "Shagkur & wintermute");
+	DrawText (90, ypos += 18, "Testing");
+	DrawText (380, ypos, "tehskeen users");
 
-	DrawText (-1, ypos += 36, (char*)"And many others who have contributed over the years!");
+	DrawText (-1, ypos += 36, "And many others who have contributed over the years!");
 
 	setfontsize (12);
-	DrawText (-1, ypos += 30, (char*)"This software is open source and may be copied,");
-	DrawText (-1, ypos += 15, (char*)"distributed, or modified under the terms of");
-	DrawText (-1, ypos += 15, (char*)"the GNU General Public License (GPL) Version 2.");
+	DrawText (-1, ypos += 30, "This software is open source and may be copied,");
+	DrawText (-1, ypos += 15, "distributed, or modified under the terms of");
+	DrawText (-1, ypos += 15, "the GNU General Public License (GPL) Version 2.");
 
 	DrawVersion();
 	showscreen ();
@@ -353,7 +353,7 @@ WaitButtonAB ()
  * Show a prompt
  ***************************************************************************/
 void
-WaitPrompt (char *msg)
+WaitPrompt (const char *msg)
 {
 	int ypos = (screenheight - 64) >> 1;
 
@@ -366,7 +366,7 @@ WaitPrompt (char *msg)
 	setfontsize(16);
 	DrawText (-1, ypos, msg);
 	ypos += 30;
-	DrawText (-1, ypos, (char*)"Press A to continue");
+	DrawText (-1, ypos, "Press A to continue");
 
 	DrawVersion();
 	showscreen ();
@@ -378,7 +378,7 @@ WaitPrompt (char *msg)
    and 0 if B button was pressed.
  ***************************************************************************/
 int
-WaitPromptChoice (char *msg, char *bmsg, char *amsg)
+WaitPromptChoice (const char *msg, const char *bmsg, const char *amsg)
 {
 	int ypos = (screenheight - 64) >> 1;
 
@@ -404,7 +404,7 @@ WaitPromptChoice (char *msg, char *bmsg, char *amsg)
  * Show an action in progress
  ***************************************************************************/
 void
-ShowAction (char *msg)
+ShowAction (const char *msg)
 {
 	int ypos = (screenheight - 30) >> 1;
 
@@ -425,7 +425,7 @@ ShowAction (char *msg)
  * Generic Menu Routines
  ***************************************************************************/
 void
-DrawMenu (char items[][50], char *title, int maxitems, int selected, int fontsize, int x)
+DrawMenu (char items[][50], const char *title, int maxitems, int selected, int fontsize, int x)
 {
 	int i, w = 0;
 	int ypos = 0;
@@ -513,7 +513,7 @@ int FindMenuItem(char items[][50], int maxitems, int currentItem, int direction)
 int menu = 0;
 
 int
-RunMenu (char items[][50], int maxitems, char *title, int fontsize, int x)
+RunMenu (char items[][50], int maxitems, const char *title, int fontsize, int x)
 {
     int redraw = 1;
     int quit = 0;
@@ -606,7 +606,7 @@ ShowFiles (FILEENTRIES filelist[], int maxfiles, int offset, int selection)
 	clearscreen ();
 
 	setfontsize (26);
-	DrawText (-1, 150, (char*)"Choose Game");
+	DrawText (-1, 150, "Choose Game");
 
 	setfontsize(18);
 
@@ -667,7 +667,7 @@ ShowCheats (char items[][50], char itemvalues[][50], int maxitems, int offset, i
 	clearscreen ();
 
 	setfontsize (26);
-	DrawText (-1, 150, (char*)"Cheats");
+	DrawText (-1, 150, "Cheats");
 
 	setfontsize(18);
 
@@ -794,7 +794,7 @@ DrawLine (int x1, int y1, int x2, int y2, u8 r, u8 g, u8 b)
  * Show the user what's happening
  ***************************************************************************/
 void
-ShowProgress (char *msg, int done, int total)
+ShowProgress (const char *msg, int done, int total)
 {
 	if(total <= 0) // division by 0 is bad!
 		return;

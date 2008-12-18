@@ -76,9 +76,9 @@ bool TestCard(int slot, bool silent)
 		if(!silent)
 		{
 			if (slot == CARD_SLOTA)
-				WaitPrompt((char*) "Mounted Slot A Memory Card!");
+				WaitPrompt("Mounted Slot A Memory Card!");
 			else
-				WaitPrompt((char*) "Mounted Slot B Memory Card!");
+				WaitPrompt("Mounted Slot B Memory Card!");
 		}
 		CARD_Unmount (slot);
 		return true;
@@ -88,9 +88,9 @@ bool TestCard(int slot, bool silent)
 		if(!silent)
 		{
 			if (slot == CARD_SLOTA)
-				WaitPrompt((char*) "Unable to Mount Slot A Memory Card!");
+				WaitPrompt("Unable to Mount Slot A Memory Card!");
 			else
-				WaitPrompt((char*) "Unable to Mount Slot B Memory Card!");
+				WaitPrompt("Unable to Mount Slot B Memory Card!");
 		}
 
 		return false;
@@ -148,7 +148,7 @@ VerifyMCFile (char *buf, int slot, char *filename, int datasize)
 		if (!CardFileExists (filename, slot))
 		{
             CARD_Unmount (slot);
-		    WaitPrompt((char*) "Unable to open file for verify!");
+		    WaitPrompt("Unable to open file for verify!");
 			return 0;
 		}
 
@@ -176,7 +176,7 @@ VerifyMCFile (char *buf, int slot, char *filename, int datasize)
             {
                 CARD_Close (&CardFile);
                 CARD_Unmount (slot);
-                WaitPrompt((char*) "File did not verify!");
+                WaitPrompt("File did not verify!");
                 return 0;
             }
 
@@ -193,9 +193,9 @@ VerifyMCFile (char *buf, int slot, char *filename, int datasize)
 	}
 	else
 		if (slot == CARD_SLOTA)
-			WaitPrompt((char*) "Unable to Mount Slot A Memory Card!");
+			WaitPrompt("Unable to Mount Slot A Memory Card!");
 		else
-			WaitPrompt((char*) "Unable to Mount Slot B Memory Card!");
+			WaitPrompt("Unable to Mount Slot B Memory Card!");
 
 	return 0;
 }
@@ -228,7 +228,7 @@ LoadMCFile (char *buf, int slot, char *filename, bool silent)
 		if (!CardFileExists (filename, slot))
 		{
 			if (!silent)
-				WaitPrompt((char*) "Unable to open file");
+				WaitPrompt("Unable to open file");
 			return 0;
 		}
 
@@ -258,9 +258,9 @@ LoadMCFile (char *buf, int slot, char *filename, bool silent)
 	}
 	else
 		if (slot == CARD_SLOTA)
-			WaitPrompt((char*) "Unable to Mount Slot A Memory Card!");
+			WaitPrompt("Unable to Mount Slot A Memory Card!");
 		else
-			WaitPrompt((char*) "Unable to Mount Slot B Memory Card!");
+			WaitPrompt("Unable to Mount Slot B Memory Card!");
 
 	return bytesread;
 }
@@ -305,7 +305,7 @@ SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
 				if (CardError)
 				{
                     CARD_Unmount (slot);
-					WaitPrompt((char*) "Unable to open card file!");
+					WaitPrompt("Unable to open card file!");
 					return 0;
 				}
 
@@ -318,7 +318,7 @@ SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
                     if (CardError)
                     {
                         CARD_Unmount (slot);
-                        WaitPrompt((char*) "Not enough space to update file!");
+                        WaitPrompt("Not enough space to update file!");
                         return 0;
                     }
 
@@ -328,7 +328,7 @@ SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
                     if (CardError)
                     {
                         CARD_Unmount (slot);
-                        WaitPrompt((char*) "Unable to delete temporary file!");
+                        WaitPrompt("Unable to delete temporary file!");
                         return 0;
                     }
 
@@ -337,7 +337,7 @@ SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
                     if (CardError)
                     {
                         CARD_Unmount (slot);
-                        WaitPrompt((char*) "Unable to delete existing file!");
+                        WaitPrompt("Unable to delete existing file!");
                         return 0;
                     }
 
@@ -346,7 +346,7 @@ SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
                     if (CardError)
                     {
                         CARD_Unmount (slot);
-                        WaitPrompt((char*) "Unable to create updated card file!");
+                        WaitPrompt("Unable to create updated card file!");
                         return 0;
                     }
 				}
@@ -359,9 +359,9 @@ SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
                 {
                     CARD_Unmount (slot);
                     if ( CardError == CARD_ERROR_INSSPACE )
-                        WaitPrompt((char*) "Not enough space to create file!");
+                        WaitPrompt("Not enough space to create file!");
                     else
-                        WaitPrompt((char*) "Unable to create card file!");
+                        WaitPrompt("Unable to create card file!");
                     return 0;
                 }
             }
@@ -405,13 +405,13 @@ SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
 		}
 		else
 			if ( !silent )
-				WaitPrompt((char*) "This game does not appear to use SRAM");
+				WaitPrompt("This game does not appear to use SRAM");
 	}
 	else
 		if (slot == CARD_SLOTA)
-			WaitPrompt((char*) "Unable to Mount Slot A Memory Card!");
+			WaitPrompt("Unable to Mount Slot A Memory Card!");
 		else
-			WaitPrompt((char*) "Unable to Mount Slot B Memory Card!");
+			WaitPrompt("Unable to Mount Slot B Memory Card!");
 
 	return 0;
 
