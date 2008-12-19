@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "vba.h"
+#include "input.h"
 
 struct SGCSettings GCSettings;
 
