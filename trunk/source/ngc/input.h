@@ -22,6 +22,7 @@ extern unsigned int wmpadmap[];
 extern unsigned int ccpadmap[];
 extern unsigned int ncpadmap[];
 
+void ResetControls();
 s8 WPAD_Stick(u8 chan,u8 right, int axis);
 
 u32 GetJoy(int which);

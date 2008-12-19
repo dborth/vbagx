@@ -37,48 +37,83 @@
 #define VBA_SPEED			1024
 #define VBA_CAPTURE			2048
 
-// VBA controller buttons
-// All other pads are mapped to this
-unsigned int vbapadmap[] = {
-	VBA_BUTTON_B, VBA_BUTTON_A,
-	VBA_BUTTON_SELECT, VBA_BUTTON_START,
-	VBA_UP, VBA_DOWN,
-	VBA_LEFT, VBA_RIGHT,
-	VBA_BUTTON_L, VBA_BUTTON_R
-};
 
-/*** Gamecube controller Padmap ***/
-unsigned int gcpadmap[] = {
-  PAD_BUTTON_B, PAD_BUTTON_A,
-  PAD_TRIGGER_Z, PAD_BUTTON_START,
-  PAD_BUTTON_UP, PAD_BUTTON_DOWN,
-  PAD_BUTTON_LEFT, PAD_BUTTON_RIGHT,
-  PAD_TRIGGER_L, PAD_TRIGGER_R
-};
-/*** Wiimote Padmap ***/
-unsigned int wmpadmap[] = {
-  WPAD_BUTTON_1, WPAD_BUTTON_2,
-  WPAD_BUTTON_MINUS, WPAD_BUTTON_PLUS,
-  WPAD_BUTTON_RIGHT, WPAD_BUTTON_LEFT,
-  WPAD_BUTTON_UP, WPAD_BUTTON_DOWN,
-  WPAD_BUTTON_B, WPAD_BUTTON_A
-};
-/*** Classic Controller Padmap ***/
-unsigned int ccpadmap[] = {
-  WPAD_CLASSIC_BUTTON_Y, WPAD_CLASSIC_BUTTON_B,
-  WPAD_CLASSIC_BUTTON_MINUS, WPAD_CLASSIC_BUTTON_PLUS,
-  WPAD_CLASSIC_BUTTON_UP, WPAD_CLASSIC_BUTTON_DOWN,
-  WPAD_CLASSIC_BUTTON_LEFT, WPAD_CLASSIC_BUTTON_RIGHT,
-  WPAD_CLASSIC_BUTTON_FULL_L, WPAD_CLASSIC_BUTTON_FULL_R
-};
-/*** Nunchuk + wiimote Padmap ***/
-unsigned int ncpadmap[] = {
-  WPAD_NUNCHUK_BUTTON_C, WPAD_NUNCHUK_BUTTON_Z,
-  WPAD_BUTTON_MINUS, WPAD_BUTTON_PLUS,
-  WPAD_BUTTON_UP, WPAD_BUTTON_DOWN,
-  WPAD_BUTTON_LEFT, WPAD_BUTTON_RIGHT,
-  WPAD_BUTTON_2, WPAD_BUTTON_1
-};
+unsigned int vbapadmap[10]; // VBA controller buttons
+unsigned int gcpadmap[10]; // Gamecube controller Padmap
+unsigned int wmpadmap[10]; // Wiimote Padmap
+unsigned int ccpadmap[10]; // Classic Controller Padmap
+unsigned int ncpadmap[10]; // Nunchuk + wiimote Padmap
+
+void ResetControls()
+{
+	int i = 0;
+
+	// VBA controller buttons
+	// All other pads are mapped to this
+	i=0;
+	vbapadmap[i++] = VBA_BUTTON_B;
+	vbapadmap[i++] = VBA_BUTTON_A;
+	vbapadmap[i++] = VBA_BUTTON_SELECT;
+	vbapadmap[i++] = VBA_BUTTON_START;
+	vbapadmap[i++] = VBA_UP;
+	vbapadmap[i++] = VBA_DOWN;
+	vbapadmap[i++] = VBA_LEFT;
+	vbapadmap[i++] = VBA_RIGHT;
+	vbapadmap[i++] = VBA_BUTTON_L;
+	vbapadmap[i++] = VBA_BUTTON_R;
+
+	/*** Gamecube controller Padmap ***/
+	i=0;
+	gcpadmap[i++] = PAD_BUTTON_B;
+	gcpadmap[i++] = PAD_BUTTON_A;
+	gcpadmap[i++] = PAD_TRIGGER_Z;
+	gcpadmap[i++] = PAD_BUTTON_START;
+	gcpadmap[i++] = PAD_BUTTON_UP;
+	gcpadmap[i++] = PAD_BUTTON_DOWN;
+	gcpadmap[i++] = PAD_BUTTON_LEFT;
+	gcpadmap[i++] = PAD_BUTTON_RIGHT;
+	gcpadmap[i++] = PAD_TRIGGER_L;
+	gcpadmap[i++] = PAD_TRIGGER_R;
+
+	/*** Wiimote Padmap ***/
+	i=0;
+	wmpadmap[i++] = WPAD_BUTTON_1;
+	wmpadmap[i++] = WPAD_BUTTON_2;
+	wmpadmap[i++] = WPAD_BUTTON_MINUS;
+	wmpadmap[i++] = WPAD_BUTTON_PLUS;
+	wmpadmap[i++] = WPAD_BUTTON_RIGHT;
+	wmpadmap[i++] = WPAD_BUTTON_LEFT;
+	wmpadmap[i++] = WPAD_BUTTON_UP;
+	wmpadmap[i++] = WPAD_BUTTON_DOWN;
+	wmpadmap[i++] = WPAD_BUTTON_B;
+	wmpadmap[i++] = WPAD_BUTTON_A;
+
+	/*** Classic Controller Padmap ***/
+	i=0;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_Y;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_B;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_MINUS;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_PLUS;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_UP;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_DOWN;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_LEFT;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_RIGHT;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_FULL_L;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_FULL_R;
+
+	/*** Nunchuk + wiimote Padmap ***/
+	i=0;
+	ncpadmap[i++] = WPAD_NUNCHUK_BUTTON_C;
+	ncpadmap[i++] = WPAD_NUNCHUK_BUTTON_Z;
+	ncpadmap[i++] = WPAD_BUTTON_MINUS;
+	ncpadmap[i++] = WPAD_BUTTON_PLUS;
+	ncpadmap[i++] = WPAD_BUTTON_UP;
+	ncpadmap[i++] = WPAD_BUTTON_DOWN;
+	ncpadmap[i++] = WPAD_BUTTON_LEFT;
+	ncpadmap[i++] = WPAD_BUTTON_RIGHT;
+	ncpadmap[i++] = WPAD_BUTTON_2;
+	ncpadmap[i++] = WPAD_BUTTON_1;
+}
 
 /****************************************************************************
  * WPAD_Stick
