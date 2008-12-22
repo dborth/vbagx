@@ -261,7 +261,7 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 	int offset = 0;
 
 	if(method == METHOD_AUTO)
-		method = autoSaveMethod(); // we use 'Save' because we need R/W
+		method = autoSaveMethod(silent); // we use 'Save' because we need R/W
 
 	if(!MakeFilePath(filepath, action, method))
 		return false;
@@ -336,7 +336,7 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 	int datasize = 0; // we need the actual size of the data written
 
 	if(method == METHOD_AUTO)
-		method = autoSaveMethod();
+		method = autoSaveMethod(silent);
 
 	if(!MakeFilePath(filepath, action, method))
 		return false;
@@ -349,6 +349,7 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
 	{
 		char savecomment[2][32];
+		memset(savecomment, 0, 64);
 		char savetype[10];
 
 		offset = sizeof (saveicon);
