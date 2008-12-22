@@ -167,17 +167,18 @@ int main(int argc, char *argv[])
 	DI_Init();	// first
 	#endif
 
+	InitDeviceThread();
+
 	// Initialise controllers
+	PAD_Init ();
+
 	#ifdef HW_RVL
 	WPAD_Init();
 	// read wiimote accelerometer and IR data
 	WPAD_SetDataFormat(WPAD_CHAN_ALL,WPAD_FMT_BTNS_ACC_IR);
 	WPAD_SetVRes(WPAD_CHAN_ALL,640,480);
-	#endif
-	PAD_Init ();
 
 	// Wii Power/Reset buttons
-	#ifdef HW_RVL
 	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
 	SYS_SetPowerCallback(ShutdownCB);
 	SYS_SetResetCallback(ResetCB);
@@ -197,7 +198,6 @@ int main(int argc, char *argv[])
 
 	// Initialize libFAT for SD and USB
 	MountAllFAT();
-	InitDeviceThread();
 
 	// Initialize DVD subsystem (GameCube only)
 	#ifdef HW_DOL
