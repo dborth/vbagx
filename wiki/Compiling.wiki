@@ -9,9 +9,9 @@ Here's some basic instructions on compiling VBAGX. You don't need to be a progra
 
 = Instructions =
 
-  # Download the source either from the [http://code.google.com/p/vba-wii/downloads/list Downloads] page, or the latest directly from SVN.
-  # Download and install [http://www.devkitpro.org devkitPro]. You only need to install devkitPPC.
-  # Download the [http://code.google.com/p/vba-wii/downloads/list VBAGX devkitPro libraries] from the Downloads page, and overwrite the libraries in your devkitPro installation folder.
-  # Run Programmer's Notepad (installed with devkitPro)
-  # Find the Makefile from the source you downloaded. Click Tools > Make.
-  # You're done!
+ # Download the source either from the [http://code.google.com/p/vba-wii/downloads/list Downloads] page, or the latest directly from SVN.
+ # Download and install [http://www.devkitpro.org devkitPro]. You only need to install devkitPPC.
+ # Download the [http://code.google.com/p/vba-wii/downloads/list VBAGX devkitPro libraries] from the Downloads page, and overwrite the libraries in your devkitPro installation folder.
+ # Run Programmer's Notepad (installed with devkitPro)
+ # Find the Makefile from the source you downloaded. Click Tools > Make.
+ # You're done!
