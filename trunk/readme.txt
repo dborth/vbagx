@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 1.0.5
+                                  Version 1.0.6
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -25,6 +25,16 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[What's New 1.0.6 - December 24, 2008]
+* Fixed save state saving bug
+* Fixed unstable SD card access
+* Proper SD/USB hotswap (Wii only)
+* Auto-update feature (Wii only)
+* Rewritten SMB access - speed boost, NTLM now supported (Wii only)
+* Improved file access code
+* Resetting preferences now resets controls
+* Minor bug fixes
 
 [What's New 1.0.5 - November 19, 2008]
 * SDHC works now
