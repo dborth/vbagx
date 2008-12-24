@@ -27,7 +27,7 @@ extern "C" {
 #include "preferences.h"
 #include "audio.h"
 #include "dvd.h"
-#include "smbop.h"
+#include "networkop.h"
 #include "fileop.h"
 #include "menu.h"
 #include "menudraw.h"
@@ -48,6 +48,7 @@ char appPath[1024];
 
 void ExitCleanup()
 {
+	LWP_SuspendThread (devicethread);
 	UnmountAllFAT();
 	CloseShare();
 

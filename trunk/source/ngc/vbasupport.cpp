@@ -31,7 +31,6 @@
 #include "vba.h"
 #include "fileop.h"
 #include "dvd.h"
-#include "smbop.h"
 #include "memcardop.h"
 #include "audio.h"
 #include "vmmem.h"
@@ -363,7 +362,7 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 		else
 			sprintf(savetype, "Freeze");
 
-		sprintf (savecomment[0], "%s %s", VERSIONSTR, savetype);
+		sprintf (savecomment[0], "%s %s", APPNAME, savetype);
 		strncpy(savecomment[1], ROMFilename, 31); // truncate filename to 31 chars
 		savecomment[1][31] = 0; // make sure last char is null byte
 		memcpy (savebuffer + offset, savecomment, 64);

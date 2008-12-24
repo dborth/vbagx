@@ -21,7 +21,7 @@ extern "C" {
 }
 
 #include "dvd.h"
-#include "smbop.h"
+#include "networkop.h"
 #include "fileop.h"
 #include "video.h"
 #include "menudraw.h"

@@ -18,8 +18,9 @@ include $(DEVKITPPC)/wii_rules
 TARGET		:=	vbagx_wii
 TARGETDIR   :=  executables
 BUILD		:=	build_wii
-SOURCES		:=	source/vba source/vba/agb source/vba/dmg source/vba/dmg/gb_apu source/ngc source/sz
-INCLUDES 	:=  source/vba source/ngc
+SOURCES		:=	source/vba source/vba/agb source/vba/dmg source/vba/dmg/gb_apu \
+				source/ngc source/sz source/unzip
+INCLUDES 	:=  source/vba source/ngc source/unzip
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -102,7 +103,6 @@ $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@[ -d $(TARGETDIR) ] || mkdir -p $(TARGETDIR)
 	@make --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.wii
-	@rm -fr $(OUTPUT).elf
 
 #---------------------------------------------------------------------------------
 clean:

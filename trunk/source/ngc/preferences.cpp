@@ -19,7 +19,6 @@
 #include "menudraw.h"
 #include "memcardop.h"
 #include "fileop.h"
-#include "smbop.h"
 #include "filesel.h"
 #include "input.h"
 
@@ -124,7 +123,7 @@ preparePrefsData (int method)
 
 		// And the comments
 		memset(prefscomment, 0, 64);
-		sprintf (prefscomment[0], "%s Prefs", VERSIONSTR);
+		sprintf (prefscomment[0], "%s Prefs", APPNAME);
 		sprintf (prefscomment[1], "Preferences");
 		memcpy (savebuffer + offset, prefscomment, 64);
 		offset += 64;
@@ -134,7 +133,8 @@ preparePrefsData (int method)
 	mxmlSetWrapMargin(0); // disable line wrapping
 
 	data = mxmlNewElement(xml, "file");
-	mxmlElementSetAttr(data, "version",VERSIONSTR);
+	mxmlElementSetAttr(data, "app",APPNAME);
+	mxmlElementSetAttr(data, "version",APPVERSION);
 
 	createXMLSection("File", "File Settings");
 
@@ -182,11 +182,11 @@ preparePrefsData (int method)
  * Load XML elements into variables for an individual variable
  ***************************************************************************/
 
-void loadXMLSetting(char * var, const char * name)
+void loadXMLSetting(char * var, const char * name, int maxsize)
 {
 	item = mxmlFindElement(xml, xml, "setting", "name", name, MXML_DESCEND);
 	if(item)
-		sprintf(var, "%s", mxmlElementGetAttr(item, "value"));
+		snprintf(var, maxsize, "%s", mxmlElementGetAttr(item, "value"));
 }
 void loadXMLSetting(int * var, const char * name)
 {
@@ -259,13 +259,22 @@ decodePrefsData (int method)
 
 	// this code assumes version in format X.X.X
 	// XX.X.X, X.XX.X, or X.X.XX will NOT work
-	char verMajor = version[7];
-	char verMinor = version[9];
-	char verPoint = version[11];
+	int verMajor = version[0] - '0';
+	int verMinor = version[2] - '0';
+	int verPoint = version[4] - '0';
+	int curMajor = APPVERSION[0] - '0';
+	int curMinor = APPVERSION[2] - '0';
+	int curPoint = APPVERSION[4] - '0';
 
-	if(verPoint < '4' && verMajor == '1') // less than version 1.0.4
+	// first we'll check that the versioning is valid
+	if(!(verMajor >= 0 && verMajor <= 9 &&
+		verMinor >= 0 && verMinor <= 9 &&
+		verPoint >= 0 && verPoint <= 9))
+		return false;
+
+	if(verPoint < 4 && verMajor == 1) // less than version 1.0.4
 		return false; // reset settings
-	else if(verMajor > '1' || verMinor > '0' || verPoint > '5') // some future version
+	else if(verMajor > curMajor || verMinor > curMinor || verPoint > curPoint) // some future version
 		return false; // reset settings
 
 	// File Settings
@@ -274,17 +283,17 @@ decodePrefsData (int method)
 	loadXMLSetting(&GCSettings.AutoSave, "AutoSave");
 	loadXMLSetting(&GCSettings.LoadMethod, "LoadMethod");
 	loadXMLSetting(&GCSettings.SaveMethod, "SaveMethod");
-	loadXMLSetting(GCSettings.LoadFolder, "LoadFolder");
-	loadXMLSetting(GCSettings.SaveFolder, "SaveFolder");
-	//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder");
+	loadXMLSetting(GCSettings.LoadFolder, "LoadFolder", sizeof(GCSettings.LoadFolder));
+	loadXMLSetting(GCSettings.SaveFolder, "SaveFolder", sizeof(GCSettings.SaveFolder));
+	//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder", sizeof(GCSettings.CheatFolder));
 	loadXMLSetting(&GCSettings.VerifySaves, "VerifySaves");
 
 	// Network Settings
 
-	loadXMLSetting(GCSettings.smbip, "smbip");
-	loadXMLSetting(GCSettings.smbshare, "smbshare");
-	loadXMLSetting(GCSettings.smbuser, "smbuser");
-	loadXMLSetting(GCSettings.smbpwd, "smbpwd");
+	loadXMLSetting(GCSettings.smbip, "smbip", sizeof(GCSettings.smbip));
+	loadXMLSetting(GCSettings.smbshare, "smbshare", sizeof(GCSettings.smbshare));
+	loadXMLSetting(GCSettings.smbuser, "smbuser", sizeof(GCSettings.smbuser));
+	loadXMLSetting(GCSettings.smbpwd, "smbpwd", sizeof(GCSettings.smbpwd));
 
 	// Emulation Settings
 

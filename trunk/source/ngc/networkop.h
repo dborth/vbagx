@@ -1,18 +1,22 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric September 2008
+ * Tantric December 2008
  *
- * smbload.h
+ * networkop.h
  *
- * SMB support routines
+ * Network and SMB support routines
  ****************************************************************************/
 
-#ifndef _NGCSMB_
-#define _NGCSMB_
+#ifndef _NETWORKOP_H_
+#define _NETWORKOP_H_
 
+void UpdateCheck();
+bool DownloadUpdate();
 void InitializeNetwork(bool silent);
 bool ConnectShare (bool silent);
 void CloseShare();
+
+extern bool updateFound;
 
 #endif
