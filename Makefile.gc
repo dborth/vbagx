@@ -18,8 +18,9 @@ include $(DEVKITPPC)/gamecube_rules
 TARGET		:=	vbagx_gc
 TARGETDIR   :=  executables
 BUILD		:=	build_gc
-SOURCES		:=	source/vba source/vba/agb source/vba/dmg source/vba/dmg/gb_apu source/ngc source/sz
-INCLUDES 	:=  source/vba source/ngc
+SOURCES		:=	source/vba source/vba/agb source/vba/dmg source/vba/dmg/gb_apu \
+				source/ngc source/sz source/unzip
+INCLUDES 	:=  source/vba source/ngc source/unzip
 
 #---------------------------------------------------------------------------------
 # options for code generation

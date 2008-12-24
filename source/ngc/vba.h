@@ -10,10 +10,8 @@
 #ifndef _VBAGX_H_
 #define _VBAGX_H_
 
-#include <gccore.h>
-#define VERSIONNUM 		"1.0.5"
-#define VERSIONSTR 		"VBA GX 1.0.5"
-#define VERSIONSTRFULL 	"Visual Boy Advance GX 1.0.5"
+#define APPNAME 		"Visual Boy Advance GX"
+#define APPVERSION 		"1.0.6"
 #define PREF_FILE_NAME 	"settings.xml"
 
 #define NOTSILENT 0

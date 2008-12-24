@@ -21,7 +21,6 @@
 #include "Port.h"
 
 #include "vba.h"
-#include "smbop.h"
 #include "fileop.h"
 #include "dvd.h"
 #include "menudraw.h"

@@ -27,7 +27,7 @@ extern "C" {
 #include "video.h"
 #include "filesel.h"
 #include "gcunzip.h"
-#include "smbop.h"
+#include "networkop.h"
 #include "memcardop.h"
 #include "fileop.h"
 #include "dvd.h"

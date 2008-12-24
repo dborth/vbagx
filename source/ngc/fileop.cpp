@@ -23,7 +23,7 @@
 #include "vba.h"
 #include "vbasupport.h"
 #include "fileop.h"
-#include "smbop.h"
+#include "networkop.h"
 #include "dvd.h"
 #include "memcardop.h"
 #include "gcunzip.h"
@@ -81,6 +81,7 @@ devicecallback (void *arg)
 		}
 
 		InitializeNetwork(SILENT);
+		UpdateCheck();
 #else
 		if(isMounted[METHOD_SD_SLOTA])
 		{
@@ -124,11 +125,11 @@ InitDeviceThread()
 void UnmountAllFAT()
 {
 #ifdef HW_RVL
-	fatUnmount("sd");
-	fatUnmount("usb");
+	fatUnmount("sd:/");
+	fatUnmount("usb:/");
 #else
-	fatUnmount("carda");
-	fatUnmount("cardb");
+	fatUnmount("carda:/");
+	fatUnmount("cardb:/");
 #endif
 }
 
@@ -177,7 +178,7 @@ bool MountFAT(int method)
 	if(unmountRequired[method])
 	{
 		unmountRequired[method] = false;
-		fatUnmount(name);
+		fatUnmount(rootdir);
 		disc->shutdown();
 	}
 	if(!isMounted[method])
