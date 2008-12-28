@@ -294,6 +294,9 @@ int VMCPULoadROM(int method)
 
 	GBAROMSize = 0;
 
+	if(!ChangeInterface(method, NOTSILENT))
+		return 0;
+
 	switch (method)
 	{
 		case METHOD_SD:
@@ -311,17 +314,16 @@ int VMCPULoadROM(int method)
 		break;
 	}
 
-	/* Check filename length */
-	if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
-		sprintf(filepath, "%s/%s",currentdir,filelist[selection].filename);
-	else
-	{
-		WaitPrompt("Maximum filepath length reached!");
-		return -1;
-	}
+	if(!MakeFilePath(filepath, FILE_ROM, method))
+		return false;
 
-	romfile = fopen(filepath, "rb");
-	if ( romfile == NULL )
+	// add device to filepath
+	char fullpath[1024];
+	sprintf(fullpath, "%s%s", rootdir, filepath);
+
+	romfile = fopen(fullpath, "rb");
+
+	if (romfile == NULL)
 	{
 		WaitPrompt("Error opening file!");
 		VMClose();
