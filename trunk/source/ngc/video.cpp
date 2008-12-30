@@ -25,7 +25,7 @@ u32 FrameTimer = 0;
 
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
-GXRModeObj *vmode = NULL; // Graphics Mode Object
+static GXRModeObj *vmode = NULL; // Graphics Mode Object
 unsigned int *xfb[2]; // Framebuffers
 int whichfb = 0; // Frame buffer toggle
 
@@ -34,17 +34,17 @@ int screenheight;
 /*** 3D GX ***/
 #define DEFAULT_FIFO_SIZE ( 256 * 1024 )
 static u8 gp_fifo[DEFAULT_FIFO_SIZE] ATTRIBUTE_ALIGN(32);
-unsigned int copynow = GX_FALSE;
+static unsigned int copynow = GX_FALSE;
 
 /*** Texture memory ***/
 static u8 *texturemem = NULL;
 static int texturesize;
 
-GXTexObj texobj;
+static GXTexObj texobj;
 static Mtx view;
 static int vwidth, vheight;
 static int video_vaspect, video_haspect;
-int updateScaling;
+static int updateScaling;
 bool progressive = false;
 
 /* New texture based scaler */
@@ -214,9 +214,9 @@ static void draw_square(Mtx v)
 /****************************************************************************
  * StartGX
  ****************************************************************************/
-void GX_Start()
+static void GX_Start()
 {
-	Mtx p;
+	Mtx44 p;
 
 	GXColor background = { 0, 0, 0, 0xff };
 
@@ -253,7 +253,7 @@ void GX_Start()
  *
  * called by postRetraceCallback in InitGCVideo - scans gcpad and wpad
  ***************************************************************************/
-void
+static void
 UpdatePadsCB ()
 {
 #ifdef HW_RVL
@@ -345,7 +345,7 @@ void InitialiseVideo ()
 	InitVideoThread ();
 }
 
-void UpdateScaling()
+static void UpdateScaling()
 {
 	int xscale;
 	int yscale;
@@ -395,7 +395,7 @@ void
 ResetVideo_Emu ()
 {
 	GXRModeObj *rmode;
-	Mtx p;
+	Mtx44 p;
 
 	rmode = vmode; // same mode as menu
 
@@ -448,7 +448,7 @@ ResetVideo_Emu ()
 void
 ResetVideo_Menu ()
 {
-	Mtx p;
+	Mtx44 p;
 
 	VIDEO_Configure (vmode);
 	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
