@@ -31,7 +31,7 @@ void WaitButtonA ();
 int RunMenu (char items[][50], int maxitems, const char *title, int fontsize = 20, int x = -1);
 void DrawMenu (char items[][50], const char *title, int maxitems, int selected, int fontsize = 20, int x = -1);
 void ShowCheats (char items[][50], char itemvalues[][50], int maxitems, int offset, int selection);
-void ShowFiles (FILEENTRIES filelist[], int maxfiles, int offset, int selection);
+void ShowFiles (BROWSERENTRY * browserList, int maxfiles, int offset, int selection);
 
 void WaitPrompt (const char *msg);
 int WaitPromptChoice (const char *msg, const char* bmsg, const char* amsg);

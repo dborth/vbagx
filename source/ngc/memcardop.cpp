@@ -20,15 +20,7 @@
 #include "menudraw.h"
 #include "menu.h"
 #include "preferences.h"
-#include "memcardop.h"
 #include "fileop.h"
-
-#define VERIFBUFFERSIZE 65536
-static u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
-unsigned char verifbuffer[VERIFBUFFERSIZE] ATTRIBUTE_ALIGN (32);
-card_dir CardDir;
-card_file CardFile;
-card_stat CardStatus;
 
 /****************************************************************************
  * CardFileExists
@@ -36,9 +28,10 @@ card_stat CardStatus;
  * Wrapper to search through the files on the card.
  * Returns TRUE if found.
  ***************************************************************************/
-int
+static int
 CardFileExists (char *filename, int slot)
 {
+	card_dir CardDir;
 	int CardError;
 
 	CardError = CARD_FindFirst (slot, &CardDir, TRUE);
@@ -54,6 +47,28 @@ CardFileExists (char *filename, int slot)
 }
 
 /****************************************************************************
+ * MountCard
+ *
+ * Mounts the memory card in the given slot.
+ * Returns the result of the last attempted CARD_Mount command.
+ ***************************************************************************/
+static int MountCard(int cslot, bool silent, u8 * SysArea)
+{
+	int ret = -1;
+	int tries = 0;
+
+	// Mount the card
+	while ( tries < 10 && ret != 0)
+	{
+		EXI_ProbeReset ();
+		ret = CARD_Mount (cslot, &SysArea, NULL);
+		VIDEO_WaitVSync ();
+		tries++;
+	}
+	return ret;
+}
+
+/****************************************************************************
  * TestCard
  *
  * Checks to see if a card is in the card slot specified
@@ -66,11 +81,12 @@ bool TestCard(int slot, bool silent)
 	#endif
 
 	/*** Initialize Card System ***/
+	u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
 	memset (SysArea, 0, CARD_WORKAREA);
 	CARD_Init ("VBA0", "00");
 
 	/*** Try to mount the card ***/
-	if (MountCard(slot, silent) == 0)
+	if (MountCard(slot, silent, (u8 *)SysArea) == 0)
 	{
 		// Mount successful!
 		if(!silent)
@@ -98,34 +114,13 @@ bool TestCard(int slot, bool silent)
 }
 
 /****************************************************************************
- * MountCard
- *
- * Mounts the memory card in the given slot.
- * Returns the result of the last attempted CARD_Mount command.
- ***************************************************************************/
-int MountCard(int cslot, bool silent)
-{
-	int ret = -1;
-	int tries = 0;
-
-	// Mount the card
-	while ( tries < 10 && ret != 0)
-	{
-		EXI_ProbeReset ();
-		ret = CARD_Mount (cslot, SysArea, NULL);
-		VIDEO_WaitVSync ();
-		tries++;
-	}
-	return ret;
-}
-
-
-/****************************************************************************
  * Verify Memory Card file against buffer
  ***************************************************************************/
-int
+static int
 VerifyMCFile (char *buf, int slot, char *filename, int datasize)
 {
+	card_file CardFile;
+	unsigned char verifbuffer[65536] ATTRIBUTE_ALIGN (32);
 	int CardError;
 	unsigned int blocks;
 	unsigned int SectorSize;
@@ -134,11 +129,12 @@ VerifyMCFile (char *buf, int slot, char *filename, int datasize)
     int bytesread = 0;
 
 	/*** Initialize Card System ***/
+    u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
 	memset (SysArea, 0, CARD_WORKAREA);
 	CARD_Init ("VBA0", "00");
 
 	/*** Try to mount the card ***/
-	CardError = MountCard(slot, NOTSILENT);
+	CardError = MountCard(slot, NOTSILENT, (u8 *)SysArea);
 
 	if (CardError == 0)
 	{
@@ -166,7 +162,7 @@ VerifyMCFile (char *buf, int slot, char *filename, int datasize)
         if (blocks > (unsigned int)datasize)
             blocks = datasize;
 
-		memset (verifbuffer, 0, VERIFBUFFERSIZE);
+        memset (verifbuffer, 0, 65536);
 		bytesleft = blocks;
 		bytesread = 0;
 		while (bytesleft > 0)
@@ -207,6 +203,7 @@ VerifyMCFile (char *buf, int slot, char *filename, int datasize)
 int
 LoadMCFile (char *buf, int slot, char *filename, bool silent)
 {
+	card_file CardFile;
 	int CardError;
 	unsigned int blocks;
 	unsigned int SectorSize;
@@ -214,11 +211,12 @@ LoadMCFile (char *buf, int slot, char *filename, bool silent)
     int bytesread = 0;
 
 	/*** Initialize Card System ***/
+    u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
 	memset (SysArea, 0, CARD_WORKAREA);
 	CARD_Init ("VBA0", "00");
 
 	/*** Try to mount the card ***/
-	CardError = MountCard(slot, NOTSILENT);
+	CardError = MountCard(slot, NOTSILENT, (u8 *)SysArea);
 
 	if (CardError == 0)
 	{
@@ -272,6 +270,8 @@ LoadMCFile (char *buf, int slot, char *filename, bool silent)
 int
 SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
 {
+	card_file CardFile;
+	card_stat CardStatus;
 	int CardError;
 	unsigned int blocks;
 	unsigned int SectorSize;
@@ -281,11 +281,12 @@ SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
 		return 0;
 
 	/*** Initialize Card System ***/
+	u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
 	memset (SysArea, 0, CARD_WORKAREA);
 	CARD_Init ("VBA0", "00");
 
 	/*** Try to mount the card ***/
-	CardError = MountCard(slot, NOTSILENT);
+	CardError = MountCard(slot, NOTSILENT, (u8 *)SysArea);
 
 	if (CardError == 0)
 	{

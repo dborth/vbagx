@@ -635,9 +635,9 @@ void LoadPatch(int method)
 
 	char patchpath[3][512];
 	memset(patchpath, 0, sizeof(patchpath));
-	sprintf(patchpath[0], "%s/%s.ips",currentdir,ROMFilename);
-	sprintf(patchpath[1], "%s/%s.ups",currentdir,ROMFilename);
-	sprintf(patchpath[2], "%s/%s.ppf",currentdir,ROMFilename);
+	sprintf(patchpath[0], "%s/%s.ips",browser.dir,ROMFilename);
+	sprintf(patchpath[1], "%s/%s.ups",browser.dir,ROMFilename);
+	sprintf(patchpath[2], "%s/%s.ppf",browser.dir,ROMFilename);
 
 	for(patchtype=0; patchtype<3; patchtype++)
 	{
@@ -694,7 +694,7 @@ bool LoadGBROM(int method)
 		if(!MakeFilePath(filepath, FILE_ROM, method))
 			return false;
 
-		gbRomSize = LoadFile ((char *)gbRom, filepath, filelist[selection].length, method, NOTSILENT);
+		gbRomSize = LoadFile ((char *)gbRom, filepath, browserList[browser.selIndex].length, method, NOTSILENT);
 	}
 	else
 	{
@@ -706,7 +706,7 @@ bool LoadGBROM(int method)
 				gbRomSize = LoadSzFile(szpath, (unsigned char *)gbRom);
 				break;
 			case METHOD_DVD:
-				gbRomSize = SzExtractFile(filelist[selection].offset, (unsigned char *)gbRom);
+				gbRomSize = SzExtractFile(browserList[browser.selIndex].offset, (unsigned char *)gbRom);
 				break;
 		}
 	}
@@ -723,11 +723,11 @@ bool LoadVBAROM(int method)
 	bool loaded = false;
 
 	// image type (checks file extension)
-	if(utilIsGBAImage(filelist[selection].filename))
+	if(utilIsGBAImage(browserList[browser.selIndex].filename))
 		type = 2;
-	else if(utilIsGBImage(filelist[selection].filename))
+	else if(utilIsGBImage(browserList[browser.selIndex].filename))
 		type = 1;
-	else if(utilIsZipFile(filelist[selection].filename))
+	else if(utilIsZipFile(browserList[browser.selIndex].filename))
 	{
 		// we need to check the file extension of the first file in the archive
 		char * zippedFilename = GetFirstZipFilename (method);

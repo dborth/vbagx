@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern int ConfigRequested;
+
 /** Locals **/
 static int head = 0;
 static int tail = 0;
@@ -23,9 +25,8 @@ static u8 mixerdata[MIXBUFFSIZE];
 #define SWAP(x) ((x>>16)|(x<<16)) // for reversing stereo channels
 
 static u8 soundbuffer[2][3840] ATTRIBUTE_ALIGN(32);
-extern int ConfigRequested;
 static int whichab = 0;
-int IsPlaying = 0;
+static int IsPlaying = 0;
 
 /****************************************************************************
  * MIXER_GetSamples
