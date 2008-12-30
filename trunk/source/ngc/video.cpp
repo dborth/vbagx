@@ -79,8 +79,8 @@ static camera cam = { {0.0F, 0.0F, 0.0F},
  * VideoThreading
  ***************************************************************************/
 #define TSTACK 16384
-lwpq_t videoblankqueue;
-lwp_t vbthread;
+static lwpq_t videoblankqueue;
+static lwp_t vbthread;
 static unsigned char vbstack[TSTACK];
 
 /****************************************************************************

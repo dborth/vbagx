@@ -179,7 +179,7 @@ bool VMCPULoadROM(int method)
 		if(!MakeFilePath(filepath, FILE_ROM, method))
 			return false;
 
-		GBAROMSize = LoadFile ((char *)rom, filepath, filelist[selection].length, method, NOTSILENT);
+		GBAROMSize = LoadFile ((char *)rom, filepath, browserList[browser.selIndex].length, method, NOTSILENT);
 	}
 	else
 	{
@@ -191,7 +191,7 @@ bool VMCPULoadROM(int method)
 				GBAROMSize = LoadSzFile(szpath, (unsigned char *)rom);
 				break;
 			case METHOD_DVD:
-				GBAROMSize = SzExtractFile(filelist[selection].offset, (unsigned char *)rom);
+				GBAROMSize = SzExtractFile(browserList[browser.selIndex].offset, (unsigned char *)rom);
 				break;
 		}
 	}

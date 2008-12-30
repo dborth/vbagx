@@ -175,7 +175,7 @@ s8 WPAD_Stick(u8 chan, u8 right, int axis)
  * these changes to VBA
  ****************************************************************************/
 
-u32 DecodeJoy(unsigned short pad)
+static u32 DecodeJoy(unsigned short pad)
 {
 	signed char pad_x = PAD_StickX (pad);
 	signed char pad_y = PAD_StickY (pad);

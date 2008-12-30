@@ -28,18 +28,32 @@ extern "C" {
 #include "gcunzip.h"
 #include "vba.h"
 
-/*
-  * PKWare Zip Header - adopted into zip standard
-  */
-#define PKZIPID 0x504b0304
-#define MAXROM 0x500000
 #define ZIPCHUNK 2048
+
+/*
+ * Zip file header definition
+ */
+typedef struct
+{
+  unsigned int zipid __attribute__ ((__packed__));	// 0x04034b50
+  unsigned short zipversion __attribute__ ((__packed__));
+  unsigned short zipflags __attribute__ ((__packed__));
+  unsigned short compressionMethod __attribute__ ((__packed__));
+  unsigned short lastmodtime __attribute__ ((__packed__));
+  unsigned short lastmoddate __attribute__ ((__packed__));
+  unsigned int crc32 __attribute__ ((__packed__));
+  unsigned int compressedSize __attribute__ ((__packed__));
+  unsigned int uncompressedSize __attribute__ ((__packed__));
+  unsigned short filenameLength __attribute__ ((__packed__));
+  unsigned short extraDataLength __attribute__ ((__packed__));
+}
+PKZIPHEADER;
 
 /*
  * Zip files are stored little endian
  * Support functions for short and int types
  */
-u32
+static u32
 FLIP32 (u32 b)
 {
 	unsigned int c;
@@ -52,7 +66,7 @@ FLIP32 (u32 b)
 	return c;
 }
 
-u16
+static u16
 FLIP16 (u16 b)
 {
 	u16 c;
@@ -66,7 +80,7 @@ FLIP16 (u16 b)
 /****************************************************************************
  * IsZipFile
  *
- * Returns TRUE when PKZIPID is first four characters of buffer
+ * Returns TRUE when 0x504b0304 is first four characters of buffer
  ***************************************************************************/
 int
 IsZipFile (char *buffer)
@@ -75,7 +89,7 @@ IsZipFile (char *buffer)
 
 	check = (unsigned int *) buffer;
 
-	if (check[0] == PKZIPID)
+	if (check[0] == 0x504b0304)
 		return 1;
 
 	return 0;
@@ -83,8 +97,6 @@ IsZipFile (char *buffer)
 
 /*****************************************************************************
 * UnZipBuffer
-*
-* It should be noted that there is a limit of 5MB total size for any ROM
 ******************************************************************************/
 
 int
@@ -100,15 +112,13 @@ UnZipBuffer (unsigned char *outbuffer, int method)
 	int readoffset = 0;
 	int have = 0;
 	char readbuffer[ZIPCHUNK];
-	u64 discoffset = 0;
 	int sizeread = 0;
 
 	// Read Zip Header
 	switch (method)
 	{
 		case METHOD_DVD:
-			discoffset = dvddir;
-			sizeread = dvd_safe_read (readbuffer, ZIPCHUNK, discoffset);
+			sizeread = dvd_safe_read (readbuffer, ZIPCHUNK, 0);
 			break;
 		default:
 			fseek(file, 0, SEEK_SET);
@@ -182,7 +192,7 @@ UnZipBuffer (unsigned char *outbuffer, int method)
 		{
 			case METHOD_DVD:
 				readoffset += ZIPCHUNK;
-				sizeread = dvd_safe_read (readbuffer, ZIPCHUNK, discoffset+readoffset);
+				sizeread = dvd_safe_read (readbuffer, ZIPCHUNK, readoffset);
 				break;
 			default:
 				sizeread = fread (readbuffer, 1, ZIPCHUNK, file);
@@ -258,7 +268,7 @@ typedef struct _SzFileInStream
 } SzFileInStream;
 
 // 7zip error list
-char szerrormsg[][30] = {
+static char szerrormsg[][30] = {
    "7z: Data error",
    "7z: Out of memory",
    "7z: CRC Error",
@@ -269,20 +279,19 @@ char szerrormsg[][30] = {
    "7z: Dictionary too large",
 };
 
-SZ_RESULT SzRes;
+static SZ_RESULT SzRes;
+static SzFileInStream SzArchiveStream;
+static CArchiveDatabaseEx SzDb;
+static ISzAlloc SzAllocImp;
+static ISzAlloc SzAllocTempImp;
+static UInt32 SzBlockIndex = 0xFFFFFFFF;
+static size_t SzBufferSize;
+static size_t SzOffset;
+static size_t SzOutSizeProcessed;
+static CFileItem *SzF;
 
-SzFileInStream SzArchiveStream;
-CArchiveDatabaseEx SzDb;
-ISzAlloc SzAllocImp;
-ISzAlloc SzAllocTempImp;
-UInt32 SzBlockIndex = 0xFFFFFFFF;
-size_t SzBufferSize;
-size_t SzOffset;
-size_t SzOutSizeProcessed;
-CFileItem *SzF;
-
-char sz_buffer[2048];
-int szMethod = 0;
+static char sz_buffer[2048];
+static int szMethod = 0;
 
 /****************************************************************************
 * Is7ZipFile
@@ -307,13 +316,13 @@ Is7ZipFile (char *buffer)
 }
 
 // display an error message
-void SzDisplayError(SZ_RESULT res)
+static void SzDisplayError(SZ_RESULT res)
 {
 	WaitPrompt(szerrormsg[(res - 1)]);
 }
 
 // function used by the 7zip SDK to read data from SD/USB/DVD/SMB
-SZ_RESULT SzFileReadImp(void *object, void **buffer, size_t maxRequiredSize, size_t *processedSize)
+static SZ_RESULT SzFileReadImp(void *object, void **buffer, size_t maxRequiredSize, size_t *processedSize)
 {
 	u32 seekok = 0;
 	u32 sizeread = 0;
@@ -340,12 +349,7 @@ SZ_RESULT SzFileReadImp(void *object, void **buffer, size_t maxRequiredSize, siz
 	}
 
 	if(seekok != 0 || sizeread <= 0)
-	{
-		char msg[150];
-		sprintf(msg, "sizeread: %u", sizeread);
-		WaitPrompt(msg);
 		return SZE_FAILREAD;
-	}
 
 	*buffer = sz_buffer;
 	*processedSize = maxRequiredSize;
@@ -353,13 +357,13 @@ SZ_RESULT SzFileReadImp(void *object, void **buffer, size_t maxRequiredSize, siz
 
 	if(maxRequiredSize > 1024) // only show progress for large reads
 		// this isn't quite right, but oh well
-		ShowProgress ("Loading...", s->pos, filelist[selection].length);
+		ShowProgress ("Loading...", s->pos, browserList[browser.selIndex].length);
 
 	return SZ_OK;
 }
 
 // function used by the 7zip SDK to change the filepointer
-SZ_RESULT SzFileSeekImp(void *object, CFileSize pos)
+static SZ_RESULT SzFileSeekImp(void *object, CFileSize pos)
 {
 	// the void* object is a SzFileInStream
 	SzFileInStream *s = (SzFileInStream *) object;
@@ -377,17 +381,23 @@ SZ_RESULT SzFileSeekImp(void *object, CFileSize pos)
 * SzParse
 *
 * Opens a 7z file, and parses it
-* Right now doesn't parse 7z, since we'll always use the first file
-* But it could parse the entire 7z for full browsing capability
+* It parses the entire 7z for full browsing capability
 ***************************************************************************/
 
 int SzParse(char * filepath, int method)
 {
+	if(!filepath)
+		return 0;
+
 	int nbfiles = 0;
 
-	// save the offset and the length of this file inside the archive stream structure
-	SzArchiveStream.offset = filelist[selection].offset;
-	SzArchiveStream.len = filelist[selection].length;
+	// save the length/offset of this file
+	unsigned int filelen = browserList[browser.selIndex].length;
+	u64 fileoff = browserList[browser.selIndex].offset;
+
+	// setup archive stream
+	SzArchiveStream.offset = 0;
+	SzArchiveStream.len = filelen;
 	SzArchiveStream.pos = 0;
 
 	// open file
@@ -399,6 +409,9 @@ int SzParse(char * filepath, int method)
 			file = fopen (filepath, "rb");
 			if(!file)
 				return 0;
+			break;
+		case METHOD_DVD:
+			SwitchDVDFolder(filepath);
 			break;
 	}
 
@@ -435,14 +448,14 @@ int SzParse(char * filepath, int method)
 		{
 			// Parses the 7z into a full file listing
 
-			// erase all previous entries
-			memset(&filelist, 0, sizeof(FILEENTRIES) * MAXFILES);
+			// reset browser
+			ResetBrowser();
 
 			// add '..' folder in case the user wants exit the 7z
-			strncpy(filelist[0].displayname, "..", 2);
-			filelist[0].flags = 1;
-			filelist[0].offset = dvddir;
-			filelist[0].length = dvddirlength;
+			strncpy(browserList[0].displayname, "..", 2);
+			browserList[0].isdir = 1;
+			browserList[0].offset = fileoff;
+			browserList[0].length = filelen;
 
 			// get contents and parse them into file list structure
 			unsigned int SzI, SzJ;
@@ -455,22 +468,25 @@ int SzParse(char * filepath, int method)
 				if (SzF->IsDirectory)
 					continue;
 
-				// do not exceed MAXFILES to avoid possible buffer overflows
-				if (SzJ == (MAXFILES - 1))
+				browserList = (BROWSERENTRY *)realloc(browserList, (SzJ+1) * sizeof(BROWSERENTRY));
+
+				if(!browserList) // failed to allocate required memory
+				{
+					WaitPrompt("Out of memory: too many files!");
+					nbfiles = 0;
 					break;
+				}
+				memset(&(browserList[SzJ]), 0, sizeof(BROWSERENTRY)); // clear the new entry
 
 				// parse information about this file to the dvd file list structure
-				strncpy(filelist[SzJ].filename, SzF->Name, MAXJOLIET); // copy joliet name (useless...)
-				filelist[SzJ].filename[MAXJOLIET] = 0; // terminate string
-				strncpy(filelist[SzJ].displayname, SzF->Name, MAXDISPLAY+1);	// crop name for display
-				filelist[SzJ].length = SzF->Size; // filesize
-				filelist[SzJ].offset = SzI; // the extraction function identifies the file with this number
-				filelist[SzJ].flags = 0; // only files will be displayed (-> no flags)
+				strncpy(browserList[SzJ].filename, SzF->Name, MAXJOLIET); // copy joliet name (useless...)
+				strncpy(browserList[SzJ].displayname, SzF->Name, MAXDISPLAY);	// crop name for display
+				browserList[SzJ].length = SzF->Size; // filesize
+				browserList[SzJ].offset = SzI; // the extraction function identifies the file with this number
+				browserList[SzJ].isdir = 0; // only files will be displayed (-> no flags)
 				SzJ++;
 			}
 
-			// update maxfiles and select the first entry
-			offset = selection = 0;
 			nbfiles = SzJ;
 		}
 		else

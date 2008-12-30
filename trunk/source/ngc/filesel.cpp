@@ -16,7 +16,7 @@
 #include <sys/dir.h>
 #include <malloc.h>
 
-#ifdef WII_DVD
+#ifdef HW_RVL
 extern "C" {
 #include <di/di.h>
 }
@@ -28,61 +28,22 @@ extern "C" {
 #include "menudraw.h"
 #include "video.h"
 #include "fileop.h"
+#include "filesel.h"
 #include "memcardop.h"
 #include "input.h"
 #include "dvd.h"
 #include "networkop.h"
 #include "gcunzip.h"
 
-int offset;
-int selection;
+BROWSERINFO browser;
+BROWSERENTRY * browserList = NULL; // list of files/folders in browser
+
 char rootdir[10];
-char currentdir[MAXPATHLEN];
 char szpath[MAXPATHLEN];
-int maxfiles;
-extern int screenheight;
-
-int havedir = -1;
-extern u64 dvddir;
-extern int dvddirlength;
-
-int hasloaded = 0;
-
-// Global file entry table
-FILEENTRIES filelist[MAXFILES];
 bool inSz = false;
 
 char ROMFilename[512];
 bool ROMLoaded = false;
-
-unsigned char *savebuffer = NULL;
-
-/****************************************************************************
- * AllocSaveBuffer ()
- * Clear and allocate the savebuffer
- ***************************************************************************/
-void
-AllocSaveBuffer ()
-{
-	if (savebuffer != NULL)
-		free(savebuffer);
-
-	savebuffer = (unsigned char *) memalign(32, SAVEBUFFERSIZE);
-	memset (savebuffer, 0, SAVEBUFFERSIZE);
-}
-
-/****************************************************************************
- * FreeSaveBuffer ()
- * Free the savebuffer memory
- ***************************************************************************/
-void
-FreeSaveBuffer ()
-{
-	if (savebuffer != NULL)
-		free(savebuffer);
-
-	savebuffer = NULL;
-}
 
 /****************************************************************************
 * autoLoadMethod()
@@ -142,6 +103,25 @@ int autoSaveMethod(bool silent)
 }
 
 /****************************************************************************
+ * ResetBrowser()
+ * Clears the file browser memory, and allocates one initial entry
+ ***************************************************************************/
+void ResetBrowser()
+{
+	browser.selIndex = browser.pageIndex = 0;
+
+	// Clear any existing values
+	if(browserList != NULL)
+	{
+		free(browserList);
+		browserList = NULL;
+	}
+	// set aside space for 1 entry
+	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY));
+	memset(browserList, 0, sizeof(BROWSERENTRY));
+}
+
+/****************************************************************************
  * UpdateDirName()
  * Update curent directory name for file browser
  ***************************************************************************/
@@ -153,21 +133,18 @@ int UpdateDirName(int method)
 
 	// update DVD directory
 	if(method == METHOD_DVD)
-	{
-		dvddir = filelist[selection].offset;
-		dvddirlength = filelist[selection].length;
-	}
+		SetDVDdirectory(browserList[browser.selIndex].offset, browserList[browser.selIndex].length);
 
 	/* current directory doesn't change */
-	if (strcmp(filelist[selection].filename,".") == 0)
+	if (strcmp(browserList[browser.selIndex].filename,".") == 0)
 	{
 		return 0;
 	}
 	/* go up to parent directory */
-	else if (strcmp(filelist[selection].filename,"..") == 0)
+	else if (strcmp(browserList[browser.selIndex].filename,"..") == 0)
 	{
 		/* determine last subdirectory namelength */
-		sprintf(temp,"%s",currentdir);
+		sprintf(temp,"%s",browser.dir);
 		test = strtok(temp,"/");
 		while (test != NULL)
 		{
@@ -176,8 +153,8 @@ int UpdateDirName(int method)
 		}
 
 		/* remove last subdirectory name */
-		size = strlen(currentdir) - size - 1;
-		currentdir[size] = 0;
+		size = strlen(browser.dir) - size - 1;
+		browser.dir[size] = 0;
 
 		return 1;
 	}
@@ -185,10 +162,10 @@ int UpdateDirName(int method)
 	else
 	{
 		/* test new directory namelength */
-		if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) < MAXPATHLEN)
+		if ((strlen(browser.dir)+1+strlen(browserList[browser.selIndex].filename)) < MAXPATHLEN)
 		{
 			/* update current directory name */
-			sprintf(currentdir, "%s/%s",currentdir, filelist[selection].filename);
+			sprintf(browser.dir, "%s/%s",browser.dir, browserList[browser.selIndex].filename);
 			return 1;
 		}
 		else
@@ -208,7 +185,7 @@ bool MakeFilePath(char filepath[], int type, int method)
 	if(type == FILE_ROM)
 	{
 		// Check path length
-		if ((strlen(currentdir)+1+strlen(filelist[selection].filename)) >= MAXPATHLEN)
+		if ((strlen(browser.dir)+1+strlen(browserList[browser.selIndex].filename)) >= MAXPATHLEN)
 		{
 			WaitPrompt("Maximum filepath length reached!");
 			filepath[0] = 0;
@@ -216,7 +193,7 @@ bool MakeFilePath(char filepath[], int type, int method)
 		}
 		else
 		{
-			sprintf(temppath, "%s/%s",currentdir,filelist[selection].filename);
+			sprintf(temppath, "%s/%s",browser.dir,browserList[browser.selIndex].filename);
 		}
 	}
 	else
@@ -268,19 +245,19 @@ bool MakeFilePath(char filepath[], int type, int method)
 int FileSortCallback(const void *f1, const void *f2)
 {
 	/* Special case for implicit directories */
-	if(((FILEENTRIES *)f1)->filename[0] == '.' || ((FILEENTRIES *)f2)->filename[0] == '.')
+	if(((BROWSERENTRY *)f1)->filename[0] == '.' || ((BROWSERENTRY *)f2)->filename[0] == '.')
 	{
-		if(strcmp(((FILEENTRIES *)f1)->filename, ".") == 0) { return -1; }
-		if(strcmp(((FILEENTRIES *)f2)->filename, ".") == 0) { return 1; }
-		if(strcmp(((FILEENTRIES *)f1)->filename, "..") == 0) { return -1; }
-		if(strcmp(((FILEENTRIES *)f2)->filename, "..") == 0) { return 1; }
+		if(strcmp(((BROWSERENTRY *)f1)->filename, ".") == 0) { return -1; }
+		if(strcmp(((BROWSERENTRY *)f2)->filename, ".") == 0) { return 1; }
+		if(strcmp(((BROWSERENTRY *)f1)->filename, "..") == 0) { return -1; }
+		if(strcmp(((BROWSERENTRY *)f2)->filename, "..") == 0) { return 1; }
 	}
 
 	/* If one is a file and one is a directory the directory is first. */
-	if(((FILEENTRIES *)f1)->flags && !(((FILEENTRIES *)f2)->flags)) return -1;
-	if(!(((FILEENTRIES *)f1)->flags) && ((FILEENTRIES *)f2)->flags) return 1;
+	if(((BROWSERENTRY *)f1)->isdir && !(((BROWSERENTRY *)f2)->isdir)) return -1;
+	if(!(((BROWSERENTRY *)f1)->isdir) && ((BROWSERENTRY *)f2)->isdir) return 1;
 
-	return stricmp(((FILEENTRIES *)f1)->filename, ((FILEENTRIES *)f2)->filename);
+	return stricmp(((BROWSERENTRY *)f1)->filename, ((BROWSERENTRY *)f2)->filename);
 }
 
 /****************************************************************************
@@ -291,9 +268,9 @@ int FileSortCallback(const void *f1, const void *f2)
 
 bool IsSz()
 {
-	if (strlen(filelist[selection].filename) > 4)
+	if (strlen(browserList[browser.selIndex].filename) > 4)
 	{
-		char * p = strrchr(filelist[selection].filename, '.');
+		char * p = strrchr(browserList[browser.selIndex].filename, '.');
 
 		if (p != NULL)
 			if(stricmp(p, ".7z") == 0)
@@ -346,7 +323,7 @@ int FileSelector (int method)
     while (haverom == 0)
     {
         if (redraw)
-            ShowFiles (filelist, maxfiles, offset, selection);
+            ShowFiles (browserList, browser.numEntries, browser.pageIndex, browser.selIndex);
         redraw = 0;
 
 		VIDEO_WaitVSync();	// slow things down a bit so we don't overread the pads
@@ -373,19 +350,16 @@ int FileSelector (int method)
 		{
 			if ( selectit )
 				selectit = 0;
-			if (filelist[selection].flags) // This is directory
+			if (browserList[browser.selIndex].isdir) // This is directory
 			{
 				/* update current directory and set new entry list if directory has changed */
 				int status;
 
-				if(inSz && selection == 0) // inside a 7z, requesting to leave
+				if(inSz && browser.selIndex == 0) // inside a 7z, requesting to leave
 				{
 					if(method == METHOD_DVD)
-					{
-						// go to directory the 7z was in
-						dvddir = filelist[0].offset;
-						dvddirlength = filelist[0].length;
-					}
+						SetDVDdirectory(browserList[0].offset, browserList[0].length);
+
 					inSz = false;
 					status = 1;
 					SzClose();
@@ -400,15 +374,15 @@ int FileSelector (int method)
 					switch (method)
 					{
 						case METHOD_DVD:
-							maxfiles = ParseDVDdirectory();
+							browser.numEntries = ParseDVDdirectory();
 							break;
 
 						default:
-							maxfiles = ParseDirectory();
+							browser.numEntries = ParseDirectory();
 							break;
 					}
 
-					if (!maxfiles)
+					if (!browser.numEntries)
 					{
 						WaitPrompt ("Error reading directory!");
 						haverom = 1; // quit menu
@@ -436,7 +410,7 @@ int FileSelector (int method)
 					int szfiles = SzParse(szpath, method);
 					if(szfiles)
 					{
-						maxfiles = szfiles;
+						browser.numEntries = szfiles;
 						inSz = true;
 					}
 					else
@@ -445,7 +419,7 @@ int FileSelector (int method)
 				else
 				{
 					// store the filename (w/o ext) - used for sram/freeze naming
-					StripExt(ROMFilename, filelist[selection].filename);
+					StripExt(ROMFilename, browserList[browser.selIndex].filename);
 
 					ShowAction ("Loading...");
 
@@ -468,14 +442,14 @@ int FileSelector (int method)
 #endif
 					)
                 VIDEO_WaitVSync();
-			if ( strcmp(filelist[0].filename,"..") == 0 )
+			if ( strcmp(browserList[0].filename,"..") == 0 )
 			{
-				selection = 0;
+				browser.selIndex = 0;
 				selectit = 1;
 			}
-			else if ( strcmp(filelist[1].filename,"..") == 0 )
+			else if ( strcmp(browserList[1].filename,"..") == 0 )
 			{
-                selection = selectit = 1;
+                browser.selIndex = selectit = 1;
 			} else {
                 return 0;
 			}
@@ -495,11 +469,11 @@ int FileSelector (int method)
 
 			if (move_selection)
 			{
-	            selection++;
-	            if (selection == maxfiles)
-	                selection = offset = 0;
-	            if ((selection - offset) >= PAGESIZE)
-	                offset += PAGESIZE;
+	            browser.selIndex++;
+	            if (browser.selIndex == browser.numEntries)
+	                browser.selIndex = browser.pageIndex = 0;
+	            if ((browser.selIndex - browser.pageIndex) >= PAGESIZE)
+	                browser.pageIndex += PAGESIZE;
 	            redraw = 1;
 				move_selection = 0;
 			}
@@ -519,15 +493,15 @@ int FileSelector (int method)
 
 			if (move_selection)
 			{
-	            selection--;
-	            if (selection < 0) {
-	                selection = maxfiles - 1;
-	                offset = selection - PAGESIZE + 1;
+	            browser.selIndex--;
+	            if (browser.selIndex < 0) {
+	                browser.selIndex = browser.numEntries - 1;
+	                browser.pageIndex = browser.selIndex - PAGESIZE + 1;
 	            }
-	            if (selection < offset)
-	                offset -= PAGESIZE;
-	            if (offset < 0)
-	                offset = 0;
+	            if (browser.selIndex < browser.pageIndex)
+	                browser.pageIndex -= PAGESIZE;
+	            if (browser.pageIndex < 0)
+	                browser.pageIndex = 0;
 	            redraw = 1;
 				move_selection = 0;
 			}
@@ -535,26 +509,26 @@ int FileSelector (int method)
         if ( (p & PAD_BUTTON_LEFT) || (wp & (WPAD_BUTTON_LEFT | WPAD_CLASSIC_BUTTON_LEFT)) )
         {
             /*** Go back a page ***/
-            selection -= PAGESIZE;
-            if (selection < 0)
+            browser.selIndex -= PAGESIZE;
+            if (browser.selIndex < 0)
             {
-                selection = maxfiles - 1;
-                offset = selection - PAGESIZE + 1;
+                browser.selIndex = browser.numEntries - 1;
+                browser.pageIndex = browser.selIndex - PAGESIZE + 1;
             }
-            if (selection < offset)
-                offset -= PAGESIZE;
-            if (offset < 0)
-                offset = 0;
+            if (browser.selIndex < browser.pageIndex)
+                browser.pageIndex -= PAGESIZE;
+            if (browser.pageIndex < 0)
+                browser.pageIndex = 0;
             redraw = 1;
         }
         if ( (p & PAD_BUTTON_RIGHT) || (wp & (WPAD_BUTTON_RIGHT | WPAD_CLASSIC_BUTTON_RIGHT)) )
         {
             /*** Go forward a page ***/
-            selection += PAGESIZE;
-            if (selection > maxfiles - 1)
-                selection = offset = 0;
-            if ((selection - offset) >= PAGESIZE)
-                offset += PAGESIZE;
+            browser.selIndex += PAGESIZE;
+            if (browser.selIndex > browser.numEntries - 1)
+                browser.selIndex = browser.pageIndex = 0;
+            if ((browser.selIndex - browser.pageIndex) >= PAGESIZE)
+                browser.pageIndex += PAGESIZE;
             redraw = 1;
         }
     }
@@ -578,17 +552,17 @@ OpenROM (int method)
 		switch(method)
 		{
 			case METHOD_DVD:
-				currentdir[0] = 0;
-				maxfiles = ParseDVDdirectory (); // Parse root directory
+				browser.dir[0] = 0;
+				browser.numEntries = ParseDVDdirectory(); // Parse root directory
 				SwitchDVDFolder(GCSettings.LoadFolder); // switch to ROM folder
 				break;
 			default:
-				sprintf(currentdir, "/%s", GCSettings.LoadFolder);
-				maxfiles = ParseDirectory(); // Parse root directory
+				sprintf(browser.dir, "/%s", GCSettings.LoadFolder);
+				browser.numEntries = ParseDirectory(); // Parse root directory
 				break;
 		}
 
-		if (maxfiles > 0)
+		if (browser.numEntries > 0)
 		{
 			// Select an entry
 			return FileSelector (method);
