@@ -277,9 +277,8 @@ void InitialiseVideo ()
 
 	switch (vmode->viTVMode >> 2)
 	{
-		case VI_PAL: // 576 lines (PAL 50Hz)
-			// force PAL60
-			//vmode = &TVEurgb60Hz480IntDf;
+		case VI_PAL:
+			// 576 lines (PAL 50hz)
 			break;
 
 		case VI_NTSC:
