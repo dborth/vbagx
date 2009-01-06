@@ -22,18 +22,16 @@
 #include "filesel.h"
 #include "input.h"
 
-static char prefscomment[2][32];
-
 /****************************************************************************
  * Prepare Preferences Data
  *
  * This sets up the save buffer for saving.
  ***************************************************************************/
-static mxml_node_t *xml;
-static mxml_node_t *data;
-static mxml_node_t *section;
-static mxml_node_t *item;
-static mxml_node_t *elem;
+static mxml_node_t *xml = NULL;
+static mxml_node_t *data = NULL;
+static mxml_node_t *section = NULL;
+static mxml_node_t *item = NULL;
+static mxml_node_t *elem = NULL;
 
 static char temp[20];
 
@@ -120,6 +118,7 @@ preparePrefsData (int method)
 		memcpy (savebuffer, saveicon, offset);
 
 		// And the comments
+		char prefscomment[2][32];
 		memset(prefscomment, 0, 64);
 		sprintf (prefscomment[0], "%s Prefs", APPNAME);
 		sprintf (prefscomment[1], "Preferences");
@@ -184,19 +183,31 @@ static void loadXMLSetting(char * var, const char * name, int maxsize)
 {
 	item = mxmlFindElement(xml, xml, "setting", "name", name, MXML_DESCEND);
 	if(item)
-		snprintf(var, maxsize, "%s", mxmlElementGetAttr(item, "value"));
+	{
+		const char * tmp = mxmlElementGetAttr(item, "value");
+		if(tmp)
+			snprintf(var, maxsize, "%s", tmp);
+	}
 }
 static void loadXMLSetting(int * var, const char * name)
 {
 	item = mxmlFindElement(xml, xml, "setting", "name", name, MXML_DESCEND);
 	if(item)
-		*var = atoi(mxmlElementGetAttr(item, "value"));
+	{
+		const char * tmp = mxmlElementGetAttr(item, "value");
+		if(tmp)
+			*var = atoi(tmp);
+	}
 }
 static void loadXMLSetting(float * var, const char * name)
 {
 	item = mxmlFindElement(xml, xml, "setting", "name", name, MXML_DESCEND);
 	if(item)
-		*var = atof(mxmlElementGetAttr(item, "value"));
+	{
+		const char * tmp = mxmlElementGetAttr(item, "value");
+		if(tmp)
+			*var = atof(tmp);
+	}
 }
 
 /****************************************************************************
@@ -216,7 +227,11 @@ static void loadXMLController(unsigned int controller[], const char * name)
 		{
 			elem = mxmlFindElement(item, xml, "button", "number", toStr(i), MXML_DESCEND);
 			if(elem)
-				controller[i] = atoi(mxmlElementGetAttr(elem, "assignment"));
+			{
+				const char * tmp = mxmlElementGetAttr(elem, "assignment");
+				if(tmp)
+					controller[i] = atoi(tmp);
+			}
 		}
 	}
 }
@@ -230,80 +245,89 @@ static void loadXMLController(unsigned int controller[], const char * name)
 static bool
 decodePrefsData (int method)
 {
+	bool result = false;
 	int offset = 0;
 
 	// skip save icon and comments for Memory Card saves
 	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
 	{
 		offset = sizeof (saveicon);
-		offset += 64; // sizeof prefscomment
+		offset += 64; // sizeof comments
 	}
 
 	xml = mxmlLoadString(NULL, (char *)savebuffer+offset, MXML_TEXT_CALLBACK);
 
-	// check settings version
-	char * version;
-	item = mxmlFindElement(xml, xml, "file", "version", NULL, MXML_DESCEND);
-	if(item) // a version entry exists
-		version = (char *)mxmlElementGetAttr(item, "version");
-	else // version # not found, must be invalid
-		return false;
+	if(xml)
+	{
+		// check settings version
+		item = mxmlFindElement(xml, xml, "file", "version", NULL, MXML_DESCEND);
+		if(item) // a version entry exists
+		{
+			const char * version = mxmlElementGetAttr(item, "version");
 
-	// this code assumes version in format X.X.X
-	// XX.X.X, X.XX.X, or X.X.XX will NOT work
-	int verMajor = version[0] - '0';
-	int verMinor = version[2] - '0';
-	int verPoint = version[4] - '0';
-	int curMajor = APPVERSION[0] - '0';
-	int curMinor = APPVERSION[2] - '0';
-	int curPoint = APPVERSION[4] - '0';
+			if(version)
+			{
+				// this code assumes version in format X.X.X
+				// XX.X.X, X.XX.X, or X.X.XX will NOT work
+				int verMajor = version[0] - '0';
+				int verMinor = version[2] - '0';
+				int verPoint = version[4] - '0';
+				int curMajor = APPVERSION[0] - '0';
+				int curMinor = APPVERSION[2] - '0';
+				int curPoint = APPVERSION[4] - '0';
 
-	// first we'll check that the versioning is valid
-	if(!(verMajor >= 0 && verMajor <= 9 &&
-		verMinor >= 0 && verMinor <= 9 &&
-		verPoint >= 0 && verPoint <= 9))
-		return false;
+				// first we'll check that the versioning is valid
+				if(!(verMajor >= 0 && verMajor <= 9 &&
+					verMinor >= 0 && verMinor <= 9 &&
+					verPoint >= 0 && verPoint <= 9))
+					result = false;
+				else if(verPoint < 4 && verMajor == 1) // less than version 1.0.4
+					result = false; // reset settings
+				else if(verMajor > curMajor || verMinor > curMinor || verPoint > curPoint) // some future version
+					result = false; // reset settings
+				else
+					result = true;
+			}
+		}
 
-	if(verPoint < 4 && verMajor == 1) // less than version 1.0.4
-		return false; // reset settings
-	else if(verMajor > curMajor || verMinor > curMinor || verPoint > curPoint) // some future version
-		return false; // reset settings
+		if(result)
+		{
+			// File Settings
 
-	// File Settings
+			loadXMLSetting(&GCSettings.AutoLoad, "AutoLoad");
+			loadXMLSetting(&GCSettings.AutoSave, "AutoSave");
+			loadXMLSetting(&GCSettings.LoadMethod, "LoadMethod");
+			loadXMLSetting(&GCSettings.SaveMethod, "SaveMethod");
+			loadXMLSetting(GCSettings.LoadFolder, "LoadFolder", sizeof(GCSettings.LoadFolder));
+			loadXMLSetting(GCSettings.SaveFolder, "SaveFolder", sizeof(GCSettings.SaveFolder));
+			//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder", sizeof(GCSettings.CheatFolder));
+			loadXMLSetting(&GCSettings.VerifySaves, "VerifySaves");
 
-	loadXMLSetting(&GCSettings.AutoLoad, "AutoLoad");
-	loadXMLSetting(&GCSettings.AutoSave, "AutoSave");
-	loadXMLSetting(&GCSettings.LoadMethod, "LoadMethod");
-	loadXMLSetting(&GCSettings.SaveMethod, "SaveMethod");
-	loadXMLSetting(GCSettings.LoadFolder, "LoadFolder", sizeof(GCSettings.LoadFolder));
-	loadXMLSetting(GCSettings.SaveFolder, "SaveFolder", sizeof(GCSettings.SaveFolder));
-	//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder", sizeof(GCSettings.CheatFolder));
-	loadXMLSetting(&GCSettings.VerifySaves, "VerifySaves");
+			// Network Settings
 
-	// Network Settings
+			loadXMLSetting(GCSettings.smbip, "smbip", sizeof(GCSettings.smbip));
+			loadXMLSetting(GCSettings.smbshare, "smbshare", sizeof(GCSettings.smbshare));
+			loadXMLSetting(GCSettings.smbuser, "smbuser", sizeof(GCSettings.smbuser));
+			loadXMLSetting(GCSettings.smbpwd, "smbpwd", sizeof(GCSettings.smbpwd));
 
-	loadXMLSetting(GCSettings.smbip, "smbip", sizeof(GCSettings.smbip));
-	loadXMLSetting(GCSettings.smbshare, "smbshare", sizeof(GCSettings.smbshare));
-	loadXMLSetting(GCSettings.smbuser, "smbuser", sizeof(GCSettings.smbuser));
-	loadXMLSetting(GCSettings.smbpwd, "smbpwd", sizeof(GCSettings.smbpwd));
+			// Emulation Settings
 
-	// Emulation Settings
+			loadXMLSetting(&GCSettings.Zoom, "Zoom");
+			loadXMLSetting(&GCSettings.ZoomLevel, "ZoomLevel");
+			loadXMLSetting(&GCSettings.render, "render");
+			loadXMLSetting(&GCSettings.widescreen, "widescreen");
 
-	loadXMLSetting(&GCSettings.Zoom, "Zoom");
-	loadXMLSetting(&GCSettings.ZoomLevel, "ZoomLevel");
-	loadXMLSetting(&GCSettings.render, "render");
-	loadXMLSetting(&GCSettings.widescreen, "widescreen");
+			// Controller Settings
 
-	// Controller Settings
+			loadXMLController(gcpadmap, "gcpadmap");
+			loadXMLController(wmpadmap, "wmpadmap");
+			loadXMLController(ccpadmap, "ccpadmap");
+			loadXMLController(ncpadmap, "ncpadmap");
+		}
+		mxmlDelete(xml);
+	}
 
-	loadXMLController(gcpadmap, "gcpadmap");
-	loadXMLController(wmpadmap, "wmpadmap");
-	loadXMLController(ccpadmap, "ccpadmap");
-	loadXMLController(ncpadmap, "ncpadmap");
-
-	mxmlDelete(xml);
-
-	return true;
+	return result;
 }
 
 /****************************************************************************
