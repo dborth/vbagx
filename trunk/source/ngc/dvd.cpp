@@ -372,7 +372,7 @@ getentry (int entrycount, unsigned char dvdbuffer[])
 	if (entrycount >= MAXDVDFILES)
 		return 0;
 
-	if (diroffset >= 2048)
+	if (diroffset >= 2048 || diroffset < 0)
 		return 0;
 
 	/** Decode this entry **/
@@ -386,7 +386,7 @@ getentry (int entrycount, unsigned char dvdbuffer[])
 
 		/* Check for wrap round - illegal in ISO spec,
 		* but certain crap writers do it! */
-		if ((diroffset + dvdbuffer[diroffset]) > 2048)
+		if ((diroffset + dvdbuffer[diroffset]) > 2048 || (diroffset + dvdbuffer[diroffset]) < 0)
 			return 0;
 
 		if (*filenamelength)
@@ -394,7 +394,9 @@ getentry (int entrycount, unsigned char dvdbuffer[])
 			memset (&fname, 0, 512);
 
 			if (!IsJoliet)			/*** Do ISO 9660 first ***/
-				strcpy (fname, filename);
+			{
+				strncpy (fname, filename, 512);
+			}
 			else
 			{			/*** The more tortuous unicode joliet entries ***/
 				for (j = 0; j < (*filenamelength >> 1); j++)
@@ -439,17 +441,22 @@ getentry (int entrycount, unsigned char dvdbuffer[])
 			if (rr != NULL)
 				*rr = 0;
 
-			browserList = (BROWSERENTRY *)realloc(browserList, (entrycount+1) * sizeof(BROWSERENTRY));
-			if(!browserList) // failed to allocate required memory
+			BROWSERENTRY * newBrowserList = (BROWSERENTRY *)realloc(browserList, (entrycount+1) * sizeof(BROWSERENTRY));
+			if(!newBrowserList) // failed to allocate required memory
 			{
+				ResetBrowser();
 				WaitPrompt("Out of memory: too many files!");
 				return 0;
 			}
+			else
+			{
+				browserList = newBrowserList;
+			}
 			memset(&(browserList[entrycount]), 0, sizeof(BROWSERENTRY)); // clear the new entry
 
-			strcpy (browserList[entrycount].filename, fname);
+			strncpy (browserList[entrycount].filename, fname, MAXJOLIET);
 			StripExt(tmpname, fname); // hide file extension
-			strcpy (browserList[entrycount].displayname, tmpname);
+			strncpy (browserList[entrycount].displayname, tmpname, MAXDISPLAY);
 
 			memcpy (&offset32, &dvdbuffer[diroffset + EXTENT], 4);
 
