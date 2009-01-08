@@ -18,7 +18,8 @@ include $(DEVKITPPC)/wii_rules
 TARGET		:=	vbagx_wii
 TARGETDIR   :=  executables
 BUILD		:=	build_wii
-SOURCES		:=	source/vba source/vba/agb source/vba/dmg source/vba/dmg/gb_apu \
+SOURCES		:=	source/vba source/vba/apu source/vba/common \
+				source/vba/gb source/vba/gba \
 				source/ngc source/sz source/unzip
 INCLUDES 	:=  source/vba source/ngc source/unzip
 

@@ -21,7 +21,7 @@
 #include <string.h>
 #include <zlib.h>
 
-#include "System.h"
+#include "../System.h"
 #include "memfile.h"
 
 /*

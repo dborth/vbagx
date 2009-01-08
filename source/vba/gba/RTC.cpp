@@ -16,12 +16,12 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "System.h"
-#include "agb/GBA.h"
+#include "../System.h"
+#include "GBA.h"
 #include "Globals.h"
-#include "Port.h"
-#include "Util.h"
-#include "NLS.h"
+#include "../common/Port.h"
+#include "../Util.h"
+#include "../NLS.h"
 #include "vmmem.h"
 
 #include <time.h>

@@ -18,7 +18,7 @@
 
 #include <string.h>
 
-#include "../agb/GBA.h"
+#include "../gba/GBA.h"
 #include "gbGlobals.h"
 #include "gbSGB.h"
 

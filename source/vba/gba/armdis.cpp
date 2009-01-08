@@ -21,9 +21,9 @@
 /************************************************************************/
 #include <stdio.h>
 
-#include "System.h"
-#include "Port.h"
-#include "agb/GBA.h"
+#include "../System.h"
+#include "../common/Port.h"
+#include "GBA.h"
 #include "armdis.h"
 #include "elf.h"
 
