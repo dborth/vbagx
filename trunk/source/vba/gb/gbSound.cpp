@@ -20,13 +20,13 @@
 
 #include <string.h>
 
-#include "../Sound.h"
+#include "../gba/Sound.h"
 #include "../Util.h"
 #include "gbGlobals.h"
 #include "gbSound.h"
 
-#include "gb_apu/Gb_Apu.h"
-#include "gb_apu/Effects_Buffer.h"
+#include "../apu/Gb_Apu.h"
+#include "../apu/Effects_Buffer.h"
 
 extern int gbHardware;
 
@@ -132,7 +132,7 @@ void gbSoundTick()
 		if ( memcmp( &gb_effects_config_current, &gb_effects_config,
 				sizeof gb_effects_config ) || soundGetEnable() != prevSoundEnable )
 			apply_effects();
-		
+
 		if ( soundVolume_ != soundGetVolume() )
 			apply_volume();
 	}
@@ -147,7 +147,7 @@ static void reset_apu()
 		mode = Gb_Apu::mode_agb;
 	gb_apu->reset( mode );
 	gb_apu->reduce_clicks( declicking );
-	
+
 	if ( stereo_buffer )
 		stereo_buffer->clear();
 
@@ -387,7 +387,7 @@ static void gbSoundReadGameOld(int version,gzFile gzFile)
 		state.apu.regs [nr52] = 0x80; // power on
 		return;
 	}
-	
+
 	// Load state
 	utilReadData( gzFile, gbsound_format );
 
@@ -420,7 +420,7 @@ static void gbSoundReadGameOld(int version,gzFile gzFile)
 static variable_desc gb_state [] =
 {
 	LOAD( int, state.version ),				// room_for_expansion will be used by later versions
-	
+
 	// APU
 	LOAD( u8 [0x40], state.apu.regs ),      // last values written to registers and wave RAM (both banks)
 	LOAD( int, state.apu.frame_time ),      // clocks until next frame sequencer action
@@ -466,7 +466,7 @@ void gbSoundReadGame( int version, gzFile in )
 	// Prepare APU and default state
 	reset_apu();
 	gb_apu->save_state( &state.apu );
-	
+
 	if ( version > 11 )
 		utilReadData( in, gb_state );
 	else

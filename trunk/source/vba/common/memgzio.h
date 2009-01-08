@@ -11,8 +11,21 @@
 #ifndef HAVE_ZUTIL_H
 #include "../win32/include/zlib/zutil.h"
 #else
-#include <zutil.h>
+#include <zlib.h>
 #endif
+
+#ifndef local
+#  define local static
+#endif
+
+#if MAX_MEM_LEVEL >= 8
+#  define DEF_MEM_LEVEL 8
+#else
+#  define DEF_MEM_LEVEL  MAX_MEM_LEVEL
+#endif
+
+#define OS_CODE  0x03  /* assume Unix */
+#define zmemcpy memcpy
 
 gzFile ZEXPORT memgzopen(char *memory, int, const char *);
 int ZEXPORT memgzread(gzFile, voidp, unsigned);

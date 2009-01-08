@@ -30,15 +30,15 @@ extern "C" {
 #include "System.h"
 #include "NLS.h"
 #include "Util.h"
-#include "Flash.h"
-#include "agb/GBA.h"
-#include "Globals.h"
-#include "RTC.h"
-#include "Port.h"
+#include "gba/Flash.h"
+#include "gba/GBA.h"
+#include "gba/Globals.h"
+#include "gba/RTC.h"
+#include "common/Port.h"
 #include "unzip.h"
 
 extern "C" {
-#include "memgzio.h"
+#include "common/memgzio.h"
 }
 
 #ifndef _MSC_VER

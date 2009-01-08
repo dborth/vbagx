@@ -14,7 +14,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-
+#include <string.h>
+#include <errno.h>
 #include "memgzio.h"
 
 /*struct internal_state {int dummy;};*/ /* for buggy compilers */
@@ -670,7 +671,7 @@ int flush;
       if (len == 0 && s->z_err == Z_BUF_ERROR) s->z_err = Z_OK;
 
       /* deflate has finished flushing only when it hasn't used up
-       * all the available space in the output buffer: 
+       * all the available space in the output buffer:
        */
       done = (s->stream.avail_out != 0 || s->z_err == Z_STREAM_END);
 

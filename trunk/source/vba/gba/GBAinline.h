@@ -21,9 +21,9 @@
 #define VBA_GBAinline_H
 
 #include "../System.h"
-#include "../Port.h"
-#include "../RTC.h"
-#include "../Sound.h"
+#include "../common/Port.h"
+#include "RTC.h"
+#include "Sound.h"
 #include "agbprint.h"
 #include "vmmem.h" // Nintendo GC Virtual Memory
 

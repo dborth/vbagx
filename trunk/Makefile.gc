@@ -18,7 +18,8 @@ include $(DEVKITPPC)/gamecube_rules
 TARGET		:=	vbagx_gc
 TARGETDIR   :=  executables
 BUILD		:=	build_gc
-SOURCES		:=	source/vba source/vba/agb source/vba/dmg source/vba/dmg/gb_apu \
+SOURCES		:=	source/vba source/vba/apu source/vba/common \
+				source/vba/gb source/vba/gba \
 				source/ngc source/sz source/unzip
 INCLUDES 	:=  source/vba source/ngc source/unzip
 
@@ -103,7 +104,6 @@ $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@[ -d $(TARGETDIR) ] || mkdir -p $(TARGETDIR)
 	@make --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.gc
-	@rm -fr $(OUTPUT).elf
 
 #---------------------------------------------------------------------------------
 clean:

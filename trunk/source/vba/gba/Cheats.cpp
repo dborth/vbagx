@@ -20,12 +20,12 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include "agb/GBA.h"
-#include "agb/GBAinline.h"
+#include "GBA.h"
+#include "GBAinline.h"
 #include "Cheats.h"
 #include "Globals.h"
-#include "NLS.h"
-#include "Util.h"
+#include "../NLS.h"
+#include "../Util.h"
 
 /**
  * Gameshark code types: (based on AR v1.0)
