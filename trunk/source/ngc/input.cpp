@@ -308,7 +308,6 @@ u32 GetJoy(int pad)
     s8 gc_py = PAD_SubStickY (0);
 
     #ifdef HW_RVL
-    s8 wm_sx = WPAD_Stick (0,1,0);
     s8 wm_sy = WPAD_Stick (0,1,1);
     u32 wm_pb = WPAD_ButtonsHeld (0); // wiimote / expansion button info
     #endif
@@ -329,7 +328,6 @@ u32 GetJoy(int pad)
     #ifdef HW_RVL
     		 || (wm_pb & WPAD_BUTTON_HOME)
     		 || (wm_pb & WPAD_CLASSIC_BUTTON_HOME)
-    		 || (wm_sx < -70)
     #endif
     )
 	{

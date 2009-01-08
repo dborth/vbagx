@@ -15,10 +15,10 @@
 #include <fat.h>
 #include <sys/dir.h>
 
-#include "agb/GBA.h"
-#include "Globals.h"
+#include "gba/GBA.h"
+#include "gba/Globals.h"
 #include "Util.h"
-#include "Port.h"
+#include "common/Port.h"
 
 #include "vba.h"
 #include "fileop.h"
