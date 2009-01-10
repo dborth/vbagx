@@ -1,24 +1,6 @@
-// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
-// Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2005-2006 Forgotten and the VBA development team
-
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2, or(at your option)
-// any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
 #include <string.h>
-
-#include "../gba/GBA.h"
+#include "../common/Types.h"
+#include "../Util.h"
 #include "gbGlobals.h"
 #include "gbSGB.h"
 
@@ -60,6 +42,7 @@ u8 gbInvertTab[256] = {
 u16 gbLineMix[160];
 u16 gbWindowColor[160];
 extern int inUseRegister_WY;
+extern int layerSettings;
 
 void gbRenderLine()
 {
@@ -583,11 +566,12 @@ void gbDrawSprites(bool draw)
           {
             for (int j = x-8; j<300; j++)
               if (j>=0)
+              {
                 if (gbSpeed)
                   gbSpritesTicks[j] += 5;
                 else
                   gbSpritesTicks[j] += 2+(count&1);
-
+              }
           }
           count++;
         }

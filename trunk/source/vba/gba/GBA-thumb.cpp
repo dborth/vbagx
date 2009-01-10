@@ -1,26 +1,5 @@
-// -*- C++ -*-
-// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
-// Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2004 Forgotten and the VBA development team
-
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2, or(at your option)
-// any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-
 #include <stdio.h>
 #include <stdlib.h>
-//#include <memory.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -37,7 +16,6 @@
 #include "../NLS.h"
 #include "elf.h"
 #include "../Util.h"
-#include "../common/Port.h"
 #include "../System.h"
 #include "agbprint.h"
 #ifdef PROFILING
@@ -48,6 +26,7 @@
 #define snprintf _snprintf
 #endif
 
+///////////////////////////////////////////////////////////////////////////
 
 static int clockTicks;
 
@@ -96,8 +75,7 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
 
-#if 1 // Wii port override
-//#ifndef C_CORE
+#ifndef C_CORE
 #ifdef __GNUC__
 #ifdef __POWERPC__
   #define ADD_RD_RS_RN(N) \
@@ -176,7 +154,7 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             {\
                 register int Flags;					\
                 register int Result;				\
-                asm volatile("mtspr 1, %4\n"		\
+                asm volatile("mtspr 1, %4\n"		\ /* reg 1 is xer */
                              "addeo. %0, %2, %3\n"	\
                              "mcrxr cr1\n"			\
                              "mfcr	%1\n"			\
@@ -268,7 +246,7 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             {\
                 register int Flags;					\
                 register int Result;				\
-                asm volatile("mtspr 1, %4\n"		\
+                asm volatile("mtspr 1, %4\n"		\ /* reg 1 is xer */
                              "subfeo. %0, %3, %2\n"	\
                              "mcrxr cr1\n"			\
                              "mfcr	%1\n"			\

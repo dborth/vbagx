@@ -1,21 +1,3 @@
-// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
-// Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2005 Forgotten and the VBA development team
-
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2, or(at your option)
-// any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,6 +72,35 @@ void gbCheatsReadGame(gzFile gzFile, int version)
 
   gbCheatUpdateMap();
 }
+
+
+void gbCheatsReadGameSkip(gzFile gzFile, int version)
+{
+  if( version <= 8 ) {
+    int gbGgOn = utilReadInt( gzFile );
+    if( gbGgOn ) {
+      int n = utilReadInt( gzFile );
+      if( n > 0 ) {
+        utilGzSeek( gzFile, n * sizeof(gbXxCheat), SEEK_CUR );
+      }
+    }
+
+    int gbGsOn = utilReadInt( gzFile );
+    if( gbGsOn ) {
+      int n = utilReadInt(gzFile);
+      if( n > 0 ) {
+        utilGzSeek( gzFile, n * sizeof(gbXxCheat), SEEK_CUR );
+      }
+    }
+  } else {
+    int n = utilReadInt( gzFile );
+
+    if( n > 0 ) {
+      utilGzSeek( gzFile, n * sizeof(gbCheat), SEEK_CUR );
+    }
+  }
+}
+
 
 void gbCheatsSaveCheatList(const char *file)
 {
@@ -177,10 +188,10 @@ bool gbVerifyGsCode(const char *code)
     if(!GBCHEAT_IS_HEX(code[i]))
       return false;
 
-  int address = GBCHEAT_HEX_VALUE(code[6]) << 12 |
+/*  int address = GBCHEAT_HEX_VALUE(code[6]) << 12 |
     GBCHEAT_HEX_VALUE(code[7]) << 8 |
     GBCHEAT_HEX_VALUE(code[4]) << 4 |
-    GBCHEAT_HEX_VALUE(code[5]);
+    GBCHEAT_HEX_VALUE(code[5]);*/
 
   return true;
 }

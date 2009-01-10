@@ -1,24 +1,5 @@
-// -*- C++ -*-
-// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
-// Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2005 Forgotten and the VBA development team
-
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2, or(at your option)
-// any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-#ifndef VBA_GBAinline_H
-#define VBA_GBAinline_H
+#ifndef GBAINLINE_H
+#define GBAINLINE_H
 
 #include "../System.h"
 #include "../common/Port.h"
@@ -700,11 +681,11 @@ static inline void CPUWriteByte(u32 address, u8 b)
   switch(address >> 24) {
   case 2:
 #ifdef BKPT_SUPPORT
-      if(freezeWorkRAM[address & 0x3FFFF])
-        cheatsWriteByte(address & 0x203FFFF, b);
-      else
+    if(freezeWorkRAM[address & 0x3FFFF])
+      cheatsWriteByte(address & 0x203FFFF, b);
+    else
 #endif
-        workRAM[address & 0x3FFFF] = b;
+      workRAM[address & 0x3FFFF] = b;
     break;
   case 3:
 #ifdef BKPT_SUPPORT
@@ -717,13 +698,6 @@ static inline void CPUWriteByte(u32 address, u8 b)
   case 4:
     if(address < 0x4000400) {
       switch(address & 0x3FF) {
-      case 0x301:
-	if(b == 0x80)
-	  stopState = true;
-	holdState = 1;
-	holdType = -1;
-  cpuNextEvent = cpuTotalTicks;
-	break;
       case 0x60:
       case 0x61:
       case 0x62:
@@ -764,17 +738,22 @@ static inline void CPUWriteByte(u32 address, u8 b)
       case 0x9d:
       case 0x9e:
       case 0x9f:
-	soundEvent(address&0xFF, b);
-	break;
-      default:
-	if(address & 1)
-	  CPUUpdateRegister(address & 0x3fe,
-			    ((READ16LE(((u16 *)&ioMem[address & 0x3fe])))
-			     & 0x00FF) |
-			    b<<8);
-	else
-	  CPUUpdateRegister(address & 0x3fe,
-			    ((READ16LE(((u16 *)&ioMem[address & 0x3fe])) & 0xFF00) | b));
+        soundEvent(address&0xFF, b);
+        break;
+      case 0x301: // HALTCNT, undocumented
+        if(b == 0x80)
+          stopState = true;
+        holdState = 1;
+        holdType = -1;
+        cpuNextEvent = cpuTotalTicks;
+        break;
+      default: // every other register
+        u32 lowerBits = address & 0x3fe;
+        if(address & 1) {
+          CPUUpdateRegister(lowerBits, (READ16LE(&ioMem[lowerBits]) & 0x00FF) | (b << 8));
+        } else {
+          CPUUpdateRegister(lowerBits, (READ16LE(&ioMem[lowerBits]) & 0xFF00) | b);
+        }
       }
       break;
     } else goto unwritable;
@@ -786,7 +765,7 @@ static inline void CPUWriteByte(u32 address, u8 b)
   case 6:
     address = (address & 0x1fffe);
     if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
-        return;
+      return;
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
 
@@ -799,7 +778,7 @@ static inline void CPUWriteByte(u32 address, u8 b)
         cheatsWriteByte(address + 0x06000000, b);
       else
 #endif
-            *((u16 *)&vram[address]) = (b << 8) | b;
+        *((u16 *)&vram[address]) = (b << 8) | b;
     }
     break;
   case 7:
@@ -814,26 +793,26 @@ static inline void CPUWriteByte(u32 address, u8 b)
     }
     goto unwritable;
   case 14:
-      if (!(saveType == 5) && (!eepromInUse | cpuSramEnabled | cpuFlashEnabled)) {
+    if (!(saveType == 5) && (!eepromInUse | cpuSramEnabled | cpuFlashEnabled)) {
 
-    //if(!cpuEEPROMEnabled && (cpuSramEnabled | cpuFlashEnabled)) {
+      //if(!cpuEEPROMEnabled && (cpuSramEnabled | cpuFlashEnabled)) {
 
-        (*cpuSaveGameFunc)(address, b);
+      (*cpuSaveGameFunc)(address, b);
       break;
     }
     // default
   default:
-  unwritable:
+unwritable:
 #ifdef GBA_LOGGING
     if(systemVerbose & VERBOSE_ILLEGAL_WRITE) {
       log("Illegal byte write: %02x to %08x from %08x\n",
-          b,
-          address,
-          armMode ? armNextPC - 4 : armNextPC -2 );
+        b,
+        address,
+        armMode ? armNextPC - 4 : armNextPC -2 );
     }
 #endif
     break;
   }
 }
 
-#endif //VBA_GBAinline_H
+#endif // GBAINLINE_H
