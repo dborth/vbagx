@@ -1,9 +1,9 @@
+#ifndef SOUND_H
+#define SOUND_H
+
 // Sound emulation setup/options and GBA sound emulation
 
-#ifndef VBA_SOUND_H
-#define VBA_SOUND_H
-
-#include "System.h"
+#include "../System.h"
 
 //// Setup/options (these affect GBA and GB sound)
 
@@ -80,4 +80,4 @@ extern int soundTicks;          // Number of 16.8 MHz clocks until soundTick() w
 void soundSaveGame( gzFile );
 void soundReadGame( gzFile, int version );
 
-#endif // VBA_SOUND_H
+#endif // SOUND_H
