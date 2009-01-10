@@ -444,15 +444,10 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 * Sound
 ****************************************************************************/
 
-void systemWriteDataToSoundBuffer()
+SoundDriver * systemSoundInit()
 {
-	MIXER_AddSamples((u8 *)soundFinalWave, (cartridgeType == 1));
-}
-
-bool systemSoundInit()
-{
-	ResetAudio();
-	return true;
+	soundShutdown();
+	return new SoundWii();
 }
 
 bool systemCanChangeSoundQuality()
@@ -460,10 +455,13 @@ bool systemCanChangeSoundQuality()
 	return true;
 }
 
-void systemSoundPause() {}
-void systemSoundResume() {}
-void systemSoundReset() {}
-void systemSoundShutdown() {}
+void systemOnWriteDataToSoundBuffer(const u16 * finalWave, int length)
+{
+}
+
+void systemOnSoundShutdown()
+{
+}
 
 /****************************************************************************
 * systemReadJoypads
@@ -773,8 +771,7 @@ bool LoadVBAROM(int method)
 			hAspect = 70;
 			vAspect = 46;
 			srcPitch = 484;
-			soundQuality = 2;
-			soundBufferLen = 736 * 2;
+			soundSetSampleRate(44100 / 2);
 			cpuSaveType = 0;
 			break;
 
@@ -807,8 +804,7 @@ bool LoadVBAROM(int method)
 			hAspect = 60;
 			vAspect = 46;
 			srcPitch = 324;
-			soundQuality = 1;
-			soundBufferLen = 1470 * 2;
+			soundSetSampleRate(44100);
 			break;
 	}
 
@@ -833,7 +829,6 @@ bool LoadVBAROM(int method)
 			LoadPatch(method);
 
 			gbSoundReset();
-			gbSoundSetQuality(soundQuality);
 			gbSoundSetDeclicking(true);
 			gbReset();
 		}
@@ -851,7 +846,6 @@ bool LoadVBAROM(int method)
 			doMirroring(mirroringEnable);
 
 			soundReset();
-			soundSetQuality(soundQuality);
 			CPUInit("BIOS.GBA", 1);
 			LoadPatch(method);
 			CPUReset();

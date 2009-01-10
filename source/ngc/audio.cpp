@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "audio.h"
+
 extern int ConfigRequested;
 
 /** Locals **/
@@ -31,7 +33,7 @@ static int IsPlaying = 0;
 /****************************************************************************
  * MIXER_GetSamples
  ***************************************************************************/
-static int MIXER_GetSamples( u8 *dstbuffer, int maxlen )
+static int MIXER_GetSamples(u8 *dstbuffer, int maxlen)
 {
 	u32 *src = (u32 *)mixerdata;
 	u32 *dst = (u32 *)dstbuffer;
@@ -55,61 +57,17 @@ static int MIXER_GetSamples( u8 *dstbuffer, int maxlen )
 
 static void AudioPlayer()
 {
-	if ( !ConfigRequested )
+	if (IsPlaying)
 	{
 		int len = MIXER_GetSamples(soundbuffer[whichab], 3200);
-		DCFlushRange(soundbuffer[whichab],len);
 		AUDIO_InitDMA((u32)soundbuffer[whichab],len);
-		AUDIO_StartDMA();
+		DCFlushRange(soundbuffer[whichab],len);
 		whichab ^= 1;
-		IsPlaying = 1;
-	}
-	else
-		IsPlaying = 0;
-}
-
-/****************************************************************************
-* MIXER_AddSamples
-*
-* Upsample from 11025 to 48000
-* 11025 == 15052
-* 22050 == 30106
-* 44100 == 60211
-*
-* Audio officianados should look away now !
-****************************************************************************/
-void MIXER_AddSamples( u8 *sampledata, int len )
-{
-	u32 *src = (u32 *)sampledata;
-	u32 *dst = (u32 *)mixerdata;
-	u32 intlen = (3200 >> 2);
-	u32 fixofs = 0;
-	u32 fixinc;
-
-	if ( !len )
-		fixinc = 30106;
-	else
-		fixinc = 60211;
-
-	do
-	{
-		// Do simple linear interpolate, and swap channels from L-R to R-L
-		dst[head++] = SWAP(src[fixofs >> 16]);
-		head &= MIXERMASK;
-		fixofs += fixinc;
-	}
-	while( --intlen );
-
-	// Restart Sound Processing if stopped
-	if (IsPlaying == 0)
-	{
-		ConfigRequested = 0;
-		AudioPlayer();
 	}
 }
 
 /****************************************************************************
- * MIXER_GetSamples
+ * InitialiseSound
  ***************************************************************************/
 
 void InitialiseSound()
@@ -122,21 +80,72 @@ void InitialiseSound()
 }
 
 /****************************************************************************
- * MIXER_GetSamples
+ * SoundDriver
  ***************************************************************************/
 
-void ResetAudio()
+SoundWii::SoundWii()
 {
 	memset(soundbuffer, 0, 3840*2);
 	memset(mixerdata, 0, MIXBUFFSIZE);
+	AudioPlayer();
+	AUDIO_StartDMA();
 }
 
 /****************************************************************************
- * MIXER_GetSamples
- ***************************************************************************/
+* SoundWii::write
+*
+* Upsample from 11025 to 48000
+* 11025 == 15052
+* 22050 == 30106
+* 44100 == 60211
+*
+* Audio officianados should look away now !
+****************************************************************************/
 
-void StopAudio()
+void SoundWii::write(u16 * finalWave, int length)
+{
+	u32 *src = (u32 *)finalWave;
+	u32 *dst = (u32 *)mixerdata;
+	u32 intlen = (3200 >> 2);
+	u32 fixofs = 0;
+	u32 fixinc;
+
+	if (length < 2940) // length = 1468 - GBA
+		fixinc = 30106;
+	else // length = 2940 - GB
+		fixinc = 60211;
+
+	do
+	{
+		// Do simple linear interpolate, and swap channels from L-R to R-L
+		dst[head++] = SWAP(src[fixofs >> 16]);
+		head &= MIXERMASK;
+		fixofs += fixinc;
+	}
+	while( --intlen );
+}
+
+bool SoundWii::init(long sampleRate)
+{
+	return true;
+}
+
+SoundWii::~SoundWii()
+{
+}
+
+void SoundWii::pause()
 {
 	AUDIO_StopDMA();
 	IsPlaying = 0;
+}
+
+void SoundWii::resume()
+{
+	AUDIO_StartDMA();
+	IsPlaying = 1;
+}
+
+void SoundWii::reset()
+{
 }
