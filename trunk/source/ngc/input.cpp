@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
@@ -331,7 +330,6 @@ u32 GetJoy(int pad)
     #endif
     )
 	{
-    	StopAudio();
     	ConfigRequested = 1;
 		return 0;
 	}

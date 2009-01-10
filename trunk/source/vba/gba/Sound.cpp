@@ -10,6 +10,8 @@
 #include "../apu/Gb_Apu.h"
 #include "../apu/Multi_Buffer.h"
 
+#include "../common/SoundDriver.h"
+
 #define NR10 0x60
 #define NR11 0x62
 #define NR12 0x63
@@ -32,21 +34,21 @@
 #define NR51 0x81
 #define NR52 0x84
 
+SoundDriver * soundDriver = 0;
+
 extern bool stopState;      // TODO: silence sound when true
 
 int const SOUND_CLOCK_TICKS_ = 167772; // 1/100 second
 
-u16   soundFinalWave [1470];
-int   soundBufferLen     = sizeof soundFinalWave;
-int   soundQuality       = 1;
+static u16   soundFinalWave [1600];
+long  soundSampleRate    = 44100;
 bool  soundInterpolation = true;
 bool  soundPaused        = true;
 float soundFiltering     = 0.5f;
-float soundVolume        = 1.0f;
-bool  soundEcho          = false;
 int   SOUND_CLOCK_TICKS  = SOUND_CLOCK_TICKS_;
 int   soundTicks         = SOUND_CLOCK_TICKS_;
 
+static float soundVolume     = 1.0f;
 static int soundEnableFlag   = 0x3ff; // emulator channels enabled
 static float soundFiltering_ = -1;
 static float soundVolume_    = -1;
@@ -344,8 +346,14 @@ static void end_frame( blip_time_t time )
 	stereo_buffer->end_frame( time );
 }
 
-static void flush_samples()
+void flush_samples(Multi_Buffer * buffer)
 {
+	// We want to write the data frame by frame to support legacy audio drivers
+	// that don't use the length parameter of the write method.
+	// TODO: Update the Win32 audio drivers (DS, OAL, XA2), and flush all the
+	// samples at once to help reducing the audio delay on all platforms.
+	int soundBufferLen = ( soundSampleRate / 60 ) * 4;
+
 	// soundBufferLen should have a whole number of sample pairs
 	assert( soundBufferLen % (2 * sizeof *soundFinalWave) == 0 );
 
@@ -353,13 +361,14 @@ static void flush_samples()
 	int const out_buf_size = soundBufferLen / sizeof *soundFinalWave;
 
 	// Keep filling and writing soundFinalWave until it can't be fully filled
-	while ( stereo_buffer->samples_avail() >= out_buf_size )
+	while ( buffer->samples_avail() >= out_buf_size )
 	{
-		stereo_buffer->read_samples( (blip_sample_t*) soundFinalWave, out_buf_size );
+		buffer->read_samples( (blip_sample_t*) soundFinalWave, out_buf_size );
 		if(soundPaused)
 			soundResume();
 
-		systemWriteDataToSoundBuffer();
+		soundDriver->write(soundFinalWave, soundBufferLen);
+		systemOnWriteDataToSoundBuffer(soundFinalWave, soundBufferLen);
 	}
 }
 
@@ -386,7 +395,7 @@ void psoundTickfn()
 		// Run sound hardware to present
 		end_frame( SOUND_CLOCK_TICKS );
 
-		flush_samples();
+		flush_samples(stereo_buffer);
 
 		if ( soundFiltering_ != soundFiltering )
 			apply_filtering();
@@ -442,8 +451,7 @@ static void remake_stereo_buffer()
 	stereo_buffer = 0;
 
 	stereo_buffer = new Stereo_Buffer; // TODO: handle out of memory
-	long const sample_rate = 44100 / soundQuality;
-	stereo_buffer->set_sample_rate( sample_rate ); // TODO: handle out of memory
+	stereo_buffer->set_sample_rate( soundSampleRate ); // TODO: handle out of memory
 	stereo_buffer->clock_rate( gb_apu->clock_rate );
 
 	// PCM
@@ -464,19 +472,27 @@ static void remake_stereo_buffer()
 
 void soundShutdown()
 {
-	systemSoundShutdown();
+	if (soundDriver)
+	{
+		delete soundDriver;
+		soundDriver = 0;
+	}
+
+	systemOnSoundShutdown();
 }
 
 void soundPause()
 {
 	soundPaused = true;
-	systemSoundPause();
+	if (soundDriver)
+		soundDriver->pause();
 }
 
 void soundResume()
 {
 	soundPaused = false;
-	systemSoundResume();
+	if (soundDriver)
+		soundDriver->resume();
 }
 
 void soundSetVolume( float volume )
@@ -502,7 +518,7 @@ int soundGetEnable()
 
 void soundReset()
 {
-	systemSoundReset();
+	soundDriver->reset();
 
 	remake_stereo_buffer();
 	reset_apu();
@@ -516,26 +532,35 @@ void soundReset()
 
 bool soundInit()
 {
-	if ( !systemSoundInit() )
+	soundDriver = systemSoundInit();
+	if ( !soundDriver )
+		return false;
+
+	if (!soundDriver->init(soundSampleRate))
 		return false;
 
 	soundPaused = true;
 	return true;
 }
 
-void soundSetQuality(int quality)
+long soundGetSampleRate()
 {
-	if ( soundQuality != quality )
+	return soundSampleRate;
+}
+
+void soundSetSampleRate(long sampleRate)
+{
+	if ( soundSampleRate != sampleRate )
 	{
 		if ( systemCanChangeSoundQuality() )
 		{
 			soundShutdown();
-			soundQuality      = quality;
+			soundSampleRate      = sampleRate;
 			soundInit();
 		}
 		else
 		{
-			soundQuality      = quality;
+			soundSampleRate      = sampleRate;
 		}
 
 		remake_stereo_buffer();

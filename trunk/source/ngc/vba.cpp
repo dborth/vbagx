@@ -22,6 +22,8 @@ extern "C" {
 }
 #endif
 
+#include "gba/Sound.h"
+
 #include "vba.h"
 #include "vbasupport.h"
 #include "preferences.h"
@@ -246,6 +248,7 @@ int main(int argc, char *argv[])
 		LWP_SuspendThread (devicethread);
 
 		ResetVideo_Emu();
+		soundResume();
 
 		while (emulating) // emulation loop
 		{
@@ -259,6 +262,7 @@ int main(int argc, char *argv[])
 
 			if(ConfigRequested)
 			{
+				soundPause();
 				ResetVideo_Menu (); // change to menu video mode
 
 				if (GCSettings.AutoSave == 1)
@@ -277,7 +281,6 @@ int main(int argc, char *argv[])
 
 				// save zoom level
 				SavePrefs(SILENT);
-
 				ConfigRequested = 0;
 				break;
 			}

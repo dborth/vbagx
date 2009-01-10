@@ -9,6 +9,7 @@
 #include "../apu/Effects_Buffer.h"
 
 extern int gbHardware;
+extern long soundSampleRate; // current sound quality
 
 gb_effects_config_t gb_effects_config = { false, 0.20f, 0.15f, false };
 
@@ -48,22 +49,6 @@ static void end_frame( blip_time_t time )
 {
 	gb_apu       ->end_frame( time );
 	stereo_buffer->end_frame( time );
-}
-
-static void flush_samples()
-{
-	// number of samples in output buffer
-	int const out_buf_size = soundBufferLen / sizeof *soundFinalWave;
-
-	// Keep filling and writing soundFinalWave until it can't be fully filled
-	while ( stereo_buffer->samples_avail() >= out_buf_size )
-	{
-		stereo_buffer->read_samples( (blip_sample_t*) soundFinalWave, out_buf_size );
-		if(soundPaused)
-			soundResume();
-
-		systemWriteDataToSoundBuffer();
-	}
 }
 
 static void apply_effects()
@@ -106,7 +91,7 @@ void gbSoundTick()
 		// Run sound hardware to present
 		end_frame( SOUND_CLOCK_TICKS * ticks_to_time );
 
-		flush_samples();
+		flush_samples(stereo_buffer);
 
 		// Update effects config if it was changed
 		if ( memcmp( &gb_effects_config_current, &gb_effects_config,
@@ -141,7 +126,7 @@ static void remake_stereo_buffer()
 	stereo_buffer = 0;
 
 	stereo_buffer = new Simple_Effects_Buffer; // TODO: handle out of memory
-	if ( stereo_buffer->set_sample_rate( 44100 / soundQuality ) ) { } // TODO: handle out of memory
+	if ( stereo_buffer->set_sample_rate( soundSampleRate ) ) { } // TODO: handle out of memory
 	stereo_buffer->clock_rate( gb_apu->clock_rate );
 
 	// APU
@@ -231,19 +216,19 @@ void gbSoundReset()
 	}
 }
 
-void gbSoundSetQuality(int quality)
+void gbSoundSetSampleRate( long sampleRate )
 {
-	if ( soundQuality != quality )
+	if ( soundSampleRate != sampleRate )
 	{
 		if ( systemCanChangeSoundQuality() )
 		{
 			soundShutdown();
-			soundQuality      = quality;
+			soundSampleRate      = sampleRate;
 			soundInit();
 		}
 		else
 		{
-			soundQuality      = quality;
+			soundSampleRate      = sampleRate;
 		}
 
 		remake_stereo_buffer();
@@ -380,7 +365,7 @@ static void gbSoundReadGameOld(int version,gzFile gzFile)
 	if ( version >= 7 )
 		quality = utilReadInt( gzFile );
 
-	gbSoundSetQuality( quality );
+	gbSoundSetSampleRate( 44100 / quality );
 
 	// Convert to format Gb_Apu uses
 	gb_apu_state_t& s = state.apu;

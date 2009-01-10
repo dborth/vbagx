@@ -11,9 +11,21 @@
 #ifndef __AUDIOMIXER__
 #define __AUDIOMIXER__
 
-void MIXER_AddSamples( u8 *sampledata, int len );
-void StopAudio();
-void ResetAudio();
+#include "common/SoundDriver.h"
+
 void InitialiseSound();
+
+class SoundWii: public SoundDriver
+{
+public:
+	SoundWii();
+	virtual ~SoundWii();
+
+	virtual bool init(long sampleRate);
+	virtual void pause();
+	virtual void reset();
+	virtual void resume();
+	virtual void write(u16 * finalWave, int length);
+};
 
 #endif

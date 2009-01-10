@@ -1951,9 +1951,9 @@ void CPUSoftwareInterrupt(int comment)
     }
 #endif
     if(reg[0].I)
-      systemSoundPause();
+      soundPause();
     else
-      systemSoundResume();
+      soundResume();
     break;
   case 0x1F:
     BIOS_MidiKey2Freq();
