@@ -1,22 +1,4 @@
-// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
-// Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2005-2006 Forgotten and the VBA development team
-
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2, or(at your option)
-// any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-#include "../gba/GBA.h"
+#include "../System.h"
 #include "../common/Port.h"
 #include "gbGlobals.h"
 #include "gbMemory.h"
@@ -1194,22 +1176,24 @@ mapperTAMA5 gbDataTAMA5 = {
   0, // RAM Byte select
   0, // mapper command number
   0, // mapper last command;
-  0, // commands 0x0
-  0, // commands 0x1
-  0, // commands 0x2
-  0, // commands 0x3
-  0, // commands 0x4
-  0, // commands 0x5
-  0, // commands 0x6
-  0, // commands 0x7
-  0, // commands 0x8
-  0, // commands 0x9
-  0, // commands 0xa
-  0, // commands 0xb
-  0, // commands 0xc
-  0, // commands 0xd
-  0, // commands 0xe
-  0, // commands 0xf
+  {
+    0, // commands 0x0
+    0, // commands 0x1
+    0, // commands 0x2
+    0, // commands 0x3
+    0, // commands 0x4
+    0, // commands 0x5
+    0, // commands 0x6
+    0, // commands 0x7
+    0, // commands 0x8
+    0, // commands 0x9
+    0, // commands 0xa
+    0, // commands 0xb
+    0, // commands 0xc
+    0, // commands 0xd
+    0, // commands 0xe
+    0  // commands 0xf
+  },
   0, // register
   0, // timer clock latch
   0, // timer clock register
@@ -1306,8 +1290,8 @@ void mapperTAMA5RAM(u16 address, u8 value)
         gbDataTAMA5.mapperCommands[gbDataTAMA5.mapperCommandNumber] = value;
         gbMemoryMap[0xa][0] = value;
 
-        int test = gbDataTAMA5.mapperCommands[gbDataTAMA5.mapperCommandNumber & 0x0e] |
-                                    (gbDataTAMA5.mapperCommands[(gbDataTAMA5.mapperCommandNumber & 0x0e) +1]<<4);
+/*        int test = gbDataTAMA5.mapperCommands[gbDataTAMA5.mapperCommandNumber & 0x0e] |
+                                    (gbDataTAMA5.mapperCommands[(gbDataTAMA5.mapperCommandNumber & 0x0e) +1]<<4);*/
 
         if ((gbDataTAMA5.mapperCommandNumber & 0xe) == 0) // Read Command !!!
         {
@@ -1338,8 +1322,8 @@ void mapperTAMA5RAM(u16 address, u8 value)
           // Write Commands !!!
           if (gbDataTAMA5.mapperCommands[0x0f] && (gbDataTAMA5.mapperCommandNumber == 7))
           {
-            int data = gbDataTAMA5.mapperCommands[0x04] & 0x0f |
-                      (gbDataTAMA5.mapperCommands[0x05] <<4);
+            int data = (gbDataTAMA5.mapperCommands[0x04] & 0x0f) |
+                       (gbDataTAMA5.mapperCommands[0x05] <<4);
 
             // Not sure when the write command should reset...
             // but it doesn't seem to matter.
@@ -1472,7 +1456,7 @@ void mapperTAMA5RAM(u16 address, u8 value)
           for (int i = 0; i<0x10; i++)
             for (int j = 0; j<0x10; j++)
               if (!(j&2))
-                gbTAMA5ram[(i*0x10)+j | 2] = gbTAMA5ram[(i*0x10)+j];
+                gbTAMA5ram[((i*0x10)+j) | 2] = gbTAMA5ram[(i*0x10)+j];
           // Enable this to see the content of the flashrom in 0xe000
           /*for (int k = 0; k<0x100; k++)
             gbMemoryMap[0xe][k] = gbTAMA5ram[k];*/
@@ -1661,8 +1645,6 @@ void memoryUpdateMapMMM01()
 // GameGenie ROM write registers
 void mapperGGROM(u16 address, u8 value)
 {
-  int tmpAddress = 0;
-
   switch(address & 0x6000) {
   case 0x0000: // RAM enable register
     break;

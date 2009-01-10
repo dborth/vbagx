@@ -1,44 +1,11 @@
-// -*- C++ -*-
-// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
-// Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2004 Forgotten and the VBA development team
+#ifndef SYSTEM_H
+#define SYSTEM_H
 
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2, or(at your option)
-// any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-#ifndef VBA_SYSTEM_H
-#define VBA_SYSTEM_H
-
-#include <stdint.h>
+#include "common/Types.h"
 
 #include <zlib.h>
 
-#ifndef NULL
-#define NULL 0
-#endif
-
-
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-
-typedef int8_t s8;
-typedef int16_t s16;
-typedef int32_t s32;
-typedef int64_t s64;
-
+class SoundDriver;
 
 struct EmulatedSystem {
   // main emulation function
@@ -84,12 +51,17 @@ extern u32 systemReadJoypad(int);
 extern u32 systemGetClock();
 extern void systemMessage(int, const char *, ...);
 extern void systemSetTitle(const char *);
+extern SoundDriver * systemSoundInit();
+extern void systemOnWriteDataToSoundBuffer(const u16 * finalWave, int length);
+extern void systemOnSoundShutdown();
+// old defs
 extern void systemWriteDataToSoundBuffer();
 extern void systemSoundShutdown();
 extern void systemSoundPause();
 extern void systemSoundResume();
 extern void systemSoundReset();
 extern bool systemSoundInit();
+// end old defs
 extern void systemScreenMessage(const char *);
 extern void systemUpdateMotionSensor();
 extern int  systemGetSensorX();
@@ -122,9 +94,8 @@ extern int systemVerbose;
 extern int systemFrameSkip;
 extern int systemSaveUpdateCounter;
 extern int systemSpeed;
-extern int systemThrottle;
 
 #define SYSTEM_SAVE_UPDATED 30
 #define SYSTEM_SAVE_NOT_UPDATED 0
 
-#endif //VBA_SYSTEM_H
+#endif // SYSTEM_H
