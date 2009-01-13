@@ -20,6 +20,7 @@ extern int ConfigRequested;
 /** Locals **/
 static int head = 0;
 static int tail = 0;
+static int gameType = 0;
 
 #define MIXBUFFSIZE 0x10000
 static u8 mixerdata[MIXBUFFSIZE];
@@ -52,18 +53,41 @@ static int MIXER_GetSamples(u8 *dstbuffer, int maxlen)
 }
 
 /****************************************************************************
- * MIXER_GetSamples
+ * AudioPlayer
  ***************************************************************************/
 
 static void AudioPlayer()
 {
-	if (IsPlaying)
+	if ( !ConfigRequested )
 	{
 		int len = MIXER_GetSamples(soundbuffer[whichab], 3200);
-		AUDIO_InitDMA((u32)soundbuffer[whichab],len);
 		DCFlushRange(soundbuffer[whichab],len);
+		AUDIO_InitDMA((u32)soundbuffer[whichab],len);
+		AUDIO_StartDMA();
 		whichab ^= 1;
+		IsPlaying = 1;
 	}
+	else
+		IsPlaying = 0;
+}
+
+/****************************************************************************
+ * StopAudio
+ ***************************************************************************/
+
+void StopAudio()
+{
+	AUDIO_StopDMA();
+	IsPlaying = 0;
+}
+
+/****************************************************************************
+ * SetAudioRate
+ ***************************************************************************/
+
+void SetAudioRate(int type)
+{
+	gameType = type;
 }
 
 /****************************************************************************
@@ -75,8 +99,6 @@ void InitialiseSound()
 	AUDIO_Init(NULL); // Start audio subsystem
 	AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ);
 	AUDIO_RegisterDMACallback(AudioPlayer);
-	memset(soundbuffer, 0, 3840*2);
-	memset(mixerdata, 0, MIXBUFFSIZE);
 }
 
 /****************************************************************************
@@ -87,8 +109,6 @@ SoundWii::SoundWii()
 {
 	memset(soundbuffer, 0, 3840*2);
 	memset(mixerdata, 0, MIXBUFFSIZE);
-	AudioPlayer();
-	AUDIO_StartDMA();
 }
 
 /****************************************************************************
@@ -110,7 +130,7 @@ void SoundWii::write(u16 * finalWave, int length)
 	u32 fixofs = 0;
 	u32 fixinc;
 
-	if (length < 2940) // length = 1468 - GBA
+	if (gameType == 2) // length = 1468 - GBA
 		fixinc = 30106;
 	else // length = 2940 - GB
 		fixinc = 60211;
@@ -123,6 +143,13 @@ void SoundWii::write(u16 * finalWave, int length)
 		fixofs += fixinc;
 	}
 	while( --intlen );
+
+	// Restart Sound Processing if stopped
+	if (IsPlaying == 0)
+	{
+		ConfigRequested = 0;
+		AudioPlayer();
+	}
 }
 
 bool SoundWii::init(long sampleRate)
@@ -136,14 +163,10 @@ SoundWii::~SoundWii()
 
 void SoundWii::pause()
 {
-	AUDIO_StopDMA();
-	IsPlaying = 0;
 }
 
 void SoundWii::resume()
 {
-	AUDIO_StartDMA();
-	IsPlaying = 1;
 }
 
 void SoundWii::reset()

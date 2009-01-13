@@ -750,7 +750,6 @@ bool LoadVBAROM(int method)
 		return false;
 	}
 
-	cartridgeType = 0;
 	srcWidth = 0;
 	srcHeight = 0;
 	srcPitch = 0;
@@ -761,8 +760,6 @@ bool LoadVBAROM(int method)
 	switch( type )
 	{
 		case 2:
-			//WaitPrompt("GameBoy Advance Image");
-			cartridgeType = 2;
 			emulator = GBASystem;
 			srcWidth = 240;
 			srcHeight = 160;
@@ -776,8 +773,6 @@ bool LoadVBAROM(int method)
 			break;
 
 		case 1:
-			//WaitPrompt("GameBoy Image");
-			cartridgeType = 1;
 			emulator = GBSystem;
 
 			gbBorderOn = 0; // GB borders always off
@@ -818,7 +813,7 @@ bool LoadVBAROM(int method)
 		// Setup GX
 		GX_Render_Init( srcWidth, srcHeight, hAspect, vAspect );
 
-		if (cartridgeType == 1)
+		if (type == 1)
 		{
 			gbGetHardwareType();
 
@@ -851,6 +846,7 @@ bool LoadVBAROM(int method)
 			CPUReset();
 		}
 
+		SetAudioRate(type);
 		soundInit();
 
 		emulating = 1;

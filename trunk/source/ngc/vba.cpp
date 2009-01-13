@@ -248,7 +248,6 @@ int main(int argc, char *argv[])
 		LWP_SuspendThread (devicethread);
 
 		ResetVideo_Emu();
-		soundResume();
 
 		while (emulating) // emulation loop
 		{
@@ -262,7 +261,7 @@ int main(int argc, char *argv[])
 
 			if(ConfigRequested)
 			{
-				soundPause();
+				StopAudio();
 				ResetVideo_Menu (); // change to menu video mode
 
 				if (GCSettings.AutoSave == 1)
