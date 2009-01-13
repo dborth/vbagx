@@ -14,6 +14,8 @@
 #include "common/SoundDriver.h"
 
 void InitialiseSound();
+void StopAudio();
+void SetAudioRate(int type);
 
 class SoundWii: public SoundDriver
 {
