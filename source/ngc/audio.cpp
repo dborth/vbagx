@@ -131,7 +131,7 @@ void SoundWii::write(u16 * finalWave, int length)
 	u32 fixinc;
 
 	if (gameType == 2) // length = 1468 - GBA
-		fixinc = 30106;
+		fixinc = 30065;
 	else // length = 2940 - GB
 		fixinc = 60211;
 
