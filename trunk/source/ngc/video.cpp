@@ -43,7 +43,6 @@ static int texturesize;
 static GXTexObj texobj;
 static Mtx view;
 static int vwidth, vheight;
-static int video_vaspect, video_haspect;
 static int updateScaling;
 bool progressive = false;
 
@@ -474,7 +473,7 @@ ResetVideo_Menu ()
 	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
 }
 
-void GX_Render_Init(int width, int height, int haspect, int vaspect)
+void GX_Render_Init(int width, int height)
 {
 	if (texturemem)
 		free(texturemem);
@@ -489,9 +488,6 @@ void GX_Render_Init(int width, int height, int haspect, int vaspect)
 	/*** Setup for first call to scaler ***/
 	vwidth = width;
 	vheight = height;
-
-	video_vaspect = vaspect;
-	video_haspect = haspect;
 }
 
 /****************************************************************************

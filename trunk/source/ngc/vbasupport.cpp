@@ -52,27 +52,20 @@ static tb_t start, now;
 
 u32 loadtimeradjust;
 
-int vAspect = 0;
-int hAspect = 0;
+static int cartridgeType = 0;
 
 /****************************************************************************
  * VBA Globals
  ***************************************************************************/
-int RGB_LOW_BITS_MASK=0x821;
+
 int systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
 int systemDebug = 0;
 int emulating = 0;
 
-int sensorX = 2047;
-int sensorY = 2047;
-
 int systemFrameSkip = 0;
 int systemVerbose = 0;
-int cartridgeType = 0;
-int srcWidth = 0;
-int srcHeight = 0;
-int srcPitch = 0;
+
 int systemRedShift = 0;
 int systemBlueShift = 0;
 int systemGreenShift = 0;
@@ -484,6 +477,9 @@ u32 systemReadJoypad(int which)
 * - Wario Ware Twisted!
 *
 ****************************************************************************/
+static int sensorX = 2047;
+static int sensorY = 2047;
+
 int systemGetSensorX()
 {
 	return sensorX;
@@ -583,6 +579,10 @@ if(sdlMotionButtons[KEY_LEFT]) {
 /****************************************************************************
 * systemDrawScreen
 ****************************************************************************/
+static int srcWidth = 0;
+static int srcHeight = 0;
+static int srcPitch = 0;
+
 void systemDrawScreen()
 {
 	GX_Render( srcWidth, srcHeight, pix, srcPitch );
@@ -717,14 +717,14 @@ bool LoadGBROM(int method)
 
 bool LoadVBAROM(int method)
 {
-	int type = 0;
+	cartridgeType = 0;
 	bool loaded = false;
 
 	// image type (checks file extension)
 	if(utilIsGBAImage(browserList[browser.selIndex].filename))
-		type = 2;
+		cartridgeType = 2;
 	else if(utilIsGBImage(browserList[browser.selIndex].filename))
-		type = 1;
+		cartridgeType = 1;
 	else if(utilIsZipFile(browserList[browser.selIndex].filename))
 	{
 		// we need to check the file extension of the first file in the archive
@@ -733,9 +733,9 @@ bool LoadVBAROM(int method)
 		if(zippedFilename != NULL)
 		{
 			if(utilIsGBAImage(zippedFilename))
-				type = 2;
+				cartridgeType = 2;
 			else if(utilIsGBImage(zippedFilename))
-				type = 1;
+				cartridgeType = 1;
 		}
 		else // loading the file failed
 		{
@@ -744,7 +744,7 @@ bool LoadVBAROM(int method)
 	}
 
 	// leave before we do anything
-	if(type != 1 && type != 2)
+	if(cartridgeType != 1 && cartridgeType != 2)
 	{
 		WaitPrompt("Unknown game image!");
 		return false;
@@ -757,16 +757,13 @@ bool LoadVBAROM(int method)
 	VMClose(); // cleanup GBA memory
 	gbCleanUp(); // cleanup GB memory
 
-	switch( type )
+	switch(cartridgeType)
 	{
 		case 2:
 			emulator = GBASystem;
 			srcWidth = 240;
 			srcHeight = 160;
 			loaded = VMCPULoadROM(method);
-			// Actual Visual Aspect is 1.57
-			hAspect = 70;
-			vAspect = 46;
 			srcPitch = 484;
 			soundSetSampleRate(44100 / 2);
 			cpuSaveType = 0;
@@ -795,9 +792,6 @@ bool LoadVBAROM(int method)
 			}
 
 			loaded = LoadGBROM(method);
-			// Actual physical aspect is 1.0
-			hAspect = 60;
-			vAspect = 46;
 			srcPitch = 324;
 			soundSetSampleRate(44100);
 			break;
@@ -811,9 +805,9 @@ bool LoadVBAROM(int method)
 	else
 	{
 		// Setup GX
-		GX_Render_Init( srcWidth, srcHeight, hAspect, vAspect );
+		GX_Render_Init(srcWidth, srcHeight);
 
-		if (type == 1)
+		if (cartridgeType == 1)
 		{
 			gbGetHardwareType();
 
@@ -841,12 +835,12 @@ bool LoadVBAROM(int method)
 			doMirroring(mirroringEnable);
 
 			soundReset();
-			CPUInit("BIOS.GBA", 1);
+			CPUInit(NULL, false);
 			LoadPatch(method);
 			CPUReset();
 		}
 
-		SetAudioRate(type);
+		SetAudioRate(cartridgeType);
 		soundInit();
 
 		emulating = 1;
