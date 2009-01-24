@@ -125,11 +125,6 @@ void VMClose()
 		free(rombase);
 		rombase = NULL;
 	}
-	if (romfile != NULL)
-	{
-		fclose(romfile);
-		romfile = NULL;
-	}
 	#endif
 }
 
@@ -287,13 +282,6 @@ int VMCPULoadROM(int method)
 	char msg[512];
 	char filepath[MAXPATHLEN];
 
-	/** Fix VM **/
-	VMClose();
-	VMInit();
-	VMAllocGBA();
-
-	GBAROMSize = 0;
-
 	if(!ChangeInterface(method, NOTSILENT))
 		return 0;
 
@@ -303,13 +291,7 @@ int VMCPULoadROM(int method)
 		case METHOD_USB:
 		break;
 
-		case METHOD_DVD:
-			VMClose();
-			return 0; // not implemented
-		break;
-
-		case METHOD_SMB:
-			VMClose();
+		default:
 			return 0; // not implemented
 		break;
 	}
@@ -317,18 +299,34 @@ int VMCPULoadROM(int method)
 	if(!MakeFilePath(filepath, FILE_ROM, method))
 		return false;
 
+	// loading compressed files via VM is not supported
+	if(!utilIsGBAImage(filepath))
+	{
+		WaitPrompt("Compressed GBA files are not supported!");
+		return 0;
+	}
+
 	// add device to filepath
 	char fullpath[1024];
 	sprintf(fullpath, "%s%s", rootdir, filepath);
+
+	if (romfile != NULL)
+		fclose(romfile);
 
 	romfile = fopen(fullpath, "rb");
 
 	if (romfile == NULL)
 	{
 		WaitPrompt("Error opening file!");
-		VMClose();
 		return 0;
 	}
+
+	/** Fix VM **/
+	VMClose();
+	VMInit();
+	VMAllocGBA();
+
+	GBAROMSize = 0;
 
 	res = fread(rom, 1, (1 << VMSHIFTBITS), romfile);
 	if ( res != (1 << VMSHIFTBITS ) )
@@ -375,7 +373,7 @@ static void VMNewPage( int pageid )
 		sprintf(msg, "Seek error! - Offset %d / %08x %d\n", pageid, pageid << VMSHIFTBITS, res);
 		WaitPrompt(msg);
 		VMClose();
-		return;
+		ExitToLoader();
 	}
 
 	VMAllocate( pageid );
@@ -383,10 +381,13 @@ static void VMNewPage( int pageid )
 	res = fread( vmpage[pageid].pageptr, 1, 1 << VMSHIFTBITS, romfile );
 	if ( res != ( 1 << VMSHIFTBITS ) )
 	{
-		sprintf(msg, "Error reading! %d bytes only\n", res);
+		// Homebrew ROMS may not have the expected amount of data
+		// and then end up here - but they still work - so we won't throw an error
+
+		/*sprintf(msg, "Error reading! %d bytes only\n", res);
 		WaitPrompt(msg);
 		VMClose();
-		return;
+		ExitToLoader();*/
 	}
 
 	//mftb(&end);
@@ -425,6 +426,7 @@ u32 VMRead32( u32 address )
 		sprintf(msg, "VM32 : Unknown page type! (%d) [%d]", vmpage[pageid].pagetype, pageid);
 		WaitPrompt(msg);
 		VMClose();
+		ExitToLoader();
 		return 0;
 	}
 }
@@ -456,6 +458,7 @@ u16 VMRead16( u32 address )
 		default:
 		WaitPrompt("VM16 : Unknown page type!");
 		VMClose();
+		ExitToLoader();
 		return 0;
 	}
 }
@@ -487,6 +490,7 @@ u8 VMRead8( u32 address )
 		default:
 		WaitPrompt("VM8 : Unknown page type!");
 		VMClose();
+		ExitToLoader();
 		return 0;
 	}
 }
