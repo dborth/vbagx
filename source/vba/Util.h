@@ -35,20 +35,9 @@ typedef struct {
   int size;
 } variable_desc;
 
-extern int utilGetSize(int size);
-extern bool utilWritePNGFile(const char *, int, int, u8 *);
-extern bool utilWriteBMPFile(const char *, int, int, u8 *);
-extern void utilApplyIPS(const char *ips, u8 **rom, int *size);
 extern bool utilIsGBAImage(const char *);
 extern bool utilIsGBImage(const char *);
-extern bool utilIsGzipFile(const char *);
 extern bool utilIsZipFile(const char *);
-extern void utilStripDoubleExtension(const char *, char *);
-extern IMAGE_TYPE utilFindType(const char *);
-extern u8 *utilLoad(const char *,
-                    bool (*)(const char*),
-                    u8 *,
-                    int &);
 
 extern void utilPutDword(u8 *, u32);
 extern void utilPutWord(u8 *, u16);
@@ -64,6 +53,4 @@ extern int utilGzRead(gzFile file, voidp buffer, unsigned int len);
 extern int utilGzClose(gzFile file);
 extern z_off_t utilGzSeek(gzFile file, z_off_t offset, int whence);
 extern long utilGzMemTell(gzFile file);
-extern void utilGBAFindSave(const u8 *, const int);
-extern void utilUpdateSystemColorMaps();
 #endif

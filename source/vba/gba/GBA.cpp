@@ -1130,12 +1130,12 @@ bool CPUReadBatteryFile(const char *fileName)
 
 bool CPUWritePNGFile(const char *fileName)
 {
-  return utilWritePNGFile(fileName, 240, 160, pix);
+  return false; //utilWritePNGFile(fileName, 240, 160, pix);
 }
 
 bool CPUWriteBMPFile(const char *fileName)
 {
-  return utilWriteBMPFile(fileName, 240, 160, pix);
+  return false; //utilWriteBMPFile(fileName, 240, 160, pix);
 }
 
 bool CPUIsZipFile(const char * file)
@@ -1296,7 +1296,7 @@ int CPULoadRom(const char *szFile)
     return 0;
   }
 
-  u8 *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
+  //u8 *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
 
 #ifndef NO_DEBUGGER
   if(CPUIsELF(szFile)) {
@@ -1321,7 +1321,7 @@ int CPULoadRom(const char *szFile)
     }
   } else
 #endif //NO_DEBUGGER
-  if(!utilLoad(szFile,
+/*  if(!utilLoad(szFile,
                       utilIsGBAImage,
                       whereToLoad,
                       romSize)) {
@@ -1337,7 +1337,7 @@ int CPULoadRom(const char *szFile)
   for(i = (romSize+1)&~1; i < 0x2000000; i+=2) {
     WRITE16LE(temp, (i >> 1) & 0xFFFF);
     temp++;
-  }
+  }*/
 
   bios = (u8 *)calloc(1,0x4000);
   if(bios == NULL) {
@@ -2969,7 +2969,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
   saveType = 0;
   useBios = false;
 
-  if(useBiosFile) {
+/*  if(useBiosFile) {
     int size = 0x4000;
     if(utilLoad(biosFileName,
                 CPUIsGBABios,
@@ -2980,7 +2980,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
       else
         systemMessage(MSG_INVALID_BIOS_FILE_SIZE, N_("Invalid BIOS file size"));
     }
-  }
+  }*/
 
   if(!useBios) {
     memcpy(bios, myROM, sizeof(myROM));

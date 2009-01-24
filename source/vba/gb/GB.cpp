@@ -2092,7 +2092,7 @@ void gbCPUInit(const char *biosFileName, bool useBiosFile)
   useBios = false;
   if (useBiosFile)
   {
-    int size = 0x100;
+/*    int size = 0x100;
     if(utilLoad(biosFileName,
                 CPUIsGBBios,
                 bios,
@@ -2101,7 +2101,7 @@ void gbCPUInit(const char *biosFileName, bool useBiosFile)
         useBios = true;
       else
         systemMessage(MSG_INVALID_BIOS_FILE_SIZE, N_("Invalid BOOTROM file size"));
-    }
+    }*/
   }
 }
 
@@ -3974,16 +3974,18 @@ bool gbReadSaveState(const char *name)
 
 bool gbWritePNGFile(const char *fileName)
 {
-  if(gbBorderOn)
+/*  if(gbBorderOn)
     return utilWritePNGFile(fileName, 256, 224, pix);
-  return utilWritePNGFile(fileName, 160, 144, pix);
+  return utilWritePNGFile(fileName, 160, 144, pix);*/
+	return false;
 }
 
 bool gbWriteBMPFile(const char *fileName)
 {
-  if(gbBorderOn)
+/*  if(gbBorderOn)
     return utilWriteBMPFile(fileName, 256, 224, pix);
-  return utilWriteBMPFile(fileName, 160, 144, pix);
+  return utilWriteBMPFile(fileName, 160, 144, pix);*/
+	return false;
 }
 
 void gbCleanUp()
@@ -4048,10 +4050,10 @@ bool gbLoadRom(const char *szFile)
 
   systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-  gbRom = utilLoad(szFile,
+/*  gbRom = utilLoad(szFile,
                    utilIsGBImage,
                    NULL,
-                   size);
+                   size);*/
   if(!gbRom)
     return false;
 
