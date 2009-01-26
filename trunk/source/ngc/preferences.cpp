@@ -157,6 +157,8 @@ preparePrefsData (int method)
 	createXMLSetting("ZoomLevel", "Zoom Level", FtoStr(GCSettings.ZoomLevel));
 	createXMLSetting("render", "Video Filtering", toStr(GCSettings.render));
 	createXMLSetting("widescreen", "Aspect Ratio Correction", toStr(GCSettings.widescreen));
+	createXMLSetting("xshift", "Horizontal Video Shift", toStr(GCSettings.xshift));
+	createXMLSetting("yshift", "Vertical Video Shift", toStr(GCSettings.yshift));
 
 	createXMLSection("Controller", "Controller Settings");
 
@@ -316,6 +318,8 @@ decodePrefsData (int method)
 			loadXMLSetting(&GCSettings.ZoomLevel, "ZoomLevel");
 			loadXMLSetting(&GCSettings.render, "render");
 			loadXMLSetting(&GCSettings.widescreen, "widescreen");
+			loadXMLSetting(&GCSettings.xshift, "xshift");
+			loadXMLSetting(&GCSettings.yshift, "yshift");
 
 			// Controller Settings
 
