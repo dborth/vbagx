@@ -46,4 +46,7 @@ DefaultSettings ()
 	GCSettings.ZoomLevel = 1.0; // zoom level
 	GCSettings.render = 1; // Filtered
 	GCSettings.widescreen = 0; // no aspect ratio correction
+
+	GCSettings.xshift = 0;	// video shift
+	GCSettings.yshift = 0;
 }

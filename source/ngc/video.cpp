@@ -369,10 +369,10 @@ static void UpdateScaling()
 	yscale *= GCSettings.ZoomLevel;
 
 	// Set new aspect
-	square[0] = square[9]  = -xscale;
-	square[3] = square[6]  =  xscale;
-	square[1] = square[4]  =  yscale;
-	square[7] = square[10] = -yscale;
+	square[0] = square[9]  = -xscale + GCSettings.xshift;
+	square[3] = square[6]  =  xscale + GCSettings.xshift;
+	square[1] = square[4]  =  yscale - GCSettings.yshift;
+	square[7] = square[10] = -yscale - GCSettings.yshift;
 	DCFlushRange (square, 32); // update memory BEFORE the GPU accesses it!
 
 	draw_init ();

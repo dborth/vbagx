@@ -56,6 +56,8 @@ struct SGCSettings{
     int		widescreen;
 	int		render;		// 0 - original, 1 - filtered, 2 - unfiltered
 	int		VerifySaves;
+	int		xshift;		// video output shift
+	int		yshift;
 };
 
 void ExitToLoader();
