@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 1.0.6
+                                  Version 1.0.7
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -17,7 +17,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * IPS/UPS/PPF patch support
 * Custom controller configurations
 * SD, USB, DVD, SMB, GC Memory Card, Zip, and 7z support
-* Compatiblity based on VBA-M r778
+* Compatiblity based on VBA-M r847
 * MEM2 ROM Storage for fast access
 * Auto frame skip for those core heavy games
 * Turbo speed, video zooming, widescreen, and unfiltered video options
@@ -25,6 +25,17 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[What's New 1.0.7 - January 27, 2009]
+* Updated to VBA-M r847
+* Corrected sound interpolation
+* Faster SD/USB - new read-ahead cache
+* Removed trigger of back to menu for Classic Controller right joystick
+* Fixed a bug with reading files < 2048 bytes
+* Fixed GBA games on GameCube
+* Fixed homebrew GBA games on GameCube
+* Fixed some memory leaks, buffer overflows, etc
+* Code cleanup, other general bugfixes
 
 [What's New 1.0.6 - December 24, 2008]
 * Fixed save state saving bug
