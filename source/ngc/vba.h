@@ -11,7 +11,7 @@
 #define _VBAGX_H_
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"1.0.6"
+#define APPVERSION 		"1.0.7"
 #define PREF_FILE_NAME 	"settings.xml"
 
 #define NOTSILENT 0
