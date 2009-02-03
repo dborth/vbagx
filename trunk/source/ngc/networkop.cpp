@@ -204,6 +204,7 @@ void CloseShare()
 	if(networkShareInit)
 		smbClose();
 	networkShareInit = false;
+	networkInit = false; // trigger a network reinit
 }
 
 /****************************************************************************
@@ -247,14 +248,14 @@ ConnectShare (bool silent)
 		return false;
 	}
 
+	if(unmountRequired[METHOD_SMB])
+		CloseShare();
+
 	if(!networkInit)
 		InitializeNetwork(silent);
 
 	if(networkInit)
 	{
-		if(unmountRequired[METHOD_SMB])
-			CloseShare();
-
 		if(!networkShareInit)
 		{
 			if(!silent)
