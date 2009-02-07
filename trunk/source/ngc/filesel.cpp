@@ -117,7 +117,7 @@ void ResetBrowser()
 		browserList = NULL;
 	}
 	// set aside space for 1 entry
-	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY));
+	browserList = (BROWSERENTRY *)memalign(32, sizeof(BROWSERENTRY));
 	memset(browserList, 0, sizeof(BROWSERENTRY));
 }
 

@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
 
 #include "unzip.h"
 #include "Util.h"
@@ -680,7 +681,7 @@ extern bool gbUpdateSizes();
 
 bool LoadGBROM(int method)
 {
-	gbRom = (u8 *)malloc(1024*1024*4); // allocate 4 MB to GB ROM
+	gbRom = (u8 *)memalign(32, 1024*1024*4); // allocate 4 MB to GB ROM
 	bios = (u8 *)calloc(1,0x100);
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
