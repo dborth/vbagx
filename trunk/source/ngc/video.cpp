@@ -269,9 +269,6 @@ UpdatePadsCB ()
 ****************************************************************************/
 void InitialiseVideo ()
 {
-	/*** Start VIDEO Subsystem ***/
-	VIDEO_Init();
-
 	vmode = VIDEO_GetPreferredMode(NULL);
 
 	switch (vmode->viTVMode >> 2)
