@@ -167,16 +167,22 @@ int main(int argc, char *argv[])
 	#endif
 
 	#ifdef HW_RVL
+	DI_Close();
 	DI_Init();	// first
 	#endif
 
 	InitDeviceThread();
-
-	// Initialise controllers
-	PAD_Init ();
+	VIDEO_Init();
+	PAD_Init();
 
 	#ifdef HW_RVL
 	WPAD_Init();
+	#endif
+
+	InitialiseVideo();
+	ResetVideo_Menu (); // change to menu video mode
+
+	#ifdef HW_RVL
 	// read wiimote accelerometer and IR data
 	WPAD_SetDataFormat(WPAD_CHAN_ALL,WPAD_FMT_BTNS_ACC_IR);
 	WPAD_SetVRes(WPAD_CHAN_ALL,640,480);
@@ -186,11 +192,6 @@ int main(int argc, char *argv[])
 	SYS_SetPowerCallback(ShutdownCB);
 	SYS_SetResetCallback(ResetCB);
 	#endif
-
-	int selectedMenu = -1;
-
-	InitialiseVideo();
-	ResetVideo_Menu (); // change to menu video mode
 
 	// Initialise freetype font system
 	if (FT_Init ())
@@ -221,6 +222,8 @@ int main(int argc, char *argv[])
 	sprintf(appPath, "vbagx");
 	if(argc > 0 && argv[0] != NULL)
 		CreateAppPath(argv[0]);
+
+	int selectedMenu = -1;
 
 	// Load preferences
 	if(!LoadPrefs())
