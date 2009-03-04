@@ -10,9 +10,9 @@
 
 #include "gamesettings.h"
 
-int gameSettingsCount = 104;
+int gameSettingsCount = 106;
 
-gameSetting gameSettings[104] = {
+gameSetting gameSettings[106] = {
 	{
 	"Dragon Ball Z - The Legacy of Goku II (Europe)(En,Fr,De,Es,It)",
 	"ALFP",
@@ -344,7 +344,7 @@ gameSetting gameSettings[104] = {
 	{
 	"Yoshi - Topsy-Turvy (USA)",
 	"KYGE",
-	1,
+	4,
 	-1,
 	-1,
 	-1
@@ -844,5 +844,21 @@ gameSetting gameSettings[104] = {
 	-1,
 	131072,
 	-1
-	}
+	},
+	{
+	"WarioWare - Twisted! (USA)",
+	"RZWE",
+	-1,
+	1, // needs "RealTimeClock" (actually motion sensor and rumble)
+	-1,
+	-1
+	},
+	{
+	"Mawaru Made in Wario (Japan)",
+	"RZWJ",
+	-1,
+	1, // needs "RealTimeClock" (actually motion sensor and rumble)
+	-1,
+	-1
+	},
 };
