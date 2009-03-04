@@ -34,6 +34,7 @@ extern "C" {
 #include "dvd.h"
 #include "networkop.h"
 #include "gcunzip.h"
+#include "wiiusbsupport.h"
 
 BROWSERINFO browser;
 BROWSERENTRY * browserList = NULL; // list of files/folders in browser
@@ -342,11 +343,11 @@ int FileSelector (int method)
 #endif
 
 		/*** Check for exit combo ***/
-		if ( (gc_sx < -70) || (wm_sx < -70) || (wp & WPAD_BUTTON_HOME) || (wp & WPAD_CLASSIC_BUTTON_HOME) )
+		if ( (gc_sx < -70) || (wm_sx < -70) || (wp & WPAD_BUTTON_HOME) || (wp & WPAD_CLASSIC_BUTTON_HOME) || DownUsbKeys[KB_ESC])
 			return 0;
 
 		/*** Check buttons, perform actions ***/
-		if ( (p & PAD_BUTTON_A) || selectit || (wp & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) )
+		if ( (p & PAD_BUTTON_A) || selectit || (wp & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) || DownUsbKeys[KB_ENTER] )
 		{
 			if ( selectit )
 				selectit = 0;
@@ -434,7 +435,7 @@ int FileSelector (int method)
 			}
 			redraw = 1;
 		}	// End of A
-        if ( (p & PAD_BUTTON_B) || (wp & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B)) )
+        if ( (p & PAD_BUTTON_B) || (wp & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B) || DownUsbKeys[KB_BKSP]))
         {
             while ( (PAD_ButtonsDown(0) & PAD_BUTTON_B)
 #ifdef HW_RVL

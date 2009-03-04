@@ -11,7 +11,7 @@
 #define _VBAGX_H_
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"1.0.7"
+#define APPVERSION 		"1.0.8"
 #define PREF_FILE_NAME 	"settings.xml"
 
 #define NOTSILENT 0
@@ -53,11 +53,13 @@ struct SGCSettings{
 
     int		Zoom; // 0 - off, 1 - on
     float	ZoomLevel; // zoom amount
-    int		widescreen;
+    int		scaling; // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
 	int		render;		// 0 - original, 1 - filtered, 2 - unfiltered
 	int		VerifySaves;
 	int		xshift;		// video output shift
 	int		yshift;
+	int		WiiControls; // Match Wii Game
+	int		WiimoteOrientation;
 };
 
 void ExitToLoader();

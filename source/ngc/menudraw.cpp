@@ -26,6 +26,8 @@
 #include "dvd.h"
 #include "input.h"
 #include "networkop.h"
+#include "wiiusbsupport.h"
+#include "filelist.h"
 
 /*** Globals ***/
 static FT_Library ftlibrary;
@@ -33,8 +35,6 @@ static FT_Face face;
 static FT_GlyphSlot slot;
 static unsigned int fonthi, fontlo;
 
-extern char fontface[];		/*** From fontface.s ***/
-extern int fontsize;		/*** From fontface.s ***/
 extern int screenheight;
 extern unsigned int *xfb[2];
 extern int whichfb;
@@ -57,7 +57,7 @@ FT_Init ()
     return 1;
 
   err =
-    FT_New_Memory_Face (ftlibrary, (FT_Byte *) fontface, fontsize, 0, &face);
+    FT_New_Memory_Face (ftlibrary, (FT_Byte *) font_ttf, font_ttf_size, 0, &face);
   if (err)
     return 1;
 
@@ -238,7 +238,7 @@ Credits ()
 	DrawText (-1, ypos += 18, "Official Site: http://code.google.com/p/vba-wii/");
 
 	DrawText (90, ypos += 36, "Visual Boy Advance GX");
-	DrawText (380, ypos, "Tantric");
+	DrawText (380, ypos, "Tantric, Carl Kenner");
 	DrawText (90, ypos += 18, "GameCube/Wii Port Improvements");
 	DrawText (380, ypos, "emukidid");
 	DrawText (90, ypos += 18, "Original GameCube Port");
@@ -304,8 +304,12 @@ void
 WaitButtonA ()
 {
 #ifdef HW_RVL
-  while ( (PAD_ButtonsDown (0) & PAD_BUTTON_A) || (WPAD_ButtonsDown(0) & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) ) VIDEO_WaitVSync();
-  while (!(PAD_ButtonsDown (0) & PAD_BUTTON_A) && !(WPAD_ButtonsDown(0) & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) ) VIDEO_WaitVSync();
+  while ( (PAD_ButtonsDown (0) & PAD_BUTTON_A) 
+		|| (WPAD_ButtonsDown(0) & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) 
+		|| (DownUsbKeys[KB_ENTER])) VIDEO_WaitVSync();
+  while (!(PAD_ButtonsDown (0) & PAD_BUTTON_A) 
+		&& !(WPAD_ButtonsDown(0) & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) 
+		&& !(DownUsbKeys[KB_ENTER])) VIDEO_WaitVSync();
 #else
   while ( PAD_ButtonsDown (0) & PAD_BUTTON_A ) VIDEO_WaitVSync();
   while (!(PAD_ButtonsDown (0) & PAD_BUTTON_A) ) VIDEO_WaitVSync();
@@ -324,15 +328,20 @@ WaitButtonAB ()
 
     while ( (PAD_ButtonsDown (0) & (PAD_BUTTON_A | PAD_BUTTON_B))
 			|| (WPAD_ButtonsDown(0) & (WPAD_BUTTON_A | WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_A | WPAD_CLASSIC_BUTTON_B))
+			|| (DownUsbKeys[KB_ENTER]) || (DownUsbKeys[KB_ESC])
 			) VIDEO_WaitVSync();
 
     while ( TRUE )
     {
         gc_btns = PAD_ButtonsDown (0);
 		wm_btns = WPAD_ButtonsDown (0);
-        if ( (gc_btns & PAD_BUTTON_A) || (wm_btns & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) )
+        if ( (gc_btns & PAD_BUTTON_A) || (wm_btns & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) 
+					|| (DownUsbKeys[KB_ENTER])
+		)
             return 1;
-        else if ( (gc_btns & PAD_BUTTON_B) || (wm_btns & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B)) )
+        else if ( (gc_btns & PAD_BUTTON_B) || (wm_btns & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B)) 
+					|| (DownUsbKeys[KB_ESC])
+		)
             return 0;
     }
 #else
@@ -558,26 +567,44 @@ RunMenu (char items[][50], int maxitems, const char *title, int fontsize, int x)
 		VIDEO_WaitVSync();	// slow things down a bit so we don't overread the pads
 
         /*** Look for up ***/
-        if ( (p & PAD_BUTTON_UP) || (wp & (WPAD_BUTTON_UP | WPAD_CLASSIC_BUTTON_UP)) || (gc_ay > PADCAL) || (wm_ay > PADCAL) )
+        if ( (p & PAD_BUTTON_UP) || (wp & (WPAD_BUTTON_UP | WPAD_CLASSIC_BUTTON_UP)) || 
+		(gc_ay > PADCAL) || (wm_ay > PADCAL) 
+#ifdef HW_RVL
+			|| DownUsbKeys[KB_UP]
+#endif		
+		)
         {
             redraw = 1;
             menu = FindMenuItem(&items[0], maxitems, menu, -1);
         }
 
         /*** Look for down ***/
-        if ( (p & PAD_BUTTON_DOWN) || (wp & (WPAD_BUTTON_DOWN | WPAD_CLASSIC_BUTTON_DOWN)) || (gc_ay < -PADCAL) || (wm_ay < -PADCAL) )
+        if ( (p & PAD_BUTTON_DOWN) || (wp & (WPAD_BUTTON_DOWN | WPAD_CLASSIC_BUTTON_DOWN)) || 
+		(gc_ay < -PADCAL) || (wm_ay < -PADCAL)
+#ifdef HW_RVL
+			|| DownUsbKeys[KB_DOWN]
+#endif		
+		)
         {
             redraw = 1;
             menu = FindMenuItem(&items[0], maxitems, menu, +1);
         }
 
-        if ((p & PAD_BUTTON_A) || (wp & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)))
+        if ((p & PAD_BUTTON_A) || (wp & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A))
+#ifdef HW_RVL
+			|| DownUsbKeys[KB_ENTER]
+#endif		
+		)
         {
             quit = 1;
             ret = menu;
         }
 
-        if ((p & PAD_BUTTON_B) || (wp & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B)))
+        if ((p & PAD_BUTTON_B) || (wp & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B))
+#ifdef HW_RVL
+			|| DownUsbKeys[KB_ESC]
+#endif
+		)
         {
             quit = -1;
             ret = -1;
@@ -588,6 +615,7 @@ RunMenu (char items[][50], int maxitems, const char *title, int fontsize, int x)
 	while ( (PAD_ButtonsDown(0) & PAD_BUTTON_B)
 #ifdef HW_RVL
 			|| (WPAD_ButtonsDown(0) & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B))
+			|| DownUsbKeys[KB_ESC]
 #endif
 			)
 	{

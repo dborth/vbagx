@@ -41,11 +41,14 @@ DefaultSettings ()
 	GCSettings.smbpwd[19] = 0;
 	GCSettings.smbshare[19] = 0;
 
+	GCSettings.WiimoteOrientation = 0;
+
 	GCSettings.VerifySaves = 0;
 	GCSettings.Zoom = 0;	// zooming default off
 	GCSettings.ZoomLevel = 1.0; // zoom level
 	GCSettings.render = 1; // Filtered
-	GCSettings.widescreen = 0; // no aspect ratio correction
+	GCSettings.scaling = 1; // partial stretch
+	GCSettings.WiiControls = true; // Match Wii Game
 
 	GCSettings.xshift = 0;	// video shift
 	GCSettings.yshift = 0;
