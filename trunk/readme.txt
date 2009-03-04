@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 1.0.7
+                                  Version 1.0.8
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -12,7 +12,8 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 -=[ Features ]=-
 
-* Wiimote, Nunchuk, Classic, and Gamecube controller support
+* Wiimote, Nunchuk, Classic, Gamecube controller, Keyboard, and Mouse support
+* Optional special Wii controls built-in for some games
 * SRAM and State saving
 * IPS/UPS/PPF patch support
 * Custom controller configurations
@@ -158,7 +159,7 @@ on these topics is the tehskeen forums: http://www.tehskeen.com/forums/
  
 -=[ Credits ]=-
 
-Visual Boy Advance GX             Tantric
+Visual Boy Advance GX             Tantric, Carl Kenner
 GameCube/Wii Port Improvements    emukidid
 Original GameCube Port            SoftDev
 Visual Boy Advance 1.7.2          Forgotten

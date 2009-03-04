@@ -156,16 +156,18 @@ preparePrefsData (int method)
 	createXMLSetting("Zoom", "Zoom On/Off", toStr(GCSettings.Zoom));
 	createXMLSetting("ZoomLevel", "Zoom Level", FtoStr(GCSettings.ZoomLevel));
 	createXMLSetting("render", "Video Filtering", toStr(GCSettings.render));
-	createXMLSetting("widescreen", "Aspect Ratio Correction", toStr(GCSettings.widescreen));
+	createXMLSetting("scaling", "Aspect Ratio Correction", toStr(GCSettings.scaling));
 	createXMLSetting("xshift", "Horizontal Video Shift", toStr(GCSettings.xshift));
 	createXMLSetting("yshift", "Vertical Video Shift", toStr(GCSettings.yshift));
 
 	createXMLSection("Controller", "Controller Settings");
 
+	createXMLSetting("WiiControls", "Match Wii Game", toStr(GCSettings.WiiControls));
 	createXMLController(gcpadmap, "gcpadmap", "GameCube Pad");
 	createXMLController(wmpadmap, "wmpadmap", "Wiimote");
 	createXMLController(ccpadmap, "ccpadmap", "Classic Controller");
 	createXMLController(ncpadmap, "ncpadmap", "Nunchuk");
+	createXMLController(kbpadmap, "kbpadmap", "Keyboard");
 
 	int datasize = mxmlSaveString(xml, (char *)savebuffer, SAVEBUFFERSIZE, XMLSaveCallback);
 
@@ -283,8 +285,8 @@ decodePrefsData (int method)
 					verMinor >= 0 && verMinor <= 9 &&
 					verPoint >= 0 && verPoint <= 9))
 					result = false;
-				else if(verPoint < 4 && verMajor == 1) // less than version 1.0.4
-					result = false; // reset settings
+				else if(verPoint < 8 && verMajor == 1) // less than version 1.0.8
+					result = false; // reset settings (sorry, should update settings instead)
 				else if(verMajor > curMajor || verMinor > curMinor || verPoint > curPoint) // some future version
 					result = false; // reset settings
 				else
@@ -317,16 +319,18 @@ decodePrefsData (int method)
 			loadXMLSetting(&GCSettings.Zoom, "Zoom");
 			loadXMLSetting(&GCSettings.ZoomLevel, "ZoomLevel");
 			loadXMLSetting(&GCSettings.render, "render");
-			loadXMLSetting(&GCSettings.widescreen, "widescreen");
+			loadXMLSetting(&GCSettings.scaling, "scaling");
 			loadXMLSetting(&GCSettings.xshift, "xshift");
 			loadXMLSetting(&GCSettings.yshift, "yshift");
 
 			// Controller Settings
 
+			loadXMLSetting(&GCSettings.WiiControls, "WiiControls");
 			loadXMLController(gcpadmap, "gcpadmap");
 			loadXMLController(wmpadmap, "wmpadmap");
 			loadXMLController(ccpadmap, "ccpadmap");
 			loadXMLController(ncpadmap, "ncpadmap");
+			loadXMLController(kbpadmap, "kbpadmap");
 		}
 		mxmlDelete(xml);
 	}

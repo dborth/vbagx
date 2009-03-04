@@ -36,6 +36,7 @@ extern "C" {
 #include "menudraw.h"
 #include "input.h"
 #include "vbaconfig.h"
+#include "wiiusbsupport.h"
 
 extern "C"
 {
@@ -140,6 +141,12 @@ PreferencesMenu ()
 		sprintf (prefmenu[6], "Verify MC Saves %s", GCSettings.VerifySaves == true ? " ON" : "OFF");
 		#endif
 
+		// disable Widescreen correction in Wii mode - determined automatically
+		#ifdef HW_RVL
+		if(GCSettings.scaling == 3)
+			GCSettings.scaling = 0;
+		#endif
+
 		// correct load/save methods out of bounds
 		if(GCSettings.LoadMethod > 4)
 			GCSettings.LoadMethod = 0;
@@ -190,8 +197,14 @@ PreferencesMenu ()
 		if (GCSettings.render == 2)
 			sprintf (prefmenu[8], "Video Rendering Unfiltered");
 
-		sprintf (prefmenu[9], "Video Scaling %s",
-			GCSettings.widescreen == true ? "16:9 Correction" : "Default");
+		if (GCSettings.scaling == 0)
+			sprintf (prefmenu[9], "Video Scaling Maintain Aspect Ratio");
+		else if (GCSettings.scaling == 1)
+			sprintf (prefmenu[9], "Video Scaling Partial Stretch");
+		else if (GCSettings.scaling == 2)
+			sprintf (prefmenu[9], "Video Scaling Stretch to Fit");
+		else if (GCSettings.scaling == 3)
+			sprintf (prefmenu[9], "Video Scaling 16:9 Correction");
 
 		ret = RunMenu (prefmenu, prefmenuCount, "Preferences", 16);
 
@@ -240,7 +253,9 @@ PreferencesMenu ()
 				break;
 
 			case 9:
-				GCSettings.widescreen ^= 1;
+				GCSettings.scaling++;
+				if (GCSettings.scaling > 3)
+					GCSettings.scaling = 0;
 				break;
 
 			case 10:
@@ -266,13 +281,14 @@ PreferencesMenu ()
 static int
 GameMenu ()
 {
-	int gamemenuCount = 8;
+	int gamemenuCount = 9;
 	char gamemenu[][50] = {
 	  "Return to Game",
 	  "Reset Game",
 	  "Load SRAM", "Save SRAM",
 	  "Load Game Snapshot", "Save Game Snapshot",
 	  "Reset Zoom",
+	  "Weather: 100% sun",
 	  "Back to Main Menu"
 	};
 
@@ -302,6 +318,12 @@ GameMenu ()
 		// disable Reset Zoom if Zooming is off
 		if(!GCSettings.Zoom)
 			gamemenu[6][0] = '\0';
+
+		// Weather menu if a game with Boktai solar sensor
+		if ((RomIdCode & 0xFF)=='U')
+			sprintf(gamemenu[7], "Weather: %d%% sun", SunBars*10);
+		else
+			gamemenu[7][0] = '\0';
 
 		ret = RunMenu (gamemenu, gamemenuCount, "Game Menu");
 
@@ -338,8 +360,13 @@ GameMenu ()
 				quit = retval = 1;
 				break;
 
+			case 7: // Weather
+				SunBars++;
+				if (SunBars>10) SunBars=0;
+				break;
+
 			case -1: // Button B
-			case 7: // Return to previous menu
+			case 8: // Return to previous menu
 				retval = 0;
 				quit = 1;
 				break;
@@ -365,10 +392,11 @@ GetInput (u16 ctrlr_type)
 	while( PAD_ButtonsHeld(0)
 #ifdef HW_RVL
 	| WPAD_ButtonsHeld(0)
+	| AnyKeyDown()
 #endif
 	) VIDEO_WaitVSync();	// button 'debounce'
 
-	while (pressed == 0)
+	while (pressed == 0 && !AnyKeyDown())
 	{
 		VIDEO_WaitVSync();
 		// get input based on controller type
@@ -380,13 +408,28 @@ GetInput (u16 ctrlr_type)
 #ifdef HW_RVL
 		else
 		{
+			// also needed for keyboard read, to prevent infinite wait when no keyboard
 			pressed = WPAD_ButtonsHeld (0);
 		}
 #endif
 		/*** check for exit sequence (c-stick left OR home button) ***/
-		if ( (gc_px < -70) || (pressed & WPAD_BUTTON_HOME) || (pressed & WPAD_CLASSIC_BUTTON_HOME) )
+		if ( (gc_px < -70) || (pressed & WPAD_BUTTON_HOME) || (pressed & WPAD_CLASSIC_BUTTON_HOME))
 			return 0;
+		if (DownUsbKeys[KB_ESC]) return 0;
+		if (ctrlr_type == CTRLR_KEYBOARD)
+			pressed = 0;
 	}	// end while
+	if (DownUsbKeys[KB_ESC]) return 0;
+	if (!pressed) {
+		for (int i=4; i<=231; i++) {
+			if (DownUsbKeys[i]) {
+				while (DownUsbKeys[i]) {
+					VIDEO_WaitVSync();
+				}
+				return i;
+			}
+		}
+	}
 	while( pressed == (PAD_ButtonsHeld(0)
 #ifdef HW_RVL
 						| WPAD_ButtonsHeld(0)
@@ -404,7 +447,7 @@ GetButtonMap(u16 ctrlr_type, char* btn_name)
 	"Remapping          ",
 	"Press Any Button",
 	"on the",
-	"       ",	// identify controller
+	"        ",	// identify controller (must be at least 8 spaces for "keyboard")
 	"                   ",
 	"Press C-Left or",
 	"Home to exit"
@@ -417,17 +460,19 @@ GetButtonMap(u16 ctrlr_type, char* btn_name)
 
 	switch (ctrlr_type) {
 		case CTRLR_NUNCHUK:
-			strncpy (cfg_text[3], "NUNCHUK", 7);
+			strncpy (cfg_text[3], "NUNCHUK", 8); // 8 spaces in "identify controller" above
 			break;
 		case CTRLR_CLASSIC:
-			strncpy (cfg_text[3], "CLASSIC", 7);
+			strncpy (cfg_text[3], "CLASSIC", 8);
 			break;
 		case CTRLR_GCPAD:
-			strncpy (cfg_text[3], "GC PAD", 7);
+			strncpy (cfg_text[3], "GC PAD", 8);
 			break;
 		case CTRLR_WIIMOTE:
-			strncpy (cfg_text[3], "WIIMOTE", 7);
+			strncpy (cfg_text[3], "WIIMOTE", 8);
 			break;
+		case CTRLR_KEYBOARD:
+			strncpy (cfg_text[3], "KEYBOARD", 8);
 	};
 
 	/*** note which button we are remapping ***/
@@ -489,6 +534,10 @@ ConfigureButtons (u16 ctrlr_type)
 		case CTRLR_WIIMOTE:
 			sprintf(menu_title, "VBA     -  WIIMOTE");
 			currentpadmap = wmpadmap;
+			break;
+		case CTRLR_KEYBOARD:
+			sprintf(menu_title, "VBA     -  KEYBOARD");
+			currentpadmap = kbpadmap;
 			break;
 	};
 
@@ -553,12 +602,14 @@ ConfigureButtons (u16 ctrlr_type)
 void
 ConfigureControllers ()
 {
-	int ctlrmenucount = 6;
+	int ctlrmenucount = 8;
 	char ctlrmenu[][50] = {
+		"Match Wii Game",
 		"Nunchuk",
 		"Classic Controller",
 		"Wiimote",
 		"Gamecube Pad",
+		"Keyboard",
 		"Save Preferences",
 		"Go Back"
 	};
@@ -568,49 +619,62 @@ ConfigureControllers ()
 	int oldmenu = menu;
 	menu = 0;
 
+
 	// disable unavailable controller options if in GC mode
 	#ifndef HW_RVL
-		ctlrmenu[0][0] = 0;
 		ctlrmenu[1][0] = 0;
 		ctlrmenu[2][0] = 0;
+		ctlrmenu[3][0] = 0;
+		ctlrmenu[5][0] = 0;
 	#endif
 
 	while (quit == 0)
 	{
+
+		sprintf (ctlrmenu[0], "Match Wii Game: %s",
+			GCSettings.WiiControls == true ? " ON" : "OFF");
 
 		/*** Controller Config Menu ***/
         ret = RunMenu (ctlrmenu, ctlrmenucount, "Configure Controllers");
 
 		switch (ret)
 		{
-
 			case 0:
+				GCSettings.WiiControls ^= 1;
+				break;
+
+			case 1:
 				/*** Configure Nunchuk ***/
 				ConfigureButtons (CTRLR_NUNCHUK);
 				break;
 
-			case 1:
+			case 2:
 				/*** Configure Classic ***/
 				ConfigureButtons (CTRLR_CLASSIC);
 				break;
 
-			case 2:
+			case 3:
 				/*** Configure Wiimote ***/
 				ConfigureButtons (CTRLR_WIIMOTE);
 				break;
 
-			case 3:
+			case 4:
 				/*** Configure GC Pad ***/
 				ConfigureButtons (CTRLR_GCPAD);
 				break;
 
-			case 4:
+			case 5:
+				/*** Configure Keyboard ***/
+				ConfigureButtons (CTRLR_KEYBOARD);
+				break;
+
+			case 6:
 				/*** Save Preferences Now ***/
 				SavePrefs(NOTSILENT);
 				break;
 
 			case -1: /*** Button B ***/
-			case 5:
+			case 7:
 				/*** Return ***/
 				quit = 1;
 				break;

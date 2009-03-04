@@ -20,8 +20,15 @@
 #include "images/bg.h"
 #include "vba.h"
 #include "menudraw.h"
+#include "gui/gui.h"
 
+s32 CursorX, CursorY;
+bool CursorVisible;
+bool CursorValid;
+bool TiltScreen = false;
+float TiltAngle = 0;
 u32 FrameTimer = 0;
+GuiImageData * pointer1;
 
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
@@ -30,6 +37,7 @@ unsigned int *xfb[2]; // Framebuffers
 int whichfb = 0; // Frame buffer toggle
 
 int screenheight;
+int screenwidth;
 
 /*** 3D GX ***/
 #define DEFAULT_FIFO_SIZE ( 256 * 1024 )
@@ -143,11 +151,28 @@ copy_to_xfb (u32 arg)
 void
 clearscreen ()
 {
-	int colour = COLOR_BLACK;
+	// PAL is 640x576 NOT 640x480!
+	// Fill the bottom of the screen with the background's top? left corner
+	int colour = bg[0];
 
 	whichfb ^= 1;
 	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], colour);
-	memcpy (xfb[whichfb], &bg, 1280 * 480);
+	if (vmode->xfbHeight==480)
+	{
+		memcpy (xfb[whichfb], &bg, 1280 * 480);
+	}
+	else if (vmode->xfbHeight<480)
+	{
+		memcpy (xfb[whichfb], &bg, 1280 * vmode->xfbHeight);
+	}
+	else
+	{
+		memcpy (xfb[whichfb], &bg, 1280 * 240);
+		for (int i=0; i<vmode->xfbHeight-480; i++)
+			memcpy (((char *)xfb[whichfb])+1280*(240+i), ((char *)&bg)+1280 * 240, 1280 * 1);
+
+		memcpy (((char *)xfb[whichfb])+1280*(vmode->xfbHeight-240), ((char *)&bg)+1280 * 240, 1280 * 240);
+	}
 }
 
 void
@@ -197,11 +222,50 @@ static void draw_square(Mtx v)
 	Mtx m;			// model matrix.
 	Mtx mv;			// modelview matrix.
 
-	guMtxIdentity(m);
+	if (TiltScreen)
+	{
+		guMtxRotDeg(m, 'z', -TiltAngle);
+		guMtxScaleApply(m, m, 0.8, 0.8, 1);
+	}
+	else
+	{
+		guMtxIdentity(m);
+	}
+
 	guMtxTransApply(m, m, 0, 0, -100);
 	guMtxConcat(v, m, mv);
 
 	GX_LoadPosMtxImm(mv, GX_PNMTX0);
+	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+	draw_vert(0, 0, 0.0, 0.0);
+	draw_vert(1, 0, 1.0, 0.0);
+	draw_vert(2, 0, 1.0, 1.0);
+	draw_vert(3, 0, 0.0, 1.0);
+	GX_End();
+}
+
+void Menu_DrawImg(f32 xpos, f32 ypos, u16 width, u16 height, u8 data[], f32 degrees, f32 scaleX, f32 scaleY, u8 alpha);
+
+static void draw_cursor(Mtx v)
+{
+	if (!CursorVisible)
+		return;
+/*
+#ifdef HW_RVL
+	WPADData *wp = WPAD_Data(0);
+
+	if(wp->ir.valid)
+		Menu_DrawImg(wp->ir.x-48, wp->ir.y-48, 96, 96, pointer1->GetImage(), wp->ir.angle, 1, 1, 255);
+#endif
+*/
+
+	Mtx m;			// model matrix.
+
+	guMtxIdentity(m);
+	guMtxScaleApply(m, m, 0.05f, 0.05f, 0.06f);
+	guMtxTransApply(m, m, CursorX-320, 240-CursorY, -100);
+
+	GX_LoadPosMtxImm(m, GX_PNMTX0);
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
 	draw_vert(0, 0, 0.0, 0.0);
 	draw_vert(1, 0, 1.0, 0.0);
@@ -245,6 +309,8 @@ static void GX_Start()
 
 	GX_CopyDisp (xfb[whichfb], GX_TRUE); // reset xfb
 	GX_Flush();
+
+	pointer1 = new GuiImageData(player1_point_png);
 }
 
 /****************************************************************************
@@ -309,6 +375,7 @@ void InitialiseVideo ()
 	VIDEO_Configure(vmode);
 
 	screenheight = vmode->xfbHeight;
+	screenwidth = vmode->fbWidth;
 
 	xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
 	xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
@@ -345,21 +412,50 @@ static void UpdateScaling()
 	int xscale;
 	int yscale;
 
-	// keep correct aspect ratio
-	// and use entire screen
-	if(vwidth == 240) // GBA
-	{
-		xscale = 320;
-		yscale = 213;
-	}
-	else // GB
-	{
-		xscale = 256;
-		yscale = 230;
-	}
+	float TvAspectRatio;
+	float GameboyAspectRatio;
+	float MaxStretchRatio = 1.6f;
 
-	if (GCSettings.widescreen)
-		xscale = (3*xscale)/4;
+	if (GCSettings.scaling == 1)
+		MaxStretchRatio = 1.3f;
+	else if (GCSettings.scaling == 2)
+		MaxStretchRatio = 1.6f;
+	else
+		MaxStretchRatio = 1.0f;
+
+	#ifdef HW_RVL
+	if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
+		TvAspectRatio = 16.0f/9.0f;
+	else
+		TvAspectRatio = 4.0f/3.0f;
+	#else
+	if (GCSettings.scaling == 3)
+		TvAspectRatio = 16.0f/9.0f;
+	else
+		TvAspectRatio = 4.0f/3.0f;
+	#endif
+
+	if (vwidth == 240) // GBA
+		GameboyAspectRatio = 240.0f/160.0f; // assumes square pixels on GB Advance
+	else // GB or GBC
+		GameboyAspectRatio = 160.0f/144.0f; // assumes square pixels on GB Colour
+
+	if (TvAspectRatio>GameboyAspectRatio)
+	{
+		yscale = 240; // half of TV resolution 640x480
+		float StretchRatio = TvAspectRatio/GameboyAspectRatio;
+		if (StretchRatio > MaxStretchRatio)
+			StretchRatio = MaxStretchRatio;
+		xscale = 240.0f*GameboyAspectRatio*StretchRatio * ((4.0f/3.0f)/TvAspectRatio);
+	}
+	else
+	{
+		xscale = 320; // half of TV resolution 640x480
+		float StretchRatio = GameboyAspectRatio/TvAspectRatio;
+		if (StretchRatio > MaxStretchRatio)
+			StretchRatio = MaxStretchRatio;
+		yscale = 320.0f/GameboyAspectRatio*StretchRatio / ((4.0f/3.0f)/TvAspectRatio);
+	}
 
 	// change zoom
 	xscale *= GCSettings.ZoomLevel;
@@ -556,8 +652,8 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	GX_SetNumChans(1);
 	GX_LoadTexObj(&texobj, GX_TEXMAP0);
 
-	// render textured quad
-	draw_square(view);
+	draw_square(view); // render textured quad
+	draw_cursor(view); // render cursor
 	GX_DrawDone();
 
 	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
@@ -596,4 +692,53 @@ zoom_reset ()
 {
 	GCSettings.ZoomLevel = 1.0;
 	updateScaling = 1;	// update video
+}
+
+void Menu_DrawImg(f32 xpos, f32 ypos, u16 width, u16 height, u8 data[], f32 degrees, f32 scaleX, f32 scaleY, u8 alpha)
+{
+	if(data == NULL)
+		return;
+
+	GXTexObj texObj;
+
+	GX_InitTexObj(&texObj, data, width,height, GX_TF_RGBA8,GX_CLAMP, GX_CLAMP,GX_FALSE);
+	GX_LoadTexObj(&texObj, GX_TEXMAP0);
+
+	GX_SetTevOp (GX_TEVSTAGE0, GX_MODULATE);
+	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
+
+	Mtx m,m1,m2, mv;
+	width *=.5;
+	height*=.5;
+	guMtxIdentity (m1);
+	guMtxScaleApply(m1,m1,scaleX,scaleY,1.0);
+	Vector axis = (Vector) {0 , 0, 1 };
+	guMtxRotAxisDeg (m2, &axis, degrees);
+	guMtxConcat(m2,m1,m);
+
+	guMtxTransApply(m,m, xpos+width,ypos+height,0);
+	guMtxConcat (view, m, mv);
+	GX_LoadPosMtxImm (mv, GX_PNMTX0);
+
+	GX_Begin(GX_QUADS, GX_VTXFMT0,4);
+	GX_Position3f32(-width, -height,  0);
+	GX_Color4u8(0xFF,0xFF,0xFF,alpha);
+	GX_TexCoord2f32(0, 0);
+
+	GX_Position3f32(width, -height,  0);
+	GX_Color4u8(0xFF,0xFF,0xFF,alpha);
+	GX_TexCoord2f32(1, 0);
+
+	GX_Position3f32(width, height,  0);
+	GX_Color4u8(0xFF,0xFF,0xFF,alpha);
+	GX_TexCoord2f32(1, 1);
+
+	GX_Position3f32(-width, height,  0);
+	GX_Color4u8(0xFF,0xFF,0xFF,alpha);
+	GX_TexCoord2f32(0, 1);
+	GX_End();
+	GX_LoadPosMtxImm (view, GX_PNMTX0);
+
+	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
+	GX_SetVtxDesc (GX_VA_TEX0, GX_NONE);
 }

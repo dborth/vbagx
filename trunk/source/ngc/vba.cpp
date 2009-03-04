@@ -36,6 +36,7 @@ extern "C" {
 #include "input.h"
 #include "video.h"
 #include "vbaconfig.h"
+#include "wiiusbsupport.h"
 
 extern bool ROMLoaded;
 extern int emulating;
@@ -50,6 +51,10 @@ char appPath[1024];
 
 static void ExitCleanup()
 {
+#ifdef HW_RVL
+	ShutoffRumble();
+	StopWiiKeyboard();
+#endif
 	LWP_SuspendThread (devicethread);
 	UnmountAllFAT();
 	CloseShare();
@@ -223,6 +228,8 @@ int main(int argc, char *argv[])
 	if(argc > 0 && argv[0] != NULL)
 		CreateAppPath(argv[0]);
 
+	StartWiiKeyboardMouse();
+
 	int selectedMenu = -1;
 
 	// Load preferences
@@ -264,6 +271,7 @@ int main(int argc, char *argv[])
 
 			if(ConfigRequested)
 			{
+				ShutoffRumble();
 				StopAudio();
 				ResetVideo_Menu (); // change to menu video mode
 

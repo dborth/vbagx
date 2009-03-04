@@ -22,26 +22,22 @@
 #include "audio.h"
 #include "video.h"
 #include "input.h"
+#include "gameinput.h"
+#include "vbasupport.h"
+#include "wiiusbsupport.h"
+#include "gba/GBA.h"
+#include "gba/bios.h"
+#include "gba/GBAinline.h"
 
-#define VBA_BUTTON_A		1
-#define VBA_BUTTON_B		2
-#define VBA_BUTTON_SELECT	4
-#define VBA_BUTTON_START	8
-#define VBA_RIGHT			16
-#define VBA_LEFT			32
-#define VBA_UP				64
-#define VBA_DOWN			128
-#define VBA_BUTTON_R		256
-#define VBA_BUTTON_L		512
-#define VBA_SPEED			1024
-#define VBA_CAPTURE			2048
-
+int rumbleRequest[4] = {0,0,0,0};
+static int rumbleCount[4] = {0,0,0,0};
 
 unsigned int vbapadmap[10]; // VBA controller buttons
 unsigned int gcpadmap[10]; // Gamecube controller Padmap
 unsigned int wmpadmap[10]; // Wiimote Padmap
 unsigned int ccpadmap[10]; // Classic Controller Padmap
 unsigned int ncpadmap[10]; // Nunchuk + wiimote Padmap
+unsigned int kbpadmap[10]; // Keyboard Padmap
 
 void ResetControls()
 {
@@ -112,6 +108,57 @@ void ResetControls()
 	ncpadmap[i++] = WPAD_BUTTON_RIGHT;
 	ncpadmap[i++] = WPAD_BUTTON_2;
 	ncpadmap[i++] = WPAD_BUTTON_1;
+
+	/*** Keyboard map ***/
+	i=0;
+	kbpadmap[i++] = KB_X; // VBA stupidly has B on the right instead of left
+	kbpadmap[i++] = KB_Z;
+	kbpadmap[i++] = KB_BKSP;
+	kbpadmap[i++] = KB_ENTER;
+	kbpadmap[i++] = KB_UP;
+	kbpadmap[i++] = KB_DOWN;
+	kbpadmap[i++] = KB_LEFT;
+	kbpadmap[i++] = KB_RIGHT;
+	kbpadmap[i++] = KB_A;
+	kbpadmap[i++] = KB_S;
+}
+
+/****************************************************************************
+ * ShutoffRumble
+ ***************************************************************************/
+
+void ShutoffRumble()
+{
+#ifdef HW_RVL
+	for(int i=0;i<4;i++)
+	{
+		WPAD_Rumble(i, 0);
+	}
+#endif
+}
+
+/****************************************************************************
+ * DoRumble
+ ***************************************************************************/
+
+void DoRumble(int i)
+{
+	if(rumbleRequest[i] && rumbleCount[i] < 3)
+	{
+		WPAD_Rumble(i, 1); // rumble on
+		rumbleCount[i]++;
+	}
+	else if(rumbleRequest[i])
+	{
+		rumbleCount[i] = 12;
+		rumbleRequest[i] = 0;
+	}
+	else
+	{
+		if(rumbleCount[i])
+			rumbleCount[i]--;
+		WPAD_Rumble(i, 0); // rumble off
+	}
 }
 
 /****************************************************************************
@@ -167,33 +214,17 @@ s8 WPAD_Stick(u8 chan, u8 right, int axis)
 	return (s8)(val * 128.0f);
 }
 
-/****************************************************************************
- * DecodeJoy
- *
- * Reads the changes (buttons pressed, etc) from a controller and reports
- * these changes to VBA
- ****************************************************************************/
-
-static u32 DecodeJoy(unsigned short pad)
+u32 StandardMovement(unsigned short pad)
 {
+	u32 J = 0;
 	signed char pad_x = PAD_StickX (pad);
 	signed char pad_y = PAD_StickY (pad);
-	signed char gc_px = PAD_SubStickX (0);
-	u32 jp = PAD_ButtonsHeld (pad);
-	u32 J = 0;
-
 	#ifdef HW_RVL
 	signed char wm_ax = WPAD_Stick ((u8)pad, 0, 0);
 	signed char wm_ay = WPAD_Stick ((u8)pad, 0, 1);
-	u32 wp = WPAD_ButtonsHeld (pad);
-	signed char wm_sx = WPAD_Stick (0,1,0); // CC right joystick
-
-	u32 exp_type;
-	if ( WPAD_Probe(pad, &exp_type) != 0 ) exp_type = WPAD_EXP_NONE;
 	#endif
-
 	/***
-	Gamecube Joystick input
+	Gamecube Joystick input, same as normal
 	***/
 	// Is XY inside the "zone"?
 	if (pad_x * pad_x + pad_y * pad_y > PADCAL * PADCAL)
@@ -265,6 +296,335 @@ static u32 DecodeJoy(unsigned short pad)
 			}
 		}
 	}
+
+	// Turbo feature, keyboard or gamecube only
+	if(DownUsbKeys[KB_SPACE])
+		J |= VBA_SPEED;
+	// Capture feature
+	if(DownUsbKeys[KB_PRTSC] | DownUsbKeys[KB_F12])
+		J |= VBA_CAPTURE;
+#endif
+	return J;
+}
+
+u32 StandardDPad(unsigned short pad)
+{
+	u32 J = 0;
+	u32 jp = PAD_ButtonsHeld(pad);
+#ifdef HW_RVL
+	u32 exp_type;
+	if ( WPAD_Probe(pad, &exp_type) != 0 )
+		exp_type = WPAD_EXP_NONE;
+	u32 wp = WPAD_ButtonsHeld(pad);
+	if (wp & WPAD_BUTTON_RIGHT)
+		J |= VBA_RIGHT;
+	if (wp & WPAD_BUTTON_LEFT)
+		J |= VBA_LEFT;
+	if (wp & WPAD_BUTTON_UP)
+		J |= VBA_UP;
+	if (wp & WPAD_BUTTON_DOWN)
+		J |= VBA_DOWN;
+	if (exp_type == WPAD_EXP_CLASSIC)
+	{
+		if (wp & WPAD_CLASSIC_BUTTON_UP)
+			J |= VBA_UP;
+		if (wp & WPAD_CLASSIC_BUTTON_DOWN)
+			J |= VBA_DOWN;
+		if (wp & WPAD_CLASSIC_BUTTON_LEFT)
+			J |= VBA_LEFT;
+		if (wp & WPAD_CLASSIC_BUTTON_RIGHT)
+			J |= VBA_RIGHT;
+	}
+#endif
+	if (jp & PAD_BUTTON_UP)
+		J |= VBA_UP;
+	if (jp & PAD_BUTTON_DOWN)
+		J |= VBA_DOWN;
+	if (jp & PAD_BUTTON_LEFT)
+		J |= VBA_LEFT;
+	if (jp & PAD_BUTTON_RIGHT)
+		J |= VBA_RIGHT;
+	return J;
+}
+
+u32 StandardSideways(unsigned short pad)
+{
+	u32 J = 0;
+#ifdef HW_RVL
+	u32 wp = WPAD_ButtonsHeld(pad);
+
+	if (wp & WPAD_BUTTON_RIGHT)
+		J |= VBA_UP;
+	if (wp & WPAD_BUTTON_LEFT)
+		J |= VBA_DOWN;
+	if (wp & WPAD_BUTTON_UP)
+		J |= VBA_LEFT;
+	if (wp & WPAD_BUTTON_DOWN)
+		J |= VBA_RIGHT;
+
+	if (wp & WPAD_BUTTON_PLUS)
+		J |= VBA_BUTTON_START;
+	if (wp & WPAD_BUTTON_MINUS)
+		J |= VBA_BUTTON_SELECT;
+
+	if (wp & WPAD_BUTTON_1)
+		J |= VBA_BUTTON_B;
+	if (wp & WPAD_BUTTON_2)
+		J |= VBA_BUTTON_A;
+	if (cartridgeType == 2)
+	{
+		if (wp & WPAD_BUTTON_A)
+			J |= VBA_BUTTON_R;
+		if (wp & WPAD_BUTTON_B)
+			J |= VBA_BUTTON_L;
+	}
+	else
+	{
+		if (wp & WPAD_BUTTON_B || wp & WPAD_BUTTON_A)
+			J |= VBA_SPEED;
+	}
+#endif
+	return J;
+}
+
+u32 StandardClassic(unsigned short pad)
+{
+	u32 J = 0;
+#ifdef HW_RVL
+	u32 wp = WPAD_ButtonsHeld(pad);
+
+	if (wp & WPAD_CLASSIC_BUTTON_RIGHT)
+		J |= VBA_RIGHT;
+	if (wp & WPAD_CLASSIC_BUTTON_LEFT)
+		J |= VBA_LEFT;
+	if (wp & WPAD_CLASSIC_BUTTON_UP)
+		J |= VBA_UP;
+	if (wp & WPAD_CLASSIC_BUTTON_DOWN)
+		J |= VBA_DOWN;
+
+	if (wp & WPAD_CLASSIC_BUTTON_PLUS)
+		J |= VBA_BUTTON_START;
+	if (wp & WPAD_CLASSIC_BUTTON_MINUS)
+		J |= VBA_BUTTON_SELECT;
+
+	if (wp & WPAD_CLASSIC_BUTTON_FULL_L || wp & WPAD_CLASSIC_BUTTON_ZL)
+		J |= VBA_BUTTON_L;
+	if (wp & WPAD_CLASSIC_BUTTON_FULL_R || wp & WPAD_CLASSIC_BUTTON_ZR)
+		J |= VBA_BUTTON_R;
+
+	if (wp & WPAD_CLASSIC_BUTTON_A)
+		J |= VBA_BUTTON_A;
+	if (wp & WPAD_CLASSIC_BUTTON_B)
+		J |= VBA_BUTTON_B;
+	if (wp & WPAD_CLASSIC_BUTTON_Y || wp & WPAD_CLASSIC_BUTTON_X)
+		J |= VBA_SPEED;
+#endif
+	return J;
+}
+
+u32 StandardGamecube(unsigned short pad)
+{
+	u32 J = 0;
+	u32 jp = PAD_ButtonsHeld(pad);
+	if (jp & PAD_BUTTON_UP)
+		J |= VBA_UP;
+	if (jp & PAD_BUTTON_DOWN)
+		J |= VBA_DOWN;
+	if (jp & PAD_BUTTON_LEFT)
+		J |= VBA_LEFT;
+	if (jp & PAD_BUTTON_RIGHT)
+		J |= VBA_RIGHT;
+	if (jp & PAD_BUTTON_A)
+		J |= VBA_BUTTON_A;
+	if (jp & PAD_BUTTON_B)
+		J |= VBA_BUTTON_B;
+	if (jp & PAD_BUTTON_START)
+		J |= VBA_BUTTON_START;
+	if (jp & PAD_BUTTON_X)
+		J |= VBA_BUTTON_SELECT;
+	if (jp & PAD_TRIGGER_L)
+		J |= VBA_BUTTON_L;
+	if (jp & PAD_TRIGGER_R)
+		J |= VBA_BUTTON_R;
+	if (jp & PAD_TRIGGER_Z || jp & PAD_BUTTON_Y)
+		J |= VBA_SPEED;
+	return J;
+}
+
+u32 StandardKeyboard(unsigned short pad)
+{
+	u32 J = 0;
+#ifdef HW_RVL
+	if (DownUsbKeys[KB_UP])
+		J |= VBA_UP;
+	if (DownUsbKeys[KB_DOWN])
+		J |= VBA_DOWN;
+	if (DownUsbKeys[KB_LEFT])
+		J |= VBA_LEFT;
+	if (DownUsbKeys[KB_RIGHT])
+		J |= VBA_RIGHT;
+	if (DownUsbKeys[KB_SPACE])
+		J |= VBA_SPEED;
+	if (DownUsbKeys[KB_F12] || DownUsbKeys[KB_PRTSC])
+		J |= VBA_CAPTURE;
+	if (DownUsbKeys[KB_X])
+		J |= VBA_BUTTON_A;
+	if (DownUsbKeys[KB_Z])
+		J |= VBA_BUTTON_B;
+	if (DownUsbKeys[KB_A])
+		J |= VBA_BUTTON_L;
+	if (DownUsbKeys[KB_S])
+		J |= VBA_BUTTON_R;
+	if (DownUsbKeys[KB_ENTER])
+		J |= VBA_BUTTON_START;
+	if (DownUsbKeys[KB_BKSP])
+	J |= VBA_BUTTON_SELECT;
+#endif
+	return J;
+}
+
+/****************************************************************************
+ * DecodeJoy
+ *
+ * Reads the STATE (not changes) from a controller and reports
+ * this STATE (not changes) to VBA
+ ****************************************************************************/
+
+static u32 DecodeJoy(unsigned short pad)
+{
+	TiltScreen = false;
+
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	CursorX = wp->ir.x;
+	CursorY = wp->ir.y;
+	CursorValid = wp->ir.valid;
+
+	// check for games that should have special Wii controls (uses wiimote + nunchuk)
+	if (GCSettings.WiiControls && wp->exp.type == WPAD_EXP_NUNCHUK)
+	{
+		switch (RomIdCode & 0xFFFFFF)
+		{
+			// Zelda
+			case ZELDA1:
+				return Zelda1Input(pad);
+			case ZELDA2:
+				return Zelda2Input(pad);
+			case ALINKTOTHEPAST:
+				return ALinkToThePastInput(pad);
+			case LINKSAWAKENING:
+				return LinksAwakeningInput(pad);
+			case ORACLEOFAGES:
+			case ORACLEOFSEASONS:
+				return OracleOfAgesInput(pad);
+			case MINISHCAP:
+				return MinishCapInput(pad);
+
+			// Metroid
+			case METROID0:
+				return MetroidZeroInput(pad);
+
+			// TMNT
+			case TMNT:
+				return TMNTInput(pad);
+
+			// Medal Of Honor
+			case MOHUNDERGROUND:
+				return MohUndergroundInput(pad);
+			case MOHINFILTRATOR:
+				return MohInfiltratorInput(pad);
+
+			// Harry Potter
+			case HARRYPOTTER1GBC:
+				return HarryPotter1GBCInput(pad);
+			case HARRYPOTTER2GBC:
+				return HarryPotter2GBCInput(pad);
+			case HARRYPOTTER1:
+				return HarryPotter1Input(pad);
+			case HARRYPOTTER2:
+				return HarryPotter2Input(pad);
+			case HARRYPOTTER3:
+				return HarryPotter3Input(pad);
+			case HARRYPOTTER4:
+				return HarryPotter4Input(pad);
+			case HARRYPOTTER5:
+				return HarryPotter5Input(pad);
+
+			// Mario
+			case MARIO1CLASSIC:
+			case MARIO2CLASSIC:
+				return Mario1ClassicInput(pad);
+			case MARIO1DX:
+				return Mario1DXInput(pad);
+			case MARIO2ADV:
+				return Mario2Input(pad);
+			case MARIO3ADV:
+				return Mario3Input(pad);
+			case MARIOWORLD:
+				return MarioWorldInput(pad);
+			case YOSHIISLAND:
+				return YoshiIslandInput(pad);
+			case MARIOLAND1:
+				return MarioLand1Input(pad);
+			case MARIOLAND2:
+				return MarioLand2Input(pad);
+			case YOSHIUG:
+				return UniversalGravitationInput(pad);
+
+			// Mario Kart
+			case MARIOKART:
+				return MarioKartInput(pad);
+
+			// Lego Star Wars
+			case LSW1:
+				return LegoStarWars1Input(pad);
+			case LSW2:
+				return LegoStarWars2Input(pad);
+
+			// Mortal Kombat
+			case MK1:
+				return MK1Input(pad);
+			case MK2:
+			case MK3:
+			case MK4:
+				return MK4Input(pad);
+			case MKA:
+				return MKAInput(pad);
+			case MKDA:
+			case MKTE:
+				return MKTEInput(pad);
+
+			// WarioWare
+			case TWISTED: //CAKTODO move this somewhere not depended on WiiControls setting
+				return TwistedInput(pad);
+
+			// Kirby
+			case KIRBYTNT:
+			case KIRBYTNTJ:
+				return KirbyTntInput(pad);
+
+			// Boktai
+			case BOKTAI1:
+				return BoktaiInput(pad);
+			case BOKTAI2:
+			case BOKTAI3:
+				return Boktai2Input(pad);
+		}
+	}
+	else
+	{
+		ShutoffRumble();
+	}
+#endif
+
+	// the function result, J, is a combination of flags for all the VBA buttons that are down
+	u32 J = StandardMovement(pad);
+
+	signed char gc_px = PAD_SubStickX(0);
+	u32 jp = PAD_ButtonsHeld(pad);
+
+#ifdef HW_RVL
+	signed char wm_sx = WPAD_Stick (0,1,0); // CC right joystick
 #endif
 
 	// Turbo feature
@@ -272,7 +632,7 @@ static u32 DecodeJoy(unsigned short pad)
 	(gc_px > 70)
 	#ifdef HW_RVL
 	|| (wm_sx > 70)
-	|| ((wp & WPAD_BUTTON_A) && (wp & WPAD_BUTTON_B))
+	|| ((wp->btns_h & WPAD_BUTTON_A) && (wp->btns_h & WPAD_BUTTON_B))
 	#endif
 	)
 		J |= VBA_SPEED;
@@ -282,11 +642,12 @@ static u32 DecodeJoy(unsigned short pad)
 
 	for (i = 0; i < MAXJP; i++)
 	{
-		if ( (jp & gcpadmap[i])											// gamecube controller
+		if ((jp & gcpadmap[i]) // gamecube controller
 		#ifdef HW_RVL
-		|| ( (exp_type == WPAD_EXP_NONE) && (wp & wmpadmap[i]) )	// wiimote
-		|| ( (exp_type == WPAD_EXP_CLASSIC) && (wp & ccpadmap[i]) )	// classic controller
-		|| ( (exp_type == WPAD_EXP_NUNCHUK) && (wp & ncpadmap[i]) )	// nunchuk + wiimote
+		|| ( (wp->exp.type == WPAD_EXP_NONE) && (wp->btns_h & wmpadmap[i]) ) // wiimote
+		|| ( (wp->exp.type == WPAD_EXP_CLASSIC) && (wp->btns_h & ccpadmap[i]) ) // classic controller
+		|| ( (wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & ncpadmap[i]) ) // nunchuk + wiimote
+		|| ( (DownUsbKeys[kbpadmap[i]]) ) // keyboard
 		#endif
 		)
 			J |= vbapadmap[i];
@@ -301,36 +662,37 @@ static u32 DecodeJoy(unsigned short pad)
 }
 u32 GetJoy(int pad)
 {
-    pad = 0;
+	pad = 0;
 
-    s8 gc_px = PAD_SubStickX (0);
-    s8 gc_py = PAD_SubStickY (0);
+	s8 gc_px = PAD_SubStickX(0);
+	s8 gc_py = PAD_SubStickY(0);
 
-    #ifdef HW_RVL
-    s8 wm_sy = WPAD_Stick (0,1,1);
-    u32 wm_pb = WPAD_ButtonsHeld (0); // wiimote / expansion button info
-    #endif
+	#ifdef HW_RVL
+	s8 wm_sy = WPAD_Stick (0,1,1);
+	u32 wm_pb = WPAD_ButtonsHeld (0); // wiimote / expansion button info
+	#endif
 
-    // Check for video zoom
+	// Check for video zoom
 	if (GCSettings.Zoom)
 	{
 		if (gc_py < -36 || gc_py > 36)
-			zoom ((float) gc_py / -36);
+			zoom((float) gc_py / -36);
 		#ifdef HW_RVL
-			if (wm_sy < -36 || wm_sy > 36)
-				zoom ((float) wm_sy / -36);
+		if (wm_sy < -36 || wm_sy> 36)
+			zoom ((float) wm_sy / -36);
 		#endif
 	}
 
-    // request to go back to menu
-    if ((gc_px < -70)
-    #ifdef HW_RVL
-    		 || (wm_pb & WPAD_BUTTON_HOME)
-    		 || (wm_pb & WPAD_CLASSIC_BUTTON_HOME)
-    #endif
-    )
+	// request to go back to menu
+	if ((gc_px < -70)
+	#ifdef HW_RVL
+	|| (wm_pb & WPAD_BUTTON_HOME)
+	|| (wm_pb & WPAD_CLASSIC_BUTTON_HOME)
+	|| (DownUsbKeys[KB_ESC])
+	#endif
+	)
 	{
-    	ConfigRequested = 1;
+		ConfigRequested = 1;
 		return 0;
 	}
 	else

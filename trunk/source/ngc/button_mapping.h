@@ -17,6 +17,7 @@ enum {
 	CTRLR_CLASSIC,
 	CTRLR_GCPAD,
 	CTRLR_WIIMOTE,
+	CTRLR_KEYBOARD,
 	CTRLR_SNES = 7	// give some other value for the snes padmap
 };
 
@@ -28,11 +29,11 @@ typedef struct _btn_map {
 typedef struct _ctrlr_map {
 	u16 type;					// controller type
 	int num_btns;				// number of buttons on the controller
-	BtnMap map[15];		// controller button map
+	BtnMap map[150];		// controller button map
 } CtrlrMap;
 
 // externs:
 
-extern CtrlrMap ctrlr_def[4];
+extern CtrlrMap ctrlr_def[5];
 
 #endif
