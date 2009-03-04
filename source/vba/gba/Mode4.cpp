@@ -1,3 +1,10 @@
+/*
+Mode 4 is a 256 colour bitmap graphics mode with 2 swappable pages.
+It has a single layer, background layer 2, the same size as the screen.
+It doesn't support scrolling, flipping, rotation or tiles.
+
+These routines only render a single line at a time, because of the way the GBA does events.
+*/
 #include "GBA.h"
 #include "GBAGfx.h"
 #include "Globals.h"

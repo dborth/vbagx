@@ -1,3 +1,12 @@
+/*
+Mode 1 is a tiled graphics mode, but with background layer 2 supporting scaling and rotation.
+There is no layer 3 in this mode.
+Layers 0 and 1 can be either 16 colours (with 16 different palettes) or 256 colours. 
+There are 1024 tiles available.
+Layer 2 is 256 colours and allows only 256 tiles.
+
+These routines only render a single line at a time, because of the way the GBA does events.
+*/
 #include "GBA.h"
 #include "Globals.h"
 #include "GBAGfx.h"

@@ -1,3 +1,11 @@
+/*
+Mode 0 is the tiled graphics mode, with all the layers available.
+There is no rotation or scaling in this mode.
+It can be either 16 colours (with 16 different palettes) or 256 colours.
+There are 1024 tiles available.
+
+These routines only render a single line at a time, because of the way the GBA does events.
+*/
 #include "GBA.h"
 #include "Globals.h"
 #include "GBAGfx.h"

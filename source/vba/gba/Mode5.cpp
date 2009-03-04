@@ -1,3 +1,11 @@
+/*
+Mode 5 is a low resolution (160x128) 15-bit colour bitmap graphics mode 
+with 2 swappable pages!
+It has a single layer, background layer 2, lower resolution than the screen.
+It doesn't support scrolling, flipping, rotation or tiles.
+
+These routines only render a single line at a time, because of the way the GBA does events.
+*/
 #include "GBA.h"
 #include "Globals.h"
 #include "GBAGfx.h"

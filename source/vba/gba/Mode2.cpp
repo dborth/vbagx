@@ -1,3 +1,11 @@
+/*
+Mode 2 is a 256 colour tiled graphics mode which supports scaling and rotation.
+There is no background layer 0 or 1 in this mode. Only background layers 2 and 3.
+There are 256 tiles available.
+It does not support flipping.
+
+These routines only render a single line at a time, because of the way the GBA does events.
+*/
 #include "GBA.h"
 #include "Globals.h"
 #include "GBAGfx.h"
