@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wiiuse/wpad.h>
 #include <malloc.h>
 
 #include "unzip.h"
@@ -36,6 +37,7 @@
 #include "audio.h"
 #include "vmmem.h"
 #include "input.h"
+#include "gameinput.h"
 #include "video.h"
 #include "menudraw.h"
 #include "gcunzip.h"
@@ -52,8 +54,10 @@ u32 diff_usec(long long start,long long end);
 static tb_t start, now;
 
 u32 loadtimeradjust;
-
-static int cartridgeType = 0;
+int cartridgeType = 0;
+u32 RomIdCode;
+int SunBars = 3;
+bool TiltSideways = false;
 
 /****************************************************************************
  * VBA Globals
@@ -480,6 +484,8 @@ u32 systemReadJoypad(int which)
 ****************************************************************************/
 static int sensorX = 2047;
 static int sensorY = 2047;
+static int sensorWario = 0x6C0;
+static u8 sensorDarkness = 0xE8; // total darkness (including daylight on rainy days)
 
 int systemGetSensorX()
 {
@@ -491,90 +497,145 @@ int systemGetSensorY()
 	return sensorY;
 }
 
+int systemGetSensorZ()
+{
+	return sensorWario;
+}
+
+u8 systemGetSensorDarkness()
+{
+	return sensorDarkness;
+}
+
+void systemUpdateSolarSensor()
+{
+	u8 d, sun;
+	switch (SunBars)
+	{
+		case 0:
+			d = 0xE8;
+			break;
+		case 1:
+			d = 0xE0;
+			break;
+		case 2:
+			d = 0xDA;
+			break;
+		case 3:
+			d = 0xD0;
+			break;
+		case 4:
+			d = 0xC8;
+			break;
+		case 5:
+			d = 0xC0;
+			break;
+		case 6:
+			d = 0xB0;
+			break;
+		case 7:
+			d = 0xA0;
+			break;
+		case 8:
+			d = 0x88;
+			break;
+		case 9:
+			d = 0x70;
+			break;
+		case 10:
+			d = 0x50;
+			break;
+		default:
+			d = 0xE8;
+			break;
+	}
+	sun = 0xE8 - d;
+
+	struct tm *newtime;
+	time_t long_time;
+
+	// regardless of the weather, there should be no sun at night time!
+	time(&long_time); // Get time as long integer.
+	newtime = localtime(&long_time); // Convert to local time.
+	if (newtime->tm_hour > 21 || newtime->tm_hour < 5)
+	{
+		sun = 0; // total darkness, 9pm - 5am
+	}
+	else if (newtime->tm_hour > 20 || newtime->tm_hour < 6)
+	{
+		sun = sun / 9; // almost total darkness 8pm-9pm, 5am-6am
+	}
+	else if (newtime->tm_hour > 18 || newtime->tm_hour < 7)
+	{
+		sun = sun / 2; // half darkness 6pm-8pm, 6am-7am
+	}
+
+#ifdef HW_RVL
+	// pointing the Gun Del Sol at the ground blocks the sun light,
+	// because sometimes you need the shade.
+	int chan = 0; // first wiimote
+	WPADData *Data = WPAD_Data(chan);
+	WPADData data = *Data;
+	float f;
+	if (data.orient.pitch > 0)
+		f = 1.0f - (data.orient.pitch/85.0f);
+	else
+		f = 1.0f;
+	if (f < 0)
+		f=0;
+	sun *= f;
+#endif
+	sensorDarkness = 0xE8 - sun;
+}
+
 void systemUpdateMotionSensor()
 {
-	/*	int chan = 0; // first wiimote
+#ifdef HW_RVL
+	int chan = 0; // first wiimote
 
 	WPADData *Data = WPAD_Data(chan);
 	WPADData data = *Data;
+	static float OldTiltAngle, OldAvg;
+	static bool WasFlat = false;
+	float DeltaAngle = 0;
 
-	WPAD_Orientation(chan, &data.orient);
-	WPAD_GForce(chan, &data.gforce);
-	WPAD_Accel(chan, &data.accel);
+	if (TiltSideways)
+	{
+		sensorY = 2047+(data.gforce.x*50);
+		sensorX = 2047+(data.gforce.y*50);
+		TiltAngle = ((-data.orient.pitch) + OldTiltAngle)/2.0f;
+		OldTiltAngle = -data.orient.pitch;
+	}
+	else
+	{
+		sensorX = 2047-(data.gforce.x*50);
+		sensorY = 2047+(data.gforce.y*50);
+		TiltAngle = ((data.orient.roll) + OldTiltAngle)/2.0f;
+		OldTiltAngle = data.orient.roll;
+	}
+	DeltaAngle = TiltAngle - OldAvg;
+	if (DeltaAngle> 180)
+		DeltaAngle -= 360;
+	else if (DeltaAngle < -180)
+		DeltaAngle += 360;
+	OldAvg = TiltAngle;
 
-	//rotz = (float)orient.roll;
-	//roty = (float)orient.pitch;
-	//rotx = (float)orient.yaw;
+	if (TiltAngle < 3.0f && TiltAngle> -3.0f)
+	{
+		WasFlat = true;
+		TiltAngle = 0;
+	}
+	else
+	{
+		if (WasFlat) TiltAngle = TiltAngle / 2.0f;
+		WasFlat = false;
+	}
 
-	//rotz = (float)(2.0*3.14159*((int)orient.roll/360.0));//Removing extra stuff fails too
-	//roty = (float)(2.0*3.14159*((int)orient.pitch/360.0));
-	//rotx = (float)(2.0*3.14159*((int)orient.yaw/360.0));
+	sensorWario = 0x6C0+DeltaAngle*11;
 
-	//rotz = (float)accel.z;
-	//roty = (float)accel.y;
-	//rotx = (float)accel.x;
+#endif
 
-	//rotz = 200-(gforce.z*50);//Even doing this without the extra stuff fails
-	//roty = 200-(gforce.y*50);
-	//rotx = 200-(gforce.x*50);
-
-	printf("ACCEL X %d             \n", (int)Data->accel.x);
-	printf("ACCEL Y %d             \n", (int)Data->accel.y);
-	printf("ACCEL Z %d             \n", (int)Data->accel.z);
-
-	printf("HORIENT ROLL %1.3f             ", (float)Data->orient.roll);
-	printf("HORIENT PITCH %1.3f             ", (float)Data->orient.pitch);
-	printf("HORIENT YAW %1.3f             ", (float)Data->orient.yaw);
-
-	printf("GFORCE X %1.3f             \n", (float)data.gforce.x);
-	printf("GFORCE Y %1.3f             \n", (float)data.gforce.y);
-	printf("GFORCE Z %1.3f             \n", (float)data.gforce.z);
-*/
-/*
-if(sdlMotionButtons[KEY_LEFT]) {
-    sensorX += 3;
-    if(sensorX > 2197)
-      sensorX = 2197;
-    if(sensorX < 2047)
-      sensorX = 2057;
-  } else if(sdlMotionButtons[KEY_RIGHT]) {
-    sensorX -= 3;
-    if(sensorX < 1897)
-      sensorX = 1897;
-    if(sensorX > 2047)
-      sensorX = 2037;
-  } else if(sensorX > 2047) {
-    sensorX -= 2;
-    if(sensorX < 2047)
-      sensorX = 2047;
-  } else {
-    sensorX += 2;
-    if(sensorX > 2047)
-      sensorX = 2047;
-  }
-
-  if(sdlMotionButtons[KEY_UP]) {
-    sensorY += 3;
-    if(sensorY > 2197)
-      sensorY = 2197;
-    if(sensorY < 2047)
-      sensorY = 2057;
-  } else if(sdlMotionButtons[KEY_DOWN]) {
-    sensorY -= 3;
-    if(sensorY < 1897)
-      sensorY = 1897;
-    if(sensorY > 2047)
-      sensorY = 2037;
-  } else if(sensorY > 2047) {
-    sensorY -= 2;
-    if(sensorY < 2047)
-      sensorY = 2047;
-  } else {
-    sensorY += 2;
-    if(sensorY > 2047)
-      sensorY = 2047;
-  }
- */
+	systemUpdateSolarSensor();
 }
 
 /****************************************************************************
@@ -589,6 +650,63 @@ void systemDrawScreen()
 	GX_Render( srcWidth, srcHeight, pix, srcPitch );
 }
 
+bool ValidGameId(u32 id)
+{
+	if (id == 0)
+		return false;
+	for (int i = 1; i <= 4; i++)
+	{
+		u8 b = id & 0xFF;
+		id = id >> 8;
+		if (!(b >= 'A' && b <= 'Z') && !(b >= '0' && b <= '9'))
+			return false;
+	}
+	return true;
+}
+
+static void gbApplyPerImagePreferences()
+{
+	// Only works for some GB Colour roms
+	u8 Colour = gbRom[0x143];
+	if (Colour == 0x80 || Colour == 0xC0)
+	{
+		RomIdCode = gbRom[0x13f] | (gbRom[0x140] << 8) | (gbRom[0x141] << 16)
+				| (gbRom[0x142] << 24);
+		if (!ValidGameId(RomIdCode))
+			RomIdCode = 0;
+	}
+	else
+		RomIdCode = 0;
+	// Otherwise we need to make up our own code
+	if (RomIdCode == 0)
+	{
+		char title[17];
+		title[15] = '\0';
+		title[16] = '\0';
+		if (gbRom[0x143] < 0x7F && gbRom[0x143] > 0x20)
+			strncpy(title, (const char *) &gbRom[0x134], 16);
+		else
+			strncpy(title, (const char *) &gbRom[0x134], 15);
+		//sprintf(DebugStr, "'%s' %x %x %d", title, Colour, gbRom[0x13f] | (gbRom[0x140] << 8) | (gbRom[0x141] << 16) | (gbRom[0x142] << 24), ValidGameId(gbRom[0x13f] | (gbRom[0x140] << 8) | (gbRom[0x141] << 16) | (gbRom[0x142] << 24)));
+		if (strcmp(title, "ZELDA") == 0)
+			RomIdCode = LINKSAWAKENING;
+		else if (strcmp(title, "MORTAL KOMBAT") == 0)
+			RomIdCode = MK1;
+		else if (strcmp(title, "MORTALKOMBATI&II") == 0)
+			RomIdCode = MK12;
+		else if (strcmp(title, "MORTAL KOMBAT II") == 0)
+			RomIdCode = MK2;
+		else if (strcmp(title, "MORTAL KOMBAT 3") == 0)
+			RomIdCode = MK3;
+		else if (strcmp(title, "MORTAL KOMBAT 4") == 0)
+			RomIdCode = MK4;
+		else if (strcmp(title, "SUPER MARIOLAND") == 0)
+			RomIdCode = MARIOLAND1;
+		else if (strcmp(title, "MARIOLAND2") == 0)
+			RomIdCode = MARIOLAND2;
+	}
+}
+
 /****************************************************************************
  * ApplyPerImagePreferences
  * Apply game specific settings, originally from vba-over.ini
@@ -598,6 +716,7 @@ static void ApplyPerImagePreferences()
 {
 	// look for matching game setting
 	int snum = -1;
+	RomIdCode = rom[0xac] | (rom[0xad] << 8) | (rom[0xae] << 16) | (rom[0xaf] << 24);
 
 	for(int i=0; i < gameSettingsCount; i++)
 	{
@@ -622,6 +741,23 @@ static void ApplyPerImagePreferences()
 			cpuSaveType = gameSettings[snum].saveType;
 		if(gameSettings[snum].mirroringEnabled >= 0)
 			mirroringEnable = gameSettings[snum].mirroringEnabled;
+	}
+	// In most cases this is already handled in GameSettings, but just to make sure:
+	switch (rom[0xac])
+	{
+		case 'F': // Classic NES
+			cpuSaveType = 1; // EEPROM
+			mirroringEnable = 1;
+			break;
+		case 'K': // Accelerometers
+			cpuSaveType = 4; // EEPROM + sensor
+			break;
+		case 'R': // WarioWare Twisted style sensors
+			rtcEnable(1);
+			break;
+		case 'U': // Boktai solar sensor and clock
+			rtcEnable(1);
+			break;
 	}
 }
 
@@ -817,6 +953,9 @@ bool LoadVBAROM(int method)
 			//gbCPUInit(gbBiosFileName, useBios);
 
 			LoadPatch(method);
+
+			// Apply preferences specific to this game
+			gbApplyPerImagePreferences();
 
 			gbSoundReset();
 			gbSoundSetDeclicking(true);
