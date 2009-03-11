@@ -704,6 +704,8 @@ static void gbApplyPerImagePreferences()
 			RomIdCode = MARIOLAND1;
 		else if (strcmp(title, "MARIOLAND2") == 0)
 			RomIdCode = MARIOLAND2;
+		else if (strcmp(title, "METROID2") == 0)
+			RomIdCode = METROID2;
 	}
 }
 
@@ -873,9 +875,14 @@ bool LoadVBAROM(int method)
 				cartridgeType = 2;
 			else if(utilIsGBImage(zippedFilename))
 				cartridgeType = 1;
+			else {
+				WaitPrompt("Rom must be 1st file in zip, or unzipped!");
+				return false;
+			}
 		}
 		else // loading the file failed
 		{
+			WaitPrompt("Empty or invalid zip file!");
 			return false;
 		}
 	}
@@ -883,7 +890,8 @@ bool LoadVBAROM(int method)
 	// leave before we do anything
 	if(cartridgeType != 1 && cartridgeType != 2)
 	{
-		WaitPrompt("Unknown game image!");
+		// Not zip gba agb gbc cgb sgb gb mb bin elf or dmg!
+		WaitPrompt("Invalid filename extension! Not a rom?");
 		return false;
 	}
 

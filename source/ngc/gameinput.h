@@ -26,6 +26,9 @@
 #define MINISHCAP		gid('B','Z','M')
 
 #define METROID0		gid('B','M','X')
+#define METROID1		gid('F','M','R')
+#define METROID2		0xFF0009
+#define METROID4		gid('A','M','T')
 
 #define MARIO1CLASSIC	gid('F','S','M')
 #define MARIO1DX		gid('A','H','Y')
@@ -103,6 +106,9 @@ u32 LinksAwakeningInput(unsigned short pad);
 u32 OracleOfAgesInput(unsigned short pad);
 u32 MinishCapInput(unsigned short pad);
 u32 MetroidZeroInput(unsigned short pad);
+u32 Metroid1Input(unsigned short pad);
+u32 Metroid2Input(unsigned short pad);
+u32 MetroidFusionInput(unsigned short pad);
 u32 TMNTInput(unsigned short pad);
 u32 HarryPotter1Input(unsigned short pad);
 u32 HarryPotter1GBCInput(unsigned short pad);
