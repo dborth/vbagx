@@ -1435,10 +1435,12 @@ void  gbWriteMemory(register u16 address, register u8 value)
         int paletteHiLo  = (v & 0x01);
 
         // No access to gbPalette during mode 3 (Color Panel Demo)
-        if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
-           (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
-           ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
-           ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
+		// CAK - The following check has to be commented out for
+		// colourised roms like Metroid 2 DX
+        //if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
+        //   (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
+        //   ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
+        //   ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
         {
           gbMemory[0xff69] = value;
           gbPalette[paletteIndex] = (paletteHiLo ?
@@ -1489,10 +1491,12 @@ void  gbWriteMemory(register u16 address, register u8 value)
         paletteIndex += 32;
 
         // No access to gbPalette during mode 3 (Color Panel Demo)
-        if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
-           (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
-           ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
-           ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
+		// CAK - The following check has to be commented out for
+		// colourised roms like Metroid 2 DX
+        //if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
+        //   (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
+        //   ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
+        //   ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
         {
           gbMemory[0xff6b] = value;
           gbPalette[paletteIndex] = (paletteHiLo ?
@@ -1669,13 +1673,13 @@ u8 gbReadOpcode(register u16 address)
       if (gbCgbMode)
       {
         // No access to gbPalette during mode 3 (Color Panel Demo)
-        if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
-           (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
-           ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
-           ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
+        //if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
+        //   (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
+        //   ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
+        //   ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
           return (gbMemory[address]);
-        else
-          return 0xff;
+        //else
+        //  return 0xff;
       }
       else
         return 0xff;
@@ -1930,13 +1934,13 @@ u8 gbReadMemory(register u16 address)
       if (gbCgbMode)
       {
         // No access to gbPalette during mode 3 (Color Panel Demo)
-        if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
-           (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
-           ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
-           ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
+        //if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
+        //   (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
+        //   ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
+        //   ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
           return (gbMemory[address]);
-        else
-          return 0xff;
+        //else
+        //  return 0xff;
       }
       else
         return 0xff;
@@ -4585,9 +4589,9 @@ void gbEmulate(int ticksToStop)
 
     if (register_LCDCBusy)
     {
-      register_LCDCBusy-=clockTicks;
-      if (register_LCDCBusy<0)
-        register_LCDCBusy = 0;
+      //register_LCDCBusy-=clockTicks;
+      //if (register_LCDCBusy<0)
+      //  register_LCDCBusy = 0;
     }
 
 
@@ -4843,7 +4847,7 @@ void gbEmulate(int ticksToStop)
             framesToSkip = 9; // try 6 FPS during speedup
           //gbLcdTicksDelayed = gbLcdTicks+1;
           gbLCDChangeHappened = false;
-          switch(gbLcdModeDelayed) {
+          switch(gbLcdMode) {
             case 0:
             {
               // H-Blank
@@ -4874,7 +4878,7 @@ void gbEmulate(int ticksToStop)
                 }
 
                 gbLcdTicksDelayed += GBLCD_MODE_1_CLOCK_TICKS;
-                gbLcdModeDelayed = 1;
+                gbLcdMode = 1;
 
                 gbFrameCount++;
                 systemFrame();
@@ -4947,7 +4951,7 @@ void gbEmulate(int ticksToStop)
               } else {
                 // go the the OAM being accessed mode
                 gbLcdTicksDelayed += GBLCD_MODE_2_CLOCK_TICKS;
-                gbLcdModeDelayed = 2;
+                gbLcdMode = 2;
                 gbInt48Signal &= ~3;
               }
             }
@@ -4962,7 +4966,7 @@ void gbEmulate(int ticksToStop)
               oldRegister_WY = register_WY;
 
               gbLcdTicksDelayed += GBLCD_MODE_2_CLOCK_TICKS;
-              gbLcdModeDelayed = 2;
+              gbLcdMode = 2;
 
               // reset the window line
               gbWindowLine = -1;
@@ -4973,7 +4977,7 @@ void gbEmulate(int ticksToStop)
               // OAM being accessed mode
               // next mode is OAM and VRAM in use
               gbLcdTicksDelayed += GBLCD_MODE_3_CLOCK_TICKS+gbSpritesTicks[299];
-              gbLcdModeDelayed = 3;
+              gbLcdMode = 3;
             }
             break;
             case 3:
@@ -5006,7 +5010,7 @@ void gbEmulate(int ticksToStop)
                 }
               }
               gbLcdTicksDelayed += GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299];
-              gbLcdModeDelayed = 0;
+              gbLcdMode = 0;
             }
             break;
           }
@@ -5033,7 +5037,7 @@ void gbEmulate(int ticksToStop)
           }
           gbLcdLYIncrementTicksDelayed += GBLY_INCREMENT_CLOCK_TICKS;
 
-          if (gbLcdModeDelayed == 1)
+          if (gbLcdMode == 1)
           {
 
             if(register_LY == 153)
