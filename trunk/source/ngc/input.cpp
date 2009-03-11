@@ -523,6 +523,12 @@ static u32 DecodeJoy(unsigned short pad)
 			// Metroid
 			case METROID0:
 				return MetroidZeroInput(pad);
+			case METROID1:
+				return Metroid1Input(pad);
+			case METROID2:
+				return Metroid2Input(pad);
+			case METROID4:
+				return MetroidFusionInput(pad);
 
 			// TMNT
 			case TMNT:
