@@ -304,7 +304,7 @@ static void GX_Start()
 	GX_SetCullMode (GX_CULL_NONE);
 	GX_SetDispCopyGamma (GX_GM_1_0);
 
-	guOrtho(p, vmode->efbHeight/2, -(vmode->efbHeight/2), -(vmode->fbWidth/2), vmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	guOrtho(p, 480/2, -(480/2), -(640/2), 640/2, 10, 1000);	// matrix, t, b, l, r, n, f
 	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
 
 	GX_CopyDisp (xfb[whichfb], GX_TRUE); // reset xfb
@@ -516,7 +516,7 @@ ResetVideo_Emu ()
 	GX_SetCullMode (GX_CULL_NONE);
 	GX_SetDispCopyGamma (GX_GM_1_0);
 
-	guOrtho(p, rmode->efbHeight/2, -(rmode->efbHeight/2), -(rmode->fbWidth/2), rmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	guOrtho(p, 480/2, -(480/2), -(640/2), 640/2, 10, 1000);	// matrix, t, b, l, r, n, f
 	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
 
 	// reinitialize texture
@@ -562,7 +562,7 @@ ResetVideo_Menu ()
 	GX_SetFieldMode (vmode->field_rendering, ((vmode->viHeight == 2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 	GX_SetPixelFmt (GX_PF_RGB8_Z24, GX_ZC_LINEAR);
 
-	guOrtho(p, vmode->efbHeight/2, -(vmode->efbHeight/2), -(vmode->fbWidth/2), vmode->fbWidth/2, 10, 1000);	// matrix, t, b, l, r, n, f
+	guOrtho(p, 480/2, -(480/2), -(640/2), 640/2, 10, 1000);	// matrix, t, b, l, r, n, f
 	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
 }
 
