@@ -80,6 +80,8 @@
 #define MKDA			gid('A','X','D')
 #define MKTE			gid('A','W','4')
 
+#define CORVETTE		gid('A','V','C')
+
 u8 gbReadMemory(register u16 address);
 void gbWriteMemory(register u16 address, register u8 value);
 

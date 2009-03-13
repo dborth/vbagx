@@ -33,6 +33,10 @@ extern bool timer3On;
 extern int timer3Ticks;
 extern int timer3ClockReload;
 extern int cpuTotalTicks;
+extern u32 RomIdCode;
+
+#define gid(a,b,c) (a|(b<<8)|(c<<16))
+#define CORVETTE		gid('A','V','C')
 
 /*****************************************************************************
  * Nintendo GC Virtual Memory function override
@@ -560,6 +564,7 @@ static inline void CPUWriteMemory(u32 address, u32 value)
                         value);
     else
 #endif
+    if(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE)
     WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
     break;
   case 0x06:
@@ -656,6 +661,7 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
                           value);
     else
 #endif
+    if(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE)
     WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
     break;
   case 6:
