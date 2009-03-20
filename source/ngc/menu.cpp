@@ -394,10 +394,14 @@ GetInput (u16 ctrlr_type)
 	| WPAD_ButtonsHeld(0)
 	| AnyKeyDown()
 #endif
-	) VIDEO_WaitVSync();	// button 'debounce'
+	) { 
+	updateRumbleFrame();
+	VIDEO_WaitVSync();	// button 'debounce'
+	}
 
 	while (pressed == 0 && !AnyKeyDown())
 	{
+		updateRumbleFrame();
 		VIDEO_WaitVSync();
 		// get input based on controller type
 		if (ctrlr_type == CTRLR_GCPAD)
@@ -424,6 +428,7 @@ GetInput (u16 ctrlr_type)
 		for (int i=4; i<=231; i++) {
 			if (DownUsbKeys[i]) {
 				while (DownUsbKeys[i]) {
+					updateRumbleFrame();
 					VIDEO_WaitVSync();
 				}
 				return i;
@@ -434,7 +439,10 @@ GetInput (u16 ctrlr_type)
 #ifdef HW_RVL
 						| WPAD_ButtonsHeld(0)
 #endif
-						) ) VIDEO_WaitVSync();
+						) ) {
+		updateRumbleFrame();
+		VIDEO_WaitVSync();
+	}
 
 	return pressed;
 }	// end GetInput()
@@ -723,6 +731,7 @@ MainMenu (int selectedMenu)
 	else
 		sprintf (menuitems[3], "Game Menu");
 
+	updateRumbleFrame();
 	VIDEO_WaitVSync ();
 
 	while (quit == 0)
@@ -798,6 +807,7 @@ MainMenu (int selectedMenu)
 		#endif
 	))
 	{
+		updateRumbleFrame();
 		VIDEO_WaitVSync();
 		count++;
 	}

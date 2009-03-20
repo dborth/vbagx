@@ -29,8 +29,11 @@
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
 
+extern bool InMenu;
 int rumbleRequest[4] = {0,0,0,0};
 static int rumbleCount[4] = {0,0,0,0};
+bool cartridgeRumble = false;
+int gameRumbleCount = 0, menuRumbleCount = 0, rumbleCountAlready = 0;
 
 unsigned int vbapadmap[10]; // VBA controller buttons
 unsigned int gcpadmap[10]; // Gamecube controller Padmap
@@ -159,6 +162,57 @@ void DoRumble(int i)
 			rumbleCount[i]--;
 		WPAD_Rumble(i, 0); // rumble off
 	}
+}
+
+static void updateRumble() {
+	bool r = false;
+	if (InMenu) r = (menuRumbleCount > 0);
+	else r = cartridgeRumble || (gameRumbleCount > 0) || (menuRumbleCount > 0);
+
+#ifdef HW_RVL
+	// Rumble wii remote 0
+	WPAD_Rumble(0, r);
+#endif
+	PAD_ControlMotor(PAD_CHAN0, PAD_MOTOR_RUMBLE);
+}
+
+void updateRumbleFrame() {
+	// If we already rumbled continuously for more than 50 frames, 
+	// then disable rumbling for a while.
+	if (rumbleCountAlready > 50) {
+		gameRumbleCount = 0;
+		menuRumbleCount = 0;
+		// disable rumbling for 10 more frames
+		if (rumbleCountAlready > 50+10)
+			rumbleCountAlready = 0;
+		else rumbleCountAlready++;
+	} else if (InMenu) {
+		if (menuRumbleCount>0)
+			rumbleCountAlready++;
+	} else {
+		if (gameRumbleCount>0 || menuRumbleCount>0 || cartridgeRumble)
+			rumbleCountAlready++;
+	}
+	updateRumble();
+	if (gameRumbleCount>0 && !InMenu) gameRumbleCount--;
+	if (menuRumbleCount>0) menuRumbleCount--;
+}
+
+void systemCartridgeRumble(bool RumbleOn) {
+	cartridgeRumble = RumbleOn;
+	updateRumble();
+}
+
+void systemGameRumble(int RumbleForFrames) {
+	if (RumbleForFrames > gameRumbleCount) gameRumbleCount = RumbleForFrames;
+}
+
+void systemGameRumbleOnlyFor(int OnlyRumbleForFrames) {
+	gameRumbleCount = OnlyRumbleForFrames;
+}
+
+void systemMenuRumble(int RumbleForFrames) {
+	if (RumbleForFrames > menuRumbleCount) menuRumbleCount = RumbleForFrames;
 }
 
 /****************************************************************************
@@ -617,10 +671,6 @@ static u32 DecodeJoy(unsigned short pad)
 				return Boktai2Input(pad);
 		}
 	}
-	else
-	{
-		ShutoffRumble();
-	}
 #endif
 
 	// the function result, J, is a combination of flags for all the VBA buttons that are down
@@ -659,13 +709,9 @@ static u32 DecodeJoy(unsigned short pad)
 			J |= vbapadmap[i];
 	}
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
+
 u32 GetJoy(int pad)
 {
 	pad = 0;
@@ -699,10 +745,18 @@ u32 GetJoy(int pad)
 	)
 	{
 		ConfigRequested = 1;
+		updateRumbleFrame();
 		return 0;
 	}
 	else
 	{
-		return DecodeJoy(pad);
+		u32 J = DecodeJoy(pad);
+		// don't allow up+down or left+right
+		if ((J & 48) == 48)
+			J &= ~16;
+		if ((J & 192) == 192)
+			J &= ~128;
+		updateRumbleFrame();
+		return J;
 	}
 }

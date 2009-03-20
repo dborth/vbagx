@@ -15,6 +15,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "system.h"
 #include "vba.h"
 #include "video.h"
 #include "menudraw.h"
@@ -62,6 +63,7 @@ static int MountCard(int cslot, bool silent, u8 * SysArea)
 	{
 		EXI_ProbeReset ();
 		ret = CARD_Mount (cslot, &SysArea, NULL);
+		updateRumbleFrame ();
 		VIDEO_WaitVSync ();
 		tries++;
 	}

@@ -180,6 +180,7 @@ showscreen ()
 {
 	VIDEO_SetNextFramebuffer (xfb[whichfb]);
 	VIDEO_Flush ();
+	updateRumbleFrame();
 	VIDEO_WaitVSync ();
 }
 

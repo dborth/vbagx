@@ -260,6 +260,7 @@ Credits ()
 	DrawText (-1, ypos += 15, "the GNU General Public License (GPL) Version 2.");
 
 	DrawVersion();
+	updateRumbleFrame();
 	showscreen ();
 }
 
@@ -306,13 +307,25 @@ WaitButtonA ()
 #ifdef HW_RVL
   while ( (PAD_ButtonsDown (0) & PAD_BUTTON_A) 
 		|| (WPAD_ButtonsDown(0) & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) 
-		|| (DownUsbKeys[KB_ENTER])) VIDEO_WaitVSync();
+		|| (DownUsbKeys[KB_ENTER])) {
+	updateRumbleFrame();
+	VIDEO_WaitVSync();
+  }
   while (!(PAD_ButtonsDown (0) & PAD_BUTTON_A) 
 		&& !(WPAD_ButtonsDown(0) & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) 
-		&& !(DownUsbKeys[KB_ENTER])) VIDEO_WaitVSync();
+		&& !(DownUsbKeys[KB_ENTER])) {
+	updateRumbleFrame();
+	VIDEO_WaitVSync();
+  }
 #else
-  while ( PAD_ButtonsDown (0) & PAD_BUTTON_A ) VIDEO_WaitVSync();
-  while (!(PAD_ButtonsDown (0) & PAD_BUTTON_A) ) VIDEO_WaitVSync();
+  while ( PAD_ButtonsDown (0) & PAD_BUTTON_A ) {
+	updateRumbleFrame();
+	VIDEO_WaitVSync();
+  }
+  while (!(PAD_ButtonsDown (0) & PAD_BUTTON_A) ) {
+	updateRumbleFrame();
+	VIDEO_WaitVSync();
+  }
 #endif
 }
 
@@ -329,7 +342,10 @@ WaitButtonAB ()
     while ( (PAD_ButtonsDown (0) & (PAD_BUTTON_A | PAD_BUTTON_B))
 			|| (WPAD_ButtonsDown(0) & (WPAD_BUTTON_A | WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_A | WPAD_CLASSIC_BUTTON_B))
 			|| (DownUsbKeys[KB_ENTER]) || (DownUsbKeys[KB_ESC])
-			) VIDEO_WaitVSync();
+			) {
+		updateRumbleFrame();
+		VIDEO_WaitVSync();
+	}
 
     while ( TRUE )
     {
@@ -347,7 +363,10 @@ WaitButtonAB ()
 #else
     u32 gc_btns;
 
-    while ( (PAD_ButtonsDown (0) & (PAD_BUTTON_A | PAD_BUTTON_B)) ) VIDEO_WaitVSync();
+    while ( (PAD_ButtonsDown (0) & (PAD_BUTTON_A | PAD_BUTTON_B)) ) {
+		updateRumbleFrame();
+		VIDEO_WaitVSync();
+	}
 
     while ( TRUE )
     {
@@ -563,7 +582,7 @@ RunMenu (char items[][50], int maxitems, const char *title, int fontsize, int x)
 		wp = WPAD_ButtonsDown (0);
 #endif
 
-
+		updateRumbleFrame();
 		VIDEO_WaitVSync();	// slow things down a bit so we don't overread the pads
 
         /*** Look for up ***/
@@ -620,6 +639,7 @@ RunMenu (char items[][50], int maxitems, const char *title, int fontsize, int x)
 			)
 	{
 		ret = -1;
+		updateRumbleFrame();
 		VIDEO_WaitVSync();
 	}
 
