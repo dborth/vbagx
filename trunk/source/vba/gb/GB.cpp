@@ -4589,9 +4589,9 @@ void gbEmulate(int ticksToStop)
 
     if (register_LCDCBusy)
     {
-      //register_LCDCBusy-=clockTicks;
-      //if (register_LCDCBusy<0)
-      //  register_LCDCBusy = 0;
+      register_LCDCBusy-=clockTicks;
+      if (register_LCDCBusy<0)
+        register_LCDCBusy = 0;
     }
 
 
@@ -4847,7 +4847,7 @@ void gbEmulate(int ticksToStop)
             framesToSkip = 9; // try 6 FPS during speedup
           //gbLcdTicksDelayed = gbLcdTicks+1;
           gbLCDChangeHappened = false;
-          switch(gbLcdMode) {
+          switch(gbLcdModeDelayed) {
             case 0:
             {
               // H-Blank
@@ -4878,7 +4878,7 @@ void gbEmulate(int ticksToStop)
                 }
 
                 gbLcdTicksDelayed += GBLCD_MODE_1_CLOCK_TICKS;
-                gbLcdMode = 1;
+                gbLcdModeDelayed = 1;
 
                 gbFrameCount++;
                 systemFrame();
@@ -4951,7 +4951,7 @@ void gbEmulate(int ticksToStop)
               } else {
                 // go the the OAM being accessed mode
                 gbLcdTicksDelayed += GBLCD_MODE_2_CLOCK_TICKS;
-                gbLcdMode = 2;
+                gbLcdModeDelayed = 2;
                 gbInt48Signal &= ~3;
               }
             }
@@ -4966,7 +4966,7 @@ void gbEmulate(int ticksToStop)
               oldRegister_WY = register_WY;
 
               gbLcdTicksDelayed += GBLCD_MODE_2_CLOCK_TICKS;
-              gbLcdMode = 2;
+              gbLcdModeDelayed = 2;
 
               // reset the window line
               gbWindowLine = -1;
@@ -4977,7 +4977,7 @@ void gbEmulate(int ticksToStop)
               // OAM being accessed mode
               // next mode is OAM and VRAM in use
               gbLcdTicksDelayed += GBLCD_MODE_3_CLOCK_TICKS+gbSpritesTicks[299];
-              gbLcdMode = 3;
+              gbLcdModeDelayed = 3;
             }
             break;
             case 3:
@@ -5010,7 +5010,7 @@ void gbEmulate(int ticksToStop)
                 }
               }
               gbLcdTicksDelayed += GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299];
-              gbLcdMode = 0;
+              gbLcdModeDelayed = 0;
             }
             break;
           }
@@ -5037,7 +5037,7 @@ void gbEmulate(int ticksToStop)
           }
           gbLcdLYIncrementTicksDelayed += GBLY_INCREMENT_CLOCK_TICKS;
 
-          if (gbLcdMode == 1)
+          if (gbLcdModeDelayed == 1)
           {
 
             if(register_LY == 153)
