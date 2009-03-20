@@ -40,6 +40,7 @@ extern "C" {
 
 extern bool ROMLoaded;
 extern int emulating;
+bool InMenu = true;
 int ConfigRequested = 0;
 int ShutdownRequested = 0;
 int ResetRequested = 0;
@@ -241,6 +242,7 @@ int main(int argc, char *argv[])
 
 	while(1) // main loop
 	{
+		InMenu = true;
 		#ifdef HW_RVL
 		if(ShutdownRequested)
 			ShutdownWii();
@@ -258,6 +260,7 @@ int main(int argc, char *argv[])
 		LWP_SuspendThread (devicethread);
 
 		ResetVideo_Emu();
+		InMenu = false;
 
 		while (emulating) // emulation loop
 		{
@@ -271,6 +274,7 @@ int main(int argc, char *argv[])
 
 			if(ConfigRequested)
 			{
+				InMenu = true;
 				ShutoffRumble();
 				StopAudio();
 				ResetVideo_Menu (); // change to menu video mode

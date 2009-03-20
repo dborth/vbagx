@@ -31,8 +31,6 @@
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
 
-extern int WarioRumbleMotor;
-
 u8 ZeldaDxLeftPos = 2, ZeldaDxRightPos = 3, ZeldaDxDownPos = 4;
 u8 ZeldaDxShieldPos = 5, ZeldaDxSwordPos = 5;
 
@@ -164,11 +162,9 @@ u32 LinksAwakeningInput(unsigned short pad)
 		SelItem = gbReadMemory(0xDB00 + CursorPos);
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
-	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+	if (Health < OldHealth) 
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	WPADData * wp = WPAD_Data(pad);
@@ -184,7 +180,8 @@ u32 LinksAwakeningInput(unsigned short pad)
 		{
 			if (!OnItemScreen)
 				ZeldaDxSheathSword();
-			else if (RumbleCount<5) RumbleCount=5;
+			else
+				systemGameRumble(5);
 				J |= VBA_BUTTON_A;
 		}
 	}
@@ -210,7 +207,7 @@ u32 LinksAwakeningInput(unsigned short pad)
 	if (SwordCount>0)
 	{
 		if (SwordCount == 50)
-			RumbleCount = 50;
+			systemGameRumbleOnlyFor(50);
 		if (!OnItemScreen)
 			J |= VBA_BUTTON_A;
 		SwordCount--;
@@ -220,7 +217,7 @@ u32 LinksAwakeningInput(unsigned short pad)
 	if (wp->btns_h & WPAD_BUTTON_UP)
 	{
 		J |= VBA_BUTTON_A | VBA_BUTTON_B | VBA_BUTTON_START | VBA_BUTTON_SELECT;
-		RumbleCount = 5;
+		systemGameRumbleOnlyFor(5);
 		QuestScreen = false;
 	}
 
@@ -229,7 +226,7 @@ u32 LinksAwakeningInput(unsigned short pad)
 	{
 		if (OnItemScreen) ZeldaDxSwap(ZeldaDxLeftPos, CursorPos);
 		else ZeldaDxSwapBItem(ZeldaDxLeftPos);
-		RumbleCount = 5;
+		systemGameRumbleOnlyFor(5);
 		QuestScreen = false;
 	}
 	// Right Item
@@ -237,7 +234,7 @@ u32 LinksAwakeningInput(unsigned short pad)
 	{
 		if (OnItemScreen) ZeldaDxSwap(ZeldaDxRightPos, CursorPos);
 		else ZeldaDxSwapBItem(ZeldaDxRightPos);
-		RumbleCount = 5;
+		systemGameRumbleOnlyFor(5);
 		QuestScreen = false;
 	}
 	// Down Item
@@ -245,7 +242,7 @@ u32 LinksAwakeningInput(unsigned short pad)
 	{
 		if (OnItemScreen) ZeldaDxSwap(ZeldaDxDownPos, CursorPos);
 		else ZeldaDxSwapBItem(ZeldaDxDownPos);
-		RumbleCount = 5;
+		systemGameRumbleOnlyFor(5);
 		QuestScreen = false;
 	}
 	// B Item
@@ -265,8 +262,8 @@ u32 LinksAwakeningInput(unsigned short pad)
 				 BombArrows = false;
 				 }
 				 }*/
-				if (RumbleCount<5) RumbleCount=5;
-					DelayCount = 10;
+				systemGameRumble(5);
+				DelayCount = 10;
 			}
 			else
 			{
@@ -346,14 +343,15 @@ u32 LinksAwakeningInput(unsigned short pad)
 		if (SelItem==2 || SelItem==5)
 		{ // toggle bomb arrows
 			BombArrows = !BombArrows;
-			RumbleCount = BombArrows?16:4;
+			if (BombArrows) systemGameRumbleOnlyFor(16);
+			else systemGameRumbleOnlyFor(4);
 			if (SelItem==2 && BombArrows)
 				J |= VBA_BUTTON_A;
 		}
 		else if (BombArrows)
 		{ // switch off bomb arrows
 			BombArrows = false;
-			RumbleCount = 4;
+			systemGameRumbleOnlyFor(4);
 			J |= VBA_BUTTON_A;
 		}
 		QuestScreen = false;
@@ -364,19 +362,6 @@ u32 LinksAwakeningInput(unsigned short pad)
 		J |= VBA_SPEED;
 		QuestScreen = false;
 	}
-
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -403,11 +388,9 @@ u32 OracleOfAgesInput(unsigned short pad)
 	//else if (AButtonItem>=0xD && AButtonItem<=0xE) ZTargetButton = VBA_BUTTON_A;
 	ZTargetButton = VBA_BUTTON_A;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	WPADData * wp = WPAD_Data(pad);
@@ -487,19 +470,6 @@ u32 OracleOfAgesInput(unsigned short pad)
 	if (jp & PAD_TRIGGER_L)
 		J |= ZTargetButton;
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -555,11 +525,9 @@ u32 MinishCapInput(unsigned short pad)
 	else
 		ZTargetButton = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	int cx, cy, SelRow, SelCol, CursorRow = 0xFF, CursorCol = 0xFF;
@@ -797,8 +765,7 @@ u32 MinishCapInput(unsigned short pad)
 			!= OldCursorCol))
 	{
 		// Cursor changed buttons, so rumble
-		if (RumbleCount < 5)
-			RumbleCount = 5;
+		systemGameRumble(5);
 	}
 	OldCursorRow = CursorRow;
 	OldCursorCol = CursorCol;
@@ -957,8 +924,7 @@ u32 MinishCapInput(unsigned short pad)
 		if (wp->btns_h & WPAD_BUTTON_A)
 		{
 			J |= VBA_BUTTON_A;
-			if (RumbleCount<12)
-			RumbleCount=12;
+			systemGameRumble(12);
 		}
 	}
 	else if (Subscreen==0x2c)
@@ -968,7 +934,6 @@ u32 MinishCapInput(unsigned short pad)
 	{ // Sleep button returns to menu instead of sleep
 		if (wp->btns_h & WPAD_BUTTON_A)
 		{
-			WPAD_Rumble(pad, 0);
 			ConfigRequested = 1;
 			return 0;
 		}
@@ -983,7 +948,7 @@ u32 MinishCapInput(unsigned short pad)
 			if (fabs(wp->exp.nunchuk.gforce.y)> 0.6)
 			{
 				J |= VBA_BUTTON_R;
-				if (RumbleCount<5) RumbleCount=5;
+				systemGameRumble(5);
 			}
 		}
 		else if (wp->exp.type == WPAD_EXP_NUNCHUK)
@@ -991,7 +956,7 @@ u32 MinishCapInput(unsigned short pad)
 			if (fabs(wp->exp.nunchuk.gforce.x)> 0.6)
 			{ // Wiiuse bug!!! Not correct values
 				J |= SwordButton;
-				if (RumbleCount<20) RumbleCount=20;
+				systemGameRumble(20);
 			}
 			// CAKTODO hold down attack button to do spin attack
 
@@ -1003,7 +968,7 @@ u32 MinishCapInput(unsigned short pad)
 		J |= VBA_BUTTON_A;
 		if (Subscreen==0x2c)
 		{
-			if (RumbleCount<10) RumbleCount=10;
+			systemGameRumble(10);
 		}
 	}
 	// Down Item
@@ -1017,7 +982,7 @@ u32 MinishCapInput(unsigned short pad)
 			J |= VBA_BUTTON_B;
 			if (Subscreen==0x2c)
 			{
-				if (RumbleCount<10) RumbleCount=10;
+				systemGameRumble(10);
 			}
 		}
 	}
@@ -1026,7 +991,7 @@ u32 MinishCapInput(unsigned short pad)
 		J |= VBA_BUTTON_B;
 		if (Subscreen==0x2c)
 		{
-			if (RumbleCount<10) RumbleCount=10;
+			systemGameRumble(10);
 		}
 	}
 	// Kinstone (doesn't work in items screen)
@@ -1078,18 +1043,6 @@ u32 MinishCapInput(unsigned short pad)
 	if (jp & PAD_TRIGGER_L)
 		J |= VBA_BUTTON_A;
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -1099,11 +1052,9 @@ u32 ALinkToThePastInput(unsigned short pad)
 	u8 Health = 0;
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	WPADData * wp = WPAD_Data(pad);
@@ -1120,7 +1071,7 @@ u32 ALinkToThePastInput(unsigned short pad)
 		if (fabs(wp->exp.nunchuk.gforce.x)> 0.6)
 		{ // Wiiuse bug!!! Not correct values
 			J |= VBA_BUTTON_B;
-			if (RumbleCount<20) RumbleCount=20;
+			systemGameRumble(20);
 		}
 		// CAKTODO hold down attack button to do spin attack
 
@@ -1161,19 +1112,6 @@ u32 ALinkToThePastInput(unsigned short pad)
 	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_C))
 		J |= VBA_SPEED;
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else
-		WPAD_Rumble(pad, 0);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -1183,11 +1121,9 @@ u32 Zelda1Input(unsigned short pad)
 	u8 Health = 0;
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	WPADData * wp = WPAD_Data(pad);
@@ -1204,7 +1140,7 @@ u32 Zelda1Input(unsigned short pad)
 		if (fabs(wp->exp.nunchuk.gforce.x)> 0.6)
 		{ // Wiiuse bug!!! Not correct values
 			J |= VBA_BUTTON_A;
-			if (RumbleCount<20) RumbleCount=20;
+			systemGameRumble(20);
 		}
 	}
 	// Use item
@@ -1241,19 +1177,6 @@ u32 Zelda1Input(unsigned short pad)
 	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_C))
 		J |= VBA_SPEED;
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -1263,11 +1186,9 @@ u32 Zelda2Input(unsigned short pad)
 	u8 Health = 0;
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	WPADData * wp = WPAD_Data(pad);
@@ -1285,7 +1206,7 @@ u32 Zelda2Input(unsigned short pad)
 		if (fabs(wp->exp.nunchuk.gforce.x)> 0.6)
 		{ // Wiiuse bug!!! Not correct values
 			J |= VBA_BUTTON_B;
-			if (RumbleCount<20) RumbleCount=20;
+			systemGameRumble(20);
 		}
 	}
 	// Use item
@@ -1324,18 +1245,6 @@ u32 Zelda2Input(unsigned short pad)
 	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_C))
 		J |= VBA_SPEED;
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -1346,11 +1255,9 @@ u32 MK1Input(unsigned short pad)
 	u8 Health = gbReadMemory(0xc695);
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 5)
-			RumbleCount = 5;
+		systemGameRumble(5);
 	OldHealth = Health;
 
 	WPADData * wp = WPAD_Data(pad);
@@ -1379,19 +1286,6 @@ u32 MK1Input(unsigned short pad)
 		// CAKTODO
 	}
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -1401,11 +1295,9 @@ u32 MK4Input(unsigned short pad)
 	u8 Health = 0;
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	WPADData * wp = WPAD_Data(pad);
@@ -1434,19 +1326,6 @@ u32 MK4Input(unsigned short pad)
 		// CAKTODO
 	}
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -1456,11 +1335,9 @@ u32 MKAInput(unsigned short pad)
 	u8 Health = 0;
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	WPADData * wp = WPAD_Data(pad);
@@ -1489,19 +1366,6 @@ u32 MKAInput(unsigned short pad)
 		// CAKTODO
 	}
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else
-		WPAD_Rumble(pad, 0);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -1524,11 +1388,9 @@ u32 MKTEInput(unsigned short pad)
 	}
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	u32 Forwards, Back;
@@ -1588,14 +1450,6 @@ u32 MKTEInput(unsigned short pad)
 		J |= VBA_SPEED;
 	}
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else
-		WPAD_Rumble(pad, 0);
-
 	if ((J & 48) == 48)
 		J &= ~16;
 	if ((J & 192) == 192)
@@ -1617,11 +1471,9 @@ u32 MarioKartInput(unsigned short pad)
 	static u8 OldHealth = 0;
 	float fraction;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-	if (RumbleCount < 20)
-		RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	// Start/Select
@@ -1727,19 +1579,6 @@ u32 MarioKartInput(unsigned short pad)
 			|| jp & PAD_BUTTON_RIGHT)
 		J |= VBA_BUTTON_R;
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	frame++;
 
 	return J;
@@ -1752,11 +1591,9 @@ u32 LegoStarWars1Input(unsigned short pad)
 	u8 Health = 0;
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	WPADData * wp = WPAD_Data(pad);
@@ -1802,20 +1639,6 @@ u32 LegoStarWars1Input(unsigned short pad)
 	// CAKTODO same as game boy for now
 	J |= StandardGamecube(pad) | StandardKeyboard(pad);
 
-
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -1825,11 +1648,9 @@ u32 LegoStarWars2Input(unsigned short pad)
 	u8 Health = 0;
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	WPADData * wp = WPAD_Data(pad);
@@ -1878,20 +1699,6 @@ u32 LegoStarWars2Input(unsigned short pad)
 	// CAKTODO same as game boy for now
 	J |= StandardGamecube(pad) | StandardKeyboard(pad);
 
-
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else
-		WPAD_Rumble(pad, 0);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -1903,11 +1710,9 @@ u32 MetroidZeroInput(unsigned short pad)
 	u16 Health = CPUReadByte(0x3001536); // 0 = stand, 1 = crouch, 2 = ball
 	static u16 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	static int Morph = 0;
@@ -2110,18 +1915,6 @@ u32 MetroidZeroInput(unsigned short pad)
 	if (jp & PAD_BUTTON_START)
 		J |= VBA_BUTTON_START;
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-	
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -2133,11 +1926,9 @@ u32 MetroidFusionInput(unsigned short pad)
 	u16 Health = CPUReadHalfWord(0x3001310); 
 	static u16 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	static int Morph = 0;
@@ -2328,18 +2119,6 @@ u32 MetroidFusionInput(unsigned short pad)
 	if (jp & PAD_BUTTON_START)
 		J |= VBA_BUTTON_START;
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -2352,11 +2131,9 @@ u32 Metroid1Input(unsigned short pad)
 	u16 Health = CPUReadHalfWord(0x3007306); // Binary Coded Decimal
 	static u16 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose health!
 	if (Health < OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	static int Morph = 0;
@@ -2469,18 +2246,6 @@ u32 Metroid1Input(unsigned short pad)
 	if (jp & PAD_BUTTON_START)
 		J |= VBA_BUTTON_START;
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -2493,11 +2258,9 @@ u32 Metroid2Input(unsigned short pad)
 	u8 Health = gbReadMemory(0xD051); // Binary Coded Decimal
 	static u8 OldHealth = 0;
 
-	static int RumbleCount = 0;
 	// Rumble when they lose (or gain) health! (since I'm not checking energy tanks)
 	if (Health != OldHealth)
-		if (RumbleCount < 20)
-			RumbleCount = 20;
+		systemGameRumble(20);
 	OldHealth = Health;
 
 	static int Morph = 0;
@@ -2636,18 +2399,6 @@ u32 Metroid2Input(unsigned short pad)
 	if (jp & PAD_BUTTON_START)
 		J |= VBA_BUTTON_START;
 
-	if (RumbleCount>0)
-	{
-		WPAD_Rumble(pad, 1);
-		RumbleCount--;
-	}
-	else WPAD_Rumble(pad, 0);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -2686,11 +2437,6 @@ u32 TMNTInput(unsigned short pad)
 		J |= 0; // Double tap D-Pad to roll CAKTODO
 
 	// CAKTODO
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -2733,11 +2479,6 @@ u32 HarryPotter1GBCInput(unsigned short pad)
 
 	// CAKTODO spell gestures
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -2776,11 +2517,6 @@ u32 HarryPotter2GBCInput(unsigned short pad)
 		J |= VBA_BUTTON_SELECT;
 
 	// CAKTODO spell gestures
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -2828,11 +2564,6 @@ u32 HarryPotter1Input(unsigned short pad)
 
 	// CAKTODO spell gestures
 
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -2883,11 +2614,6 @@ u32 HarryPotter2Input(unsigned short pad)
 	// CAKTODO spell gestures
 
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -2937,11 +2663,6 @@ u32 HarryPotter3Input(unsigned short pad)
 	// point at ceiling for Lumos
 
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -2990,11 +2711,6 @@ u32 HarryPotter4Input(unsigned short pad)
 	// swing sideways for Flipendo
 	// point at ceiling for Lumos
 
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -3053,11 +2769,6 @@ u32 HarryPotter5Input(unsigned short pad)
 		J |= VBA_SPEED;
 
 	// CAKTODO spell gestures
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -3155,11 +2866,6 @@ u32 Mario1DXInput(unsigned short pad)
 
 	J |= StandardGamecube(pad) | StandardKeyboard(pad);
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -3245,11 +2951,6 @@ u32 Mario1ClassicInput(unsigned short pad)
 
 	J |= StandardGamecube(pad) | StandardKeyboard(pad);
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -3328,11 +3029,6 @@ u32 MarioLand1Input(unsigned short pad)
 	// CAKTODO joystick run
 
 	J |= StandardGamecube(pad) | StandardKeyboard(pad);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -3439,11 +3135,6 @@ u32 MarioLand2Input(unsigned short pad)
 
 	J |= StandardGamecube(pad) | StandardKeyboard(pad);
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 
 }
@@ -3489,13 +3180,6 @@ u32 Mario2Input(unsigned short pad)
 		J |= VBA_BUTTON_R;
 	if (wp->btns_h & WPAD_BUTTON_2)
 		J |= VBA_BUTTON_R;
-
-
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -3631,11 +3315,6 @@ u32 MarioWorldInput(unsigned short pad)
 
 	J |= StandardKeyboard(pad);
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -3724,11 +3403,6 @@ u32 Mario3Input(unsigned short pad)
 		J |= StandardSideways(pad);
 
 	J |= StandardGamecube(pad) | StandardKeyboard(pad);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -3838,11 +3512,6 @@ u32 YoshiIslandInput(unsigned short pad)
 	//	NeedStomp = false;
 	//}
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -3926,11 +3595,6 @@ u32 UniversalGravitationInput(unsigned short pad)
 	// A bit stupid playing with keyboard or gamecube pad when you need to tilt the wiimote...
 	J |= StandardKeyboard(pad) | StandardGamecube(pad);
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -3940,11 +3604,6 @@ u32 TwistedInput(unsigned short pad)
 	TiltScreen = false;
 	u32 J = StandardMovement(pad);
 	WPADData * wp = WPAD_Data(pad);
-
-	if (WarioRumbleMotor)
-		WPAD_Rumble(pad, 1);
-	else
-		WPAD_Rumble(pad, 0);
 
 	if (wp->exp.type == WPAD_EXP_NUNCHUK)
 	{
@@ -3990,11 +3649,6 @@ u32 TwistedInput(unsigned short pad)
 
 	// A bit stupid playing with keyboard or gamecube pad when you need to tilt the wiimote...
 	J |= StandardKeyboard(pad) | StandardGamecube(pad);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -4051,11 +3705,6 @@ u32 KirbyTntInput(unsigned short pad)
 	// A bit stupid playing with keyboard or gamecube pad when you need to tilt the wiimote...
 	J |= StandardKeyboard(pad) | StandardGamecube(pad);
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -4103,11 +3752,6 @@ u32 MohInfiltratorInput(unsigned short pad)
 	J |= StandardSideways(pad);
 
 	J |= StandardGamecube(pad) | StandardKeyboard(pad);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -4181,11 +3825,6 @@ u32 MohUndergroundInput(unsigned short pad)
 	if (crouched && (!(J & VBA_BUTTON_L)) && (!(J & VBA_BUTTON_R)))
 		J |= VBA_BUTTON_L | VBA_BUTTON_R;
 
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-
 	return J;
 }
 
@@ -4247,11 +3886,6 @@ u32 BoktaiInput(unsigned short pad)
 	}
 
 	J |= StandardGamecube(pad) | StandardKeyboard(pad);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }
@@ -4317,11 +3951,6 @@ u32 Boktai2Input(unsigned short pad)
 	}
 
 	J |= StandardGamecube(pad) | StandardKeyboard(pad);
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
 
 	return J;
 }

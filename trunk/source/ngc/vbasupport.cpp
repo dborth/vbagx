@@ -755,10 +755,11 @@ static void ApplyPerImagePreferences()
 			cpuSaveType = 4; // EEPROM + sensor
 			break;
 		case 'R': // WarioWare Twisted style sensors
-			rtcEnable(1);
+		case 'V': // Drill Dozer
+			rtcEnableWarioRumble(true);
 			break;
 		case 'U': // Boktai solar sensor and clock
-			rtcEnable(1);
+			rtcEnable(true);
 			break;
 	}
 }

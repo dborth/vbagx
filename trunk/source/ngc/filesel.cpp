@@ -327,6 +327,7 @@ int FileSelector (int method)
             ShowFiles (browserList, browser.numEntries, browser.pageIndex, browser.selIndex);
         redraw = 0;
 
+		updateRumbleFrame();
 		VIDEO_WaitVSync();	// slow things down a bit so we don't overread the pads
 
 		gc_ay = PAD_StickY (0);
@@ -441,8 +442,10 @@ int FileSelector (int method)
 #ifdef HW_RVL
 					|| (WPAD_ButtonsDown(0) & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B))
 #endif
-					)
+					) {
+				updateRumbleFrame();
                 VIDEO_WaitVSync();
+			}
 			if ( strcmp(browserList[0].filename,"..") == 0 )
 			{
 				browser.selIndex = 0;

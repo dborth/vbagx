@@ -540,6 +540,7 @@ mapperMBC5 gbDataMBC5 = {
   0  // is rumble cartridge?
 };
 
+extern int ConfigRequested;
 // MBC5 ROM write registers
 void mapperMBC5ROM(u16 address, u8 value)
 {
@@ -580,10 +581,11 @@ void mapperMBC5ROM(u16 address, u8 value)
       gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
     }
     break;
-  case 0x4000: // RAM bank select
-    if(gbDataMBC5.isRumbleCartridge)
+  case 0x4000: // RAM bank select, plus rumble
+    if(gbDataMBC5.isRumbleCartridge) {
+	  systemCartridgeRumble(value & 0x08);
       value &= 0x07;
-    else
+    } else
       value &= 0x0f;
     if(value == gbDataMBC5.mapperRAMBank)
       break;

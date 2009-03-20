@@ -32,8 +32,7 @@ typedef struct {
 
 static RTCCLOCKDATA rtcClockData;
 static bool rtcEnabled = false;
-
-int WarioRumbleMotor = 0;
+static bool rtcWarioRumbleEnabled = false;
 
 void rtcEnable(bool e)
 {
@@ -43,6 +42,12 @@ void rtcEnable(bool e)
 bool rtcIsEnabled()
 {
   return rtcEnabled;
+}
+
+void rtcEnableWarioRumble(bool e)
+{
+  if (e) rtcEnable(true);
+  rtcWarioRumbleEnabled = e;
 }
 
 u16 rtcRead(u32 address)
@@ -103,14 +108,13 @@ bool rtcWrite(u32 address, u16 value)
     rtcClockData.byte2 = (u8)value; // bit 0 = enable reading from 0x80000c4 c6 and c8
   } else if(address == 0x80000c6) {
     rtcClockData.byte1 = (u8)value; // 0=read/1=write (for each of 4 low bits)
-	if (!(value & 8)) WarioRumbleMotor = 0;
+	// rumble is off when not writing to that pin
+	if (rtcWarioRumbleEnabled && !(value & 8)) systemCartridgeRumble(false);
   } else if(address == 0x80000c4) { // 4 bits of I/O Port Data (upper bits not used)
 	
 	// WarioWare Twisted  rumble
-	if(rtcClockData.byte1 & 8) {
-		WarioRumbleMotor = value & 8;
-	} else {
-		WarioRumbleMotor = 0; // rumble is off when not writing to that pin
+	if(rtcWarioRumbleEnabled && (rtcClockData.byte1 & 8)) {
+		systemCartridgeRumble(value & 8);
 	}
 
 	// Boktai solar sensor
