@@ -12,7 +12,8 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 -=[ Features ]=-
 
-* Wiimote, Nunchuk, Classic, Gamecube controller, Keyboard, and Mouse support
+* Wiimote, Nunchuk, Classic, Gamecube controller, and Keyboard support
+* Rotation sensors, Solar sensors, and Rumble support
 * Optional special Wii controls built-in for some games
 * SRAM and State saving
 * IPS/UPS/PPF patch support
@@ -26,6 +27,23 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[What's New 1.0.8 - April 4, 2009]
+* "Match Wii Game" controls option! Games that have a Wii equivalent can be
+played using the controls for that Wii game. For example all Zelda games can
+be played with Twilight Princess controls. See the Instructions section
+below for important details.
+* Rotation/Tilt sensor games all work
+* Solar sensors (Boktai 1/2/3)
+* Rumble (except for games that rely on Gameboy Player)
+* Keyboard
+* PAL support, finally!
+* New scaling options, choose how much stretching you want
+* Colourised games now partially work but still have distortion
+* "Corvette" no longer has a screwed up palette (but still crashes)
+* triggers net reconnection on SMB failure
+* source code refactored, and project file added
+* instructions section added to this readme file
 
 [What's New 1.0.7 - January 27, 2009]
 * Updated to VBA-M r847
@@ -155,6 +173,558 @@ it to your Gamecube, or by booting a bootable DVD with VBAGX on it.
 This document doesn't cover how to do any of that. A good source for information 
 on these topics is the tehskeen forums: http://www.tehskeen.com/forums/
  
+×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
+|0O×øo·                          INSTRUCTIONS                         ·oø×O0|
+`¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+Note! You will need to unplug and replug the USB keyboard (perhaps more than
+once) while in the emulator to get it to work. A keyboard is not required.
+
+If you have upgraded from a previous version, the emulator will start with a
+message that your preferences have been reset. Press A and you will be taken
+to the preferences menu. You will need to set your preferences how you want 
+them.
+
+Otherwise the emulator will start at the main menu.
+
+Navigate the menu with the D-Pad, and select options with the A button.
+Press B to cancel out of a menu. Cancelling out of the main menu with B will
+return you to the game, if you have chosen one.
+
+When choosing a file, the B button takes you up a folder. Once you get to
+the root directory pressing B will cancel and take you back to the menu.
+There may be more than one page of files, even if it doesn't look like it.
+Keep pressing down or up to go to the next page, or use left and right.
+
+If you don't want to load ROMs from the SD card, you can go to the 
+preferences menu and choose where to load from. You can load from SD cards,
+USB memory sticks/hard drives, DVD (if you installed DVDX), gamecube memory
+cards, or from shared folders over the network (this is called SMB).
+
+ROMs can be in ZIP files, but the ROM must be the first file in the ZIP. If
+not, you will get an error. ROMs can also be in .7z files, or ordinary rom
+files.
+
+Patches can be used to colourise a monochrome gameboy game, or to translate
+a game into your language, or to stop the game from needing special hardware.
+Search the internet for patches. Many games have been translated by fans.
+They can be in IPS or UPS format. You don't need to patch anything yourself. 
+Just put the IPS or UPS file in the vbagx/roms folder along with the rom 
+itself. The patch must have the same name as the rom. Patches can not be put
+inside the ZIP file. If a rom is zipped, you might need to check inside the 
+zip for the actual rom filename.
+
+Colourised games still have some distortion in this version, but it is
+improved from the previous version, and better than VBA-M.
+
+You must not use patched versions of Boktai roms! (Except for the translation
+patch for Boktai 3, which is highly recommended). The patches are for old
+emulators that don't support the solar sensor. VBA GX and NO$GBA support the
+solar sensor natively, and the patch will stop them from working.
+
+You must also not use patched versions of WarioWare Twisted, Kirby's Tilt n
+Tumble, or Yoshi's Universal Gravitation (Topsy Turvy). The original roms
+are fully supported, and the patch will stop them from working.
+
+-=[ Controls ]=-
+
+The default controls are...
+
++ = Gameboy Start Button
+- = Gameboy Select Button
+Home = Show emulator's game menu
+
+Wii Remote by itself:
+Hold the Wii Remote sideways.
+2 = Gameboy A Button
+1 = Gameboy B Button
+A = Gameboy R Button
+B = Gameboy L Button
+
+Wii Remote + Nunchuk:
+Hold the Nunchuk and ignore the Wii Remote.
+Z = Gameboy A Button
+C = Gameboy B Button
+
+Classic Controller:
+Use the buttons as labelled.
+A = Gameboy A Button
+B = Gameboy B Button
+R = Gameboy R Button
+L = Gameboy L Button
+
+Keyboard:
+X = Gameboy A Button
+Z = Gameboy B Button
+S = Gameboy R Button
+A = Gameboy L Button
+Enter = Gameboy Start Button
+Backspace = Gameboy Select Button
+Space = Fast forward
+
+You can configure the controls how you want from the controls menu. Different
+controls will be used depending on what you have plugged into the Wii Remote.
+Nunchuk means Nunchuk + Wii Remote. Gamecube controllers and Keyboards can
+be used at the same time as Wii Remotes and all control the same player.
+When configuring controls, press HOME to cancel.
+
+But the controls you choose will be overridden for certain games if you 
+choose "Match Wii Game" (or "Match Gamecube Game" on a Gamecube) and you have
+the appropriate expansion plugged in. If the game does not have special Wii
+controls, then the controls you chose will be used.
+
+Gameboy and Gameboy colour games don't have L and R buttons. Those buttons
+only work in Gameboy Advance games.
+
+In addition to the controls you can configure, these other controls apply:
+
+HOME, Escape: returns you to the emulator's game menu. Then press B to go 
+to the main menu and B again to return to the game.
+A+B, Spacebar, or right analog stick: fast forward
+Right analog stick: zoom (if enabled)
+
+-=[ Match Wii Controls ]=-
+
+Special Wii controls exist for the following games:
+
+These Zelda games can be played with Twilight Princess controls:
+The Legend Of Zelda, Zelda 2, A Link To The Past, Link's Awakening (DX), Oracle of Ages, 
+Oracle of Seasons, Minish Cap
+
+These Mario games can be played with Mario Galaxy controls:
+Super Mario Bros., Super Mario Bros. DX, Super Mario 2, Super Mario (2) 
+Advance, Super Mario 3, Super Mario World, Yoshi's Island, 
+Yoshi's Universal Gravitation (Topsy Turvy)
+
+Mario Kart can be played with Mario Kart wii controls
+
+These Metroid games can be played with Metroid Prime 3 controls:
+Metroid Zero Mission, Metroid 1, Metroid 2, Metroid Fusion
+
+These Mortal Kombat games can be played with Mortal Kombat Armageddon controls:
+Mortal Kombat, Mortal Kombat II, Mortal Kombat 3, Mortal Kombat 4, Mortal 
+Kombat Advance, Mortal Kombat Deadly Alliance, Mortal Kombat Tournament 
+Edition
+
+These Lego games can be played with Lego Star Wars the Complete Saga 
+controls:
+Lego Star Wars The Video Game, Lego Star Wars The Original Trilogy
+
+TMNT can be played with TMNT Wii controls.
+
+These Harry Potter games can be played with Harry Potter and the Order of 
+the Phoenix Wii controls:
+Harry Potter 1, Harry Potter 1 GBC, Harry Potter 2, Harry Potter 2 GBC, Harry Potter 3, Harry Potter 4, Harry Potter 5
+
+These Medal Of Honour games can be played with Medal Of Honour Wii controls:
+Medal Of Honour Underground, Medal Of Honour Infiltrator
+
+One Piece can be played with One Piece Unlimited Adventure controls.
+
+Boktai 1, Boktai 2, Boktai 3, Kirby's Tilt n Tumble, and WarioWare Twisted can be played with
+controls I designed for them.
+
+-=[ Zelda, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+All Zelda games use the same controls as Twilight Princess on the Wii or 
+Gamecube. You can also connect a Classic Controller to use similar controls
+to the Ocarina Of Time for the Virtual Console, but with the R trigger
+acting as the B button and an inventory like Twilight Princess. With nothing
+plugged in to the Wii Remote, your configured controls are used instead.
+
+The Wii Zelda controls are:
+===========================
+
+Swing your Wii Remote to draw or swing your sword. Press A to put your sword
+away again. The 2 handed sword can't be drawn this way, and must be drawn
+manually from the items menu, but you can swing it like normal.
+
+Shake your Nunchuk to do a spin attack.
+
+Use the Z Button to Z-Target and to draw and use your shield. While 
+Z-Targetting you will sidestep in some games. If you have a Gust Jar 
+equipped instead of a shield, it will be used for Z-Targetting.
+
+Use the A Button to perform an action, such as rolling, talking to people, 
+reading signs, picking things up, throwing things, shrinking or growing, 
+pulling things, etc. It will also put away your sword or shield. In Zelda 2, 
+it will jump.
+
+Use the C Button to fast forward. It was originally the camera button in
+Twilight Princess.
+
+Press the B Button to use the currently selected item. 3 other items will be
+mapped to Left, Down, and Right D-Pad buttons. Swap the currently selected
+item with one of those items by pressing that D-Pad button. The three slots
+correspond to the first 3 slots in your inventory. In Minish Cap, the D-Pad
+buttons use the item directly instead of swapping it with the B Button, and
+the B Button is the same as the down button. In Minish Cap the left item is
+always the Kinstones and the down and right items correspond to the B and A
+slots.
+
+Up on the D-Pad talks to Midna, or to your hat. It will take you to the save
+screen in Link's Awakening, or to the secondary items screen in the Oracle
+games.
+
+The 1 Button goes to the Map screen.
+The - Button goes to the Items screen.
+The + Button goes to the Quest Status screen
+
+On the Items screen, choose an item and then press either the B Button or the
+D-Pad button to move it to that slot. The change may not be visible until you
+go to another screen and back. In Link's Awakening you can toggle Bomb 
+Arrows by choosing the bombs and pressing Z. It will rumble for a short time
+when bomb arrows are deactivated, and for a long time when bomb arrows are
+activated. You still need to equip the bow to use bomb arrows. In Minish Cap
+you should be able to use the IR pointer function to select items.
+
+The Gamecube controller Zelda controls are:
+===========================================
+
+B is the sword button. Use it to draw or swing your sword. Hold B for a spin
+attack. Press A to put the sword away again. The 2 handed sword can't be
+drawn this way, and must be selected manually from the items screen, but can
+be swung with this (or any other) button.
+
+Use the L Trigger to L-Target and to draw and use your shield. While 
+L-Targetting you will sidestep in some games. If you have a Gust Jar 
+equipped instead of a shield, it will be used for L-Targetting.
+
+Use the A Button to perform an action, such as rolling, talking to people, 
+reading signs, picking things up, throwing things, shrinking or growing, 
+etc. It will also put away your sword or shield. In Zelda 2, it will jump.
+
+Use the R Trigger to pull on blocks or walls, or to lift things. You must
+have a bracelet or gloves to lift some objects. The bracelet or gloves will
+be equipped automatically. This feature is unique to the Gamecube controller.
+
+Use the right analog stick to fast forward. It was originally the camera 
+control in Twilight Princess.
+
+Press the X or Y buttons to use the two equipped items. These two items both
+share the B slot, except in Minish Cap where one is in the A slot. The item
+that was not used last will be in the first slot in your inventory.
+
+Right on the D-Pad takes you to the map.
+Up on the D-Pad takes you to the items screen.
+Start takes you to the quest status screen.
+
+The Z trigger talks to Midna, or to your hat. It will take you to the save
+screen in Link's Awakening, or to the secondary items screen in the Oracle
+games.
+
+The Classic controller Zelda controls are:
+==========================================
+
+B is the sword button. Use it to draw or swing your sword. Hold B for a spin
+attack. Press A to put the sword away again. The 2 handed sword can't be
+drawn this way, and must be selected manually from the items screen, but can
+be swung with this (or any other) button.
+
+Use the L Trigger to L-Target and to draw and use your shield. While 
+L-Targetting you will sidestep in some games. If you have a Gust Jar 
+equipped instead of a shield, it will be used for L-Targetting.
+
+Use the A Button to perform an action, such as rolling, talking to people, 
+reading signs, picking things up, throwing things, shrinking or growing, 
+pulling, etc. It will also put away your sword or shield. In Zelda 2, it 
+will jump.
+
+Use the ZL Button to fast forward. 
+
+Press the R Button to use the currently selected item. 3 other items will be
+mapped to Left, Down, and Right on the right analog stick. They are also
+mapped to ZR, Y, and X. Swap the currently selected item with one of those 
+items by pressing that button or direction. The three slots correspond to 
+the first 3 slots in your inventory. In Minish Cap, the D-Pad buttons use the
+item directly instead of swapping it with the B Button, and the B Button is 
+the same as the down button. In Minish Cap the left item is always the 
+Kinstones and the down and right items correspond to the B and A slots.
+
++ (Start) takes you to the subscreens.
+- (Select) takes you to the map or changes subscreens.
+
+Up on the analog stick talks to Midna, or to your hat.
+
+
+-=[ Mario, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+All Mario or Yoshi games use the same controls as Super Mario Galaxy on the 
+Wii. You can also connect a Classic Controller to use similar controls to 
+Super Mario World on the SNES.
+
+The Wii Mario controls are:
+===========================
+
+Shake the Wii Remote to do a spin attack, or to shoot fireballs when you are
+fire Mario. In some games that have a spin attack, you will need to use the
+B Button instead to shoot fireballs. You can also dismount Yoshi by shaking.
+
+Walk by moving the joystick a little, run by moving the joystick a lot.
+
+A = jump
+B = shoot, run, hold on to things, yoshi's tongue, etc.
+Z = crouch or lay egg. Press Z while in the air to butt stomp.
+C = camera. Hold C to look around with the joystick.
+D-Pad = look around, or walk in some games
++ = pause
+1 = throw egg if you are Yoshi
+
+The Classic Controller Mario controls are:
+==========================================
+
+Walk by moving the joystick a little, run by moving the joystick a lot.
+
+B = jump
+A = spin attack
+X/Y = shoot, run, hold on to things, yoshi's tongue, etc.
+ZL or sometimes L = crouch or lay egg. Press in the air to butt stomp.
++ = pause
+L/R sometimes look around
+
+
+-=[ Yoshi's Universal Gravitation (Topsy Turvy), Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+The controls are the same as all other Mario or Yoshi games, except that
+tilting the Wii Remote tilts the world and the screen. This affects
+everything in the world and also how you move.
+
+
+-=[ Metroid, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+All Metroid games use the same controls as Metroid Prime 3: Corruption on 
+the Wii. You aim up and down by pointing the Wii Remote up and down.
+
+The Wii Metroid controls are:
+=============================
+Aim up and down by pointing the Wii Remote up and down.
+
+Flick the Wii remote up while in Morph Ball to spring jump.
+
+A = shoot
+B = jump
+Down on D-Pad = fire missile
+C = toggle Morph Ball
+- = start
++ = toggle super missiles
+1 = map
+2 = hint
+
+
+-=[ TMNT, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+The TMNT game based on the CGI movie uses the same controls as TMNT on Wii.
+They are not fully implemented yet.
+
+The Wii TMNT controls are:
+==========================
+Shake the Wii Remote or Nunchuk to attack or to throw away a weapon if 
+in the air. Also shake to pick up a weapon.
+
+A = jump
+B = swap turtle
+
+-=[ Boktai, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+The 3 Boktai games use special controls that I created. They are not based on
+anything, since the real game uses a solar sensor.
+
+The controls are the same with or without a Nunchuk.
+
+The Wii Boktai controls are:
+============================
+
+Point your Wii Remote at the sky to quickly charge your Gun Del Sol. Point
+your Wii Remote at the ground to block the sunlight and prevent it from
+charging or overheating. Or hold it like normal to use it like normal.
+
+Press Home to set the real life weather in the emulator's game menu. Note
+that if it is night time in real life, there will not be any sun, regardless
+of what you set the weather to. Please set the weather honestly or it spoils
+the fun. Note that maximum sun is not actually the best, since it rots fruit,
+and overheats your gun. The weather must be set each time you play, it is not
+saved.
+
+Swing your Wii Remote to swing your sword or other weapon, if you have one.
+
+D-Pad or Nunchuk joystick walks.
+
+Press B to fire your Gun Del Sol.
+
+A = read signs, open chests, talk to people
+C or 2 = look around, or change subscreen (R)
++ = start
+- = select
+Z or 1 = change element, or change subscreen (L)
+1 (if Nunchuk plugged in) = fast forward
+
+-=[ WarioWare Twisted, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+WarioWare Twisted uses similar controls to the Gameboy game.
+
+The Wii WarioWare Twisted controls are:
+=======================================
+
+Rotate the Wii Remote to rotate.
+
+Hold Z to lock the current menu item.
+
+A = Select
+B = Cancel
++ = Start
+
+-=[ Kirby's Tilt n Tumble, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+Kirby's Tilt n Tumble uses similar controls to the Gameboy game.
+
+The Kirby Tilt n Tumble controls are:
+=====================================
+
+Tilt the Wii Remote to tilt the world. Shake the Wii Remote to flick Kirby
+and the monsters up into the air.
+
+A = shoot yourself out of holes in the ground, or jump from clouds.
+
+-=[ Mortal Kombat, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+All Mortal Kombat games use the same controls as Mortal Kombat Armaggedon
+for the Wii, except that special moves gestures are not implemented yet.
+Note that the Gameboy games all only have 1 punch and 1 kick, rather than
+the 4 attacks on other consoles.
+
+The Mortal Kombat Wii controls are:
+===================================
+
+Use the Nunchuk joystick to move and jump.
+
+D-Pad up/left = punch
+D-Pad down/right = kick
+
+Z = block
+A = throw
+C = change style, run
+- = pause
+
+-=[ Lego Star Wars, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+Both Lego Star Wars games use the same controls as Lego Star Wars: The 
+Complete Saga for the Wii.
+
+The Lego Star Wars Wii controls are:
+====================================
+Swing the Wii Remote to swing your lightsaber.
+Flick the Wii Remote up to grapple.
+
+A = Jump
+B = Shoot
+Z = Use the force, build lego
+C = Change characters, talk to people
+- = force power, special ability
++ = start
+1/2 = fast forward
+
+-=[ Harry Potter, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+All the Harry Potter games use the same controls as Harry Potter & The Order
+Of The Phoenix on the Wii. They also use the keyboard controls from the PC
+version of each game. Spell gestures are not supported yet.
+
+The Harry Potter Wii controls are:
+==================================
+Wave the Wii Remote to cast a spell.
+Nunchuk joystick walks. 
+D-Pad changes subscreen in the map and navigates menu.
+In Harry Potter and the Order of the Phoenix you must use the IR Pointer
+to select where to cast a spell.
+
+A = Talk, open door, push button, interract, etc. / Jinx
+B = Use your wand / charm / cancel
+Z = run (fast forward) / sneak
+C = show location name / flute / jump
+- = Maurauders map / Tasks
++ = pause / menu
+1/2 = change spells
+
+-=[ Medal of Honour, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+All the Medal of Honour games use the same controls as various 
+Medal of Honour games and modes on the Wii.
+
+The Medal of Honour Wii controls are:
+=====================================
+
+In Medal of Honour Underground you turn by aiming with the Wii Remote IR
+pointer on the screen like any FPS game. In Medal of Honour Infiltrator,
+you don't.
+
+Swing the Wiimote up to reload.
+Move with the Nunchuk joystick.
+
+B = shoot
+- = use
++ = pause, objectives, menu
+2 / D-Pad Up = reload
+D-Pad Left/Right = change weapons
+D-Pad Down = toggle crouch
+C = strafe
+1 = run
+
+-=[ One Piece, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+One Piece uses the same controls as One Piece Unlimited Adventure on the Wii
+or One Piece Grand Adventure (and others) on the Gamecube.
+
+The One Piece Wii controls are:
+===============================
+
+A = attack
+B = jump
+- = change character
++ = pause
+C = dash (double click and hold)
+Z = grab
+2 = fast forward
+1 = select (maybe does nothing)
+
+The One Piece Gamecube controls are:
+===============================
+
+A = attack
+X = attack up
+Y = jump
+B = grab
+R Trigger = change character
+start = pause
+L Trigger = dash (double click and hold)
+Z = grab
+right analog stick = fast forward
+1 = select (maybe does nothing)
+
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
 -=[ Credits ]=-

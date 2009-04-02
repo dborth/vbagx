@@ -537,6 +537,160 @@ u32 StandardKeyboard(unsigned short pad)
 	return J;
 }
 
+u32 DPadWASD(unsigned short pad)
+{
+	u32 J = 0;
+#ifdef HW_RVL
+	if (DownUsbKeys[KB_W])
+		J |= VBA_UP;
+	if (DownUsbKeys[KB_S])
+		J |= VBA_DOWN;
+	if (DownUsbKeys[KB_A])
+		J |= VBA_LEFT;
+	if (DownUsbKeys[KB_D])
+		J |= VBA_RIGHT;
+#endif
+	return J;
+}
+
+u32 DPadArrowKeys(unsigned short pad)
+{
+	u32 J = 0;
+#ifdef HW_RVL
+	if (DownUsbKeys[KB_UP])
+		J |= VBA_UP;
+	if (DownUsbKeys[KB_DOWN])
+		J |= VBA_DOWN;
+	if (DownUsbKeys[KB_LEFT])
+		J |= VBA_LEFT;
+	if (DownUsbKeys[KB_RIGHT])
+		J |= VBA_RIGHT;
+#endif
+	return J;
+}
+
+u32 DecodeKeyboard(unsigned short pad)
+{
+	u32 J = 0;
+	#ifdef HW_RVL
+	for (int i = 0; i < MAXJP; i++)
+	{
+		if (DownUsbKeys[kbpadmap[i]]) // keyboard
+			J |= vbapadmap[i];
+	}
+	#endif
+	return J;
+}
+
+u32 DecodeGamecube(unsigned short pad)
+{
+	u32 J = 0;
+	u32 jp = PAD_ButtonsHeld(pad);
+	for (int i = 0; i < MAXJP; i++)
+	{
+		if (jp & gcpadmap[i])
+			J |= vbapadmap[i];
+	}
+	return J;
+}
+
+u32 DecodeWiimote(unsigned short pad)
+{
+	u32 J = 0;
+	#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	for (int i = 0; i < MAXJP; i++)
+	{
+		if ( (wp->exp.type == WPAD_EXP_NONE) && (wp->btns_h & wmpadmap[i]) )
+			J |= vbapadmap[i];
+	}
+	#endif
+	return J;
+}
+
+u32 DecodeClassic(unsigned short pad)
+{
+	u32 J = 0;
+	#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	for (int i = 0; i < MAXJP; i++)
+	{
+		if ( (wp->exp.type == WPAD_EXP_CLASSIC) && (wp->btns_h & ccpadmap[i]) )
+			J |= vbapadmap[i];
+	}
+	#endif
+	return J;
+}
+
+u32 DecodeNunchuk(unsigned short pad)
+{
+	u32 J = 0;
+	#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	for (int i = 0; i < MAXJP; i++)
+	{
+		if ( (wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & ncpadmap[i]) )
+			J |= vbapadmap[i];
+	}
+	#endif
+	return J;
+}
+
+#ifdef HW_RVL
+static u32 CCToGC(u32 w) {
+	u32 gc = 0;
+	if (w & WPAD_CLASSIC_BUTTON_A) gc |= PAD_BUTTON_A;
+	if (w & WPAD_CLASSIC_BUTTON_B) gc |= PAD_BUTTON_B;
+	if (w & WPAD_CLASSIC_BUTTON_X) gc |= PAD_BUTTON_X;
+	if (w & WPAD_CLASSIC_BUTTON_Y) gc |= PAD_BUTTON_Y;
+	if (w & WPAD_CLASSIC_BUTTON_PLUS) gc |= PAD_BUTTON_START;
+	if (w & WPAD_CLASSIC_BUTTON_MINUS) gc |= 0;
+	if (w & (WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_ZR)) gc |= PAD_TRIGGER_Z;
+	if (w & WPAD_CLASSIC_BUTTON_FULL_L) gc |= PAD_TRIGGER_L;
+	if (w & WPAD_CLASSIC_BUTTON_FULL_R) gc |= PAD_TRIGGER_R;
+	if (w & WPAD_CLASSIC_BUTTON_UP) gc |= PAD_BUTTON_UP;
+	if (w & WPAD_CLASSIC_BUTTON_DOWN) gc |= PAD_BUTTON_DOWN;
+	if (w & WPAD_CLASSIC_BUTTON_LEFT) gc |= PAD_BUTTON_LEFT;
+	if (w & WPAD_CLASSIC_BUTTON_RIGHT) gc |= PAD_BUTTON_RIGHT;
+	return gc;
+}
+#endif
+
+// For developers who don't have gamecube pads but need to test gamecube input
+u32 PAD_ButtonsHeldFake(unsigned short pad)
+{
+	u32 gc = 0;
+	#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		gc = CCToGC(wp->btns_h);
+	}
+	#endif
+	return gc;
+}
+u32 PAD_ButtonsDownFake(unsigned short pad)
+{
+	u32 gc = 0;
+	#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		gc = CCToGC(wp->btns_d);
+	}
+	#endif
+	return gc;
+}
+u32 PAD_ButtonsUpFake(unsigned short pad)
+{
+	u32 gc = 0;
+	#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		gc = CCToGC(wp->btns_u);
+	}
+	#endif
+	return gc;
+}
+
 /****************************************************************************
  * DecodeJoy
  *
@@ -547,131 +701,137 @@ u32 StandardKeyboard(unsigned short pad)
 static u32 DecodeJoy(unsigned short pad)
 {
 	TiltScreen = false;
+	CursorVisible = false;
 
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	CursorX = wp->ir.x;
 	CursorY = wp->ir.y;
 	CursorValid = wp->ir.valid;
-
-	// check for games that should have special Wii controls (uses wiimote + nunchuk)
-	if (GCSettings.WiiControls && wp->exp.type == WPAD_EXP_NUNCHUK)
-	{
-		switch (RomIdCode & 0xFFFFFF)
-		{
-			// Zelda
-			case ZELDA1:
-				return Zelda1Input(pad);
-			case ZELDA2:
-				return Zelda2Input(pad);
-			case ALINKTOTHEPAST:
-				return ALinkToThePastInput(pad);
-			case LINKSAWAKENING:
-				return LinksAwakeningInput(pad);
-			case ORACLEOFAGES:
-			case ORACLEOFSEASONS:
-				return OracleOfAgesInput(pad);
-			case MINISHCAP:
-				return MinishCapInput(pad);
-
-			// Metroid
-			case METROID0:
-				return MetroidZeroInput(pad);
-			case METROID1:
-				return Metroid1Input(pad);
-			case METROID2:
-				return Metroid2Input(pad);
-			case METROID4:
-				return MetroidFusionInput(pad);
-
-			// TMNT
-			case TMNT:
-				return TMNTInput(pad);
-
-			// Medal Of Honor
-			case MOHUNDERGROUND:
-				return MohUndergroundInput(pad);
-			case MOHINFILTRATOR:
-				return MohInfiltratorInput(pad);
-
-			// Harry Potter
-			case HARRYPOTTER1GBC:
-				return HarryPotter1GBCInput(pad);
-			case HARRYPOTTER2GBC:
-				return HarryPotter2GBCInput(pad);
-			case HARRYPOTTER1:
-				return HarryPotter1Input(pad);
-			case HARRYPOTTER2:
-				return HarryPotter2Input(pad);
-			case HARRYPOTTER3:
-				return HarryPotter3Input(pad);
-			case HARRYPOTTER4:
-				return HarryPotter4Input(pad);
-			case HARRYPOTTER5:
-				return HarryPotter5Input(pad);
-
-			// Mario
-			case MARIO1CLASSIC:
-			case MARIO2CLASSIC:
-				return Mario1ClassicInput(pad);
-			case MARIO1DX:
-				return Mario1DXInput(pad);
-			case MARIO2ADV:
-				return Mario2Input(pad);
-			case MARIO3ADV:
-				return Mario3Input(pad);
-			case MARIOWORLD:
-				return MarioWorldInput(pad);
-			case YOSHIISLAND:
-				return YoshiIslandInput(pad);
-			case MARIOLAND1:
-				return MarioLand1Input(pad);
-			case MARIOLAND2:
-				return MarioLand2Input(pad);
-			case YOSHIUG:
-				return UniversalGravitationInput(pad);
-
-			// Mario Kart
-			case MARIOKART:
-				return MarioKartInput(pad);
-
-			// Lego Star Wars
-			case LSW1:
-				return LegoStarWars1Input(pad);
-			case LSW2:
-				return LegoStarWars2Input(pad);
-
-			// Mortal Kombat
-			case MK1:
-				return MK1Input(pad);
-			case MK2:
-			case MK3:
-			case MK4:
-				return MK4Input(pad);
-			case MKA:
-				return MKAInput(pad);
-			case MKDA:
-			case MKTE:
-				return MKTEInput(pad);
-
-			// WarioWare
-			case TWISTED: //CAKTODO move this somewhere not depended on WiiControls setting
-				return TwistedInput(pad);
-
-			// Kirby
-			case KIRBYTNT:
-			case KIRBYTNTJ:
-				return KirbyTntInput(pad);
-
-			// Boktai
-			case BOKTAI1:
-				return BoktaiInput(pad);
-			case BOKTAI2:
-			case BOKTAI3:
-				return Boktai2Input(pad);
-		}
-	}
+#else
+	CursorX = CursorY = CursorValid = 0;
 #endif
+
+	// check for games that should have special Wii controls
+	if (GCSettings.WiiControls) 
+	switch (RomIdCode & 0xFFFFFF)
+	{
+		// Zelda
+		case ZELDA1:
+			return Zelda1Input(pad);
+		case ZELDA2:
+			return Zelda2Input(pad);
+		case ALINKTOTHEPAST:
+			return ALinkToThePastInput(pad);
+		case LINKSAWAKENING:
+			return LinksAwakeningInput(pad);
+		case ORACLEOFAGES:
+			return OracleOfAgesInput(pad);
+		case ORACLEOFSEASONS:
+			return OracleOfSeasonsInput(pad);
+		case MINISHCAP:
+			return MinishCapInput(pad);
+
+		// Metroid
+		case METROID0:
+			return MetroidZeroInput(pad);
+		case METROID1:
+			return Metroid1Input(pad);
+		case METROID2:
+			return Metroid2Input(pad);
+		case METROID4:
+			return MetroidFusionInput(pad);
+
+		// TMNT
+		case TMNT:
+			return TMNTInput(pad);
+
+		// Medal Of Honor
+		case MOHUNDERGROUND:
+			return MohUndergroundInput(pad);
+		case MOHINFILTRATOR:
+			return MohInfiltratorInput(pad);
+
+		// Harry Potter
+		case HARRYPOTTER1GBC:
+			return HarryPotter1GBCInput(pad);
+		case HARRYPOTTER2GBC:
+			return HarryPotter2GBCInput(pad);
+		case HARRYPOTTER1:
+			return HarryPotter1Input(pad);
+		case HARRYPOTTER2:
+			return HarryPotter2Input(pad);
+		case HARRYPOTTER3:
+			return HarryPotter3Input(pad);
+		case HARRYPOTTER4:
+			return HarryPotter4Input(pad);
+		case HARRYPOTTER5:
+			return HarryPotter5Input(pad);
+
+		// Mario
+		case MARIO1CLASSIC:
+		case MARIO2CLASSIC:
+			return Mario1ClassicInput(pad);
+		case MARIO1DX:
+			return Mario1DXInput(pad);
+		case MARIO2ADV:
+			return Mario2Input(pad);
+		case MARIO3ADV:
+			return Mario3Input(pad);
+		case MARIOWORLD:
+			return MarioWorldInput(pad);
+		case YOSHIISLAND:
+			return YoshiIslandInput(pad);
+		case MARIOLAND1:
+			return MarioLand1Input(pad);
+		case MARIOLAND2:
+			return MarioLand2Input(pad);
+		case YOSHIUG:
+			return UniversalGravitationInput(pad);
+
+		// Mario Kart
+		case MARIOKART:
+			return MarioKartInput(pad);
+
+		// Lego Star Wars
+		case LSW1:
+			return LegoStarWars1Input(pad);
+		case LSW2:
+			return LegoStarWars2Input(pad);
+
+		// Mortal Kombat
+		case MK1:
+			return MK1Input(pad);
+		case MK2:
+		case MK3:
+		case MK4:
+			return MK4Input(pad);
+		case MKA:
+			return MKAInput(pad);
+		case MKDA:
+		case MKTE:
+			return MKTEInput(pad);
+
+		// WarioWare
+		case TWISTED:
+			return TwistedInput(pad);
+
+		// Kirby
+		case KIRBYTNT:
+		case KIRBYTNTJ:
+			return KirbyTntInput(pad);
+
+		// Boktai
+		case BOKTAI1:
+			return BoktaiInput(pad);
+		case BOKTAI2:
+		case BOKTAI3:
+			return Boktai2Input(pad);
+		
+		// One Piece
+		case ONEPIECE:
+			return OnePieceInput(pad);
+	}
 
 	// the function result, J, is a combination of flags for all the VBA buttons that are down
 	u32 J = StandardMovement(pad);

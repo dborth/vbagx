@@ -82,6 +82,8 @@
 
 #define CORVETTE		gid('A','V','C')
 
+#define ONEPIECE		gid('B','O','N')
+
 u8 gbReadMemory(register u16 address);
 void gbWriteMemory(register u16 address, register u8 value);
 
@@ -91,6 +93,18 @@ u32 StandardSideways(unsigned short pad);
 u32 StandardClassic(unsigned short pad);
 u32 StandardGamecube(unsigned short pad);
 u32 StandardKeyboard(unsigned short pad);
+u32 DPadWASD(unsigned short pad);
+u32 DPadArrowKeys(unsigned short pad);
+u32 DecodeKeyboard(unsigned short pad);
+u32 DecodeWiimote(unsigned short pad);
+u32 DecodeClassic(unsigned short pad);
+u32 DecodeGamecube(unsigned short pad);
+u32 DecodeNunchuk(unsigned short pad);
+
+// For developers who don't have gamecube pads but need to test gamecube input
+u32 PAD_ButtonsDownFake(unsigned short pad);
+u32 PAD_ButtonsHeldFake(unsigned short pad);
+u32 PAD_ButtonsUpFake(unsigned short pad);
 
 u32 MarioLand1Input(unsigned short pad);
 u32 MarioLand2Input(unsigned short pad);
@@ -106,6 +120,7 @@ u32 Zelda2Input(unsigned short pad);
 u32 ALinkToThePastInput(unsigned short pad);
 u32 LinksAwakeningInput(unsigned short pad);
 u32 OracleOfAgesInput(unsigned short pad);
+u32 OracleOfSeasonsInput(unsigned short pad);
 u32 MinishCapInput(unsigned short pad);
 u32 MetroidZeroInput(unsigned short pad);
 u32 Metroid1Input(unsigned short pad);
@@ -132,6 +147,7 @@ u32 TwistedInput(unsigned short pad);
 u32 KirbyTntInput(unsigned short pad);
 u32 BoktaiInput(unsigned short pad);
 u32 Boktai2Input(unsigned short pad);
+u32 OnePieceInput(unsigned short pad);
 
 #endif
 
