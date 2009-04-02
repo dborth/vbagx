@@ -245,34 +245,56 @@ static void draw_square(Mtx v)
 	GX_End();
 }
 
-void Menu_DrawImg(f32 xpos, f32 ypos, u16 width, u16 height, u8 data[], f32 degrees, f32 scaleX, f32 scaleY, u8 alpha);
-
 static void draw_cursor(Mtx v)
 {
-	if (!CursorVisible)
+	if (!CursorVisible || !CursorValid)
 		return;
-/*
-#ifdef HW_RVL
-	WPADData *wp = WPAD_Data(0);
 
-	if(wp->ir.valid)
-		Menu_DrawImg(wp->ir.x-48, wp->ir.y-48, 96, 96, pointer1->GetImage(), wp->ir.angle, 1, 1, 255);
-#endif
-*/
+	GX_InitTexObj(&texobj, pointer1->GetImage(), 96, 96, GX_TF_RGBA8,GX_CLAMP, GX_CLAMP,GX_FALSE);
+	GX_LoadTexObj(&texobj, GX_TEXMAP0);
+	GX_SetBlendMode(GX_BM_BLEND,GX_BL_DSTALPHA,GX_BL_INVSRCALPHA,GX_LO_CLEAR);
+	GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
+	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
 
 	Mtx m;			// model matrix.
 
 	guMtxIdentity(m);
-	guMtxScaleApply(m, m, 0.05f, 0.05f, 0.06f);
-	guMtxTransApply(m, m, CursorX-320, 240-CursorY, -100);
+	guMtxScaleApply(m, m, 0.070f, 0.10f, 0.06f);
+	// I needed to hack this position
+	guMtxTransApply(m, m, CursorX-315, 220-CursorY, -100);
 
 	GX_LoadPosMtxImm(m, GX_PNMTX0);
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-	draw_vert(0, 0, 0.0, 0.0);
-	draw_vert(1, 0, 1.0, 0.0);
-	draw_vert(2, 0, 1.0, 1.0);
-	draw_vert(3, 0, 0.0, 1.0);
+	
+	// I needed to hack the texture coords to cut out the opaque bit around the outside
+	draw_vert(0, 0, 0.4, 0.45);
+	draw_vert(1, 0, 0.76, 0.45);
+	draw_vert(2, 0, 0.76, 0.97);
+	draw_vert(3, 0, 0.4, 0.97);
+	
 	GX_End();
+
+	GX_ClearVtxDesc ();
+	GX_SetVtxDesc (GX_VA_POS, GX_INDEX8);
+	GX_SetVtxDesc (GX_VA_CLR0, GX_INDEX8);
+	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
+
+	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
+	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+
+	GX_SetArray (GX_VA_POS, square, 3 * sizeof (s16));
+
+	GX_SetNumTexGens (1);
+	GX_SetTexCoordGen (GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+
+	GX_InvVtxCache ();	// update vertex cache
+
+	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565,
+		GX_CLAMP, GX_CLAMP, GX_FALSE);
+	if (!(GCSettings.render&1))
+		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
+
 }
 
 /****************************************************************************
@@ -695,51 +717,3 @@ zoom_reset ()
 	updateScaling = 1;	// update video
 }
 
-void Menu_DrawImg(f32 xpos, f32 ypos, u16 width, u16 height, u8 data[], f32 degrees, f32 scaleX, f32 scaleY, u8 alpha)
-{
-	if(data == NULL)
-		return;
-
-	GXTexObj texObj;
-
-	GX_InitTexObj(&texObj, data, width,height, GX_TF_RGBA8,GX_CLAMP, GX_CLAMP,GX_FALSE);
-	GX_LoadTexObj(&texObj, GX_TEXMAP0);
-
-	GX_SetTevOp (GX_TEVSTAGE0, GX_MODULATE);
-	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
-
-	Mtx m,m1,m2, mv;
-	width *=.5;
-	height*=.5;
-	guMtxIdentity (m1);
-	guMtxScaleApply(m1,m1,scaleX,scaleY,1.0);
-	Vector axis = (Vector) {0 , 0, 1 };
-	guMtxRotAxisDeg (m2, &axis, degrees);
-	guMtxConcat(m2,m1,m);
-
-	guMtxTransApply(m,m, xpos+width,ypos+height,0);
-	guMtxConcat (view, m, mv);
-	GX_LoadPosMtxImm (mv, GX_PNMTX0);
-
-	GX_Begin(GX_QUADS, GX_VTXFMT0,4);
-	GX_Position3f32(-width, -height,  0);
-	GX_Color4u8(0xFF,0xFF,0xFF,alpha);
-	GX_TexCoord2f32(0, 0);
-
-	GX_Position3f32(width, -height,  0);
-	GX_Color4u8(0xFF,0xFF,0xFF,alpha);
-	GX_TexCoord2f32(1, 0);
-
-	GX_Position3f32(width, height,  0);
-	GX_Color4u8(0xFF,0xFF,0xFF,alpha);
-	GX_TexCoord2f32(1, 1);
-
-	GX_Position3f32(-width, height,  0);
-	GX_Color4u8(0xFF,0xFF,0xFF,alpha);
-	GX_TexCoord2f32(0, 1);
-	GX_End();
-	GX_LoadPosMtxImm (view, GX_PNMTX0);
-
-	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
-	GX_SetVtxDesc (GX_VA_TEX0, GX_NONE);
-}

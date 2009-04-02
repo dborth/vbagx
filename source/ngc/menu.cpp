@@ -45,6 +45,7 @@ extern "C"
 
 extern int menu;
 extern bool ROMLoaded;
+extern char DebugStr[50];
 
 /****************************************************************************
  * Load Manager
@@ -281,7 +282,7 @@ PreferencesMenu ()
 static int
 GameMenu ()
 {
-	int gamemenuCount = 9;
+	int gamemenuCount = 10;
 	char gamemenu[][50] = {
 	  "Return to Game",
 	  "Reset Game",
@@ -289,7 +290,8 @@ GameMenu ()
 	  "Load Game Snapshot", "Save Game Snapshot",
 	  "Reset Zoom",
 	  "Weather: 100% sun",
-	  "Back to Main Menu"
+	  "Back to Main Menu",
+	  ""
 	};
 
 	int ret, retval = 0;
@@ -324,6 +326,8 @@ GameMenu ()
 			sprintf(gamemenu[7], "Weather: %d%% sun", SunBars*10);
 		else
 			gamemenu[7][0] = '\0';
+			
+		sprintf(gamemenu[9], "%s", DebugStr);
 
 		ret = RunMenu (gamemenu, gamemenuCount, "Game Menu");
 
@@ -639,8 +643,13 @@ ConfigureControllers ()
 	while (quit == 0)
 	{
 
+	#ifdef HW_RVL
 		sprintf (ctlrmenu[0], "Match Wii Game: %s",
 			GCSettings.WiiControls == true ? " ON" : "OFF");
+	#else
+		sprintf (ctlrmenu[0], "Match Gamecube Game: %s",
+			GCSettings.WiiControls == true ? " ON" : "OFF");
+	#endif
 
 		/*** Controller Config Menu ***/
         ret = RunMenu (ctlrmenu, ctlrmenucount, "Configure Controllers");
