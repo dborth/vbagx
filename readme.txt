@@ -30,9 +30,9 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 [What's New 1.0.8 - April 4, 2009]
 * "Match Wii Game" controls option! Games that have a Wii equivalent can be
-played using the controls for that Wii game. For example all Zelda games can
-be played with Twilight Princess controls. See the Instructions section
-below for important details.
+  played using the controls for that Wii game. For example all Zelda games
+  can be played with Twilight Princess controls. See the Instructions section
+  below for important details.
 * Rotation/Tilt sensor games all work
 * Solar sensors (Boktai 1/2/3)
 * Rumble (except for games that rely on Gameboy Player)
@@ -41,9 +41,9 @@ below for important details.
 * New scaling options, choose how much stretching you want
 * Colourised games now partially work but still have distortion
 * "Corvette" no longer has a screwed up palette (but still crashes)
-* triggers net reconnection on SMB failure
-* source code refactored, and project file added
-* instructions section added to this readme file
+* Triggers net reconnection on SMB failure
+* Source code refactored, and project file added
+* Instructions section added to this readme file
 
 [What's New 1.0.7 - January 27, 2009]
 * Updated to VBA-M r847
@@ -287,8 +287,8 @@ Right analog stick: zoom (if enabled)
 Special Wii controls exist for the following games:
 
 These Zelda games can be played with Twilight Princess controls:
-The Legend Of Zelda, Zelda 2, A Link To The Past, Link's Awakening (DX), Oracle of Ages, 
-Oracle of Seasons, Minish Cap
+The Legend Of Zelda, Zelda 2, A Link To The Past, Link's Awakening (DX), 
+Oracle of Ages, Oracle of Seasons, Minish Cap
 
 These Mario games can be played with Mario Galaxy controls:
 Super Mario Bros., Super Mario Bros. DX, Super Mario 2, Super Mario (2) 
@@ -313,15 +313,16 @@ TMNT can be played with TMNT Wii controls.
 
 These Harry Potter games can be played with Harry Potter and the Order of 
 the Phoenix Wii controls:
-Harry Potter 1, Harry Potter 1 GBC, Harry Potter 2, Harry Potter 2 GBC, Harry Potter 3, Harry Potter 4, Harry Potter 5
+Harry Potter 1, Harry Potter 1 GBC, Harry Potter 2, Harry Potter 2 GBC, 
+Harry Potter 3, Harry Potter 4, Harry Potter 5
 
 These Medal Of Honour games can be played with Medal Of Honour Wii controls:
 Medal Of Honour Underground, Medal Of Honour Infiltrator
 
 One Piece can be played with One Piece Unlimited Adventure controls.
 
-Boktai 1, Boktai 2, Boktai 3, Kirby's Tilt n Tumble, and WarioWare Twisted can be played with
-controls I designed for them.
+Boktai 1, Boktai 2, Boktai 3, Kirby's Tilt n Tumble, and WarioWare Twisted 
+can be played with controls I designed for them.
 
 -=[ Zelda, Match Wii Controls ]=-
 
