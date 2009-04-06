@@ -265,13 +265,13 @@ static void draw_cursor(Mtx v)
 
 	GX_LoadPosMtxImm(m, GX_PNMTX0);
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-	
+
 	// I needed to hack the texture coords to cut out the opaque bit around the outside
 	draw_vert(0, 0, 0.4, 0.45);
 	draw_vert(1, 0, 0.76, 0.45);
 	draw_vert(2, 0, 0.76, 0.97);
 	draw_vert(3, 0, 0.4, 0.97);
-	
+
 	GX_End();
 
 	GX_ClearVtxDesc ();
@@ -390,8 +390,8 @@ void InitialiseVideo ()
 	// widescreen fix
 	if(CONF_GetAspectRatio())
 	{
-		vmode->viWidth = 678;
-		vmode->viXOrigin = (VI_MAX_WIDTH_PAL - 678) / 2;
+		vmode->viWidth = VI_MAX_WIDTH_PAL-12;
+		vmode->viXOrigin = ((VI_MAX_WIDTH_PAL - vmode->viWidth) / 2) + 2;
 	}
 #endif
 
