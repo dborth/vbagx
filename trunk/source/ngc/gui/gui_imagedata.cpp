@@ -15,25 +15,44 @@
  */
 GuiImageData::GuiImageData(const u8 * img)
 {
-	if(img == NULL)
-	{
-		data = NULL;
-		width = 0;
-		height = 0;
-	}
-	else
+	data = NULL;
+	width = 0;
+	height = 0;
+
+	if(img)
 	{
 		PNGUPROP imgProp;
-		IMGCTX ctx;
+		IMGCTX ctx = PNGU_SelectImageFromBuffer(img);
 
-		ctx = PNGU_SelectImageFromBuffer(img);
-		PNGU_GetImageProperties (ctx, &imgProp);
-		width = imgProp.imgWidth;
-		height = imgProp.imgHeight;
-		data = (u8 *)memalign (32, imgProp.imgWidth * imgProp.imgHeight * 4);
-		PNGU_DecodeTo4x4RGBA8 (ctx, imgProp.imgWidth, imgProp.imgHeight, data, 255);
+		if(!ctx)
+			return;
+
+		int res = PNGU_GetImageProperties(ctx, &imgProp);
+
+		if(res == PNGU_OK)
+		{
+			int len = imgProp.imgWidth * imgProp.imgHeight * 4;
+			if(len%32) len += (32-len%32);
+			data = (u8 *)memalign (32, len);
+
+			if(data)
+			{
+				res = PNGU_DecodeTo4x4RGBA8 (ctx, imgProp.imgWidth, imgProp.imgHeight, data, 255);
+
+				if(res == PNGU_OK)
+				{
+					width = imgProp.imgWidth;
+					height = imgProp.imgHeight;
+					DCFlushRange(data, len);
+				}
+				else
+				{
+					free(data);
+					data = NULL;
+				}
+			}
+		}
 		PNGU_ReleaseImageContext (ctx);
-		DCFlushRange (data, imgProp.imgWidth * imgProp.imgHeight * 4);
 	}
 }
 
