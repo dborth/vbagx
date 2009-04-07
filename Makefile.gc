@@ -29,7 +29,7 @@ INCLUDES 	:=  source/vba source/ngc source/unzip
 #---------------------------------------------------------------------------------
 
 CFLAGS  = 	-g -O3 -Wall $(MACHDEP) $(INCLUDE) \
-	  		-DNGC -DUSE_VM -DWORDS_BIGENDIAN \
+	  		-DNGC -DNO_SOUND -DUSE_VM -DWORDS_BIGENDIAN \
 	  		-DC_CORE -D__ppc__ -D__POWERPC__ -DFINAL_VERSION \
 	  		-DSDL -DNO_PNG -DHAVE_ZUTIL_H \
 	  		-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
@@ -72,6 +72,7 @@ sFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S)))
 TTFFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.ttf)))
 PNGFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.png)))
+PCMFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.pcm)))
 
 #---------------------------------------------------------------------------------
 # use CXX for linking C++ projects, CC for standard C
@@ -84,8 +85,8 @@ endif
 
 export OFILES	:=	$(addsuffix .o,$(BINFILES)) \
 					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) \
-					$(TTFFILES:.ttf=.ttf.o) \
-					$(PNGFILES:.png=.png.o)
+					$(TTFFILES:.ttf=.ttf.o) $(PNGFILES:.png=.png.o) \
+					$(PCMFILES:.pcm=.pcm.o)
 
 #---------------------------------------------------------------------------------
 # build a list of include paths
