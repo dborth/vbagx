@@ -138,6 +138,7 @@ void ShutoffRumble()
 		WPAD_Rumble(i, 0);
 	}
 #endif
+	PAD_ControlMotor(PAD_CHAN0, PAD_MOTOR_STOP);
 }
 
 /****************************************************************************
@@ -173,7 +174,7 @@ static void updateRumble() {
 	// Rumble wii remote 0
 	WPAD_Rumble(0, r);
 #endif
-	PAD_ControlMotor(PAD_CHAN0, PAD_MOTOR_RUMBLE);
+	PAD_ControlMotor(PAD_CHAN0, r?PAD_MOTOR_RUMBLE:PAD_MOTOR_STOP);
 }
 
 void updateRumbleFrame() {
