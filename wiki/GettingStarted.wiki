@@ -3,7 +3,7 @@
 
 = Setup & Installation =
 
-Download the latest version from the [http://code.google.com/p/vba-wii/downloads/list Downloads page].
+Download the latest Wii version (1.0.8a) from [http://rapidshare.com/files/218544365/vbawii1.0.8a.zip rapidshare], it will be added to the [http://code.google.com/p/vba-wii/downloads/list Downloads page] later.
 
 == Wii ==
 
