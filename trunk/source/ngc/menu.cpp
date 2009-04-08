@@ -2656,11 +2656,11 @@ static int MenuSettingsVideo()
 				#endif
 				break;
 
-			case 3:
+			case 2:
 				ScreenZoomWindow();
 				break;
 
-			case 4:
+			case 3:
 				ScreenPositionWindow();
 				break;
 		}
