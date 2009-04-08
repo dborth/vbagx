@@ -30,6 +30,8 @@
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
 
+#define ALLOWCHEAT
+
 u8 ZeldaDxLeftPos = 2, ZeldaDxRightPos = 3, ZeldaDxDownPos = 4;
 u8 ZeldaDxShieldPos = 5, ZeldaDxSwordPos = 5, ZeldaDxBraceletPos = 5;
 
@@ -121,6 +123,7 @@ void ZeldaDxSheathSword()
 
 void ZeldaDxCheat()
 {
+#ifdef ALLOWCHEAT
 	gbWriteMemory(0xDB00 + 11, 0);
 	for (int i = 0; i <= 10; i++)
 	{
@@ -137,10 +140,12 @@ void ZeldaDxCheat()
 	gbWriteMemory(0xDB5D, 0x9); // rupees
 	gbWriteMemory(0xDB5E, 0x99); // rupees
 	gbWriteMemory(0xDBD0, 1); // keys
+#endif
 }
 
 void ZeldaAgesCheat()
 {
+#ifdef ALLOWCHEAT
 	int j = 1;
 	for (int i = 0; i <= 14; i++, j++)
 	{
@@ -167,10 +172,12 @@ void ZeldaAgesCheat()
 	for (j=0xC6B9; j<=0xC6BD; j++) gbWriteMemory(j, 0x05); // seeds
 	gbWriteMemory(0xC6BF, 0xFF); // essences
 	gbWriteMemory(0xCF14, 0xEA); // GBA shop
+#endif
 }
 
 void ZeldaSeasonsCheat()
 {
+#ifdef ALLOWCHEAT
 	gbWriteMemory(0xC68F, 0);
 	gbWriteMemory(0xC690, 0);
 	gbWriteMemory(0xC691, 0);
@@ -199,6 +206,7 @@ void ZeldaSeasonsCheat()
 	gbWriteMemory(0xC6BF, 0xFF); // essences
 	gbWriteMemory(0xC6C6, 3); // ring box
 	gbWriteMemory(0xCF14, 0xEA); // GBA shop
+#endif
 }
 
 u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
