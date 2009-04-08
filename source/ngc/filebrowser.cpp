@@ -323,6 +323,77 @@ void StripExt(char* returnstring, char * inputstring)
 		*loc_dot = 0; // strip file extension
 }
 
+// Shorten a ROM filename by removing the extension, URLs, id numbers and other rubbish
+void ShortenFilename(char * returnstring, char * inputstring)
+{
+	if (!inputstring) {
+		returnstring[0] = '\0';
+		return;
+	}
+	// skip URLs in brackets
+	char * dotcom = (char *) strstr(inputstring, ".com)");
+	char * url = NULL;
+	if (dotcom) {
+		url = (char *) strchr(inputstring, '(');
+		if (url >= dotcom) {
+			url = NULL;
+			dotcom = NULL;
+		} else dotcom+= 5; // point to after ')'
+	}
+	// skip URLs not in brackets
+	if (!dotcom) {
+		dotcom = (char *) strstr(inputstring, ".com");
+		url = NULL;
+		if (dotcom) {
+			url = (char *) strstr(inputstring, "www");
+			if (url >= dotcom) {
+				url = NULL;
+				dotcom = NULL;
+			} else dotcom+= 4; // point to after ')'
+		}
+	}
+	// skip file extension
+	char * loc_dot = (char *)strrchr(inputstring,'.');
+	char * s = (char *)inputstring;
+	char * r = (char *)returnstring;
+	// skip initial whitespace, numbers, - and _ ...
+	while ((*s!='\0' && *s<=' ') || *s=='-' || *s=='_' || *s=='+') s++;
+	// ... except those that SHOULD begin with numbers
+	if (strncmp(s,"3D",2)==0) for (int i=0; i<2; i++, r++, s++) *r=*s;
+	if (strncmp(s,"1st",3)==0 || strncmp(s,"2nd",3)==0 || strncmp(s,"3rd",3)==0 || strncmp(s,"4th",3)==0) for (int i=0; i<3; i++, r++, s++) *r=*s;
+	if (strncmp(s,"199",3)==0 || strncmp(s,"007",3)==0 || strncmp(s,"4x4",3)==0 || strncmp(s,"720",3)==0 || strncmp(s,"10 ",3)==0) for (int i=0; i<3; i++, r++, s++) *r=*s;
+	if (strncmp(s,"102 ",4)==0 || strncmp(s,"1942",4)==0 || strncmp(s,"3 Ch",4)==0) for (int i=0; i<4; i++, r++, s++) *r=*s;
+	if (strncmp(s,"2 in 1",6)==0 || strncmp(s,"3 in 1",6)==0 || strncmp(s,"4 in 1",6)==0) for (int i=0; i<6; i++, r++, s++) *r=*s;
+	if (strncmp(s,"2-in-1",6)==0 || strncmp(s,"3-in-1",6)==0 || strncmp(s,"4-in-1",6)==0) for (int i=0; i<6; i++, r++, s++) *r=*s;
+	while (*s>='0' && *s<='9') s++;
+	if (r==(char *)returnstring) while ((*s!='\0' && *s<=' ') || *s=='-' || *s=='_' || *s=='+') s++;
+	// now go through rest of string until we get to the end or the extension
+	while (*s!='\0' && (loc_dot==NULL || s<loc_dot)) {
+		// skip url
+		if (s==url) s=dotcom;
+		// skip whitespace, numbers, - and _ after url
+		if (s==dotcom) {
+			while ((*s>'\0' && *s<=' ') || *s=='-' || *s=='_') s++;
+			while (*s>='0' && *s<='9') s++;
+			while ((*s>'\0' && *s<=' ') || *s=='-' || *s=='_') s++;
+		}
+		// skip all but 1 '-', '_' or space in a row
+		char c = s[0];
+		if (c==s[1] && (c=='-' || c=='_' || c==' ')) s++;
+		// skip space before hyphen
+		if (*s==' ' && s[1]=='-') s++;
+		// copy character to result
+		if (*s=='_') *r=' ';
+		else *r = *s;
+		// skip spaces after hyphen
+		if (*s=='-') while (s[1]==' ') s++;
+		s++; r++;
+	}
+	*r = '\0';
+	// if the result is too short, abandon what we did and just strip the ext instead
+	if (strlen(returnstring) <= 4) StripExt(returnstring, inputstring);
+}
+
 /****************************************************************************
  * BrowserLoadSz
  *
