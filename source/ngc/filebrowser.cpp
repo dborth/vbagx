@@ -36,6 +36,8 @@ extern "C" {
 #include "gcunzip.h"
 #include "wiiusbsupport.h"
 
+void AutoLoad(int method);
+
 BROWSERINFO browser;
 BROWSERENTRY * browserList = NULL; // list of files/folders in browser
 
@@ -214,7 +216,7 @@ bool MakeFilePath(char filepath[], int type, int method, char * filename, int fi
 				if(type == FILE_SRAM) sprintf(ext, "sav");
 				else sprintf(ext, "sgm");
 
-				if(filenum >= 0)
+				if(filenum >= -1)
 				{
 					if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
 					{
@@ -223,7 +225,9 @@ bool MakeFilePath(char filepath[], int type, int method, char * filename, int fi
 					}
 					else
 					{
-						if(filenum == 0)
+						if(filenum == -1)
+							sprintf(file, "%s.%s", filename, ext);
+						else if(filenum == 0)
 							sprintf(file, "%s Auto.%s", filename, ext);
 						else
 							sprintf(file, "%s %i.%s", filename, filenum, ext);
@@ -446,6 +450,8 @@ int BrowserLoadFile(int method)
 	}
 	else
 	{
+		AutoLoad(method); // Load SRAM (battery backed RAM) or save state
+		
 		ResetBrowser();
 	}
 	CancelAction();

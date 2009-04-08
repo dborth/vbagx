@@ -43,7 +43,7 @@ extern bool ROMLoaded;
 extern char szpath[MAXPATHLEN];
 extern bool inSz;
 
-bool MakeFilePath(char filepath[], int type, int method, char * filename = NULL, int filenum = -1);
+bool MakeFilePath(char filepath[], int type, int method, char * filename = NULL, int filenum = -2);
 int UpdateDirName(int method);
 int OpenGameList();
 int autoLoadMethod();

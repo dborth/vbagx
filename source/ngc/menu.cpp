@@ -535,6 +535,32 @@ void AutoSave()
 }
 
 /****************************************************************************
+ * AutoLoad
+ *
+ * Automatically loads SRAM/snapshot when choosing a game from the menu
+ ***************************************************************************/
+void AutoLoad(int method)
+{
+	if (GCSettings.AutoLoad == 1)
+	{
+		LoadBatteryOrStateAuto(method, FILE_SRAM, SILENT); // save battery
+	}
+	else if (GCSettings.AutoLoad == 2)
+	{
+		if (WindowPrompt("Load", "Load Snapshot?", "Load", "Don't Load") )
+			LoadBatteryOrStateAuto(method, FILE_SNAPSHOT, NOTSILENT); // save state
+	}
+	else if (GCSettings.AutoLoad == 3)
+	{
+		if (WindowPrompt("Load", "Load SRAM and Snapshot?", "Load", "Don't Load") )
+		{
+			LoadBatteryOrStateAuto(method, FILE_SRAM, NOTSILENT); // save battery
+			LoadBatteryOrStateAuto(method, FILE_SNAPSHOT, NOTSILENT); // save state
+		}
+	}
+}
+
+/****************************************************************************
  * OnScreenKeyboard
  *
  * Opens an on-screen keyboard window, with the data entered being stored
