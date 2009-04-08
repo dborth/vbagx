@@ -1978,6 +1978,35 @@ static int MenuSettingsMappings()
 	else
 		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
 
+#ifdef HW_RVL
+	GuiText wiiControlsBtnTxt1("Match Wii", 24, (GXColor){0, 0, 0, 255});
+#else
+	GuiText wiiControlsBtnTxt1("Match GC", 24, (GXColor){0, 0, 0, 255});
+#endif
+	GuiText wiiControlsBtnTxt2("Controls", 18, (GXColor){0, 0, 0, 255});
+	char s[4];
+	if (GCSettings.WiiControls) sprintf(s, "ON");
+	else sprintf(s, "OFF");
+	GuiText wiiControlsBtnTxt3(s, 24, (GXColor){0, 0, 0, 255});
+	wiiControlsBtnTxt1.SetPosition(0, -20);
+	wiiControlsBtnTxt3.SetPosition(0, +20);
+	GuiImage wiiControlsBtnImg(&btnLargeOutline);
+	GuiImage wiiControlsBtnImgOver(&btnLargeOutlineOver);
+	GuiImage wiiControlsBtnIcon(&iconNunchuk);
+	GuiButton wiiControlsBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
+	wiiControlsBtn.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
+	wiiControlsBtn.SetPosition(50, 120);
+	wiiControlsBtn.SetLabel(&wiiControlsBtnTxt1, 0);
+	wiiControlsBtn.SetLabel(&wiiControlsBtnTxt2, 1);
+	wiiControlsBtn.SetLabel(&wiiControlsBtnTxt3, 2);
+	wiiControlsBtn.SetImage(&wiiControlsBtnImg);
+	wiiControlsBtn.SetImageOver(&wiiControlsBtnImgOver);
+	wiiControlsBtn.SetIcon(&wiiControlsBtnIcon);
+	wiiControlsBtn.SetSoundOver(&btnSoundOver);
+	wiiControlsBtn.SetSoundClick(&btnSoundClick);
+	wiiControlsBtn.SetTrigger(&trigA);
+	wiiControlsBtn.SetEffectGrow();
+
 	GuiText gamecubeBtnTxt("GameCube Controller", 24, (GXColor){0, 0, 0, 255});
 	gamecubeBtnTxt.SetMaxWidth(btnLargeOutline.GetWidth()-30);
 	GuiImage gamecubeBtnImg(&btnLargeOutline);
@@ -1985,7 +2014,7 @@ static int MenuSettingsMappings()
 	GuiImage gamecubeBtnIcon(&iconGamecube);
 	GuiButton gamecubeBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	gamecubeBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	gamecubeBtn.SetPosition(-125, 120);
+	gamecubeBtn.SetPosition(0, 120);
 	gamecubeBtn.SetLabel(&gamecubeBtnTxt);
 	gamecubeBtn.SetImage(&gamecubeBtnImg);
 	gamecubeBtn.SetImageOver(&gamecubeBtnImgOver);
@@ -2000,8 +2029,8 @@ static int MenuSettingsMappings()
 	GuiImage wiimoteBtnImgOver(&btnLargeOutlineOver);
 	GuiImage wiimoteBtnIcon(&iconWiimote);
 	GuiButton wiimoteBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
-	wiimoteBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	wiimoteBtn.SetPosition(125, 120);
+	wiimoteBtn.SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
+	wiimoteBtn.SetPosition(-50, 120);
 	wiimoteBtn.SetLabel(&wiimoteBtnTxt);
 	wiimoteBtn.SetImage(&wiimoteBtnImg);
 	wiimoteBtn.SetImageOver(&wiimoteBtnImgOver);
@@ -2018,7 +2047,7 @@ static int MenuSettingsMappings()
 	GuiImage classicBtnIcon(&iconClassic);
 	GuiButton classicBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	classicBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	classicBtn.SetPosition(-125, 250);
+	classicBtn.SetPosition(0, 250);
 	classicBtn.SetLabel(&classicBtnTxt);
 	classicBtn.SetImage(&classicBtnImg);
 	classicBtn.SetImageOver(&classicBtnImgOver);
@@ -2027,6 +2056,28 @@ static int MenuSettingsMappings()
 	classicBtn.SetSoundClick(&btnSoundClick);
 	classicBtn.SetTrigger(&trigA);
 	classicBtn.SetEffectGrow();
+
+	GuiText keyboardBtnTxt1("Keyboard", 24, (GXColor){0, 0, 0, 255});
+	GuiText keyboardBtnTxt2("&", 18, (GXColor){0, 0, 0, 255});
+	GuiText keyboardBtnTxt3("Mouse", 24, (GXColor){0, 0, 0, 255});
+	keyboardBtnTxt1.SetPosition(0, -20);
+	keyboardBtnTxt3.SetPosition(0, +20);
+	GuiImage keyboardBtnImg(&btnLargeOutline);
+	GuiImage keyboardBtnImgOver(&btnLargeOutlineOver);
+	//GuiImage keyboardBtnIcon(&iconkeyboard);
+	GuiButton keyboardBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
+	keyboardBtn.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
+	keyboardBtn.SetPosition(50, 250);
+	keyboardBtn.SetLabel(&keyboardBtnTxt1, 0);
+	keyboardBtn.SetLabel(&keyboardBtnTxt2, 1);
+	keyboardBtn.SetLabel(&keyboardBtnTxt3, 2);
+	keyboardBtn.SetImage(&keyboardBtnImg);
+	keyboardBtn.SetImageOver(&keyboardBtnImgOver);
+	//keyboardBtn.SetIcon(&keyboardBtnIcon);
+	keyboardBtn.SetSoundOver(&btnSoundOver);
+	keyboardBtn.SetSoundClick(&btnSoundClick);
+	keyboardBtn.SetTrigger(&trigA);
+	keyboardBtn.SetEffectGrow();
 
 	GuiText nunchukBtnTxt1("Wiimote", 24, (GXColor){0, 0, 0, 255});
 	GuiText nunchukBtnTxt2("&", 18, (GXColor){0, 0, 0, 255});
@@ -2037,8 +2088,8 @@ static int MenuSettingsMappings()
 	GuiImage nunchukBtnImgOver(&btnLargeOutlineOver);
 	GuiImage nunchukBtnIcon(&iconNunchuk);
 	GuiButton nunchukBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
-	nunchukBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	nunchukBtn.SetPosition(125, 250);
+	nunchukBtn.SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
+	nunchukBtn.SetPosition(-50, 250);
 	nunchukBtn.SetLabel(&nunchukBtnTxt1, 0);
 	nunchukBtn.SetLabel(&nunchukBtnTxt2, 1);
 	nunchukBtn.SetLabel(&nunchukBtnTxt3, 2);
@@ -2068,11 +2119,13 @@ static int MenuSettingsMappings()
 	GuiWindow w(screenwidth, screenheight);
 	w.Append(&titleTxt);
 
+	w.Append(&wiiControlsBtn);
 	w.Append(&gamecubeBtn);
 #ifdef HW_RVL
 	w.Append(&wiimoteBtn);
 	w.Append(&nunchukBtn);
 	w.Append(&classicBtn);
+	w.Append(&keyboardBtn);
 #endif
 	w.Append(&backBtn);
 
@@ -2084,7 +2137,17 @@ static int MenuSettingsMappings()
 	{
 		VIDEO_WaitVSync ();
 
-		if(wiimoteBtn.GetState() == STATE_CLICKED)
+		if(wiiControlsBtn.GetState() == STATE_CLICKED)
+		{
+			menu = MENU_SETTINGS_MAPPINGS;
+			GCSettings.WiiControls = !GCSettings.WiiControls;
+		}
+		else if(keyboardBtn.GetState() == STATE_CLICKED)
+		{
+			menu = MENU_SETTINGS_MAPPINGS_MAP;
+			mapMenuCtrl = CTRLR_KEYBOARD;
+		}
+		else if(wiimoteBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_SETTINGS_MAPPINGS_MAP;
 			mapMenuCtrl = CTRLR_WIIMOTE;
@@ -2151,6 +2214,9 @@ ButtonMappingWindow()
 			sprintf(msg, "Press any button on the GameCube Controller now. Press the C-Stick in any direction to cancel.");
 			#endif
 			break;
+		case CTRLR_KEYBOARD:
+			sprintf(msg, "Press any key or mouse button now. Press Esc or Home to cancel.");
+			break;
 		case CTRLR_WIIMOTE:
 			sprintf(msg, "Press any button on the Wiimote now. Press Home to cancel.");
 			break;
@@ -2197,6 +2263,18 @@ ButtonMappingWindow()
 			if(userInput[0].wpad.btns_d == WPAD_BUTTON_HOME)
 				pressed = WPAD_BUTTON_HOME;
 		}
+		else if(mapMenuCtrl == CTRLR_KEYBOARD)
+		{
+			pressed = 0;
+			for (int i=4; i<=234; i++) {
+				if (DownUsbKeys[i]) {
+					pressed = i;
+					break;
+				}
+			}
+			if(userInput[0].wpad.btns_d == WPAD_BUTTON_HOME)
+				pressed = KB_ESC;
+		}
 		else
 		{
 			pressed = userInput[0].wpad.btns_d;
@@ -2214,8 +2292,8 @@ ButtonMappingWindow()
 					case CTRLR_CLASSIC:
 						if(userInput[0].wpad.exp.type != WPAD_EXP_CLASSIC)
 							pressed = 0; // not a valid input
-						else if(pressed <= 0x1000)
-							pressed = 0; // not a valid input
+						//else if(pressed <= 0x1000)
+						//	pressed = 0; // not a valid input (says Tantric, I disagree)
 						break;
 
 					case CTRLR_NUNCHUK:
@@ -2227,8 +2305,10 @@ ButtonMappingWindow()
 		}
 	}
 
-	if(pressed == WPAD_BUTTON_HOME
-		|| pressed == WPAD_CLASSIC_BUTTON_HOME)
+	if(mapMenuCtrl == CTRLR_KEYBOARD) {
+		if (pressed == KB_ESC)
+			pressed = 0;
+	} else if(pressed == WPAD_BUTTON_HOME || pressed == WPAD_CLASSIC_BUTTON_HOME)
 		pressed = 0;
 
 	HaltGui();
