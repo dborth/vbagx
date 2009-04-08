@@ -16,6 +16,8 @@
 void InitialiseSound();
 void StopAudio();
 void SetAudioRate(int type);
+void SwitchAudioMode(int mode);
+void ShutdownAudio();
 
 class SoundWii: public SoundDriver
 {

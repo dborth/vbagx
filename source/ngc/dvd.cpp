@@ -21,10 +21,11 @@ extern "C" {
 }
 #endif
 
-#include "menudraw.h"
-#include "gcunzip.h"
-#include "filesel.h"
 #include "vba.h"
+#include "menu.h"
+#include "gcunzip.h"
+#include "filebrowser.h"
+#include "fileop.h"
 
 #define MAXDVDFILES 2000
 
@@ -141,7 +142,6 @@ static int dvd_buffered_read(void *dst, u32 len, u64 offset)
  * This function relies on dvddir (file offset) being prepopulated!
  * returns: 1 - ok ; 0 - error
  ***************************************************************************/
-
 int dvd_safe_read(void *dst_v, u32 len, u64 fileoffset)
 {
 	u64 offset = dvddir + fileoffset;
@@ -318,35 +318,40 @@ getpvd ()
  *
  * Tests if a ISO9660 DVD is inserted and available, and mounts it
  ***************************************************************************/
-
 bool MountDVD(bool silent)
 {
-	if (!getpvd())
+	bool res = false;
+
+	if (getpvd())
+	{
+		return true;
+	}
+	else
 	{
 		ShowAction("Loading DVD...");
 		#ifdef HW_DOL
 		DVD_Mount(); // mount the DVD unit again
-		#elif HW_RVL
+		#else
 		u32 val;
 		DI_GetCoverRegister(&val);
 		if(val & 0x1)	// True if no disc inside, use (val & 0x2) for true if disc inside.
 		{
 			if(!silent)
-				WaitPrompt("No disc inserted!");
+				ErrorPrompt("No disc inserted!");
+			CancelAction();
 			return false;
 		}
 		DI_Mount();
-		while(DI_GetStatus() & DVD_INIT);
+		while(DI_GetStatus() & DVD_INIT) usleep(20000);
 		#endif
 
-		if (!getpvd())
-		{
-			if(!silent)
-				WaitPrompt ("Invalid DVD.");
-			return false;
-		}
+		if (getpvd())
+			res = true;
+		else if(!silent)
+			ErrorPrompt("Invalid DVD.");
 	}
-	return true;
+	CancelAction();
+	return res;
 }
 
 /****************************************************************************
@@ -355,7 +360,6 @@ bool MountDVD(bool silent)
  * Support function to return the next file entry, if any
  * Declared static to avoid accidental external entry.
  ***************************************************************************/
-
 static int
 getentry (int entrycount, unsigned char dvdbuffer[])
 {
@@ -445,7 +449,7 @@ getentry (int entrycount, unsigned char dvdbuffer[])
 			if(!newBrowserList) // failed to allocate required memory
 			{
 				ResetBrowser();
-				WaitPrompt("Out of memory: too many files!");
+				ErrorPrompt("Out of memory: too many files!");
 				return 0;
 			}
 			else
@@ -455,8 +459,16 @@ getentry (int entrycount, unsigned char dvdbuffer[])
 			memset(&(browserList[entrycount]), 0, sizeof(BROWSERENTRY)); // clear the new entry
 
 			strncpy (browserList[entrycount].filename, fname, MAXJOLIET);
-			StripExt(tmpname, fname); // hide file extension
-			strncpy (browserList[entrycount].displayname, tmpname, MAXDISPLAY);
+
+			if(strcmp(fname,"..") == 0)
+			{
+				sprintf(browserList[entrycount].displayname, "Up One Level");
+			}
+			else
+			{
+				StripExt(tmpname, fname); // hide file extension
+				strncpy (browserList[entrycount].displayname, tmpname, MAXDISPLAY);
+			}
 
 			memcpy (&offset32, &dvdbuffer[diroffset + EXTENT], 4);
 
@@ -483,7 +495,7 @@ getentry (int entrycount, unsigned char dvdbuffer[])
  * It relies on dvddir and dvddirlength being pre-populated by a call to
  * getpvd, a previous parse or a menu selection.
  *
- * The return value is number of files collected, or 0 on failure.
+ * The return value is number of files collected, or -1 on failure.
  ***************************************************************************/
 int
 ParseDVDdirectory ()
@@ -506,7 +518,7 @@ ParseDVDdirectory ()
 	while (len < pdlength)
 	{
 		if (dvd_read (&dvdbuffer, 2048, pdoffset) == 0)
-			return 0;
+			return -1;
 
 		diroffset = 0;
 
@@ -523,6 +535,7 @@ ParseDVDdirectory ()
 	// Sort the file list
 	qsort(browserList, filecount, sizeof(BROWSERENTRY), FileSortCallback);
 
+	browser.numEntries = filecount;
 	return filecount;
 }
 
@@ -530,7 +543,6 @@ ParseDVDdirectory ()
  * SetDVDdirectory
  * Set the current DVD file offset
  ***************************************************************************/
-
 void SetDVDdirectory(u64 dir, int length)
 {
 	dvddir = dir;
@@ -579,12 +591,18 @@ static bool SwitchDVDFolderR(char * dir, int maxDepth)
 
 	if(dirindex >= 0)
 	{
-		dvddir = browserList[dirindex].offset;
-		dvddirlength = browserList[dirindex].length;
 		browser.selIndex = dirindex;
 
 		if(browserList[dirindex].isdir) // only parse directories
-			browser.numEntries = ParseDVDdirectory();
+		{
+			UpdateDirName(METHOD_DVD);
+			ParseDVDdirectory();
+		}
+		else
+		{
+			dvddir = browserList[dirindex].offset;
+			dvddirlength = browserList[dirindex].length;
+		}
 
 		if(lastdir)
 			return true;
@@ -597,8 +615,8 @@ static bool SwitchDVDFolderR(char * dir, int maxDepth)
 bool SwitchDVDFolder(char origdir[])
 {
 	// make a copy of origdir so we don't mess with original
-	char dir[200];
-	strcpy(dir, origdir);
+	char dir[1024];
+	strncpy(dir, origdir, 1024);
 
 	char * dirptr = dir;
 
@@ -612,6 +630,7 @@ bool SwitchDVDFolder(char origdir[])
 	// start searching at root of DVD
 	dvddir = dvdrootdir;
 	dvddirlength = dvdrootlength;
+	browser.dir[0] = 0;
 	ParseDVDdirectory();
 
 	return SwitchDVDFolderR(dirptr, 0);
@@ -622,10 +641,10 @@ bool SwitchDVDFolder(char origdir[])
  * This function will load a file from DVD
  * It assumes dvddir and dvddirlength are prepopulated
  ***************************************************************************/
-
 int
 LoadDVDFileOffset (unsigned char *buffer, int length)
 {
+	int result = 0;
 	int offset;
 	int blocks;
 	int i;
@@ -643,17 +662,19 @@ LoadDVDFileOffset (unsigned char *buffer, int length)
 	{
 		ret = dvd_read (buffer, length, discoffset);
 		if(ret <= 0) // read failure
-			return 0;
+			goto done;
+		else
+			result = length;
 	}
 	else // load whole file
 	{
 		ret = dvd_read (readbuffer, 2048, discoffset);
 		if(ret <= 0) // read failure
-			return 0;
+			goto done;
 
 		if (IsZipFile (readbuffer))
 		{
-			return UnZipBuffer (buffer, METHOD_DVD); // unzip from dvd
+			result = UnZipBuffer (buffer, METHOD_DVD); // unzip from dvd
 		}
 		else
 		{
@@ -661,7 +682,7 @@ LoadDVDFileOffset (unsigned char *buffer, int length)
 			{
 				ret = dvd_read (readbuffer, 2048, discoffset);
 				if(ret <= 0) // read failure
-					return 0;
+					goto done;
 				memcpy (buffer + offset, readbuffer, 2048);
 				offset += 2048;
 				discoffset += 2048;
@@ -674,12 +695,15 @@ LoadDVDFileOffset (unsigned char *buffer, int length)
 				i = dvddirlength % 2048;
 				ret = dvd_read (readbuffer, 2048, discoffset);
 				if(ret <= 0) // read failure
-					return 0;
+					goto done;
 				memcpy (buffer + offset, readbuffer, i);
 			}
+			result = dvddirlength;
 		}
 	}
-	return dvddirlength;
+done:
+	CancelAction();
+	return result;
 }
 
 /****************************************************************************
@@ -688,20 +712,30 @@ LoadDVDFileOffset (unsigned char *buffer, int length)
  * It will attempt to find the offset of the file, and if successful it
  * will populate dvddir and dvddirlength, and load the file
  ***************************************************************************/
-
 int
 LoadDVDFile(char * buffer, char *filepath, int datasize, bool silent)
 {
+	int ret = 0;
+
+	// retain original browser information
+	char origDir[MAXPATHLEN];
+	memset(origDir, 0, MAXPATHLEN);
+	strncpy(origDir, browser.dir, MAXPATHLEN);
+	int origSelIndex = browser.selIndex;
+	int origPageIndex = browser.selIndex;
+
 	if(SwitchDVDFolder(filepath))
-	{
-		return LoadDVDFileOffset ((unsigned char *)buffer, datasize);
-	}
-	else
-	{
-		if(!silent)
-			WaitPrompt("Error loading file!");
-		return 0;
-	}
+		ret = LoadDVDFileOffset ((unsigned char *)buffer, datasize);
+	else if(!silent)
+		ErrorPrompt("Error loading file!");
+
+	// restore browser information
+	memset(browser.dir, 0, MAXPATHLEN);
+	strncpy(browser.dir, origDir, MAXPATHLEN);
+	browser.selIndex = origSelIndex;
+	browser.pageIndex = origPageIndex;
+
+	return ret;
 }
 
 /****************************************************************************
@@ -768,8 +802,8 @@ int dvd_driveid()
     dvd[6] = 0x20;
     dvd[7] = 3;
 
-    while( dvd[7] & 1 )
-        ;
+    while( dvd[7] & 1 );
+
     DCFlushRange((void *)0x80000000, 32);
 
     return (int)inquiry[2];

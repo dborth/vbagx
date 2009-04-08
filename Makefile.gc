@@ -41,7 +41,7 @@ LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with
 #---------------------------------------------------------------------------------
-LIBS	:=	-lpngu -lpng -lmxml -lbba -ltinysmb -lfat -lz -logc -lm -lfreetype
+LIBS	:=	-lpngu -lpng -lmxml -lmetaphrasis -lfat -lz -logc -lfreetype
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -147,6 +147,10 @@ $(OUTPUT).elf: $(OFILES)
 	@echo $(notdir $<)
 	$(bin2o)
 
+%.pcm.o : %.pcm
+	@echo $(notdir $<)
+	$(bin2o)
+	
 -include $(DEPENDS)
 
 #---------------------------------------------------------------------------------

@@ -15,6 +15,8 @@
 #include <wiiuse/wpad.h>
 #include <malloc.h>
 
+#include "pngu/pngu.h"
+
 #include "unzip.h"
 #include "Util.h"
 #include "common/Port.h"
@@ -32,6 +34,7 @@
 
 #include "vba.h"
 #include "fileop.h"
+#include "filebrowser.h"
 #include "dvd.h"
 #include "memcardop.h"
 #include "audio.h"
@@ -39,10 +42,9 @@
 #include "input.h"
 #include "gameinput.h"
 #include "video.h"
-#include "menudraw.h"
+#include "menu.h"
 #include "gcunzip.h"
 #include "gamesettings.h"
-#include "images/saveicon.h"
 
 extern "C"
 {
@@ -251,9 +253,8 @@ int MemCPUWriteBatteryFile(char * membuffer)
 * action = FILE_SNAPSHOT - Load state
 ****************************************************************************/
 
-bool LoadBatteryOrState(int method, int action, bool silent)
+bool LoadBatteryOrState(char * filepath, int method, int action, bool silent)
 {
-	char filepath[1024];
 	bool result = false;
 	int offset = 0;
 
@@ -269,15 +270,6 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 
 	// load the file into savebuffer
 	offset = LoadFile(filepath, method, silent);
-
-	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
-	{
-		// skip save icon and comments for Memory Card saves
-		int skip = sizeof (saveicon);
-		skip += 64; // sizeof savecomment
-		memmove(savebuffer, savebuffer+skip, offset-skip);
-		offset -= skip;
-	}
 
 	// load savebuffer into VBA memory
 	if (offset > 0)
@@ -302,21 +294,36 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 		if(offset == 0)
 		{
 			if(action == FILE_SRAM)
-				WaitPrompt ("Save file not found");
+				ErrorPrompt ("Save file not found");
 			else
-				WaitPrompt ("State file not found");
+				ErrorPrompt ("State file not found");
 		}
 		else
 		{
 			if(action == FILE_SRAM)
-				WaitPrompt ("Invalid save file");
+				ErrorPrompt ("Invalid save file");
 			else
-				WaitPrompt ("Invalid state file");
+				ErrorPrompt ("Invalid state file");
 		}
 	}
 	return result;
 }
 
+bool LoadBatteryOrStateAuto(int method, int action, bool silent)
+{
+	if(method == METHOD_AUTO)
+		method = autoSaveMethod(silent);
+
+	if(method == METHOD_AUTO)
+		return false;
+
+	char filepath[1024];
+
+	if(!MakeFilePath(filepath, FILE_SNAPSHOT, method, ROMFilename, 0))
+		return false;
+
+	return LoadBatteryOrState(filepath, method, action, silent);
+}
 
 /****************************************************************************
 * SaveBatteryOrState
@@ -325,46 +332,34 @@ bool LoadBatteryOrState(int method, int action, bool silent)
 * action = 1 - Save state
 ****************************************************************************/
 
-bool SaveBatteryOrState(int method, int action, bool silent)
+bool SaveBatteryOrState(char * filename, int method, int action, bool silent)
 {
 	char filepath[1024];
 	bool result = false;
 	int offset = 0;
 	int datasize = 0; // we need the actual size of the data written
+	int imgSize = 0; // image screenshot bytes written
 
 	if(method == METHOD_AUTO)
 		method = autoSaveMethod(silent);
 
-	if(!MakeFilePath(filepath, action, method))
-		return false;
-
-	ShowAction ("Saving...");
-
 	AllocSaveBuffer();
 
-	// add save icon and comments for Memory Card saves
+	// set comments for Memory Card saves
 	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
 	{
-		char savecomment[2][32];
-		memset(savecomment, 0, 64);
+		char savecomments[2][32];
 		char savetype[10];
+		memset(savecomments, 0, 64);
 
-		offset = sizeof (saveicon);
-
-		// Copy in save icon
-		memcpy (savebuffer, saveicon, offset);
-
-		// And the comments
 		if(action == FILE_SRAM)
 			sprintf(savetype, "SRAM");
 		else
 			sprintf(savetype, "Freeze");
 
-		sprintf (savecomment[0], "%s %s", APPNAME, savetype);
-		strncpy(savecomment[1], ROMFilename, 31); // truncate filename to 31 chars
-		savecomment[1][31] = 0; // make sure last char is null byte
-		memcpy (savebuffer + offset, savecomment, 64);
-		offset += 64;
+		sprintf (savecomments[0], "%s %s", APPNAME, savetype);
+		snprintf (savecomments[1], 32, ROMFilename);
+		SetMCSaveComments(savecomments);
 	}
 
 	// put VBA memory into savebuffer, sets datasize to size of memory written
@@ -423,19 +418,59 @@ bool SaveBatteryOrState(int method, int action, bool silent)
 		if(offset > 0)
 		{
 			if(!silent)
-				WaitPrompt ("Save successful");
+				InfoPrompt ("Save successful");
 			result = true;
 		}
 	}
 	else
 	{
 		if(!silent)
-			WaitPrompt("No data to save!");
+			InfoPrompt("No data to save!");
 	}
 
 	FreeSaveBuffer();
 
+	// save screenshot - I would prefer to do this from gameScreenTex
+	if(offset > 0 && gameScreenTex2 != NULL && method != METHOD_MC_SLOTA && method != METHOD_MC_SLOTB)
+	{
+		AllocSaveBuffer ();
+
+		IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
+
+		if (pngContext != NULL)
+		{
+			imgSize = PNGU_EncodeFromGXTexture(pngContext, 640, 480, gameScreenTex2, 0);
+			PNGU_ReleaseImageContext(pngContext);
+		}
+
+		if(imgSize > 0)
+		{
+			char screenpath[1024];
+			filepath[strlen(filepath)-4] = 0;
+			sprintf(screenpath, "%s.png", filepath);
+			SaveFile(screenpath, imgSize, method, silent);
+		}
+
+		FreeSaveBuffer ();
+	}
+
 	return result;
+}
+
+bool SaveBatteryOrStateAuto(int method, int action, bool silent)
+{
+	if(method == METHOD_AUTO)
+		method = autoSaveMethod(silent);
+
+	if(method == METHOD_AUTO)
+		return false;
+
+	char filepath[1024];
+
+	if(!MakeFilePath(filepath, FILE_SNAPSHOT, method, ROMFilename, 0))
+		return false;
+
+	return SaveBatteryOrState(filepath, method, action, silent);
 }
 
 /****************************************************************************
@@ -877,13 +912,13 @@ bool LoadVBAROM(int method)
 			else if(utilIsGBImage(zippedFilename))
 				cartridgeType = 1;
 			else {
-				WaitPrompt("Rom must be 1st file in zip, or unzipped!");
+				ErrorPrompt("Rom must be 1st file in zip, or unzipped!");
 				return false;
 			}
 		}
 		else // loading the file failed
 		{
-			WaitPrompt("Empty or invalid zip file!");
+			ErrorPrompt("Empty or invalid zip file!");
 			return false;
 		}
 	}
@@ -892,7 +927,7 @@ bool LoadVBAROM(int method)
 	if(cartridgeType != 1 && cartridgeType != 2)
 	{
 		// Not zip gba agb gbc cgb sgb gb mb bin elf or dmg!
-		WaitPrompt("Invalid filename extension! Not a rom?");
+		ErrorPrompt("Invalid filename extension! Not a rom?");
 		return false;
 	}
 
@@ -945,7 +980,7 @@ bool LoadVBAROM(int method)
 
 	if(!loaded)
 	{
-		WaitPrompt("Error loading game!");
+		ErrorPrompt("Error loading game!");
 		return false;
 	}
 	else

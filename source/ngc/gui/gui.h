@@ -40,12 +40,11 @@
 #include <asndlib.h>
 #include "pngu/pngu.h"
 #include "FreeTypeGX.h"
-#include "snes9xGX.h"
+#include "vba.h"
 #include "video.h"
 #include "input.h"
 #include "filelist.h"
 #include "fileop.h"
-#include "menu.h"
 #include "oggplayer.h"
 
 #define SCROLL_INITIAL_DELAY 20
