@@ -482,7 +482,9 @@ int SzParse(char * filepath, int method)
 
 				// parse information about this file to the dvd file list structure
 				strncpy(browserList[SzJ].filename, SzF->Name, MAXJOLIET); // copy joliet name (useless...)
-				strncpy(browserList[SzJ].displayname, SzF->Name, MAXDISPLAY);	// crop name for display
+				char tmpname[MAXJOLIET+1] = "";
+				ShortenFilename(tmpname, browserList[SzJ].filename);
+				strncpy(browserList[SzJ].displayname, tmpname, MAXDISPLAY);	// crop name for display
 				browserList[SzJ].length = SzF->Size; // filesize
 				browserList[SzJ].offset = SzI; // the extraction function identifies the file with this number
 				browserList[SzJ].isdir = 0; // only files will be displayed (-> no flags)

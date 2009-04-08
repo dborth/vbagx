@@ -344,7 +344,7 @@ ParseDirectory(int method)
 			}
 			else
 			{
-				StripExt(tmpname, filename); // hide file extension
+				ShortenFilename(tmpname, filename); // hide file extension
 				strncpy(browserList[entryNum].displayname, tmpname, MAXDISPLAY);	// crop name for display
 			}
 

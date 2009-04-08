@@ -124,7 +124,7 @@ ParseMCDirectory (int slot)
 			memset(&(browserList[entryNum]), 0, sizeof(BROWSERENTRY)); // clear the new entry
 
 			strncpy(browserList[entryNum].filename, (char *)CardDir.filename, MAXJOLIET);
-			StripExt(tmpname, (char *)CardDir.filename); // hide file extension
+			ShortenFilename(tmpname, (char *)CardDir.filename); // hide file extension
 			strncpy(browserList[entryNum].displayname, tmpname, MAXDISPLAY); // crop name for display
 			browserList[entryNum].length = CardDir.filelen;
 
