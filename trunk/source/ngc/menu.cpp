@@ -1441,9 +1441,9 @@ static int MenuGameSaves(int action)
 		// find matching files
 		if(len2 > 5 && strncmp(browserList[i].filename, ROMFilename, len) == 0)
 		{
-			if(strncmp(&browserList[i].filename[len2-4], ".srm", 4) == 0)
+			if(strncmp(&browserList[i].filename[len2-4], ".sav", 4) == 0)
 				saves.type[j] = FILE_SRAM;
-			else if(strncmp(&browserList[i].filename[len2-4], ".frz", 4) == 0)
+			else if(strncmp(&browserList[i].filename[len2-4], ".sgm", 4) == 0)
 				saves.type[j] = FILE_SNAPSHOT;
 			else
 				saves.type[j] = -1;
@@ -1522,9 +1522,11 @@ static int MenuGameSaves(int action)
 				switch(saves.type[ret])
 				{
 					case FILE_SRAM:
-					case FILE_SNAPSHOT:
 						result = LoadBatteryOrState(filepath, GCSettings.SaveMethod, saves.type[ret], NOTSILENT);
 						emulator.emuReset();
+						break;
+					case FILE_SNAPSHOT:
+						result = LoadBatteryOrState(filepath, GCSettings.SaveMethod, saves.type[ret], NOTSILENT);
 						break;
 				}
 				if(result)
