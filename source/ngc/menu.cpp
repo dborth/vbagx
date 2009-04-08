@@ -877,6 +877,8 @@ static int MenuGameSelection()
 	GuiImageData iconSettings(icon_settings_png);
 	GuiImageData btnOutline(button_png);
 	GuiImageData btnOutlineOver(button_over_png);
+	GuiImageData btnCloseOutline(button_small_png);
+	GuiImageData btnCloseOutlineOver(button_small_over_png);
 	GuiTrigger trigA;
 	if(GCSettings.WiimoteOrientation)
 		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
@@ -902,6 +904,20 @@ static int MenuGameSelection()
 	settingsBtn.SetSoundClick(&btnSoundClick);
 	settingsBtn.SetTrigger(&trigA);
 	settingsBtn.SetEffectGrow();
+
+	GuiText closeBtnTxt("Close", 22, (GXColor){0, 0, 0, 255});
+	GuiImage closeBtnImg(&btnCloseOutline);
+	GuiImage closeBtnImgOver(&btnCloseOutlineOver);
+	GuiButton closeBtn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	closeBtn.SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
+	closeBtn.SetPosition(-170, 35);
+	closeBtn.SetLabel(&closeBtnTxt);
+	closeBtn.SetImage(&closeBtnImg);
+	closeBtn.SetImageOver(&closeBtnImgOver);
+	closeBtn.SetSoundOver(&btnSoundOver);
+	closeBtn.SetSoundClick(&btnSoundClick);
+	closeBtn.SetTrigger(&trigA);
+	closeBtn.SetEffectGrow();
 
 	GuiText exitBtnTxt("Exit", 24, (GXColor){0, 0, 0, 255});
 	GuiImage exitBtnIcon(&iconHome);
@@ -935,6 +951,7 @@ static int MenuGameSelection()
 	mainWindow->Append(&titleTxt);
 	mainWindow->Append(&gameBrowser);
 	mainWindow->Append(&buttonWindow);
+	mainWindow->Append(&closeBtn);
 	ResumeGui();
 
 	while(menu == MENU_NONE)
@@ -987,11 +1004,14 @@ static int MenuGameSelection()
 			menu = MENU_SETTINGS;
 		else if(exitBtn.GetState() == STATE_CLICKED)
 			ExitRequested = 1;
+		else if(closeBtn.GetState() == STATE_CLICKED)
+			menu = MENU_EXIT;
 	}
 	HaltGui();
 	mainWindow->Remove(&titleTxt);
 	mainWindow->Remove(&buttonWindow);
 	mainWindow->Remove(&gameBrowser);
+	mainWindow->Remove(&closeBtn);
 	return menu;
 }
 
