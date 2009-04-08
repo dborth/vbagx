@@ -261,10 +261,8 @@ bool LoadBatteryOrState(char * filepath, int method, int action, bool silent)
 	if(method == METHOD_AUTO)
 		method = autoSaveMethod(silent); // we use 'Save' because we need R/W
 
-	if(!MakeFilePath(filepath, action, method))
+	if(method == METHOD_AUTO)
 		return false;
-
-	ShowAction ("Loading...");
 
 	AllocSaveBuffer();
 
@@ -319,7 +317,7 @@ bool LoadBatteryOrStateAuto(int method, int action, bool silent)
 
 	char filepath[1024];
 
-	if(!MakeFilePath(filepath, FILE_SNAPSHOT, method, ROMFilename, 0))
+	if(!MakeFilePath(filepath, action, method, ROMFilename, 0))
 		return false;
 
 	return LoadBatteryOrState(filepath, method, action, silent);
@@ -332,9 +330,8 @@ bool LoadBatteryOrStateAuto(int method, int action, bool silent)
 * action = 1 - Save state
 ****************************************************************************/
 
-bool SaveBatteryOrState(char * filename, int method, int action, bool silent)
+bool SaveBatteryOrState(char * filepath, int method, int action, bool silent)
 {
-	char filepath[1024];
 	bool result = false;
 	int offset = 0;
 	int datasize = 0; // we need the actual size of the data written
@@ -342,6 +339,9 @@ bool SaveBatteryOrState(char * filename, int method, int action, bool silent)
 
 	if(method == METHOD_AUTO)
 		method = autoSaveMethod(silent);
+
+	if(method == METHOD_AUTO)
+		return false;
 
 	AllocSaveBuffer();
 
@@ -355,7 +355,7 @@ bool SaveBatteryOrState(char * filename, int method, int action, bool silent)
 		if(action == FILE_SRAM)
 			sprintf(savetype, "SRAM");
 		else
-			sprintf(savetype, "Freeze");
+			sprintf(savetype, "Snapshot");
 
 		sprintf (savecomments[0], "%s %s", APPNAME, savetype);
 		snprintf (savecomments[1], 32, ROMFilename);
@@ -366,13 +366,13 @@ bool SaveBatteryOrState(char * filename, int method, int action, bool silent)
 	if(action == FILE_SRAM)
 	{
 		if(cartridgeType == 1)
-			datasize = MemgbWriteBatteryFile((char *)savebuffer+offset);
+			datasize = MemgbWriteBatteryFile((char *)savebuffer);
 		else
-			datasize = MemCPUWriteBatteryFile((char *)savebuffer+offset);
+			datasize = MemCPUWriteBatteryFile((char *)savebuffer);
 	}
 	else
 	{
-		bool written = emulator.emuWriteMemState((char *)savebuffer+offset, SAVEBUFFERSIZE-offset);
+		bool written = emulator.emuWriteMemState((char *)savebuffer, SAVEBUFFERSIZE);
 		// we need to set datasize to the exact memory size written
 		// but emuWriteMemState doesn't return that for us
 		// so instead we'll find the end of the save the old fashioned way
@@ -467,7 +467,7 @@ bool SaveBatteryOrStateAuto(int method, int action, bool silent)
 
 	char filepath[1024];
 
-	if(!MakeFilePath(filepath, FILE_SNAPSHOT, method, ROMFilename, 0))
+	if(!MakeFilePath(filepath, action, method, ROMFilename, 0))
 		return false;
 
 	return SaveBatteryOrState(filepath, method, action, silent);
