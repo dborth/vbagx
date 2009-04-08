@@ -320,7 +320,13 @@ bool LoadBatteryOrStateAuto(int method, int action, bool silent)
 	if(!MakeFilePath(filepath, action, method, ROMFilename, 0))
 		return false;
 
-	return LoadBatteryOrState(filepath, method, action, silent);
+	if (action==FILE_SRAM) {
+		if (!LoadBatteryOrState(filepath, method, action, SILENT)) {
+			if(!MakeFilePath(filepath, action, method, ROMFilename, -1))
+				return false;
+			return LoadBatteryOrState(filepath, method, action, silent);
+		} else return true;		
+	} else return LoadBatteryOrState(filepath, method, action, silent);
 }
 
 /****************************************************************************
