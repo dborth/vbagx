@@ -12,6 +12,7 @@
 
 #define _VBACONFIG_
 
+void FixInvalidSettings();
 void DefaultSettings ();
 
 #endif

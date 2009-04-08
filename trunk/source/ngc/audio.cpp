@@ -9,9 +9,11 @@
  ***************************************************************************/
 
 #include <gccore.h>
+#include <ogcsys.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <asndlib.h>
 
 #include "audio.h"
 
@@ -91,14 +93,56 @@ void SetAudioRate(int type)
 }
 
 /****************************************************************************
+ * SwitchAudioMode
+ *
+ * Switches between menu sound and emulator sound
+ ***************************************************************************/
+void
+SwitchAudioMode(int mode)
+{
+	if(mode == 0) // emulator
+	{
+		#ifndef NO_SOUND
+		ASND_Pause(1);
+		ASND_End();
+		#endif
+		AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ);
+		AUDIO_RegisterDMACallback(AudioPlayer);
+	}
+	else // menu
+	{
+		AUDIO_StopDMA();
+		AUDIO_RegisterDMACallback(NULL);
+		#ifndef NO_SOUND
+		ASND_Init();
+		ASND_Pause(0);
+		#endif
+	}
+}
+
+/****************************************************************************
  * InitialiseSound
  ***************************************************************************/
 
 void InitialiseSound()
 {
 	AUDIO_Init(NULL); // Start audio subsystem
-	AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ);
-	AUDIO_RegisterDMACallback(AudioPlayer);
+}
+
+/****************************************************************************
+ * ShutdownAudio
+ *
+ * Shuts down audio subsystem. Useful to avoid unpleasant sounds if a
+ * crash occurs during shutdown.
+ ***************************************************************************/
+void ShutdownAudio()
+{
+	#ifndef NO_SOUND
+	ASND_Pause(1);
+	ASND_End();
+	#endif
+	AUDIO_StopDMA();
+	AUDIO_RegisterDMACallback(NULL);
 }
 
 /****************************************************************************

@@ -22,7 +22,9 @@ extern bool TiltSideways;
 
 bool LoadVBAROM(int method);
 void InitialisePalette();
-bool LoadBatteryOrState(int method, int action, bool silent);
-bool SaveBatteryOrState(int method, int action, bool silent);
+bool LoadBatteryOrState(char * filepath, int method, int action, bool silent);
+bool LoadBatteryOrStateAuto(int method, int action, bool silent);
+bool SaveBatteryOrState(char * filepath, int method, int action, bool silent);
+bool SaveBatteryOrStateAuto(int method, int action, bool silent);
 
 #endif

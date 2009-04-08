@@ -16,6 +16,33 @@
 
 struct SGCSettings GCSettings;
 
+/****************************************************************************
+ * FixInvalidSettings
+ *
+ * Attempts to correct at least some invalid settings - the ones that
+ * might cause crashes
+ ***************************************************************************/
+void FixInvalidSettings()
+{
+	if(!(GCSettings.ZoomLevel > 0.5 && GCSettings.ZoomLevel < 1.5))
+		GCSettings.ZoomLevel = 1.0;
+	if(!(GCSettings.xshift > -50 && GCSettings.xshift < 50))
+		GCSettings.xshift = 0;
+	if(!(GCSettings.yshift > -50 && GCSettings.yshift < 50))
+		GCSettings.yshift = 0;
+	if(!(GCSettings.MusicVolume >= 0 && GCSettings.MusicVolume <= 100))
+		GCSettings.MusicVolume = 40;
+	if(!(GCSettings.SFXVolume >= 0 && GCSettings.SFXVolume <= 100))
+		GCSettings.SFXVolume = 40;
+	if(!(GCSettings.render >= 0 && GCSettings.render < 2))
+		GCSettings.render = 1;
+}
+
+/****************************************************************************
+ * DefaultSettings
+ *
+ * Sets all the defaults!
+ ***************************************************************************/
 void
 DefaultSettings ()
 {
@@ -44,12 +71,16 @@ DefaultSettings ()
 	GCSettings.WiimoteOrientation = 0;
 
 	GCSettings.VerifySaves = 0;
-	GCSettings.Zoom = 0;	// zooming default off
 	GCSettings.ZoomLevel = 1.0; // zoom level
 	GCSettings.render = 1; // Filtered
 	GCSettings.scaling = 1; // partial stretch
-	GCSettings.WiiControls = true; // Match Wii Game
+	GCSettings.WiiControls = false; // Match Wii Game
 
-	GCSettings.xshift = 0;	// video shift
-	GCSettings.yshift = 0;
+	GCSettings.xshift = 0; // horizontal video shift
+	GCSettings.yshift = 0; // vertical video shift
+
+	GCSettings.WiimoteOrientation = 0;
+	GCSettings.ExitAction = 0;
+	GCSettings.MusicVolume = 40;
+	GCSettings.SFXVolume = 40;
 }

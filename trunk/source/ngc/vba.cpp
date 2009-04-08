@@ -22,6 +22,8 @@ extern "C" {
 }
 #endif
 
+#include "FreeTypeGX.h"
+
 #include "gba/Sound.h"
 
 #include "vba.h"
@@ -30,21 +32,21 @@ extern "C" {
 #include "audio.h"
 #include "dvd.h"
 #include "networkop.h"
+#include "filebrowser.h"
 #include "fileop.h"
 #include "menu.h"
-#include "menudraw.h"
 #include "input.h"
 #include "video.h"
 #include "vbaconfig.h"
 #include "wiiusbsupport.h"
 
-extern bool ROMLoaded;
 extern int emulating;
-bool InMenu = true;
 int ConfigRequested = 0;
 int ShutdownRequested = 0;
 int ResetRequested = 0;
+int ExitRequested = 0;
 char appPath[1024];
+FreeTypeGX *fontSystem;
 
 /****************************************************************************
  * Shutdown / Reboot / Exit
@@ -56,9 +58,11 @@ static void ExitCleanup()
 	ShutoffRumble();
 	StopWiiKeyboard();
 #endif
+	ShutdownAudio();
+	StopGX();
+
 	LWP_SuspendThread (devicethread);
 	UnmountAllFAT();
-	CloseShare();
 
 #ifdef HW_RVL
 	DI_Close();
@@ -71,27 +75,32 @@ static void ExitCleanup()
 	void (*PSOReload) () = (void (*)()) 0x80001800;
 #endif
 
-void Reboot()
+void ExitApp()
 {
 	ExitCleanup();
-#ifdef HW_RVL
-    SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
-#else
-	#define SOFTRESET_ADR ((volatile u32*)0xCC003024)
-	*SOFTRESET_ADR = 0x00000000;
-#endif
-}
 
-void ExitToLoader()
-{
-	ExitCleanup();
-	// Exit to Loader
-	#ifdef HW_RVL
-		exit(0);
-	#else	// gamecube
-		if (psoid[0] == PSOSDLOADID)
-			PSOReload();
-	#endif
+	if(GCSettings.ExitAction == 0) // Exit to Loader
+	{
+		#ifdef HW_RVL
+			exit(0);
+		#else
+			if (psoid[0] == PSOSDLOADID)
+				PSOReload ();
+		#endif
+	}
+	else if(GCSettings.ExitAction == 1) // Exit to Menu
+	{
+		#ifdef HW_RVL
+			SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+		#else
+			#define SOFTRESET_ADR ((volatile u32*)0xCC003024)
+			*SOFTRESET_ADR = 0x00000000;
+		#endif
+	}
+	else // Shutdown Wii
+	{
+		SYS_ResetSystem(SYS_POWEROFF, 0, 0);
+	}
 }
 
 #ifdef HW_RVL
@@ -185,13 +194,13 @@ int main(int argc, char *argv[])
 	WPAD_Init();
 	#endif
 
-	InitialiseVideo();
+	InitializeVideo();
 	ResetVideo_Menu (); // change to menu video mode
 
 	#ifdef HW_RVL
 	// read wiimote accelerometer and IR data
 	WPAD_SetDataFormat(WPAD_CHAN_ALL,WPAD_FMT_BTNS_ACC_IR);
-	WPAD_SetVRes(WPAD_CHAN_ALL,640,480);
+	WPAD_SetVRes(WPAD_CHAN_ALL,screenwidth,screenheight);
 
 	// Wii Power/Reset buttons
 	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
@@ -199,30 +208,24 @@ int main(int argc, char *argv[])
 	SYS_SetResetCallback(ResetCB);
 	#endif
 
-	// Initialise freetype font system
-	if (FT_Init ())
-	{
-		printf ("Cannot initialise font subsystem!\n");
-		while (1);
-	}
-
-	// Initialize libFAT for SD and USB
-	MountAllFAT();
+	MountAllFAT(); // Initialize libFAT for SD and USB
 
 	// Initialize DVD subsystem (GameCube only)
 	#ifdef HW_DOL
 	DVD_Init ();
 	#endif
 
-	// Check if DVD drive belongs to a Wii
-	SetDVDDriveType();
-
+	SetDVDDriveType(); // Check if DVD drive belongs to a Wii
 	InitialiseSound();
-
 	InitialisePalette();
+	DefaultSettings (); // Set defaults
 
-	// Set defaults
-	DefaultSettings ();
+	// Initialize font system
+	fontSystem = new FreeTypeGX();
+	fontSystem->loadFont(font_ttf, font_ttf_size, 0);
+	fontSystem->setCompatibilityMode(FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_PASSCLR | FTGX_COMPATIBILITY_DEFAULT_VTXDESC_GX_NONE);
+
+	InitGUIThreads();
 
 	// store path app was loaded from
 	sprintf(appPath, "vbagx");
@@ -231,18 +234,8 @@ int main(int argc, char *argv[])
 
 	StartWiiKeyboardMouse();
 
-	int selectedMenu = -1;
-
-	// Load preferences
-	if(!LoadPrefs())
-	{
-		WaitPrompt("Preferences reset - check settings!");
-		selectedMenu = 2; // change to preferences menu
-	}
-
 	while(1) // main loop
 	{
-		InMenu = true;
 		#ifdef HW_RVL
 		if(ShutdownRequested)
 			ShutdownWii();
@@ -252,15 +245,22 @@ int main(int argc, char *argv[])
 		// since we're entering the menu
 		LWP_ResumeThread (devicethread);
 
-		MainMenu(selectedMenu);
-		selectedMenu = 3; // return to game menu from now on
+		ConfigRequested = 1;
+		SwitchAudioMode(1);
+
+		if(!ROMLoaded)
+			MainMenu(MENU_GAMESELECTION);
+		else
+			MainMenu(MENU_GAME);
+
+		ConfigRequested = 0;
+		SwitchAudioMode(0);
 
 		// stop checking if devices were removed/inserted
 		// since we're starting emulation again
 		LWP_SuspendThread (devicethread);
 
 		ResetVideo_Emu();
-		InMenu = false;
 
 		while (emulating) // emulation loop
 		{
@@ -274,30 +274,10 @@ int main(int argc, char *argv[])
 
 			if(ConfigRequested)
 			{
-				InMenu = true;
-				ShutoffRumble();
-				StopAudio();
-				ResetVideo_Menu (); // change to menu video mode
-
-				if (GCSettings.AutoSave == 1)
-				{
-					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SRAM, SILENT); // save battery
-				}
-				else if (GCSettings.AutoSave == 2)
-				{
-					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SNAPSHOT, SILENT); // save state
-				}
-				else if(GCSettings.AutoSave == 3)
-				{
-					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SRAM, SILENT); // save battery
-					SaveBatteryOrState(GCSettings.SaveMethod, FILE_SNAPSHOT, SILENT); // save state
-				}
-
-				// save zoom level
-				SavePrefs(SILENT);
-				ConfigRequested = 0;
-				break;
+				TakeScreenshot();
+				ResetVideo_Menu();
+				break; // leave emulation loop
 			}
-		}
-	}
+		} // emulation loop
+	} // main loop
 }

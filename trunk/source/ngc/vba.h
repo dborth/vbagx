@@ -10,6 +10,9 @@
 #ifndef _VBAGX_H_
 #define _VBAGX_H_
 
+#include "FreeTypeGX.h"
+#include "filelist.h"
+
 #define APPNAME 		"Visual Boy Advance GX"
 #define APPVERSION 		"1.0.8"
 #define PREF_FILE_NAME 	"settings.xml"
@@ -45,29 +48,32 @@ struct SGCSettings{
 	char	LoadFolder[200]; // Path to game files
 	char	SaveFolder[200]; // Path to save files
 	char	CheatFolder[200]; // Path to cheat files
+	int		VerifySaves;
 
 	char	smbip[16];
 	char	smbuser[20];
 	char	smbpwd[20];
 	char	smbshare[20];
 
-    int		Zoom; // 0 - off, 1 - on
     float	ZoomLevel; // zoom amount
     int		scaling; // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
 	int		render;		// 0 - original, 1 - filtered, 2 - unfiltered
-	int		VerifySaves;
 	int		xshift;		// video output shift
 	int		yshift;
 	int		WiiControls; // Match Wii Game
 	int		WiimoteOrientation;
+	int		ExitAction;
+	int		MusicVolume;
+	int		SFXVolume;
 };
 
-void ExitToLoader();
-void Reboot();
+void ExitApp();
 void ShutdownWii();
 extern struct SGCSettings GCSettings;
 extern int ConfigRequested;
 extern int ShutdownRequested;
+extern int ExitRequested;
 extern char appPath[];
+extern FreeTypeGX *fontSystem;
 
 #endif

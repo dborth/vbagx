@@ -3,7 +3,7 @@
  *
  * Tantric September 2008
  *
- * filesel.cpp
+ * filebrowser.cpp
  *
  * Generic file routines - reading, writing, browsing
  ***************************************************************************/
@@ -23,16 +23,16 @@ extern "C" {
 #endif
 
 #include "vba.h"
+#include "dvd.h"
 #include "vbasupport.h"
 #include "vmmem.h"
-#include "menudraw.h"
+#include "filebrowser.h"
+#include "menu.h"
 #include "video.h"
+#include "networkop.h"
 #include "fileop.h"
-#include "filesel.h"
 #include "memcardop.h"
 #include "input.h"
-#include "dvd.h"
-#include "networkop.h"
 #include "gcunzip.h"
 #include "wiiusbsupport.h"
 
@@ -55,7 +55,7 @@ int autoLoadMethod()
 {
 	ShowAction ("Attempting to determine load method...");
 
-	int method = 0;
+	int method = METHOD_AUTO;
 
 	if(ChangeInterface(METHOD_SD, SILENT))
 		method = METHOD_SD;
@@ -66,10 +66,11 @@ int autoLoadMethod()
 	else if(ChangeInterface(METHOD_SMB, SILENT))
 		method = METHOD_SMB;
 	else
-		WaitPrompt("Unable to auto-determine load method!");
+		ErrorPrompt("Unable to auto-determine load method!");
 
 	if(GCSettings.LoadMethod == METHOD_AUTO)
 		GCSettings.LoadMethod = method; // save method found for later use
+	CancelAction();
 	return method;
 }
 
@@ -83,23 +84,25 @@ int autoSaveMethod(bool silent)
 	if(!silent)
 		ShowAction ("Attempting to determine save method...");
 
-	int method = 0;
+	int method = METHOD_AUTO;
 
 	if(ChangeInterface(METHOD_SD, SILENT))
 		method = METHOD_SD;
 	else if(ChangeInterface(METHOD_USB, SILENT))
 		method = METHOD_USB;
-	else if(TestCard(CARD_SLOTA, SILENT))
+	else if(ChangeInterface(METHOD_MC_SLOTA, SILENT))
 		method = METHOD_MC_SLOTA;
-	else if(TestCard(CARD_SLOTB, SILENT))
+	else if(ChangeInterface(METHOD_MC_SLOTB, SILENT))
 		method = METHOD_MC_SLOTB;
 	else if(ChangeInterface(METHOD_SMB, SILENT))
 		method = METHOD_SMB;
 	else if(!silent)
-		WaitPrompt("Unable to auto-determine save method!");
+		ErrorPrompt("Unable to auto-determine save method!");
 
 	if(GCSettings.SaveMethod == METHOD_AUTO)
 		GCSettings.SaveMethod = method; // save method found for later use
+
+	CancelAction();
 	return method;
 }
 
@@ -109,7 +112,9 @@ int autoSaveMethod(bool silent)
  ***************************************************************************/
 void ResetBrowser()
 {
-	browser.selIndex = browser.pageIndex = 0;
+	browser.numEntries = 0;
+	browser.selIndex = 0;
+	browser.pageIndex = 0;
 
 	// Clear any existing values
 	if(browserList != NULL)
@@ -118,7 +123,7 @@ void ResetBrowser()
 		browserList = NULL;
 	}
 	// set aside space for 1 entry
-	browserList = (BROWSERENTRY *)memalign(32, sizeof(BROWSERENTRY));
+	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY));
 	memset(browserList, 0, sizeof(BROWSERENTRY));
 }
 
@@ -171,16 +176,17 @@ int UpdateDirName(int method)
 		}
 		else
 		{
-			WaitPrompt("Directory name is too long!");
+			ErrorPrompt("Directory name is too long!");
 			return -1;
 		}
 	}
 }
 
-bool MakeFilePath(char filepath[], int type, int method)
+bool MakeFilePath(char filepath[], int type, int method, char * filename, int filenum)
 {
 	char file[512];
 	char folder[1024];
+	char ext[4];
 	char temppath[MAXPATHLEN];
 
 	if(type == FILE_ROM)
@@ -188,7 +194,7 @@ bool MakeFilePath(char filepath[], int type, int method)
 		// Check path length
 		if ((strlen(browser.dir)+1+strlen(browserList[browser.selIndex].filename)) >= MAXPATHLEN)
 		{
-			WaitPrompt("Maximum filepath length reached!");
+			ErrorPrompt("Maximum filepath length reached!");
 			filepath[0] = 0;
 			return false;
 		}
@@ -202,12 +208,31 @@ bool MakeFilePath(char filepath[], int type, int method)
 		switch(type)
 		{
 			case FILE_SRAM:
-				sprintf(folder, GCSettings.SaveFolder);
-				sprintf(file, "%s.sav", ROMFilename);
-				break;
 			case FILE_SNAPSHOT:
 				sprintf(folder, GCSettings.SaveFolder);
-				sprintf(file, "%s.sgm", ROMFilename);
+
+				if(type == FILE_SRAM) sprintf(ext, "sav");
+				else sprintf(ext, "sgm");
+
+				if(filenum >= 0)
+				{
+					if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
+					{
+						filename[26] = 0; // truncate filename
+						sprintf(file, "%s%i.%s", filename, filenum, ext);
+					}
+					else
+					{
+						if(filenum == 0)
+							sprintf(file, "%s Auto.%s", filename, ext);
+						else
+							sprintf(file, "%s %i.%s", filename, filenum, ext);
+					}
+				}
+				else
+				{
+					sprintf(file, "%s", filename);
+				}
 				break;
 			case FILE_CHEAT:
 				sprintf(folder, GCSettings.CheatFolder);
@@ -230,7 +255,7 @@ bool MakeFilePath(char filepath[], int type, int method)
 				break;
 		}
 	}
-	strcpy(filepath, temppath);
+	strncpy(filepath, temppath, MAXPATHLEN);
 	return true;
 }
 
@@ -266,7 +291,6 @@ int FileSortCallback(const void *f1, const void *f2)
  *
  * Checks if the specified file is a 7z
  ***************************************************************************/
-
 bool IsSz()
 {
 	if (strlen(browserList[browser.selIndex].filename) > 4)
@@ -285,298 +309,141 @@ bool IsSz()
  *
  * Strips an extension from a filename
  ***************************************************************************/
-
 void StripExt(char* returnstring, char * inputstring)
 {
 	char* loc_dot;
 
-	strcpy (returnstring, inputstring);
+	strncpy (returnstring, inputstring, 255);
+
+	if(inputstring == NULL || strlen(inputstring) < 4)
+		return;
+
 	loc_dot = strrchr(returnstring,'.');
 	if (loc_dot != NULL)
-		*loc_dot = 0;	// strip file extension
+		*loc_dot = 0; // strip file extension
 }
 
 /****************************************************************************
- * FileSelector
+ * BrowserLoadSz
  *
- * Let user select a file from the listing
+ * Opens the selected 7z file, and parses a listing of the files within
  ***************************************************************************/
-int FileSelector (int method)
+int BrowserLoadSz(int method)
 {
-    u32 p = 0;
-	u32 wp = 0;
-	u32 ph = 0;
-	u32 wh = 0;
-    signed char gc_ay = 0;
-	signed char gc_sx = 0;
-	signed char wm_ay = 0;
-	signed char wm_sx = 0;
+	char filepath[MAXPATHLEN];
+	memset(filepath, 0, MAXPATHLEN);
 
-    int haverom = 0;
-    int redraw = 1;
-    int selectit = 0;
+	// we'll store the 7z filepath for extraction later
+	if(!MakeFilePath(szpath, FILE_ROM, method))
+		return 0;
 
-	int scroll_delay = 0;
-	bool move_selection = 0;
-	#define SCROLL_INITIAL_DELAY	15
-	#define SCROLL_LOOP_DELAY		2
+	// add device to filepath
+	if(method != METHOD_DVD)
+	{
+		sprintf(filepath, "%s%s", rootdir, szpath);
+		memcpy(szpath, filepath, MAXPATHLEN);
+	}
 
-    while (haverom == 0)
-    {
-        if (redraw)
-            ShowFiles (browserList, browser.numEntries, browser.pageIndex, browser.selIndex);
-        redraw = 0;
+	int szfiles = SzParse(szpath, method);
+	if(szfiles)
+	{
+		browser.numEntries = szfiles;
+		inSz = true;
+	}
+	else
+		ErrorPrompt("Error opening archive!");
 
-		updateRumbleFrame();
-		VIDEO_WaitVSync();	// slow things down a bit so we don't overread the pads
+	return szfiles;
+}
 
-		gc_ay = PAD_StickY (0);
-		gc_sx = PAD_SubStickX (0);
+/****************************************************************************
+ * BrowserLoadFile
+ *
+ * Loads the selected ROM
+ ***************************************************************************/
+int BrowserLoadFile(int method)
+{
+	// store the filename (w/o ext) - used for sram/freeze naming
+	StripExt(ROMFilename, browserList[browser.selIndex].filename);
 
-        p = PAD_ButtonsDown (0);
-		ph = PAD_ButtonsHeld (0);
-#ifdef HW_RVL
-		wm_ay = WPAD_Stick (0, 0, 0);
-		wm_sx = WPAD_Stick (0, 1, 1);
+	ROMLoaded = LoadVBAROM(method);
+	inSz = false;
 
-		wp = WPAD_ButtonsDown (0);
-		wh = WPAD_ButtonsHeld (0);
-#endif
+	if (!ROMLoaded)
+	{
+		ErrorPrompt("Error loading ROM!");
+	}
+	else
+	{
+		ResetBrowser();
+	}
+	CancelAction();
+	return ROMLoaded;
+}
 
-		/*** Check for exit combo ***/
-		if ( (gc_sx < -70) || (wm_sx < -70) || (wp & WPAD_BUTTON_HOME) || (wp & WPAD_CLASSIC_BUTTON_HOME) || DownUsbKeys[KB_ESC])
-			return 0;
+/****************************************************************************
+ * BrowserChangeFolder
+ *
+ * Update current directory and set new entry list if directory has changed
+ ***************************************************************************/
+int BrowserChangeFolder(int method)
+{
+	if(inSz && browser.selIndex == 0) // inside a 7z, requesting to leave
+	{
+		if(method == METHOD_DVD)
+			SetDVDdirectory(browserList[0].offset, browserList[0].length);
 
-		/*** Check buttons, perform actions ***/
-		if ( (p & PAD_BUTTON_A) || selectit || (wp & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) || DownUsbKeys[KB_ENTER] )
-		{
-			if ( selectit )
-				selectit = 0;
-			if (browserList[browser.selIndex].isdir) // This is directory
-			{
-				/* update current directory and set new entry list if directory has changed */
-				int status;
+		inSz = false;
+		SzClose();
+	}
 
-				if(inSz && browser.selIndex == 0) // inside a 7z, requesting to leave
-				{
-					if(method == METHOD_DVD)
-						SetDVDdirectory(browserList[0].offset, browserList[0].length);
+	if(!UpdateDirName(method))
+		return -1;
 
-					inSz = false;
-					status = 1;
-					SzClose();
-				}
-				else
-				{
-					status = UpdateDirName(method);
-				}
+	switch (method)
+	{
+		case METHOD_DVD:
+			ParseDVDdirectory();
+			break;
 
-				if (status == 1) // ok, open directory
-				{
-					switch (method)
-					{
-						case METHOD_DVD:
-							browser.numEntries = ParseDVDdirectory();
-							break;
+		default:
+			ParseDirectory(method);
+			break;
+	}
 
-						default:
-							browser.numEntries = ParseDirectory();
-							break;
-					}
+	if (!browser.numEntries)
+	{
+		ErrorPrompt("Error reading directory!");
+	}
 
-					if (!browser.numEntries)
-					{
-						WaitPrompt ("Error reading directory!");
-						haverom = 1; // quit menu
-					}
-				}
-				else if (status == -1)	// directory name too long
-				{
-					haverom = 1; // quit menu
-				}
-			}
-			else	// this is a file
-			{
-				// 7z file - let's open it up to select a file inside
-				if(IsSz())
-				{
-					// we'll store the 7z filepath for extraction later
-					if(!MakeFilePath(szpath, FILE_ROM, method))
-						return 0;
-
-					// add device to filepath
-					char fullpath[1024];
-					sprintf(fullpath, "%s%s", rootdir, szpath);
-					strcpy(szpath, fullpath);
-
-					int szfiles = SzParse(szpath, method);
-					if(szfiles)
-					{
-						browser.numEntries = szfiles;
-						inSz = true;
-					}
-					else
-						WaitPrompt("Error opening archive!");
-				}
-				else
-				{
-					// store the filename (w/o ext) - used for sram/freeze naming
-					StripExt(ROMFilename, browserList[browser.selIndex].filename);
-
-					ShowAction ("Loading...");
-
-					ROMLoaded = LoadVBAROM(method);
-					inSz = false;
-
-					if (ROMLoaded)
-					{
-						return 1;
-					}
-				}
-			}
-			redraw = 1;
-		}	// End of A
-        if ( (p & PAD_BUTTON_B) || (wp & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B) || DownUsbKeys[KB_BKSP]))
-        {
-            while ( (PAD_ButtonsDown(0) & PAD_BUTTON_B)
-#ifdef HW_RVL
-					|| (WPAD_ButtonsDown(0) & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B))
-#endif
-					) {
-				updateRumbleFrame();
-                VIDEO_WaitVSync();
-			}
-			if ( strcmp(browserList[0].filename,"..") == 0 )
-			{
-				browser.selIndex = 0;
-				selectit = 1;
-			}
-			else if ( strcmp(browserList[1].filename,"..") == 0 )
-			{
-                browser.selIndex = selectit = 1;
-			} else {
-                return 0;
-			}
-        }	// End of B
-        if ( ((p | ph) & PAD_BUTTON_DOWN) || ((wp | wh) & (WPAD_BUTTON_DOWN | WPAD_CLASSIC_BUTTON_DOWN)) || (gc_ay < -PADCAL) || (wm_ay < -PADCAL) )
-        {
-			if ( (p & PAD_BUTTON_DOWN) || (wp & (WPAD_BUTTON_DOWN | WPAD_CLASSIC_BUTTON_DOWN)) ) { /*** Button just pressed ***/
-				scroll_delay = SCROLL_INITIAL_DELAY;	// reset scroll delay.
-				move_selection = 1;	//continue (move selection)
-			}
-			else if (scroll_delay == 0) { 		/*** Button is held ***/
-				scroll_delay = SCROLL_LOOP_DELAY;
-				move_selection = 1;	//continue (move selection)
-			} else {
-				scroll_delay--;	// wait
-			}
-
-			if (move_selection)
-			{
-	            browser.selIndex++;
-	            if (browser.selIndex == browser.numEntries)
-	                browser.selIndex = browser.pageIndex = 0;
-	            if ((browser.selIndex - browser.pageIndex) >= PAGESIZE)
-	                browser.pageIndex += PAGESIZE;
-	            redraw = 1;
-				move_selection = 0;
-			}
-        }	// End of down
-        if ( ((p | ph) & PAD_BUTTON_UP) || ((wp | wh) & (WPAD_BUTTON_UP | WPAD_CLASSIC_BUTTON_UP)) || (gc_ay > PADCAL) || (wm_ay > PADCAL) )
-        {
-			if ( (p & PAD_BUTTON_UP) || (wp & (WPAD_BUTTON_UP | WPAD_CLASSIC_BUTTON_UP)) ) { /*** Button just pressed***/
-				scroll_delay = SCROLL_INITIAL_DELAY;	// reset scroll delay.
-				move_selection = 1;	//continue (move selection)
-			}
-			else if (scroll_delay == 0) { 		/*** Button is held ***/
-				scroll_delay = SCROLL_LOOP_DELAY;
-				move_selection = 1;	//continue (move selection)
-			} else {
-				scroll_delay--;	// wait
-			}
-
-			if (move_selection)
-			{
-	            browser.selIndex--;
-	            if (browser.selIndex < 0) {
-	                browser.selIndex = browser.numEntries - 1;
-	                browser.pageIndex = browser.selIndex - PAGESIZE + 1;
-	            }
-	            if (browser.selIndex < browser.pageIndex)
-	                browser.pageIndex -= PAGESIZE;
-	            if (browser.pageIndex < 0)
-	                browser.pageIndex = 0;
-	            redraw = 1;
-				move_selection = 0;
-			}
-        }	// End of Up
-        if ( (p & PAD_BUTTON_LEFT) || (wp & (WPAD_BUTTON_LEFT | WPAD_CLASSIC_BUTTON_LEFT)) )
-        {
-            /*** Go back a page ***/
-            browser.selIndex -= PAGESIZE;
-            if (browser.selIndex < 0)
-            {
-                browser.selIndex = browser.numEntries - 1;
-                browser.pageIndex = browser.selIndex - PAGESIZE + 1;
-            }
-            if (browser.selIndex < browser.pageIndex)
-                browser.pageIndex -= PAGESIZE;
-            if (browser.pageIndex < 0)
-                browser.pageIndex = 0;
-            redraw = 1;
-        }
-        if ( (p & PAD_BUTTON_RIGHT) || (wp & (WPAD_BUTTON_RIGHT | WPAD_CLASSIC_BUTTON_RIGHT)) )
-        {
-            /*** Go forward a page ***/
-            browser.selIndex += PAGESIZE;
-            if (browser.selIndex > browser.numEntries - 1)
-                browser.selIndex = browser.pageIndex = 0;
-            if ((browser.selIndex - browser.pageIndex) >= PAGESIZE)
-                browser.pageIndex += PAGESIZE;
-            redraw = 1;
-        }
-    }
-    return 0;
+	return browser.numEntries;
 }
 
 /****************************************************************************
  * OpenROM
- * Opens device specified by method, displays a list of ROMS
+ * Displays a list of ROMS on load device
  ***************************************************************************/
-
 int
-OpenROM (int method)
+OpenGameList ()
 {
+	int method = GCSettings.LoadMethod;
+
 	if(method == METHOD_AUTO)
 		method = autoLoadMethod();
 
-	if(ChangeInterface(method, NOTSILENT))
+	// change current dir to roms directory
+	switch(method)
 	{
-		// change current dir to roms directory
-		switch(method)
-		{
-			case METHOD_DVD:
-				browser.dir[0] = 0;
-				browser.numEntries = ParseDVDdirectory(); // Parse root directory
-				SwitchDVDFolder(GCSettings.LoadFolder); // switch to ROM folder
-				break;
-			default:
-				sprintf(browser.dir, "/%s", GCSettings.LoadFolder);
-				browser.numEntries = ParseDirectory(); // Parse root directory
-				break;
-		}
-
-		if (browser.numEntries > 0)
-		{
-			// Select an entry
-			return FileSelector (method);
-		}
-		else
-		{
-			// no entries found
-			WaitPrompt ("No Files Found!");
-			return 0;
-		}
+		case METHOD_DVD:
+			browser.dir[0] = 0;
+			if(MountDVD(NOTSILENT))
+				if(ParseDVDdirectory()) // Parse root directory
+					SwitchDVDFolder(GCSettings.LoadFolder); // switch to ROM folder
+			break;
+		default:
+			sprintf(browser.dir, "/%s", GCSettings.LoadFolder);
+			ParseDirectory(method); // Parse root directory
+			break;
 	}
-	return 0;
+	return browser.numEntries;
 }
