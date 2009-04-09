@@ -30,9 +30,9 @@
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
 
-char DebugStr[50] = "";
+/*char DebugStr[50] = "";
 
-/*void DebugPrintf(const char *format, ...) {
+void DebugPrintf(const char *format, ...) {
 	va_list args;
     va_start( args, format );
     vsprintf( DebugStr, format, args );
