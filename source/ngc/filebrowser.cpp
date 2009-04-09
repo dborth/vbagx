@@ -36,8 +36,6 @@ extern "C" {
 #include "gcunzip.h"
 #include "wiiusbsupport.h"
 
-void AutoLoad(int method);
-
 BROWSERINFO browser;
 BROWSERENTRY * browserList = NULL; // list of files/folders in browser
 
@@ -450,8 +448,10 @@ int BrowserLoadFile(int method)
 	}
 	else
 	{
-		AutoLoad(method); // Load SRAM (battery backed RAM) or save state
-		
+		if (GCSettings.AutoLoad == 1)
+			LoadBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SRAM, SILENT);
+		else if (GCSettings.AutoLoad == 2)
+			LoadBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SNAPSHOT, SILENT);
 		ResetBrowser();
 	}
 	CancelAction();
