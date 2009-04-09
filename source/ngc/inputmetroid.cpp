@@ -31,7 +31,7 @@
 #include "gba/GBAinline.h"
 
 u32 MetroidZeroInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeClassic(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeClassic(pad) | DecodeKeyboard(pad);
 	u8 BallState = CPUReadByte(0x30015df); // 0 = stand, 1 = crouch, 2 = ball
 	u16 Health = CPUReadByte(0x3001536); // 0 = stand, 1 = crouch, 2 = ball
 	static u16 OldHealth = 0;
@@ -50,6 +50,7 @@ u32 MetroidZeroInput(unsigned short pad) {
 	if (BallState == 1) // Can't enter morph ball without pressing C!
 		J &= ~VBA_DOWN;
 
+	bool MorphBallButton = 0;
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 
@@ -109,13 +110,7 @@ u32 MetroidZeroInput(unsigned short pad) {
 
 	// Morph Ball
 	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_d & WPAD_NUNCHUK_BUTTON_C)) {
-		if (BallState == 2) { // ball
-			Morph = -1;
-		} else if (BallState == 1) {
-			Morph = 2;
-		} else {
-			Morph = 1;
-		}
+		MorphBallButton = true;
 	}
 	// Missile
 	if (wp->btns_h & WPAD_BUTTON_DOWN) {
@@ -163,6 +158,20 @@ u32 MetroidZeroInput(unsigned short pad) {
 			break;
 	}
 
+
+#endif
+	{
+		u32 gc = PAD_ButtonsHeld(pad);
+		u32 pressed = PAD_ButtonsDown(pad);
+		if (pressed & PAD_BUTTON_X) MorphBallButton = true;
+		if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_B; // shoot beam
+		if (gc & PAD_BUTTON_B) J |= VBA_BUTTON_A; // jump
+		if (gc & PAD_BUTTON_Y) MissileCount = 1; // missile
+		if (gc & PAD_TRIGGER_Z) J |= VBA_BUTTON_START; // map
+		if (gc & PAD_TRIGGER_L) J |= VBA_BUTTON_L; // aim up/down
+		if (gc & PAD_BUTTON_START) J |= VBA_BUTTON_SELECT; // toggle super missiles
+		if (gc & PAD_TRIGGER_R) J |= VBA_BUTTON_R; // ???
+	}
 	switch (MissileCount) {
 		case 1:
 		case 2:
@@ -178,7 +187,15 @@ u32 MetroidZeroInput(unsigned short pad) {
 			MissileCount = 0;
 			break;
 	}
-
+	if (MorphBallButton) {
+		if (BallState == 2) { // ball
+			Morph = -1;
+		} else if (BallState == 1) {
+			Morph = 2;
+		} else {
+			Morph = 1;
+		}
+	}
 	switch (Morph) {
 		case 1:
 			J &= ~(VBA_UP | VBA_DOWN | VBA_LEFT | VBA_RIGHT | VBA_BUTTON_L);
@@ -218,7 +235,6 @@ u32 MetroidZeroInput(unsigned short pad) {
 			Morph = 0;
 			break;
 	}
-#endif
 
 	return J;
 }
