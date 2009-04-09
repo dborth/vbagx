@@ -218,8 +218,20 @@ bool MakeFilePath(char filepath[], int type, int method, char * filename, int fi
 				{
 					if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
 					{
-						filename[26] = 0; // truncate filename
-						sprintf(file, "%s%i.%s", filename, filenum, ext);
+						if(filenum > 9)
+						{
+							return false;
+						}
+						else if(filenum == -1)
+						{
+							filename[27] = 0; // truncate filename
+							sprintf(file, "%s.%s", filename, ext);
+						}
+						else
+						{
+							filename[26] = 0; // truncate filename
+							sprintf(file, "%s%i.%s", filename, filenum, ext);
+						}
 					}
 					else
 					{
