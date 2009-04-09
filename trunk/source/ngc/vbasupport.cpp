@@ -315,18 +315,42 @@ bool LoadBatteryOrStateAuto(int method, int action, bool silent)
 	if(method == METHOD_AUTO)
 		return false;
 
-	char filepath[1024];
+	char filepath[MAXPATHLEN];
+	char fullpath[MAXPATHLEN];
+	char filepath2[MAXPATHLEN];
+	char fullpath2[MAXPATHLEN];
 
 	if(!MakeFilePath(filepath, action, method, ROMFilename, 0))
 		return false;
 
-	if (action==FILE_SRAM) {
-		if (!LoadBatteryOrState(filepath, method, action, SILENT)) {
-			if(!MakeFilePath(filepath, action, method, ROMFilename, -1))
+	if (action==FILE_SRAM)
+	{
+		if (!LoadBatteryOrState(filepath, method, action, SILENT))
+		{
+			if(!MakeFilePath(filepath2, action, method, ROMFilename, -1))
 				return false;
-			return LoadBatteryOrState(filepath, method, action, silent);
-		} else return true;		
-	} else return LoadBatteryOrState(filepath, method, action, silent);
+			if(LoadBatteryOrState(filepath2, method, action, silent))
+			{
+				// rename this file - append Auto
+				sprintf(fullpath, "%s%s", rootdir, filepath); // add device to path
+				sprintf(fullpath2, "%s%s", rootdir, filepath2); // add device to path
+				rename(fullpath2, fullpath); // rename file (to avoid duplicates)
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		else
+		{
+			return true;
+		}
+	}
+	else
+	{
+		return LoadBatteryOrState(filepath, method, action, silent);
+	}
 }
 
 /****************************************************************************

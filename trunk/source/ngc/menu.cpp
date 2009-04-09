@@ -509,58 +509,6 @@ void InfoPrompt(const char *msg)
 }
 
 /****************************************************************************
- * AutoSave
- *
- * Automatically saves SRAM/snapshot when returning from in-game to the menu
- ***************************************************************************/
-void AutoSave()
-{
-	if (GCSettings.AutoSave == 1)
-	{
-		SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SRAM, SILENT); // save battery
-	}
-	else if (GCSettings.AutoSave == 2)
-	{
-		if (WindowPrompt("Save", "Save Snapshot?", "Save", "Don't Save") )
-			SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SNAPSHOT, NOTSILENT); // save state
-	}
-	else if (GCSettings.AutoSave == 3)
-	{
-		if (WindowPrompt("Save", "Save SRAM and Snapshot?", "Save", "Don't Save") )
-		{
-			SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SRAM, NOTSILENT); // save battery
-			SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SNAPSHOT, NOTSILENT); // save state
-		}
-	}
-}
-
-/****************************************************************************
- * AutoLoad
- *
- * Automatically loads SRAM/snapshot when choosing a game from the menu
- ***************************************************************************/
-void AutoLoad(int method)
-{
-	if (GCSettings.AutoLoad == 1)
-	{
-		LoadBatteryOrStateAuto(method, FILE_SRAM, SILENT); // save battery
-	}
-	else if (GCSettings.AutoLoad == 2)
-	{
-		if (WindowPrompt("Load", "Load Snapshot?", "Load", "Don't Load") )
-			LoadBatteryOrStateAuto(method, FILE_SNAPSHOT, NOTSILENT); // save state
-	}
-	else if (GCSettings.AutoLoad == 3)
-	{
-		if (WindowPrompt("Load", "Load SRAM and Snapshot?", "Load", "Don't Load") )
-		{
-			LoadBatteryOrStateAuto(method, FILE_SRAM, NOTSILENT); // save battery
-			LoadBatteryOrStateAuto(method, FILE_SNAPSHOT, NOTSILENT); // save state
-		}
-	}
-}
-
-/****************************************************************************
  * OnScreenKeyboard
  *
  * Opens an on-screen keyboard window, with the data entered being stored
@@ -1256,7 +1204,23 @@ static int MenuGame()
 		resetBtn.SetEffect(EFFECT_FADE, 15);
 		//cheatsBtn.SetEffect(EFFECT_FADE, 15);
 
-		AutoSave();
+		if (GCSettings.AutoSave == 1)
+		{
+			SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SRAM, SILENT); // save battery
+		}
+		else if (GCSettings.AutoSave == 2)
+		{
+			if (WindowPrompt("Save", "Save Snapshot?", "Save", "Don't Save") )
+				SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SNAPSHOT, NOTSILENT); // save state
+		}
+		else if (GCSettings.AutoSave == 3)
+		{
+			if (WindowPrompt("Save", "Save SRAM and Snapshot?", "Save", "Don't Save") )
+			{
+				SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SRAM, NOTSILENT); // save battery
+				SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SNAPSHOT, NOTSILENT); // save state
+			}
+		}
 	}
 
 	ResumeGui();
@@ -2338,8 +2302,8 @@ ButtonMappingWindow()
 					case CTRLR_CLASSIC:
 						if(userInput[0].wpad.exp.type != WPAD_EXP_CLASSIC)
 							pressed = 0; // not a valid input
-						//else if(pressed <= 0x1000)
-						//	pressed = 0; // not a valid input (says Tantric, I disagree)
+						else if(pressed <= 0x1000)
+							pressed = 0;
 						break;
 
 					case CTRLR_NUNCHUK:

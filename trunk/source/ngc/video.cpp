@@ -392,7 +392,7 @@ InitializeVideo ()
 
 	VIDEO_Configure (vmode);
 
-	screenheight = 480; //vmode->xfbHeight;
+	screenheight = 480;
 	screenwidth = vmode->fbWidth;
 
 	// Allocate the video buffers
