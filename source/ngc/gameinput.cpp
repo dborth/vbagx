@@ -39,225 +39,8 @@ char DebugStr[50] = "";
     va_end( args );
 }*/
 
-
-u32 MK1Input(unsigned short pad) {
-	u32 J = StandardMovement(pad);
-	u8 Health = gbReadMemory(0xc695);
-	static u8 OldHealth = 0;
-
-	// Rumble when they lose health!
-	if (Health < OldHealth)
-		systemGameRumble(5);
-	OldHealth = Health;
-
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-
-	// Punch
-	if (wp->btns_h & WPAD_BUTTON_UP || wp->btns_h & WPAD_BUTTON_LEFT)
-		J |= VBA_BUTTON_B;
-	// Kick
-	if (wp->btns_h & WPAD_BUTTON_DOWN || wp->btns_h & WPAD_BUTTON_RIGHT)
-		J |= VBA_BUTTON_A;
-	// Block
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_BUTTON_A | VBA_BUTTON_B; // different from MK2
-	// Throw
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_BUTTON_B | VBA_RIGHT; // CAKTODO check which way we are facing
-	// Pause
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
-	// Start
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Special move
-	if (wp->btns_h & WPAD_BUTTON_B)
-	{
-		// CAKTODO
-	}
-
-#endif
-	return J;
-}
-
-u32 MK4Input(unsigned short pad)
-{
-	u32 J = StandardMovement(pad);
-	u8 Health = 0;
-	static u8 OldHealth = 0;
-
-	// Rumble when they lose health!
-	if (Health < OldHealth)
-		systemGameRumble(20);
-	OldHealth = Health;
-
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-
-	// Punch
-	if (wp->btns_h & WPAD_BUTTON_UP || wp->btns_h & WPAD_BUTTON_LEFT)
-		J |= VBA_BUTTON_B;
-	// Kick
-	if (wp->btns_h & WPAD_BUTTON_DOWN || wp->btns_h & WPAD_BUTTON_RIGHT)
-		J |= VBA_BUTTON_A;
-	// Block
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_BUTTON_START;
-	// Throw
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_BUTTON_B | VBA_RIGHT; // CAKTODO check which way we are facing
-	// Pause
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
-	// Start
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Special move
-	if (wp->btns_h & WPAD_BUTTON_B)
-	{
-		// CAKTODO
-	}
-#endif
-
-	return J;
-}
-
-u32 MKAInput(unsigned short pad)
-{
-	u32 J = StandardMovement(pad);
-	u8 Health = 0;
-	static u8 OldHealth = 0;
-
-	// Rumble when they lose health!
-	if (Health < OldHealth)
-		systemGameRumble(20);
-	OldHealth = Health;
-
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-
-	// Punch
-	if (wp->btns_h & WPAD_BUTTON_UP || wp->btns_h & WPAD_BUTTON_LEFT)
-		J |= VBA_BUTTON_B;
-	// Kick
-	if (wp->btns_h & WPAD_BUTTON_DOWN || wp->btns_h & WPAD_BUTTON_RIGHT)
-		J |= VBA_BUTTON_A;
-	// Block
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_BUTTON_R;
-	// Run (supposed to be change styles)
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_C))
-		J |= VBA_BUTTON_L;
-	// Throw
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_RIGHT; // CAKTODO check which way we are facing
-	// Pause
-	if (wp->btns_h & WPAD_BUTTON_PLUS || wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
-	// Special move
-	if (wp->btns_h & WPAD_BUTTON_B)
-	{
-		// CAKTODO
-	}
-#endif
-
-	return J;
-}
-
-u32 MKTEInput(unsigned short pad)
-{
-	static u32 prevJ = 0, prevPrevJ = 0;
-	u32 J = StandardMovement(pad);
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	u8 Health;
-	u8 Side;
-	if (RomIdCode & 0xFFFFFF == MKDA)
-	{
-		Health = CPUReadByte(0x3000760); // 731 or 760
-		Side = CPUReadByte(0x3000747);
-	}
-	else
-	{
-		Health = CPUReadByte(0x3000761); // or 790
-		Side = CPUReadByte(0x3000777);
-	}
-	static u8 OldHealth = 0;
-
-	// Rumble when they lose health!
-	if (Health < OldHealth)
-		systemGameRumble(20);
-	OldHealth = Health;
-
-	u32 Forwards, Back;
-	if (Side == 0)
-	{
-		Forwards = VBA_RIGHT;
-		Back = VBA_LEFT;
-	}
-	else
-	{
-		Forwards = VBA_LEFT;
-		Back = VBA_RIGHT;
-	}
-
-	// Punch
-	if (wp->btns_h & WPAD_BUTTON_UP || wp->btns_h & WPAD_BUTTON_LEFT)
-		J |= VBA_BUTTON_B;
-	// Kick
-	if (wp->btns_h & WPAD_BUTTON_DOWN || wp->btns_h & WPAD_BUTTON_RIGHT)
-		J |= VBA_BUTTON_A;
-	// Block
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_BUTTON_R;
-	// Change styles
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_C))
-		J |= VBA_BUTTON_L;
-	// Throw
-	if (wp->btns_h & WPAD_BUTTON_A)
-	{
-		if ((prevJ & Forwards && prevJ & VBA_BUTTON_A && prevJ & VBA_BUTTON_B) || ((prevPrevJ & Forwards) && !(prevJ & Forwards)))
-			J |= Forwards | VBA_BUTTON_A | VBA_BUTTON_B; // R, R+1+2 = throw
-
-		else if (prevJ & Forwards)
-		{
-			J &= ~Forwards;
-			J &= ~VBA_BUTTON_A;
-			J &= ~VBA_BUTTON_B;
-		}
-		else
-			J |= Forwards;
-
-	}
-	// Pause
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
-	// Start
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Special move
-	if (wp->btns_h & WPAD_BUTTON_B) {
-		// CAKTODO
-	}
-	// Speed
-	if (wp->btns_h & WPAD_BUTTON_1 || wp->btns_h & WPAD_BUTTON_2) {
-		J |= VBA_SPEED;
-	}
-#endif
-
-	if ((J & 48) == 48)
-		J &= ~16;
-	if ((J & 192) == 192)
-		J &= ~128;
-	prevPrevJ = prevJ;
-	prevJ = J;
-
-	return J;
-}
-
 u32 LegoStarWars1Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -266,6 +49,14 @@ u32 LegoStarWars1Input(unsigned short pad) {
 	OldHealth = Health;
 
 #ifdef HW_RVL
+	if (DownUsbKeys[KB_ENTER]) J |= VBA_BUTTON_START; // start
+	if (DownUsbKeys[KB_K] || DownUsbKeys[KB_LCTRL]) J |= VBA_BUTTON_SELECT; // change chars
+	if (DownUsbKeys[KB_U]) J |= VBA_BUTTON_A; // jump
+	if (DownUsbKeys[KB_H]) J |= VBA_BUTTON_B; // attack
+	if (DownUsbKeys[KB_J]) J |= VBA_BUTTON_R; // force power, special ability
+	if (DownUsbKeys[KB_I]) J |= VBA_BUTTON_L; // build, use force (supposed to be J too)
+	if (DownUsbKeys[KB_SPACE]) J |= VBA_SPEED; // fast forward
+
 	WPADData * wp = WPAD_Data(pad);
 
 	// Start/Select
@@ -304,7 +95,7 @@ u32 LegoStarWars1Input(unsigned short pad) {
 }
 
 u32 LegoStarWars2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -313,6 +104,14 @@ u32 LegoStarWars2Input(unsigned short pad) {
 	OldHealth = Health;
 
 #ifdef HW_RVL
+	if (DownUsbKeys[KB_ENTER]) J |= VBA_BUTTON_START; // start
+	if (DownUsbKeys[KB_K] || DownUsbKeys[KB_LCTRL]) J |= VBA_BUTTON_SELECT; // change chars
+	if (DownUsbKeys[KB_U]) J |= VBA_BUTTON_A; // jump
+	if (DownUsbKeys[KB_H]) J |= VBA_BUTTON_B; // attack
+	if (DownUsbKeys[KB_J]) J |= VBA_BUTTON_L; // force power, special ability
+	if (DownUsbKeys[KB_I]) J |= VBA_BUTTON_R; // build, use force (supposed to be J too)
+	if (DownUsbKeys[KB_SPACE]) J |= VBA_SPEED; // fast forward
+
 	WPADData * wp = WPAD_Data(pad);
 
 	// Start/Select
