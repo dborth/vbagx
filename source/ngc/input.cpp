@@ -25,29 +25,26 @@
 #include "gameinput.h"
 #include "vbasupport.h"
 #include "wiiusbsupport.h"
-#include "gui/gui.h"
 #include "gba/GBA.h"
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
 
+extern bool InMenu;
 int rumbleRequest[4] = {0,0,0,0};
-GuiTrigger userInput[4];
-
-#ifdef HW_RVL
 static int rumbleCount[4] = {0,0,0,0};
-#endif
-
 bool cartridgeRumble = false;
 int gameRumbleCount = 0, menuRumbleCount = 0, rumbleCountAlready = 0;
 
 unsigned int vbapadmap[10]; // VBA controller buttons
-u32 btnmap[5][10]; // button mapping
+unsigned int gcpadmap[10]; // Gamecube controller Padmap
+unsigned int wmpadmap[10]; // Wiimote Padmap
+unsigned int ccpadmap[10]; // Classic Controller Padmap
+unsigned int ncpadmap[10]; // Nunchuk + wiimote Padmap
+unsigned int kbpadmap[10]; // Keyboard Padmap
 
 void ResetControls()
 {
-	memset(btnmap, 0, sizeof(btnmap));
-
-	int i;
+	int i = 0;
 
 	// VBA controller buttons
 	// All other pads are mapped to this
@@ -65,71 +62,69 @@ void ResetControls()
 
 	/*** Gamecube controller Padmap ***/
 	i=0;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_B;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_A;
-	btnmap[CTRLR_GCPAD][i++] = PAD_TRIGGER_Z;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_START;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_UP;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_DOWN;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_LEFT;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_RIGHT;
-	btnmap[CTRLR_GCPAD][i++] = PAD_TRIGGER_L;
-	btnmap[CTRLR_GCPAD][i++] = PAD_TRIGGER_R;
+	gcpadmap[i++] = PAD_BUTTON_B;
+	gcpadmap[i++] = PAD_BUTTON_A;
+	gcpadmap[i++] = PAD_TRIGGER_Z;
+	gcpadmap[i++] = PAD_BUTTON_START;
+	gcpadmap[i++] = PAD_BUTTON_UP;
+	gcpadmap[i++] = PAD_BUTTON_DOWN;
+	gcpadmap[i++] = PAD_BUTTON_LEFT;
+	gcpadmap[i++] = PAD_BUTTON_RIGHT;
+	gcpadmap[i++] = PAD_TRIGGER_L;
+	gcpadmap[i++] = PAD_TRIGGER_R;
 
 	/*** Wiimote Padmap ***/
 	i=0;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_1;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_2;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_MINUS;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_PLUS;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_RIGHT;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_LEFT;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_UP;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_DOWN;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_B;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_A;
+	wmpadmap[i++] = WPAD_BUTTON_1;
+	wmpadmap[i++] = WPAD_BUTTON_2;
+	wmpadmap[i++] = WPAD_BUTTON_MINUS;
+	wmpadmap[i++] = WPAD_BUTTON_PLUS;
+	wmpadmap[i++] = WPAD_BUTTON_RIGHT;
+	wmpadmap[i++] = WPAD_BUTTON_LEFT;
+	wmpadmap[i++] = WPAD_BUTTON_UP;
+	wmpadmap[i++] = WPAD_BUTTON_DOWN;
+	wmpadmap[i++] = WPAD_BUTTON_B;
+	wmpadmap[i++] = WPAD_BUTTON_A;
 
 	/*** Classic Controller Padmap ***/
 	i=0;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_Y;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_B;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_MINUS;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_PLUS;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_UP;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_DOWN;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_LEFT;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_RIGHT;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_FULL_L;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_FULL_R;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_Y;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_B;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_MINUS;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_PLUS;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_UP;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_DOWN;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_LEFT;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_RIGHT;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_FULL_L;
+	ccpadmap[i++] = WPAD_CLASSIC_BUTTON_FULL_R;
 
 	/*** Nunchuk + wiimote Padmap ***/
 	i=0;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_NUNCHUK_BUTTON_C;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_NUNCHUK_BUTTON_Z;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_MINUS;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_PLUS;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_UP;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_DOWN;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_LEFT;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_RIGHT;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_2;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_1;
+	ncpadmap[i++] = WPAD_NUNCHUK_BUTTON_C;
+	ncpadmap[i++] = WPAD_NUNCHUK_BUTTON_Z;
+	ncpadmap[i++] = WPAD_BUTTON_MINUS;
+	ncpadmap[i++] = WPAD_BUTTON_PLUS;
+	ncpadmap[i++] = WPAD_BUTTON_UP;
+	ncpadmap[i++] = WPAD_BUTTON_DOWN;
+	ncpadmap[i++] = WPAD_BUTTON_LEFT;
+	ncpadmap[i++] = WPAD_BUTTON_RIGHT;
+	ncpadmap[i++] = WPAD_BUTTON_2;
+	ncpadmap[i++] = WPAD_BUTTON_1;
 
 	/*** Keyboard map ***/
 	i=0;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_X; // VBA stupidly has B on the right instead of left
-	btnmap[CTRLR_KEYBOARD][i++] = KB_Z;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_BKSP;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_ENTER;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_UP;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_DOWN;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_LEFT;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_RIGHT;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_A;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_S;
+	kbpadmap[i++] = KB_X; // VBA stupidly has B on the right instead of left
+	kbpadmap[i++] = KB_Z;
+	kbpadmap[i++] = KB_BKSP;
+	kbpadmap[i++] = KB_ENTER;
+	kbpadmap[i++] = KB_UP;
+	kbpadmap[i++] = KB_DOWN;
+	kbpadmap[i++] = KB_LEFT;
+	kbpadmap[i++] = KB_RIGHT;
+	kbpadmap[i++] = KB_A;
+	kbpadmap[i++] = KB_S;
 }
-
-#ifdef HW_RVL
 
 /****************************************************************************
  * ShutoffRumble
@@ -141,10 +136,8 @@ void ShutoffRumble()
 	for(int i=0;i<4;i++)
 	{
 		WPAD_Rumble(i, 0);
-		rumbleCount[i] = 0;
 	}
 #endif
-	PAD_ControlMotor(PAD_CHAN0, PAD_MOTOR_STOP);
 }
 
 /****************************************************************************
@@ -170,23 +163,21 @@ void DoRumble(int i)
 		WPAD_Rumble(i, 0); // rumble off
 	}
 }
-#endif
 
-static void updateRumble()
-{
+static void updateRumble() {
 	bool r = false;
-	if (ConfigRequested) r = (menuRumbleCount > 0);
+	if (InMenu) r = (menuRumbleCount > 0);
 	else r = cartridgeRumble || (gameRumbleCount > 0) || (menuRumbleCount > 0);
 
 #ifdef HW_RVL
 	// Rumble wii remote 0
 	WPAD_Rumble(0, r);
 #endif
-	PAD_ControlMotor(PAD_CHAN0, r?PAD_MOTOR_RUMBLE:PAD_MOTOR_STOP);
+	PAD_ControlMotor(PAD_CHAN0, PAD_MOTOR_RUMBLE);
 }
 
 void updateRumbleFrame() {
-	// If we already rumbled continuously for more than 50 frames,
+	// If we already rumbled continuously for more than 50 frames, 
 	// then disable rumbling for a while.
 	if (rumbleCountAlready > 50) {
 		gameRumbleCount = 0;
@@ -195,7 +186,7 @@ void updateRumbleFrame() {
 		if (rumbleCountAlready > 50+10)
 			rumbleCountAlready = 0;
 		else rumbleCountAlready++;
-	} else if (ConfigRequested) {
+	} else if (InMenu) {
 		if (menuRumbleCount>0)
 			rumbleCountAlready++;
 	} else {
@@ -203,7 +194,7 @@ void updateRumbleFrame() {
 			rumbleCountAlready++;
 	}
 	updateRumble();
-	if (gameRumbleCount>0 && !ConfigRequested) gameRumbleCount--;
+	if (gameRumbleCount>0 && !InMenu) gameRumbleCount--;
 	if (menuRumbleCount>0) menuRumbleCount--;
 }
 
@@ -584,7 +575,7 @@ u32 DecodeKeyboard(unsigned short pad)
 	#ifdef HW_RVL
 	for (int i = 0; i < MAXJP; i++)
 	{
-		if (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) // keyboard
+		if (DownUsbKeys[kbpadmap[i]]) // keyboard
 			J |= vbapadmap[i];
 	}
 	#endif
@@ -597,7 +588,7 @@ u32 DecodeGamecube(unsigned short pad)
 	u32 jp = PAD_ButtonsHeld(pad);
 	for (int i = 0; i < MAXJP; i++)
 	{
-		if (jp & btnmap[CTRLR_GCPAD][i])
+		if (jp & gcpadmap[i])
 			J |= vbapadmap[i];
 	}
 	return J;
@@ -610,7 +601,7 @@ u32 DecodeWiimote(unsigned short pad)
 	WPADData * wp = WPAD_Data(pad);
 	for (int i = 0; i < MAXJP; i++)
 	{
-		if ( (wp->exp.type == WPAD_EXP_NONE) && (wp->btns_h & btnmap[CTRLR_WIIMOTE][i]) )
+		if ( (wp->exp.type == WPAD_EXP_NONE) && (wp->btns_h & wmpadmap[i]) )
 			J |= vbapadmap[i];
 	}
 	#endif
@@ -624,7 +615,7 @@ u32 DecodeClassic(unsigned short pad)
 	WPADData * wp = WPAD_Data(pad);
 	for (int i = 0; i < MAXJP; i++)
 	{
-		if ( (wp->exp.type == WPAD_EXP_CLASSIC) && (wp->btns_h & btnmap[CTRLR_CLASSIC][i]) )
+		if ( (wp->exp.type == WPAD_EXP_CLASSIC) && (wp->btns_h & ccpadmap[i]) )
 			J |= vbapadmap[i];
 	}
 	#endif
@@ -638,7 +629,7 @@ u32 DecodeNunchuk(unsigned short pad)
 	WPADData * wp = WPAD_Data(pad);
 	for (int i = 0; i < MAXJP; i++)
 	{
-		if ( (wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & btnmap[CTRLR_NUNCHUK][i]) )
+		if ( (wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & ncpadmap[i]) )
 			J |= vbapadmap[i];
 	}
 	#endif
@@ -722,7 +713,7 @@ static u32 DecodeJoy(unsigned short pad)
 #endif
 
 	// check for games that should have special Wii controls
-	if (GCSettings.WiiControls)
+	if (GCSettings.WiiControls) 
 	switch (RomIdCode & 0xFFFFFF)
 	{
 		// Zelda
@@ -836,7 +827,7 @@ static u32 DecodeJoy(unsigned short pad)
 		case BOKTAI2:
 		case BOKTAI3:
 			return Boktai2Input(pad);
-
+		
 		// One Piece
 		case ONEPIECE:
 			return OnePieceInput(pad);
@@ -867,12 +858,12 @@ static u32 DecodeJoy(unsigned short pad)
 
 	for (i = 0; i < MAXJP; i++)
 	{
-		if ((jp & btnmap[CTRLR_GCPAD][i]) // gamecube controller
+		if ((jp & gcpadmap[i]) // gamecube controller
 		#ifdef HW_RVL
-		|| ( (wp->exp.type == WPAD_EXP_NONE) && (wp->btns_h & btnmap[CTRLR_WIIMOTE][i]) ) // wiimote
-		|| ( (wp->exp.type == WPAD_EXP_CLASSIC) && (wp->btns_h & btnmap[CTRLR_CLASSIC][i]) ) // classic controller
-		|| ( (wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & btnmap[CTRLR_NUNCHUK][i]) ) // nunchuk + wiimote
-		|| ( (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) ) // keyboard
+		|| ( (wp->exp.type == WPAD_EXP_NONE) && (wp->btns_h & wmpadmap[i]) ) // wiimote
+		|| ( (wp->exp.type == WPAD_EXP_CLASSIC) && (wp->btns_h & ccpadmap[i]) ) // classic controller
+		|| ( (wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & ncpadmap[i]) ) // nunchuk + wiimote
+		|| ( (DownUsbKeys[kbpadmap[i]]) ) // keyboard
 		#endif
 		)
 			J |= vbapadmap[i];
@@ -886,10 +877,23 @@ u32 GetJoy(int pad)
 	pad = 0;
 
 	s8 gc_px = PAD_SubStickX(0);
+	s8 gc_py = PAD_SubStickY(0);
 
 	#ifdef HW_RVL
-	u32 wm_pb = WPAD_ButtonsDown(0); // wiimote / expansion button info
+	s8 wm_sy = WPAD_Stick (0,1,1);
+	u32 wm_pb = WPAD_ButtonsHeld (0); // wiimote / expansion button info
 	#endif
+
+	// Check for video zoom
+	if (GCSettings.Zoom)
+	{
+		if (gc_py < -36 || gc_py > 36)
+			zoom((float) gc_py / -36);
+		#ifdef HW_RVL
+		if (wm_sy < -36 || wm_sy> 36)
+			zoom ((float) wm_sy / -36);
+		#endif
+	}
 
 	// request to go back to menu
 	if ((gc_px < -70)

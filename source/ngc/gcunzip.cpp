@@ -20,14 +20,13 @@ extern "C" {
 #include "../sz/7zExtract.h"
 }
 
-#include "vba.h"
 #include "dvd.h"
 #include "networkop.h"
 #include "fileop.h"
-#include "filebrowser.h"
 #include "video.h"
-#include "menu.h"
+#include "menudraw.h"
 #include "gcunzip.h"
+#include "vba.h"
 
 #define ZIPCHUNK 2048
 
@@ -147,7 +146,7 @@ UnZipBuffer (unsigned char *outbuffer, int method)
 	res = inflateInit2 (&zs, -MAX_WBITS);
 
 	if (res != Z_OK)
-		goto done;
+		return 0;
 
 	/*** Set ZipChunk for first pass ***/
 	zipoffset =
@@ -171,7 +170,8 @@ UnZipBuffer (unsigned char *outbuffer, int method)
 
 			if (res == Z_MEM_ERROR)
 			{
-				goto done;
+				inflateEnd (&zs);
+				return 0;
 			}
 
 			have = ZIPCHUNK - zs.avail_out;
@@ -199,20 +199,23 @@ UnZipBuffer (unsigned char *outbuffer, int method)
 				break;
 		}
 		if(sizeread <= 0)
-			goto done; // read failure
+			break; // read failure
 
 		ShowProgress ("Loading...", bufferoffset, pkzip.uncompressedSize);
 	}
 	while (res != Z_STREAM_END);
 
-done:
 	inflateEnd (&zs);
-	CancelAction();
 
 	if (res == Z_STREAM_END)
-		return pkzip.uncompressedSize;
-	else
-		return 0;
+	{
+		if (pkzip.uncompressedSize == (u32) bufferoffset)
+			return bufferoffset;
+		else
+			return pkzip.uncompressedSize;
+	}
+
+	return 0;
 }
 
 /****************************************************************************
@@ -245,7 +248,7 @@ GetFirstZipFilename (int method)
 		}
 		else
 		{
-			ErrorPrompt("Error - Invalid ZIP file!");
+			WaitPrompt("Error - Invalid ZIP file!");
 		}
 	}
 
@@ -315,7 +318,7 @@ Is7ZipFile (char *buffer)
 // display an error message
 static void SzDisplayError(SZ_RESULT res)
 {
-	ErrorPrompt(szerrormsg[(res - 1)]);
+	WaitPrompt(szerrormsg[(res - 1)]);
 }
 
 // function used by the 7zip SDK to read data from SD/USB/DVD/SMB
@@ -470,7 +473,7 @@ int SzParse(char * filepath, int method)
 				if(!newBrowserList) // failed to allocate required memory
 				{
 					ResetBrowser();
-					ErrorPrompt("Out of memory: too many files!");
+					WaitPrompt("Out of memory: too many files!");
 					nbfiles = 0;
 					break;
 				}
@@ -482,9 +485,7 @@ int SzParse(char * filepath, int method)
 
 				// parse information about this file to the dvd file list structure
 				strncpy(browserList[SzJ].filename, SzF->Name, MAXJOLIET); // copy joliet name (useless...)
-				char tmpname[MAXJOLIET+1] = "";
-				ShortenFilename(tmpname, browserList[SzJ].filename);
-				strncpy(browserList[SzJ].displayname, tmpname, MAXDISPLAY);	// crop name for display
+				strncpy(browserList[SzJ].displayname, SzF->Name, MAXDISPLAY);	// crop name for display
 				browserList[SzJ].length = SzF->Size; // filesize
 				browserList[SzJ].offset = SzI; // the extraction function identifies the file with this number
 				browserList[SzJ].isdir = 0; // only files will be displayed (-> no flags)
@@ -552,8 +553,6 @@ int SzExtractFile(int i, unsigned char *buffer)
 
 	// close 7Zip archive and free memory
 	SzClose();
-
-	CancelAction();
 
 	// check for errors
 	if(SzRes != SZ_OK)

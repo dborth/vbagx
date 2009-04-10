@@ -15,133 +15,104 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "system.h"
 #include "vba.h"
 #include "video.h"
+#include "menudraw.h"
 #include "menu.h"
 #include "preferences.h"
-#include "filebrowser.h"
 #include "fileop.h"
-#include "dvd.h"
-#include "images/saveicon.h"
-
-static u8 * SysArea = NULL;
-static char savecomments[2][32];
 
 /****************************************************************************
- * MountMC
+ * CardFileExists
+ *
+ * Wrapper to search through the files on the card.
+ * Returns TRUE if found.
+ ***************************************************************************/
+static int
+CardFileExists (char *filename, int slot)
+{
+	card_dir CardDir;
+	int CardError;
+
+	CardError = CARD_FindFirst (slot, &CardDir, TRUE);
+	while (CardError != CARD_ERROR_NOFILE)
+	{
+		CardError = CARD_FindNext (&CardDir);
+
+		if (strcmp ((char *) CardDir.filename, filename) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+/****************************************************************************
+ * MountCard
  *
  * Mounts the memory card in the given slot.
  * Returns the result of the last attempted CARD_Mount command.
  ***************************************************************************/
-static int MountMC(int slot, bool silent)
+static int MountCard(int cslot, bool silent, u8 * SysArea)
 {
 	int ret = -1;
 	int tries = 0;
 
-	// Initialize Card System
-	SysArea = (u8 *)memalign(32, CARD_WORKAREA);
-	memset (SysArea, 0, CARD_WORKAREA);
-	CARD_Init ("VBA0", "00");
-
 	// Mount the card
-	while(tries < 10 && ret != 0)
+	while ( tries < 10 && ret != 0)
 	{
-		EXI_ProbeReset();
-		ret = CARD_Mount (slot, SysArea, NULL);
-		VIDEO_WaitVSync();
+		EXI_ProbeReset ();
+		ret = CARD_Mount (cslot, &SysArea, NULL);
+		updateRumbleFrame ();
+		VIDEO_WaitVSync ();
 		tries++;
-	}
-
-	if(ret != 0 && !silent)
-	{
-		if (slot == CARD_SLOTA)
-			ErrorPrompt("Unable to mount Slot A Memory Card!");
-		else
-			ErrorPrompt("Unable to mount Slot B Memory Card!");
 	}
 	return ret;
 }
 
 /****************************************************************************
- * TestMC
+ * TestCard
  *
  * Checks to see if a card is in the card slot specified
  ***************************************************************************/
-bool TestMC(int slot, bool silent)
+bool TestCard(int slot, bool silent)
 {
 	// Memory Cards do not work in Wii mode - disable
 	#ifdef HW_RVL
 	return false;
 	#endif
 
-	bool ret = false;
+	/*** Initialize Card System ***/
+	u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
+	memset (SysArea, 0, CARD_WORKAREA);
+	CARD_Init ("VBA0", "00");
 
-	// Try to mount the card
-	if (MountMC(slot, silent) == 0)
+	/*** Try to mount the card ***/
+	if (MountCard(slot, silent, (u8 *)SysArea) == 0)
 	{
 		// Mount successful!
-		CARD_Unmount (slot);
-		ret = true;
-	}
-	free(SysArea);
-	return ret;
-}
-
-/****************************************************************************
- * ParseMCDirectory
- *
- * Parses a list of all files on the specified memory card
- ***************************************************************************/
-int
-ParseMCDirectory (int slot)
-{
-	card_dir CardDir;
-	int CardError;
-	int entryNum = 0;
-	char tmpname[MAXPATHLEN];
-
-	// Try to mount the card
-	CardError = MountMC(slot, NOTSILENT);
-
-	if (CardError == 0)
-	{
-		CardError = CARD_FindFirst (slot, &CardDir, TRUE);
-		while (CardError != CARD_ERROR_NOFILE)
+		if(!silent)
 		{
-			BROWSERENTRY * newBrowserList = (BROWSERENTRY *)realloc(browserList, (entryNum+1) * sizeof(BROWSERENTRY));
-
-			if(!newBrowserList) // failed to allocate required memory
-			{
-				ResetBrowser();
-				ErrorPrompt("Out of memory: too many files!");
-				entryNum = -1;
-				break;
-			}
+			if (slot == CARD_SLOTA)
+				WaitPrompt("Mounted Slot A Memory Card!");
 			else
-			{
-				browserList = newBrowserList;
-			}
-			memset(&(browserList[entryNum]), 0, sizeof(BROWSERENTRY)); // clear the new entry
-
-			strncpy(browserList[entryNum].filename, (char *)CardDir.filename, MAXJOLIET);
-			ShortenFilename(tmpname, (char *)CardDir.filename); // hide file extension
-			strncpy(browserList[entryNum].displayname, tmpname, MAXDISPLAY); // crop name for display
-			browserList[entryNum].length = CardDir.filelen;
-
-			entryNum++;
-
-			CardError = CARD_FindNext (&CardDir);
+				WaitPrompt("Mounted Slot B Memory Card!");
 		}
-		CARD_Unmount(slot);
+		CARD_Unmount (slot);
+		return true;
 	}
+	else
+	{
+		if(!silent)
+		{
+			if (slot == CARD_SLOTA)
+				WaitPrompt("Unable to Mount Slot A Memory Card!");
+			else
+				WaitPrompt("Unable to Mount Slot B Memory Card!");
+		}
 
-	// Sort the file list
-	qsort(browserList, entryNum, sizeof(BROWSERENTRY), FileSortCallback);
-
-	CancelAction();
-
-	browser.numEntries = entryNum;
-	return entryNum;
+		return false;
+	}
 }
 
 /****************************************************************************
@@ -151,27 +122,37 @@ static int
 VerifyMCFile (char *buf, int slot, char *filename, int datasize)
 {
 	card_file CardFile;
-	unsigned char verifybuffer[65536] ATTRIBUTE_ALIGN (32);
+	unsigned char verifbuffer[65536] ATTRIBUTE_ALIGN (32);
 	int CardError;
 	unsigned int blocks;
 	unsigned int SectorSize;
-	int bytesleft = 0;
-	int bytesread = 0;
+	char msg[80];
+    int bytesleft = 0;
+    int bytesread = 0;
 
-	memset (verifybuffer, 0, 65536);
+	/*** Initialize Card System ***/
+    u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
+	memset (SysArea, 0, CARD_WORKAREA);
+	CARD_Init ("VBA0", "00");
 
-	// Get Sector Size
-	CARD_GetSectorSize (slot, &SectorSize);
+	/*** Try to mount the card ***/
+	CardError = MountCard(slot, NOTSILENT, (u8 *)SysArea);
 
-	memset (&CardFile, 0, sizeof (CardFile));
-	CardError = CARD_Open (slot, filename, &CardFile);
-
-	if(CardError)
+	if (CardError == 0)
 	{
-		ErrorPrompt("Unable to open file!");
-	}
-	else
-	{
+		/*** Get Sector Size ***/
+		CARD_GetSectorSize (slot, &SectorSize);
+
+		if (!CardFileExists (filename, slot))
+		{
+            CARD_Unmount (slot);
+		    WaitPrompt("Unable to open file for verify!");
+			return 0;
+		}
+
+		memset (&CardFile, 0, sizeof (CardFile));
+		CardError = CARD_Open (slot, filename, &CardFile);
+
 		blocks = CardFile.len;
 
 		if (blocks < SectorSize)
@@ -180,29 +161,41 @@ VerifyMCFile (char *buf, int slot, char *filename, int datasize)
 		if (blocks % SectorSize)
 			blocks += SectorSize;
 
-		if (blocks > (unsigned int)datasize)
-			blocks = datasize;
+        if (blocks > (unsigned int)datasize)
+            blocks = datasize;
 
+        memset (verifbuffer, 0, 65536);
 		bytesleft = blocks;
 		bytesread = 0;
 		while (bytesleft > 0)
 		{
-			CardError = CARD_Read (&CardFile, verifybuffer, SectorSize, bytesread);
-			if (CardError || memcmp (buf + bytesread, verifybuffer, (unsigned int)bytesleft < SectorSize ? bytesleft : SectorSize) )
-			{
-				bytesread = 0;
-				ErrorPrompt("File integrity could not be verified!");
-				break;
-			}
+			CARD_Read (&CardFile, verifbuffer, SectorSize, bytesread);
+			if ( memcmp (buf + bytesread, verifbuffer, (unsigned int)bytesleft < SectorSize ? bytesleft : SectorSize) )
+            {
+                CARD_Close (&CardFile);
+                CARD_Unmount (slot);
+                WaitPrompt("File did not verify!");
+                return 0;
+            }
 
 			bytesleft -= SectorSize;
 			bytesread += SectorSize;
-			ShowProgress ("Verifying...", bytesread, blocks);
+
+            sprintf (msg, "Verified %d of %d bytes", bytesread, blocks);
+            ShowProgress (msg, bytesread, blocks);
 		}
 		CARD_Close (&CardFile);
-		CancelAction();
+		CARD_Unmount (slot);
+
+		return 1;
 	}
-	return bytesread;
+	else
+		if (slot == CARD_SLOTA)
+			WaitPrompt("Unable to Mount Slot A Memory Card!");
+		else
+			WaitPrompt("Unable to Mount Slot B Memory Card!");
+
+	return 0;
 }
 
 /****************************************************************************
@@ -216,63 +209,59 @@ LoadMCFile (char *buf, int slot, char *filename, bool silent)
 	int CardError;
 	unsigned int blocks;
 	unsigned int SectorSize;
-	int bytesleft = 0;
-	int bytesread = 0;
+    int bytesleft = 0;
+    int bytesread = 0;
 
-	// Try to mount the card
-	CardError = MountMC(slot, NOTSILENT);
+	/*** Initialize Card System ***/
+    u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
+	memset (SysArea, 0, CARD_WORKAREA);
+	CARD_Init ("VBA0", "00");
+
+	/*** Try to mount the card ***/
+	CardError = MountCard(slot, NOTSILENT, (u8 *)SysArea);
 
 	if (CardError == 0)
 	{
-		// Get Sector Size
+		/*** Get Sector Size ***/
 		CARD_GetSectorSize (slot, &SectorSize);
+
+		if (!CardFileExists (filename, slot))
+		{
+			if (!silent)
+				WaitPrompt("Unable to open file");
+			return 0;
+		}
 
 		memset (&CardFile, 0, sizeof (CardFile));
 		CardError = CARD_Open (slot, filename, &CardFile);
 
-		if(CardError)
+		blocks = CardFile.len;
+
+		if (blocks < SectorSize)
+			blocks = SectorSize;
+
+		if (blocks % SectorSize)
+			blocks += SectorSize;
+
+		memset (buf, 0, 0x22000);
+
+		bytesleft = blocks;
+		bytesread = 0;
+		while (bytesleft > 0)
 		{
-			if(!silent)
-				ErrorPrompt("Unable to open file!");
+			CARD_Read (&CardFile, buf + bytesread, SectorSize, bytesread);
+			bytesleft -= SectorSize;
+			bytesread += SectorSize;
 		}
-		else
-		{
-			blocks = CardFile.len;
-
-			if (blocks < SectorSize)
-				blocks = SectorSize;
-
-			if (blocks % SectorSize)
-				blocks += SectorSize;
-
-			bytesleft = blocks;
-			bytesread = 0;
-			while (bytesleft > 0)
-			{
-				CardError = CARD_Read (&CardFile, buf + bytesread, SectorSize, bytesread);
-
-				if(CardError)
-				{
-					ErrorPrompt("Error loading file!");
-					bytesread = 0;
-					break;
-				}
-
-				bytesleft -= SectorSize;
-				bytesread += SectorSize;
-				ShowProgress ("Loading...", bytesread, blocks);
-			}
-			CARD_Close (&CardFile);
-			CancelAction();
-		}
-		CARD_Unmount(slot);
+		CARD_Close (&CardFile);
+		CARD_Unmount (slot);
 	}
+	else
+		if (slot == CARD_SLOTA)
+			WaitPrompt("Unable to Mount Slot A Memory Card!");
+		else
+			WaitPrompt("Unable to Mount Slot B Memory Card!");
 
-	// discard save icon and comments
-	memmove(buf, buf+sizeof(saveicon)+64, bytesread);
-	bytesread -= (sizeof(saveicon)+64);
-
-	free(SysArea);
 	return bytesread;
 }
 
@@ -288,59 +277,99 @@ SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
 	int CardError;
 	unsigned int blocks;
 	unsigned int SectorSize;
-	int byteswritten = 0;
-	int bytesleft = 0;
+	char msg[80];
 
 	if(datasize <= 0)
 		return 0;
 
-	// add save icon and comments
-	memmove(buf+sizeof(saveicon)+64, buf, datasize);
-	memcpy(buf, saveicon, sizeof(saveicon));
-	memcpy(buf+sizeof(saveicon), savecomments, 64);
-	datasize += (sizeof(saveicon)+64);
+	/*** Initialize Card System ***/
+	u8 SysArea[CARD_WORKAREA] ATTRIBUTE_ALIGN (32);
+	memset (SysArea, 0, CARD_WORKAREA);
+	CARD_Init ("VBA0", "00");
 
-	// Try to mount the card
-	CardError = MountMC(slot, NOTSILENT);
+	/*** Try to mount the card ***/
+	CardError = MountCard(slot, NOTSILENT, (u8 *)SysArea);
 
 	if (CardError == 0)
 	{
-		// Get Sector Size
+		/*** Get Sector Size ***/
 		CARD_GetSectorSize (slot, &SectorSize);
 
-		// Calculate number of blocks required
+		/*** Calculate number of blocks required ***/
 		blocks = (datasize / SectorSize) * SectorSize;
 		if (datasize % SectorSize)
 			blocks += SectorSize;
 
-		// Delete existing file (if present)
-		memset(&CardStatus, 0, sizeof(card_stat));
-		CardError = CARD_Open (slot, filename, &CardFile);
-
-		if(CardError == 0)
+		/*** Does this file exist ? ***/
+		if (CardFileExists (filename, slot))
 		{
-			CARD_Close (&CardFile);
-			CardError = CARD_Delete(slot, filename);
+			/*** Try to open the file ***/
+			CardError = CARD_Open (slot, filename, &CardFile);
 			if (CardError)
 			{
-				ErrorPrompt("Unable to delete existing file!");
-				goto done;
+				CARD_Unmount (slot);
+				WaitPrompt("Unable to open card file!");
+				return 0;
+			}
+
+			if ( (s32)blocks > CardFile.len )  /*** new data is longer ***/
+			{
+				CARD_Close (&CardFile);
+
+				/*** Try to create temp file to check available space ***/
+				CardError = CARD_Create (slot, "TEMPFILESNES9XGX201", blocks, &CardFile);
+				if (CardError)
+				{
+					CARD_Unmount (slot);
+					WaitPrompt("Not enough space to update file!");
+					return 0;
+				}
+
+				/*** Delete the temporary file ***/
+				CARD_Close (&CardFile);
+				CardError = CARD_Delete(slot, "TEMPFILESNES9XGX201");
+				if (CardError)
+				{
+					CARD_Unmount (slot);
+					WaitPrompt("Unable to delete temporary file!");
+					return 0;
+				}
+
+				/*** Delete the existing shorter file ***/
+				CardError = CARD_Delete(slot, filename);
+				if (CardError)
+				{
+					CARD_Unmount (slot);
+					WaitPrompt("Unable to delete existing file!");
+					return 0;
+				}
+
+				/*** Create new, longer file ***/
+				CardError = CARD_Create (slot, filename, blocks, &CardFile);
+				if (CardError)
+				{
+					CARD_Unmount (slot);
+					WaitPrompt("Unable to create updated card file!");
+					return 0;
+				}
+			}
+		}
+		else  /*** no file existed, create new one ***/
+		{
+			/*** Create new file ***/
+			CardError = CARD_Create (slot, filename, blocks, &CardFile);
+			if (CardError)
+			{
+				CARD_Unmount (slot);
+				if ( CardError == CARD_ERROR_INSSPACE )
+					WaitPrompt("Not enough space to create file!");
+				else
+					WaitPrompt("Unable to create card file!");
+				return 0;
 			}
 		}
 
-		// Create new file
-		memset(&CardStatus, 0, sizeof(card_stat));
-		CardError = CARD_Create (slot, filename, blocks, &CardFile);
-		if (CardError)
-		{
-			if (CardError == CARD_ERROR_INSSPACE)
-				ErrorPrompt("Insufficient space to create file!");
-			else
-				ErrorPrompt("Unable to create card file!");
-			goto done;
-		}
-
-		// Now, have an open file handle, ready to send out the data
+		/*** Now, have an open file handle, ready to send out the data ***/
 		CARD_GetStatus (slot, CardFile.filenum, &CardStatus);
 		CardStatus.icon_addr = 0x0;
 		CardStatus.icon_fmt = 2;
@@ -348,43 +377,40 @@ SaveMCFile (char *buf, int slot, char *filename, int datasize, bool silent)
 		CardStatus.comment_addr = 2048;
 		CARD_SetStatus (slot, CardFile.filenum, &CardStatus);
 
-		bytesleft = blocks;
-
+		int byteswritten = 0;
+		int bytesleft = blocks;
 		while (bytesleft > 0)
 		{
 			CardError =
-				CARD_Write (&CardFile, buf + byteswritten, SectorSize, byteswritten);
-
-			if(CardError)
-			{
-				ErrorPrompt("Error writing file!");
-				byteswritten = 0;
-				break;
-			}
-
+				CARD_Write (&CardFile, buf + byteswritten,
+							SectorSize, byteswritten);
 			bytesleft -= SectorSize;
 			byteswritten += SectorSize;
 
-			ShowProgress ("Saving...", byteswritten, blocks);
+			sprintf (msg, "Wrote %d of %d bytes", byteswritten, blocks);
+			ShowProgress (msg, byteswritten, blocks);
 		}
+
 		CARD_Close (&CardFile);
-		CancelAction();
-
-		if (byteswritten > 0 && GCSettings.VerifySaves)
-		{
-			// Verify the written file
-			if (!VerifyMCFile (buf, slot, filename, byteswritten) )
-				byteswritten = 0;
-		}
-done:
 		CARD_Unmount (slot);
+
+		if ( GCSettings.VerifySaves )
+		{
+			/*** Verify the written file, but only up to the length we wrote
+				 because the file could be longer due to past writes    ***/
+			if ( VerifyMCFile (buf, slot, filename, byteswritten) )
+				return byteswritten;
+			else
+				return 0;
+		}
+		else
+			return byteswritten;
 	}
+	else
+		if (slot == CARD_SLOTA)
+			WaitPrompt("Unable to Mount Slot A Memory Card!");
+		else
+			WaitPrompt("Unable to Mount Slot B Memory Card!");
 
-	free(SysArea);
-	return byteswritten;
-}
-
-void SetMCSaveComments(char comments[2][32])
-{
-	memcpy(savecomments, comments, 64);
+	return 0;
 }

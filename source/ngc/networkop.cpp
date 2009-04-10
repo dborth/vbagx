@@ -8,20 +8,18 @@
  * Network and SMB support routines
  ****************************************************************************/
 
-#ifdef HW_RVL
-
 #include <network.h>
 #include <smb.h>
 #include <mxml.h>
 
 #include "unzip.h"
 #include "miniunz.h"
+
 #include "vba.h"
-#include "menu.h"
+#include "menudraw.h"
 #include "fileop.h"
 #include "http.h"
 
-static bool inNetworkInit = false;
 static bool networkInit = false;
 static bool autoNetworkInit = true;
 static bool networkShareInit = false;
@@ -46,7 +44,7 @@ void UpdateCheck()
 
 		snprintf(url, 128, "http://vba-wii.googlecode.com/svn/trunk/update.xml");
 
-		u8 * tmpbuffer = (u8 *)memalign(32,32768);
+		u8 * tmpbuffer = (u8 *)malloc(32768);
 		memset(tmpbuffer, 0, 32768);
 		retval = http_request(url, NULL, tmpbuffer, 32768);
 		memset(url, 0, 128);
@@ -66,7 +64,7 @@ void UpdateCheck()
 				{
 					const char * version = mxmlElementGetAttr(item, "version");
 
-					if(version && strlen(version) == 5)
+					if(version)
 					{
 						int verMajor = version[0] - '0';
 						int verMinor = version[2] - '0';
@@ -80,8 +78,8 @@ void UpdateCheck()
 							verMinor >= 0 && verMinor <= 9 &&
 							verPoint >= 0 && verPoint <= 9) &&
 							(verMajor > curMajor ||
-							(verMajor == curMajor && verMinor > curMinor) ||
-							(verMajor == curMajor && verMinor == curMinor && verPoint > curPoint)))
+							verMinor > curMinor ||
+							verPoint > curPoint))
 						{
 							item = mxmlFindElement(xml, xml, "file", NULL, NULL, MXML_DESCEND);
 							if(item)
@@ -149,12 +147,12 @@ bool DownloadUpdate()
 		if(unzipResult)
 		{
 			result = true;
-			InfoPrompt("Update successful!");
+			WaitPrompt("Update successful!");
 		}
 		else
 		{
 			result = false;
-			ErrorPrompt("Update failed!");
+			WaitPrompt("Update failed!");
 		}
 
 		updateFound = false; // updating is finished (successful or not!)
@@ -180,14 +178,6 @@ void InitializeNetwork(bool silent)
 	if(!silent)
 		ShowAction ("Initializing network...");
 
-	while(inNetworkInit) // a network init is already in progress!
-		usleep(50);
-
-	if(networkInit) // check again if the network was inited
-		return;
-
-	inNetworkInit = true;
-
 	char ip[16];
 	s32 initResult = if_config(ip, NULL, NULL, true);
 
@@ -204,18 +194,15 @@ void InitializeNetwork(bool silent)
 		{
 			char msg[150];
 			sprintf(msg, "Unable to initialize network (Error #: %i)", initResult);
-			ErrorPrompt(msg);
+			WaitPrompt(msg);
 		}
 	}
-	if(!silent)
-		CancelAction();
-	inNetworkInit = false;
 }
 
 void CloseShare()
 {
 	if(networkShareInit)
-		smbClose("smb");
+		smbClose("smb:");
 	networkShareInit = false;
 	networkInit = false; // trigger a network reinit
 }
@@ -256,7 +243,7 @@ ConnectShare (bool silent)
 				sprintf(msg, "Share IP is blank.");
 
 			sprintf(msg2, "Invalid network settings - %s", msg);
-			ErrorPrompt(msg2);
+			WaitPrompt(msg2);
 		}
 		return false;
 	}
@@ -279,15 +266,11 @@ ConnectShare (bool silent)
 			{
 				networkShareInit = true;
 			}
-			if(!silent)
-				CancelAction();
 		}
 
 		if(!networkShareInit && !silent)
-			ErrorPrompt("Failed to connect to network share.");
+			WaitPrompt ("Failed to connect to network share.");
 	}
 
 	return networkShareInit;
 }
-
-#endif

@@ -29,8 +29,8 @@
 #include "memcardop.h"
 #include "gcunzip.h"
 #include "video.h"
-#include "menu.h"
-#include "filebrowser.h"
+#include "menudraw.h"
+#include "filesel.h"
 #include "preferences.h"
 
 unsigned char * savebuffer = NULL;
@@ -49,7 +49,7 @@ bool isMounted[9] = { false, false, false, false, false, false, false, false, fa
 /****************************************************************************
  * deviceThreading
  ***************************************************************************/
-lwp_t devicethread = LWP_THREAD_NULL;
+lwp_t devicethread;
 
 /****************************************************************************
  * devicecallback
@@ -103,6 +103,7 @@ devicecallback (void *arg)
 #endif
 		usleep(500000); // suspend thread for 1/2 sec
 	}
+
 	return NULL;
 }
 
@@ -115,7 +116,7 @@ devicecallback (void *arg)
 void
 InitDeviceThread()
 {
-	LWP_CreateThread (&devicethread, devicecallback, NULL, NULL, 0, 40);
+	LWP_CreateThread (&devicethread, devicecallback, NULL, NULL, 0, 80);
 }
 
 /****************************************************************************
@@ -180,7 +181,6 @@ bool MountFAT(int method)
 		unmountRequired[method] = false;
 		fatUnmount(rootdir);
 		disc->shutdown();
-		isMounted[method] = false;
 	}
 	if(!isMounted[method])
 	{
@@ -227,7 +227,7 @@ bool ChangeInterface(int method, bool silent)
 			mounted = MountFAT(METHOD_SD_SLOTB); // try SD Gecko on slot B
 		#endif
 		if(!mounted && !silent) // no SD device found
-			ErrorPrompt("SD card not found!");
+			WaitPrompt ("SD card not found!");
 	}
 	else if(method == METHOD_USB)
 	{
@@ -235,30 +235,18 @@ bool ChangeInterface(int method, bool silent)
 		mounted = MountFAT(method);
 
 		if(!mounted && !silent)
-			ErrorPrompt("USB drive not found!");
+			WaitPrompt ("USB drive not found!");
 		#endif
 	}
 	else if(method == METHOD_DVD)
 	{
-		rootdir[0] = 0;
+		sprintf(rootdir, "/");
 		mounted = MountDVD(silent);
 	}
-#ifdef HW_RVL
 	else if(method == METHOD_SMB)
 	{
 		sprintf(rootdir, "smb:/");
 		mounted = ConnectShare(silent);
-	}
-#endif
-	else if(method == METHOD_MC_SLOTA)
-	{
-		rootdir[0] = 0;
-		mounted = TestMC(CARD_SLOTA, silent);
-	}
-	else if(method == METHOD_MC_SLOTB)
-	{
-		rootdir[0] = 0;
-		mounted = TestMC(CARD_SLOTB, silent);
 	}
 
 	return mounted;
@@ -268,49 +256,39 @@ bool ChangeInterface(int method, bool silent)
  * Browse subdirectories
  **************************************************************************/
 int
-ParseDirectory(int method)
+ParseDirectory()
 {
-	DIR_ITER *dir = NULL;
+	DIR_ITER *dir;
 	char fulldir[MAXPATHLEN];
 	char filename[MAXPATHLEN];
 	char tmpname[MAXPATHLEN];
 	struct stat filestat;
 	char msg[128];
-	int retry = 1;
-	bool mounted = false;
 
 	// reset browser
 	ResetBrowser();
 
-	ShowAction("Loading...");
+	// add device to path
+	sprintf(fulldir, "%s%s", rootdir, browser.dir);
 
 	// open the directory
-	while(dir == NULL && retry == 1)
-	{
-		mounted = ChangeInterface(method, NOTSILENT);
-		sprintf(fulldir, "%s%s", rootdir, browser.dir); // add device to path
-		if(mounted) dir = diropen(fulldir);
-		if(dir == NULL)
-		{
-			unmountRequired[method] = true;
-			sprintf(msg, "Error opening %s", fulldir);
-			retry = ErrorPromptRetry(msg);
-		}
-	}
+	dir = diropen(fulldir);
 
-	// if we can't open the dir, try opening the root dir
 	if (dir == NULL)
 	{
-		if(ChangeInterface(method, SILENT))
+		sprintf(msg, "Error opening %s", fulldir);
+		WaitPrompt(msg);
+
+		// if we can't open the dir, open root dir
+		sprintf(browser.dir,"/");
+
+		dir = diropen(rootdir);
+
+		if (dir == NULL)
 		{
-			sprintf(browser.dir,"/");
-			dir = diropen(rootdir);
-			if (dir == NULL)
-			{
-				sprintf(msg, "Error opening %s", rootdir);
-				ErrorPrompt(msg);
-				return -1;
-			}
+			sprintf(msg, "Error opening %s", rootdir);
+			WaitPrompt(msg);
+			return 0;
 		}
 	}
 
@@ -326,8 +304,8 @@ ParseDirectory(int method)
 			if(!newBrowserList) // failed to allocate required memory
 			{
 				ResetBrowser();
-				ErrorPrompt("Out of memory: too many files!");
-				entryNum = -1;
+				WaitPrompt("Out of memory: too many files!");
+				entryNum = 0;
 				break;
 			}
 			else
@@ -337,19 +315,9 @@ ParseDirectory(int method)
 			memset(&(browserList[entryNum]), 0, sizeof(BROWSERENTRY)); // clear the new entry
 
 			strncpy(browserList[entryNum].filename, filename, MAXJOLIET);
-
-			if(strcmp(filename,"..") == 0)
-			{
-				sprintf(browserList[entryNum].displayname, "Up One Level");
-			}
-			else
-			{
-				ShortenFilename(tmpname, filename); // hide file extension
-				strncpy(browserList[entryNum].displayname, tmpname, MAXDISPLAY);	// crop name for display
-			}
-
+			StripExt(tmpname, filename); // hide file extension
+			strncpy(browserList[entryNum].displayname, tmpname, MAXDISPLAY);	// crop name for display
 			browserList[entryNum].length = filestat.st_size;
-			browserList[entryNum].mtime = filestat.st_mtime;
 			browserList[entryNum].isdir = (filestat.st_mode & _IFDIR) == 0 ? 0 : 1; // flag this as a dir
 
 			entryNum++;
@@ -362,9 +330,6 @@ ParseDirectory(int method)
 	// Sort the file list
 	qsort(browserList, entryNum, sizeof(BROWSERENTRY), FileSortCallback);
 
-	CancelAction();
-
-	browser.numEntries = entryNum;
 	return entryNum;
 }
 
@@ -375,8 +340,8 @@ ParseDirectory(int method)
 void
 AllocSaveBuffer ()
 {
-	while(savebuffer != NULL) // save buffer is in use
-		usleep(50); // wait for it to be free
+	if (savebuffer != NULL)
+		free(savebuffer);
 
 	savebuffer = (unsigned char *) memalign(32, SAVEBUFFERSIZE);
 	memset (savebuffer, 0, SAVEBUFFERSIZE);
@@ -417,7 +382,7 @@ LoadSzFile(char * filepath, unsigned char * rbuffer)
 	}
 	else
 	{
-		ErrorPrompt("Error opening file");
+		WaitPrompt("Error opening file");
 	}
 
 	// go back to checking if devices were inserted/removed
@@ -435,8 +400,9 @@ LoadFile (char * rbuffer, char *filepath, u32 length, int method, bool silent)
 	char zipbuffer[2048];
 	u32 size = 0;
 	u32 readsize = 0;
-	char fullpath[MAXPATHLEN];
-	int retry = 1;
+
+	if(!ChangeInterface(method, NOTSILENT))
+		return 0;
 
 	switch(method)
 	{
@@ -455,84 +421,69 @@ LoadFile (char * rbuffer, char *filepath, u32 length, int method, bool silent)
 	// since we're loading a file
 	LWP_SuspendThread (devicethread);
 
-	// open the file
-	while(!size && retry == 1)
+	// add device to filepath
+	char fullpath[1024];
+	sprintf(fullpath, "%s%s", rootdir, filepath);
+
+	file = fopen (fullpath, "rb");
+
+	if (file > 0)
 	{
-		if(ChangeInterface(method, silent))
+		if(length > 0 && length <= 2048) // do a partial read (eg: to check file header)
 		{
-			sprintf(fullpath, "%s%s", rootdir, filepath); // add device to filepath
-			file = fopen (fullpath, "rb");
+			size = fread (rbuffer, 1, length, file);
+		}
+		else // load whole file
+		{
+			readsize = fread (zipbuffer, 1, 2048, file);
 
-			if(file > 0)
+			if(readsize > 0)
 			{
-				if(length > 0 && length <= 2048) // do a partial read (eg: to check file header)
+				if (IsZipFile (zipbuffer))
 				{
-					size = fread (rbuffer, 1, length, file);
+					size = UnZipBuffer ((unsigned char *)rbuffer, method); // unzip
 				}
-				else // load whole file
+				else
 				{
-					readsize = fread (zipbuffer, 1, 2048, file);
+					struct stat fileinfo;
+					fstat(file->_file, &fileinfo);
+					size = fileinfo.st_size;
 
-					if(readsize > 0)
+					memcpy (rbuffer, zipbuffer, readsize); // copy what we already read
+
+					u32 offset = readsize;
+					while(offset < size)
 					{
-						if (IsZipFile (zipbuffer))
-						{
-							size = UnZipBuffer ((unsigned char *)rbuffer, method); // unzip
-						}
-						else
-						{
-							struct stat fileinfo;
-							fstat(file->_file, &fileinfo);
-							size = fileinfo.st_size;
+						ShowProgress ("Loading...", offset, size);
+						readsize = fread (rbuffer + offset, 1, (1024*512), file); // read in 512K chunks
 
-							memcpy (rbuffer, zipbuffer, readsize); // copy what we already read
+						if(readsize <= 0 || readsize > (1024*512))
+							break; // read failure
 
-							u32 offset = readsize;
-							u32 nextread = 0;
-							while(offset < size)
-							{
-								if(size - offset > 1024*512) nextread = 1024*512;
-								else nextread = size-offset;
-								ShowProgress ("Loading...", offset, size);
-								readsize = fread (rbuffer + offset, 1, nextread, file); // read in next chunk
-
-								if(readsize <= 0 || readsize > nextread)
-									break; // read failure
-
-								if(readsize > 0)
-									offset += readsize;
-							}
-							CancelAction();
-
-							if(offset != size) // # bytes read doesn't match # expected
-								size = 0;
-						}
+						if(readsize > 0)
+							offset += readsize;
 					}
+
+					if(offset != size) // # bytes read doesn't match # expected
+						size = 0;
 				}
-				fclose (file);
 			}
 		}
-		if(!size)
-		{
-			if(!silent)
-			{
-				unmountRequired[method] = true;
-				retry = ErrorPromptRetry("Error loading file!");
-			}
-			else
-			{
-				retry = 0;
-			}
-		}
+		fclose (file);
+	}
+	if(!size && !silent)
+	{
+		unmountRequired[method] = true;
+		WaitPrompt("Error loading file!");
 	}
 
 	// go back to checking if devices were inserted/removed
 	LWP_ResumeThread (devicethread);
-	CancelAction();
+
 	return size;
 }
 
-u32 LoadFile(char * filepath, int method, bool silent)
+u32 LoadFile(char filepath[], int method, bool silent)
 {
 	return LoadFile((char *)savebuffer, filepath, 0, method, silent);
 }
@@ -544,59 +495,53 @@ u32 LoadFile(char * filepath, int method, bool silent)
 u32
 SaveFile (char * buffer, char *filepath, u32 datasize, int method, bool silent)
 {
-	char fullpath[MAXPATHLEN];
 	u32 written = 0;
-	int retry = 1;
 
-	if(datasize == 0)
+	if(!ChangeInterface(method, NOTSILENT))
 		return 0;
 
-	ShowAction("Saving...");
-
-	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
+	switch(method)
 	{
-		if(method == METHOD_MC_SLOTA)
+		case METHOD_MC_SLOTA:
 			return SaveMCFile (buffer, CARD_SLOTA, filepath, datasize, silent);
-		else
+			break;
+		case METHOD_MC_SLOTB:
 			return SaveMCFile (buffer, CARD_SLOTB, filepath, datasize, silent);
+			break;
 	}
 
-	// stop checking if devices were removed/inserted
-	// since we're saving a file
-	LWP_SuspendThread (devicethread);
+	if (datasize)
+    {
+		// stop checking if devices were removed/inserted
+		// since we're saving a file
+		LWP_SuspendThread (devicethread);
 
-	while(!written && retry == 1)
-	{
-		if(ChangeInterface(method, silent))
+		// add device to filepath
+		char fullpath[1024];
+		sprintf(fullpath, "%s%s", rootdir, filepath);
+
+		// open file for writing
+		file = fopen (fullpath, "wb");
+
+		if (file > 0)
 		{
-			sprintf(fullpath, "%s%s", rootdir, filepath); // add device to filepath
-			file = fopen (fullpath, "wb");
-
-			if (file > 0)
-			{
-				written = fwrite (savebuffer, 1, datasize, file);
-				if(written < datasize) written = 0;
-				fclose (file);
-			}
+			written = fwrite (savebuffer, 1, datasize, file);
+			fclose (file);
 		}
-		if(!written)
+
+		if(!written && !silent)
 		{
 			unmountRequired[method] = true;
-			if(!silent)
-				retry = ErrorPromptRetry("Error saving file!");
-			else
-				retry = 0;
+			WaitPrompt ("Error saving file!");
 		}
-	}
 
-	// go back to checking if devices were inserted/removed
-	LWP_ResumeThread (devicethread);
-
-	CancelAction();
+		// go back to checking if devices were inserted/removed
+		LWP_ResumeThread (devicethread);
+    }
     return written;
 }
 
-u32 SaveFile(char * filepath, u32 datasize, int method, bool silent)
+u32 SaveFile(char filepath[], u32 datasize, int method, bool silent)
 {
 	return SaveFile((char *)savebuffer, filepath, datasize, method, silent);
 }
