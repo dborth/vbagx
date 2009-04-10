@@ -167,7 +167,6 @@ s32 KeyboardCallback(int ret,void * none)
 		// Update old keys, unless too many keys were held down
 		if (KeyData.keys[0]!=1)
 		memcpy(OldKeys, KeyData.keys, 6);
-		OldShiftKeys = DownUsbShiftKeys;
 	}
 
 	// no keyboard message

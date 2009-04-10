@@ -13,14 +13,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+
 #include <ogcsys.h>
 #include <network.h>
 #include <ogc/lwp_watchdog.h>
+
 #include <sys/types.h>
 #include <sys/errno.h>
 #include <fcntl.h>
 
-#include "menu.h"
+#include "menudraw.h"
 #include "http.h"
 
 static s32 tcp_socket(void)
@@ -414,7 +416,6 @@ bool http_request(const char *url, FILE * hfile, u8 * buffer,
 			ShowProgress("Downloading...", (content_length - bytesLeft),
 					content_length);
 		}
-		CancelAction();
 	}
 
 	if (!b || !res)

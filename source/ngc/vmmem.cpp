@@ -23,8 +23,8 @@
 #include "vba.h"
 #include "fileop.h"
 #include "dvd.h"
-#include "menu.h"
-#include "filebrowser.h"
+#include "menudraw.h"
+#include "filesel.h"
 #include "gcunzip.h"
 
 extern "C" {
@@ -148,7 +148,7 @@ static void VMAllocGBA( void )
 		paletteRAM == NULL || vram == NULL || oam == NULL ||
 		pix == NULL || ioMem == NULL)
 	{
-		ErrorPrompt("Out of memory!");
+		WaitPrompt("Out of memory!");
 		VMClose();
 	}
 }
@@ -302,7 +302,7 @@ int VMCPULoadROM(int method)
 	// loading compressed files via VM is not supported
 	if(!utilIsGBAImage(filepath))
 	{
-		InfoPrompt("Compressed GBA files are not supported!");
+		WaitPrompt("Compressed GBA files are not supported!");
 		return 0;
 	}
 
@@ -317,7 +317,7 @@ int VMCPULoadROM(int method)
 
 	if (romfile == NULL)
 	{
-		InfoPrompt("Error opening file!");
+		WaitPrompt("Error opening file!");
 		return 0;
 	}
 
@@ -332,7 +332,7 @@ int VMCPULoadROM(int method)
 	if ( res != (1 << VMSHIFTBITS ) )
 	{
 		sprintf(msg, "Error reading file! %i \n",res);
-		InfoPrompt(msg);
+		WaitPrompt(msg);
 		VMClose();
 		return 0;
 	}
@@ -371,9 +371,9 @@ static void VMNewPage( int pageid )
 	if (res) // fseek returns non-zero on a failure
 	{
 		sprintf(msg, "Seek error! - Offset %d / %08x %d\n", pageid, pageid << VMSHIFTBITS, res);
-		InfoPrompt(msg);
+		WaitPrompt(msg);
 		VMClose();
-		ExitApp();
+		ExitToLoader();
 	}
 
 	VMAllocate( pageid );
@@ -385,9 +385,9 @@ static void VMNewPage( int pageid )
 		// and then end up here - but they still work - so we won't throw an error
 
 		/*sprintf(msg, "Error reading! %d bytes only\n", res);
-		InfoPrompt(msg);
+		WaitPrompt(msg);
 		VMClose();
-		ExitApp();*/
+		ExitToLoader();*/
 	}
 
 	//mftb(&end);
@@ -424,9 +424,9 @@ u32 VMRead32( u32 address )
 
 		default:
 		sprintf(msg, "VM32 : Unknown page type! (%d) [%d]", vmpage[pageid].pagetype, pageid);
-		InfoPrompt(msg);
+		WaitPrompt(msg);
 		VMClose();
-		ExitApp();
+		ExitToLoader();
 		return 0;
 	}
 }
@@ -456,9 +456,9 @@ u16 VMRead16( u32 address )
 		return READ16LE( vmpage[pageid].pageptr + ( address & VMSHIFTMASK ) );
 
 		default:
-		InfoPrompt("VM16 : Unknown page type!");
+		WaitPrompt("VM16 : Unknown page type!");
 		VMClose();
-		ExitApp();
+		ExitToLoader();
 		return 0;
 	}
 }
@@ -488,9 +488,9 @@ u8 VMRead8( u32 address )
 		return (u8)vmpage[pageid].pageptr[ (address & VMSHIFTMASK) ];
 
 		default:
-		InfoPrompt("VM8 : Unknown page type!");
+		WaitPrompt("VM8 : Unknown page type!");
 		VMClose();
-		ExitApp();
+		ExitToLoader();
 		return 0;
 	}
 }

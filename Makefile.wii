@@ -41,8 +41,7 @@ LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with
 #---------------------------------------------------------------------------------
-LIBS	:=	-ldb -ldi -lpngu -lpng -lmxml -lmetaphrasis \
-			-lfat -lwiiuse -lz -lbte -logc -lasnd -ltremor -lfreetype -ltinysmb
+LIBS	:=	-ldi -lpngu -lpng -lmxml -lfat -lwiiuse -lz -lbte -logc -lm -lfreetype -ltinysmb
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -73,8 +72,6 @@ sFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S)))
 TTFFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.ttf)))
 PNGFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.png)))
-OGGFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.ogg)))
-PCMFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.pcm)))
 
 #---------------------------------------------------------------------------------
 # use CXX for linking C++ projects, CC for standard C
@@ -87,8 +84,8 @@ endif
 
 export OFILES	:=	$(addsuffix .o,$(BINFILES)) \
 					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) \
-					$(TTFFILES:.ttf=.ttf.o) $(PNGFILES:.png=.png.o) \
-					$(OGGFILES:.ogg=.ogg.o) $(PCMFILES:.pcm=.pcm.o)
+					$(TTFFILES:.ttf=.ttf.o) \
+					$(PNGFILES:.png=.png.o)
 
 #---------------------------------------------------------------------------------
 # build a list of include paths
@@ -146,14 +143,6 @@ $(OUTPUT).elf: $(OFILES)
 	$(bin2o)
 
 %.png.o : %.png
-	@echo $(notdir $<)
-	$(bin2o)
-	
-%.ogg.o : %.ogg
-	@echo $(notdir $<)
-	$(bin2o)
-	
-%.pcm.o : %.pcm
 	@echo $(notdir $<)
 	$(bin2o)
 

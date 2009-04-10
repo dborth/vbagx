@@ -25,7 +25,6 @@ GuiElement::GuiElement()
 	trigger[0] = NULL;
 	trigger[1] = NULL;
 	parentElement = NULL;
-	rumble = true;
 	selectable = false;
 	clickable = false;
 	visible = true;
@@ -282,16 +281,6 @@ void GuiElement::SetTrigger(GuiTrigger * t)
 void GuiElement::SetTrigger(u8 i, GuiTrigger * t)
 {
 	trigger[i] = t;
-}
-
-bool GuiElement::Rumble()
-{
-	return rumble;
-}
-
-void GuiElement::SetRumble(bool r)
-{
-	rumble = r;
 }
 
 int GuiElement::GetEffect()
