@@ -1,7 +1,7 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric September 2008
+ * Tantric 2008-2009
  *
  * input.cpp
  *
