@@ -531,6 +531,7 @@ bool systemReadJoypads()
 
 u32 systemReadJoypad(int which)
 {
+	if(which == -1) which = 0; // default joypad
 	return GetJoy(which);
 }
 

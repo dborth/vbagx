@@ -713,10 +713,9 @@ static u32 DecodeJoy(unsigned short pad)
 	CursorVisible = false;
 
 #ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	CursorX = wp->ir.x;
-	CursorY = wp->ir.y;
-	CursorValid = wp->ir.valid;
+	CursorX = userInput[pad].wpad.ir.x;
+	CursorY = userInput[pad].wpad.ir.y;
+	CursorValid = userInput[pad].wpad.ir.valid;
 #else
 	CursorX = CursorY = CursorValid = 0;
 #endif
@@ -845,33 +844,23 @@ static u32 DecodeJoy(unsigned short pad)
 	// the function result, J, is a combination of flags for all the VBA buttons that are down
 	u32 J = StandardMovement(pad);
 
-	signed char gc_px = PAD_SubStickX(0);
-	u32 jp = PAD_ButtonsHeld(pad);
-
-#ifdef HW_RVL
-	signed char wm_sx = WPAD_Stick (0,1,0); // CC right joystick
-#endif
-
 	// Turbo feature
 	if(
-	(gc_px > 70)
-	#ifdef HW_RVL
-	|| (wm_sx > 70)
-	|| ((wp->btns_h & WPAD_BUTTON_A) && (wp->btns_h & WPAD_BUTTON_B))
-	#endif
+		userInput[0].pad.substickX > 70 ||
+		userInput[0].WPAD_Stick(1,0) > 70
 	)
 		J |= VBA_SPEED;
 
-	/*** Report pressed buttons (gamepads) ***/
+	// Report pressed buttons (gamepads)
 	int i;
 
 	for (i = 0; i < MAXJP; i++)
 	{
-		if ((jp & btnmap[CTRLR_GCPAD][i]) // gamecube controller
+		if ((userInput[pad].pad.btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
 		#ifdef HW_RVL
-		|| ( (wp->exp.type == WPAD_EXP_NONE) && (wp->btns_h & btnmap[CTRLR_WIIMOTE][i]) ) // wiimote
-		|| ( (wp->exp.type == WPAD_EXP_CLASSIC) && (wp->btns_h & btnmap[CTRLR_CLASSIC][i]) ) // classic controller
-		|| ( (wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & btnmap[CTRLR_NUNCHUK][i]) ) // nunchuk + wiimote
+		|| ( (userInput[pad].wpad.exp.type == WPAD_EXP_NONE) && (userInput[pad].wpad.btns_h & btnmap[CTRLR_WIIMOTE][i]) ) // wiimote
+		|| ( (userInput[pad].wpad.exp.type == WPAD_EXP_CLASSIC) && (userInput[pad].wpad.btns_h & btnmap[CTRLR_CLASSIC][i]) ) // classic controller
+		|| ( (userInput[pad].wpad.exp.type == WPAD_EXP_NUNCHUK) && (userInput[pad].wpad.btns_h & btnmap[CTRLR_NUNCHUK][i]) ) // nunchuk + wiimote
 		|| ( (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) ) // keyboard
 		#endif
 		)
@@ -883,36 +872,25 @@ static u32 DecodeJoy(unsigned short pad)
 
 u32 GetJoy(int pad)
 {
-	pad = 0;
-
-	s8 gc_px = PAD_SubStickX(0);
-
-	#ifdef HW_RVL
-	u32 wm_pb = WPAD_ButtonsDown(0); // wiimote / expansion button info
-	#endif
-
 	// request to go back to menu
-	if ((gc_px < -70)
-	#ifdef HW_RVL
-	|| (wm_pb & WPAD_BUTTON_HOME)
-	|| (wm_pb & WPAD_CLASSIC_BUTTON_HOME)
-	|| (DownUsbKeys[KB_ESC])
-	#endif
+	if (
+		(userInput[pad].pad.substickX < -70) ||
+		(userInput[pad].wpad.btns_d & WPAD_BUTTON_HOME) ||
+		(userInput[pad].wpad.btns_d & WPAD_CLASSIC_BUTTON_HOME) ||
+		(DownUsbKeys[KB_ESC])
 	)
 	{
 		ConfigRequested = 1;
 		updateRumbleFrame();
 		return 0;
 	}
-	else
-	{
-		u32 J = DecodeJoy(pad);
-		// don't allow up+down or left+right
-		if ((J & 48) == 48)
-			J &= ~16;
-		if ((J & 192) == 192)
-			J &= ~128;
-		updateRumbleFrame();
-		return J;
-	}
+
+	u32 J = DecodeJoy(pad);
+	// don't allow up+down or left+right
+	if ((J & 48) == 48)
+		J &= ~16;
+	if ((J & 192) == 192)
+		J &= ~128;
+	updateRumbleFrame();
+	return J;
 }
