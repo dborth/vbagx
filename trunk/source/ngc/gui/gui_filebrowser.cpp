@@ -30,10 +30,7 @@ GuiFileBrowser::GuiFileBrowser(int w, int h)
 		trigA->SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
 
 	trigHeldA = new GuiTrigger;
-	if(GCSettings.WiimoteOrientation)
-		trigHeldA->SetHeldTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigHeldA->SetHeldTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
+	trigHeldA->SetHeldTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
 
 	btnSoundOver = new GuiSound(button_over_pcm, button_over_pcm_size, SOUND_PCM);
 	btnSoundClick = new GuiSound(button_click_pcm, button_click_pcm_size, SOUND_PCM);
@@ -254,21 +251,25 @@ void GuiFileBrowser::Update(GuiTrigger * t)
 		listChanged = true;
 	}
 
+	if(arrowDownBtn->GetState() == STATE_HELD && arrowDownBtn->GetStateChan() == t->chan)
+	{
+		t->wpad.btns_h |= WPAD_BUTTON_DOWN;
+		if(!this->IsFocused())
+			((GuiWindow *)this->GetParent())->ChangeFocus(this);
+	}
+	else if(arrowUpBtn->GetState() == STATE_HELD && arrowUpBtn->GetStateChan() == t->chan)
+	{
+		t->wpad.btns_h |= WPAD_BUTTON_UP;
+		if(!this->IsFocused())
+			((GuiWindow *)this->GetParent())->ChangeFocus(this);
+	}
+
 	// pad/joystick navigation
 	if(!focus)
 	{
 		goto endNavigation; // skip navigation
 		listChanged = false;
 	}
-
-	if(arrowDownBtn->GetState() == STATE_CLICKED && arrowDownBtn->GetStateChan() == t->chan)
-		t->wpad.btns_d |= WPAD_BUTTON_DOWN;
-	else if(arrowUpBtn->GetState() == STATE_CLICKED && arrowUpBtn->GetStateChan() == t->chan)
-		t->wpad.btns_d |= WPAD_BUTTON_UP;
-	else if(arrowDownBtn->GetState() == STATE_HELD && arrowDownBtn->GetStateChan() == t->chan)
-		t->wpad.btns_h |= WPAD_BUTTON_DOWN;
-	else if(arrowUpBtn->GetState() == STATE_HELD && arrowUpBtn->GetStateChan() == t->chan)
-		t->wpad.btns_h |= WPAD_BUTTON_UP;
 
 	if(t->Right())
 	{
