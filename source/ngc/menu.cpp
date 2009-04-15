@@ -1800,6 +1800,9 @@ static int MenuGameSettings()
 		}
 	}
 
+	if(menu == MENU_GAME || menu == MENU_EXIT)
+		SavePrefs(NOTSILENT);
+
 	HaltGui();
 	mainWindow->Remove(&w);
 	return menu;
