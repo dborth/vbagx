@@ -31,6 +31,7 @@ u32 FrameTimer = 0;
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
 static GXRModeObj *vmode = NULL; // Graphics Mode Object
+static int currentVideoMode = -1; // -1 - not set, 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
 unsigned int *xfb[2]; // Framebuffers
 int whichfb = 0; // Frame buffer toggle
 
@@ -341,19 +342,51 @@ UpdatePadsCB ()
 	}
 }
 
+
 /****************************************************************************
- * InitializeVideo
+ * SetupVideoMode
  *
- * This function MUST be called at startup.
- * - also sets up menu video mode
+ * Finds the optimal video mode, or uses the user-specified one
+ * Also configures original video modes
  ***************************************************************************/
-
-void
-InitializeVideo ()
+static void SetupVideoMode()
 {
-	// get default video mode
-	vmode = VIDEO_GetPreferredMode(NULL);
+	if(currentVideoMode == GCSettings.videomode)
+		return; // no need to do anything
 
+	// choose the desired video mode
+	switch(GCSettings.videomode)
+	{
+		case 1: // NTSC (480i)
+			vmode = &TVNtsc480IntDf;
+			break;
+		case 2: // Progressive (480p)
+			vmode = &TVNtsc480Prog;
+			break;
+		case 3: // PAL (50Hz)
+			vmode = &TVPal574IntDfScale;
+			break;
+		case 4: // PAL (60Hz)
+			vmode = &TVEurgb60Hz480IntDf;
+			break;
+		default:
+			vmode = VIDEO_GetPreferredMode(NULL);
+
+			#ifdef HW_DOL
+			/* we have component cables, but the preferred mode is interlaced
+			 * why don't we switch into progressive?
+			 * on the Wii, the user can do this themselves on their Wii Settings */
+			if(VIDEO_HaveComponentCable())
+				vmode = &TVNtsc480Prog;
+			#endif
+
+			// use hardware vertical scaling to fill screen
+			if(vmode->viTVMode >> 2 == VI_PAL)
+				vmode = &TVPal574IntDfScale;
+			break;
+	}
+
+	// configure original modes (not implemented)
 	switch (vmode->viTVMode >> 2)
 	{
 		case VI_PAL:
@@ -369,17 +402,11 @@ InitializeVideo ()
 			break;
 	}
 
-	#ifdef HW_DOL
-	/* we have component cables, but the preferred mode is interlaced
-	 * why don't we switch into progressive?
-	 * on the Wii, the user can do this themselves on their Wii Settings */
-	if(VIDEO_HaveComponentCable())
-		vmode = &TVNtsc480Prog;
-	#endif
-
 	// check for progressive scan
 	if (vmode->viTVMode == VI_TVMODE_NTSC_PROG)
 		progressive = true;
+	else
+		progressive = false;
 
 	#ifdef HW_RVL
 	// widescreen fix
@@ -390,10 +417,24 @@ InitializeVideo ()
 	}
 	#endif
 
+	currentVideoMode = GCSettings.videomode;
+}
+
+/****************************************************************************
+ * InitializeVideo
+ *
+ * This function MUST be called at startup.
+ * - also sets up menu video mode
+ ***************************************************************************/
+
+void
+InitializeVideo ()
+{
+	SetupVideoMode();
 	VIDEO_Configure (vmode);
 
 	screenheight = 480;
-	screenwidth = vmode->fbWidth;
+	screenwidth = 640;
 
 	// Allocate the video buffers
 	xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
@@ -511,10 +552,9 @@ static void UpdateScaling()
 void
 ResetVideo_Emu ()
 {
-	GXRModeObj *rmode;
+	SetupVideoMode();
+	GXRModeObj *rmode = vmode; // same mode as menu
 	Mtx44 p;
-
-	rmode = vmode; // same mode as menu
 
 	// reconfigure VI
 	VIDEO_Configure (rmode);
@@ -725,6 +765,7 @@ ResetVideo_Menu ()
 	f32 yscale;
 	u32 xfbHeight;
 
+	SetupVideoMode();
 	VIDEO_Configure (vmode);
 	VIDEO_Flush();
 	VIDEO_WaitVSync();
