@@ -36,6 +36,8 @@ void FixInvalidSettings()
 		GCSettings.SFXVolume = 40;
 	if(!(GCSettings.render >= 0 && GCSettings.render < 2))
 		GCSettings.render = 1;
+	if(!(GCSettings.videomode >= 0 && GCSettings.videomode < 5))
+		GCSettings.videomode = 0;
 }
 
 /****************************************************************************
@@ -72,6 +74,7 @@ DefaultSettings ()
 
 	GCSettings.VerifySaves = 0;
 	GCSettings.ZoomLevel = 1.0; // zoom level
+	GCSettings.videomode = 0; // automatic video mode detection
 	GCSettings.render = 1; // Filtered
 	GCSettings.scaling = 1; // partial stretch
 	GCSettings.WiiControls = false; // Match Wii Game

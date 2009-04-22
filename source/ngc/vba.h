@@ -56,6 +56,7 @@ struct SGCSettings{
 	char	smbshare[20];
 
     float	ZoomLevel; // zoom amount
+    int		videomode; // 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
     int		scaling; // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
 	int		render;		// 0 - original, 1 - filtered, 2 - unfiltered
 	int		xshift;		// video output shift

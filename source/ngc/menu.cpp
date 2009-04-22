@@ -907,7 +907,7 @@ static int MenuGameSelection()
 
 	HaltGui();
 	btnLogo->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-	btnLogo->SetPosition(-30, 24);
+	btnLogo->SetPosition(-50, 24);
 	mainWindow->Append(&titleTxt);
 	mainWindow->Append(&gameBrowser);
 	mainWindow->Append(&buttonWindow);
@@ -1095,7 +1095,7 @@ static int MenuGame()
 	GuiImage closeBtnImgOver(&btnCloseOutlineOver);
 	GuiButton closeBtn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
 	closeBtn.SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-	closeBtn.SetPosition(-30, 35);
+	closeBtn.SetPosition(-50, 35);
 	closeBtn.SetLabel(&closeBtnTxt);
 	closeBtn.SetImage(&closeBtnImg);
 	closeBtn.SetImageOver(&closeBtnImgOver);
@@ -1164,7 +1164,7 @@ static int MenuGame()
 	w.Append(&closeBtn);
 
 	btnLogo->SetAlignment(ALIGN_RIGHT, ALIGN_BOTTOM);
-	btnLogo->SetPosition(-30, -40);
+	btnLogo->SetPosition(-50, -40);
 	mainWindow->Append(&w);
 
 	if(lastMenu == MENU_NONE)
@@ -1380,7 +1380,7 @@ static int MenuGameSaves(int action)
 	GuiImage closeBtnImgOver(&btnCloseOutlineOver);
 	GuiButton closeBtn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
 	closeBtn.SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-	closeBtn.SetPosition(-30, 35);
+	closeBtn.SetPosition(-50, 35);
 	closeBtn.SetLabel(&closeBtnTxt);
 	closeBtn.SetImage(&closeBtnImg);
 	closeBtn.SetImageOver(&closeBtnImgOver);
@@ -1714,7 +1714,7 @@ static int MenuGameSettings()
 	GuiImage closeBtnImgOver(&btnCloseOutlineOver);
 	GuiButton closeBtn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
 	closeBtn.SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-	closeBtn.SetPosition(-30, 35);
+	closeBtn.SetPosition(-50, 35);
 	closeBtn.SetLabel(&closeBtnTxt);
 	closeBtn.SetImage(&closeBtnImg);
 	closeBtn.SetImageOver(&closeBtnImgOver);
@@ -2564,6 +2564,7 @@ static int MenuSettingsVideo()
 	sprintf(options.name[i++], "Scaling");
 	sprintf(options.name[i++], "Screen Zoom");
 	sprintf(options.name[i++], "Screen Position");
+	sprintf(options.name[i++], "Video Mode");
 	options.length = i;
 
 	GuiText titleTxt("Game Settings - Video", 28, (GXColor){255, 255, 255, 255});
@@ -2597,6 +2598,7 @@ static int MenuSettingsVideo()
 
 	GuiOptionBrowser optionBrowser(552, 248, &options);
 	optionBrowser.SetPosition(0, 108);
+	optionBrowser.SetCol2Position(200);
 	optionBrowser.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
 
 	HaltGui();
@@ -2631,6 +2633,20 @@ static int MenuSettingsVideo()
 
 		sprintf (options.value[3], "%d, %d", GCSettings.xshift, GCSettings.yshift);
 
+		switch(GCSettings.videomode)
+		{
+			case 0:
+				sprintf (options.value[4], "Automatic (Recommended)"); break;
+			case 1:
+				sprintf (options.value[4], "NTSC (480i)"); break;
+			case 2:
+				sprintf (options.value[4], "Progressive (480p)"); break;
+			case 3:
+				sprintf (options.value[4], "PAL (50Hz)"); break;
+			case 4:
+				sprintf (options.value[4], "PAL (60Hz)"); break;
+		}
+
 		ret = optionBrowser.GetClickedOption();
 
 		switch (ret)
@@ -2658,6 +2674,12 @@ static int MenuSettingsVideo()
 
 			case 3:
 				ScreenPositionWindow();
+				break;
+
+			case 4:
+				GCSettings.videomode++;
+				if(GCSettings.videomode > 4)
+					GCSettings.videomode = 0;
 				break;
 		}
 
@@ -3314,7 +3336,7 @@ MainMenu (int menu)
 	logoTxt.SetPosition(0, 4);
 	btnLogo = new GuiButton(logoImg.GetWidth(), logoImg.GetHeight());
 	btnLogo->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-	btnLogo->SetPosition(-30, 24);
+	btnLogo->SetPosition(-50, 24);
 	btnLogo->SetImage(&logoImg);
 	btnLogo->SetImageOver(&logoImgOver);
 	btnLogo->SetLabel(&logoTxt);
