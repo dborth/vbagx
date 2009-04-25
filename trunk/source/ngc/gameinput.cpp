@@ -30,14 +30,14 @@
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
 
-/*char DebugStr[50] = "";
+char DebugStr[50] = "";
 
 void DebugPrintf(const char *format, ...) {
 	va_list args;
     va_start( args, format );
     vsprintf( DebugStr, format, args );
     va_end( args );
-}*/
+}
 
 u32 LegoStarWars1Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad);
@@ -153,7 +153,7 @@ u32 LegoStarWars2Input(unsigned short pad) {
 }
 
 u32 TMNTInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeClassic(pad) | DecodeKeyboard(pad) | DecodeGamecube(pad);
+	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
 	static u32 LastDir = VBA_RIGHT;
 	static bool wait = false;
 	static int holdcount = 0;
@@ -255,6 +255,346 @@ u32 TMNTInput(unsigned short pad) {
 		} else wait = false;
 	}
 	
+		
+	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
+	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
+	return J;
+}
+
+u32 TMNT1Input(unsigned short pad) {
+	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	static u32 LastDir = VBA_RIGHT;
+	static bool wait = false;
+	static int holdcount = 0;
+	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
+
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		Jump = (wp->btns_h & WPAD_BUTTON_A);
+		Attack = (fabs(wp->gforce.x)> 1.5);
+		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
+		Roll = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z || wp->btns_h & WPAD_NUNCHUK_BUTTON_C);
+		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			// N/A
+		}
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		J |= StandardDPad(pad);
+		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
+		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
+		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
+		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
+		Roll = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_ZR));
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
+			// N/A
+		}
+	} else {
+		Jump = (wp->btns_h & WPAD_BUTTON_A);
+		Attack = (fabs(wp->gforce.x)> 1.5);
+		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			//N/A
+		}
+		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
+		Roll = (wp->btns_h & WPAD_BUTTON_2);
+	}
+
+#endif
+	u32 gc = PAD_ButtonsHeld(pad);
+	u32 released = PAD_ButtonsUp(pad);
+	// DPad moves
+	if (gc & PAD_BUTTON_UP)
+		J |= VBA_UP;
+	if (gc & PAD_BUTTON_DOWN)
+		J |= VBA_DOWN;
+	if (gc & PAD_BUTTON_LEFT)
+		J |= VBA_LEFT;
+	if (gc & PAD_BUTTON_RIGHT)
+		J |= VBA_RIGHT;
+	// Jump
+	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
+	// Swap turtles, hold for super family move
+	if (gc & PAD_BUTTON_B) {
+		// N/A
+	}
+	// Attack
+	if (gc & PAD_BUTTON_X) Attack = true;
+	// Spin kick
+	if (gc & PAD_BUTTON_Y) SpinKick = true;
+	// Pause
+	if (gc & PAD_BUTTON_START) Pause = true;
+	// Select
+	if (gc & PAD_TRIGGER_Z) Select = true;
+	// Roll
+	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) Roll = true;
+
+	if (Jump) J |= VBA_BUTTON_A;
+	if (Attack || SpinKick) J |= VBA_BUTTON_B;
+	if (Pause) J |= VBA_BUTTON_START;
+	if (Select) J |= VBA_BUTTON_SELECT;
+		
+	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
+	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
+	return J;
+}
+
+u32 TMNT2Input(unsigned short pad) {
+	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	static u32 LastDir = VBA_RIGHT;
+	static bool wait = false;
+	static int holdcount = 0;
+	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
+
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		Jump = (wp->btns_h & WPAD_BUTTON_A);
+		Attack = (fabs(wp->gforce.x)> 1.5);
+		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
+		Roll = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z || wp->btns_h & WPAD_NUNCHUK_BUTTON_C);
+		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			// N/A
+		}
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		J |= StandardDPad(pad);
+		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
+		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
+		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
+		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
+		Roll = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_ZR));
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
+			// N/A
+		}
+	} else {
+		Jump = (wp->btns_h & WPAD_BUTTON_A);
+		Attack = (fabs(wp->gforce.x)> 1.5);
+		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			//N/A
+		}
+		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
+		Roll = (wp->btns_h & WPAD_BUTTON_2);
+	}
+
+#endif
+	u32 gc = PAD_ButtonsHeld(pad);
+	u32 released = PAD_ButtonsUp(pad);
+	// DPad moves
+	if (gc & PAD_BUTTON_UP)
+		J |= VBA_UP;
+	if (gc & PAD_BUTTON_DOWN)
+		J |= VBA_DOWN;
+	if (gc & PAD_BUTTON_LEFT)
+		J |= VBA_LEFT;
+	if (gc & PAD_BUTTON_RIGHT)
+		J |= VBA_RIGHT;
+	// Jump
+	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
+	// Swap turtles, hold for super family move
+	if (gc & PAD_BUTTON_B) {
+		// N/A
+	}
+	// Attack
+	if (gc & PAD_BUTTON_X) Attack = true;
+	// Spin kick
+	if (gc & PAD_BUTTON_Y) SpinKick = true;
+	// Pause
+	if (gc & PAD_BUTTON_START) Pause = true;
+	// Select
+	if (gc & PAD_TRIGGER_Z) Select = true;
+	// Roll
+	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) Roll = true;
+
+	if (Jump) J |= VBA_BUTTON_A;
+	if (Attack) J |= VBA_BUTTON_B;
+	if (SpinKick || Roll) J |= VBA_BUTTON_B | VBA_BUTTON_A;
+	if (Pause) J |= VBA_BUTTON_START;
+	if (Select) J |= VBA_BUTTON_SELECT;
+		
+	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
+	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
+	return J;
+}
+
+u32 TMNT3Input(unsigned short pad) {
+	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	static u32 LastDir = VBA_RIGHT;
+	static bool wait = false;
+	static int holdcount = 0;
+	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
+
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		Jump = (wp->btns_h & WPAD_BUTTON_A);
+		Attack = (fabs(wp->gforce.x)> 1.5);
+		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
+		Roll = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z || wp->btns_h & WPAD_NUNCHUK_BUTTON_C);
+		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			J |= VBA_BUTTON_START;
+		}
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		J |= StandardDPad(pad);
+		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
+		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
+		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
+		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
+		Roll = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_ZR));
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
+			J |= VBA_BUTTON_START;
+		}
+	} else {
+		Jump = (wp->btns_h & WPAD_BUTTON_A);
+		Attack = (fabs(wp->gforce.x)> 1.5);
+		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			J |= VBA_BUTTON_START;
+		}
+		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
+		Roll = (wp->btns_h & WPAD_BUTTON_2);
+	}
+
+#endif
+	u32 gc = PAD_ButtonsHeld(pad);
+	u32 released = PAD_ButtonsUp(pad);
+	// DPad moves
+	if (gc & PAD_BUTTON_UP)
+		J |= VBA_UP;
+	if (gc & PAD_BUTTON_DOWN)
+		J |= VBA_DOWN;
+	if (gc & PAD_BUTTON_LEFT)
+		J |= VBA_LEFT;
+	if (gc & PAD_BUTTON_RIGHT)
+		J |= VBA_RIGHT;
+	// Jump
+	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
+	// Swap turtles
+	if (gc & PAD_BUTTON_B) {
+		J |= VBA_BUTTON_START;
+	}
+	// Attack
+	if (gc & PAD_BUTTON_X) Attack = true;
+	// Spin kick
+	if (gc & PAD_BUTTON_Y) SpinKick = true;
+	// Pause
+	if (gc & PAD_BUTTON_START) Pause = true;
+	// Select
+	if (gc & PAD_TRIGGER_Z) Select = true;
+	// Roll
+	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) Roll = true;
+
+	if (Jump || Roll) J |= VBA_BUTTON_A;
+	if (Attack || SpinKick) J |= VBA_BUTTON_B;
+	if (Pause) J |= VBA_BUTTON_SELECT;
+	if (Select) J |= VBA_BUTTON_START;
+		
+	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
+	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
+	return J;
+}
+
+u32 TMNTGBAInput(unsigned short pad) {
+	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	static u32 LastDir = VBA_RIGHT;
+	static bool wait = false;
+	static int holdcount = 0;
+	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0;
+
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		Jump = (wp->btns_h & WPAD_BUTTON_A);
+		Attack = (fabs(wp->gforce.x)> 1.5) || (wp->btns_h & WPAD_BUTTON_B);
+		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
+		SpecialMove = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z);
+		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			//J |= VBA_BUTTON_START;
+		}
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
+		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
+		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
+		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
+		SpecialMove = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_ZR));
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
+			//J |= VBA_BUTTON_START;
+		}
+	} else {
+		Jump = (wp->btns_h & WPAD_BUTTON_A);
+		Attack = (fabs(wp->gforce.x)> 1.5) || (wp->btns_h & WPAD_BUTTON_B);
+		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			//J |= VBA_BUTTON_START;
+		}
+		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
+		SpecialMove = (wp->btns_h & WPAD_BUTTON_2);
+	}
+
+#endif
+	u32 gc = PAD_ButtonsHeld(pad);
+	u32 released = PAD_ButtonsUp(pad);
+	// DPad moves
+	if (gc & PAD_BUTTON_UP)
+		J |= VBA_UP;
+	if (gc & PAD_BUTTON_DOWN)
+		J |= VBA_DOWN;
+	if (gc & PAD_BUTTON_LEFT)
+		J |= VBA_LEFT;
+	if (gc & PAD_BUTTON_RIGHT)
+		J |= VBA_RIGHT;
+	// Jump
+	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
+	// Swap turtles
+	if (gc & PAD_BUTTON_B) {
+		//J |= VBA_BUTTON_B;
+	}
+	// Attack
+	if (gc & PAD_BUTTON_X) Attack = true;
+	// Spin kick
+	if (gc & PAD_BUTTON_Y) SpinKick = true;
+	// Pause
+	if (gc & PAD_BUTTON_START) Pause = true;
+	// Select
+	if (gc & PAD_TRIGGER_Z) Select = true;
+	// SpecialMove
+	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) SpecialMove = true;
+
+	if (Jump) J |= VBA_BUTTON_A;
+	if (Attack) J |= VBA_BUTTON_B;
+	if (SpinKick) J |= VBA_BUTTON_R;
+	if (Pause) J |= VBA_BUTTON_START;
+	if (Select) J |= VBA_BUTTON_SELECT;
+	if (SpecialMove) {
+		J |= VBA_BUTTON_R | VBA_BUTTON_A; // CAKTODO
+	}
 		
 	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
 	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
