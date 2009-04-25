@@ -751,6 +751,14 @@ static u32 DecodeJoy(unsigned short pad)
 			return MetroidFusionInput(pad);
 
 		// TMNT
+		case TMNT1:
+			return TMNT1Input(pad);
+		case TMNT2:
+			return TMNT2Input(pad);
+		case TMNT3:
+			return TMNT3Input(pad);
+		case TMNTGBA:
+			return TMNTGBAInput(pad);
 		case TMNT:
 			return TMNTInput(pad);
 
@@ -810,8 +818,12 @@ static u32 DecodeJoy(unsigned short pad)
 		// Mortal Kombat
 		case MK1:
 			return MK1Input(pad);
+		case MK12:
+			return MK12Input(pad);
 		case MK2:
+			return MK2Input(pad);
 		case MK3:
+			return MK3Input(pad);
 		case MK4:
 			return MK4Input(pad);
 		case MKA:

@@ -49,6 +49,10 @@
 #define HARRYPOTTER5 	gid('B','J','X')
 #define QUIDDITCH		gid('B','H','P')
 
+#define TMNT1			0xFF000B
+#define TMNT2			0xFF000C
+#define TMNT3			0xFF000D
+#define TMNTGBA			gid('B','N','T')
 #define TMNT 			gid('B','E','X')
 
 #define RESIDENTEVIL	gid('B','I','O')
@@ -84,6 +88,8 @@
 
 #define ONEPIECE		gid('B','O','N')
 
+#define MARBLEMADNESS   0xFF000A
+
 u8 gbReadMemory(register u16 address);
 void gbWriteMemory(register u16 address, register u8 value);
 
@@ -112,6 +118,9 @@ u32 LegoStarWars1Input(unsigned short pad);
 u32 LegoStarWars2Input(unsigned short pad);
 u32 MarioKartInput(unsigned short pad);
 u32 MK1Input(unsigned short pad);
+u32 MK12Input(unsigned short pad);
+u32 MK2Input(unsigned short pad);
+u32 MK3Input(unsigned short pad);
 u32 MK4Input(unsigned short pad);
 u32 MKAInput(unsigned short pad);
 u32 MKTEInput(unsigned short pad);
@@ -127,6 +136,10 @@ u32 Metroid1Input(unsigned short pad);
 u32 Metroid2Input(unsigned short pad);
 u32 MetroidFusionInput(unsigned short pad);
 u32 TMNTInput(unsigned short pad);
+u32 TMNT1Input(unsigned short pad);
+u32 TMNT2Input(unsigned short pad);
+u32 TMNT3Input(unsigned short pad);
+u32 TMNTGBAInput(unsigned short pad);
 u32 HarryPotter1Input(unsigned short pad);
 u32 HarryPotter1GBCInput(unsigned short pad);
 u32 HarryPotter2Input(unsigned short pad);

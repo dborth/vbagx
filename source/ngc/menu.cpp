@@ -972,6 +972,8 @@ static int MenuGameSelection()
 	return menu;
 }
 
+extern char DebugStr[50];
+
 /****************************************************************************
  * MenuGame
  *
@@ -982,6 +984,7 @@ static int MenuGame()
 	int menu = MENU_NONE;
 
 	GuiText titleTxt(ROMFilename, 24, (GXColor){255, 255, 255, 255});
+	if (DebugStr[0]) titleTxt.SetText(DebugStr);
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
 	titleTxt.SetPosition(50,50);
 

@@ -768,6 +768,14 @@ static void gbApplyPerImagePreferences()
 			RomIdCode = MARIOLAND2;
 		else if (strcmp(title, "METROID2") == 0)
 			RomIdCode = METROID2;
+		else if (strcmp(title, "MARBLE MADNESS") == 0)
+			RomIdCode = MARBLEMADNESS;
+		else if (strcmp(title, "TMNT FOOT CLAN") == 0)
+			RomIdCode = TMNT1;
+		else if (strcmp(title, "TMNT BACK FROM") == 0 || strcmp(title, "TMNT 2") == 0)
+			RomIdCode = TMNT2;
+		else if (strcmp(title, "TMNT3") == 0)
+			RomIdCode = TMNT3;
 	}
 }
 
