@@ -60,7 +60,7 @@ static int MIXER_GetSamples(u8 *dstbuffer, int maxlen)
 
 static void AudioPlayer()
 {
-	if ( !ConfigRequested )
+	if (!ConfigRequested)
 	{
 		int len = MIXER_GetSamples(soundbuffer[whichab], 3200);
 		DCFlushRange(soundbuffer[whichab],len);
@@ -113,6 +113,7 @@ SwitchAudioMode(int mode)
 	{
 		AUDIO_StopDMA();
 		AUDIO_RegisterDMACallback(NULL);
+		IsPlaying = 0;
 		#ifndef NO_SOUND
 		ASND_Init();
 		ASND_Pause(0);
