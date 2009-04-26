@@ -1786,6 +1786,7 @@ static int MenuGameSettings()
 		else if(closeBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_EXIT;
+			SavePrefs(NOTSILENT);
 
 			exitSound->Play();
 			bgTopImg->SetEffect(EFFECT_SLIDE_TOP | EFFECT_SLIDE_OUT, 15);
