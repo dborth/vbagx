@@ -1249,8 +1249,11 @@ static int MenuGame()
 		}
 		else if(resetBtn.GetState() == STATE_CLICKED)
 		{
-			emulator.emuReset();
-			menu = MENU_EXIT;
+			if (WindowPrompt("Reset Game", "Usaved progress will be lost. Are you sure?", "OK", "Cancel")) 
+			{
+				emulator.emuReset();
+				menu = MENU_EXIT;
+			}
 		}
 		else if(gameSettingsBtn.GetState() == STATE_CLICKED)
 		{
@@ -1258,22 +1261,25 @@ static int MenuGame()
 		}
 		else if(mainmenuBtn.GetState() == STATE_CLICKED)
 		{
-			if(gameScreenImg)
+			if (WindowPrompt("Exit Game", "Usaved progress will be lost. Are you sure?", "OK", "Cancel")) 
 			{
-				mainWindow->Remove(gameScreenImg);
-				delete gameScreenImg;
-				gameScreenImg = NULL;
-			}
-			if(gameScreenTex)
-			{
-				free(gameScreenTex);
-				gameScreenTex = NULL;
-			}
-			bgImg->SetVisible(true);
-			#ifndef NO_SOUND
-			bgMusic->Play(); // startup music
-			#endif
-			menu = MENU_GAMESELECTION;
+				if(gameScreenImg)
+				{
+					mainWindow->Remove(gameScreenImg);
+					delete gameScreenImg;
+					gameScreenImg = NULL;
+				}
+				if(gameScreenTex)
+				{
+					free(gameScreenTex);
+					gameScreenTex = NULL;
+				}
+				bgImg->SetVisible(true);
+				#ifndef NO_SOUND
+				bgMusic->Play(); // startup music
+				#endif
+				menu = MENU_GAMESELECTION;
+			} 
 		}
 		else if(closeBtn.GetState() == STATE_CLICKED)
 		{
