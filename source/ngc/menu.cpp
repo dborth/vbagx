@@ -1684,7 +1684,11 @@ static int MenuGameSettings()
 	GuiImageData btnLargeOutlineOver(button_large_over_png);
 	GuiImageData iconMappings(icon_settings_mappings_png);
 	GuiImageData iconVideo(icon_settings_video_png);
-	GuiImageData iconWiiControls(icon_settings_mappings_png);
+#ifdef HW_RVL	
+	GuiImageData iconWiiControls(icon_settings_nunchuk_png);
+#else
+	GuiImageData iconWiiControls(icon_settings_gamecube_png);
+#endif
 	//GuiImageData iconCheats(icon_game_cheats_png);
 	GuiImageData btnCloseOutline(button_small_png);
 	GuiImageData btnCloseOutlineOver(button_small_over_png);
