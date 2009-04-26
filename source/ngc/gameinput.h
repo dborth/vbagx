@@ -123,6 +123,7 @@ u32 MK2Input(unsigned short pad);
 u32 MK3Input(unsigned short pad);
 u32 MK4Input(unsigned short pad);
 u32 MKAInput(unsigned short pad);
+u32 MKDAInput(unsigned short pad);
 u32 MKTEInput(unsigned short pad);
 u32 Zelda1Input(unsigned short pad);
 u32 Zelda2Input(unsigned short pad);

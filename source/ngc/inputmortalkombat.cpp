@@ -29,6 +29,7 @@
 #include "gba/GBA.h"
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
+#include "gb/gbGlobals.h"
 
 void DebugPrintf(const char *format, ...);
 void gbSetSpritePal(u8 WhichPal, u32 bright, u32 medium, u32 dark);
@@ -68,6 +69,7 @@ void gbSetSpritePal(u8 WhichPal, u32 bright, u32 medium, u32 dark);
 #define MK3_CYRAX 8
 // boss
 #define MK3_SHAOKHAN 9
+#define MK3_RAND 10
 
 #define MK4_RAIDEN 0
 #define MK4_QUANCHI 1
@@ -112,6 +114,8 @@ static bool HP=0,LP=0,HK=0,LK=0,BL=0,Throw=0,CS=0,F=0,B=0,Select=0,Start=0,Speci
 static u16	OurHealth=0,OpponentHealth=0,OurOldHealth=0;
 static s16  OurX=0,OpponentX=1;
 static u32  VBA_FORWARD=VBA_RIGHT, VBA_BACK=VBA_LEFT;
+
+static int ChameleonChangeTime = 0;
 
 u32 GetMKInput(unsigned short pad, int rumbleTime=4) {
 	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad);
@@ -222,7 +226,10 @@ void gbaWriteByte(u32 addr, u8 value) {
 	else rom[addr & 0x1FFFFFF] = value;
 #endif
 }
-
+void gbWriteByte(u16 addr, u8 value) {
+	if (addr>=0x8000) gbWriteMemory(addr, value);
+	else gbRom[addr] = value;
+}
 
 u32 MK1Input(unsigned short pad) {
 	OurHealth = gbReadMemory(0xD695);
@@ -305,34 +312,266 @@ u32 MK12Input(unsigned short pad) {
 	return J;
 }
 
-void MK3Rename(int n, const char *name, const char *nick) {
-	// CAKTODO
+void MK3SetPal(int player, u8 NewChar, u8 SubChar=0) {
+	switch (NewChar) {
+		case MK3_SHEEVA: 
+			gbSetSpritePal(player, 0xF5CCAC,0x9A7057,0x800000); 
+			break;
+		case MK3_KANO: 
+			gbSetSpritePal(player, 0xA87860,0x882020,0x000000);
+			break;
+		case MK3_SINDEL: 
+			gbSetSpritePal(player, 0xB8B8B8,0x7F5644,0xA818F0);
+			break;
+		case MK3_SUBZERO:
+			if (SubChar==2) gbSetSpritePal(player, 0x101010,0x080808,0x000000); // noob saibot
+			else if (SubChar==4) gbSetSpritePal(player, 0xB39890,0x909090,0x000000); // Chameleon
+			else gbSetSpritePal(player, 0xB39890,0x707BFF,0x000020); // sub zero or frost
+			break;
+		case MK3_SMOKE: 
+			if (SubChar==2) gbSetSpritePal(player, 0xB3A080,0x50A050,0x003000); // Reptile
+			else gbSetSpritePal(player, 0xFFFFFF,0xA0A0A0,0x636363); // Smoke
+			break;
+		case MK3_CYRAX: 
+			gbSetSpritePal(player, 0xC0C0B0,0x90A000,0x303800); 
+			break;
+		case MK3_SEKTOR: 
+			gbSetSpritePal(player, 0xA09090,0xC00000,0x300000); 
+			break;
+		case MK3_SONYA: 
+			if (SubChar==1) gbSetSpritePal(player, 0xC6A040,0x909090,0x000000); // Khameleon
+			else gbSetSpritePal(player, 0xC6A040,0x96964D,0x000000); // Sonya
+			break;
+		case MK3_KABAL: 
+			gbSetSpritePal(player, 0xB6B6B6,0x866232,0x1A1211); 
+			break;
+		case MK3_SHAOKHAN: 
+			if (SubChar==1) gbSetSpritePal(player, 0xB3A080,0xFF1070,0x200008); // Reiko
+			else gbSetSpritePal(player, 0xC0C0C0,0x7F5644,0x700000); // Shao Khan
+			break;
+	}
+	return;
 }
 
-u8 MK3SetSubchar(int Char, int Subchar, u16 OriginalColour) {
+
+// Name must be 8 chars or less (preferably 7), fullname must be 9 chars or less
+void MK3Rename(int n, const char *name, const char *fullname = NULL) {
+	if (n<0 || n>10) return;
+	// Rename the Player 1 health bar
+	u16 addr = 0x2DD9 + n*8;
+	int i;
+	for (i=0; i<8; i++) {
+		if (name[i]=='\0') {
+			gbRom[addr+i] = '*';
+			i++;
+			while (i<8) {
+				gbRom[addr+i] = ' ';
+				i++;
+			}
+			break;
+		} else gbRom[addr+i] = name[i];
+	}
+	// Rename the player wins message which is right aligned
+	if (n>9) return;
+	if (!fullname) fullname = name;
+	addr = 0x2E9F + n*9;
+	int len = strlen(fullname);
+	if (len>9) len=9;
+	int j = len-1;
+	for (i=8; i>=0; i--) {
+		if (j<0) gbRom[addr+i]=' ';
+		else gbRom[addr+i]=fullname[j];
+		j--;
+	}
+}
+
+void MK3RenameEveryoneProperlyExcept(u8 n) {
+	const char *names[MK3_SHAOKHAN+1] = {
+		"SINDEL", "SEKTOR", "KABAL", "SHEEVA", "SMOKE", "SUBZERO", "KANO", "SONYA", "CYRAX", "SHAO"};
+	const char *longnames[MK3_SHAOKHAN+1] = {
+		NULL, NULL, NULL, NULL, NULL, "SUB-ZERO", NULL, NULL, NULL, "SHAO KHAN"};
+	for (int i=0; i<=MK3_SHAOKHAN; i++) {
+		if (i!=n) MK3Rename(i, names[i], longnames[i]);
+	}
+}
+
+void MK3RandomNinja() {
+	if (ChameleonChangeTime>0) {
+		ChameleonChangeTime--;
+		return;
+	} else ChameleonChangeTime = 80;
+	switch (rand() % 4) {
+		case 0: // Sub-Zero
+			MK3SetPal(1, MK3_SUBZERO);
+			gbWriteMemory(0xCD00,MK3_SUBZERO); // use moves from...
+			break;
+		case 1: // Smoke
+			MK3SetPal(1, MK3_SMOKE);
+			gbWriteMemory(0xCD00,MK3_SMOKE); // use moves from...
+			break;
+		case 2: // Sektor
+			MK3SetPal(1, MK3_SEKTOR, 1);
+			gbWriteMemory(0xCD00,MK3_SEKTOR); // use moves from...
+			break;
+		case 3: // Cyrax
+			MK3SetPal(1, MK3_CYRAX, 1);
+			gbWriteMemory(0xCD00,MK3_CYRAX); // use moves from...
+			break;
+	}
+}
+
+void MK3RandomFemale() {
+	if (ChameleonChangeTime>0) {
+		ChameleonChangeTime--;
+		return;
+	} else ChameleonChangeTime = 80;
+	switch (rand() % 3) {
+		case 0: // Sonya
+			MK3SetPal(1, MK3_SONYA);
+			gbWriteMemory(0xCD00,MK3_SONYA); // use moves from...
+			break;
+		case 1: // Sindel
+			MK3SetPal(1, MK3_SINDEL);
+			gbWriteMemory(0xCD00,MK3_SINDEL); // use moves from...
+			break;
+		case 2: // Sheeva
+			MK3SetPal(1, MK3_SHEEVA);
+			gbWriteMemory(0xCD00,MK3_SHEEVA); // use moves from...
+			break;
+	}
+}
+
+void MK3Impersonate(u8 appearance, u8 moves, const char *name, const char *longname = NULL) {
+	gbWriteMemory(0xC0F0, appearance);
+	MK3Rename(appearance, name, longname);
+	if (moves!=MK3_RAND)
+		gbWriteMemory(0xCD00, moves);
+}
+
+
+u8 MK3SetSubchar(int Char, int Subchar, bool menu=false) {
 	switch (Char) {
 		case MK3_SUBZERO:
 			if (Subchar>=5) Subchar = 0;
 			switch (Subchar) {
 			    // Subzero Unmasked
 				case 0: 
-					MK3Rename(MK3_SUBZERO, "SUBZERO", "SUB-ZERO");
+					MK3Impersonate(MK3_SUBZERO, MK3_SUBZERO, "SUBZERO", "SUB-ZERO"); 
 					break;
 				// Cyborg
 				case 1: 
-					MK3Rename(MK3_SUBZERO, "SUBZERO", "SUB-ZERO");
+					MK3Impersonate(MK3_SEKTOR, MK3_SUBZERO, "SUBZERO", "SUB-ZERO"); 
 					break;
 				// Noob Saibot
 				case 2: 
-					MK3Rename(MK3_SUBZERO, "NOOB", "NOOB");
+					MK3Impersonate(MK3_SUBZERO, MK3_SUBZERO, "NOOB", "N. SAIBOT"); 
 					break;
 				// Frost
 				case 3: 
-					MK3Rename(MK3_SUBZERO, "FROST", "FROST");
+					MK3Impersonate(MK3_SINDEL, MK3_SUBZERO, "FROST");
 					break;
 				// Chameleon
 				case 4: 
-					MK3Rename(MK3_SUBZERO, "CAMELEON", "CHAM");
+					MK3Impersonate(MK3_SUBZERO, MK3_RAND, "CAMELEON", "CHAMELEON");
+					break;
+			}
+			break;
+		case MK3_SONYA:
+			if (Subchar>=2) Subchar = 0;
+			switch (Subchar) {
+			    // Sonya Blade
+				case 0: 
+					MK3Impersonate(MK3_SONYA, MK3_SONYA, "SONYA");
+					break;
+				// Khameleon
+				case 1: 
+					MK3Impersonate(MK3_SONYA, MK3_RAND, "KAMELEON", "KHAMELEON");
+					break;
+			}
+			break;
+		case MK3_KANO:
+			if (Subchar>=2) Subchar = 0;
+			switch (Subchar) {
+			    // Kano
+				case 0: 
+					MK3Impersonate(MK3_KANO, MK3_KANO, "KANO");
+					break;
+				// Cyborg Kano
+				case 1: 
+					MK3Impersonate(MK3_SEKTOR, MK3_KANO, "KANO");
+					break;
+			}
+			break;
+		case MK3_KABAL:
+			if (Subchar>=2) Subchar = 0;
+			switch (Subchar) {
+			    // Kabal
+				case 0: 
+					MK3Impersonate(MK3_KABAL, MK3_KABAL, "KABAL");
+					break;
+				// Cyborg Kabal
+				case 1: 
+					MK3Impersonate(MK3_SEKTOR, MK3_KABAL, "KABAL");
+					break;
+			}
+			break;
+		case MK3_SHAOKHAN:
+			if (Subchar>=1) Subchar = 0; // disable reiko because he crashes too much
+			switch (Subchar) {
+			    // Shao Khan
+				case 0: 
+					MK3Impersonate(MK3_SHAOKHAN, MK3_SHAOKHAN, "KHAN", "SHAO KHAN");
+					break;
+				// Reiko
+				case 1:
+					MK3Impersonate(MK3_SUBZERO, MK3_SHAOKHAN, "REIKO");
+					break;
+			}
+			break;
+		case MK3_SEKTOR:
+			if (Subchar>=2) Subchar = 0;
+			switch (Subchar) {
+			    // Cyborg
+				case 0: 
+					MK3Impersonate(MK3_SEKTOR, MK3_SEKTOR, "SEKTOR");
+					break;
+				// Human
+				case 1:
+					MK3Impersonate(MK3_SUBZERO, MK3_SEKTOR, "SEKTOR");
+					break;
+			}
+			break;
+		case MK3_CYRAX:
+			if (Subchar>=2) Subchar = 0;
+			switch (Subchar) {
+			    // Cyborg
+				case 0: 
+					MK3Impersonate(MK3_CYRAX, MK3_CYRAX, "CYRAX");
+					break;
+				// Human
+				case 1:
+					MK3Impersonate(MK3_SUBZERO, MK3_CYRAX, "CYRAX");
+					break;
+			}
+			break;
+		case MK3_SMOKE:
+			if (Subchar>=4) Subchar = 0;
+			switch (Subchar) {
+			    // Cyborg
+				case 0: 
+					MK3Impersonate(MK3_SMOKE, MK3_SMOKE, "SMOKE");
+					break;
+				// Human
+				case 1: 
+					MK3Impersonate(MK3_SUBZERO, MK3_SMOKE, "SMOKE");
+					break;
+				// Reptile
+				case 2: 
+					MK3Impersonate(MK3_SUBZERO, MK3_SMOKE, "REPTILE");
+					break;
+				// Scorpion
+				case 3: 
+					MK3Impersonate(MK3_SUBZERO, MK3_SMOKE, "SCORPION");
 					break;
 			}
 			break;
@@ -340,67 +579,70 @@ u8 MK3SetSubchar(int Char, int Subchar, u16 OriginalColour) {
 			Subchar = 0;
 			break;
 	}
+	if (Char==MK3_SONYA && Subchar==1 && !menu) {
+		MK3RandomFemale();
+	} else if (Char==MK3_SUBZERO && Subchar==4 && !menu) {
+		MK3RandomNinja();
+	} else MK3SetPal(1, Char, Subchar);
 	return Subchar;
 }
-
-void MK3SetPal(int player, u8 NewChar) {
-	switch (NewChar) {
-		case MK3_SHEEVA: gbSetSpritePal(player, 0xF5CCAC,0x9A7057,0x800000); break;
-		case MK3_KANO: gbSetSpritePal(player, 0xA87860,0x882020,0x000000); break;
-		case MK3_SINDEL: gbSetSpritePal(player, 0xB8B8B8,0x7F5644,0xA818F0); break;
-		case MK3_SUBZERO: gbSetSpritePal(player, 0xB39890,0x707BFF,0x000020); break;
-		case MK3_SMOKE: gbSetSpritePal(player, 0xFFFFFF,0xA0A0A0,0x636363); break;
-		case MK3_CYRAX: gbSetSpritePal(player, 0xC0C0B0,0x90A000,0x303800); break;
-		case MK3_SEKTOR: gbSetSpritePal(player, 0xA09090,0xC00000,0x300000); break;
-		case MK3_SONYA: gbSetSpritePal(player, 0xC6A040,0x96964D,0x000000); break;
-		case MK3_KABAL: gbSetSpritePal(player, 0xB6B6B6,0x866232,0x1A1211); break;
-		case MK3_SHAOKHAN: gbSetSpritePal(player, 0xC0C0C0,0x7F5644,0x700000); break;
-	}
-	return;
-}
-
 
 u32 MK3Input(unsigned short pad) {
 	OurHealth = gbReadMemory(0xC0D6);
 	OpponentHealth = gbReadMemory(0xC0D7);
-	u8 OurChar = gbReadMemory(0xC0F0); // also CD00?
+	u8 OurChar = gbReadMemory(0xC0F0); // 
 	u8 OpponentChar = gbReadMemory(0xC0F1); // also CD40, D526
 	OurX = gbReadMemory(0xCD02) | (gbReadMemory(0xCD03) << 8);
 	OpponentX = gbReadMemory(0xCD42) | (gbReadMemory(0xCD43) << 8);
-	bool InMenu = false;
-	if (gbReadMemory(0xC028)==0x48 && gbReadMemory(0xC029)==0x4C)
-		InMenu = true;
-	static bool WasInMenu = false;
+	bool InSelectScreen=false, InGame=false;
+	if (gbReadMemory(0xC51E)==0x00 && gbReadMemory(0xC522)==0xFF) InSelectScreen = true;
+	if (gbReadMemory(0xC080)==0x00 && gbReadMemory(0xC522)==0x00) InGame = true;
+	static bool WasInSelectScreen = false;
 	static u8 MenuChar = 0;
 	static u8 MenuSubChar = 0;
-	if (InMenu) MenuChar = gbReadMemory(0xD4CE);
+	if (InSelectScreen) MenuChar = gbReadMemory(0xD4CE);
 		
 	static u8 OldMenuChar = 0;
 	// Rumble when they change character
 	if (MenuChar != OldMenuChar) {
-		if (InMenu) {
+		if (InSelectScreen && !InGame) {
 			systemGameRumble(4);
 			MK3SetPal(1,MenuChar);
+			MK3RenameEveryoneProperlyExcept(255);
+			MenuSubChar=0;
 		}
 		OldMenuChar = MenuChar;
 	}
 
-	if (!InMenu) {
-		switch (OpponentChar) {
-			MK3SetPal(2, OpponentChar);
+	// Special Characters in-game
+	if (!InSelectScreen) {
+		// Set opponent colour
+		MK3SetPal(2, OpponentChar);
+		// Our colour
+		if (MenuSubChar!=0) {
+			MK3SetSubchar(MenuChar, MenuSubChar);
 		}
 	}
-	
-	u32 J = GetMKInput(pad, 1);
+
+	// Get input, and rumble for 2 frames if hurt
+	u32 J = GetMKInput(pad, 2);
 	if (LK || HK) J |= VBA_BUTTON_A;
 	if (LP || HP) J |= VBA_BUTTON_B;
 	if (BL) J |= VBA_BUTTON_START;
-	if (Throw) J |= VBA_BUTTON_B;
-	if (InMenu && (Start || Throw || HP || LP || HK || LK || BL)) {
+	if (Throw) {
+		if (InGame) J |= VBA_BUTTON_B;
+		else J |= VBA_BUTTON_START;
+	}
+	if (Start) {
+		if (InGame) J |= VBA_BUTTON_SELECT;
+		else J |= VBA_BUTTON_START;
+	}
+	if (Select) J |= VBA_BUTTON_SELECT;
+	if (InSelectScreen && (Start || Throw || HP || LP || HK || LK || BL)) {
 		J |= VBA_BUTTON_START;
-	} else if (Start || Select) J |= VBA_BUTTON_SELECT;
+	}
 	// Fix kick controls to what they should be!
-	if (!InMenu && !(J & (VBA_UP | VBA_DOWN))) {
+	if (!InSelectScreen && !(J & (VBA_UP | VBA_DOWN))) {
 		if (B && HK && !LK) { // Make B+HK do roundhouse, while B+LK does sweep!
 			J &= ~VBA_BACK;
 			J |= VBA_FORWARD;
@@ -411,7 +653,7 @@ u32 MK3Input(unsigned short pad) {
 		}
 	}
 	// Fix punch controls to what they should be!
-	if ((!InMenu) && (J & VBA_DOWN)) {
+	if ((!InSelectScreen) && (J & VBA_DOWN)) {
 		// Make D+LP do crouch punch instead of uppercut
 		if (LP && !F && !B && !LK && !HK && !HP) { 
 			J &= ~VBA_BACK;
@@ -419,10 +661,10 @@ u32 MK3Input(unsigned short pad) {
 		}
 	}
 	// Run, sometimes does roundhouse kick (Midway's fault, not mine)
-	if (CS) J |= VBA_FORWARD | VBA_BUTTON_A | VBA_BUTTON_B;
+	if (CS && InGame) J |= VBA_FORWARD | VBA_BUTTON_A | VBA_BUTTON_B;
 	// Allow to choose secret characters from menu
 	static bool CancelMovement = false;
-	if (InMenu) {
+	if (InSelectScreen) {
 		if ((MenuChar==1 && (J & VBA_DOWN))
 		|| (MenuChar==3 && (J & VBA_RIGHT))
 		|| (MenuChar==5 && (J & VBA_LEFT))
@@ -437,28 +679,50 @@ u32 MK3Input(unsigned short pad) {
 				J &= ~(VBA_RIGHT | VBA_LEFT | VBA_UP | VBA_DOWN);
 			else CancelMovement = false;
 		}
-		WasInMenu = true;
+		WasInSelectScreen = true;
 	} else {
 		CancelMovement = false;
-		if (WasInMenu) {
+		if (WasInSelectScreen) {
 			// We just chose a character, so apply anything special here
+			// Cyborg Sub-Zero
 			if (MenuChar==MK3_SUBZERO && MenuSubChar==1)
 				gbWriteMemory(0xD4CE,MK3_SEKTOR);			
+			// Frost
 			else if (MenuChar==MK3_SUBZERO && MenuSubChar==3)
 				gbWriteMemory(0xD4CE,MK3_SINDEL);			
+			// Cyborg Kano
 			else if (MenuChar==MK3_KANO && MenuSubChar==1)
 				gbWriteMemory(0xD4CE,MK3_SEKTOR);			
+			// Cyborg Kabal
 			else if (MenuChar==MK3_KABAL && MenuSubChar==1)
 				gbWriteMemory(0xD4CE,MK3_SEKTOR);
+			// Human Cyrax
 			else if (MenuChar==MK3_CYRAX && MenuSubChar==1)
 				gbWriteMemory(0xD4CE,MK3_SUBZERO);
+			// Human Sektor
 			else if (MenuChar==MK3_SEKTOR && MenuSubChar==1)
 				gbWriteMemory(0xD4CE,MK3_SUBZERO);
-			else if (MenuChar==MK3_SMOKE && MenuSubChar==1)
+			// Human Smoke, Reptile, Scorpion
+			else if (MenuChar==MK3_SMOKE && MenuSubChar>=1)
 				gbWriteMemory(0xD4CE,MK3_SUBZERO);
-			WasInMenu = false;
+			// Reiko
+			else if (MenuChar==MK3_SHAOKHAN && MenuSubChar==1)
+				gbWriteMemory(0xD4CE,MK3_SUBZERO);
+			WasInSelectScreen = false;
 		}
 	}
+
+	bool CostumeButton = InSelectScreen && (CS || (J & VBA_BUTTON_SELECT)); // Change Style/Select changes costume
+	static bool OldCostumeButton = 0;
+
+	if (CostumeButton && !OldCostumeButton) {
+		int OldSubChar = MenuSubChar;
+		MenuSubChar = MK3SetSubchar(MenuChar, MenuSubChar+1, true);
+		if (MenuSubChar!=OldSubChar) systemGameRumble(8);
+	}
+	OldCostumeButton = CostumeButton;
+	//DebugPrintf("%d,%d C=%d M=%d", MenuChar,MenuSubChar,gbReadMemory(0xC0F0),gbReadMemory(0xCD00));
+
 	return J;
 }
 
@@ -1394,7 +1658,7 @@ u32 MKAInput(unsigned short pad)
 	}
 	WasInMenu = InMenu;
 	
-	DebugPrintf("M=%d O=%d MC=%d,%d Old=%d",InMenu,OurChar,MenuChar,MenuSubchar,OurOldChar);
+	//DebugPrintf("M=%d O=%d MC=%d,%d Old=%d",InMenu,OurChar,MenuChar,MenuSubchar,OurOldChar);
 	
 	//  CONTROLS
 	u32 J = GetMKInput(pad);
@@ -1447,109 +1711,39 @@ u32 MKAInput(unsigned short pad)
 	return J;
 }
 
-u32 MKTEInput(unsigned short pad)
+u32 MKDAInput(unsigned short pad)
 {
 	static u32 prevJ = 0, prevPrevJ = 0;
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad);
-	bool throwButton = false;
-	u8 Health;
-	u8 Side;
-	if (RomIdCode & 0xFFFFFF == MKDA)
-	{
-		Health = CPUReadByte(0x3000760); // 731 or 760
-		Side = CPUReadByte(0x3000747);
-	} else {
-		Health = CPUReadByte(0x3000761); // or 790
-		Side = CPUReadByte(0x3000777);
-	}
+	OurHealth = CPUReadByte(0x3000760); // 731 or 760
+	u8 Side = CPUReadByte(0x3000747);
 	u32 Forwards, Back;
 	if (Side == 0) {
+		OurX = 0; OpponentX = 1;
 		Forwards = VBA_RIGHT;
 		Back = VBA_LEFT;
 	} else {
+		OurX = 1; OpponentX = 0;
 		Forwards = VBA_LEFT;
 		Back = VBA_RIGHT;
 	}
 
-	// Rumble when they lose health!
-	static u8 OldHealth = 0;
-	if (Health < OldHealth)
-		systemGameRumble(20);
-	OldHealth = Health;
-
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-
-	// Punch
-	if (wp->btns_h & WPAD_BUTTON_UP || wp->btns_h & WPAD_BUTTON_LEFT)
-		J |= VBA_BUTTON_B;
-	// Kick
-	if (wp->btns_h & WPAD_BUTTON_DOWN || wp->btns_h & WPAD_BUTTON_RIGHT)
-		J |= VBA_BUTTON_A;
-	// Block
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_BUTTON_R;
-	// Change styles
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_C))
-		J |= VBA_BUTTON_L;
-	// Throw
-	if (wp->btns_h & WPAD_BUTTON_A) throwButton=true;
-	// Pause
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
-	// Start
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Special move
-	if (wp->btns_h & WPAD_BUTTON_B) {
-		// CAKTODO
-	}
-	// Speed
-	if (wp->btns_h & WPAD_BUTTON_1 || wp->btns_h & WPAD_BUTTON_2) {
-		J |= VBA_SPEED;
-	}
-	if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_UP) J |= VBA_UP;
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_DOWN) J |= VBA_DOWN;
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_LEFT) J |= VBA_LEFT;
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_RIGHT) J |= VBA_RIGHT;
-		if (wp->btns_h & (WPAD_CLASSIC_BUTTON_X | WPAD_CLASSIC_BUTTON_Y)) J |= VBA_BUTTON_B;
-		if (wp->btns_h & (WPAD_CLASSIC_BUTTON_A | WPAD_CLASSIC_BUTTON_B)) J |= VBA_BUTTON_A;
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS) J |= VBA_BUTTON_SELECT;
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS) J |= VBA_BUTTON_START;
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_ZR) throwButton = true;
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_FULL_R) J |= VBA_BUTTON_R; // block
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_FULL_L) J |= VBA_BUTTON_L; // run
-	}
-#endif
-	{
-		u32 gc = PAD_ButtonsHeld(pad);
-		// DPad moves
-		if (gc & PAD_BUTTON_UP) J |= VBA_UP;
-		if (gc & PAD_BUTTON_DOWN) J |= VBA_DOWN;
-		if (gc & PAD_BUTTON_LEFT) J |= VBA_LEFT;
-		if (gc & PAD_BUTTON_RIGHT) J |= VBA_RIGHT;
-		if (gc & PAD_BUTTON_START) J |= VBA_BUTTON_START;
-		if (gc & (PAD_BUTTON_B | PAD_BUTTON_Y)) J |= VBA_BUTTON_B;
-		if (gc & (PAD_BUTTON_A | PAD_BUTTON_X)) J |= VBA_BUTTON_A;
-		if (gc & PAD_TRIGGER_Z) J |= throwButton = true;
-		if (gc & PAD_TRIGGER_R) J |= VBA_BUTTON_R; // block
-		if (gc & PAD_TRIGGER_L) J |= VBA_BUTTON_L; // change styles
-	}
-	if (throwButton)
-	{
+	u32 J = GetMKInput(pad, 10);
+	if (HP || LP) J |= VBA_BUTTON_B;
+	if (HK || LK) J |= VBA_BUTTON_A;
+	if (BL) J |= VBA_BUTTON_R;
+	if (CS) J |= VBA_BUTTON_L;
+	if (Select) J |= VBA_BUTTON_SELECT;
+	if (Start) J |= VBA_BUTTON_START;
+	if (Throw) {
 		if ((prevJ & Forwards && prevJ & VBA_BUTTON_A && prevJ & VBA_BUTTON_B) || ((prevPrevJ & Forwards) && !(prevJ & Forwards)))
 			J |= Forwards | VBA_BUTTON_A | VBA_BUTTON_B; // R, R+1+2 = throw
 
-		else if (prevJ & Forwards)
-		{
+		else if (prevJ & Forwards) {
 			J &= ~Forwards;
 			J &= ~VBA_BUTTON_A;
 			J &= ~VBA_BUTTON_B;
-		}
-		else
+		} else
 			J |= Forwards;
-
 	}
 
 	if ((J & 48) == 48)
@@ -1561,4 +1755,53 @@ u32 MKTEInput(unsigned short pad)
 
 	return J;
 }
+
+u32 MKTEInput(unsigned short pad)
+{
+	static u32 prevJ = 0, prevPrevJ = 0;
+	OurHealth = CPUReadByte(0x3000760); // 731 or 760
+	u8 Side = CPUReadByte(0x3000777);
+	u32 Forwards, Back;
+	if (Side == 0) {
+		OurX = 0; OpponentX = 1;
+		Forwards = VBA_RIGHT;
+		Back = VBA_LEFT;
+	} else {
+		OurX = 1; OpponentX = 0;
+		Forwards = VBA_LEFT;
+		Back = VBA_RIGHT;
+	}
+
+	u32 J = GetMKInput(pad, 10);
+	if (HP || LP) J |= VBA_BUTTON_B;
+	if (HK || LK) J |= VBA_BUTTON_A;
+	if (BL) J |= VBA_BUTTON_R;
+	if (CS) J |= VBA_BUTTON_L;
+	if (Select) J |= VBA_BUTTON_SELECT;
+	if (Start) J |= VBA_BUTTON_START;
+	if (Throw) {
+		if ((prevJ & Forwards && prevJ & VBA_BUTTON_A && prevJ & VBA_BUTTON_B) || ((prevPrevJ & Forwards) && !(prevJ & Forwards)))
+			J |= Forwards | VBA_BUTTON_A | VBA_BUTTON_B; // R, R+1+2 = throw
+
+		else if (prevJ & Forwards) {
+			J &= ~Forwards;
+			J &= ~VBA_BUTTON_A;
+			J &= ~VBA_BUTTON_B;
+		} else
+			J |= Forwards;
+	}
+
+	if ((J & 48) == 48)
+		J &= ~16;
+	if ((J & 192) == 192)
+		J &= ~128;
+	prevPrevJ = prevJ;
+	prevJ = J;
+
+	return J;
+}
+
+
+
+
 

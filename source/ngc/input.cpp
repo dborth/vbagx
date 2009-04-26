@@ -829,6 +829,7 @@ static u32 DecodeJoy(unsigned short pad)
 		case MKA:
 			return MKAInput(pad);
 		case MKDA:
+			return MKDAInput(pad);
 		case MKTE:
 			return MKTEInput(pad);
 
