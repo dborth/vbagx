@@ -129,7 +129,7 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
 	GuiImageData dialogBox(dialogue_box_png);
 	GuiImage dialogBoxImg(&dialogBox);
 
-	GuiText titleTxt(title, 26, (GXColor){70, 70, 10, 255});
+	GuiText titleTxt(title, 26, (GXColor){25, 100, 10, 255});
 	titleTxt.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
 	titleTxt.SetPosition(0,14);
 	GuiText msgTxt(msg, 26, (GXColor){0, 0, 0, 255});
@@ -342,7 +342,7 @@ ProgressWindow(char *title, char *msg)
 	throbberImg.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	throbberImg.SetPosition(0, 40);
 
-	GuiText titleTxt(title, 26, (GXColor){70, 70, 10, 255});
+	GuiText titleTxt(title, 26, (GXColor){25, 100, 10, 255});
 	titleTxt.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
 	titleTxt.SetPosition(0,14);
 	GuiText msgTxt(msg, 26, (GXColor){0, 0, 0, 255});
@@ -617,7 +617,7 @@ SettingWindow(const char * title, GuiWindow * w)
 	GuiImageData dialogBox(dialogue_box_png);
 	GuiImage dialogBoxImg(&dialogBox);
 
-	GuiText titleTxt(title, 26, (GXColor){70, 70, 10, 255});
+	GuiText titleTxt(title, 26, (GXColor){25, 100, 10, 255});
 	titleTxt.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
 	titleTxt.SetPosition(0,14);
 
@@ -1301,7 +1301,7 @@ static int MenuGame()
 		}
 		else if(resetBtn.GetState() == STATE_CLICKED)
 		{
-			if (WindowPrompt("Reset Game", "Usaved progress will be lost. Are you sure?", "OK", "Cancel")) 
+			if (WindowPrompt("Reset Game", "Unsaved progress will be lost. Are you sure?", "OK", "Cancel"))
 			{
 				emulator.emuReset();
 				menu = MENU_EXIT;
@@ -1313,7 +1313,7 @@ static int MenuGame()
 		}
 		else if(mainmenuBtn.GetState() == STATE_CLICKED)
 		{
-			if (WindowPrompt("Exit Game", "Usaved progress will be lost. Are you sure?", "OK", "Cancel")) 
+			if (WindowPrompt("Exit Game", "Unsaved progress will be lost. Are you sure?", "OK", "Cancel"))
 			{
 				if(gameScreenImg)
 				{
@@ -1331,7 +1331,7 @@ static int MenuGame()
 				bgMusic->Play(); // startup music
 				#endif
 				menu = MENU_GAMESELECTION;
-			} 
+			}
 		}
 		else if(closeBtn.GetState() == STATE_CLICKED)
 		{
@@ -2182,7 +2182,7 @@ ButtonMappingWindow()
 	GuiImageData dialogBox(dialogue_box_png);
 	GuiImage dialogBoxImg(&dialogBox);
 
-	GuiText titleTxt("Button Mapping", 26, (GXColor){70, 70, 10, 255});
+	GuiText titleTxt("Button Mapping", 26, (GXColor){25, 100, 10, 255});
 	titleTxt.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
 	titleTxt.SetPosition(0,14);
 
@@ -2718,10 +2718,10 @@ static int MenuSettingsVideo()
 		}
 
 		if (GCSettings.colorize)
-			sprintf (options.value[5], "ON");
+			sprintf (options.value[5], "On");
 		else
-			sprintf (options.value[5], "off");
-			
+			sprintf (options.value[5], "Off");
+
 		ret = optionBrowser.GetClickedOption();
 
 		switch (ret)
@@ -2756,7 +2756,7 @@ static int MenuSettingsVideo()
 				if(GCSettings.videomode > 4)
 					GCSettings.videomode = 0;
 				break;
-				
+
 			case 5:
 				if (GCSettings.colorize) GCSettings.colorize = 0;
 				else GCSettings.colorize = 1;
@@ -3381,7 +3381,7 @@ MainMenu (int menu)
 
 	mainWindow = new GuiWindow(screenwidth, screenheight);
 
-	bgImg = new GuiImage(screenwidth, screenheight, (GXColor){210, 240, 210, 255});
+	bgImg = new GuiImage(screenwidth, screenheight, (GXColor){236, 226, 238, 255});
 	bgImg->ColorStripe(10);
 	mainWindow->Append(bgImg);
 

@@ -14,7 +14,7 @@
 #include "filelist.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"1.0.9"
+#define APPVERSION 		"2.0.0"
 #define PREF_FILE_NAME 	"settings.xml"
 
 #define NOTSILENT 0
