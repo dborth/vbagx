@@ -364,7 +364,7 @@ static void SetupVideoMode()
 			vmode = &TVNtsc480Prog;
 			break;
 		case 3: // PAL (50Hz)
-			vmode = &TVPal574IntDfScale;
+			vmode = &TVPal528IntDf;
 			break;
 		case 4: // PAL (60Hz)
 			vmode = &TVEurgb60Hz480IntDf;
@@ -381,8 +381,8 @@ static void SetupVideoMode()
 			#endif
 
 			// use hardware vertical scaling to fill screen
-			if(vmode->viTVMode >> 2 == VI_PAL)
-				vmode = &TVPal574IntDfScale;
+			//if(vmode->viTVMode >> 2 == VI_PAL)
+			//	vmode = &TVPal574IntDfScale;
 			break;
 	}
 
