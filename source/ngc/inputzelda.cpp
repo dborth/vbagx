@@ -30,7 +30,7 @@
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
 
-#define ALLOWCHEAT
+//#define ALLOWCHEAT
 
 u8 ZeldaDxLeftPos = 2, ZeldaDxRightPos = 3, ZeldaDxDownPos = 4;
 u8 ZeldaDxShieldPos = 5, ZeldaDxSwordPos = 5, ZeldaDxBraceletPos = 5;
