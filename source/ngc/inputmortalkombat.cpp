@@ -31,6 +31,7 @@
 #include "gba/GBAinline.h"
 
 void DebugPrintf(const char *format, ...);
+void gbSetSpritePal(u8 WhichPal, u32 bright, u32 medium, u32 dark);
 
 #define MK1_CAGE 0
 #define MK1_KANO 1
@@ -342,6 +343,22 @@ u8 MK3SetSubchar(int Char, int Subchar, u16 OriginalColour) {
 	return Subchar;
 }
 
+void MK3SetPal(int player, u8 NewChar) {
+	switch (NewChar) {
+		case MK3_SHEEVA: gbSetSpritePal(player, 0xF5CCAC,0x9A7057,0x800000); break;
+		case MK3_KANO: gbSetSpritePal(player, 0xA87860,0x882020,0x000000); break;
+		case MK3_SINDEL: gbSetSpritePal(player, 0xB8B8B8,0x7F5644,0xA818F0); break;
+		case MK3_SUBZERO: gbSetSpritePal(player, 0xB39890,0x707BFF,0x000020); break;
+		case MK3_SMOKE: gbSetSpritePal(player, 0xFFFFFF,0xA0A0A0,0x636363); break;
+		case MK3_CYRAX: gbSetSpritePal(player, 0xC0C0B0,0x90A000,0x303800); break;
+		case MK3_SEKTOR: gbSetSpritePal(player, 0xA09090,0xC00000,0x300000); break;
+		case MK3_SONYA: gbSetSpritePal(player, 0xC6A040,0x96964D,0x000000); break;
+		case MK3_KABAL: gbSetSpritePal(player, 0xB6B6B6,0x866232,0x1A1211); break;
+		case MK3_SHAOKHAN: gbSetSpritePal(player, 0xC0C0C0,0x7F5644,0x700000); break;
+	}
+	return;
+}
+
 
 u32 MK3Input(unsigned short pad) {
 	OurHealth = gbReadMemory(0xC0D6);
@@ -361,12 +378,20 @@ u32 MK3Input(unsigned short pad) {
 	static u8 OldMenuChar = 0;
 	// Rumble when they change character
 	if (MenuChar != OldMenuChar) {
-		if (InMenu) 
+		if (InMenu) {
 			systemGameRumble(4);
+			MK3SetPal(1,MenuChar);
+		}
 		OldMenuChar = MenuChar;
 	}
+
+	if (!InMenu) {
+		switch (OpponentChar) {
+			MK3SetPal(2, OpponentChar);
+		}
+	}
 	
-	u32 J = GetMKInput(pad);
+	u32 J = GetMKInput(pad, 1);
 	if (LK || HK) J |= VBA_BUTTON_A;
 	if (LP || HP) J |= VBA_BUTTON_B;
 	if (BL) J |= VBA_BUTTON_START;
@@ -419,6 +444,8 @@ u32 MK3Input(unsigned short pad) {
 			// We just chose a character, so apply anything special here
 			if (MenuChar==MK3_SUBZERO && MenuSubChar==1)
 				gbWriteMemory(0xD4CE,MK3_SEKTOR);			
+			else if (MenuChar==MK3_SUBZERO && MenuSubChar==3)
+				gbWriteMemory(0xD4CE,MK3_SINDEL);			
 			else if (MenuChar==MK3_KANO && MenuSubChar==1)
 				gbWriteMemory(0xD4CE,MK3_SEKTOR);			
 			else if (MenuChar==MK3_KABAL && MenuSubChar==1)

@@ -61,6 +61,8 @@ struct SGCSettings{
 	int		render;		// 0 - original, 1 - filtered, 2 - unfiltered
 	int		xshift;		// video output shift
 	int		yshift;
+	int     colorize; // colorize Mono Gameboy games
+
 	int		WiiControls; // Match Wii Game
 	int		WiimoteOrientation;
 	int		ExitAction;

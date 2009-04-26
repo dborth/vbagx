@@ -81,6 +81,7 @@ DefaultSettings ()
 
 	GCSettings.xshift = 0; // horizontal video shift
 	GCSettings.yshift = 0; // vertical video shift
+	GCSettings.colorize = 1; // Colorize mono gameboy games
 
 	GCSettings.WiimoteOrientation = 0;
 	GCSettings.ExitAction = 0;
