@@ -982,6 +982,10 @@ extern char DebugStr[50];
 static int MenuGame()
 {
 	int menu = MENU_NONE;
+	
+	// Weather menu if a game with Boktai solar sensor
+	bool isBoktai = ((RomIdCode & 0xFF)=='U');
+    char s[64];                    
 
 	GuiText titleTxt(ROMFilename, 24, (GXColor){255, 255, 255, 255});
 	if (DebugStr[0]) titleTxt.SetText(DebugStr);
@@ -1014,13 +1018,18 @@ static int MenuGame()
 	GuiTrigger trigHome;
 	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0);
 
+	int xOffset=125, yOffset=65;
+	if (isBoktai) {
+		xOffset=170; yOffset=70;
+	}
+
 	GuiText saveBtnTxt("Save", 24, (GXColor){0, 0, 0, 255});
 	GuiImage saveBtnImg(&btnLargeOutline);
 	GuiImage saveBtnImgOver(&btnLargeOutlineOver);
 	GuiImage saveBtnIcon(&iconSave);
 	GuiButton saveBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	saveBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	saveBtn.SetPosition(-125, 120);
+	saveBtn.SetPosition(-xOffset, 185-yOffset);
 	saveBtn.SetLabel(&saveBtnTxt);
 	saveBtn.SetImage(&saveBtnImg);
 	saveBtn.SetImageOver(&saveBtnImgOver);
@@ -1036,7 +1045,7 @@ static int MenuGame()
 	GuiImage loadBtnIcon(&iconLoad);
 	GuiButton loadBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	loadBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	loadBtn.SetPosition(125, 120);
+	loadBtn.SetPosition(xOffset, 185-yOffset);
 	loadBtn.SetLabel(&loadBtnTxt);
 	loadBtn.SetImage(&loadBtnImg);
 	loadBtn.SetImageOver(&loadBtnImgOver);
@@ -1046,13 +1055,45 @@ static int MenuGame()
 	loadBtn.SetTrigger(&trigA);
 	loadBtn.SetEffectGrow();
 
+	// Boktai adds an extra button for setting the sun.
+	GuiText *sunBtnTxt = NULL;
+	GuiImage *sunBtnImg = NULL;
+	GuiImage *sunBtnImgOver = NULL;
+	GuiButton *sunBtn = NULL;
+	if (isBoktai) {
+		struct tm *newtime;
+		time_t long_time;
+
+		// regardless of the weather, there should be no sun at night time!
+		time(&long_time); // Get time as long integer.
+		newtime = localtime(&long_time); // Convert to local time.
+		if (newtime->tm_hour > 21 || newtime->tm_hour < 5)
+		{
+			sprintf(s, "Weather: Night Time");
+		} else sprintf(s, "Weather: %d%% sun", SunBars*10);
+		sunBtnTxt = new GuiText(s, 24, (GXColor){0, 0, 0, 255});
+		sunBtnTxt->SetMaxWidth(btnLargeOutline.GetWidth()-30);
+		sunBtnImg = new GuiImage(&btnLargeOutline);
+		sunBtnImgOver = new GuiImage(&btnLargeOutlineOver);
+		sunBtn = new GuiButton(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
+		sunBtn->SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+		sunBtn->SetPosition(0, 185);
+		sunBtn->SetLabel(sunBtnTxt);
+		sunBtn->SetImage(sunBtnImg);
+		sunBtn->SetImageOver(sunBtnImgOver);
+		sunBtn->SetSoundOver(&btnSoundOver);
+		sunBtn->SetSoundClick(&btnSoundClick);
+		sunBtn->SetTrigger(&trigA);
+		sunBtn->SetEffectGrow();
+	}
+
 	GuiText resetBtnTxt("Reset", 24, (GXColor){0, 0, 0, 255});
 	GuiImage resetBtnImg(&btnLargeOutline);
 	GuiImage resetBtnImgOver(&btnLargeOutlineOver);
 	GuiImage resetBtnIcon(&iconReset);
 	GuiButton resetBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	resetBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	resetBtn.SetPosition(125, 250);
+	resetBtn.SetPosition(xOffset, 185+yOffset);
 	resetBtn.SetLabel(&resetBtnTxt);
 	resetBtn.SetImage(&resetBtnImg);
 	resetBtn.SetImageOver(&resetBtnImgOver);
@@ -1069,7 +1110,7 @@ static int MenuGame()
 	GuiImage gameSettingsBtnIcon(&iconGameSettings);
 	GuiButton gameSettingsBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	gameSettingsBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	gameSettingsBtn.SetPosition(-125, 250);
+	gameSettingsBtn.SetPosition(-xOffset, 185+yOffset);
 	gameSettingsBtn.SetLabel(&gameSettingsBtnTxt);
 	gameSettingsBtn.SetImage(&gameSettingsBtnImg);
 	gameSettingsBtn.SetImageOver(&gameSettingsBtnImgOver);
@@ -1155,6 +1196,8 @@ static int MenuGame()
 	w.Append(&loadBtn);
 	w.Append(&resetBtn);
 	w.Append(&gameSettingsBtn);
+	if (isBoktai)
+		w.Append(sunBtn);
 
 	#ifdef HW_RVL
 	w.Append(batteryBtn[0]);
@@ -1238,6 +1281,15 @@ static int MenuGame()
 			}
 		}
 		#endif
+		
+		if (isBoktai)
+		{
+			if (sunBtn->GetState() == STATE_CLICKED) {
+				SunBars++;
+				if (SunBars>10) SunBars=0;
+				menu = MENU_GAME;
+			}
+		}
 
 		if(saveBtn.GetState() == STATE_CLICKED)
 		{
@@ -1305,6 +1357,13 @@ static int MenuGame()
 	}
 
 	HaltGui();
+	
+	if (isBoktai) {
+		delete sunBtnTxt;
+		delete sunBtnImg;
+		delete sunBtnImgOver;
+		delete sunBtn;
+	}
 
 	#ifdef HW_RVL
 	for(i=0; i < 4; i++)
