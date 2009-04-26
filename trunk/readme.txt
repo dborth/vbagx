@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 1.0.9
+                                  Version 2.0.0
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -27,6 +27,20 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[2.0.0]
+* New GX-based menu, with a completely redesigned layout. Has Wiimote IR 
+  support, sounds, graphics, animation effects, and more
+* Thanks to the3seashells for designing some top-notch artwork, to 
+  Peter de Man for composing the music, and a special thanks to shagkur for 
+  fixing libogc bugs that would have otherwise prevented the release
+* Onscreen keyboard for changing save/load folders and network settings
+* Menu configuration options (configurable exit button, wiimote orientation,
+  volumes)
+* New save manager, allowing multiple saves and save browsing. Shows
+  screenshots for Snapshot saves, and save dates/times
+* Added video shifting option
+* Added video mode selection (recommended to leave on Automatic)
 
 [1.0.9 - April 7, 2009]
 * Gamecube controller should no longer rumble constantly
@@ -733,14 +747,20 @@ right analog stick = fast forward
  
 -=[ Credits ]=-
 
-Visual Boy Advance GX             Tantric, Carl Kenner
-GameCube/Wii Port Improvements    emukidid
-Original GameCube Port            SoftDev
-Visual Boy Advance 1.7.2          Forgotten
-libogc                            Shagkur & wintermute
-Testing                           tehskeen users
+			Coding & menu design		Tantric
+			Additional coding			Carl Kenner
+			Menu artwork				the3seashells
+			Menu sound					Peter de Man
+                      
+			¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
+			VBA GameCube/Wii			SoftDev, emukidid
 
-And many others who have contributed over the years!
+			Visual Boy Advance - M		VBA-M Team
+			Visual Boy Advance			Forgotten
+			libogc/devkitPPC			shagkur & wintermute
+			FreeTypeGX					Armin Tamzarian
+
+			And many others who have contributed over the years!
  
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
