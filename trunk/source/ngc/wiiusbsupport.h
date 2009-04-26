@@ -69,7 +69,6 @@
 #define KB_RSHIFT 	229
 #define KB_RALT 	230
 #define KB_RWIN 	231
-// CAKTODO
 #define KB_MOUSEL 	232
 #define KB_MOUSER 	233
 #define KB_MOUSEM 	234

@@ -257,8 +257,8 @@ bool StartColorizing() {
 }
 
 void StopColorizing() {
-  for(int i = 0; i < 8; i++) // CAKTODO fix
-    gbPalette[i] = systemGbPalette[gbPaletteOption*8+i];
+  for(int i = 0; i < 12; i++)
+    gbPalette[i] = systemGbPalette[gbPaletteOption*12+i];
   ColorizeGameboy = false;
 }
 

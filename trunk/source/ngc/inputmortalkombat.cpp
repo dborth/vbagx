@@ -979,13 +979,13 @@ void MKAMakeSindel() {
 	}
 	gbaWriteHalfWord(0x200005c, 0x78D4);
 }
-void MKAMakeKabal() { // CAKTODO, currently a Ninja
+void MKAMakeKabal() { 
 	if (MKAIsStanding()) {
-	    MKASetYPos(0x36); // y offset
-	    gbaWriteHalfWord(0x2000040, 0x039b);
-	    gbaWriteHalfWord(0x2000048, 0x0409);
+	    MKASetYPos(0x31); // y offset
+	    gbaWriteHalfWord(0x2000040, 0x0591);
+	    gbaWriteHalfWord(0x2000048, 0x050A);
 	}
-	gbaWriteHalfWord(0x200005c, 0x3494);
+	gbaWriteHalfWord(0x200005c, 0x4E2C);
 }
 
 #define CYBORG_RED      0x94

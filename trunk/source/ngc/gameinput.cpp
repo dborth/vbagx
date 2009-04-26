@@ -64,7 +64,6 @@ u32 LegoStarWars1Input(unsigned short pad) {
 		J |= VBA_BUTTON_START;
 
 	if (wp->exp.type == WPAD_EXP_NONE) {
-		// CAKTODO
 		J |= DecodeWiimote(pad);
 	} else if (wp->exp.type == WPAD_EXP_NUNCHUK) {
 		// build, use force
@@ -250,7 +249,7 @@ u32 TMNTInput(unsigned short pad) {
 	if (Select) J |= VBA_BUTTON_SELECT;
 	if (Roll) {
 		if (!wait) {
-			J |= LastDir; // Double tap D-Pad to roll CAKTODO
+			J |= LastDir; // Double tap D-Pad to roll
 			wait = true;
 		} else wait = false;
 	}
