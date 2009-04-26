@@ -17,6 +17,10 @@
 #define _stricmp strcasecmp
 #endif
 
+void gbSetBGPalette(u8 value, bool ColoursChanged=false);
+void gbSetObj0Palette(u8 value, bool ColoursChanged=false);
+void gbSetObj1Palette(u8 value, bool ColoursChanged=false);
+
 extern u8 *pix;
 extern bool speedup;
 
@@ -1202,10 +1206,7 @@ void  gbWriteMemory(register u16 address, register u8 value)
       else
         memset(gbBgpLine,value,sizeof(gbBgpLine));
 
-      gbBgp[0] = value & 0x03;
-      gbBgp[1] = (value & 0x0c)>>2;
-      gbBgp[2] = (value & 0x30)>>4;
-      gbBgp[3] = (value & 0xc0)>>6;
+	  gbSetBGPalette(value);
       break;
     }
 
@@ -1228,10 +1229,7 @@ void  gbWriteMemory(register u16 address, register u8 value)
       else
         memset(gbObp0Line,value,sizeof(gbObp0Line));
 
-      gbObp0[0] = value & 0x03;
-      gbObp0[1] = (value & 0x0c)>>2;
-      gbObp0[2] = (value & 0x30)>>4;
-      gbObp0[3] = (value & 0xc0)>>6;
+	  gbSetObj0Palette(value);
       break;
     }
 
@@ -1254,10 +1252,7 @@ void  gbWriteMemory(register u16 address, register u8 value)
       else
         memset(gbObp1Line,value,sizeof(gbObp1Line));
 
-      gbObp1[0] = value & 0x03;
-      gbObp1[1] = (value & 0x0c)>>2;
-      gbObp1[2] = (value & 0x30)>>4;
-      gbObp1[3] = (value & 0xc0)>>6;
+	  gbSetObj1Palette(value);
       break;
     }
 
@@ -2558,12 +2553,12 @@ void gbReset()
     }
   } else {
     if(gbSgbMode) {
-      for(int i = 0; i < 8; i++)
-        gbPalette[i] = systemGbPalette[gbPaletteOption*8+i];
+      for(int i = 0; i < 12; i++)
+        gbPalette[i] = systemGbPalette[gbPaletteOption*12+i];
 
     }
-    for(int i = 0; i < 8; i++)
-      gbPalette[i] = systemGbPalette[gbPaletteOption*8+i];
+    for(int i = 0; i < 12; i++)
+      gbPalette[i] = systemGbPalette[gbPaletteOption*12+i];
   }
 
   GBTIMER_MODE_0_CLOCK_TICKS = 256;

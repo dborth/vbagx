@@ -4,6 +4,11 @@
 #include "gbGlobals.h"
 #include "gbSGB.h"
 
+void gbSetBGPalette(u8 value, bool ColoursChanged=false);
+void gbSetObj0Palette(u8 value, bool ColoursChanged=false);
+void gbSetObj1Palette(u8 value, bool ColoursChanged=false);
+extern bool ColorizeGameboy;
+
 u8 gbInvertTab[256] = {
   0x00,0x80,0x40,0xc0,0x20,0xa0,0x60,0xe0,
   0x10,0x90,0x50,0xd0,0x30,0xb0,0x70,0xf0,
@@ -46,6 +51,7 @@ extern int layerSettings;
 
 void gbRenderLine()
 {
+  static u8 oldBgPal=0;
   memset(gbLineMix, 0, sizeof(gbLineMix));
   u8 * bank0;
   u8 * bank1;
@@ -141,8 +147,11 @@ void gbRenderLine()
           if(gbCgbMode) {
             c = c + (attrs & 7)*4;
           } else {
-            c = (gbBgpLine[x+(gbSpeed ? 5 : 11)+SpritesTicks]>>(c<<1)) &3;
-            if(gbSgbMode && !gbCgbMode) {
+		    // Get the background palette to use (from the delayed pipeline)
+			u8 BgPal = gbBgpLine[x+(gbSpeed ? 5 : 11)+SpritesTicks];
+			// Super Game Boy has its own special palettes
+            if(gbSgbMode) { 
+              c = (BgPal>>(c<<1)) &3;
               int dx = x >> 3;
               int dy = y >> 3;
 
@@ -152,7 +161,15 @@ void gbRenderLine()
                 palette = 0;
 
               c = c + 4*palette;
-            }
+			// Mono Game Boy requires special palette handling
+            } else {
+			  if (BgPal!=oldBgPal) {
+				gbSetBGPalette(BgPal);
+				oldBgPal = BgPal;
+			  }
+	          if (!ColorizeGameboy) c = (BgPal>>(c<<1)) &3;
+              else c += 0;
+			}
           }
           gbLineMix[x] = gbColorOption ? gbColorFilter[gbPalette[c] & 0x7FFF] :
             gbPalette[c] & 0x7FFF;
@@ -205,9 +222,15 @@ void gbRenderLine()
       {
         u16 color = gbColorOption ? gbColorFilter[0x7FFF] :
                     0x7FFF;
-        if (!gbCgbMode)
-        color = gbColorOption ? gbColorFilter[gbPalette[gbBgpLine[i+(gbSpeed ? 5 : 11)+gbSpritesTicks[i]*(gbSpeed ? 2 : 4)]&3] & 0x7FFF] :
-                gbPalette[gbBgpLine[i+(gbSpeed ? 5 : 11)+gbSpritesTicks[i]*(gbSpeed ? 2 : 4)]&3] & 0x7FFF;
+        if (!gbCgbMode) {
+		    // Get the background palette to use (from the delayed pipeline)
+			u8 BgPal = gbBgpLine[i+(gbSpeed ? 5 : 11)+gbSpritesTicks[i]*(gbSpeed ? 2 : 4)];
+			if ((BgPal!=oldBgPal) && !gbSgbMode) {
+			  gbSetBGPalette(BgPal);
+			  oldBgPal = BgPal;
+			}
+			color = gbColorOption ? gbColorFilter[gbPalette[BgPal&3] & 0x7FFF] : gbPalette[BgPal&3] & 0x7FFF;
+		}
         gbLineMix[i] = color;
         gbLineBuffer[i] = 0;
       }
@@ -338,8 +361,11 @@ void gbRenderLine()
               if(gbCgbMode) {
                 c = c + (attrs & 7) * 4;
               } else {
-                c = (gbBgpLine[x+(gbSpeed ? 5 : 11)+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)]>>(c<<1)) &3;
-                if(gbSgbMode && !gbCgbMode) {
+		        // Get the background palette to use (from the delayed pipeline)
+			    u8 BgPal = gbBgpLine[x+(gbSpeed ? 5 : 11)+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)];
+			    // Super Game Boy has its own special palettes
+                if(gbSgbMode) {
+                  c = (BgPal>>(c<<1)) &3;
                   int dx = x >> 3;
                   int dy = y >> 3;
 
@@ -349,7 +375,15 @@ void gbRenderLine()
                     palette = 0;
 
                   c = c + 4*palette;
-                }
+			    // Mono Game Boy requires special palette handling
+			    } else {
+				  if (BgPal!=oldBgPal) {
+					gbSetBGPalette(BgPal);
+					oldBgPal = BgPal;
+			      }
+				  if (!ColorizeGameboy) c = (BgPal>>(c<<1)) &3;
+				  else c += 4;
+				}
               }
               gbLineMix[x] = gbColorOption ? gbColorFilter[gbPalette[c] & 0x7FFF] :
                 gbPalette[c] & 0x7FFF;
@@ -405,6 +439,7 @@ void gbRenderLine()
 void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
                       int size,int spriteNumber)
 {
+  static u8 oldObj0Pal=0, oldObj1Pal=0;
   u8 * bank0;
   u8 * bank1;
   if(gbCgbMode) {
@@ -422,18 +457,34 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
 
   int init = 0x0000;
 
-  for (int i = 0; i<4; i++)
-  {
-    gbObp0[i] = (gbObp0Line[x+11+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)]>>(i<<1)) & 3;
-    gbObp1[i] = (gbObp1Line[x+11+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)]>>(i<<1)) & 3;
+
+  // The monochrome gameboy has 2 sprite palettes, because each palette only contains 3 colours
+  // out of a possible 4. Here we are colourising the two palettes seperately.
+  u8 *pal;
+  u8 ObjPal = 0;
+  u8 PalOffset = 8;
+  if(!gbCgbMode) {
+    if(flags & 0x10) {
+      pal = gbObp1;
+	  ObjPal = gbObp1Line[x+11+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)];
+	  if (ObjPal!=oldObj1Pal && !gbSgbMode) {
+		gbSetObj1Palette(ObjPal);
+		oldObj1Pal = ObjPal;
+	  }
+	  PalOffset = 12;
+    } else {
+      pal = gbObp0;
+	  ObjPal = gbObp0Line[x+11+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)];
+	  if (ObjPal!=oldObj0Pal && !gbSgbMode) {
+		gbSetObj0Palette(ObjPal);
+		oldObj0Pal = ObjPal;
+	  }
+	  PalOffset = 8;
+    }
   }
-  u8 *pal = gbObp0;
 
   int flipx = (flags & 0x20);
   int flipy = (flags & 0x40);
-
-  if((flags & 0x10))
-    pal = gbObp1;
 
   if(flipy) {
     t = (size ? 15 : 7) - t;
@@ -461,6 +512,7 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
     if( (b & mask))
       c+=2;
 
+	// colour index 0 is always transparent, so skip
     if(c==0) continue;
 
     int xxx = xx+x;
@@ -508,9 +560,9 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
     if(gbCgbMode) {
       c = c + (flags & 0x07)*4 + 32;
     } else {
-      c = pal[c];
-
-      if(gbSgbMode && !gbCgbMode) {
+	  // Super Game Boy has its own special palettes
+      if(gbSgbMode) {
+        c = (ObjPal>>(c<<1)) &3;
         int dx = xxx >> 3;
         int dy = y >> 3;
 
@@ -520,8 +572,10 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
           palette = 0;
 
         c = c + 4*palette;
-      } else {
-        c += 4;
+	  // Monochrome Game Boy 
+	  } else {
+	    if (!ColorizeGameboy) c = (ObjPal>>(c<<1)) &3;
+        else c += PalOffset;
       }
     }
 

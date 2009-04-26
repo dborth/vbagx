@@ -81,6 +81,14 @@ u16 systemGbPalette[24];
 u16 systemColorMap16[0x10000];
 u32 *systemColorMap32 = NULL;
 
+void gbSetPalette(u32 RRGGBB[]);
+bool StartColorizing();
+void StopColorizing();
+extern bool ColorizeGameboy;
+extern u16 systemMonoPalette[14];
+void gbSetBgPal(u8 WhichPal, u32 bright, u32 medium, u32 dark, u32 black=0x000000);
+void gbSetSpritePal(u8 WhichPal, u32 bright, u32 medium, u32 dark);
+
 struct EmulatedSystem emulator =
 {
 	NULL,
@@ -728,6 +736,7 @@ bool ValidGameId(u32 id)
 
 static void gbApplyPerImagePreferences()
 {
+	char title[17];
 	// Only works for some GB Colour roms
 	u8 Colour = gbRom[0x143];
 	if (Colour == 0x80 || Colour == 0xC0)
@@ -740,16 +749,14 @@ static void gbApplyPerImagePreferences()
 	else
 		RomIdCode = 0;
 	// Otherwise we need to make up our own code
+	title[15] = '\0';
+	title[16] = '\0';
+	if (gbRom[0x143] < 0x7F && gbRom[0x143] > 0x20)
+		strncpy(title, (const char *) &gbRom[0x134], 16);
+	else
+		strncpy(title, (const char *) &gbRom[0x134], 15);
 	if (RomIdCode == 0)
 	{
-		char title[17];
-		title[15] = '\0';
-		title[16] = '\0';
-		if (gbRom[0x143] < 0x7F && gbRom[0x143] > 0x20)
-			strncpy(title, (const char *) &gbRom[0x134], 16);
-		else
-			strncpy(title, (const char *) &gbRom[0x134], 15);
-		//sprintf(DebugStr, "'%s' %x %x %d", title, Colour, gbRom[0x13f] | (gbRom[0x140] << 8) | (gbRom[0x141] << 16) | (gbRom[0x142] << 24), ValidGameId(gbRom[0x13f] | (gbRom[0x140] << 8) | (gbRom[0x141] << 16) | (gbRom[0x142] << 24)));
 		if (strcmp(title, "ZELDA") == 0)
 			RomIdCode = LINKSAWAKENING;
 		else if (strcmp(title, "MORTAL KOMBAT") == 0)
@@ -776,6 +783,26 @@ static void gbApplyPerImagePreferences()
 			RomIdCode = TMNT2;
 		else if (strcmp(title, "TMNT3") == 0)
 			RomIdCode = TMNT3;
+	}
+	// look for matching palettes if a monochrome gameboy game 
+	// (or if a Super Gameboy game, but the palette will be ignored later in that case)
+	int snum = -1;
+	if ((Colour != 0x80) && (Colour != 0xC0)) {
+		for(int i=1; i < gamePalettesCount; i++)
+		{
+			if(strcmp(title, gamePalettes[i].gameName)==0)
+			{
+				snum = i;
+				break;
+			}
+		}
+		// match found!
+		if(snum >= 0)
+		{
+			gbSetPalette(gamePalettes[snum].palette);
+		} else {
+			gbSetPalette(gamePalettes[0].palette);
+		}
 	}
 }
 

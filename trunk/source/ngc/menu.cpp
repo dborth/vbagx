@@ -2568,6 +2568,7 @@ static int MenuSettingsVideo()
 	sprintf(options.name[i++], "Screen Zoom");
 	sprintf(options.name[i++], "Screen Position");
 	sprintf(options.name[i++], "Video Mode");
+	sprintf(options.name[i++], "Colorize Mono GB");
 	options.length = i;
 
 	GuiText titleTxt("Game Settings - Video", 28, (GXColor){255, 255, 255, 255});
@@ -2650,6 +2651,11 @@ static int MenuSettingsVideo()
 				sprintf (options.value[4], "PAL (60Hz)"); break;
 		}
 
+		if (GCSettings.colorize)
+			sprintf (options.value[5], "ON");
+		else
+			sprintf (options.value[5], "off");
+			
 		ret = optionBrowser.GetClickedOption();
 
 		switch (ret)
@@ -2683,6 +2689,11 @@ static int MenuSettingsVideo()
 				GCSettings.videomode++;
 				if(GCSettings.videomode > 4)
 					GCSettings.videomode = 0;
+				break;
+				
+			case 5:
+				if (GCSettings.colorize) GCSettings.colorize = 0;
+				else GCSettings.colorize = 1;
 				break;
 		}
 

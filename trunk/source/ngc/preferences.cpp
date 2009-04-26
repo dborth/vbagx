@@ -140,6 +140,7 @@ preparePrefsData (int method)
 	createXMLSetting("scaling", "Aspect Ratio Correction", toStr(GCSettings.scaling));
 	createXMLSetting("xshift", "Horizontal Video Shift", toStr(GCSettings.xshift));
 	createXMLSetting("yshift", "Vertical Video Shift", toStr(GCSettings.yshift));
+	createXMLSetting("colorize", "Colorize Mono Gameboy", toStr(GCSettings.colorize));
 
 	createXMLSection("Menu", "Menu Settings");
 
@@ -301,6 +302,7 @@ decodePrefsData (int method)
 			loadXMLSetting(&GCSettings.scaling, "scaling");
 			loadXMLSetting(&GCSettings.xshift, "xshift");
 			loadXMLSetting(&GCSettings.yshift, "yshift");
+			loadXMLSetting(&GCSettings.colorize, "colorize");
 
 			// Menu Settings
 
