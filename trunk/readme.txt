@@ -41,6 +41,21 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
   screenshots for Snapshot saves, and save dates/times
 * Added video shifting option
 * Added video mode selection (recommended to leave on Automatic)
+* ROM filenames are now displayed shortened by removing rubbish from name
+* USB Mouse support (buttons only)
+* Keyboard shift key bug fixed
+* Built-in 14 colour palettes for some monochrome gameboy games (Magnetic
+  Soccer, Malibu Beach Volleyball, Marble Madness, Metroid 2, Mortal Kombat,
+  Mortal Kombat II, Mortal Kombat 3, Mr. Do!)  
+* Rumble works in GBC games designed for rumble cartridges but shipped
+  without rumble cartridges, such as Disney's Tarzan for GBC
+* Improved Mortal Kombat Wii Controls
+* Mortal Kombat games now have many extra characters to choose
+* Wii Controls for more Teenage Mutant Ninja Turtles games
+* Improved Lego Star Wars controls
+* Zelda cheat button removed
+* Boktai menu now tells you when there can't be sun because it is night
+* Minor bug fixes
 
 [1.0.9 - April 7, 2009]
 * Gamecube controller should no longer rumble constantly
