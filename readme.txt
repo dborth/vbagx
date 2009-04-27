@@ -12,7 +12,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 -=[ Features ]=-
 
-* Wiimote, Nunchuk, Classic, Gamecube controller, and Keyboard support
+* Wiimote, Nunchuk, Classic, Gamecube controller, Keyboard and Mouse support
 * Rotation sensors, Solar sensors, and Rumble support
 * Optional special Wii controls built-in for some games
 * SRAM and State saving
@@ -208,27 +208,50 @@ on these topics is the tehskeen forums: http://www.tehskeen.com/forums/
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                          INSTRUCTIONS                         ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
-Note! You will need to unplug and replug the USB keyboard (perhaps more than
-once) while in the emulator to get it to work. A keyboard is not required.
+Note! A USB Mouse must be plugged in before starting the emulator, or it
+won't be recognised. A mouse or keyboard is not required. Keyboards might or
+might not need to be unplugged and replugged to work.
 
-If you have upgraded from a previous version, the emulator will start with a
-message that your preferences have been reset. Press A and you will be taken
-to the preferences menu. You will need to set your preferences how you want 
-them.
+If you have upgraded from a previous version, the emulator may start with a
+message that your preferences have been reset. You will need to set your 
+preferences how you want them.
 
-Otherwise the emulator will start at the main menu.
+Otherwise the emulator will start at the main menu, which is a list of game
+ROMs. There is also a settings button to choose how and where to load or
+save files, and to change menu settings.
 
-Navigate the menu with the D-Pad, and select options with the A button.
-Press B to cancel out of a menu. Cancelling out of the main menu with B will
-return you to the game, if you have chosen one.
+Navigate the menu with the D-Pad, or the Wiimote pointer, and select options 
+with the A button. Press the B button to swap between controlling a list box 
+and controlling the buttons. Pressing the Home button will exit from the
+main menu. You can choose what exiting will do by using the settings menu.
 
-When choosing a file, the B button takes you up a folder. Once you get to
-the root directory pressing B will cancel and take you back to the menu.
-There may be more than one page of files, even if it doesn't look like it.
-Keep pressing down or up to go to the next page, or use left and right.
+Keyboard and mouse do not work in the menu yet. 
+
+Click on the logo to see the credits.
+
+When choosing a file, use left and right to go up or down a page.
+
+Once you choose a game, the game will start. But you can get back to a menu
+by pressing Home. This takes you to the in-game menu, where you can save,
+load, reset, or change settings. The settings apply to all games, not just
+the current one. These settings are different from the settings on the main
+menu. If you are playing a Boktai game with a solar sensor, there will also
+be a fifth button which lets you change the weather. The sunlight is based
+on the weather, the time of day, and the angle of your Wiimote.
+
+Saving and loading let you choose two kinds of save files. SRAM is the
+normal kind of saving and loading that you have on a real gameboy. It only
+saves up to the last checkpoint or savepoint in the game. Or you can save
+a better way by using the emulator's special "Snapshot" feature which
+saves the state of everything, exactly where you are up to. Loading a
+Snapshot may erase your "SRAM (Auto)" so be careful.
+
+From the game menu you can return to the game by pressing Home again, or by
+clicking on the "Close" button in the top right. Or to quit that game and
+choose a different game, click on the "Main Menu" button.
 
 If you don't want to load ROMs from the SD card, you can go to the 
-preferences menu and choose where to load from. You can load from SD cards,
+settings menu and choose where to load from. You can load from SD cards,
 USB memory sticks/hard drives, DVD (if you installed DVDX), gamecube memory
 cards, or from shared folders over the network (this is called SMB).
 
@@ -246,7 +269,9 @@ inside the ZIP file. If a rom is zipped, you might need to check inside the
 zip for the actual rom filename.
 
 Colourised games still have some distortion in this version, but it is
-improved from the previous version, and better than VBA-M.
+improved from the previous version, and better than VBA-M. Some unpatched
+monochrome gameboy games have built-in palettes in this emulator and will 
+appear in colour.
 
 You must not use patched versions of Boktai roms! (Except for the translation
 patch for Boktai 3, which is highly recommended). The patches are for old
@@ -258,6 +283,9 @@ Tumble, or Yoshi's Universal Gravitation (Topsy Turvy). The original roms
 are fully supported, and the patch will stop them from working.
 
 -=[ Controls ]=-
+
+See the website at http://www.wiibrew.org/wiki/VBA for better control
+documentation, with illustrations and tables.
 
 The default controls are...
 
@@ -327,7 +355,8 @@ Super Mario Bros., Super Mario Bros. DX, Super Mario 2, Super Mario (2)
 Advance, Super Mario 3, Super Mario World, Yoshi's Island, 
 Yoshi's Universal Gravitation (Topsy Turvy)
 
-Mario Kart can be played with Mario Kart wii controls
+Mario Kart can be (sort of) played with Mario Kart wii controls, but it
+doesn't work very well.
 
 These Metroid games can be played with Metroid Prime 3 controls:
 Metroid Zero Mission, Metroid 1, Metroid 2, Metroid Fusion
@@ -341,7 +370,9 @@ These Lego games can be played with Lego Star Wars the Complete Saga
 controls:
 Lego Star Wars The Video Game, Lego Star Wars The Original Trilogy
 
-TMNT can be played with TMNT Wii controls.
+These Teenage Mutant Ninja Turtles games can be played with TMNT Wii controls:
+TMNT, Teenage Mutant Ninja Turtles, Fall of the Foot Clan, Back from the Sewers,
+Radical Rescue
 
 These Harry Potter games can be played with Harry Potter and the Order of 
 the Phoenix Wii controls:
@@ -555,16 +586,22 @@ C = toggle Morph Ball
 
 Turn "Match Wii Controls" ON to use these controls.
 
-The TMNT game based on the CGI movie uses the same controls as TMNT on Wii.
-They are not fully implemented yet.
+The TMNT games (except Battle Nexus) use the same controls as TMNT on Wii,
+or GameCube. With a Classic Controller they use the same controls as on
+the Playstation version.
 
 The Wii TMNT controls are:
 ==========================
-Shake the Wii Remote or Nunchuk to attack or to throw away a weapon if 
+Shake the Wii Remote to attack or to throw away a weapon if 
 in the air. Also shake to pick up a weapon.
 
+Shake the Nunchuk to do a spin kick.
+
 A = jump
-B = swap turtle
+B = swap turtle, or charge attack
+B while pointing up = super family move
+C = roll
+Z = special move
 
 -=[ Boktai, Match Wii Controls ]=-
 
@@ -639,21 +676,21 @@ Turn "Match Wii Controls" ON to use these controls.
 
 All Mortal Kombat games use the same controls as Mortal Kombat Armaggedon
 for the Wii, except that special moves gestures are not implemented yet.
-Note that the Gameboy games all only have 1 punch and 1 kick, rather than
-the 4 attacks on other consoles.
 
 The Mortal Kombat Wii controls are:
 ===================================
 
 Use the Nunchuk joystick to move and jump.
 
-D-Pad up/left = punch
-D-Pad down/right = kick
-
+D-Pad left = Low Punch
+D-Pad up = High Punch
+D-Pad down = Low Kick
+D-Pad right = High Kick
 Z = block
 A = throw
-C = change style, run
-- = pause
+C = change style, run, change costume or character
++ = pause
+- = change costume or character
 
 -=[ Lego Star Wars, Match Wii Controls ]=-
 
