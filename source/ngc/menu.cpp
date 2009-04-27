@@ -1,7 +1,7 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric September 2008
+ * Tantric 2008-2009
  *
  * menu.cpp
  *
@@ -982,10 +982,10 @@ extern char DebugStr[50];
 static int MenuGame()
 {
 	int menu = MENU_NONE;
-	
+
 	// Weather menu if a game with Boktai solar sensor
 	bool isBoktai = ((RomIdCode & 0xFF)=='U');
-    char s[64];                    
+    char s[64];
 
 	GuiText titleTxt(ROMFilename, 24, (GXColor){255, 255, 255, 255});
 	if (DebugStr[0]) titleTxt.SetText(DebugStr);
@@ -1281,7 +1281,7 @@ static int MenuGame()
 			}
 		}
 		#endif
-		
+
 		if (isBoktai)
 		{
 			if (sunBtn->GetState() == STATE_CLICKED) {
@@ -1301,7 +1301,7 @@ static int MenuGame()
 		}
 		else if(resetBtn.GetState() == STATE_CLICKED)
 		{
-			if (WindowPrompt("Reset Game", "Unsaved progress will be lost. Are you sure?", "OK", "Cancel"))
+			if (WindowPrompt("Reset Game", "Reset this game? Any unsaved progress will be lost.", "OK", "Cancel"))
 			{
 				emulator.emuReset();
 				menu = MENU_EXIT;
@@ -1313,7 +1313,7 @@ static int MenuGame()
 		}
 		else if(mainmenuBtn.GetState() == STATE_CLICKED)
 		{
-			if (WindowPrompt("Exit Game", "Unsaved progress will be lost. Are you sure?", "OK", "Cancel"))
+			if (WindowPrompt("Quit Game", "Quit this game? Any unsaved progress will be lost.", "OK", "Cancel"))
 			{
 				if(gameScreenImg)
 				{
@@ -1357,7 +1357,7 @@ static int MenuGame()
 	}
 
 	HaltGui();
-	
+
 	if (isBoktai) {
 		delete sunBtnTxt;
 		delete sunBtnImg;
@@ -1684,7 +1684,7 @@ static int MenuGameSettings()
 	GuiImageData btnLargeOutlineOver(button_large_over_png);
 	GuiImageData iconMappings(icon_settings_mappings_png);
 	GuiImageData iconVideo(icon_settings_video_png);
-#ifdef HW_RVL	
+#ifdef HW_RVL
 	GuiImageData iconWiiControls(icon_settings_nunchuk_png);
 #else
 	GuiImageData iconWiiControls(icon_settings_gamecube_png);
