@@ -183,9 +183,9 @@ u32 GetMKInput(unsigned short pad, int rumbleTime=4) {
 		if (gc & PAD_BUTTON_START) Start = true;
 		// Punch
 		if (gc & PAD_BUTTON_B) LP = true;
-		if (gc & PAD_BUTTON_X) HP = true;
+		if (gc & PAD_BUTTON_Y) HP = true;
 		// Kick
-		if (gc & PAD_BUTTON_B) LK = true;
+		if (gc & PAD_BUTTON_A) LK = true;
 		if (gc & PAD_BUTTON_X) HK = true;
 		// Block
 		if (gc & PAD_TRIGGER_R) BL = true;
