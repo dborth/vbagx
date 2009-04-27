@@ -71,7 +71,7 @@ void gbSetBGPalette(u8 value, bool ColoursChanged=false) {
   gbBgp[1] = (value & 0x0c)>>2;
   gbBgp[2] = (value & 0x30)>>4;
   gbBgp[3] = (value & 0xc0)>>6;
-  if ((value==oldBgp && !ColoursChanged) || gbSgbMode || !ColorizeGameboy) return;
+  if ((value==oldBgp && !ColoursChanged) || gbCgbMode || gbSgbMode || !ColorizeGameboy) return;
   // check for duplicates
   bool dup = false;
   for (int i=0; i<=2; i++)
@@ -138,7 +138,7 @@ void gbSetObj0Palette(u8 value, bool ColoursChanged = false) {
   gbObp0[1] = (value & 0x0c)>>2;
   gbObp0[2] = (value & 0x30)>>4;
   gbObp0[3] = (value & 0xc0)>>6;
-  if ((value==oldObp0 && !ColoursChanged) || gbSgbMode || !ColorizeGameboy) return;
+  if ((value==oldObp0 && !ColoursChanged) || gbCgbMode || gbSgbMode || !ColorizeGameboy) return;
   // check for duplicates
   bool dup = false;
   for (int i=1; i<=2; i++)
@@ -198,7 +198,7 @@ void gbSetObj1Palette(u8 value, bool ColoursChanged = false) {
   gbObp1[1] = (value & 0x0c)>>2;
   gbObp1[2] = (value & 0x30)>>4;
   gbObp1[3] = (value & 0xc0)>>6;
-  if ((value==oldObp1 && !ColoursChanged) || gbSgbMode || !ColorizeGameboy) return;
+  if ((value==oldObp1 && !ColoursChanged) || gbCgbMode || gbSgbMode || !ColorizeGameboy) return;
   // check for duplicates
   bool dup = false;
   for (int i=1; i<=2; i++)
