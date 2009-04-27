@@ -266,7 +266,7 @@ decodePrefsData (int method)
 					verMinor >= 0 && verMinor <= 9 &&
 					verPoint >= 0 && verPoint <= 9))
 					result = false;
-				else if(verPoint < 8 && verMajor == 1) // less than version 1.0.8
+				else if(verMajor < 2) // less than version 2.0.0
 					result = false; // reset settings (sorry, should update settings instead)
 				else if(verMajor > curMajor || verMinor > curMinor || verPoint > curPoint) // some future version
 					result = false; // reset settings

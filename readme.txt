@@ -28,7 +28,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
-[2.0.0]
+[2.0.0 - April 27, 2009]
 * New GX-based menu, with a completely redesigned layout. Has Wiimote IR 
   support, sounds, graphics, animation effects, and more
 * Thanks to the3seashells for designing some top-notch artwork, to 
@@ -41,7 +41,6 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
   screenshots for Snapshot saves, and save dates/times
 * Added video shifting option
 * Added video mode selection (recommended to leave on Automatic)
-* ROM filenames are now displayed shortened by removing rubbish from name
 * USB Mouse support (buttons only)
 * Keyboard shift key bug fixed
 * Built-in 14 colour palettes for some monochrome gameboy games (Magnetic
@@ -53,7 +52,6 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Mortal Kombat games now have many extra characters to choose
 * Wii Controls for more Teenage Mutant Ninja Turtles games
 * Improved Lego Star Wars controls
-* Zelda cheat button removed
 * Boktai menu now tells you when there can't be sun because it is night
 * Minor bug fixes
 
