@@ -601,7 +601,7 @@ u32 TMNTGBAInput(unsigned short pad) {
 }
 
 u32 HarryPotter1GBCInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DPadWASD(pad) | DPadArrowKeys(pad) 
+	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad) 
 			| DecodeGamecube(pad);
 	//u8 ScreenMode = gbReadMemory(0xFFCF);
 	//u8 CursorItem = gbReadMemory(0xFFD5);
@@ -645,7 +645,7 @@ u32 HarryPotter1GBCInput(unsigned short pad) {
 }
 
 u32 HarryPotter2GBCInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DPadWASD(pad) | DPadArrowKeys(pad) 
+	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad) 
 			| DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -686,7 +686,7 @@ u32 HarryPotter2GBCInput(unsigned short pad) {
 }
 
 u32 HarryPotter1Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DPadWASD(pad) | DPadArrowKeys(pad) 
+	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) 
 			| DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -734,7 +734,7 @@ u32 HarryPotter1Input(unsigned short pad) {
 }
 
 u32 HarryPotter2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DPadWASD(pad) | DPadArrowKeys(pad) 
+	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) 
 			| DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -784,7 +784,7 @@ u32 HarryPotter2Input(unsigned short pad) {
 }
 
 u32 HarryPotter3Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DPadWASD(pad) | DPadArrowKeys(pad) 
+	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) 
 			| DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
