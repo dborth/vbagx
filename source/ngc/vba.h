@@ -14,7 +14,7 @@
 #include "filelist.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"2.0.0"
+#define APPVERSION 		"2.0.1"
 #define PREF_FILE_NAME 	"settings.xml"
 
 #define NOTSILENT 0
@@ -33,9 +33,9 @@ enum {
 };
 
 enum {
-	FILE_ROM,
 	FILE_SRAM,
 	FILE_SNAPSHOT,
+	FILE_ROM,
 	FILE_CHEAT,
 	FILE_PREF
 };
