@@ -49,7 +49,35 @@ bool isMounted[9] = { false, false, false, false, false, false, false, false, fa
 /****************************************************************************
  * deviceThreading
  ***************************************************************************/
-lwp_t devicethread = LWP_THREAD_NULL;
+static lwp_t devicethread = LWP_THREAD_NULL;
+static bool deviceHalt = true;
+
+/****************************************************************************
+ * ResumeDeviceThread
+ *
+ * Signals the device thread to start, and resumes the thread.
+ ***************************************************************************/
+void
+ResumeDeviceThread()
+{
+	deviceHalt = false;
+	LWP_ResumeThread(devicethread);
+}
+
+/****************************************************************************
+ * HaltGui
+ *
+ * Signals the device thread to stop.
+ ***************************************************************************/
+void
+HaltDeviceThread()
+{
+	deviceHalt = true;
+
+	// wait for thread to finish
+	while(!LWP_ThreadIsSuspended(devicethread))
+		usleep(100);
+}
 
 /****************************************************************************
  * devicecallback
@@ -102,7 +130,10 @@ devicecallback (void *arg)
 			}
 		}
 #endif
-		sleep(1); // suspend thread for 1 sec
+		if(deviceHalt)
+			LWP_SuspendThread(devicethread);
+		else
+			sleep(1); // suspend thread for 1 sec
 	}
 	return NULL;
 }
@@ -404,7 +435,7 @@ LoadSzFile(char * filepath, unsigned char * rbuffer)
 
 	// stop checking if devices were removed/inserted
 	// since we're loading a file
-	LWP_SuspendThread (devicethread);
+	HaltDeviceThread();
 
 	file = fopen (filepath, "rb");
 	if (file > 0)
@@ -418,7 +449,7 @@ LoadSzFile(char * filepath, unsigned char * rbuffer)
 	}
 
 	// go back to checking if devices were inserted/removed
-	LWP_ResumeThread (devicethread);
+	ResumeDeviceThread();
 
 	return size;
 }
@@ -450,7 +481,7 @@ LoadFile (char * rbuffer, char *filepath, u32 length, int method, bool silent)
 
 	// stop checking if devices were removed/inserted
 	// since we're loading a file
-	LWP_SuspendThread (devicethread);
+	HaltDeviceThread();
 
 	// open the file
 	while(!size && retry == 1)
@@ -526,7 +557,7 @@ LoadFile (char * rbuffer, char *filepath, u32 length, int method, bool silent)
 	}
 
 	// go back to checking if devices were inserted/removed
-	LWP_ResumeThread (devicethread);
+	ResumeDeviceThread();
 	CancelAction();
 	return size;
 }
@@ -562,7 +593,7 @@ SaveFile (char * buffer, char *filepath, u32 datasize, int method, bool silent)
 
 	// stop checking if devices were removed/inserted
 	// since we're saving a file
-	LWP_SuspendThread (devicethread);
+	HaltDeviceThread();
 
 	while(!written && retry == 1)
 	{
@@ -598,7 +629,7 @@ SaveFile (char * buffer, char *filepath, u32 datasize, int method, bool silent)
 	}
 
 	// go back to checking if devices were inserted/removed
-	LWP_ResumeThread (devicethread);
+	ResumeDeviceThread();
 
 	CancelAction();
     return written;

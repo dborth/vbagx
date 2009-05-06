@@ -61,7 +61,7 @@ static void ExitCleanup()
 	ShutdownAudio();
 	StopGX();
 
-	LWP_SuspendThread (devicethread);
+	HaltDeviceThread();
 	UnmountAllFAT();
 
 #ifdef HW_RVL
@@ -182,7 +182,6 @@ int main(int argc, char *argv[])
 	#endif
 
 	#ifdef HW_RVL
-	DI_Close();
 	DI_Init();	// first
 	#endif
 
@@ -243,7 +242,7 @@ int main(int argc, char *argv[])
 
 		// go back to checking if devices were inserted/removed
 		// since we're entering the menu
-		LWP_ResumeThread (devicethread);
+		ResumeDeviceThread();
 
 		ConfigRequested = 1;
 		SwitchAudioMode(1);
@@ -258,7 +257,7 @@ int main(int argc, char *argv[])
 
 		// stop checking if devices were removed/inserted
 		// since we're starting emulation again
-		LWP_SuspendThread (devicethread);
+		HaltDeviceThread();
 
 		ResetVideo_Emu();
 
