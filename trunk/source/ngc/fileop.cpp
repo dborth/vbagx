@@ -60,6 +60,7 @@ lwp_t devicethread = LWP_THREAD_NULL;
 static void *
 devicecallback (void *arg)
 {
+	sleep(1);
 	while (1)
 	{
 #ifdef HW_RVL
@@ -74,7 +75,7 @@ devicecallback (void *arg)
 
 		if(isMounted[METHOD_USB])
 		{
-			if(!usb->isInserted()) // check if the device was removed - doesn't work on USB!
+			if(!usb->isInserted()) // check if the device was removed
 			{
 				unmountRequired[METHOD_USB] = true;
 				isMounted[METHOD_USB] = false;
@@ -101,7 +102,7 @@ devicecallback (void *arg)
 			}
 		}
 #endif
-		usleep(500000); // suspend thread for 1/2 sec
+		sleep(1); // suspend thread for 1 sec
 	}
 	return NULL;
 }
@@ -478,30 +479,32 @@ LoadFile (char * rbuffer, char *filepath, u32 length, int method, bool silent)
 						else
 						{
 							struct stat fileinfo;
-							fstat(file->_file, &fileinfo);
-							size = fileinfo.st_size;
-
-							memcpy (rbuffer, zipbuffer, readsize); // copy what we already read
-
-							u32 offset = readsize;
-							u32 nextread = 0;
-							while(offset < size)
+							if(fstat(file->_file, &fileinfo) == 0)
 							{
-								if(size - offset > 1024*512) nextread = 1024*512;
-								else nextread = size-offset;
-								ShowProgress ("Loading...", offset, size);
-								readsize = fread (rbuffer + offset, 1, nextread, file); // read in next chunk
+								size = fileinfo.st_size;
 
-								if(readsize <= 0 || readsize > nextread)
-									break; // read failure
+								memcpy (rbuffer, zipbuffer, readsize); // copy what we already read
 
-								if(readsize > 0)
-									offset += readsize;
+								u32 offset = readsize;
+								u32 nextread = 0;
+								while(offset < size)
+								{
+									if(size - offset > 1024*512) nextread = 1024*512;
+									else nextread = size-offset;
+									ShowProgress ("Loading...", offset, size);
+									readsize = fread (rbuffer + offset, 1, nextread, file); // read in next chunk
+
+									if(readsize <= 0 || readsize > nextread)
+										break; // read failure
+
+									if(readsize > 0)
+										offset += readsize;
+								}
+								CancelAction();
+
+								if(offset != size) // # bytes read doesn't match # expected
+									size = 0;
 							}
-							CancelAction();
-
-							if(offset != size) // # bytes read doesn't match # expected
-								size = 0;
 						}
 					}
 				}
@@ -570,8 +573,17 @@ SaveFile (char * buffer, char *filepath, u32 datasize, int method, bool silent)
 
 			if (file > 0)
 			{
-				written = fwrite (savebuffer, 1, datasize, file);
-				if(written < datasize) written = 0;
+				u32 writesize, nextwrite;
+				while(written < datasize)
+				{
+					if(datasize - written > 16*1024) nextwrite=16*1024;
+					else nextwrite = datasize-written;
+					writesize = fwrite (buffer+written, 1, nextwrite, file);
+					if(writesize != nextwrite) break; // write failure
+					written += writesize;
+				}
+
+				if(written != datasize) written = 0;
 				fclose (file);
 			}
 		}

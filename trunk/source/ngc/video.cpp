@@ -136,7 +136,7 @@ InitVideoThread ()
  * Stock code to copy the GX buffer to the current display mode.
  * Also increments the frameticker, as it's called for each vb.
  ***************************************************************************/
-static void
+static inline void
 copy_to_xfb (u32 arg)
 {
 	if (copynow == GX_TRUE)
@@ -153,7 +153,7 @@ copy_to_xfb (u32 arg)
 /****************************************************************************
  * Scaler Support Functions
  ****************************************************************************/
-static void draw_init(void)
+static inline void draw_init(void)
 {
 	GX_ClearVtxDesc ();
 	GX_SetVtxDesc (GX_VA_POS, GX_INDEX8);
@@ -186,14 +186,14 @@ static void draw_init(void)
 		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
 }
 
-static void draw_vert(u8 pos, u8 c, f32 s, f32 t)
+static inline void draw_vert(u8 pos, u8 c, f32 s, f32 t)
 {
 	GX_Position1x8(pos);
 	GX_Color1x8(c);
 	GX_TexCoord2f32(s, t);
 }
 
-static void draw_square(Mtx v)
+static inline void draw_square(Mtx v)
 {
 	Mtx m;			// model matrix.
 	Mtx mv;			// modelview matrix.
@@ -221,7 +221,7 @@ static void draw_square(Mtx v)
 }
 
 #ifdef HW_RVL
-static void draw_cursor(Mtx v)
+static inline void draw_cursor(Mtx v)
 {
 	if (!CursorVisible || !CursorValid)
 		return;
@@ -474,7 +474,7 @@ InitializeVideo ()
 }
 
 
-static void UpdateScaling()
+static inline void UpdateScaling()
 {
 	int xscale;
 	int yscale;
