@@ -27,10 +27,6 @@
 #include "filebrowser.h"
 #include "gcunzip.h"
 
-extern "C" {
-#include "tbtime.h"
-}
-
 #define MEM_BAD	0xff
 #define MEM_VM  0x01
 #define MEM_UN  0x80
@@ -40,7 +36,6 @@ unsigned int MEM2Storage = 0x91000000;
 int GBAROMSize = 0;
 
 #ifdef USE_VM
-//extern u32 loadtimeradjust;
 
 /** Setup VM to use small 16kb windows **/
 #define VMSHIFTBITS 14
@@ -362,10 +357,7 @@ int VMCPULoadROM(int method)
 static void VMNewPage( int pageid )
 {
 	int res;
-	//tb_t start,end;
 	char msg[512];
-
-	//mftb(&start);
 
 	res = fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
 	if (res) // fseek returns non-zero on a failure
@@ -379,20 +371,6 @@ static void VMNewPage( int pageid )
 	VMAllocate( pageid );
 
 	res = fread( vmpage[pageid].pageptr, 1, 1 << VMSHIFTBITS, romfile );
-	if ( res != ( 1 << VMSHIFTBITS ) )
-	{
-		// Homebrew ROMS may not have the expected amount of data
-		// and then end up here - but they still work - so we won't throw an error
-
-		/*sprintf(msg, "Error reading! %d bytes only\n", res);
-		InfoPrompt(msg);
-		VMClose();
-		ExitApp();*/
-	}
-
-	//mftb(&end);
-
-	//loadtimeradjust += tb_diff_msec(&end, &start);
 }
 
 /****************************************************************************

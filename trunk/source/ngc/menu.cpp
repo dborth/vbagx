@@ -17,9 +17,7 @@
 #include <sys/stat.h>
 
 #ifdef HW_RVL
-extern "C" {
 #include <di/di.h>
-}
 #endif
 
 #include "vba.h"

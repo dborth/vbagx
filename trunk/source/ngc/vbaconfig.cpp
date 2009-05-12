@@ -34,7 +34,7 @@ void FixInvalidSettings()
 		GCSettings.MusicVolume = 40;
 	if(!(GCSettings.SFXVolume >= 0 && GCSettings.SFXVolume <= 100))
 		GCSettings.SFXVolume = 40;
-	if(!(GCSettings.render >= 0 && GCSettings.render < 2))
+	if(!(GCSettings.render >= 0 && GCSettings.render < 3))
 		GCSettings.render = 1;
 	if(!(GCSettings.videomode >= 0 && GCSettings.videomode < 5))
 		GCSettings.videomode = 0;

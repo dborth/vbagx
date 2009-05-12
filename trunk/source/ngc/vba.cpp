@@ -17,9 +17,7 @@
 #include <wiiuse/wpad.h>
 
 #ifdef HW_RVL
-extern "C" {
 #include <di/di.h>
-}
 #endif
 
 #include "FreeTypeGX.h"
