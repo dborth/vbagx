@@ -14,7 +14,6 @@
 #include "System.h"
 
 extern struct EmulatedSystem emulator;
-extern u32 loadtimeradjust;
 extern int cartridgeType;
 extern int SunBars;
 extern u32 RomIdCode;

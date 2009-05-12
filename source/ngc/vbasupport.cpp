@@ -15,6 +15,11 @@
 #include <wiiuse/wpad.h>
 #include <malloc.h>
 
+extern "C" {
+long long gettime();
+u32 diff_usec(long long start,long long end);
+}
+
 #include "pngu/pngu.h"
 
 #include "unzip.h"
@@ -46,16 +51,7 @@
 #include "gcunzip.h"
 #include "gamesettings.h"
 
-extern "C"
-{
-#include "tbtime.h"
-long long gettime();
-u32 diff_usec(long long start,long long end);
-}
-
-static tb_t start, now;
-
-u32 loadtimeradjust;
+static u32 start;
 int cartridgeType = 0;
 u32 RomIdCode;
 int SunBars = 3;
@@ -114,8 +110,8 @@ struct EmulatedSystem emulator =
 ****************************************************************************/
 u32 systemGetClock( void )
 {
-	mftb(&now);
-	return tb_diff_msec(&now, &start) - loadtimeradjust;
+	u32 now = gettime();
+	return diff_usec(start, now) / 1000;
 }
 
 void systemFrame() {}
@@ -784,7 +780,7 @@ static void gbApplyPerImagePreferences()
 		else if (strcmp(title, "TMNT3") == 0)
 			RomIdCode = TMNT3;
 	}
-	// look for matching palettes if a monochrome gameboy game 
+	// look for matching palettes if a monochrome gameboy game
 	// (or if a Super Gameboy game, but the palette will be ignored later in that case)
 	int snum = -1;
 	if ((Colour != 0x80) && (Colour != 0xC0)) {
@@ -1095,7 +1091,7 @@ bool LoadVBAROM(int method)
 		lastTime = systemFrameSkip = 0;
 
 		// Start system clock
-		mftb(&start);
+		start = gettime();
 
 		return true;
 	}
