@@ -3157,6 +3157,7 @@ static int MenuSettingsMenu()
 	sprintf(options.name[i++], "Wiimote Orientation");
 	sprintf(options.name[i++], "Music Volume");
 	sprintf(options.name[i++], "Sound Effects Volume");
+	sprintf(options.name[i++], "Rumble");
 	options.length = i;
 
 	GuiText titleTxt("Settings - Menu", 28, (GXColor){255, 255, 255, 255});
@@ -3209,13 +3210,10 @@ static int MenuSettingsMenu()
 			sprintf (options.value[0], "Return to Wii Menu");
 		else if (GCSettings.ExitAction == 2)
 			sprintf (options.value[0], "Power off Wii");
-		else
+		else if (GCSettings.ExitAction == 3)
 			sprintf (options.value[0], "Return to Loader");
-
-		if (GCSettings.WiimoteOrientation == 0)
-			sprintf (options.value[1], "Vertical");
-		else if (GCSettings.WiimoteOrientation == 1)
-			sprintf (options.value[1], "Horizontal");
+		else
+			sprintf (options.value[0], "Auto");
 		#else // GameCube
 		if(GCSettings.ExitAction > 1)
 			GCSettings.ExitAction = 0;
@@ -3227,7 +3225,13 @@ static int MenuSettingsMenu()
 		options.name[1][0] = 0; // Wiimote
 		options.name[2][0] = 0; // Music
 		options.name[3][0] = 0; // Sound Effects
+		options.name[4][0] = 0; // Rumble
 		#endif
+
+		if (GCSettings.WiimoteOrientation == 0)
+			sprintf (options.value[1], "Vertical");
+		else if (GCSettings.WiimoteOrientation == 1)
+			sprintf (options.value[1], "Horizontal");
 
 		if(GCSettings.MusicVolume > 0)
 			sprintf(options.value[2], "%d%%", GCSettings.MusicVolume);
@@ -3239,13 +3243,18 @@ static int MenuSettingsMenu()
 		else
 			sprintf(options.value[3], "Mute");
 
+		if (GCSettings.Rumble == 1)
+			sprintf (options.value[4], "Enabled");
+		else
+			sprintf (options.value[4], "Disabled");
+
 		ret = optionBrowser.GetClickedOption();
 
 		switch (ret)
 		{
 			case 0:
 				GCSettings.ExitAction++;
-				if(GCSettings.ExitAction > 2)
+				if(GCSettings.ExitAction > 3)
 					GCSettings.ExitAction = 0;
 				break;
 			case 1:
@@ -3261,6 +3270,9 @@ static int MenuSettingsMenu()
 				GCSettings.SFXVolume += 10;
 				if(GCSettings.SFXVolume > 100)
 					GCSettings.SFXVolume = 0;
+				break;
+			case 4:
+				GCSettings.Rumble ^= 1;
 				break;
 		}
 
