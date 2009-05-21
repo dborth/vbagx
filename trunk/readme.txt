@@ -156,7 +156,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 [1.0.1 - September 18, 2008]
 * GBA games now run at full speed
-* Menu improvements, with spiffy new background - thanks brakken!
+* Menu improvements, with spiffy new background
 * Fixed L/R buttons - they work now
 
 [1.0.0 - September 16, 2008]
@@ -209,8 +209,7 @@ Gamecube:
 --------------------------------
 You can load VBAGX via sdload and an SD card in slot A, or by streaming 
 it to your Gamecube, or by booting a bootable DVD with VBAGX on it. 
-This document doesn't cover how to do any of that. A good source for information 
-on these topics is the tehskeen forums: http://www.tehskeen.com/forums/
+This document doesn't cover how to do any of that.
  
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                          INSTRUCTIONS                         ·oø×O0|
@@ -825,8 +824,5 @@ right analog stick = fast forward
  
                                   VBAGX Web Site
                           http://code.google.com/p/vba-wii
-                              
-                              TehSkeen Support Forums
-                              http://www.tehskeen.net
  
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤

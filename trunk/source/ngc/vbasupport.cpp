@@ -14,11 +14,7 @@
 #include <string.h>
 #include <wiiuse/wpad.h>
 #include <malloc.h>
-
-extern "C" {
-long long gettime();
-u32 diff_usec(long long start,long long end);
-}
+#include <ogc/lwp_watchdog.h>
 
 #include "pngu/pngu.h"
 
