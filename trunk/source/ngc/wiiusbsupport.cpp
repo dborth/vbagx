@@ -13,7 +13,7 @@
 #include <ogc/ipc.h>
 #include <wiiuse/wpad.h>
 #include <cstdio>
-#include <string>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <malloc.h>

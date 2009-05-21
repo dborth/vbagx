@@ -236,8 +236,8 @@ u32 MK1Input(unsigned short pad) {
 	OpponentHealth = gbReadMemory(0xD696);
 	OurX = gbReadMemory(0xCF00);
 	OpponentX = gbReadMemory(0xCF26);
-	u8 OurChar = gbReadMemory(0xD685);
-	u8 OpponentChar = gbReadMemory(0xD686);
+	//u8 OurChar = gbReadMemory(0xD685);
+	//u8 OpponentChar = gbReadMemory(0xD686);
 	u8 MenuChar = gbReadMemory(0xD61D)+1;
 	static u8 OldMenuChar = 0;
 	// Rumble when they change character
@@ -267,8 +267,8 @@ u32 MK1Input(unsigned short pad) {
 }
 
 u32 MK2Input(unsigned short pad) {
-	u8 OurChar = gbReadMemory(0xDD01);
-	u8 OpponentChar = gbReadMemory(0xDD01+0x40);
+	//u8 OurChar = gbReadMemory(0xDD01);
+	//u8 OpponentChar = gbReadMemory(0xDD01+0x40);
 	OurX = gbReadMemory(0xDD12) | (gbReadMemory(0xDD13) << 8);
 	OpponentX = gbReadMemory(0xDD12+0x40) | (gbReadMemory(0xDD13+0x40) << 8);
 	OurHealth = gbReadMemory(0xDD20);
@@ -590,7 +590,7 @@ u8 MK3SetSubchar(int Char, int Subchar, bool menu=false) {
 u32 MK3Input(unsigned short pad) {
 	OurHealth = gbReadMemory(0xC0D6);
 	OpponentHealth = gbReadMemory(0xC0D7);
-	u8 OurChar = gbReadMemory(0xC0F0); // 
+	//u8 OurChar = gbReadMemory(0xC0F0); // 
 	u8 OpponentChar = gbReadMemory(0xC0F1); // also CD40, D526
 	OurX = gbReadMemory(0xCD02) | (gbReadMemory(0xCD03) << 8);
 	OpponentX = gbReadMemory(0xCD42) | (gbReadMemory(0xCD43) << 8);
@@ -730,8 +730,8 @@ u32 MK4Input(unsigned short pad)
 {
 	OurHealth = gbReadMemory(0xC0D6);
 	OpponentHealth = gbReadMemory(0xC0D7);
-	u8 OurChar = gbReadMemory(0xC0F0); // also CD00?
-	u8 OpponentChar = gbReadMemory(0xC0F1); // also CD40, D526
+	//u8 OurChar = gbReadMemory(0xC0F0); // also CD00?
+	//u8 OpponentChar = gbReadMemory(0xC0F1); // also CD40, D526
 	OurX = gbReadMemory(0xCD02) | (gbReadMemory(0xCD03) << 8);
 	OpponentX = gbReadMemory(0xCD42) | (gbReadMemory(0xCD43) << 8);
 	bool InMenu = false; // CAKTODO
@@ -1597,7 +1597,7 @@ u32 MKAInput(unsigned short pad)
 	OurX = (s16)CPUReadHalfWord(0x2000008);
 	OpponentX = (s16)CPUReadHalfWord(0x2000008+0x68);
 	u8 OurChar =   CPUReadByte(0x2000025); // also 202f6a8
-	u8 OpponentChar = CPUReadByte(0x2000025+0x68);
+	//u8 OpponentChar = CPUReadByte(0x2000025+0x68);
 		
 	// Special characters
 	static int MenuChar = 0;

@@ -263,8 +263,6 @@ u32 TMNTInput(unsigned short pad) {
 u32 TMNT1Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
 	static u32 LastDir = VBA_RIGHT;
-	static bool wait = false;
-	static int holdcount = 0;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
 #ifdef HW_RVL
@@ -307,7 +305,6 @@ u32 TMNT1Input(unsigned short pad) {
 
 #endif
 	u32 gc = PAD_ButtonsHeld(pad);
-	u32 released = PAD_ButtonsUp(pad);
 	// DPad moves
 	if (gc & PAD_BUTTON_UP)
 		J |= VBA_UP;
@@ -347,8 +344,6 @@ u32 TMNT1Input(unsigned short pad) {
 u32 TMNT2Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
 	static u32 LastDir = VBA_RIGHT;
-	static bool wait = false;
-	static int holdcount = 0;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
 #ifdef HW_RVL
@@ -391,7 +386,6 @@ u32 TMNT2Input(unsigned short pad) {
 
 #endif
 	u32 gc = PAD_ButtonsHeld(pad);
-	u32 released = PAD_ButtonsUp(pad);
 	// DPad moves
 	if (gc & PAD_BUTTON_UP)
 		J |= VBA_UP;
@@ -432,8 +426,6 @@ u32 TMNT2Input(unsigned short pad) {
 u32 TMNT3Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
 	static u32 LastDir = VBA_RIGHT;
-	static bool wait = false;
-	static int holdcount = 0;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
 #ifdef HW_RVL
@@ -476,7 +468,6 @@ u32 TMNT3Input(unsigned short pad) {
 
 #endif
 	u32 gc = PAD_ButtonsHeld(pad);
-	u32 released = PAD_ButtonsUp(pad);
 	// DPad moves
 	if (gc & PAD_BUTTON_UP)
 		J |= VBA_UP;
@@ -516,8 +507,6 @@ u32 TMNT3Input(unsigned short pad) {
 u32 TMNTGBAInput(unsigned short pad) {
 	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
 	static u32 LastDir = VBA_RIGHT;
-	static bool wait = false;
-	static int holdcount = 0;
 	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0;
 
 #ifdef HW_RVL
@@ -559,7 +548,6 @@ u32 TMNTGBAInput(unsigned short pad) {
 
 #endif
 	u32 gc = PAD_ButtonsHeld(pad);
-	u32 released = PAD_ButtonsUp(pad);
 	// DPad moves
 	if (gc & PAD_BUTTON_UP)
 		J |= VBA_UP;
