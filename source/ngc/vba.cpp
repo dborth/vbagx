@@ -39,6 +39,7 @@
 #include "wiiusbsupport.h"
 
 extern int emulating;
+int ScreenshotRequested = 0;
 int ConfigRequested = 0;
 int ShutdownRequested = 0;
 int ResetRequested = 0;
@@ -290,7 +291,6 @@ int main(int argc, char *argv[])
 
 			if(ConfigRequested)
 			{
-				TakeScreenshot();
 				ResetVideo_Menu();
 				break; // leave emulation loop
 			}

@@ -894,7 +894,7 @@ u32 GetJoy(int pad)
 		(DownUsbKeys[KB_ESC])
 	)
 	{
-		ConfigRequested = 1;
+		ScreenshotRequested = 1;
 		updateRumbleFrame();
 		return 0;
 	}
