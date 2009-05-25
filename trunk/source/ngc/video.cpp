@@ -141,8 +141,16 @@ copy_to_xfb (u32 arg)
 {
 	if (copynow == GX_TRUE)
 	{
+		if(ScreenshotRequested)
+		{
+			TakeScreenshot();
+			ScreenshotRequested = 0;
+			ConfigRequested = 1;
+		}
+
 		GX_CopyDisp (xfb[whichfb], GX_TRUE);
 		GX_Flush ();
+
 		copynow = GX_FALSE;
 	}
 
