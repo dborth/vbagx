@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 2.0.1
+                                  Version 2.0.2
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -28,6 +28,16 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
 
+[2.0.2 - May 26, 2009]
+
+* Improved stability
+* Fixed broken SDHC from HBC 1.0.2 update
+* Fixed issues with returning to menu from in-game
+* Add option to disable rumble
+* Auto-determines if HBC is present - returns to Wii menu otherwise
+* Unfiltered mode fixed
+* Miscellaneous bugfixes
+
 [2.0.1 - April 30, 2009]
 
 * Multiple state saves now working
@@ -38,6 +48,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Fixed Harry Potter 1-3 keyboard bug
 
 [2.0.0 - April 27, 2009]
+
 * New GX-based menu, with a completely redesigned layout. Has Wiimote IR 
   support, sounds, graphics, animation effects, and more
 * Thanks to the3seashells for designing some top-notch artwork, to 
@@ -65,9 +76,11 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Minor bug fixes
 
 [1.0.9 - April 7, 2009]
+
 * Gamecube controller should no longer rumble constantly
 
 [1.0.8 - April 4, 2009]
+
 * "Match Wii Game" controls option! Games that have a Wii equivalent can be
   played using the controls for that Wii game. For example all Zelda games
   can be played with Twilight Princess controls. See the Instructions section
@@ -85,6 +98,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Instructions section added to this readme file
 
 [1.0.7 - January 27, 2009]
+
 * Updated to VBA-M r847
 * Corrected sound interpolation
 * Faster SD/USB - new read-ahead cache
@@ -96,6 +110,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Code cleanup, other general bugfixes
 
 [1.0.6 - December 24, 2008]
+
 * Fixed save state saving bug
 * Fixed unstable SD card access
 * Proper SD/USB hotswap (Wii only)
@@ -106,6 +121,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Minor bug fixes
 
 [1.0.5 - November 19, 2008]
+
 * SDHC works now
 * Frameskipping tweaks
 * Fixed snapshot loading issue
@@ -121,6 +137,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * GameCube - Fixed GBA loading issue
 
 [1.0.4 - October 28, 2008]
+
 * Complete port of VBA-M - now uses blaarg's new audio core, latest GB core
 * Frameskipping improvements
 * Sound processing improved - L-R channel reversal corrected, skipping fixed
@@ -133,6 +150,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * GameCube support is back, including Qoob support!
 
 [1.0.3 - October 15, 2008]
+
 * New timing / frameskip algorithm - should (hopefully) work 100% better!
 * Performance improvements - video threading, PPC core partly activated
 * Video zooming option
@@ -141,6 +159,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Loading progress bars added
 
 [1.0.2 - October 6, 2008]
+
 * New core! The core is now a custom combination of VBA-M and VBA 1.72
 * Added DVD, SMB, ZIP, GameCube MC support
 * Faster USB/SD speeds
@@ -155,6 +174,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Many other tweaks behind the scenes
 
 [1.0.1 - September 18, 2008]
+
 * GBA games now run at full speed
 * Menu improvements, with spiffy new background
 * Fixed L/R buttons - they work now
