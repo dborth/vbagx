@@ -2971,6 +2971,7 @@ static int MenuSettingsFile()
 	sprintf(options.name[i++], "Auto Save");
 	sprintf(options.name[i++], "Verify MC Saves");
 	options.length = i;
+	options.name[4][0] = 0; // hide cheats folder (not implemented)
 
 	GuiText titleTxt("Settings - Saving & Loading", 28, (GXColor){255, 255, 255, 255});
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
