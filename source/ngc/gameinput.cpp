@@ -30,6 +30,8 @@
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
 
+extern bool CalibrateWario;
+
 char DebugStr[50] = "";
 
 void DebugPrintf(const char *format, ...) {
@@ -1131,6 +1133,7 @@ u32 HarryPotter5Input(unsigned short pad) {
 	return J;
 }
 
+// WarioWare Twisted
 u32 TwistedInput(unsigned short pad) {
 	// Change this to true if you want to see the screen tilt.
 	TiltScreen = false;
@@ -1161,9 +1164,10 @@ u32 TwistedInput(unsigned short pad) {
 		// Grab an icon and prevent menu from spinning
 		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z)
 			J |= VBA_BUTTON_R;
-		// Speed
-		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_C)
-			J |= VBA_SPEED;
+		// Calibrate
+		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_C) {
+			CalibrateWario = true;
+		} else CalibrateWario = false;
 	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
 		TiltSideways = false;
 		J |= StandardDPad(pad) | StandardClassic(pad);
@@ -1171,8 +1175,9 @@ u32 TwistedInput(unsigned short pad) {
 	} else {
 		TiltSideways = true;
 		J |= StandardSideways(pad);
-		if (wp->btns_h & WPAD_BUTTON_B)
-			J |= VBA_SPEED;
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			CalibrateWario = true;
+		} else CalibrateWario = false;
 	}
 #endif
 	return J;
