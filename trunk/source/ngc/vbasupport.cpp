@@ -553,6 +553,7 @@ static int sensorX = 2047;
 static int sensorY = 2047;
 static int sensorWario = 0x6C0;
 static u8 sensorDarkness = 0xE8; // total darkness (including daylight on rainy days)
+bool CalibrateWario = false;
 
 int systemGetSensorX()
 {
@@ -566,7 +567,8 @@ int systemGetSensorY()
 
 int systemGetSensorZ()
 {
-	return sensorWario;
+	if (CalibrateWario) return 0x6C0;
+	else return sensorWario;
 }
 
 u8 systemGetSensorDarkness()
