@@ -47,7 +47,9 @@ GuiImageData * pointer[4];
 
 static int MenuPalette();
 void gbSetPalette(u32 RRGGBB[]);
+void StopColorizing();
 extern char RomTitle[17];
+
 
 static GuiButton * btnLogo = NULL;
 static GuiImage * gameScreenImg = NULL;
@@ -2778,6 +2780,8 @@ static int MenuSettingsVideo()
 			case 5:
 				if (GCSettings.colorize) GCSettings.colorize = 0;
 				else GCSettings.colorize = 1;
+				if (GCSettings.colorize) LoadPalette(RomTitle);
+				else StopColorizing();
 				break;
 
 			case 6:
