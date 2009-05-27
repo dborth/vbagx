@@ -1751,3 +1751,57 @@ u32 CastlevaniaLegendsInput(unsigned short pad) {
 	return J;
 }
 
+u32 CastlevaniaCircleMoonInput(unsigned short pad) {
+	// Only Nunchuk and Classic controls available
+	// Wiimote, Gamecube and Keyboard controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, HyperButton=0,
+	LButton=0, RButton=0;
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	// Nunchuk controls are based on Castlevania Wii
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		ShootButton = wp->btns_h & WPAD_BUTTON_A;
+		AttackButton = (fabs(wp->gforce.x)> 1.5) || (fabs(wp->gforce.y)> 1.5) || wp->btns_h & WPAD_BUTTON_B;
+		JumpButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
+		GuardButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
+		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
+		SelectButton = wp->btns_h & WPAD_BUTTON_MINUS;
+		SpeedButton = (wp->btns_h & WPAD_BUTTON_A) && (wp->btns_h & WPAD_BUTTON_B);
+		HyperButton = wp->btns_h & WPAD_BUTTON_DOWN;
+		LButton = wp->btns_h & WPAD_BUTTON_1;
+		RButton = wp->btns_h & WPAD_BUTTON_2;
+	// Classic controls are based on ...?
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		ShootButton = wp->btns_h & WPAD_CLASSIC_BUTTON_Y;
+		AttackButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
+		JumpButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_R);
+		GuardButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L);
+		PauseButton = wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS;
+		SelectButton = wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS;
+		SpeedButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
+		HyperButton = wp->btns_h & WPAD_CLASSIC_BUTTON_X;
+		LButton = wp->btns_h & WPAD_CLASSIC_BUTTON_ZL;
+		RButton = wp->btns_h & WPAD_CLASSIC_BUTTON_ZR;
+	}
+#endif
+	
+	if (JumpButton) J |= VBA_BUTTON_A;
+	if (AttackButton) {
+		J &= ~VBA_UP;
+		J |= VBA_BUTTON_B;
+	}
+	if (HyperButton) J |= VBA_BUTTON_A | VBA_BUTTON_B;
+	if (ShootButton) J |= VBA_UP | VBA_BUTTON_B;
+	if (PauseButton) J |= VBA_BUTTON_START;
+	if (SelectButton) J |= VBA_BUTTON_SELECT;
+	if (SpeedButton) J |= VBA_SPEED;
+	if (GuardButton) {
+		J &= ~VBA_UP;
+		J |= VBA_DOWN;
+	}
+	if (LButton) J |= VBA_BUTTON_L;
+	if (RButton) J |= VBA_BUTTON_R;
+	return J;
+}
+

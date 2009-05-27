@@ -878,6 +878,10 @@ static u32 DecodeJoy(unsigned short pad)
 			return CastlevaniaBelmontInput(pad);
 		case CVLEGENDS:
 			return CastlevaniaLegendsInput(pad);
+		case CVCIRCLEMOON:
+		case CVHARMONY:
+		case CVARIA:
+			return CastlevaniaCircleMoonInput(pad);
 	}
 
 	// the function result, J, is a combination of flags for all the VBA buttons that are down
