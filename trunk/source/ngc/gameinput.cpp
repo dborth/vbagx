@@ -151,6 +151,102 @@ u32 LegoStarWars2Input(unsigned short pad) {
 	return J;
 }
 
+u32 SWObiWanInput(unsigned short pad) {
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	// Rumble when they lose health!
+	u8 Health = gbReadMemory(0xCFF2);
+	static u8 OldHealth = 0;
+	if (Health < OldHealth)
+		systemGameRumble(20);
+	OldHealth = Health;
+
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+
+	// Start/Select
+	if (wp->btns_h & WPAD_BUTTON_PLUS)
+		J |= VBA_BUTTON_START;
+	if (wp->btns_h & WPAD_BUTTON_MINUS)
+		J |= VBA_BUTTON_SELECT;
+
+	if (wp->exp.type == WPAD_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		// use the force
+		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z) {
+			gbWriteMemory(0xCFF1, 2);
+			J |= VBA_BUTTON_A;
+		}
+		// Jump
+		if (wp->btns_h & WPAD_BUTTON_A)
+			J |= VBA_BUTTON_B;
+		// Shoot
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			gbWriteMemory(0xCFF1, 0);
+			J |= VBA_BUTTON_A;
+		}
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 ) {
+			gbWriteMemory(0xCFF1, 1);
+			J |= VBA_BUTTON_A;
+		}
+		if (wp->btns_h & WPAD_BUTTON_1 || wp->btns_h & WPAD_BUTTON_2)
+			J |= VBA_SPEED;
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		J |= DecodeClassic(pad);
+	}
+#endif
+	return J;
+}
+
+u32 SWEpisode2Input(unsigned short pad) {
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	// Rumble when they lose health!
+	u8 Health = CPUReadByte(0x3002fb3); 
+	static u8 OldHealth = 0;
+	if (Health < OldHealth)
+		systemGameRumble(6);
+	OldHealth = Health;
+
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+
+	// Start/Select
+	if (wp->btns_h & WPAD_BUTTON_PLUS)
+		J |= VBA_BUTTON_START;
+	if (wp->btns_h & WPAD_BUTTON_MINUS)
+		J |= VBA_BUTTON_SELECT;
+
+	if (wp->exp.type == WPAD_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		// Jump
+		if (wp->btns_h & WPAD_BUTTON_A)
+			J |= VBA_BUTTON_B;
+		// Shoot (N/A)
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			J |= VBA_BUTTON_A;
+		}
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 ) {
+			J |= VBA_BUTTON_A;
+		}
+		if (wp->btns_h & WPAD_BUTTON_1 || wp->btns_h & WPAD_BUTTON_2)
+			J |= VBA_SPEED;
+		// CAKTODO
+		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_C) {
+			J |= VBA_BUTTON_L;
+		}
+		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z) {
+			J |= VBA_BUTTON_R;
+		}
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		J |= DecodeClassic(pad);
+	}
+#endif
+	return J;
+}
+
 u32 TMNTInput(unsigned short pad) {
 	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
 	static u32 LastDir = VBA_RIGHT;
@@ -581,6 +677,95 @@ u32 TMNTGBAInput(unsigned short pad) {
 	if (Select) J |= VBA_BUTTON_SELECT;
 	if (SpecialMove) {
 		J |= VBA_BUTTON_R | VBA_BUTTON_A; // CAKTODO
+	}
+		
+	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
+	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
+	return J;
+}
+
+u32 TMNTGBA2Input(unsigned short pad) {
+	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	static u32 LastDir = VBA_RIGHT;
+	static bool wait = false;
+	static int holdcount = 0;
+	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0, Look=0;
+
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		Jump = (wp->btns_h & WPAD_BUTTON_A);
+		Attack = (fabs(wp->gforce.x)> 1.5) || (wp->btns_h & WPAD_BUTTON_B);
+		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
+		SpecialMove = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z);
+		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+		Look = (wp->btns_h & WPAD_NUNCHUK_BUTTON_C);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			//J |= VBA_BUTTON_START;
+		}
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
+		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
+		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
+		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
+		SpecialMove = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZR));
+		Look = (wp->btns_h & WPAD_CLASSIC_BUTTON_ZL);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
+			//J |= VBA_BUTTON_START;
+		}
+	} else {
+		Jump = (wp->btns_h & WPAD_BUTTON_A);
+		Attack = (fabs(wp->gforce.x)> 1.5) || (wp->btns_h & WPAD_BUTTON_B);
+		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
+		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+		// Swap Turtles or super turtle summon
+		if (wp->btns_h & WPAD_BUTTON_B) {
+			Look = true;
+		}
+		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
+		SpecialMove = (wp->btns_h & WPAD_BUTTON_2);
+	}
+
+#endif
+	u32 gc = PAD_ButtonsHeld(pad);
+	u32 released = PAD_ButtonsUp(pad);
+	// DPad moves
+	if (gc & PAD_BUTTON_UP)
+		J |= VBA_UP;
+	if (gc & PAD_BUTTON_DOWN)
+		J |= VBA_DOWN;
+	if (gc & PAD_BUTTON_LEFT)
+		J |= VBA_LEFT;
+	if (gc & PAD_BUTTON_RIGHT)
+		J |= VBA_RIGHT;
+	// Jump
+	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
+	// Swap turtles
+	if (gc & PAD_BUTTON_B) {
+		Look = true;
+	}
+	// Attack
+	if (gc & PAD_BUTTON_X) Attack = true;
+	// Spin kick
+	if (gc & PAD_BUTTON_Y) SpinKick = true;
+	// Pause
+	if (gc & PAD_BUTTON_START) Pause = true;
+	// Select
+	if (gc & PAD_TRIGGER_Z) Select = true;
+	// SpecialMove
+	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) SpecialMove = true;
+
+	if (Jump) J |= VBA_BUTTON_A;
+	if (Attack) J |= VBA_BUTTON_B;
+	if (SpinKick) J |= VBA_BUTTON_R;
+	if (Pause) J |= VBA_BUTTON_START;
+	if (Select) J |= VBA_BUTTON_SELECT;
+	if (SpecialMove) {
+		J |= VBA_UP | VBA_BUTTON_A; // CAKTODO, currently works for Don and Mike
 	}
 		
 	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
@@ -1286,6 +1471,146 @@ u32 OnePieceInput(unsigned short pad) {
 	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
 	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
 	
+	return J;
+}
+
+u32 HobbitInput(unsigned short pad) {
+	// Only Nunchuk and Keyboard controls available
+	// Wiimote, Gamecube and Classic controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad) | 
+	DPadArrowKeys(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	bool AbilityButton=0, AttackButton=0, UseButton=0, ChangeSkillButton=0, PauseButton=0,
+	ItemsButton=0, SpeedButton=0;
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	// Nunchuk controls are made up
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		J |= StandardDPad(pad);
+		AbilityButton = wp->btns_h & WPAD_BUTTON_B;
+		UseButton = wp->btns_h & WPAD_BUTTON_A;
+		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
+		ItemsButton = wp->btns_h & WPAD_BUTTON_MINUS;
+		SpeedButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
+		ChangeSkillButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
+		AttackButton = (fabs(wp->gforce.x)> 1.5);
+	}
+#endif
+	if (DownUsbKeys[KB_E]) UseButton = true;
+	if (DownUsbKeys[KB_LSHIFT]) {
+		if (DownUsbKeys[KB_MOUSEL] || DownUsbKeys[KB_MOUSER]) AbilityButton = true;
+	} else {
+		if (DownUsbKeys[KB_MOUSEL] || DownUsbKeys[KB_MOUSER]) AttackButton = true;
+	}
+	if (DownUsbKeys[KB_F5]) AbilityButton = true;
+	if (DownUsbKeys[KB_LCTRL]) AttackButton = true;
+	if (DownUsbKeys[KB_SPACE]) AttackButton = true;
+	if (DownUsbKeys[KB_Q]) AttackButton = true;
+	if (DownUsbKeys[KB_C]) ChangeSkillButton = true;
+	if (DownUsbKeys[KB_ENTER]) ItemsButton = true;
+	if (DownUsbKeys[KB_BKSP]) PauseButton = true;
+	if (DownUsbKeys[KB_F]) SpeedButton = true;
+	
+	if (AbilityButton) J |= VBA_BUTTON_B;
+	if (AttackButton) J |= VBA_BUTTON_L;
+	if (ChangeSkillButton) J |= VBA_BUTTON_L;
+	if (ItemsButton) J |= VBA_BUTTON_SELECT;
+	if (UseButton) J |= VBA_BUTTON_A;
+	if (SpeedButton) J |= VBA_BUTTON_R;
+	if (PauseButton) J |= VBA_BUTTON_START;
+
+	return J;
+}
+
+u32 FellowshipOfTheRingInput(unsigned short pad) {
+	// Only Nunchuk and Keyboard controls available
+	// Wiimote, Gamecube and Classic controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad) | 
+	DPadArrowKeys(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	bool CancelButton=0, UseButton=0, ChangeCharButton=0, PauseButton=0,
+	ItemsButton=0, SpeedButton=0, SelectButton=0;
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	// Nunchuk controls are made up
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		J |= StandardDPad(pad);
+		CancelButton = wp->btns_h & WPAD_BUTTON_B;
+		UseButton = wp->btns_h & WPAD_BUTTON_A;
+		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
+		ItemsButton = wp->btns_h & WPAD_BUTTON_MINUS;
+		SpeedButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
+		ChangeCharButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
+		CancelButton = CancelButton || (fabs(wp->gforce.x)> 1.5);
+		SelectButton = wp->btns_h & WPAD_BUTTON_1;
+	}
+#endif
+	if (DownUsbKeys[KB_E]) UseButton = true;
+	if (DownUsbKeys[KB_Q]) CancelButton = true;
+	if (DownUsbKeys[KB_MOUSEL]) UseButton = true;
+	if (DownUsbKeys[KB_MOUSER]) CancelButton = true;
+	if (DownUsbKeys[KB_C]) ChangeCharButton = true;
+	if (DownUsbKeys[KB_ENTER]) PauseButton = true;
+	if (DownUsbKeys[KB_BKSP]) ItemsButton = true;
+	if (DownUsbKeys[KB_TAB]) SelectButton = true;
+	if (DownUsbKeys[KB_F]) SpeedButton = true;
+	if (DownUsbKeys[KB_SPACE]) SpeedButton = true;
+	if (DownUsbKeys[KB_F5]) UseButton = true;
+	if (DownUsbKeys[KB_LCTRL]) UseButton = true;
+	
+	if (UseButton) J |= VBA_BUTTON_A;
+	if (CancelButton) J |= VBA_BUTTON_B;
+	if (ChangeCharButton) J |= VBA_BUTTON_L;
+	if (ItemsButton) J |= VBA_BUTTON_R;
+	if (SpeedButton) J |= VBA_SPEED;
+	if (PauseButton) J |= VBA_BUTTON_START;
+	if (SelectButton) J |= VBA_BUTTON_SELECT;
+
+	return J;
+}
+
+u32 ReturnOfTheKingInput(unsigned short pad) {
+	// Only Nunchuk and Keyboard controls available
+	// Wiimote, Gamecube and Classic controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad) | 
+	DPadArrowKeys(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	bool AbilityButton=0, AttackButton=0, UseButton=0, ChangeSkillButton=0, PauseButton=0,
+	ItemsButton=0, SpeedButton=0;
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	// Nunchuk controls are made up
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		J |= StandardDPad(pad);
+		AbilityButton = wp->btns_h & WPAD_BUTTON_B;
+		UseButton = wp->btns_h & WPAD_BUTTON_A;
+		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
+		ItemsButton = wp->btns_h & WPAD_BUTTON_MINUS;
+		SpeedButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
+		ChangeSkillButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
+		AttackButton = (fabs(wp->gforce.x)> 1.5);
+	}
+#endif
+	if (DownUsbKeys[KB_E]) UseButton = true;
+	if (DownUsbKeys[KB_LSHIFT]) {
+		if (DownUsbKeys[KB_MOUSEL] || DownUsbKeys[KB_MOUSER]) AbilityButton = true;
+	} else {
+		if (DownUsbKeys[KB_MOUSEL] || DownUsbKeys[KB_MOUSER]) AttackButton = true;
+	}
+	if (DownUsbKeys[KB_F5]) AbilityButton = true;
+	if (DownUsbKeys[KB_LCTRL]) AttackButton = true;
+	if (DownUsbKeys[KB_SPACE]) AttackButton = true;
+	if (DownUsbKeys[KB_Q]) AttackButton = true;
+	if (DownUsbKeys[KB_C]) ChangeSkillButton = true;
+	if (DownUsbKeys[KB_ENTER]) ItemsButton = true;
+	if (DownUsbKeys[KB_BKSP]) PauseButton = true;
+	if (DownUsbKeys[KB_F]) SpeedButton = true;
+	
+	if (AbilityButton) J |= VBA_BUTTON_A;
+	if (AttackButton) J |= VBA_BUTTON_B;
+	if (ChangeSkillButton) J |= VBA_BUTTON_L;
+	if (ItemsButton) J |= VBA_BUTTON_START;
+	if (UseButton) J |= VBA_BUTTON_R;
+	if (SpeedButton) J |= VBA_SPEED;
+	if (PauseButton) J |= VBA_BUTTON_SELECT;
+
 	return J;
 }
 

@@ -256,6 +256,10 @@ bool MakeFilePath(char filepath[], int type, int method, char * filename, int fi
 				sprintf(folder, appPath);
 				sprintf(file, "%s", PREF_FILE_NAME);
 				break;
+			case FILE_PAL:
+				sprintf(folder, appPath);
+				sprintf(file, "%s", PAL_FILE_NAME);
+				break;
 		}
 		switch(method)
 		{

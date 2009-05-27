@@ -53,6 +53,7 @@
 #define TMNT2			0xFF000C
 #define TMNT3			0xFF000D
 #define TMNTGBA			gid('B','N','T')
+#define TMNTGBA2		gid('B','T','2')
 #define TMNT 			gid('B','E','X')
 
 #define RESIDENTEVIL	gid('B','I','O')
@@ -71,9 +72,13 @@
 
 #define MARIOKART		gid('A','M','K')
 
+#define BIONICLEHEROES	gid('B','I','H')
 #define LSW1			gid('B','L','W')
 #define LSW2			gid('B','L','7')
-#define BIONICLEHEROES	gid('B','I','H')
+
+#define SWOBIWAN		gid('B','O','W')
+#define SWEP2			gid('A','S','2')
+#define SWNDA			gid('A','2','W')
 
 #define MK1				0xFF0002
 #define MK2				0xFF0003
@@ -87,6 +92,13 @@
 #define CORVETTE		gid('A','V','C')
 
 #define ONEPIECE		gid('B','O','N')
+
+#define HOBBIT			gid('A','H','9')
+#define LOTR1			gid('A','L','O')
+#define LOTR2			gid('A','L','P')
+#define LOTR3			gid('B','L','R')
+#define LOTR3RDAGE		gid('B','3','A')
+
 
 #define MARBLEMADNESS   0xFF000A
 
@@ -116,6 +128,9 @@ u32 MarioLand1Input(unsigned short pad);
 u32 MarioLand2Input(unsigned short pad);
 u32 LegoStarWars1Input(unsigned short pad);
 u32 LegoStarWars2Input(unsigned short pad);
+u32 SWObiWanInput(unsigned short pad);
+u32 SWEpisode2Input(unsigned short pad);
+u32 SWNDAInput(unsigned short pad);
 u32 MarioKartInput(unsigned short pad);
 u32 MK1Input(unsigned short pad);
 u32 MK12Input(unsigned short pad);
@@ -141,6 +156,7 @@ u32 TMNT1Input(unsigned short pad);
 u32 TMNT2Input(unsigned short pad);
 u32 TMNT3Input(unsigned short pad);
 u32 TMNTGBAInput(unsigned short pad);
+u32 TMNTGBA2Input(unsigned short pad);
 u32 HarryPotter1Input(unsigned short pad);
 u32 HarryPotter1GBCInput(unsigned short pad);
 u32 HarryPotter2Input(unsigned short pad);
@@ -162,6 +178,9 @@ u32 KirbyTntInput(unsigned short pad);
 u32 BoktaiInput(unsigned short pad);
 u32 Boktai2Input(unsigned short pad);
 u32 OnePieceInput(unsigned short pad);
+u32 HobbitInput(unsigned short pad);
+u32 FellowshipOfTheRingInput(unsigned short pad);
+u32 ReturnOfTheKingInput(unsigned short pad);
 
 #endif
 

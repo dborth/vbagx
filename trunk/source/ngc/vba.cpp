@@ -47,6 +47,8 @@ int ExitRequested = 0;
 char appPath[1024];
 FreeTypeGX *fontSystem;
 
+extern FILE *out;
+
 /****************************************************************************
  * Shutdown / Reboot / Exit
  ***************************************************************************/
@@ -59,6 +61,7 @@ static void ExitCleanup()
 #endif
 	ShutdownAudio();
 	StopGX();
+	if (out) fclose(out);
 
 	HaltDeviceThread();
 	UnmountAllFAT();
@@ -296,4 +299,5 @@ int main(int argc, char *argv[])
 			}
 		} // emulation loop
 	} // main loop
+	return 0;
 }

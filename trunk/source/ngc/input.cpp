@@ -760,6 +760,8 @@ static u32 DecodeJoy(unsigned short pad)
 			return TMNT3Input(pad);
 		case TMNTGBA:
 			return TMNTGBAInput(pad);
+		case TMNTGBA2:
+			return TMNTGBA2Input(pad);
 		case TMNT:
 			return TMNTInput(pad);
 
@@ -816,6 +818,12 @@ static u32 DecodeJoy(unsigned short pad)
 		case LSW2:
 			return LegoStarWars2Input(pad);
 
+		// Star Wars
+		case SWOBIWAN:
+			return SWObiWanInput(pad);
+		case SWEP2:
+			return SWEpisode2Input(pad);
+
 		// Mortal Kombat
 		case MK1:
 			return MK1Input(pad);
@@ -853,6 +861,15 @@ static u32 DecodeJoy(unsigned short pad)
 		// One Piece
 		case ONEPIECE:
 			return OnePieceInput(pad);
+		
+		// Lord of the Rings
+		case HOBBIT:
+			return HobbitInput(pad);
+		case LOTR1:
+			return FellowshipOfTheRingInput(pad);
+		case LOTR2:
+		case LOTR3:
+			return ReturnOfTheKingInput(pad);
 	}
 
 	// the function result, J, is a combination of flags for all the VBA buttons that are down
