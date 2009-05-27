@@ -3377,7 +3377,6 @@ void CPUInterrupt()
   biosProtected[3] = 0xe5;
 }
 
-#ifdef SDL
 void log(const char *defaultMsg, ...)
 {
   char buffer[2048];
@@ -3387,16 +3386,31 @@ void log(const char *defaultMsg, ...)
   vsprintf(buffer, defaultMsg, valist);
 
   if(out == NULL) {
-    out = fopen("trace.log","w");
+    out = fopen("sd:/trace.log","w");
   }
 
-  fputs(buffer, out);
+  fprintf(out,"%s\n",buffer);
 
   va_end(valist);
 }
-#else
-extern void winlog(const char *, ...);
-#endif
+
+void winlog(const char *defaultMsg, ...)
+{
+  char buffer[2048];
+  va_list valist;
+
+  va_start(valist, defaultMsg);
+  vsprintf(buffer, defaultMsg, valist);
+
+  if(out == NULL) {
+    out = fopen("sd:/trace.log","w");
+  }
+
+  fprintf(out,"%s\n",buffer);
+  //fputs(buffer, out);
+
+  va_end(valist);
+}
 
 void CPULoop(int ticks)
 {

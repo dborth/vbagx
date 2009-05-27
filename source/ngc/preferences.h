@@ -10,3 +10,5 @@
 
 bool SavePrefs (bool silent);
 bool LoadPrefs ();
+bool SavePalette (bool silent, const char *gameName);
+bool LoadPalette (const char *gameName);

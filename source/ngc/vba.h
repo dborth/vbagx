@@ -16,6 +16,7 @@
 #define APPNAME 		"Visual Boy Advance GX"
 #define APPVERSION 		"2.0.2"
 #define PREF_FILE_NAME 	"settings.xml"
+#define PAL_FILE_NAME 	"palette.xml"
 
 #define NOTSILENT 0
 #define SILENT 1
@@ -37,7 +38,8 @@ enum {
 	FILE_SNAPSHOT,
 	FILE_ROM,
 	FILE_CHEAT,
-	FILE_PREF
+	FILE_PREF,
+	FILE_PAL
 };
 
 struct SGCSettings{

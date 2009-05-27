@@ -20,6 +20,7 @@
 void gbSetBGPalette(u8 value, bool ColoursChanged=false);
 void gbSetObj0Palette(u8 value, bool ColoursChanged=false);
 void gbSetObj1Palette(u8 value, bool ColoursChanged=false);
+void gbPaletteReset();
 
 extern u8 *pix;
 extern bool speedup;
@@ -2140,6 +2141,7 @@ void gbReset()
 {
   systemCartridgeRumble(false);
   gbGetHardwareType();
+  gbPaletteReset();
 
   oldRegister_WY = 146;
   gbInterruptLaunched = 0;

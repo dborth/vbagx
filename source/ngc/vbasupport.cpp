@@ -46,10 +46,15 @@
 #include "menu.h"
 #include "gcunzip.h"
 #include "gamesettings.h"
+#include "preferences.h"
+
+//#define CARLLOG
 
 static u32 start;
 int cartridgeType = 0;
 u32 RomIdCode;
+char RomTitle[17];
+
 int SunBars = 3;
 bool TiltSideways = false;
 
@@ -728,7 +733,6 @@ bool ValidGameId(u32 id)
 
 static void gbApplyPerImagePreferences()
 {
-	char title[17];
 	// Only works for some GB Colour roms
 	u8 Colour = gbRom[0x143];
 	if (Colour == 0x80 || Colour == 0xC0)
@@ -741,60 +745,54 @@ static void gbApplyPerImagePreferences()
 	else
 		RomIdCode = 0;
 	// Otherwise we need to make up our own code
-	title[15] = '\0';
-	title[16] = '\0';
+	RomTitle[15] = '\0';
+	RomTitle[16] = '\0';
 	if (gbRom[0x143] < 0x7F && gbRom[0x143] > 0x20)
-		strncpy(title, (const char *) &gbRom[0x134], 16);
+		strncpy(RomTitle, (const char *) &gbRom[0x134], 16);
 	else
-		strncpy(title, (const char *) &gbRom[0x134], 15);
+		strncpy(RomTitle, (const char *) &gbRom[0x134], 15);
+
+#ifdef CARLLOG
+	if (RomIdCode !=0) {
+		log("******** %2x \"%c%c%c%c\" \"%s\"", Colour, gbRom[0x13f], gbRom[0x140], gbRom[0x141], gbRom[0x142], title);
+	} else {
+		log("******** %2x \"%s\"", Colour, title);
+	}
+#endif
+
 	if (RomIdCode == 0)
 	{
-		if (strcmp(title, "ZELDA") == 0)
+		if (strcmp(RomTitle, "ZELDA") == 0)
 			RomIdCode = LINKSAWAKENING;
-		else if (strcmp(title, "MORTAL KOMBAT") == 0)
+		else if (strcmp(RomTitle, "MORTAL KOMBAT") == 0)
 			RomIdCode = MK1;
-		else if (strcmp(title, "MORTALKOMBATI&II") == 0)
+		else if (strcmp(RomTitle, "MORTALKOMBATI&II") == 0)
 			RomIdCode = MK12;
-		else if (strcmp(title, "MORTAL KOMBAT II") == 0)
+		else if (strcmp(RomTitle, "MORTAL KOMBAT II") == 0)
 			RomIdCode = MK2;
-		else if (strcmp(title, "MORTAL KOMBAT 3") == 0)
+		else if (strcmp(RomTitle, "MORTAL KOMBAT 3") == 0)
 			RomIdCode = MK3;
-		else if (strcmp(title, "MORTAL KOMBAT 4") == 0)
+		else if (strcmp(RomTitle, "MORTAL KOMBAT 4") == 0)
 			RomIdCode = MK4;
-		else if (strcmp(title, "SUPER MARIOLAND") == 0)
+		else if (strcmp(RomTitle, "SUPER MARIOLAND") == 0)
 			RomIdCode = MARIOLAND1;
-		else if (strcmp(title, "MARIOLAND2") == 0)
+		else if (strcmp(RomTitle, "MARIOLAND2") == 0)
 			RomIdCode = MARIOLAND2;
-		else if (strcmp(title, "METROID2") == 0)
+		else if (strcmp(RomTitle, "METROID2") == 0)
 			RomIdCode = METROID2;
-		else if (strcmp(title, "MARBLE MADNESS") == 0)
+		else if (strcmp(RomTitle, "MARBLE MADNESS") == 0)
 			RomIdCode = MARBLEMADNESS;
-		else if (strcmp(title, "TMNT FOOT CLAN") == 0)
+		else if (strcmp(RomTitle, "TMNT FOOT CLAN") == 0)
 			RomIdCode = TMNT1;
-		else if (strcmp(title, "TMNT BACK FROM") == 0 || strcmp(title, "TMNT 2") == 0)
+		else if (strcmp(RomTitle, "TMNT BACK FROM") == 0 || strcmp(RomTitle, "TMNT 2") == 0)
 			RomIdCode = TMNT2;
-		else if (strcmp(title, "TMNT3") == 0)
+		else if (strcmp(RomTitle, "TMNT3") == 0)
 			RomIdCode = TMNT3;
 	}
 	// look for matching palettes if a monochrome gameboy game
 	// (or if a Super Gameboy game, but the palette will be ignored later in that case)
-	int snum = -1;
 	if ((Colour != 0x80) && (Colour != 0xC0)) {
-		for(int i=1; i < gamePalettesCount; i++)
-		{
-			if(strcmp(title, gamePalettes[i].gameName)==0)
-			{
-				snum = i;
-				break;
-			}
-		}
-		// match found!
-		if(snum >= 0)
-		{
-			gbSetPalette(gamePalettes[snum].palette);
-		} else {
-			gbSetPalette(gamePalettes[0].palette);
-		}
+		LoadPalette(RomTitle);
 	}
 }
 
@@ -808,6 +806,7 @@ static void ApplyPerImagePreferences()
 	// look for matching game setting
 	int snum = -1;
 	RomIdCode = rom[0xac] | (rom[0xad] << 8) | (rom[0xae] << 16) | (rom[0xaf] << 24);
+	RomTitle[0] = '\0';
 
 	for(int i=0; i < gameSettingsCount; i++)
 	{
@@ -1099,6 +1098,7 @@ bool LoadVBAROM(int method)
 
 void InitialisePalette()
 {
+	log("InitialisePalette();");
 	int i;
 	// Build GBPalette
 	for( i = 0; i < 24; )

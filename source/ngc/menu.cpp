@@ -37,12 +37,17 @@
 #include "gui/gui.h"
 #include "menu.h"
 #include "wiiusbsupport.h"
+#include "gamesettings.h"
 
 #define THREAD_SLEEP 100
 
 #ifdef HW_RVL
 GuiImageData * pointer[4];
 #endif
+
+static int MenuPalette();
+void gbSetPalette(u32 RRGGBB[]);
+extern char RomTitle[17];
 
 static GuiButton * btnLogo = NULL;
 static GuiImage * gameScreenImg = NULL;
@@ -1838,6 +1843,10 @@ static int MenuGameSettings()
 		{
 			menu = MENU_GAMESETTINGS_VIDEO;
 		}
+		/*else if(cheatsBtn.GetState() == STATE_CLICKED)
+		{
+			menu = MENU_GAMESETTINGS_PALETTE;
+		}*/
 		else if(wiiControlsBtn.GetState() == STATE_CLICKED)
 		{
 			GCSettings.WiiControls ^= 1;
@@ -2634,6 +2643,7 @@ static int MenuSettingsVideo()
 	int ret;
 	int i = 0;
 	OptionList options;
+	char Buffer[1024];
 
 	sprintf(options.name[i++], "Rendering");
 	sprintf(options.name[i++], "Scaling");
@@ -2641,11 +2651,12 @@ static int MenuSettingsVideo()
 	sprintf(options.name[i++], "Screen Position");
 	sprintf(options.name[i++], "Video Mode");
 	sprintf(options.name[i++], "Colorize Mono GB");
+	sprintf(options.name[i++], "Choose Palette");
 	options.length = i;
 
 	GuiText titleTxt("Game Settings - Video", 28, (GXColor){255, 255, 255, 255});
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
-	titleTxt.SetPosition(50,50);
+	titleTxt.SetPosition(50,50); 
 
 	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND_PCM);
 	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
@@ -2727,6 +2738,7 @@ static int MenuSettingsVideo()
 			sprintf (options.value[5], "On");
 		else
 			sprintf (options.value[5], "Off");
+		sprintf(options.value[6], "click here");
 
 		ret = optionBrowser.GetClickedOption();
 
@@ -2766,6 +2778,10 @@ static int MenuSettingsVideo()
 			case 5:
 				if (GCSettings.colorize) GCSettings.colorize = 0;
 				else GCSettings.colorize = 1;
+				break;
+
+			case 6:
+				menu = MENU_GAMESETTINGS_PALETTE;
 				break;
 		}
 
@@ -3497,6 +3513,9 @@ MainMenu (int menu)
 			/*case MENU_GAMESETTINGS_CHEATS:
 				currentMenu = MenuGameCheats();
 				break;*/
+			case MENU_GAMESETTINGS_PALETTE:
+				currentMenu = MenuPalette();
+				break;
 			case MENU_SETTINGS:
 				currentMenu = MenuSettings();
 				break;
@@ -3553,4 +3572,688 @@ MainMenu (int menu)
 		free(gameScreenTex2);
 		gameScreenTex2 = NULL;
 	}
+}
+
+static int redAmount=128, greenAmount=128, blueAmount=128;
+static GuiText *redText;
+static GuiText *greenText;
+static GuiText *blueText;
+static GuiText *sampleText;
+
+static void RGBWindowUpdate(void * ptr, int red, int green, int blue)
+{
+	GuiButton * b = (GuiButton *)ptr;
+	if(b->GetState() == STATE_CLICKED)
+	{
+		redAmount += red;
+		if (redAmount>255) redAmount=255;
+		else if (redAmount<0) redAmount=0;
+		greenAmount += green;
+		if (greenAmount>255) greenAmount=255;
+		else if (greenAmount<0) greenAmount=0;
+		blueAmount += blue;
+		if (blueAmount>255) blueAmount=255;
+		else if (blueAmount<0) blueAmount=0;
+
+		redText->SetColor((GXColor){redAmount, 0, 0, 255});
+		greenText->SetColor((GXColor){0, greenAmount, 0, 255});
+		blueText->SetColor((GXColor){0, 0, blueAmount, 255});
+		sampleText->SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+
+		char shift[10];
+		sprintf(shift, "%2x", redAmount);
+		redText->SetText(shift);
+		sprintf(shift, "%2x", greenAmount);
+		greenText->SetText(shift);
+		sprintf(shift, "%2x", blueAmount);
+		blueText->SetText(shift);
+
+		b->ResetState();
+	}
+}
+
+static void LessRedClick(void * ptr) { RGBWindowUpdate(ptr, -8, 0, 0); }
+static void LessGreenClick(void * ptr) { RGBWindowUpdate(ptr, 0, -8, 0); }
+static void LessBlueClick(void * ptr) { RGBWindowUpdate(ptr, 0, 0, -8); }
+static void MoreRedClick(void * ptr) { RGBWindowUpdate(ptr, +8, 0, 0); }
+static void MoreGreenClick(void * ptr) { RGBWindowUpdate(ptr, 0, +8, 0); }
+static void MoreBlueClick(void * ptr) { RGBWindowUpdate(ptr, 0, 0, +8); }
+
+static void PaletteWindow(const char *name)
+{
+	GuiWindow * w = new GuiWindow(500,480);
+	w->SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	w->SetPosition(0, -10);
+
+	GuiTrigger trigA;
+	if(GCSettings.WiimoteOrientation)
+		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
+	else
+		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
+
+	GuiImageData arrowUp(button_arrow_up_png);
+	GuiImageData arrowDown(button_arrow_down_png);
+	GuiImageData arrowUpOver(button_arrow_up_over_png);
+	GuiImageData arrowDownOver(button_arrow_down_over_png);
+
+	GuiImage moreRedImg(&arrowUp);
+	GuiImage moreRedOverImg(&arrowUpOver);
+	GuiButton moreRedBtn(arrowUp.GetWidth(), arrowUp.GetHeight());
+	moreRedBtn.SetImage(&moreRedImg);
+	moreRedBtn.SetImageOver(&moreRedOverImg);
+	moreRedBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	moreRedBtn.SetPosition(-150,-60);
+	moreRedBtn.SetTrigger(0, &trigA);
+	moreRedBtn.SetSelectable(true);
+	moreRedBtn.SetUpdateCallback(MoreRedClick);
+
+	GuiImage lessRedImg(&arrowDown);
+	GuiImage lessRedOverImg(&arrowDownOver);
+	GuiButton lessRedBtn(arrowDown.GetWidth(), arrowDown.GetHeight());
+	lessRedBtn.SetImage(&lessRedImg);
+	lessRedBtn.SetImageOver(&lessRedOverImg);
+	lessRedBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	lessRedBtn.SetPosition(-150,+50);
+	lessRedBtn.SetTrigger(0, &trigA);
+	lessRedBtn.SetSelectable(true);
+	lessRedBtn.SetUpdateCallback(LessRedClick);
+
+	GuiImage moreGreenImg(&arrowUp);
+	GuiImage moreGreenOverImg(&arrowUpOver);
+	GuiButton moreGreenBtn(arrowUp.GetWidth(), arrowUp.GetHeight());
+	moreGreenBtn.SetImage(&moreGreenImg);
+	moreGreenBtn.SetImageOver(&moreGreenOverImg);
+	moreGreenBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	moreGreenBtn.SetPosition(-50,-60);
+	moreGreenBtn.SetTrigger(0, &trigA);
+	moreGreenBtn.SetSelectable(true);
+	moreGreenBtn.SetUpdateCallback(MoreGreenClick);
+
+	GuiImage lessGreenImg(&arrowDown);
+	GuiImage lessGreenOverImg(&arrowDownOver);
+	GuiButton lessGreenBtn(arrowDown.GetWidth(), arrowDown.GetHeight());
+	lessGreenBtn.SetImage(&lessGreenImg);
+	lessGreenBtn.SetImageOver(&lessGreenOverImg);
+	lessGreenBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	lessGreenBtn.SetPosition(-50,+50);
+	lessGreenBtn.SetTrigger(0, &trigA);
+	lessGreenBtn.SetSelectable(true);
+	lessGreenBtn.SetUpdateCallback(LessGreenClick);
+
+	GuiImage moreBlueImg(&arrowUp);
+	GuiImage moreBlueOverImg(&arrowUpOver);
+	GuiButton moreBlueBtn(arrowUp.GetWidth(), arrowUp.GetHeight());
+	moreBlueBtn.SetImage(&moreBlueImg);
+	moreBlueBtn.SetImageOver(&moreBlueOverImg);
+	moreBlueBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	moreBlueBtn.SetPosition(50,-60);
+	moreBlueBtn.SetTrigger(0, &trigA);
+	moreBlueBtn.SetSelectable(true);
+	moreBlueBtn.SetUpdateCallback(MoreBlueClick);
+
+	GuiImage lessBlueImg(&arrowDown);
+	GuiImage lessBlueOverImg(&arrowDownOver);
+	GuiButton lessBlueBtn(arrowDown.GetWidth(), arrowDown.GetHeight());
+	lessBlueBtn.SetImage(&lessBlueImg);
+	lessBlueBtn.SetImageOver(&lessBlueOverImg);
+	lessBlueBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	lessBlueBtn.SetPosition(50,+50);
+	lessBlueBtn.SetTrigger(0, &trigA);
+	lessBlueBtn.SetSelectable(true);
+	lessBlueBtn.SetUpdateCallback(LessBlueClick);
+
+	GuiImageData box(screen_position_png);
+
+	GuiImage redBoxImg(&box);
+	redBoxImg.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	redBoxImg.SetPosition(-150, 0);
+
+	GuiImage greenBoxImg(&box);
+	greenBoxImg.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	greenBoxImg.SetPosition(-50, 0);
+
+	GuiImage blueBoxImg(&box);
+	blueBoxImg.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	blueBoxImg.SetPosition(+50, 0);
+
+	char shift[10];
+	redText = new GuiText(NULL, 22, (GXColor){128, 0, 0, 255});
+	redText->SetPosition(-150,0);
+	sprintf(shift, "%2x", redAmount);
+	redText->SetText(shift);
+
+	greenText = new GuiText(NULL, 22, (GXColor){0, 128, 0, 255});
+	greenText->SetPosition(-50, 0);
+	sprintf(shift, "%2x", greenAmount);
+	greenText->SetText(shift);
+
+	blueText = new GuiText(NULL, 22, (GXColor){0, 0, 128, 255});
+	blueText->SetPosition(+50,0);
+	sprintf(shift, "%2x", blueAmount);
+	blueText->SetText(shift);
+
+	sampleText = new GuiText(NULL, 22, (GXColor){redAmount, greenAmount, blueAmount, 255});
+	sampleText->SetPosition(+150,0);
+	sampleText->SetText(name);
+
+	int currentRed = redAmount;
+	int currentGreen = greenAmount;
+	int currentBlue = blueAmount;
+
+	w->Append(&lessRedBtn);
+	w->Append(&moreRedBtn);
+	w->Append(&lessGreenBtn);
+	w->Append(&moreGreenBtn);
+	w->Append(&lessBlueBtn);
+	w->Append(&moreBlueBtn);
+
+	w->Append(&redBoxImg);
+	w->Append(&greenBoxImg);
+	w->Append(&blueBoxImg);
+
+	w->Append(sampleText);
+	w->Append(redText);
+	w->Append(greenText);
+	w->Append(blueText);
+
+	if(!SettingWindow("Red Green Blue",w))
+	{
+		redAmount = currentRed; // undo changes
+		greenAmount = currentGreen;
+		blueAmount = currentBlue;
+	}
+
+	delete(w);
+	delete(redText);
+	delete(greenText);
+	delete(blueText);
+}
+
+GXColor GetCol(int i) {
+	u32 c;
+	if (i>=0 && i<=13) c = CurrentPalette.palette[i];
+	else c = 0;
+	u8 r = (c >> 16) & 255;
+	u8 g = (c >> 8) & 255;
+	u8 b = (c) & 255;
+	return (GXColor){r,g,b,255};
+}
+
+/****************************************************************************
+ * MenuPalette
+ *
+ * Menu displayed when returning to the menu from in-game.
+ ***************************************************************************/
+static int MenuPalette()
+{
+	int menu = MENU_NONE;
+	char s[4];
+
+	GuiText titleTxt("Palette", 28, (GXColor){255, 255, 255, 255});
+	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
+	titleTxt.SetPosition(50,50);
+
+	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND_PCM);
+	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
+	GuiImageData btnOutline(button_png);
+	GuiImageData btnOutlineOver(button_over_png);
+	GuiImageData btnLargeOutline(button_large_png);
+	GuiImageData btnLargeOutlineOver(button_large_over_png);
+	GuiImageData btnCloseOutline(button_small_png);
+	GuiImageData btnCloseOutlineOver(button_small_over_png);
+
+	GuiTrigger trigA;
+	if(GCSettings.WiimoteOrientation)
+		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
+	else
+		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
+
+	GuiTrigger trigHome;
+	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0);
+
+	GuiText bg0BtnTxt("BG 0", 24, GetCol(0));
+	GuiImage bg0BtnImg(&btnCloseOutline);
+	GuiImage bg0BtnImgOver(&btnCloseOutlineOver);
+	GuiButton bg0Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	bg0Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	bg0Btn.SetPosition(-200, 120);
+	bg0Btn.SetLabel(&bg0BtnTxt);
+	bg0Btn.SetImage(&bg0BtnImg);
+	bg0Btn.SetImageOver(&bg0BtnImgOver);
+	bg0Btn.SetSoundOver(&btnSoundOver);
+	bg0Btn.SetSoundClick(&btnSoundClick);
+	bg0Btn.SetTrigger(&trigA);
+	bg0Btn.SetEffectGrow();
+
+	GuiText bg1BtnTxt("BG 1", 24, GetCol(1));
+	GuiImage bg1BtnImg(&btnCloseOutline);
+	GuiImage bg1BtnImgOver(&btnCloseOutlineOver);
+	GuiButton bg1Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	bg1Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	bg1Btn.SetPosition(-200, 180);
+	bg1Btn.SetLabel(&bg1BtnTxt);
+	bg1Btn.SetImage(&bg1BtnImg);
+	bg1Btn.SetImageOver(&bg1BtnImgOver);
+	bg1Btn.SetSoundOver(&btnSoundOver);
+	bg1Btn.SetSoundClick(&btnSoundClick);
+	bg1Btn.SetTrigger(&trigA);
+	bg1Btn.SetEffectGrow();
+
+	GuiText bg2BtnTxt("BG 2", 24, GetCol(2));
+	GuiImage bg2BtnImg(&btnCloseOutline);
+	GuiImage bg2BtnImgOver(&btnCloseOutlineOver);
+	GuiButton bg2Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	bg2Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	bg2Btn.SetPosition(-200, 240);
+	bg2Btn.SetLabel(&bg2BtnTxt);
+	bg2Btn.SetImage(&bg2BtnImg);
+	bg2Btn.SetImageOver(&bg2BtnImgOver);
+	bg2Btn.SetSoundOver(&btnSoundOver);
+	bg2Btn.SetSoundClick(&btnSoundClick);
+	bg2Btn.SetTrigger(&trigA);
+	bg2Btn.SetEffectGrow();
+
+	GuiText bg3BtnTxt("BG 3", 24, GetCol(3));
+	GuiImage bg3BtnImg(&btnCloseOutline);
+	GuiImage bg3BtnImgOver(&btnCloseOutlineOver);
+	GuiButton bg3Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	bg3Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	bg3Btn.SetPosition(-200, 300);
+	bg3Btn.SetLabel(&bg3BtnTxt);
+	bg3Btn.SetImage(&bg3BtnImg);
+	bg3Btn.SetImageOver(&bg3BtnImgOver);
+	bg3Btn.SetSoundOver(&btnSoundOver);
+	bg3Btn.SetSoundClick(&btnSoundClick);
+	bg3Btn.SetTrigger(&trigA);
+	bg3Btn.SetEffectGrow();
+
+	GuiText win0BtnTxt("WIN 0", 24, GetCol(4));
+	GuiImage win0BtnImg(&btnCloseOutline);
+	GuiImage win0BtnImgOver(&btnCloseOutlineOver);
+	GuiButton win0Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	win0Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	win0Btn.SetPosition(-70, 120);
+	win0Btn.SetLabel(&win0BtnTxt);
+	win0Btn.SetImage(&win0BtnImg);
+	win0Btn.SetImageOver(&win0BtnImgOver);
+	win0Btn.SetSoundOver(&btnSoundOver);
+	win0Btn.SetSoundClick(&btnSoundClick);
+	win0Btn.SetTrigger(&trigA);
+	win0Btn.SetEffectGrow();
+
+	GuiText win1BtnTxt("WIN 1", 24, GetCol(5));
+	GuiImage win1BtnImg(&btnCloseOutline);
+	GuiImage win1BtnImgOver(&btnCloseOutlineOver);
+	GuiButton win1Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	win1Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	win1Btn.SetPosition(-70, 180);
+	win1Btn.SetLabel(&win1BtnTxt);
+	win1Btn.SetImage(&win1BtnImg);
+	win1Btn.SetImageOver(&win1BtnImgOver);
+	win1Btn.SetSoundOver(&btnSoundOver);
+	win1Btn.SetSoundClick(&btnSoundClick);
+	win1Btn.SetTrigger(&trigA);
+	win1Btn.SetEffectGrow();
+
+	GuiText win2BtnTxt("WIN 2", 24, GetCol(6));
+	GuiImage win2BtnImg(&btnCloseOutline);
+	GuiImage win2BtnImgOver(&btnCloseOutlineOver);
+	GuiButton win2Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	win2Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	win2Btn.SetPosition(-70, 240);
+	win2Btn.SetLabel(&win2BtnTxt);
+	win2Btn.SetImage(&win2BtnImg);
+	win2Btn.SetImageOver(&win2BtnImgOver);
+	win2Btn.SetSoundOver(&btnSoundOver);
+	win2Btn.SetSoundClick(&btnSoundClick);
+	win2Btn.SetTrigger(&trigA);
+	win2Btn.SetEffectGrow();
+
+	GuiText win3BtnTxt("WIN 3", 24, GetCol(7));
+	GuiImage win3BtnImg(&btnCloseOutline);
+	GuiImage win3BtnImgOver(&btnCloseOutlineOver);
+	GuiButton win3Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	win3Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	win3Btn.SetPosition(-70, 300);
+	win3Btn.SetLabel(&win3BtnTxt);
+	win3Btn.SetImage(&win3BtnImg);
+	win3Btn.SetImageOver(&win3BtnImgOver);
+	win3Btn.SetSoundOver(&btnSoundOver);
+	win3Btn.SetSoundClick(&btnSoundClick);
+	win3Btn.SetTrigger(&trigA);
+	win3Btn.SetEffectGrow();
+
+	GuiText obj0BtnTxt("OBJ 0", 24, GetCol(8));
+	GuiImage obj0BtnImg(&btnCloseOutline);
+	GuiImage obj0BtnImgOver(&btnCloseOutlineOver);
+	GuiButton obj0Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	obj0Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	obj0Btn.SetPosition(+70, 120);
+	obj0Btn.SetLabel(&obj0BtnTxt);
+	obj0Btn.SetImage(&obj0BtnImg);
+	obj0Btn.SetImageOver(&obj0BtnImgOver);
+	obj0Btn.SetSoundOver(&btnSoundOver);
+	obj0Btn.SetSoundClick(&btnSoundClick);
+	obj0Btn.SetTrigger(&trigA);
+	obj0Btn.SetEffectGrow();
+
+	GuiText obj1BtnTxt("OBJ 1", 24, GetCol(9));
+	GuiImage obj1BtnImg(&btnCloseOutline);
+	GuiImage obj1BtnImgOver(&btnCloseOutlineOver);
+	GuiButton obj1Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	obj1Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	obj1Btn.SetPosition(+70, 180);
+	obj1Btn.SetLabel(&obj1BtnTxt);
+	obj1Btn.SetImage(&obj1BtnImg);
+	obj1Btn.SetImageOver(&obj1BtnImgOver);
+	obj1Btn.SetSoundOver(&btnSoundOver);
+	obj1Btn.SetSoundClick(&btnSoundClick);
+	obj1Btn.SetTrigger(&trigA);
+	obj1Btn.SetEffectGrow();
+
+	GuiText obj2BtnTxt("OBJ 2", 24, GetCol(10));
+	GuiImage obj2BtnImg(&btnCloseOutline);
+	GuiImage obj2BtnImgOver(&btnCloseOutlineOver);
+	GuiButton obj2Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	obj2Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	obj2Btn.SetPosition(+70, 240);
+	obj2Btn.SetLabel(&obj2BtnTxt);
+	obj2Btn.SetImage(&obj2BtnImg);
+	obj2Btn.SetImageOver(&obj2BtnImgOver);
+	obj2Btn.SetSoundOver(&btnSoundOver);
+	obj2Btn.SetSoundClick(&btnSoundClick);
+	obj2Btn.SetTrigger(&trigA);
+	obj2Btn.SetEffectGrow();
+
+	GuiText spr0BtnTxt("SPR 0", 24, GetCol(11));
+	GuiImage spr0BtnImg(&btnCloseOutline);
+	GuiImage spr0BtnImgOver(&btnCloseOutlineOver);
+	GuiButton spr0Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	spr0Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	spr0Btn.SetPosition(+200, 120);
+	spr0Btn.SetLabel(&spr0BtnTxt);
+	spr0Btn.SetImage(&spr0BtnImg);
+	spr0Btn.SetImageOver(&spr0BtnImgOver);
+	spr0Btn.SetSoundOver(&btnSoundOver);
+	spr0Btn.SetSoundClick(&btnSoundClick);
+	spr0Btn.SetTrigger(&trigA);
+	spr0Btn.SetEffectGrow();
+
+	GuiText spr1BtnTxt("SPR 1", 24, GetCol(12));
+	GuiImage spr1BtnImg(&btnCloseOutline);
+	GuiImage spr1BtnImgOver(&btnCloseOutlineOver);
+	GuiButton spr1Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	spr1Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	spr1Btn.SetPosition(+200, 180);
+	spr1Btn.SetLabel(&spr1BtnTxt);
+	spr1Btn.SetImage(&spr1BtnImg);
+	spr1Btn.SetImageOver(&spr1BtnImgOver);
+	spr1Btn.SetSoundOver(&btnSoundOver);
+	spr1Btn.SetSoundClick(&btnSoundClick);
+	spr1Btn.SetTrigger(&trigA);
+	spr1Btn.SetEffectGrow();
+
+	GuiText spr2BtnTxt("SPR 2", 24, GetCol(13));
+	GuiImage spr2BtnImg(&btnCloseOutline);
+	GuiImage spr2BtnImgOver(&btnCloseOutlineOver);
+	GuiButton spr2Btn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	spr2Btn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	spr2Btn.SetPosition(+200, 240);
+	spr2Btn.SetLabel(&spr2BtnTxt);
+	spr2Btn.SetImage(&spr2BtnImg);
+	spr2Btn.SetImageOver(&spr2BtnImgOver);
+	spr2Btn.SetSoundOver(&btnSoundOver);
+	spr2Btn.SetSoundClick(&btnSoundClick);
+	spr2Btn.SetTrigger(&trigA);
+	spr2Btn.SetEffectGrow();
+
+	GuiText importBtnTxt("Load / Save", 24, (GXColor){0, 0, 0, 255});
+	importBtnTxt.SetMaxWidth(btnOutline.GetWidth()-30);
+	GuiImage importBtnImg(&btnOutline);
+	GuiImage importBtnImgOver(&btnOutlineOver);
+	GuiButton importBtn(btnOutline.GetWidth(), btnOutline.GetHeight());
+	importBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	importBtn.SetPosition(140, 300);
+	importBtn.SetLabel(&importBtnTxt);
+	importBtn.SetImage(&importBtnImg);
+	importBtn.SetImageOver(&importBtnImgOver);
+	importBtn.SetSoundOver(&btnSoundOver);
+	importBtn.SetSoundClick(&btnSoundClick);
+	importBtn.SetTrigger(&trigA);
+	importBtn.SetEffectGrow();
+
+	GuiText closeBtnTxt("Close", 22, (GXColor){0, 0, 0, 255});
+	GuiImage closeBtnImg(&btnCloseOutline);
+	GuiImage closeBtnImgOver(&btnCloseOutlineOver);
+	GuiButton closeBtn(btnCloseOutline.GetWidth(), btnCloseOutline.GetHeight());
+	closeBtn.SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
+	closeBtn.SetPosition(-50, 35);
+	closeBtn.SetLabel(&closeBtnTxt);
+	closeBtn.SetImage(&closeBtnImg);
+	closeBtn.SetImageOver(&closeBtnImgOver);
+	closeBtn.SetSoundOver(&btnSoundOver);
+	closeBtn.SetSoundClick(&btnSoundClick);
+	closeBtn.SetTrigger(&trigA);
+	closeBtn.SetTrigger(&trigHome);
+	closeBtn.SetEffectGrow();
+
+	GuiText backBtnTxt("Go Back", 24, (GXColor){0, 0, 0, 255});
+	GuiImage backBtnImg(&btnOutline);
+	GuiImage backBtnImgOver(&btnOutlineOver);
+	GuiButton backBtn(btnOutline.GetWidth(), btnOutline.GetHeight());
+	backBtn.SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+	backBtn.SetPosition(100, -35);
+	backBtn.SetLabel(&backBtnTxt);
+	backBtn.SetImage(&backBtnImg);
+	backBtn.SetImageOver(&backBtnImgOver);
+	backBtn.SetSoundOver(&btnSoundOver);
+	backBtn.SetSoundClick(&btnSoundClick);
+	backBtn.SetTrigger(&trigA);
+	backBtn.SetEffectGrow();
+
+	HaltGui();
+	GuiWindow w(screenwidth, screenheight);
+	w.Append(&titleTxt);
+	w.Append(&bg0Btn);
+	w.Append(&bg1Btn);
+	w.Append(&bg2Btn);
+	w.Append(&bg3Btn);
+	w.Append(&win0Btn);
+	w.Append(&win1Btn);
+	w.Append(&win2Btn);
+	w.Append(&win3Btn);
+	w.Append(&obj0Btn);
+	w.Append(&obj1Btn);
+	w.Append(&obj2Btn);
+	w.Append(&spr0Btn);
+	w.Append(&spr1Btn);
+	w.Append(&spr2Btn);
+	w.Append(&importBtn);
+	w.Append(&closeBtn);
+	w.Append(&backBtn);
+
+	mainWindow->Append(&w);
+
+	ResumeGui();
+
+	while(menu == MENU_NONE)
+	{
+		VIDEO_WaitVSync ();
+
+		if(bg0Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[0] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[0] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[0] >> 0) & 0xFF;
+			PaletteWindow("BG 0");
+			CurrentPalette.palette[0] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			bg0BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			bg0Btn.ResetState();
+		}
+		else if(bg1Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[1] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[1] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[1] >> 0) & 0xFF;
+			PaletteWindow("BG 1");
+			CurrentPalette.palette[1] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			bg1BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			bg1Btn.ResetState();
+		}
+		else if(bg2Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[2] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[2] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[2] >> 0) & 0xFF;
+			PaletteWindow("BG 2");
+			CurrentPalette.palette[2] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			bg2BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			bg2Btn.ResetState();
+		}
+		else if(bg3Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[3] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[3] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[3] >> 0) & 0xFF;
+			PaletteWindow("BG 3");
+			CurrentPalette.palette[3] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			bg3BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			bg3Btn.ResetState();
+		}
+		else if(win0Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[4] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[4] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[4] >> 0) & 0xFF;
+			PaletteWindow("WIN 0");
+			CurrentPalette.palette[4] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			win0BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			win0Btn.ResetState();
+		}
+		else if(win1Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[5] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[5] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[5] >> 0) & 0xFF;
+			PaletteWindow("WIN 1");
+			CurrentPalette.palette[5] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			win1BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			win1Btn.ResetState();
+		}
+		else if(win2Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[6] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[6] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[6] >> 0) & 0xFF;
+			PaletteWindow("WIN 2");
+			CurrentPalette.palette[6] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			win2BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			win2Btn.ResetState();
+		}
+		else if(win3Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[7] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[7] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[7] >> 0) & 0xFF;
+			PaletteWindow("WIN 3");
+			CurrentPalette.palette[7] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			win3BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			win3Btn.ResetState();
+		}
+		else if(obj0Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[8] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[8] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[8] >> 0) & 0xFF;
+			PaletteWindow("OBJ 0");
+			CurrentPalette.palette[8] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			obj0BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			obj0Btn.ResetState();
+		}
+		else if(obj1Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[9] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[9] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[9] >> 0) & 0xFF;
+			PaletteWindow("OBJ 1");
+			CurrentPalette.palette[9] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			obj1BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			obj1Btn.ResetState();
+		}
+		else if(obj2Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[10] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[10] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[10] >> 0) & 0xFF;
+			PaletteWindow("OBJ 2");
+			CurrentPalette.palette[10] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			obj2BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			obj2Btn.ResetState();
+		}
+		else if(spr0Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[11] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[11] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[11] >> 0) & 0xFF;
+			PaletteWindow("SPR 0");
+			CurrentPalette.palette[11] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			spr0BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			spr0Btn.ResetState();
+		}
+		else if(spr1Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[12] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[12] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[12] >> 0) & 0xFF;
+			PaletteWindow("SPR 1");
+			CurrentPalette.palette[12] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			spr1BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			spr1Btn.ResetState();
+		}
+		else if(spr2Btn.GetState() == STATE_CLICKED)
+		{
+			redAmount = (CurrentPalette.palette[13] >> 16) & 0xFF;
+			greenAmount = (CurrentPalette.palette[13] >> 8) & 0xFF;
+			blueAmount = (CurrentPalette.palette[13] >> 0) & 0xFF;
+			PaletteWindow("SPR 2");
+			CurrentPalette.palette[13] = redAmount << 16 | greenAmount << 8 | blueAmount;
+			spr2BtnTxt.SetColor((GXColor){redAmount, greenAmount, blueAmount, 255});
+			spr2Btn.ResetState();
+		}
+		else if(importBtn.GetState() == STATE_CLICKED)
+		{
+			SavePalette(NOTSILENT, RomTitle);
+			menu = MENU_GAMESETTINGS_PALETTE;
+		}
+		else if(closeBtn.GetState() == STATE_CLICKED)
+		{
+			menu = MENU_EXIT;
+			SavePalette(SILENT, CurrentPalette.gameName);
+			SavePrefs(NOTSILENT);
+
+			exitSound->Play();
+			bgTopImg->SetEffect(EFFECT_SLIDE_TOP | EFFECT_SLIDE_OUT, 15);
+			closeBtn.SetEffect(EFFECT_SLIDE_TOP | EFFECT_SLIDE_OUT, 15);
+			titleTxt.SetEffect(EFFECT_SLIDE_TOP | EFFECT_SLIDE_OUT, 15);
+			backBtn.SetEffect(EFFECT_SLIDE_BOTTOM | EFFECT_SLIDE_OUT, 15);
+			bgBottomImg->SetEffect(EFFECT_SLIDE_BOTTOM | EFFECT_SLIDE_OUT, 15);
+			btnLogo->SetEffect(EFFECT_SLIDE_BOTTOM | EFFECT_SLIDE_OUT, 15);
+
+			w.SetEffect(EFFECT_FADE, -15);
+
+			usleep(350000); // wait for effects to finish
+		}
+		else if(backBtn.GetState() == STATE_CLICKED)
+		{			
+			menu = MENU_GAMESETTINGS_VIDEO;
+		}
+	}
+
+	if(menu == MENU_GAME)
+		SavePrefs(NOTSILENT);
+	gbSetPalette(CurrentPalette.palette);
+	
+	HaltGui();
+	mainWindow->Remove(&w);
+	return menu;
 }

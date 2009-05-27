@@ -32,5 +32,6 @@ struct gamePalette {
 
 extern gamePalette gamePalettes[];
 extern int gamePalettesCount;
+extern gamePalette CurrentPalette;
 
 #endif
