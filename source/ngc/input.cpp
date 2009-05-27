@@ -870,6 +870,14 @@ static u32 DecodeJoy(unsigned short pad)
 		case LOTR2:
 		case LOTR3:
 			return ReturnOfTheKingInput(pad);
+		
+		// Castlevania
+		case CVADVENTURE:
+			return CastlevaniaAdventureInput(pad);
+		case CVBELMONT:
+			return CastlevaniaBelmontInput(pad);
+		case CVLEGENDS:
+			return CastlevaniaLegendsInput(pad);
 	}
 
 	// the function result, J, is a combination of flags for all the VBA buttons that are down
