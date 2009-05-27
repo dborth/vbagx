@@ -194,6 +194,7 @@ u32 ReturnOfTheKingInput(unsigned short pad);
 u32 CastlevaniaAdventureInput(unsigned short pad);
 u32 CastlevaniaBelmontInput(unsigned short pad);
 u32 CastlevaniaLegendsInput(unsigned short pad);
+u32 CastlevaniaCircleMoonInput(unsigned short pad);
 
 #endif
 
