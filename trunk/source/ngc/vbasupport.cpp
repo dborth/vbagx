@@ -790,6 +790,12 @@ static void gbApplyPerImagePreferences()
 			RomIdCode = TMNT2;
 		else if (strcmp(RomTitle, "TMNT3") == 0)
 			RomIdCode = TMNT3;
+		else if (strcmp(RomTitle, "CASTLEVANIA ADVE") == 0)
+			RomIdCode = CVADVENTURE;
+		else if (strcmp(RomTitle, "CASTLEVANIA2 BEL") == 0)
+			RomIdCode = CVBELMONT;
+		else if (strcmp(RomTitle, "CASTLEVANIA") == 0 || strcmp(RomTitle, "CV3 GER") == 0)
+			RomIdCode = CVLEGENDS;
 	}
 	// look for matching palettes if a monochrome gameboy game
 	// (or if a Super Gameboy game, but the palette will be ignored later in that case)

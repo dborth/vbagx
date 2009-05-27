@@ -689,8 +689,8 @@ u32 TMNTGBAInput(unsigned short pad) {
 u32 TMNTGBA2Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
 	static u32 LastDir = VBA_RIGHT;
-	static bool wait = false;
-	static int holdcount = 0;
+	//static bool wait = false;
+	//static int holdcount = 0;
 	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0, Look=0;
 
 #ifdef HW_RVL
@@ -1615,6 +1615,138 @@ u32 ReturnOfTheKingInput(unsigned short pad) {
 	if (UseButton) J |= VBA_BUTTON_R;
 	if (SpeedButton) J |= VBA_SPEED;
 	if (PauseButton) J |= VBA_BUTTON_SELECT;
+
+	return J;
+}
+
+u32 CastlevaniaAdventureInput(unsigned short pad) {
+	// Only Nunchuk and Classic controls available
+	// Wiimote, Gamecube and Keyboard controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	bool JumpButton=0, AttackButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0;
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	// Nunchuk controls are based on Castlevania Wii
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		AttackButton = (fabs(wp->gforce.x)> 1.5) || (fabs(wp->gforce.y)> 1.5) || wp->btns_h & WPAD_BUTTON_B;
+		JumpButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
+		GuardButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
+		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
+		SelectButton = wp->btns_h & WPAD_BUTTON_MINUS;
+		SpeedButton = (wp->btns_h & WPAD_BUTTON_A) && (wp->btns_h & WPAD_BUTTON_B);
+	// Classic controls are based on ...?
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		AttackButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
+		JumpButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZR);
+		GuardButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_ZL);
+		PauseButton = wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS;
+		SelectButton = wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS;
+		SpeedButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
+	}
+#endif
+	
+	if (JumpButton) J |= VBA_BUTTON_A;
+	if (AttackButton) J |= VBA_BUTTON_B;
+	if (PauseButton) J |= VBA_BUTTON_START;
+	if (SelectButton) J |= VBA_BUTTON_SELECT;
+	if (SpeedButton) J |= VBA_SPEED;
+	if (GuardButton) {
+		J &= ~VBA_UP;
+		J |= VBA_DOWN;
+	}
+
+	return J;
+}
+
+u32 CastlevaniaBelmontInput(unsigned short pad) {
+	// Only Nunchuk and Classic controls available
+	// Wiimote, Gamecube and Keyboard controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0;
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	// Nunchuk controls are based on Castlevania Wii
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		ShootButton = wp->btns_h & WPAD_BUTTON_A;
+		AttackButton = (fabs(wp->gforce.x)> 1.5) || (fabs(wp->gforce.y)> 1.5) || wp->btns_h & WPAD_BUTTON_B;
+		JumpButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
+		GuardButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
+		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
+		SelectButton = wp->btns_h & WPAD_BUTTON_MINUS;
+		SpeedButton = (wp->btns_h & WPAD_BUTTON_A) && (wp->btns_h & WPAD_BUTTON_B);
+	// Classic controls are based on ...?
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		ShootButton = wp->btns_h & WPAD_CLASSIC_BUTTON_Y;
+		AttackButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
+		JumpButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZR);
+		GuardButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_ZL);
+		PauseButton = wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS;
+		SelectButton = wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS;
+		SpeedButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
+	}
+#endif
+	
+	if (JumpButton) J |= VBA_BUTTON_A;
+	if (AttackButton) {
+		J &= ~VBA_UP;
+		J |= VBA_BUTTON_B;
+	}
+	if (ShootButton) J |= VBA_UP | VBA_BUTTON_B;
+	if (PauseButton) J |= VBA_BUTTON_START;
+	if (SelectButton) J |= VBA_BUTTON_SELECT;
+	if (SpeedButton) J |= VBA_SPEED;
+	if (GuardButton) {
+		J &= ~VBA_UP;
+		J |= VBA_DOWN;
+	}
+
+	return J;
+}
+
+u32 CastlevaniaLegendsInput(unsigned short pad) {
+	// Only Nunchuk and Classic controls available
+	// Wiimote, Gamecube and Keyboard controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, HyperButton=0;
+#ifdef HW_RVL
+	WPADData * wp = WPAD_Data(pad);
+	// Nunchuk controls are based on Castlevania Wii
+	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+		ShootButton = wp->btns_h & WPAD_BUTTON_A;
+		AttackButton = (fabs(wp->gforce.x)> 1.5) || (fabs(wp->gforce.y)> 1.5) || wp->btns_h & WPAD_BUTTON_B;
+		JumpButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
+		GuardButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
+		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
+		SelectButton = wp->btns_h & WPAD_BUTTON_MINUS;
+		SpeedButton = (wp->btns_h & WPAD_BUTTON_A) && (wp->btns_h & WPAD_BUTTON_B);
+		HyperButton = wp->btns_h & WPAD_BUTTON_DOWN;
+	// Classic controls are based on ...?
+	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		ShootButton = wp->btns_h & WPAD_CLASSIC_BUTTON_Y;
+		AttackButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
+		JumpButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZR);
+		GuardButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_ZL);
+		PauseButton = wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS;
+		SelectButton = wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS;
+		SpeedButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
+		HyperButton = wp->btns_h & WPAD_CLASSIC_BUTTON_X;
+	}
+#endif
+	
+	if (JumpButton) J |= VBA_BUTTON_A;
+	if (AttackButton) {
+		J &= ~VBA_UP;
+		J |= VBA_BUTTON_B;
+	}
+	if (HyperButton) J |= VBA_BUTTON_A | VBA_BUTTON_B;
+	if (ShootButton) J |= VBA_UP | VBA_BUTTON_B;
+	if (PauseButton) J |= VBA_BUTTON_START;
+	if (SelectButton) J |= VBA_BUTTON_SELECT;
+	if (SpeedButton) J |= VBA_SPEED;
+	if (GuardButton) {
+		J &= ~VBA_UP;
+		J |= VBA_DOWN;
+	}
 
 	return J;
 }

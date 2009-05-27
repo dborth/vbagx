@@ -99,6 +99,16 @@
 #define LOTR3			gid('B','L','R')
 #define LOTR3RDAGE		gid('B','3','A')
 
+#define CVADVENTURE		0xFF000E
+#define CVBELMONT		0xFF000F
+#define CVLEGENDS		0xFF0010
+#define CVCIRCLEMOON	gid('A','A','M')
+#define CVHARMONY		gid('A','C','H')
+#define CVARIA			gid('A','2','C')
+#define CVCLASSIC		gid('F','A','D')
+#define CVDOUBLE		gid('B','X','K')
+
+
 
 #define MARBLEMADNESS   0xFF000A
 
@@ -181,6 +191,9 @@ u32 OnePieceInput(unsigned short pad);
 u32 HobbitInput(unsigned short pad);
 u32 FellowshipOfTheRingInput(unsigned short pad);
 u32 ReturnOfTheKingInput(unsigned short pad);
+u32 CastlevaniaAdventureInput(unsigned short pad);
+u32 CastlevaniaBelmontInput(unsigned short pad);
+u32 CastlevaniaLegendsInput(unsigned short pad);
 
 #endif
 
