@@ -1564,6 +1564,7 @@ static int MenuGameSaves(int action)
 
 	HaltGui();
 	mainWindow->Append(&saveBrowser);
+	mainWindow->ChangeFocus(&saveBrowser);
 	ResumeGui();
 
 	while(menu == MENU_NONE)
@@ -2658,7 +2659,7 @@ static int MenuSettingsVideo()
 
 	GuiText titleTxt("Game Settings - Video", 28, (GXColor){255, 255, 255, 255});
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
-	titleTxt.SetPosition(50,50); 
+	titleTxt.SetPosition(50,50);
 
 	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND_PCM);
 	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
@@ -4252,7 +4253,7 @@ static int MenuPalette()
 			usleep(350000); // wait for effects to finish
 		}
 		else if(backBtn.GetState() == STATE_CLICKED)
-		{			
+		{
 			menu = MENU_GAMESETTINGS_VIDEO;
 		}
 	}
@@ -4260,7 +4261,7 @@ static int MenuPalette()
 	if(menu == MENU_GAME)
 		SavePrefs(NOTSILENT);
 	gbSetPalette(CurrentPalette.palette);
-	
+
 	HaltGui();
 	mainWindow->Remove(&w);
 	return menu;
