@@ -50,6 +50,7 @@ extern bool systemReadJoypads();
 extern u32 systemReadJoypad(int);
 // this function should turn on or off rumble on the gamepad
 extern void systemCartridgeRumble(bool);
+extern void systemPossibleCartridgeRumble(bool);
 // This should be called once per frame
 extern void updateRumbleFrame();
 extern u32 systemGetClock();

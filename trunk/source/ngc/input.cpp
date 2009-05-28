@@ -37,7 +37,7 @@ GuiTrigger userInput[4];
 static int rumbleCount[4] = {0,0,0,0};
 #endif
 
-bool cartridgeRumble = false;
+bool cartridgeRumble = false, possibleCartridgeRumble = false;
 int gameRumbleCount = 0, menuRumbleCount = 0, rumbleCountAlready = 0;
 
 unsigned int vbapadmap[10]; // VBA controller buttons
@@ -173,11 +173,19 @@ void DoRumble(int i)
 }
 #endif
 
+static int SilenceNeeded = 0;
+
 static void updateRumble()
 {
 	bool r = false;
 	if (ConfigRequested) r = (menuRumbleCount > 0);
-	else r = cartridgeRumble || (gameRumbleCount > 0) || (menuRumbleCount > 0);
+	else r = cartridgeRumble || possibleCartridgeRumble || (gameRumbleCount > 0) || (menuRumbleCount > 0);
+	
+	if (SilenceNeeded>0) {
+		if (r) SilenceNeeded = 5;
+		else SilenceNeeded--;
+		if (SilenceNeeded>0) r = false;
+	}
 
 #ifdef HW_RVL
 	// Rumble wii remote 0
@@ -189,27 +197,30 @@ static void updateRumble()
 void updateRumbleFrame() {
 	// If we already rumbled continuously for more than 50 frames,
 	// then disable rumbling for a while.
-	if (rumbleCountAlready > 50) {
-		gameRumbleCount = 0;
-		menuRumbleCount = 0;
-		// disable rumbling for 10 more frames
-		if (rumbleCountAlready > 50+10)
-			rumbleCountAlready = 0;
-		else rumbleCountAlready++;
+	if (rumbleCountAlready > 70) {
+		SilenceNeeded = 5;
+		rumbleCountAlready = 0;
 	} else if (ConfigRequested) {
-		if (menuRumbleCount>0)
-			rumbleCountAlready++;
+		if (menuRumbleCount>0) rumbleCountAlready++;
+		else rumbleCountAlready=0;
 	} else {
-		if (gameRumbleCount>0 || menuRumbleCount>0 || cartridgeRumble)
+		if (gameRumbleCount>0 || menuRumbleCount>0 || possibleCartridgeRumble)
 			rumbleCountAlready++;
+		else rumbleCountAlready=0;
 	}
 	updateRumble();
 	if (gameRumbleCount>0 && !ConfigRequested) gameRumbleCount--;
 	if (menuRumbleCount>0) menuRumbleCount--;
 }
 
+void systemPossibleCartridgeRumble(bool RumbleOn) {
+	possibleCartridgeRumble = RumbleOn;
+	updateRumble();
+}
+
 void systemCartridgeRumble(bool RumbleOn) {
 	cartridgeRumble = RumbleOn;
+	possibleCartridgeRumble = false;
 	updateRumble();
 }
 

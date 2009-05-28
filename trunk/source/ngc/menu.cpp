@@ -2781,7 +2781,8 @@ static int MenuSettingsVideo()
 			case 5:
 				if (GCSettings.colorize) GCSettings.colorize = 0;
 				else GCSettings.colorize = 1;
-				if (GCSettings.colorize) LoadPalette(RomTitle);
+				if (strcmp(RomTitle, "MEGAMAN")==0) StopColorizing();
+				else if (GCSettings.colorize) LoadPalette(RomTitle);
 				else StopColorizing();
 				break;
 
