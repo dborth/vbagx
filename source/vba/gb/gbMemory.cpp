@@ -586,8 +586,11 @@ void mapperMBC5ROM(u16 address, u8 value)
 	// rumble cartridge. As long as the RAM is less than or equal to 256Kbit
 	// we know that the last address line is not used for real RAM addresses,
 	// so it must be a rumble signal instead.
-    if(gbDataMBC5.isRumbleCartridge || gbRamSizeMask <= 0x7FFF) {
+    if(gbDataMBC5.isRumbleCartridge) {
 	  systemCartridgeRumble(value & 0x08);
+      value &= 0x07;
+	} else if (gbRamSizeMask <= 0x7FFF) {
+	  systemPossibleCartridgeRumble(value & 0x08);
       value &= 0x07;
     } else
       value &= 0x0f;
