@@ -918,9 +918,9 @@ bool MenuRequested()
 	for(int i=0; i<4; i++)
 	{
 		if (
-			(userInput[pad].pad.substickX < -70) ||
-			(userInput[pad].wpad.btns_h & WPAD_BUTTON_HOME) ||
-			(userInput[pad].wpad.btns_h & WPAD_CLASSIC_BUTTON_HOME) ||
+			(userInput[i].pad.substickX < -70) ||
+			(userInput[i].wpad.btns_h & WPAD_BUTTON_HOME) ||
+			(userInput[i].wpad.btns_h & WPAD_CLASSIC_BUTTON_HOME) ||
 			(DownUsbKeys[KB_ESC])
 		)
 		{
