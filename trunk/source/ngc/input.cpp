@@ -913,15 +913,27 @@ static u32 DecodeJoy(unsigned short pad)
 	return J;
 }
 
+bool MenuRequested()
+{
+	for(int i=0; i<4; i++)
+	{
+		if (
+			(userInput[pad].pad.substickX < -70) ||
+			(userInput[pad].wpad.btns_h & WPAD_BUTTON_HOME) ||
+			(userInput[pad].wpad.btns_h & WPAD_CLASSIC_BUTTON_HOME) ||
+			(DownUsbKeys[KB_ESC])
+		)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 u32 GetJoy(int pad)
 {
 	// request to go back to menu
-	if (
-		(userInput[pad].pad.substickX < -70) ||
-		(userInput[pad].wpad.btns_h & WPAD_BUTTON_HOME) ||
-		(userInput[pad].wpad.btns_h & WPAD_CLASSIC_BUTTON_HOME) ||
-		(DownUsbKeys[KB_ESC])
-	)
+	if (MenuRequested())
 	{
 		ScreenshotRequested = 1;
 		updateRumbleFrame();
