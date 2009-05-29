@@ -27,6 +27,7 @@ extern int gameSettingsCount;
 
 struct gamePalette {
 	char gameName[17];
+	char use;
 	u32 palette[14]; // in 24-bit 0xRRGGBB
 };
 

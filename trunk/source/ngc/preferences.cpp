@@ -24,6 +24,9 @@
 #include "button_mapping.h"
 #include "gamesettings.h"
 
+static gamePalette *palettes;
+static int loadedPalettes = 0;
+
 void StopColorizing();
 void gbSetPalette(u32 RRGGBB[]);
 
@@ -242,7 +245,7 @@ static void createXMLPalette(gamePalette *p, bool overwrite, const char *newname
 }
 
 static int
-preparePalData (int method)
+preparePalData (int method, gamePalette pals[], int palCount)
 {
 	xml = mxmlNewXML("1.0");
 	mxmlSetWrapMargin(0); // disable line wrapping
@@ -250,45 +253,14 @@ preparePalData (int method)
 	data = mxmlNewElement(xml, "palette");
 	mxmlElementSetAttr(data, "app", APPNAME);
 	mxmlElementSetAttr(data, "version", APPVERSION);
-	for (int i=0; i<gamePalettesCount; i++) {
-		createXMLPalette(&gamePalettes[i], false);
+	for (int i=palCount-1; i>=0; i--) {
+		createXMLPalette(&pals[i], false);
 	}
 
 	int datasize = mxmlSaveString(xml, (char *)savebuffer, SAVEBUFFERSIZE, XMLSavePalCallback);
 
 	mxmlDelete(xml);
 
-	return datasize;
-}
-
-static int
-prepareExistingPalData (int method, const char *gameName)
-{
-	int datasize = 0;
-	xml = mxmlLoadString(NULL, (char *)savebuffer, MXML_TEXT_CALLBACK);
-
-	if(xml)
-	{
-		// check settings version
-		// we don't do anything with the version #, but we'll store it anyway
-		data = mxmlFindElement(xml, xml, "palette", "version", NULL, MXML_DESCEND);
-		if(data) // a version entry exists
-		{
-			mxmlElementSetAttr(data, "app", APPNAME);
-			mxmlElementSetAttr(data, "version", APPVERSION);
-		} else {
-			data = mxmlNewElement(xml, "palette");
-			mxmlElementSetAttr(data, "app", APPNAME);
-			mxmlElementSetAttr(data, "version", APPVERSION);
-		}
-		for (int i=0; i<gamePalettesCount; i++) {
-			createXMLPalette(&gamePalettes[i], false);
-		}
-		createXMLPalette(&CurrentPalette, true, gameName);
-
-		datasize = mxmlSaveString(xml, (char *)savebuffer, SAVEBUFFERSIZE, XMLSavePalCallback);
-		mxmlDelete(xml);
-	}
 	return datasize;
 }
 
@@ -355,6 +327,61 @@ static void loadXMLController(unsigned int controller[], const char * name)
 		}
 	}
 }
+
+static void loadXMLPaletteFromSection(gamePalette &pal)
+{
+	if (section) {
+		strncpy(pal.gameName, mxmlElementGetAttr(section, "name"), 17);
+		item = mxmlFindElement(section, xml, "bkgr", NULL, NULL, MXML_DESCEND);
+		if(item) {
+			const char * tmp = mxmlElementGetAttr(item, "c0");
+			if(tmp) pal.palette[0] = strtoul(tmp, NULL, 16);
+			tmp = mxmlElementGetAttr(item, "c1");
+			if(tmp) pal.palette[1] = strtoul(tmp, NULL, 16);
+			tmp = mxmlElementGetAttr(item, "c2");
+			if(tmp) pal.palette[2] = strtoul(tmp, NULL, 16);
+			tmp = mxmlElementGetAttr(item, "c3");
+			if(tmp) pal.palette[3] = strtoul(tmp, NULL, 16);
+		}
+		item = mxmlFindElement(section, xml, "wind", NULL, NULL, MXML_DESCEND);
+		if(item) {
+			const char * tmp = mxmlElementGetAttr(item, "c0");
+			if(tmp) pal.palette[4] = strtoul(tmp, NULL, 16);
+			tmp = mxmlElementGetAttr(item, "c1");
+			if(tmp) pal.palette[5] = strtoul(tmp, NULL, 16);
+			tmp = mxmlElementGetAttr(item, "c2");
+			if(tmp) pal.palette[6] = strtoul(tmp, NULL, 16);
+			tmp = mxmlElementGetAttr(item, "c3");
+			if(tmp) pal.palette[7] = strtoul(tmp, NULL, 16);
+		}
+		item = mxmlFindElement(section, xml, "obj0", NULL, NULL, MXML_DESCEND);
+		if(item) {
+			const char * tmp = mxmlElementGetAttr(item, "c0");
+			if(tmp) pal.palette[8] = strtoul(tmp, NULL, 16);
+			tmp = mxmlElementGetAttr(item, "c1");
+			if(tmp) pal.palette[9] = strtoul(tmp, NULL, 16);
+			tmp = mxmlElementGetAttr(item, "c2");
+			if(tmp) pal.palette[10] = strtoul(tmp, NULL, 16);
+		}
+		item = mxmlFindElement(section, xml, "obj1", NULL, NULL, MXML_DESCEND);
+		if(item) {
+			const char * tmp = mxmlElementGetAttr(item, "c0");
+			if(tmp) pal.palette[11] = strtoul(tmp, NULL, 16);
+			tmp = mxmlElementGetAttr(item, "c1");
+			if(tmp) pal.palette[12] = strtoul(tmp, NULL, 16);
+			tmp = mxmlElementGetAttr(item, "c2");
+			if(tmp) pal.palette[13] = strtoul(tmp, NULL, 16);
+		}				
+		const char *use = mxmlElementGetAttr(section, "use");
+		if (use) {
+			if (atoi(use)==0) pal.use = 0;
+			else pal.use = 1;
+		} else {
+			pal.use = 1;
+		}
+	}
+}
+
 
 /****************************************************************************
  * decodePrefsData
@@ -503,58 +530,87 @@ decodePalData (int method, const char *gameName)
 			if (!section) section = mxmlFindElement(xml, xml, "game", "name", "default", MXML_DESCEND);
 			// we have either the XML default palette or the XML game palette
 			if (section) {
-				item = mxmlFindElement(section, xml, "bkgr", NULL, NULL, MXML_DESCEND);
-				if(item) {
-					const char * tmp = mxmlElementGetAttr(item, "c0");
-					if(tmp) CurrentPalette.palette[0] = strtoul(tmp, NULL, 16);
-					tmp = mxmlElementGetAttr(item, "c1");
-					if(tmp) CurrentPalette.palette[1] = strtoul(tmp, NULL, 16);
-					tmp = mxmlElementGetAttr(item, "c2");
-					if(tmp) CurrentPalette.palette[2] = strtoul(tmp, NULL, 16);
-					tmp = mxmlElementGetAttr(item, "c3");
-					if(tmp) CurrentPalette.palette[3] = strtoul(tmp, NULL, 16);
-				}
-				item = mxmlFindElement(section, xml, "wind", NULL, NULL, MXML_DESCEND);
-				if(item) {
-					const char * tmp = mxmlElementGetAttr(item, "c0");
-					if(tmp) CurrentPalette.palette[4] = strtoul(tmp, NULL, 16);
-					tmp = mxmlElementGetAttr(item, "c1");
-					if(tmp) CurrentPalette.palette[5] = strtoul(tmp, NULL, 16);
-					tmp = mxmlElementGetAttr(item, "c2");
-					if(tmp) CurrentPalette.palette[6] = strtoul(tmp, NULL, 16);
-					tmp = mxmlElementGetAttr(item, "c3");
-					if(tmp) CurrentPalette.palette[7] = strtoul(tmp, NULL, 16);
-				}
-				item = mxmlFindElement(section, xml, "obj0", NULL, NULL, MXML_DESCEND);
-				if(item) {
-					const char * tmp = mxmlElementGetAttr(item, "c0");
-					if(tmp) CurrentPalette.palette[8] = strtoul(tmp, NULL, 16);
-					tmp = mxmlElementGetAttr(item, "c1");
-					if(tmp) CurrentPalette.palette[9] = strtoul(tmp, NULL, 16);
-					tmp = mxmlElementGetAttr(item, "c2");
-					if(tmp) CurrentPalette.palette[10] = strtoul(tmp, NULL, 16);
-				}
-				item = mxmlFindElement(section, xml, "obj1", NULL, NULL, MXML_DESCEND);
-				if(item) {
-					const char * tmp = mxmlElementGetAttr(item, "c0");
-					if(tmp) CurrentPalette.palette[11] = strtoul(tmp, NULL, 16);
-					tmp = mxmlElementGetAttr(item, "c1");
-					if(tmp) CurrentPalette.palette[12] = strtoul(tmp, NULL, 16);
-					tmp = mxmlElementGetAttr(item, "c2");
-					if(tmp) CurrentPalette.palette[13] = strtoul(tmp, NULL, 16);
-				}				
-				const char *use = mxmlElementGetAttr(section, "use");
-				if (use) {
-					if (atoi(use)==0) StopColorizing();
-					else gbSetPalette(CurrentPalette.palette);
-				} else {
-					gbSetPalette(CurrentPalette.palette);
-				}
+				loadXMLPaletteFromSection(CurrentPalette);
 			// there is no palette for this game and no default in XML
 			} else {
 				// use the hardcoded default palette
 				CurrentPalette = gamePalettes[0];
-				gbSetPalette(CurrentPalette.palette);
+			}
+			if (CurrentPalette.use) gbSetPalette(CurrentPalette.palette);
+			else StopColorizing();
+		}
+		mxmlDelete(xml);
+	}
+	return result;
+}
+
+static bool
+decodePalsData (int method)
+{
+	bool result = false;
+
+	xml = mxmlLoadString(NULL, (char *)savebuffer, MXML_TEXT_CALLBACK);
+
+	if(xml)
+	{
+		// check settings version
+		// we don't do anything with the version #, but we'll store it anyway
+		item = mxmlFindElement(xml, xml, "palette", "version", NULL, MXML_DESCEND);
+		if(item) // a version entry exists
+		{
+			const char * version = mxmlElementGetAttr(item, "version");
+
+			if(version && strlen(version) == 5)
+			{
+				// this code assumes version in format X.X.X
+				// XX.X.X, X.XX.X, or X.X.XX will NOT work
+				int verMajor = version[0] - '0';
+				int verMinor = version[2] - '0';
+				int verPoint = version[4] - '0';
+				int curMajor = APPVERSION[0] - '0';
+				int curMinor = APPVERSION[2] - '0';
+				int curPoint = APPVERSION[4] - '0';
+
+				// first we'll check that the versioning is valid
+				if(!(verMajor >= 0 && verMajor <= 9 &&
+					verMinor >= 0 && verMinor <= 9 &&
+					verPoint >= 0 && verPoint <= 9))
+					result = false;
+				else if(verMajor < 2) // less than version 2.0.0
+					result = false; // reset settings (sorry, should update settings instead)
+				else if(verMajor > curMajor || verMinor > curMinor || verPoint > curPoint) // some future version
+					result = true; // don't reset settings!
+				else
+					result = true;
+			}
+		}
+
+		if(result)
+		{
+			// count number of palettes in file
+			loadedPalettes = 0;
+			item = mxmlFindElement(xml, xml, "palette", NULL, NULL, MXML_DESCEND);
+			for (section = mxmlFindElement(item, xml, "game", NULL, NULL, MXML_DESCEND);
+				 section;
+				 section = mxmlFindElement(section, xml, "game", NULL, NULL, MXML_NO_DESCEND)) 
+			{
+				 loadedPalettes++;
+			}
+			// Allocate enough memory for all palettes in file, plus all hardcoded palettes,
+			// plus one new palette
+			if (palettes) {
+				delete[] palettes;
+				palettes = NULL;
+			}
+			palettes = new gamePalette[loadedPalettes+1+gamePalettesCount];
+			// Load all palettes in file, hardcoded palettes are added later
+			int i = 0;
+			for (section = mxmlFindElement(item, xml, "game", NULL, NULL, MXML_DESCEND);
+				 section;
+				 section = mxmlFindElement(section, xml, "game", NULL, NULL, MXML_NO_DESCEND)) 
+			{
+				loadXMLPaletteFromSection(palettes[i]);
+				i++;
 			}
 			
 		}
@@ -616,27 +672,28 @@ SavePrefs (bool silent)
 	return false;
 }
 
-bool
-CreateAndLoadPalette(bool silent, const char *gameName)
+static bool
+CreateAndLoadPalette(bool silent, const char *gameName, bool load)
 {
-	// Load palette from hardcoded palettes
-	int snum = -1;
-	for(int i=1; i < gamePalettesCount; i++) {
-		if(strcmp(gameName, gamePalettes[i].gameName)==0)
-		{
-			snum = i;
-			break;
+	if (load) {
+		// Load palette from hardcoded palettes
+		int snum = -1;
+		for(int i=1; i < gamePalettesCount; i++) {
+			if(strcmp(gameName, gamePalettes[i].gameName)==0)
+			{
+				snum = i;
+				break;
+			}
 		}
+		// match found!
+		if(snum >= 0)
+		{
+			CurrentPalette = gamePalettes[snum];
+		} else {
+			CurrentPalette = gamePalettes[0];
+		}
+		gbSetPalette(CurrentPalette.palette);
 	}
-	// match found!
-	if(snum >= 0)
-	{
-		CurrentPalette = gamePalettes[snum];
-	} else {
-		CurrentPalette = gamePalettes[0];
-	}
-	gbSetPalette(CurrentPalette.palette);
-	
 	// Now create the XML palette file
 	char filepath[1024];
 	int datasize;
@@ -656,7 +713,7 @@ CreateAndLoadPalette(bool silent, const char *gameName)
 		ShowAction ("Saving palette...");
 
 	AllocSaveBuffer ();
-	datasize = preparePalData (method);
+	datasize = preparePalData(method, gamePalettes, gamePalettesCount);
 
 	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
 	{
@@ -683,41 +740,28 @@ CreateAndLoadPalette(bool silent, const char *gameName)
 	return false;
 }
 
-bool
-SavePaletteMethod(bool silent, int method, const char *gameName)
-{
+static bool
+SavePalettes(bool silent) {
+	// Now create the XML palette file
 	char filepath[1024];
+	int datasize;
 	int offset = 0;
-
-	if(!MakeFilePath(filepath, FILE_PAL, method))
-		return false;
-
-	AllocSaveBuffer ();
-
-	offset = LoadFile(filepath, method, SILENT);
-
-	int datasize = 0;
-	if (offset > 0)
-		datasize = prepareExistingPalData (method, gameName);
-	if (!datasize) {
-		FreeSaveBuffer();
-		CancelAction();		
-		return false;
-	}
-
-
-	if (!silent)
-		ShowAction ("Saving palette...");
 
 	// We'll save using the first available method (probably SD) since this
 	// is the method preferences will be loaded from by default
-	method = autoSaveMethod(silent);
+	int method = autoSaveMethod(silent);
 
 	if(method == METHOD_AUTO)
 		return false;
 
-	if(!MakeFilePath(filepath, FILE_PREF, method))
+	if(!MakeFilePath(filepath, FILE_PAL, method))
 		return false;
+
+	if (!silent)
+		ShowAction("Saving palette...");
+
+	AllocSaveBuffer ();
+	datasize = preparePalData(method, palettes, loadedPalettes);
 
 	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
 	{
@@ -770,7 +814,7 @@ LoadPrefsFromMethod (int method)
 	return retval;
 }
 
-bool
+static bool
 LoadPalFromMethod (int method, const char *gameName)
 {
 	bool retval = false;
@@ -786,6 +830,28 @@ LoadPalFromMethod (int method, const char *gameName)
 
 	if (offset > 0)
 		retval = decodePalData (method, gameName);
+
+	FreeSaveBuffer ();
+
+	return retval;
+}
+
+static bool
+LoadPalsFromMethod (int method)
+{
+	bool retval = false;
+	char filepath[1024];
+	int offset = 0;
+
+	if(!MakeFilePath(filepath, FILE_PAL, method))
+		return false;
+
+	AllocSaveBuffer ();
+
+	offset = LoadFile(filepath, method, SILENT);
+
+	if (offset > 0)
+		retval = decodePalsData (method);
 
 	FreeSaveBuffer ();
 
@@ -823,6 +889,10 @@ bool LoadPrefs()
 	return prefFound;
 }
 
+/****************************************************************************
+ * Load Palette
+ * Checks sources consecutively until we find a palette file
+ ***************************************************************************/
 bool LoadPalette(const char *gameName)
 {
 	bool prefFound = false;
@@ -838,31 +908,89 @@ bool LoadPalette(const char *gameName)
 		prefFound = LoadPalFromMethod(METHOD_SMB, gameName);
 
 	if(!prefFound) {
-		return CreateAndLoadPalette(SILENT, gameName);
+		char msg[1024];
+		sprintf(msg, "Failed to load palette");
+		InfoPrompt(msg);
+		return CreateAndLoadPalette(SILENT, gameName, true);
 	}
 	return true;
 }
 
-bool SavePalette(bool silent, const char *gameName)
+static
+bool LoadPalettes()
 {
 	bool prefFound = false;
 	if(ChangeInterface(METHOD_SD, SILENT))
-		prefFound = SavePaletteMethod(silent, METHOD_SD, gameName);
+		prefFound = LoadPalsFromMethod(METHOD_SD);
 	if(!prefFound && ChangeInterface(METHOD_USB, SILENT))
-		prefFound = SavePaletteMethod(silent, METHOD_USB, gameName);
+		prefFound = LoadPalsFromMethod(METHOD_USB);
 	if(!prefFound && TestMC(CARD_SLOTA, SILENT))
-		prefFound = SavePaletteMethod(silent, METHOD_MC_SLOTA, gameName);
+		prefFound = LoadPalsFromMethod(METHOD_MC_SLOTA);
 	if(!prefFound && TestMC(CARD_SLOTB, SILENT))
-		prefFound = SavePaletteMethod(silent, METHOD_MC_SLOTB, gameName);
+		prefFound = LoadPalsFromMethod(METHOD_MC_SLOTB);
 	if(!prefFound && ChangeInterface(METHOD_SMB, SILENT))
-		prefFound = SavePaletteMethod(silent, METHOD_SMB, gameName);
+		prefFound = LoadPalsFromMethod(METHOD_SMB);
 
 	if(!prefFound) {
-		gamePalette pal = CurrentPalette;
-		CreateAndLoadPalette(silent, gameName);
-		CurrentPalette = pal;
-		gbSetPalette(CurrentPalette.palette);
-		SavePaletteMethod(silent, METHOD_SD, gameName);
+		char msg[1024];
+		sprintf(msg, "Failed to load palettes");
+		InfoPrompt(msg);
+		CreateAndLoadPalette(SILENT, "", false);
+		if(ChangeInterface(METHOD_SD, SILENT))
+			prefFound = LoadPalsFromMethod(METHOD_SD);
+		if(!prefFound && ChangeInterface(METHOD_USB, SILENT))
+			prefFound = LoadPalsFromMethod(METHOD_USB);
+		if(!prefFound && TestMC(CARD_SLOTA, SILENT))
+			prefFound = LoadPalsFromMethod(METHOD_MC_SLOTA);
+		if(!prefFound && TestMC(CARD_SLOTB, SILENT))
+			prefFound = LoadPalsFromMethod(METHOD_MC_SLOTB);
+		if(!prefFound && ChangeInterface(METHOD_SMB, SILENT))
+			prefFound = LoadPalsFromMethod(METHOD_SMB);
+	}
+	return prefFound;
+}
+
+static void AddPalette(gamePalette pal, const char *gameName) {
+	for (int i=0; i<loadedPalettes; i++) {
+		if (strcmp(palettes[i].gameName, gameName)==0) {
+			palettes[i] = pal;
+			strncpy(palettes[i].gameName, gameName, 17);
+			return;
+		}
+	}
+	char msg[1024];
+	sprintf(msg, "Adding new palette '%s'", gameName);
+	InfoPrompt(msg);
+	palettes[loadedPalettes] = pal;
+	strncpy(palettes[loadedPalettes].gameName, gameName, 17);
+	loadedPalettes++;	
+}
+
+bool SavePalette(bool silent, const char *gameName) {
+	char msg[1024];
+	sprintf(msg, "Save palette '%s'", gameName);
+	InfoPrompt(msg);
+	bool prefFound = LoadPalettes();
+	if (!prefFound) {
+		delete[] palettes;
+		palettes = NULL;
+		return false;
+	}
+	sprintf(msg, "%d palettes loaded", loadedPalettes);
+	InfoPrompt(msg);
+
+	if(prefFound && palettes) {
+		for (int i=0; i<gamePalettesCount; i++) 
+			AddPalette(gamePalettes[i], gamePalettes[i].gameName);
+		sprintf(msg, "Added more to make %d palettes", loadedPalettes);
+		InfoPrompt(msg);
+		if (!gameName) gameName = CurrentPalette.gameName;
+		AddPalette(CurrentPalette, gameName);
+		sprintf(msg, "Added %s to make %d palettes", gameName, loadedPalettes);
+		InfoPrompt(msg);
+		SavePalettes(silent);
+		delete[] palettes;
+		palettes = NULL;
 	}
 	return true;
 }
