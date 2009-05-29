@@ -796,6 +796,12 @@ static void gbApplyPerImagePreferences()
 			RomIdCode = CVBELMONT;
 		else if (strcmp(RomTitle, "CASTLEVANIA") == 0 || strcmp(RomTitle, "CV3 GER") == 0)
 			RomIdCode = CVLEGENDS;
+		else if (strcmp(RomTitle, "STAR WARS") == 0)
+			RomIdCode = SWEP4;
+		else if (strcmp(RomTitle, "EMPIRE STRIKES") == 0)
+			RomIdCode = SWEP5;
+		else if (strcmp(RomTitle, "SRJ DMG") == 0)
+			RomIdCode = SWEP6;
 	}
 	// look for matching palettes if a monochrome gameboy game
 	// (or if a Super Gameboy game, but the palette will be ignored later in that case)
