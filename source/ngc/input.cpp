@@ -832,8 +832,24 @@ static u32 DecodeJoy(unsigned short pad)
 		// Star Wars
 		case SWOBIWAN:
 			return SWObiWanInput(pad);
+		case SWJPB:
+			return SWJediPowerBattlesInput(pad);
 		case SWEP2:
 			return SWEpisode2Input(pad);
+		case SWEP3:
+			return SWEpisode3Input(pad);
+		case SWEP4:
+			return SWEpisode4Input(pad);
+		case SWEP5:
+			return SWEpisode5Input(pad);
+		case SWEP6:
+			return SWEpisode6Input(pad);
+		case SWTRILOGY:
+			return SWTrilogyInput(pad);
+		case SWNDA:
+			return SWNDAInput(pad);
+		case SWYODA:
+			return SWYodaStoriesInput(pad);
 
 		// Mortal Kombat
 		case MK1:

@@ -77,8 +77,15 @@
 #define LSW2			gid('B','L','7')
 
 #define SWOBIWAN		gid('B','O','W')
+#define SWJPB			gid('A','S','W')
 #define SWEP2			gid('A','S','2')
+#define SWEP3			gid('B','E','3')
+#define SWEP4			0xFF0011
+#define SWEP5			0xFF0012
+#define SWEP6			0xFF0013
+#define SWTRILOGY		gid('B','C','K')
 #define SWNDA			gid('A','2','W')
+#define SWYODA			gid('A','Y','D')
 
 #define MK1				0xFF0002
 #define MK2				0xFF0003
@@ -141,6 +148,13 @@ u32 LegoStarWars2Input(unsigned short pad);
 u32 SWObiWanInput(unsigned short pad);
 u32 SWEpisode2Input(unsigned short pad);
 u32 SWNDAInput(unsigned short pad);
+u32 SWEpisode3Input(unsigned short pad);
+u32 SWEpisode4Input(unsigned short pad);
+u32 SWEpisode5Input(unsigned short pad);
+u32 SWEpisode6Input(unsigned short pad);
+u32 SWJediPowerBattlesInput(unsigned short pad);
+u32 SWTrilogyInput(unsigned short pad);
+u32 SWYodaStoriesInput(unsigned short pad);
 u32 MarioKartInput(unsigned short pad);
 u32 MK1Input(unsigned short pad);
 u32 MK12Input(unsigned short pad);
