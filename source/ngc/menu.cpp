@@ -4238,7 +4238,7 @@ static int MenuPalette()
 		else if(closeBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_EXIT;
-			SavePalette(SILENT, CurrentPalette.gameName);
+			SavePalette(NOTSILENT, RomTitle);
 			SavePrefs(NOTSILENT);
 
 			exitSound->Play();
