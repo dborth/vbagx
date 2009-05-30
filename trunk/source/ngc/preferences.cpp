@@ -910,9 +910,6 @@ bool LoadPalette(const char *gameName)
 		prefFound = LoadPalFromMethod(METHOD_SMB, gameName);
 
 	if(!prefFound) {
-		char msg[1024];
-		sprintf(msg, "Failed to load palette");
-		InfoPrompt(msg);
 		return CreateAndLoadPalette(SILENT, gameName, true);
 	}
 	return true;
@@ -934,9 +931,6 @@ bool LoadPalettes()
 		prefFound = LoadPalsFromMethod(METHOD_SMB);
 
 	if(!prefFound) {
-		char msg[1024];
-		sprintf(msg, "Failed to load palettes");
-		InfoPrompt(msg);
 		CreateAndLoadPalette(SILENT, "", false);
 		if(ChangeInterface(METHOD_SD, SILENT))
 			prefFound = LoadPalsFromMethod(METHOD_SD);
@@ -960,36 +954,24 @@ static void AddPalette(gamePalette pal, const char *gameName) {
 			return;
 		}
 	}
-	char msg[1024];
-	sprintf(msg, "Adding new palette '%s'", gameName);
-	InfoPrompt(msg);
 	palettes[loadedPalettes] = pal;
 	strncpy(palettes[loadedPalettes].gameName, gameName, 17);
 	loadedPalettes++;
 }
 
 bool SavePalette(bool silent, const char *gameName) {
-	char msg[1024];
-	sprintf(msg, "Save palette '%s'", gameName);
-	InfoPrompt(msg);
 	bool prefFound = LoadPalettes();
 	if (!prefFound) {
 		delete[] palettes;
 		palettes = NULL;
 		return false;
 	}
-	sprintf(msg, "%d palettes loaded", loadedPalettes);
-	InfoPrompt(msg);
 
 	if(prefFound && palettes) {
 		for (int i=0; i<gamePalettesCount; i++)
 			AddPalette(gamePalettes[i], gamePalettes[i].gameName);
-		sprintf(msg, "Added more to make %d palettes", loadedPalettes);
-		InfoPrompt(msg);
 		if (!gameName) gameName = CurrentPalette.gameName;
 		AddPalette(CurrentPalette, gameName);
-		sprintf(msg, "Added %s to make %d palettes", gameName, loadedPalettes);
-		InfoPrompt(msg);
 		SavePalettes(silent);
 		delete[] palettes;
 		palettes = NULL;

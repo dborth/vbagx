@@ -4236,13 +4236,13 @@ static int MenuPalette()
 		}
 		else if(importBtn.GetState() == STATE_CLICKED)
 		{
-			SavePalette(NOTSILENT, RomTitle);
+			SavePalette(SILENT, RomTitle);
 			menu = MENU_GAMESETTINGS_PALETTE;
 		}
 		else if(closeBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_EXIT;
-			SavePalette(NOTSILENT, RomTitle);
+			SavePalette(SILENT, RomTitle);
 			SavePrefs(NOTSILENT);
 
 			exitSound->Play();
@@ -4259,6 +4259,7 @@ static int MenuPalette()
 		}
 		else if(backBtn.GetState() == STATE_CLICKED)
 		{
+			SavePalette(SILENT, RomTitle);
 			menu = MENU_GAMESETTINGS_VIDEO;
 		}
 	}
