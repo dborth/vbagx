@@ -526,7 +526,6 @@ u32 TMNTGBA2Input(unsigned short pad) {
 
 #endif
 	u32 gc = PAD_ButtonsHeld(pad);
-	u32 released = PAD_ButtonsUp(pad);
 	// DPad moves
 	if (gc & PAD_BUTTON_UP)
 		J |= VBA_UP;

@@ -2652,7 +2652,6 @@ static int MenuSettingsVideo()
 	int ret;
 	int i = 0;
 	OptionList options;
-	char Buffer[1024];
 
 	sprintf(options.name[i++], "Rendering");
 	sprintf(options.name[i++], "Scaling");
@@ -3803,7 +3802,6 @@ GXColor GetCol(int i) {
 static int MenuPalette()
 {
 	int menu = MENU_NONE;
-	char s[4];
 
 	GuiText titleTxt("Palette", 28, (GXColor){255, 255, 255, 255});
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);

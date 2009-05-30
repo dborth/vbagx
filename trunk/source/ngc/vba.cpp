@@ -265,7 +265,6 @@ int main(int argc, char *argv[])
 		// since we're entering the menu
 		ResumeDeviceThread();
 
-		ConfigRequested = 1;
 		SwitchAudioMode(1);
 
 		if(!ROMLoaded)
@@ -274,6 +273,7 @@ int main(int argc, char *argv[])
 			MainMenu(MENU_GAME);
 
 		ConfigRequested = 0;
+		ScreenshotRequested = 0;
 		SwitchAudioMode(0);
 
 		// stop checking if devices were removed/inserted

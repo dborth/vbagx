@@ -143,8 +143,8 @@ copy_to_xfb (u32 arg)
 	{
 		if(ScreenshotRequested)
 		{
-			TakeScreenshot();
 			ScreenshotRequested = 0;
+			TakeScreenshot();
 			ConfigRequested = 1;
 		}
 
