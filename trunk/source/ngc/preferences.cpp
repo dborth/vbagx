@@ -196,6 +196,7 @@ preparePrefsData (int method)
 	createXMLSetting("ExitAction", "Exit Action", toStr(GCSettings.ExitAction));
 	createXMLSetting("MusicVolume", "Music Volume", toStr(GCSettings.MusicVolume));
 	createXMLSetting("SFXVolume", "Sound Effects Volume", toStr(GCSettings.SFXVolume));
+	createXMLSetting("Rumble", "Rumble", toStr(GCSettings.Rumble));
 
 	createXMLSection("Controller", "Controller Settings");
 
@@ -371,7 +372,7 @@ static void loadXMLPaletteFromSection(gamePalette &pal)
 			if(tmp) pal.palette[12] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c2");
 			if(tmp) pal.palette[13] = strtoul(tmp, NULL, 16);
-		}				
+		}
 		const char *use = mxmlElementGetAttr(section, "use");
 		if (use) {
 			if (atoi(use)==0) pal.use = 0;
@@ -466,6 +467,7 @@ decodePrefsData (int method)
 			loadXMLSetting(&GCSettings.ExitAction, "ExitAction");
 			loadXMLSetting(&GCSettings.MusicVolume, "MusicVolume");
 			loadXMLSetting(&GCSettings.SFXVolume, "SFXVolume");
+			loadXMLSetting(&GCSettings.Rumble, "Rumble");
 
 			// Controller Settings
 
@@ -592,7 +594,7 @@ decodePalsData (int method)
 			item = mxmlFindElement(xml, xml, "palette", NULL, NULL, MXML_DESCEND);
 			for (section = mxmlFindElement(item, xml, "game", NULL, NULL, MXML_DESCEND);
 				 section;
-				 section = mxmlFindElement(section, xml, "game", NULL, NULL, MXML_NO_DESCEND)) 
+				 section = mxmlFindElement(section, xml, "game", NULL, NULL, MXML_NO_DESCEND))
 			{
 				 loadedPalettes++;
 			}
@@ -607,12 +609,12 @@ decodePalsData (int method)
 			int i = 0;
 			for (section = mxmlFindElement(item, xml, "game", NULL, NULL, MXML_DESCEND);
 				 section;
-				 section = mxmlFindElement(section, xml, "game", NULL, NULL, MXML_NO_DESCEND)) 
+				 section = mxmlFindElement(section, xml, "game", NULL, NULL, MXML_NO_DESCEND))
 			{
 				loadXMLPaletteFromSection(palettes[i]);
 				i++;
 			}
-			
+
 		}
 		mxmlDelete(xml);
 	}
@@ -963,7 +965,7 @@ static void AddPalette(gamePalette pal, const char *gameName) {
 	InfoPrompt(msg);
 	palettes[loadedPalettes] = pal;
 	strncpy(palettes[loadedPalettes].gameName, gameName, 17);
-	loadedPalettes++;	
+	loadedPalettes++;
 }
 
 bool SavePalette(bool silent, const char *gameName) {
@@ -980,7 +982,7 @@ bool SavePalette(bool silent, const char *gameName) {
 	InfoPrompt(msg);
 
 	if(prefFound && palettes) {
-		for (int i=0; i<gamePalettesCount; i++) 
+		for (int i=0; i<gamePalettesCount; i++)
 			AddPalette(gamePalettes[i], gamePalettes[i].gameName);
 		sprintf(msg, "Added more to make %d palettes", loadedPalettes);
 		InfoPrompt(msg);
