@@ -14,7 +14,7 @@
 #include "filelist.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"2.0.2"
+#define APPVERSION 		"2.0.3"
 #define PREF_FILE_NAME 	"settings.xml"
 #define PAL_FILE_NAME 	"palette.xml"
 
