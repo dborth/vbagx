@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 2.0.2
+                                  Version 2.0.3
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -27,6 +27,21 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[2.0.3 - May 30, 2009]
+
+* Fixed SD/USB corruption bug
+* SMB works again
+* GUI bugs fixed, GUI behavioral improvements
+* GB Palette editing
+* More built-in palettes
+* Palettes now fade to white correctly instead of getting brighter
+* Can now turn off palette colorizing
+* Workaround for palette issue on Mega Man I GB - palette disabled
+* Star Wars, TMNT, Lord Of The Rings, Castlevania Wii Controls
+* Fix for WarioWare startup - Nunchuk C button or Wii Remote B button will now
+  make calibration easy by locking the gyroscope.
+* Fixed issues with constant rumbling
 
 [2.0.2 - May 26, 2009]
 
