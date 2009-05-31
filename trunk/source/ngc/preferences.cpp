@@ -254,7 +254,7 @@ preparePalData (int method, gamePalette pals[], int palCount)
 	data = mxmlNewElement(xml, "palette");
 	mxmlElementSetAttr(data, "app", APPNAME);
 	mxmlElementSetAttr(data, "version", APPVERSION);
-	for (int i=palCount-1; i>=0; i--) {
+	for (int i=0; i<palCount; i++) {
 		createXMLPalette(&pals[i], false);
 	}
 
