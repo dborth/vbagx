@@ -805,10 +805,12 @@ static void gbApplyPerImagePreferences()
 	}
 	// look for matching palettes if a monochrome gameboy game
 	// (or if a Super Gameboy game, but the palette will be ignored later in that case)
-	if ((Colour != 0x80) && (Colour != 0xC0)) {
-		if (strcmp(RomTitle, "MEGAMAN")==0) StopColorizing();
-		else if (GCSettings.colorize) LoadPalette(RomTitle);
-		else StopColorizing();
+	if ((Colour != 0x80) && (Colour != 0xC0))
+	{
+		if (GCSettings.colorize && strcmp(RomTitle, "MEGAMAN") != 0)
+			SetPalette(RomTitle);
+		else
+			StopColorizing();
 	}
 }
 

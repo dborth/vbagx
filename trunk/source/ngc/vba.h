@@ -16,7 +16,7 @@
 #define APPNAME 		"Visual Boy Advance GX"
 #define APPVERSION 		"2.0.3"
 #define PREF_FILE_NAME 	"settings.xml"
-#define PAL_FILE_NAME 	"palette.xml"
+#define PAL_FILE_NAME 	"palettes.xml"
 
 #define NOTSILENT 0
 #define SILENT 1

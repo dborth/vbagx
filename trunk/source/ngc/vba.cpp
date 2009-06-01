@@ -36,9 +36,12 @@
 #include "input.h"
 #include "video.h"
 #include "vbaconfig.h"
+#include "gamesettings.h"
 #include "wiiusbsupport.h"
 
 extern int emulating;
+void StopColorizing();
+void gbSetPalette(u32 RRGGBB[]);
 int ScreenshotRequested = 0;
 int ConfigRequested = 0;
 int ShutdownRequested = 0;
@@ -281,6 +284,15 @@ int main(int argc, char *argv[])
 		HaltDeviceThread();
 
 		ResetVideo_Emu();
+
+		// GB colorizing - set palette
+		if(cartridgeType == 1)
+		{
+			if(GCSettings.colorize && strcmp(RomTitle, "MEGAMAN") != 0)
+				gbSetPalette(CurrentPalette.palette);
+			else
+				StopColorizing();
+		}
 
 		while (emulating) // emulation loop
 		{
