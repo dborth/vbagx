@@ -13,3 +13,5 @@ bool LoadPrefs ();
 bool SavePalettes (bool silent);
 bool LoadPalettes();
 void SetPalette(const char *gameName);
+bool SavePaletteAs(bool silent, const char *name);
+
