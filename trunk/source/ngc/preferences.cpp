@@ -676,16 +676,29 @@ bool SavePalettes(bool silent)
 	return false;
 }
 
-static void AddPalette(gamePalette pal, const char *gameName)
+static void AddPalette(gamePalette pal, const char *gameName, bool overwrite)
 {
 	for (int i=0; i < loadedPalettes; i++)
-		if (strcmp(palettes[i].gameName, gameName)==0)
-			return;
+		if (strcmp(palettes[i].gameName, gameName)==0) {
+			if (overwrite) {
+				palettes[i] = pal;
+				strncpy(palettes[i].gameName, gameName, 17);
+				return;
+			} else {
+				return;
+			}
+		}
 
 	palettes = (gamePalette *)realloc(palettes, sizeof(gamePalette)*(loadedPalettes+1));
 	palettes[loadedPalettes] = pal;
 	strncpy(palettes[loadedPalettes].gameName, gameName, 17);
 	loadedPalettes++;
+}
+
+bool SavePaletteAs(bool silent, const char *name)
+{
+	AddPalette(CurrentPalette, name, true);
+	return SavePalettes(silent);
 }
 
 /****************************************************************************
@@ -718,7 +731,7 @@ bool LoadPalettes()
 
 	// add hard-coded palettes
 	for (int i=0; i<gamePalettesCount; i++)
-		AddPalette(gamePalettes[i], gamePalettes[i].gameName);
+		AddPalette(gamePalettes[i], gamePalettes[i].gameName, false);
 
 	if (!retval)
 		retval = SavePalettes(SILENT);
@@ -741,11 +754,27 @@ void SetPalette(const char *gameName)
 	// match found!
 	if(snum >= 0)
 	{
-		CurrentPalette = gamePalettes[snum];
+		CurrentPalette = palettes[snum];
 	}
 	else
+	// no match, use the default palette
 	{
-		CurrentPalette = gamePalettes[0]; // use the default palette
-		AddPalette(gamePalettes[0], gameName); // add this game to the palette list
+		for (int i = 0; i < loadedPalettes; i++)
+		{
+			if(strcmp(gameName, "default")==0)
+			{
+				snum = i;
+				break;
+			}
+		}
+		if(snum >= 0)
+		{
+			CurrentPalette = palettes[snum];
+		}
+		else
+		{
+			CurrentPalette = palettes[0];
+		}
+		// DON'T add this game to the palette list
 	}
 }

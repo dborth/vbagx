@@ -2741,7 +2741,7 @@ static int MenuSettingsVideo()
 		else
 			sprintf (options.value[5], "Off");
 
-		if(true) // TODO - show custom if different from the default palette
+		if(strcmp(CurrentPalette.gameName,"default")) 
 			sprintf(options.value[6], "Custom");
 		else
 			sprintf(options.value[6], "Default");
@@ -3623,6 +3623,9 @@ GXColor GetCol(int i) {
  ***************************************************************************/
 static int MenuPalette()
 {
+	// We are now using a custom palette
+	strncpy(CurrentPalette.gameName, RomTitle, 17);
+
 	int menu = MENU_NONE;
 
 	GuiText titleTxt("Palette", 28, (GXColor){255, 255, 255, 255});
@@ -4058,13 +4061,13 @@ static int MenuPalette()
 		}
 		else if(importBtn.GetState() == STATE_CLICKED)
 		{
-			SavePalettes(SILENT);
+			SavePaletteAs(NOTSILENT, RomTitle);
 			menu = MENU_GAMESETTINGS_PALETTE;
 		}
 		else if(closeBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_EXIT;
-			SavePalettes(SILENT);
+			SavePaletteAs(SILENT, RomTitle);
 			SavePrefs(NOTSILENT);
 
 			exitSound->Play();
@@ -4081,7 +4084,7 @@ static int MenuPalette()
 		}
 		else if(backBtn.GetState() == STATE_CLICKED)
 		{
-			SavePalettes(SILENT);
+			SavePaletteAs(SILENT, RomTitle);
 			menu = MENU_GAMESETTINGS_VIDEO;
 		}
 	}
