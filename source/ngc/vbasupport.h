@@ -18,6 +18,7 @@ extern int cartridgeType;
 extern int SunBars;
 extern u32 RomIdCode;
 extern bool TiltSideways;
+extern char RomTitle[];
 
 bool LoadVBAROM(int method);
 void InitialisePalette();

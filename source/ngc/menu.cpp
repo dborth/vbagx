@@ -45,12 +45,6 @@
 GuiImageData * pointer[4];
 #endif
 
-static int MenuPalette();
-void gbSetPalette(u32 RRGGBB[]);
-void StopColorizing();
-extern char RomTitle[17];
-
-
 static GuiButton * btnLogo = NULL;
 static GuiImage * gameScreenImg = NULL;
 static GuiImage * bgImg = NULL;
@@ -1856,10 +1850,6 @@ static int MenuGameSettings()
 		{
 			menu = MENU_GAMESETTINGS_VIDEO;
 		}
-		/*else if(cheatsBtn.GetState() == STATE_CLICKED)
-		{
-			menu = MENU_GAMESETTINGS_PALETTE;
-		}*/
 		else if(wiiControlsBtn.GetState() == STATE_CLICKED)
 		{
 			GCSettings.WiiControls ^= 1;
@@ -2663,7 +2653,7 @@ static int MenuSettingsVideo()
 	sprintf(options.name[i++], "Screen Position");
 	sprintf(options.name[i++], "Video Mode");
 	sprintf(options.name[i++], "Colorize Mono GB");
-	sprintf(options.name[i++], "Choose Palette");
+	sprintf(options.name[i++], "GB Palette");
 	options.length = i;
 
 	GuiText titleTxt("Game Settings - Video", 28, (GXColor){255, 255, 255, 255});
@@ -2750,7 +2740,11 @@ static int MenuSettingsVideo()
 			sprintf (options.value[5], "On");
 		else
 			sprintf (options.value[5], "Off");
-		sprintf(options.value[6], "click here");
+
+		if(true) // TODO - show custom if different from the default palette
+			sprintf(options.value[6], "Custom");
+		else
+			sprintf(options.value[6], "Default");
 
 		ret = optionBrowser.GetClickedOption();
 
@@ -2788,11 +2782,7 @@ static int MenuSettingsVideo()
 				break;
 
 			case 5:
-				if (GCSettings.colorize) GCSettings.colorize = 0;
-				else GCSettings.colorize = 1;
-				if (strcmp(RomTitle, "MEGAMAN")==0) StopColorizing();
-				else if (GCSettings.colorize) LoadPalette(RomTitle);
-				else StopColorizing();
+				GCSettings.colorize ^= 1;
 				break;
 
 			case 6:
@@ -3420,178 +3410,6 @@ static int MenuSettingsNetwork()
 	return menu;
 }
 
-/****************************************************************************
- * MainMenu
- ***************************************************************************/
-void
-MainMenu (int menu)
-{
-	int currentMenu = menu;
-	lastMenu = MENU_NONE;
-
-	mainWindow = new GuiWindow(screenwidth, screenheight);
-
-	bgImg = new GuiImage(screenwidth, screenheight, (GXColor){236, 226, 238, 255});
-	bgImg->ColorStripe(10);
-	mainWindow->Append(bgImg);
-
-	if(gameScreenTex)
-	{
-		gameScreenImg = new GuiImage(gameScreenTex, screenwidth, screenheight);
-		gameScreenImg->SetAlpha(192);
-		gameScreenImg->ColorStripe(30);
-		mainWindow->Append(gameScreenImg);
-		bgImg->SetVisible(false);
-	}
-
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
-	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND_PCM);
-	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
-	GuiImageData bgTop(bg_top_png);
-	bgTopImg = new GuiImage(&bgTop);
-	GuiImageData bgBottom(bg_bottom_png);
-	bgBottomImg = new GuiImage(&bgBottom);
-	bgBottomImg->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
-	GuiImageData logo(logo_png);
-	GuiImage logoImg(&logo);
-	GuiImageData logoOver(logo_over_png);
-	GuiImage logoImgOver(&logoOver);
-	GuiText logoTxt(APPVERSION, 18, (GXColor){255, 255, 255, 255});
-	logoTxt.SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-	logoTxt.SetPosition(0, 4);
-	btnLogo = new GuiButton(logoImg.GetWidth(), logoImg.GetHeight());
-	btnLogo->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-	btnLogo->SetPosition(-50, 24);
-	btnLogo->SetImage(&logoImg);
-	btnLogo->SetImageOver(&logoImgOver);
-	btnLogo->SetLabel(&logoTxt);
-	btnLogo->SetSoundOver(&btnSoundOver);
-	btnLogo->SetSoundClick(&btnSoundClick);
-	btnLogo->SetTrigger(&trigA);
-	btnLogo->SetUpdateCallback(WindowCredits);
-
-	mainWindow->Append(bgTopImg);
-	mainWindow->Append(bgBottomImg);
-	mainWindow->Append(btnLogo);
-
-	if(currentMenu == MENU_GAMESELECTION)
-		ResumeGui();
-
-	// Load preferences
-	if(!LoadPrefs())
-		SavePrefs(SILENT);
-
-	#ifndef NO_SOUND
-	bgMusic = new GuiSound(bg_music_ogg, bg_music_ogg_size, SOUND_OGG);
-	bgMusic->SetVolume(GCSettings.MusicVolume);
-	bgMusic->SetLoop(true);
-	enterSound = new GuiSound(enter_ogg, enter_ogg_size, SOUND_OGG);
-	enterSound->SetVolume(GCSettings.SFXVolume);
-	exitSound = new GuiSound(exit_ogg, exit_ogg_size, SOUND_OGG);
-	exitSound->SetVolume(GCSettings.SFXVolume);
-	if(currentMenu == MENU_GAMESELECTION) bgMusic->Play(); // startup music
-	#endif
-
-	while(currentMenu != MENU_EXIT || !ROMLoaded)
-	{
-		switch (currentMenu)
-		{
-			case MENU_GAMESELECTION:
-				currentMenu = MenuGameSelection();
-				break;
-			case MENU_GAME:
-				currentMenu = MenuGame();
-				break;
-			case MENU_GAME_LOAD:
-				currentMenu = MenuGameSaves(0);
-				break;
-			case MENU_GAME_SAVE:
-				currentMenu = MenuGameSaves(1);
-				break;
-			case MENU_GAMESETTINGS:
-				currentMenu = MenuGameSettings();
-				break;
-			case MENU_GAMESETTINGS_MAPPINGS:
-				currentMenu = MenuSettingsMappings();
-				break;
-			case MENU_GAMESETTINGS_MAPPINGS_MAP:
-				currentMenu = MenuSettingsMappingsMap();
-				break;
-			case MENU_GAMESETTINGS_VIDEO:
-				currentMenu = MenuSettingsVideo();
-				break;
-			/*case MENU_GAMESETTINGS_CHEATS:
-				currentMenu = MenuGameCheats();
-				break;*/
-			case MENU_GAMESETTINGS_PALETTE:
-				currentMenu = MenuPalette();
-				break;
-			case MENU_SETTINGS:
-				currentMenu = MenuSettings();
-				break;
-			case MENU_SETTINGS_FILE:
-				currentMenu = MenuSettingsFile();
-				break;
-			case MENU_SETTINGS_MENU:
-				currentMenu = MenuSettingsMenu();
-				break;
-			case MENU_SETTINGS_NETWORK:
-				currentMenu = MenuSettingsNetwork();
-				break;
-			default: // unrecognized menu
-				currentMenu = MenuGameSelection();
-				break;
-		}
-		lastMenu = currentMenu;
-		usleep(THREAD_SLEEP);
-	}
-
-	#ifdef HW_RVL
-	ShutoffRumble();
-	#endif
-
-	// wait for keys to be depressed
-	while(MenuRequested())
-		usleep(THREAD_SLEEP);
-
-	CancelAction();
-	HaltGui();
-
-	#ifndef NO_SOUND
-	delete bgMusic;
-	delete enterSound;
-	delete exitSound;
-	#endif
-
-	delete btnLogo;
-	delete bgImg;
-	delete bgTopImg;
-	delete bgBottomImg;
-	delete mainWindow;
-
-	mainWindow = NULL;
-
-	if(gameScreenImg)
-	{
-		delete gameScreenImg;
-		gameScreenImg = NULL;
-	}
-	if(gameScreenTex)
-	{
-		free(gameScreenTex);
-		gameScreenTex = NULL;
-	}
-	if(gameScreenTex2)
-	{
-		free(gameScreenTex2);
-		gameScreenTex2 = NULL;
-	}
-}
 
 static int redAmount=128, greenAmount=128, blueAmount=128;
 static GuiText *redText;
@@ -4096,7 +3914,7 @@ static int MenuPalette()
 
 	while(menu == MENU_NONE)
 	{
-		VIDEO_WaitVSync ();
+		usleep(THREAD_SLEEP);
 
 		if(bg0Btn.GetState() == STATE_CLICKED)
 		{
@@ -4240,13 +4058,13 @@ static int MenuPalette()
 		}
 		else if(importBtn.GetState() == STATE_CLICKED)
 		{
-			SavePalette(SILENT, RomTitle);
+			SavePalettes(SILENT);
 			menu = MENU_GAMESETTINGS_PALETTE;
 		}
 		else if(closeBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_EXIT;
-			SavePalette(SILENT, RomTitle);
+			SavePalettes(SILENT);
 			SavePrefs(NOTSILENT);
 
 			exitSound->Play();
@@ -4263,16 +4081,191 @@ static int MenuPalette()
 		}
 		else if(backBtn.GetState() == STATE_CLICKED)
 		{
-			SavePalette(SILENT, RomTitle);
+			SavePalettes(SILENT);
 			menu = MENU_GAMESETTINGS_VIDEO;
 		}
 	}
 
 	if(menu == MENU_GAME)
 		SavePrefs(NOTSILENT);
-	gbSetPalette(CurrentPalette.palette);
 
 	HaltGui();
 	mainWindow->Remove(&w);
 	return menu;
+}
+
+/****************************************************************************
+ * MainMenu
+ ***************************************************************************/
+void
+MainMenu (int menu)
+{
+	int currentMenu = menu;
+	lastMenu = MENU_NONE;
+
+	mainWindow = new GuiWindow(screenwidth, screenheight);
+
+	bgImg = new GuiImage(screenwidth, screenheight, (GXColor){236, 226, 238, 255});
+	bgImg->ColorStripe(10);
+	mainWindow->Append(bgImg);
+
+	if(gameScreenTex)
+	{
+		gameScreenImg = new GuiImage(gameScreenTex, screenwidth, screenheight);
+		gameScreenImg->SetAlpha(192);
+		gameScreenImg->ColorStripe(30);
+		mainWindow->Append(gameScreenImg);
+		bgImg->SetVisible(false);
+	}
+
+	GuiTrigger trigA;
+	if(GCSettings.WiimoteOrientation)
+		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
+	else
+		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
+
+	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND_PCM);
+	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
+	GuiImageData bgTop(bg_top_png);
+	bgTopImg = new GuiImage(&bgTop);
+	GuiImageData bgBottom(bg_bottom_png);
+	bgBottomImg = new GuiImage(&bgBottom);
+	bgBottomImg->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+	GuiImageData logo(logo_png);
+	GuiImage logoImg(&logo);
+	GuiImageData logoOver(logo_over_png);
+	GuiImage logoImgOver(&logoOver);
+	GuiText logoTxt(APPVERSION, 18, (GXColor){255, 255, 255, 255});
+	logoTxt.SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
+	logoTxt.SetPosition(0, 4);
+	btnLogo = new GuiButton(logoImg.GetWidth(), logoImg.GetHeight());
+	btnLogo->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
+	btnLogo->SetPosition(-50, 24);
+	btnLogo->SetImage(&logoImg);
+	btnLogo->SetImageOver(&logoImgOver);
+	btnLogo->SetLabel(&logoTxt);
+	btnLogo->SetSoundOver(&btnSoundOver);
+	btnLogo->SetSoundClick(&btnSoundClick);
+	btnLogo->SetTrigger(&trigA);
+	btnLogo->SetUpdateCallback(WindowCredits);
+
+	mainWindow->Append(bgTopImg);
+	mainWindow->Append(bgBottomImg);
+	mainWindow->Append(btnLogo);
+
+	if(currentMenu == MENU_GAMESELECTION)
+		ResumeGui();
+
+	// Load preferences
+	if(!LoadPrefs())
+		SavePrefs(SILENT);
+
+	// Load palettes
+	LoadPalettes();
+
+	#ifndef NO_SOUND
+	bgMusic = new GuiSound(bg_music_ogg, bg_music_ogg_size, SOUND_OGG);
+	bgMusic->SetVolume(GCSettings.MusicVolume);
+	bgMusic->SetLoop(true);
+	enterSound = new GuiSound(enter_ogg, enter_ogg_size, SOUND_OGG);
+	enterSound->SetVolume(GCSettings.SFXVolume);
+	exitSound = new GuiSound(exit_ogg, exit_ogg_size, SOUND_OGG);
+	exitSound->SetVolume(GCSettings.SFXVolume);
+	if(currentMenu == MENU_GAMESELECTION) bgMusic->Play(); // startup music
+	#endif
+
+	while(currentMenu != MENU_EXIT || !ROMLoaded)
+	{
+		switch (currentMenu)
+		{
+			case MENU_GAMESELECTION:
+				currentMenu = MenuGameSelection();
+				break;
+			case MENU_GAME:
+				currentMenu = MenuGame();
+				break;
+			case MENU_GAME_LOAD:
+				currentMenu = MenuGameSaves(0);
+				break;
+			case MENU_GAME_SAVE:
+				currentMenu = MenuGameSaves(1);
+				break;
+			case MENU_GAMESETTINGS:
+				currentMenu = MenuGameSettings();
+				break;
+			case MENU_GAMESETTINGS_MAPPINGS:
+				currentMenu = MenuSettingsMappings();
+				break;
+			case MENU_GAMESETTINGS_MAPPINGS_MAP:
+				currentMenu = MenuSettingsMappingsMap();
+				break;
+			case MENU_GAMESETTINGS_VIDEO:
+				currentMenu = MenuSettingsVideo();
+				break;
+			/*case MENU_GAMESETTINGS_CHEATS:
+				currentMenu = MenuGameCheats();
+				break;*/
+			case MENU_GAMESETTINGS_PALETTE:
+				currentMenu = MenuPalette();
+				break;
+			case MENU_SETTINGS:
+				currentMenu = MenuSettings();
+				break;
+			case MENU_SETTINGS_FILE:
+				currentMenu = MenuSettingsFile();
+				break;
+			case MENU_SETTINGS_MENU:
+				currentMenu = MenuSettingsMenu();
+				break;
+			case MENU_SETTINGS_NETWORK:
+				currentMenu = MenuSettingsNetwork();
+				break;
+			default: // unrecognized menu
+				currentMenu = MenuGameSelection();
+				break;
+		}
+		lastMenu = currentMenu;
+		usleep(THREAD_SLEEP);
+	}
+
+	#ifdef HW_RVL
+	ShutoffRumble();
+	#endif
+
+	// wait for keys to be depressed
+	while(MenuRequested())
+		usleep(THREAD_SLEEP);
+
+	CancelAction();
+	HaltGui();
+
+	#ifndef NO_SOUND
+	delete bgMusic;
+	delete enterSound;
+	delete exitSound;
+	#endif
+
+	delete btnLogo;
+	delete bgImg;
+	delete bgTopImg;
+	delete bgBottomImg;
+	delete mainWindow;
+
+	mainWindow = NULL;
+
+	if(gameScreenImg)
+	{
+		delete gameScreenImg;
+		gameScreenImg = NULL;
+	}
+	if(gameScreenTex)
+	{
+		free(gameScreenTex);
+		gameScreenTex = NULL;
+	}
+	if(gameScreenTex2)
+	{
+		free(gameScreenTex2);
+		gameScreenTex2 = NULL;
+	}
 }
