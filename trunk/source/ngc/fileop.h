@@ -35,7 +35,7 @@ u32 LoadSzFile(char * filepath, unsigned char * rbuffer);
 u32 SaveFile(char * buffer, char *filepath, u32 datasize, int method, bool silent);
 u32 SaveFile(char * filepath, u32 datasize, int method, bool silent);
 
-extern unsigned char * savebuffer;
+extern unsigned char savebuffer[];
 extern FILE * file;
 extern bool unmountRequired[];
 extern bool isMounted[];
