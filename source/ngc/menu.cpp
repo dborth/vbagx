@@ -246,6 +246,8 @@ EmulatorUpdate (void *arg)
 static void *
 UpdateGUI (void *arg)
 {
+	int i;
+
 	while(1)
 	{
 		if(guiHalt)
@@ -257,7 +259,7 @@ UpdateGUI (void *arg)
 			mainWindow->Draw();
 
 			#ifdef HW_RVL
-			for(int i=3; i >= 0; i--) // so that player 1's cursor appears on top!
+			for(i=3; i >= 0; i--) // so that player 1's cursor appears on top!
 			{
 				if(userInput[i].wpad.ir.valid)
 					Menu_DrawImg(userInput[i].wpad.ir.x-48, userInput[i].wpad.ir.y-48,
@@ -268,7 +270,7 @@ UpdateGUI (void *arg)
 
 			Menu_Render();
 
-			for(int i=3; i >= 0; i--)
+			for(i=3; i >= 0; i--)
 				mainWindow->Update(&userInput[i]);
 
 			#ifdef HW_RVL
@@ -281,10 +283,10 @@ UpdateGUI (void *arg)
 
 			if(ExitRequested || ShutdownRequested)
 			{
-				for(int a = 0; a < 255; a += 15)
+				for(i = 0; i < 255; i += 15)
 				{
 					mainWindow->Draw();
-					Menu_DrawRectangle(0,0,screenwidth,screenheight,(GXColor){0, 0, 0, a},1);
+					Menu_DrawRectangle(0,0,screenwidth,screenheight,(GXColor){0, 0, 0, i},1);
 					Menu_Render();
 				}
 
@@ -829,6 +831,8 @@ static void WindowCredits(void * ptr)
 static int MenuGameSelection()
 {
 	int menu = MENU_NONE;
+	bool res;
+	int i;
 
 	GuiText titleTxt("Choose Game", 28, (GXColor){255, 255, 255, 255});
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
@@ -931,7 +935,7 @@ static int MenuGameSelection()
 
 			// update gameWindow based on arrow buttons
 			// set MENU_EXIT if A button pressed on a game
-			for(int i=0; i<PAGESIZE; i++)
+			for(i=0; i<PAGESIZE; i++)
 			{
 				if(gameBrowser.gameList[i]->GetState() == STATE_CLICKED)
 				{
@@ -939,8 +943,6 @@ static int MenuGameSelection()
 					// check corresponding browser entry
 					if(browserList[browser.selIndex].isdir || IsSz())
 					{
-						bool res;
-
 						if(IsSz())
 							res = BrowserLoadSz(GCSettings.LoadMethod);
 						else
@@ -1163,7 +1165,7 @@ static int MenuGame()
 	closeBtn.SetEffectGrow();
 
 	#ifdef HW_RVL
-	int i = 0;
+	int i, level;
 	char txt[3];
 	GuiText * batteryTxt[4];
 	GuiImage * batteryImg[4];
@@ -1270,7 +1272,6 @@ static int MenuGame()
 		usleep(THREAD_SLEEP);
 
 		#ifdef HW_RVL
-		int level;
 		for(i=0; i < 4; i++)
 		{
 			if(WPAD_Probe(i, NULL) == WPAD_ERR_NONE) // controller connected
@@ -1400,7 +1401,7 @@ static int MenuGame()
 static int MenuGameSaves(int action)
 {
 	int menu = MENU_NONE;
-	int ret;
+	int ret, result;
 	int i, n, len, len2;
 	int j = 0;
 	SaveList saves;
@@ -1580,7 +1581,7 @@ static int MenuGameSaves(int action)
 		// load or save game
 		if(ret > -3)
 		{
-			int result = 0;
+			result = 0;
 
 			if(action == 0) // load
 			{
@@ -2324,6 +2325,7 @@ static int MenuSettingsMappingsMap()
 {
 	int menu = MENU_NONE;
 	int ret,i,j;
+	u32 pressed;
 	OptionList options;
 
 	char menuTitle[100];
@@ -2414,7 +2416,7 @@ static int MenuSettingsMappingsMap()
 
 		if(ret >= 0)
 		{
-			u32 pressed = ButtonMappingWindow(); // get a button selection from user
+			pressed = ButtonMappingWindow(); // get a button selection from user
 
 			if (pressed > 0)
 				btnmap[mapMenuCtrl][ret] = pressed; // update mapping
@@ -2741,7 +2743,7 @@ static int MenuSettingsVideo()
 		else
 			sprintf (options.value[5], "Off");
 
-		if(strcmp(CurrentPalette.gameName,"default")) 
+		if(strcmp(CurrentPalette.gameName,"default"))
 			sprintf(options.value[6], "Custom");
 		else
 			sprintf(options.value[6], "Default");
