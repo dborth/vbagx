@@ -1116,7 +1116,9 @@ bool LoadVBAROM(int method)
 
 void InitialisePalette()
 {
+	#ifdef CARLLOG
 	log("InitialisePalette();");
+	#endif
 	int i;
 	// Build GBPalette
 	for( i = 0; i < 24; )
