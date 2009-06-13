@@ -104,18 +104,18 @@ SwitchAudioMode(int mode)
 	{
 		#ifndef NO_SOUND
 		ASND_Pause(1);
-		#endif
 		AUDIO_StopDMA();
-		AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ);
 		AUDIO_RegisterDMACallback(AudioPlayer);
+		#endif
 	}
 	else // menu
 	{
 		IsPlaying = 0;
-		AUDIO_StopDMA();
 		#ifndef NO_SOUND
-		ASND_SetDMACallback();
+		ASND_Init();
 		ASND_Pause(0);
+		#else
+		AUDIO_StopDMA();
 		#endif
 	}
 }
@@ -141,12 +141,7 @@ void InitialiseSound()
  ***************************************************************************/
 void ShutdownAudio()
 {
-	#ifndef NO_SOUND
-	ASND_Pause(1);
-	ASND_End();
-	#endif
 	AUDIO_StopDMA();
-	AUDIO_RegisterDMACallback(NULL);
 }
 
 /****************************************************************************
