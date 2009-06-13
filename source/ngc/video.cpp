@@ -90,7 +90,6 @@ static camera cam = { {0.0F, 0.0F, 0.0F},
  * VideoThreading
  ***************************************************************************/
 #define TSTACK 16384
-static lwpq_t videoblankqueue;
 static lwp_t vbthread;
 static unsigned char vbstack[TSTACK];
 
@@ -116,18 +115,11 @@ vbgetback (void *arg)
 
 /****************************************************************************
  * InitVideoThread
- *
- * libOGC provides a nice wrapper for LWP access.
- * This function sets up a new local queue and attaches the thread to it.
  ***************************************************************************/
 void
 InitVideoThread ()
 {
-	/*** Initialise a new queue ***/
-	LWP_InitQueue (&videoblankqueue);
-
-	/*** Create the thread on this queue ***/
-	LWP_CreateThread (&vbthread, vbgetback, NULL, vbstack, TSTACK, 150);
+	LWP_CreateThread (&vbthread, vbgetback, NULL, vbstack, TSTACK, 100);
 }
 
 /****************************************************************************
