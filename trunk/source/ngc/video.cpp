@@ -109,7 +109,6 @@ vbgetback (void *arg)
 		VIDEO_WaitVSync ();	 /**< Wait for video vertical blank */
 		LWP_SuspendThread (vbthread);
 	}
-
 	return NULL;
 }
 
@@ -133,19 +132,10 @@ copy_to_xfb (u32 arg)
 {
 	if (copynow == GX_TRUE)
 	{
-		if(ScreenshotRequested)
-		{
-			ScreenshotRequested = 0;
-			TakeScreenshot();
-			ConfigRequested = 1;
-		}
-
 		GX_CopyDisp (xfb[whichfb], GX_TRUE);
 		GX_Flush ();
-
 		copynow = GX_FALSE;
 	}
-
 	FrameTimer++;
 }
 
@@ -682,6 +672,8 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	DCFlushRange(texturemem, texturesize);
 
 	GX_SetNumChans(1);
+	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
+	GX_SetColorUpdate(GX_TRUE);
 	GX_LoadTexObj(&texobj, GX_TEXMAP0);
 
 	draw_square(view); // render textured quad
@@ -690,8 +682,12 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	#endif
 	GX_DrawDone();
 
-	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
-	GX_SetColorUpdate(GX_TRUE);
+	if(ScreenshotRequested)
+	{
+		ScreenshotRequested = 0;
+		TakeScreenshot();
+		ConfigRequested = 1;
+	}
 
 	// EFB is ready to be copied into XFB
 	VIDEO_SetNextFramebuffer(xfb[whichfb]);
