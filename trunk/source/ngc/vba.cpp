@@ -48,6 +48,7 @@ int ShutdownRequested = 0;
 int ResetRequested = 0;
 int ExitRequested = 0;
 char appPath[1024];
+int appLoadMethod = METHOD_AUTO;
 FreeTypeGX *fontSystem;
 
 extern FILE *out;
@@ -60,7 +61,6 @@ static void ExitCleanup()
 {
 #ifdef HW_RVL
 	ShutoffRumble();
-	StopWiiKeyboard();
 #endif
 	ShutdownAudio();
 	StopGX();
@@ -173,19 +173,24 @@ static void ipl_set_config(unsigned char c)
 static void CreateAppPath(char origpath[])
 {
 #ifdef HW_DOL
-	snprintf(appPath, 1024, GCSettings.SaveFolder);
+	sprintf(appPath, GCSettings.SaveFolder);
 #else
 	char path[1024];
-	strcpy(path, origpath); // make a copy so we don't mess up original
+	strncpy(path, origpath, 1024); // make a copy so we don't mess up original
 
 	char * loc;
 	int pos = -1;
+
+	if(strncmp(path, "sd:/", 5) == 0 || strncmp(path, "fat:/", 5) == 0)
+		appLoadMethod = METHOD_SD;
+	else if(strncmp(path, "usb:/", 5) == 0)
+		appLoadMethod = METHOD_USB;
 
 	loc = strrchr(path,'/');
 	if (loc != NULL)
 		*loc = 0; // strip file name
 
-	loc = strchr(path,'/'); // looking for / from fat:/
+	loc = strchr(path,'/'); // looking for first / (after sd: or usb:)
 	if (loc != NULL)
 		pos = loc - path + 1;
 
