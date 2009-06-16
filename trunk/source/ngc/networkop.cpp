@@ -279,7 +279,6 @@ ConnectShare (bool silent)
 					GCSettings.smbshare, GCSettings.smbip))
 			{
 				networkShareInit = true;
-				sprintf(rootdir, "smb:");
 			}
 
 			if(!silent)
@@ -289,6 +288,9 @@ ConnectShare (bool silent)
 		if(!networkShareInit && !silent)
 			ErrorPrompt("Failed to connect to network share.");
 	}
+
+	if(networkShareInit)
+		sprintf(rootdir, "smb:");
 
 	return networkShareInit;
 }
