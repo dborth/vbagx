@@ -1165,8 +1165,12 @@ static int MenuGame()
 	closeBtn.SetEffectGrow();
 
 	#ifdef HW_RVL
-	int i, level;
+	int i;
 	char txt[3];
+	bool status[4] = { false, false, false, false };
+	int level[4] = { 0, 0, 0, 0 };
+	bool newStatus;
+	int newLevel;
 	GuiText * batteryTxt[4];
 	GuiImage * batteryImg[4];
 	GuiImage * batteryBarImg[4];
@@ -1274,24 +1278,38 @@ static int MenuGame()
 		#ifdef HW_RVL
 		for(i=0; i < 4; i++)
 		{
-			if(WPAD_Probe(i, NULL) == WPAD_ERR_NONE) // controller connected
+			if(WPAD_Probe(i, NULL) == WPAD_ERR_NONE)
 			{
-				level = (userInput[i].wpad.battery_level / 100.0) * 4;
-				if(level > 4) level = 4;
-				batteryBarImg[i]->SetTile(level);
-
-				if(level == 0)
-					batteryImg[i]->SetImage(&batteryRed);
-				else
-					batteryImg[i]->SetImage(&battery);
-
-				batteryBtn[i]->SetAlpha(255);
+				newStatus = true;
+				newLevel = (userInput[i].wpad.battery_level / 100.0) * 4;
+				if(newLevel > 4) newLevel = 4;
 			}
-			else // controller not connected
+			else
 			{
-				batteryBarImg[i]->SetTile(0);
-				batteryImg[i]->SetImage(&battery);
-				batteryBtn[i]->SetAlpha(150);
+				newStatus = false;
+				newLevel = 0;
+			}
+
+			if(status[i] != newStatus || level[i] != newLevel)
+			{
+				if(newStatus == true) // controller connected
+				{
+					batteryBtn[i]->SetAlpha(255);
+					batteryBarImg[i]->SetTile(newLevel);
+
+					if(newLevel == 0)
+						batteryImg[i]->SetImage(&batteryRed);
+					else
+						batteryImg[i]->SetImage(&battery);
+				}
+				else // controller not connected
+				{
+					batteryBtn[i]->SetAlpha(150);
+					batteryBarImg[i]->SetTile(0);
+					batteryImg[i]->SetImage(&battery);
+				}
+				status[i] = newStatus;
+				level[i] = newLevel;
 			}
 		}
 		#endif
@@ -2658,6 +2676,9 @@ static int MenuSettingsVideo()
 	sprintf(options.name[i++], "GB Palette");
 	options.length = i;
 
+	if(!IsGameboyGame())
+		options.name[6][0] = 0; // disable palette option for GBA/GBC
+
 	GuiText titleTxt("Game Settings - Video", 28, (GXColor){255, 255, 255, 255});
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
 	titleTxt.SetPosition(50,50);
@@ -2743,7 +2764,7 @@ static int MenuSettingsVideo()
 		else
 			sprintf (options.value[5], "Off");
 
-		if(strcmp(CurrentPalette.gameName,"default"))
+		if(strcmp(CurrentPalette.gameName, "default"))
 			sprintf(options.value[6], "Custom");
 		else
 			sprintf(options.value[6], "Default");

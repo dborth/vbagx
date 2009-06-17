@@ -22,6 +22,7 @@ extern char RomTitle[];
 
 bool LoadVBAROM(int method);
 void InitialisePalette();
+bool IsGameboyGame();
 bool LoadBatteryOrState(char * filepath, int method, int action, bool silent);
 bool LoadBatteryOrStateAuto(int method, int action, bool silent);
 bool SaveBatteryOrState(char * filepath, int method, int action, bool silent);

@@ -291,7 +291,7 @@ int main(int argc, char *argv[])
 		ResetVideo_Emu();
 
 		// GB colorizing - set palette
-		if(cartridgeType == 1)
+		if(IsGameboyGame())
 		{
 			if(GCSettings.colorize && strcmp(RomTitle, "MEGAMAN") != 0)
 				gbSetPalette(CurrentPalette.palette);

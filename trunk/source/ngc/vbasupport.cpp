@@ -719,7 +719,7 @@ void systemDrawScreen()
 	GX_Render( srcWidth, srcHeight, pix, srcPitch );
 }
 
-bool ValidGameId(u32 id)
+static bool ValidGameId(u32 id)
 {
 	if (id == 0)
 		return false;
@@ -731,6 +731,14 @@ bool ValidGameId(u32 id)
 			return false;
 	}
 	return true;
+}
+
+bool IsGameboyGame()
+{
+	if(cartridgeType == 1 && !gbCgbMode && !gbSgbMode)
+		return true;
+	else
+		return false;
 }
 
 static void gbApplyPerImagePreferences()
