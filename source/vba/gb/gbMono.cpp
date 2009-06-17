@@ -453,6 +453,7 @@ bool StartColorizing() {
 }
 
 void StopColorizing() {
+  if(!ColorizeGameboy || gbSgbMode || gbCgbMode) return;
   for(int i = 0; i < 12; i++)
     gbPalette[i] = systemGbPalette[gbPaletteOption*12+i];
   ColorizeGameboy = false;
