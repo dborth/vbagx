@@ -30,6 +30,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 [2.0.4]
 
+* Increase file browser listing to 10 entries, decrease font size
 * Settings are now loaded from USB when loading the app from USB on HBC
 * Fixed menu crashes caused by ogg player bugs
 * Fixed memory card saving verification bug
