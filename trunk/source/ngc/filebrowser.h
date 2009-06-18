@@ -15,7 +15,7 @@
 #include <gccore.h>
 
 #define MAXJOLIET 255
-#define MAXDISPLAY 33
+#define MAXDISPLAY 40
 
 typedef struct
 {
