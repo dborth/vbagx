@@ -37,5 +37,6 @@ extern bool TiltScreen;
 extern float TiltAngle;
 extern u8 * gameScreenTex;
 extern u8 * gameScreenTex2;
+extern u32 FrameTimer;
 
 #endif

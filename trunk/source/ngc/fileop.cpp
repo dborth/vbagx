@@ -75,6 +75,11 @@ HaltDeviceThread()
 {
 	deviceHalt = true;
 
+	#ifdef HW_RVL
+	if(inNetworkInit) // don't wait for network to initialize
+		return;
+	#endif
+
 	// wait for thread to finish
 	while(!LWP_ThreadIsSuspended(devicethread))
 		usleep(100);
@@ -120,8 +125,8 @@ devicecallback (void *arg)
 			}
 		}
 
-		InitializeNetwork(SILENT);
 		UpdateCheck();
+		InitializeNetwork(SILENT);
 #else
 		if(isMounted[METHOD_SD_SLOTA])
 		{
@@ -318,7 +323,6 @@ ParseDirectory(int method)
 	DIR_ITER *dir = NULL;
 	char fulldir[MAXPATHLEN];
 	char filename[MAXPATHLEN];
-	char tmpname[MAXPATHLEN];
 	struct stat filestat;
 	char msg[128];
 	int retry = 1;
@@ -390,8 +394,7 @@ ParseDirectory(int method)
 			}
 			else
 			{
-				ShortenFilename(tmpname, filename); // hide file extension
-				strncpy(browserList[entryNum].displayname, tmpname, MAXDISPLAY);	// crop name for display
+				StripExt(browserList[entryNum].displayname, browserList[entryNum].filename); // hide file extension
 			}
 
 			browserList[entryNum].length = filestat.st_size;
