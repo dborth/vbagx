@@ -16,9 +16,7 @@
 #include <malloc.h>
 
 #ifdef HW_RVL
-extern "C" {
 #include <di/di.h>
-}
 #endif
 
 #include "vba.h"
@@ -364,7 +362,6 @@ static int
 getentry (int entrycount, unsigned char dvdbuffer[])
 {
 	char fname[512];		/* Huge, but experience has determined this */
-	char tmpname[512];
 	char *ptr;
 	char *filename;
 	char *filenamelength;
@@ -466,8 +463,7 @@ getentry (int entrycount, unsigned char dvdbuffer[])
 			}
 			else
 			{
-				StripExt(tmpname, fname); // hide file extension
-				strncpy (browserList[entrycount].displayname, tmpname, MAXDISPLAY);
+				StripExt(browserList[entrycount].displayname, browserList[entrycount].filename); // hide file extension
 			}
 
 			memcpy (&offset32, &dvdbuffer[diroffset + EXTENT], 4);

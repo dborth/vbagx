@@ -3,7 +3,7 @@
  *
  * Tantric September 2008
  *
- * unzip.cpp
+ * gcunzip.cpp
  *
  * File unzip routines
  ***************************************************************************/
@@ -482,11 +482,9 @@ int SzParse(char * filepath, int method)
 				}
 				memset(&(browserList[SzJ]), 0, sizeof(BROWSERENTRY)); // clear the new entry
 
-				// parse information about this file to the dvd file list structure
-				strncpy(browserList[SzJ].filename, SzF->Name, MAXJOLIET); // copy joliet name (useless...)
-				char tmpname[MAXJOLIET+1] = "";
-				ShortenFilename(tmpname, browserList[SzJ].filename);
-				strncpy(browserList[SzJ].displayname, tmpname, MAXDISPLAY);	// crop name for display
+				// parse information about this file to the file list structure
+				strncpy(browserList[SzJ].filename, SzF->Name, MAXJOLIET);
+				StripExt(browserList[SzJ].displayname, browserList[SzJ].filename);
 				browserList[SzJ].length = SzF->Size; // filesize
 				browserList[SzJ].offset = SzI; // the extraction function identifies the file with this number
 				browserList[SzJ].isdir = 0; // only files will be displayed (-> no flags)

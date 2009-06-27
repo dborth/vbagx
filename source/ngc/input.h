@@ -34,7 +34,7 @@
 extern int rumbleRequest[4];
 extern u32 btnmap[5][10];
 
-void ResetControls();
+void ResetControls(int wc = 0);
 void ShutoffRumble();
 void DoRumble(int i);
 void systemGameRumble(int RumbleForFrames);
@@ -43,5 +43,6 @@ void updateRumbleFrame();
 s8 WPAD_Stick(u8 chan,u8 right, int axis);
 u32 GetJoy(int which);
 bool MenuRequested();
+void UpdatePads();
 
 #endif

@@ -43,10 +43,8 @@ int gameRumbleCount = 0, menuRumbleCount = 0, rumbleCountAlready = 0;
 unsigned int vbapadmap[10]; // VBA controller buttons
 u32 btnmap[5][10]; // button mapping
 
-void ResetControls()
+void ResetControls(int wiiCtrl)
 {
-	memset(btnmap, 0, sizeof(btnmap));
-
 	int i;
 
 	// VBA controller buttons
@@ -64,69 +62,116 @@ void ResetControls()
 	vbapadmap[i++] = VBA_BUTTON_R;
 
 	/*** Gamecube controller Padmap ***/
-	i=0;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_B;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_A;
-	btnmap[CTRLR_GCPAD][i++] = PAD_TRIGGER_Z;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_START;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_UP;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_DOWN;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_LEFT;
-	btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_RIGHT;
-	btnmap[CTRLR_GCPAD][i++] = PAD_TRIGGER_L;
-	btnmap[CTRLR_GCPAD][i++] = PAD_TRIGGER_R;
+	if(wiiCtrl == CTRLR_GCPAD || wiiCtrl == 0)
+	{
+		i=0;
+		btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_B;
+		btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_A;
+		btnmap[CTRLR_GCPAD][i++] = PAD_TRIGGER_Z;
+		btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_START;
+		btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_UP;
+		btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_DOWN;
+		btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_LEFT;
+		btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_RIGHT;
+		btnmap[CTRLR_GCPAD][i++] = PAD_TRIGGER_L;
+		btnmap[CTRLR_GCPAD][i++] = PAD_TRIGGER_R;
+	}
 
 	/*** Wiimote Padmap ***/
-	i=0;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_1;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_2;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_MINUS;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_PLUS;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_RIGHT;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_LEFT;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_UP;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_DOWN;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_B;
-	btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_A;
+	if(wiiCtrl == CTRLR_WIIMOTE || wiiCtrl == 0)
+	{
+		i=0;
+		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_1;
+		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_2;
+		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_MINUS;
+		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_PLUS;
+		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_RIGHT;
+		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_LEFT;
+		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_UP;
+		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_DOWN;
+		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_B;
+		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_A;
+	}
 
 	/*** Classic Controller Padmap ***/
-	i=0;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_Y;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_B;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_MINUS;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_PLUS;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_UP;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_DOWN;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_LEFT;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_RIGHT;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_FULL_L;
-	btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_FULL_R;
+	if(wiiCtrl == CTRLR_CLASSIC || wiiCtrl == 0)
+	{
+		i=0;
+		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_Y;
+		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_B;
+		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_MINUS;
+		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_PLUS;
+		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_UP;
+		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_DOWN;
+		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_LEFT;
+		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_RIGHT;
+		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_FULL_L;
+		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_FULL_R;
+	}
 
 	/*** Nunchuk + wiimote Padmap ***/
-	i=0;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_NUNCHUK_BUTTON_C;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_NUNCHUK_BUTTON_Z;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_MINUS;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_PLUS;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_UP;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_DOWN;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_LEFT;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_RIGHT;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_2;
-	btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_1;
+	if(wiiCtrl == CTRLR_NUNCHUK || wiiCtrl == 0)
+	{
+		i=0;
+		btnmap[CTRLR_NUNCHUK][i++] = WPAD_NUNCHUK_BUTTON_C;
+		btnmap[CTRLR_NUNCHUK][i++] = WPAD_NUNCHUK_BUTTON_Z;
+		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_MINUS;
+		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_PLUS;
+		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_UP;
+		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_DOWN;
+		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_LEFT;
+		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_RIGHT;
+		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_2;
+		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_1;
+	}
 
 	/*** Keyboard map ***/
-	i=0;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_X; // VBA stupidly has B on the right instead of left
-	btnmap[CTRLR_KEYBOARD][i++] = KB_Z;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_BKSP;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_ENTER;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_UP;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_DOWN;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_LEFT;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_RIGHT;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_A;
-	btnmap[CTRLR_KEYBOARD][i++] = KB_S;
+	if(wiiCtrl == CTRLR_KEYBOARD || wiiCtrl == 0)
+	{
+		i=0;
+		btnmap[CTRLR_KEYBOARD][i++] = KB_X; // VBA stupidly has B on the right instead of left
+		btnmap[CTRLR_KEYBOARD][i++] = KB_Z;
+		btnmap[CTRLR_KEYBOARD][i++] = KB_BKSP;
+		btnmap[CTRLR_KEYBOARD][i++] = KB_ENTER;
+		btnmap[CTRLR_KEYBOARD][i++] = KB_UP;
+		btnmap[CTRLR_KEYBOARD][i++] = KB_DOWN;
+		btnmap[CTRLR_KEYBOARD][i++] = KB_LEFT;
+		btnmap[CTRLR_KEYBOARD][i++] = KB_RIGHT;
+		btnmap[CTRLR_KEYBOARD][i++] = KB_A;
+		btnmap[CTRLR_KEYBOARD][i++] = KB_S;
+	}
+}
+
+/****************************************************************************
+ * UpdatePads
+ *
+ * called by PostRetraceCallback in InitGCVideo - scans pad and wpad
+ ***************************************************************************/
+void
+UpdatePads()
+{
+	#ifdef HW_RVL
+	WPAD_ScanPads();
+	#endif
+	PAD_ScanPads();
+
+	for(int i=3; i >= 0; i--)
+	{
+		#ifdef HW_RVL
+		memcpy(&userInput[i].wpad, WPAD_Data(i), sizeof(WPADData));
+		#endif
+
+		userInput[i].chan = i;
+		userInput[i].pad.btns_d = PAD_ButtonsDown(i);
+		userInput[i].pad.btns_u = PAD_ButtonsUp(i);
+		userInput[i].pad.btns_h = PAD_ButtonsHeld(i);
+		userInput[i].pad.stickX = PAD_StickX(i);
+		userInput[i].pad.stickY = PAD_StickY(i);
+		userInput[i].pad.substickX = PAD_SubStickX(i);
+		userInput[i].pad.substickY = PAD_SubStickY(i);
+		userInput[i].pad.triggerL = PAD_TriggerL(i);
+		userInput[i].pad.triggerR = PAD_TriggerR(i);
+	}
 }
 
 #ifdef HW_RVL
@@ -180,7 +225,7 @@ static void updateRumble()
 	bool r = false;
 	if (ConfigRequested) r = (menuRumbleCount > 0);
 	else r = cartridgeRumble || possibleCartridgeRumble || (gameRumbleCount > 0) || (menuRumbleCount > 0);
-	
+
 	if (SilenceNeeded>0) {
 		if (r) SilenceNeeded = 5;
 		else SilenceNeeded--;
@@ -888,7 +933,7 @@ static u32 DecodeJoy(unsigned short pad)
 		// One Piece
 		case ONEPIECE:
 			return OnePieceInput(pad);
-		
+
 		// Lord of the Rings
 		case HOBBIT:
 			return HobbitInput(pad);
@@ -897,7 +942,7 @@ static u32 DecodeJoy(unsigned short pad)
 		case LOTR2:
 		case LOTR3:
 			return ReturnOfTheKingInput(pad);
-		
+
 		// Castlevania
 		case CVADVENTURE:
 			return CastlevaniaAdventureInput(pad);
@@ -959,6 +1004,8 @@ bool MenuRequested()
 
 u32 GetJoy(int pad)
 {
+	UpdatePads();
+
 	// request to go back to menu
 	if (MenuRequested())
 	{
