@@ -1440,7 +1440,7 @@ static int FindGameSaveNum(char * savefile, int method)
 	}
 	else if(savefile[romlen] == ' ')
 	{
-		if(diff == 5 && strncmp((const char *)savefile[romlen+1], "Auto", 4) == 0)
+		if(diff == 5 && strncmp(&savefile[romlen+1], "Auto", 4) == 0)
 			n = 0; // found Auto save
 		else if(diff == 2 || diff == 3)
 			n = atoi(&savefile[romlen+1]);
