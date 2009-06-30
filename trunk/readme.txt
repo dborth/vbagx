@@ -30,6 +30,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 [2.0.4 - June 30, 2009]
 
+* Fixed auto-update
 * Increased file browser listing to 10 entries, decreased font size
 * Added text scrolling on file browser
 * Added reset button for controller mappings
