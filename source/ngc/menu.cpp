@@ -96,11 +96,6 @@ ResumeGui()
 static void
 HaltGui()
 {
-	#ifdef HW_RVL
-	if(updatethread != LWP_THREAD_NULL)
-		LWP_JoinThread(updatethread, NULL);
-	#endif
-
 	guiHalt = true;
 
 	// wait for thread to finish
@@ -4338,6 +4333,11 @@ MainMenu (int menu)
 
 	CancelAction();
 	HaltGui();
+
+	#ifdef HW_RVL
+	if(updatethread != LWP_THREAD_NULL)
+		LWP_JoinThread(updatethread, NULL);
+	#endif
 
 	#ifndef NO_SOUND
 	delete bgMusic;
