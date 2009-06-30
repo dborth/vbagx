@@ -28,9 +28,9 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
-[2.0.4]
+[2.0.4 - June 30, 2009]
 
-* Increase file browser listing to 10 entries, decrease font size
+* Increased file browser listing to 10 entries, decreased font size
 * Added text scrolling on file browser
 * Added reset button for controller mappings
 * Settings are now loaded from USB when loading the app from USB on HBC
