@@ -128,6 +128,7 @@ void InitialiseSound()
 {
 	#ifdef NO_SOUND
 	AUDIO_Init (NULL);
+	AUDIO_RegisterDMACallback(AudioPlayer);
 	#else
 	ASND_Init();
 	#endif
