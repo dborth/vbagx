@@ -34,7 +34,7 @@
 extern int rumbleRequest[4];
 extern u32 btnmap[5][10];
 
-void ResetControls(int wc = 0);
+void ResetControls(int wc = -1);
 void ShutoffRumble();
 void DoRumble(int i);
 void systemGameRumble(int RumbleForFrames);
