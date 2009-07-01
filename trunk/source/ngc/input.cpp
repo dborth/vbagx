@@ -62,7 +62,7 @@ void ResetControls(int wiiCtrl)
 	vbapadmap[i++] = VBA_BUTTON_R;
 
 	/*** Gamecube controller Padmap ***/
-	if(wiiCtrl == CTRLR_GCPAD || wiiCtrl == 0)
+	if(wiiCtrl == CTRLR_GCPAD || wiiCtrl == -1)
 	{
 		i=0;
 		btnmap[CTRLR_GCPAD][i++] = PAD_BUTTON_B;
@@ -78,7 +78,7 @@ void ResetControls(int wiiCtrl)
 	}
 
 	/*** Wiimote Padmap ***/
-	if(wiiCtrl == CTRLR_WIIMOTE || wiiCtrl == 0)
+	if(wiiCtrl == CTRLR_WIIMOTE || wiiCtrl == -1)
 	{
 		i=0;
 		btnmap[CTRLR_WIIMOTE][i++] = WPAD_BUTTON_1;
@@ -94,7 +94,7 @@ void ResetControls(int wiiCtrl)
 	}
 
 	/*** Classic Controller Padmap ***/
-	if(wiiCtrl == CTRLR_CLASSIC || wiiCtrl == 0)
+	if(wiiCtrl == CTRLR_CLASSIC || wiiCtrl == -1)
 	{
 		i=0;
 		btnmap[CTRLR_CLASSIC][i++] = WPAD_CLASSIC_BUTTON_Y;
@@ -110,7 +110,7 @@ void ResetControls(int wiiCtrl)
 	}
 
 	/*** Nunchuk + wiimote Padmap ***/
-	if(wiiCtrl == CTRLR_NUNCHUK || wiiCtrl == 0)
+	if(wiiCtrl == CTRLR_NUNCHUK || wiiCtrl == -1)
 	{
 		i=0;
 		btnmap[CTRLR_NUNCHUK][i++] = WPAD_NUNCHUK_BUTTON_C;
@@ -126,7 +126,7 @@ void ResetControls(int wiiCtrl)
 	}
 
 	/*** Keyboard map ***/
-	if(wiiCtrl == CTRLR_KEYBOARD || wiiCtrl == 0)
+	if(wiiCtrl == CTRLR_KEYBOARD || wiiCtrl == -1)
 	{
 		i=0;
 		btnmap[CTRLR_KEYBOARD][i++] = KB_X; // VBA stupidly has B on the right instead of left
