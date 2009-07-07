@@ -82,7 +82,15 @@ static void ExitCleanup()
 
 void ExitApp()
 {
+	SavePrefs(SILENT);
+
+	if (ROMLoaded && !ConfigRequested && GCSettings.AutoSave == 1)
+		SaveSRAMAuto(GCSettings.SaveMethod, SILENT);
+
 	ExitCleanup();
+
+	if(ShutdownRequested)
+		SYS_ResetSystem(SYS_POWEROFF, 0, 0);
 
 	#ifdef HW_RVL
 	if(GCSettings.ExitAction == 0) // Auto
@@ -130,17 +138,11 @@ void ExitApp()
 #ifdef HW_RVL
 void ShutdownCB()
 {
-	ConfigRequested = 1;
 	ShutdownRequested = 1;
 }
 void ResetCB()
 {
 	ResetRequested = 1;
-}
-void ShutdownWii()
-{
-	ExitCleanup();
-	SYS_ResetSystem(SYS_POWEROFF, 0, 0);
 }
 #endif
 
@@ -265,11 +267,6 @@ int main(int argc, char *argv[])
 
 	while(1) // main loop
 	{
-		#ifdef HW_RVL
-		if(ShutdownRequested)
-			ShutdownWii();
-		#endif
-
 		// go back to checking if devices were inserted/removed
 		// since we're entering the menu
 		ResumeDeviceThread();
@@ -309,12 +306,15 @@ int main(int argc, char *argv[])
 				emulator.emuReset(); // reset game
 				ResetRequested = 0;
 			}
-
 			if(ConfigRequested)
 			{
 				ResetVideo_Menu();
 				break; // leave emulation loop
 			}
+			#ifdef HW_RVL
+			if(ShutdownRequested)
+				ExitApp();
+			#endif
 		} // emulation loop
 	} // main loop
 	return 0;
