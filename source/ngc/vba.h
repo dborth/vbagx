@@ -10,6 +10,8 @@
 #ifndef _VBAGX_H_
 #define _VBAGX_H_
 
+#include <unistd.h>
+
 #include "FreeTypeGX.h"
 #include "filelist.h"
 
@@ -82,6 +84,6 @@ extern int ShutdownRequested;
 extern int ExitRequested;
 extern char appPath[];
 extern int appLoadMethod;
-extern FreeTypeGX *fontSystem;
+extern FreeTypeGX *fontSystem[];
 
 #endif
