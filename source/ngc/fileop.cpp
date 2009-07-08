@@ -1,7 +1,7 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric September 2008
+ * Tantric 2008-2009
  *
  * fileop.cpp
  *
@@ -505,6 +505,9 @@ LoadSzFile(char * filepath, unsigned char * rbuffer)
 	// since we're loading a file
 	HaltDeviceThread();
 
+	// halt parsing
+	parseHalt = true;
+
 	file = fopen (filepath, "rb");
 	if (file > 0)
 	{
@@ -550,6 +553,9 @@ LoadFile (char * rbuffer, char *filepath, u32 length, int method, bool silent)
 	// stop checking if devices were removed/inserted
 	// since we're loading a file
 	HaltDeviceThread();
+
+	// halt parsing
+	parseHalt = true;
 
 	// open the file
 	while(!size && retry == 1)
