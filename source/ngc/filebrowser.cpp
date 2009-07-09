@@ -477,10 +477,15 @@ int BrowserLoadFile(int method)
 	StripExt(ROMFilename, browserList[browser.selIndex].filename);
 
 	ROMLoaded = LoadVBAROM(method);
-	inSz = false;
 
 	if (!ROMLoaded)
 	{
+		if(inSz)
+		{
+			browser.selIndex = 0;
+			BrowserChangeFolder(method);
+		}
+
 		ErrorPrompt("Error loading ROM!");
 	}
 	else
