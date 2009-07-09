@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 2.0.4
+                                  Version 2.0.5
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -27,6 +27,18 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[2.0.5 - July 9, 2009]
+
+* Faster SMB/USB browsing
+* Last browsed folder is now remembered
+* Fixed controller mapping reset button
+* Fixed no sound on GameCube version
+* Directory names are no longer altered
+* Preferences now only saved on exit
+* Fixed on-screen keyboard glitches
+* SRAM auto-saved on power-off from within a game
+* Prevent 7z lockups, better 7z error messages
 
 [2.0.4 - June 30, 2009]
 
