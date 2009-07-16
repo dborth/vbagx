@@ -410,7 +410,7 @@ bool ParseDirEntries()
  * Browse subdirectories
  **************************************************************************/
 int
-ParseDirectory(int method)
+ParseDirectory(int method, bool waitParse)
 {
 	char fulldir[MAXPATHLEN];
 	char msg[128];
@@ -459,8 +459,18 @@ ParseDirectory(int method)
 	}
 
 	parseHalt = false;
-	ParseDirEntries(); // index first 50 entries
+	ParseDirEntries(); // index first 20 entries
 	LWP_ResumeThread(parsethread); // index remaining entries
+
+	if(waitParse) // wait for complete parsing
+	{
+		ShowAction("Loading...");
+
+		while(!LWP_ThreadIsSuspended(parsethread))
+			usleep(THREAD_SLEEP);
+
+		CancelAction();
+	}
 
 	return browser.numEntries;
 }

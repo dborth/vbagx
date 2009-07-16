@@ -28,6 +28,12 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.0.6]
+
+* Fixed "No game saves found." message when there are actually saves.
+* Fixed shift key on keyboard
+* Text scrolling works again
+
 [2.0.5 - July 9, 2009]
 
 * Faster SMB/USB browsing

@@ -1568,7 +1568,7 @@ static int MenuGameSaves(int action)
 	else
 	{
 		strncpy(browser.dir, GCSettings.SaveFolder, 200);
-		ParseDirectory(GCSettings.SaveMethod);
+		ParseDirectory(GCSettings.SaveMethod, true);
 	}
 
 	len = strlen(ROMFilename);
