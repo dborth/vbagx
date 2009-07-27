@@ -58,7 +58,7 @@ extern FreeTypeGX *fontSystem[];
 #define PAGESIZE 				8
 #define SAVELISTSIZE 			6
 #define MAX_SAVES 				20
-#define MAX_OPTIONS 			30
+#define MAX_OPTIONS 			150
 #define MAX_KEYBOARD_DISPLAY	32
 
 typedef void (*UpdateCallback)(void * e);
@@ -800,11 +800,13 @@ class GuiOptionBrowser : public GuiElement
 		void ResetState();
 		void SetFocus(int f);
 		void Draw();
+		void TriggerUpdate();
 		void Update(GuiTrigger * t);
 		GuiText * optionVal[PAGESIZE];
 	protected:
 		int selectedItem;
 		int listOffset;
+		bool listChanged;
 
 		OptionList * options;
 		int optionIndex[PAGESIZE];
