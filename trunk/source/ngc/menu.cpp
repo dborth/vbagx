@@ -2392,6 +2392,27 @@ static int MenuSettingsMappingsMap()
 	{
 		usleep(THREAD_SLEEP);
 
+		if(backBtn.GetState() == STATE_CLICKED)
+		{
+			menu = MENU_GAMESETTINGS_MAPPINGS;
+		}
+		else if(resetBtn.GetState() == STATE_CLICKED)
+		{
+			resetBtn.ResetState();
+
+			int choice = WindowPrompt(
+				"Reset Mappings",
+				"Are you sure that you want to reset your mappings?",
+				"Yes",
+				"No");
+
+			if(choice == 1)
+			{
+				ResetControls(mapMenuCtrl);
+				firstRun = true;
+			}
+		}
+
 		ret = optionBrowser.GetClickedOption();
 
 		if(ret >= 0)
@@ -2422,24 +2443,6 @@ static int MenuSettingsMappingsMap()
 				}
 			}
 			optionBrowser.TriggerUpdate();
-		}
-
-		if(backBtn.GetState() == STATE_CLICKED)
-		{
-			menu = MENU_GAMESETTINGS_MAPPINGS;
-		}
-		else if(resetBtn.GetState() == STATE_CLICKED)
-		{
-			resetBtn.ResetState();
-
-			int choice = WindowPrompt(
-				"Reset Mappings",
-				"Are you sure that you want to reset your mappings?",
-				"Yes",
-				"No");
-
-			if(choice == 1)
-				ResetControls(mapMenuCtrl);
 		}
 	}
 	HaltGui();
