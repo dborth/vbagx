@@ -59,8 +59,11 @@ int autoLoadMethod()
 		method = METHOD_SD;
 	else if(ChangeInterface(METHOD_USB, SILENT))
 		method = METHOD_USB;
+#ifdef HW_RVL
+	// DVD support not implemented for GameCube
 	else if(ChangeInterface(METHOD_DVD, SILENT))
 		method = METHOD_DVD;
+#endif
 	else if(ChangeInterface(METHOD_SMB, SILENT))
 		method = METHOD_SMB;
 	else
