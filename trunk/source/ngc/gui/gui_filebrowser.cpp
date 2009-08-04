@@ -42,7 +42,7 @@ GuiFileBrowser::GuiFileBrowser(int w, int h)
 	bgFileSelectionImg->SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
 
 	bgFileSelectionEntry = new GuiImageData(bg_game_selection_entry_png);
-	 = new GuiImageData(folder_png);
+	fileFolder = new GuiImageData(folder_png);
 
 	scrollbar = new GuiImageData(scrollbar_png);
 	scrollbarImg = new GuiImage(scrollbar);
@@ -107,7 +107,7 @@ GuiFileBrowser::GuiFileBrowser(int w, int h)
 		fileListText[i]->SetMaxWidth(380);
 
 		fileListBg[i] = new GuiImage(bgFileSelectionEntry);
-		fileListFolder[i] = new GuiImage();
+		fileListFolder[i] = new GuiImage(fileFolder);
 
 		fileList[i] = new GuiButton(380, 26);
 		fileList[i]->SetParent(this);
@@ -139,7 +139,7 @@ GuiFileBrowser::~GuiFileBrowser()
 
 	delete bgFileSelection;
 	delete bgFileSelectionEntry;
-	delete ;
+	delete fileFolder;
 	delete scrollbar;
 	delete arrowDown;
 	delete arrowDownOver;
