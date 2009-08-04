@@ -933,7 +933,7 @@ class GuiFileBrowser : public GuiElement
 
 		GuiImageData * bgFileSelection;
 		GuiImageData * bgFileSelectionEntry;
-		GuiImageData * ;
+		GuiImageData * fileFolder;
 		GuiImageData * scrollbar;
 		GuiImageData * arrowDown;
 		GuiImageData * arrowDownOver;
