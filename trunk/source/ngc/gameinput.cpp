@@ -17,6 +17,7 @@
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
+#include <wiikeyboard/wsksymdef.h>
 
 #include "vba.h"
 #include "button_mapping.h"
@@ -803,13 +804,13 @@ u32 HarryPotter4Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | DPadArrowKeys(pad) 
 			| DecodeGamecube(pad);
 #ifdef HW_RVL
-	if (DownUsbKeys[KB_A]) J |= VBA_BUTTON_L;
-	if (DownUsbKeys[KB_D]) J |= VBA_BUTTON_R;
-	if (DownUsbKeys[KB_ENTER] || DownUsbKeys[KB_X]) J |= VBA_BUTTON_A;
-	if (DownUsbKeys[KB_C]) J |= VBA_BUTTON_B;
-	if (DownUsbKeys[KB_TAB]) J |= VBA_BUTTON_SELECT;
-	if (DownUsbKeys[KB_SPACE]) J |= VBA_BUTTON_START;
-	if (DownUsbKeys[KB_LSHIFT] || DownUsbKeys[KB_RSHIFT]) J |= VBA_SPEED;
+	if (DownUsbKeys[KS_A]) J |= VBA_BUTTON_L;
+	if (DownUsbKeys[KS_D]) J |= VBA_BUTTON_R;
+	if (DownUsbKeys[KS_Return] || DownUsbKeys[KS_X]) J |= VBA_BUTTON_A;
+	if (DownUsbKeys[KS_C]) J |= VBA_BUTTON_B;
+	if (DownUsbKeys[KS_Tab]) J |= VBA_BUTTON_SELECT;
+	if (DownUsbKeys[KS_space]) J |= VBA_BUTTON_START;
+	if (DownUsbKeys[KS_Shift_L] || DownUsbKeys[KS_Shift_R]) J |= VBA_SPEED;
 
 	WPADData * wp = WPAD_Data(pad);
 
@@ -861,13 +862,13 @@ u32 HarryPotter5Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad);
 #ifdef HW_RVL
 	// Keyboard controls based on Harry Potter 5 for PC 
-	if (DownUsbKeys[KB_LEFT]) J |= VBA_BUTTON_L;
-	if (DownUsbKeys[KB_RIGHT]) J |= VBA_BUTTON_R;
-	if (DownUsbKeys[KB_UP] || DownUsbKeys[KB_DOWN]) J |= VBA_BUTTON_B;
-	if (DownUsbKeys[KB_ENTER]) J |= VBA_BUTTON_A;
-	if (DownUsbKeys[KB_TAB]) J |= VBA_BUTTON_SELECT;
-	if (DownUsbKeys[KB_SPACE]) J |= VBA_BUTTON_START;
-	if (DownUsbKeys[KB_LSHIFT] || DownUsbKeys[KB_RSHIFT]) J |= VBA_SPEED;
+	if (DownUsbKeys[KS_Left]) J |= VBA_BUTTON_L;
+	if (DownUsbKeys[KS_Right]) J |= VBA_BUTTON_R;
+	if (DownUsbKeys[KS_Up] || DownUsbKeys[KS_Down]) J |= VBA_BUTTON_B;
+	if (DownUsbKeys[KS_Return]) J |= VBA_BUTTON_A;
+	if (DownUsbKeys[KS_Tab]) J |= VBA_BUTTON_SELECT;
+	if (DownUsbKeys[KS_space]) J |= VBA_BUTTON_START;
+	if (DownUsbKeys[KS_Shift_L] || DownUsbKeys[KS_Shift_R]) J |= VBA_SPEED;
 
 	WPADData * wp = WPAD_Data(pad);
 
@@ -1291,20 +1292,20 @@ u32 HobbitInput(unsigned short pad) {
 		AttackButton = (fabs(wp->gforce.x)> 1.5);
 	}
 #endif
-	if (DownUsbKeys[KB_E]) UseButton = true;
-	if (DownUsbKeys[KB_LSHIFT]) {
-		if (DownUsbKeys[KB_MOUSEL] || DownUsbKeys[KB_MOUSER]) AbilityButton = true;
+	if (DownUsbKeys[KS_E]) UseButton = true;
+	if (DownUsbKeys[KS_Shift_L]) {
+		if (DownUsbKeys[MOUSEL] || DownUsbKeys[MOUSER]) AbilityButton = true;
 	} else {
-		if (DownUsbKeys[KB_MOUSEL] || DownUsbKeys[KB_MOUSER]) AttackButton = true;
+		if (DownUsbKeys[MOUSEL] || DownUsbKeys[MOUSER]) AttackButton = true;
 	}
-	if (DownUsbKeys[KB_F5]) AbilityButton = true;
-	if (DownUsbKeys[KB_LCTRL]) AttackButton = true;
-	if (DownUsbKeys[KB_SPACE]) AttackButton = true;
-	if (DownUsbKeys[KB_Q]) AttackButton = true;
-	if (DownUsbKeys[KB_C]) ChangeSkillButton = true;
-	if (DownUsbKeys[KB_ENTER]) ItemsButton = true;
-	if (DownUsbKeys[KB_BKSP]) PauseButton = true;
-	if (DownUsbKeys[KB_F]) SpeedButton = true;
+	if (DownUsbKeys[KS_F5]) AbilityButton = true;
+	if (DownUsbKeys[KS_Control_L]) AttackButton = true;
+	if (DownUsbKeys[KS_space]) AttackButton = true;
+	if (DownUsbKeys[KS_Q]) AttackButton = true;
+	if (DownUsbKeys[KS_C]) ChangeSkillButton = true;
+	if (DownUsbKeys[KS_Return]) ItemsButton = true;
+	if (DownUsbKeys[KS_BackSpace]) PauseButton = true;
+	if (DownUsbKeys[KS_F]) SpeedButton = true;
 	
 	if (AbilityButton) J |= VBA_BUTTON_B;
 	if (AttackButton) J |= VBA_BUTTON_L;
@@ -1339,18 +1340,18 @@ u32 FellowshipOfTheRingInput(unsigned short pad) {
 		SelectButton = wp->btns_h & WPAD_BUTTON_1;
 	}
 #endif
-	if (DownUsbKeys[KB_E]) UseButton = true;
-	if (DownUsbKeys[KB_Q]) CancelButton = true;
-	if (DownUsbKeys[KB_MOUSEL]) UseButton = true;
-	if (DownUsbKeys[KB_MOUSER]) CancelButton = true;
-	if (DownUsbKeys[KB_C]) ChangeCharButton = true;
-	if (DownUsbKeys[KB_ENTER]) PauseButton = true;
-	if (DownUsbKeys[KB_BKSP]) ItemsButton = true;
-	if (DownUsbKeys[KB_TAB]) SelectButton = true;
-	if (DownUsbKeys[KB_F]) SpeedButton = true;
-	if (DownUsbKeys[KB_SPACE]) SpeedButton = true;
-	if (DownUsbKeys[KB_F5]) UseButton = true;
-	if (DownUsbKeys[KB_LCTRL]) UseButton = true;
+	if (DownUsbKeys[KS_E]) UseButton = true;
+	if (DownUsbKeys[KS_Q]) CancelButton = true;
+	if (DownUsbKeys[MOUSEL]) UseButton = true;
+	if (DownUsbKeys[MOUSER]) CancelButton = true;
+	if (DownUsbKeys[KS_C]) ChangeCharButton = true;
+	if (DownUsbKeys[KS_Return]) PauseButton = true;
+	if (DownUsbKeys[KS_BackSpace]) ItemsButton = true;
+	if (DownUsbKeys[KS_Tab]) SelectButton = true;
+	if (DownUsbKeys[KS_F]) SpeedButton = true;
+	if (DownUsbKeys[KS_space]) SpeedButton = true;
+	if (DownUsbKeys[KS_F5]) UseButton = true;
+	if (DownUsbKeys[KS_Control_L]) UseButton = true;
 	
 	if (UseButton) J |= VBA_BUTTON_A;
 	if (CancelButton) J |= VBA_BUTTON_B;
@@ -1384,20 +1385,20 @@ u32 ReturnOfTheKingInput(unsigned short pad) {
 		AttackButton = (fabs(wp->gforce.x)> 1.5);
 	}
 #endif
-	if (DownUsbKeys[KB_E]) UseButton = true;
-	if (DownUsbKeys[KB_LSHIFT]) {
-		if (DownUsbKeys[KB_MOUSEL] || DownUsbKeys[KB_MOUSER]) AbilityButton = true;
+	if (DownUsbKeys[KS_E]) UseButton = true;
+	if (DownUsbKeys[KS_Shift_L]) {
+		if (DownUsbKeys[MOUSEL] || DownUsbKeys[MOUSER]) AbilityButton = true;
 	} else {
-		if (DownUsbKeys[KB_MOUSEL] || DownUsbKeys[KB_MOUSER]) AttackButton = true;
+		if (DownUsbKeys[MOUSEL] || DownUsbKeys[MOUSER]) AttackButton = true;
 	}
-	if (DownUsbKeys[KB_F5]) AbilityButton = true;
-	if (DownUsbKeys[KB_LCTRL]) AttackButton = true;
-	if (DownUsbKeys[KB_SPACE]) AttackButton = true;
-	if (DownUsbKeys[KB_Q]) AttackButton = true;
-	if (DownUsbKeys[KB_C]) ChangeSkillButton = true;
-	if (DownUsbKeys[KB_ENTER]) ItemsButton = true;
-	if (DownUsbKeys[KB_BKSP]) PauseButton = true;
-	if (DownUsbKeys[KB_F]) SpeedButton = true;
+	if (DownUsbKeys[KS_F5]) AbilityButton = true;
+	if (DownUsbKeys[KS_Control_L]) AttackButton = true;
+	if (DownUsbKeys[KS_space]) AttackButton = true;
+	if (DownUsbKeys[KS_Q]) AttackButton = true;
+	if (DownUsbKeys[KS_C]) ChangeSkillButton = true;
+	if (DownUsbKeys[KS_Return]) ItemsButton = true;
+	if (DownUsbKeys[KS_BackSpace]) PauseButton = true;
+	if (DownUsbKeys[KS_F]) SpeedButton = true;
 	
 	if (AbilityButton) J |= VBA_BUTTON_A;
 	if (AttackButton) J |= VBA_BUTTON_B;

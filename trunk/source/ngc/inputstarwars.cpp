@@ -40,13 +40,13 @@ u32 LegoStarWars1Input(unsigned short pad) {
 	OldHealth = Health;
 
 #ifdef HW_RVL
-	if (DownUsbKeys[KB_ENTER]) J |= VBA_BUTTON_START; // start
-	if (DownUsbKeys[KB_K] || DownUsbKeys[KB_LCTRL]) J |= VBA_BUTTON_SELECT; // change chars
-	if (DownUsbKeys[KB_U]) J |= VBA_BUTTON_A; // jump
-	if (DownUsbKeys[KB_H]) J |= VBA_BUTTON_B; // attack
-	if (DownUsbKeys[KB_J]) J |= VBA_BUTTON_R; // force power, special ability
-	if (DownUsbKeys[KB_I]) J |= VBA_BUTTON_L; // build, use force (supposed to be J too)
-	if (DownUsbKeys[KB_SPACE]) J |= VBA_SPEED; // fast forward
+	if (DownUsbKeys[KS_Return]) J |= VBA_BUTTON_START; // start
+	if (DownUsbKeys[KS_K] || DownUsbKeys[KS_Control_L]) J |= VBA_BUTTON_SELECT; // change chars
+	if (DownUsbKeys[KS_U]) J |= VBA_BUTTON_A; // jump
+	if (DownUsbKeys[KS_H]) J |= VBA_BUTTON_B; // attack
+	if (DownUsbKeys[KS_J]) J |= VBA_BUTTON_R; // force power, special ability
+	if (DownUsbKeys[KS_I]) J |= VBA_BUTTON_L; // build, use force (supposed to be J too)
+	if (DownUsbKeys[KS_space]) J |= VBA_SPEED; // fast forward
 
 	WPADData * wp = WPAD_Data(pad);
 
@@ -94,13 +94,13 @@ u32 LegoStarWars2Input(unsigned short pad) {
 	OldHealth = Health;
 
 #ifdef HW_RVL
-	if (DownUsbKeys[KB_ENTER]) J |= VBA_BUTTON_START; // start
-	if (DownUsbKeys[KB_K] || DownUsbKeys[KB_LCTRL]) J |= VBA_BUTTON_SELECT; // change chars
-	if (DownUsbKeys[KB_U]) J |= VBA_BUTTON_A; // jump
-	if (DownUsbKeys[KB_H]) J |= VBA_BUTTON_B; // attack
-	if (DownUsbKeys[KB_J]) J |= VBA_BUTTON_L; // force power, special ability
-	if (DownUsbKeys[KB_I]) J |= VBA_BUTTON_R; // build, use force (supposed to be J too)
-	if (DownUsbKeys[KB_SPACE]) J |= VBA_SPEED; // fast forward
+	if (DownUsbKeys[KS_Return]) J |= VBA_BUTTON_START; // start
+	if (DownUsbKeys[KS_K] || DownUsbKeys[KS_Control_L]) J |= VBA_BUTTON_SELECT; // change chars
+	if (DownUsbKeys[KS_U]) J |= VBA_BUTTON_A; // jump
+	if (DownUsbKeys[KS_H]) J |= VBA_BUTTON_B; // attack
+	if (DownUsbKeys[KS_J]) J |= VBA_BUTTON_L; // force power, special ability
+	if (DownUsbKeys[KS_I]) J |= VBA_BUTTON_R; // build, use force (supposed to be J too)
+	if (DownUsbKeys[KS_space]) J |= VBA_SPEED; // fast forward
 
 	WPADData * wp = WPAD_Data(pad);
 
@@ -193,7 +193,7 @@ u32 SWObiWanInput(unsigned short pad) {
 u32 SWEpisode2Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
 	// Rumble when they lose health!
-	u8 Health = CPUReadByte(0x3002fb3); 
+	u8 Health = CPUReadByte(0x3002fb3);
 	static u8 OldHealth = 0;
 	if (Health < OldHealth)
 		systemGameRumble(6);
@@ -241,7 +241,7 @@ u32 SWEpisode2Input(unsigned short pad) {
 u32 SWEpisode3Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
 	// Rumble when they lose health!
-	u8 Health = 0;//CPUReadByte(0x3002fb3); 
+	u8 Health = 0;//CPUReadByte(0x3002fb3);
 	static u8 OldHealth = 0;
 	if (Health < OldHealth)
 		systemGameRumble(6);
@@ -294,7 +294,7 @@ u32 SWEpisode3Input(unsigned short pad) {
 u32 SWJediPowerBattlesInput(unsigned short pad) {
 	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
 	// Rumble when they lose health!
-	u8 Health = 0;//CPUReadByte(0x3002fb3); 
+	u8 Health = 0;//CPUReadByte(0x3002fb3);
 	static u8 OldHealth = 0;
 	if (Health < OldHealth)
 		systemGameRumble(6);
@@ -347,7 +347,7 @@ u32 SWJediPowerBattlesInput(unsigned short pad) {
 u32 SWTrilogyInput(unsigned short pad) {
 	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
 	// Rumble when they lose health!
-	u8 Health = 0;//CPUReadByte(0x3002fb3); 
+	u8 Health = 0;//CPUReadByte(0x3002fb3);
 	static u8 OldHealth = 0;
 	if (Health < OldHealth)
 		systemGameRumble(6);
@@ -431,7 +431,7 @@ u32 SWEpisode4Input(unsigned short pad) {
 		}
 		// Force
 		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z) {
-			
+
 		}
 		// Start/Select
 		if (wp->btns_h & WPAD_BUTTON_PLUS)
@@ -484,7 +484,7 @@ u32 SWEpisode5Input(unsigned short pad) {
 		}
 		// Force
 		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z) {
-			
+
 		}
 		// Start/Select
 		if (wp->btns_h & WPAD_BUTTON_PLUS)
@@ -537,7 +537,7 @@ u32 SWEpisode6Input(unsigned short pad) {
 		}
 		// Force
 		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z) {
-			
+
 		}
 		// Start/Select
 		if (wp->btns_h & WPAD_BUTTON_PLUS)
@@ -574,7 +574,7 @@ u32 SWYodaStoriesInput(unsigned short pad) {
 		// Drag object, get out of dialog
 		if (wp->btns_h & WPAD_BUTTON_A)
 			J |= VBA_BUTTON_B;
-		
+
 		// Light saber
 		if (fabs(wp->gforce.x)> 1.5 ) {
 			// should change weapon here
