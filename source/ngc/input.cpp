@@ -129,16 +129,16 @@ void ResetControls(int wiiCtrl)
 	if(wiiCtrl == CTRLR_KEYBOARD || wiiCtrl == -1)
 	{
 		i=0;
-		btnmap[CTRLR_KEYBOARD][i++] = KB_X; // VBA stupidly has B on the right instead of left
-		btnmap[CTRLR_KEYBOARD][i++] = KB_Z;
-		btnmap[CTRLR_KEYBOARD][i++] = KB_BKSP;
-		btnmap[CTRLR_KEYBOARD][i++] = KB_ENTER;
-		btnmap[CTRLR_KEYBOARD][i++] = KB_UP;
-		btnmap[CTRLR_KEYBOARD][i++] = KB_DOWN;
-		btnmap[CTRLR_KEYBOARD][i++] = KB_LEFT;
-		btnmap[CTRLR_KEYBOARD][i++] = KB_RIGHT;
-		btnmap[CTRLR_KEYBOARD][i++] = KB_A;
-		btnmap[CTRLR_KEYBOARD][i++] = KB_S;
+		btnmap[CTRLR_KEYBOARD][i++] = KS_X; // VBA stupidly has B on the right instead of left
+		btnmap[CTRLR_KEYBOARD][i++] = KS_Z;
+		btnmap[CTRLR_KEYBOARD][i++] = KS_BackSpace;
+		btnmap[CTRLR_KEYBOARD][i++] = KS_Return;
+		btnmap[CTRLR_KEYBOARD][i++] = KS_Up;
+		btnmap[CTRLR_KEYBOARD][i++] = KS_Down;
+		btnmap[CTRLR_KEYBOARD][i++] = KS_Left;
+		btnmap[CTRLR_KEYBOARD][i++] = KS_Right;
+		btnmap[CTRLR_KEYBOARD][i++] = KS_A;
+		btnmap[CTRLR_KEYBOARD][i++] = KS_S;
 	}
 }
 
@@ -418,10 +418,10 @@ u32 StandardMovement(unsigned short pad)
 	}
 
 	// Turbo feature, keyboard or gamecube only
-	if(DownUsbKeys[KB_SPACE])
+	if(DownUsbKeys[KS_space])
 		J |= VBA_SPEED;
 	// Capture feature
-	if(DownUsbKeys[KB_PRTSC] | DownUsbKeys[KB_F12])
+	if(DownUsbKeys[KS_Print_Screen] | DownUsbKeys[KS_F12])
 		J |= VBA_CAPTURE;
 #endif
 	return J;
@@ -575,29 +575,29 @@ u32 StandardKeyboard(unsigned short pad)
 {
 	u32 J = 0;
 #ifdef HW_RVL
-	if (DownUsbKeys[KB_UP])
+	if (DownUsbKeys[KS_Up])
 		J |= VBA_UP;
-	if (DownUsbKeys[KB_DOWN])
+	if (DownUsbKeys[KS_Down])
 		J |= VBA_DOWN;
-	if (DownUsbKeys[KB_LEFT])
+	if (DownUsbKeys[KS_Left])
 		J |= VBA_LEFT;
-	if (DownUsbKeys[KB_RIGHT])
+	if (DownUsbKeys[KS_Right])
 		J |= VBA_RIGHT;
-	if (DownUsbKeys[KB_SPACE])
+	if (DownUsbKeys[KS_space])
 		J |= VBA_SPEED;
-	if (DownUsbKeys[KB_F12] || DownUsbKeys[KB_PRTSC])
+	if (DownUsbKeys[KS_F12] || DownUsbKeys[KS_Print_Screen])
 		J |= VBA_CAPTURE;
-	if (DownUsbKeys[KB_X])
+	if (DownUsbKeys[KS_X])
 		J |= VBA_BUTTON_A;
-	if (DownUsbKeys[KB_Z])
+	if (DownUsbKeys[KS_Z])
 		J |= VBA_BUTTON_B;
-	if (DownUsbKeys[KB_A])
+	if (DownUsbKeys[KS_A])
 		J |= VBA_BUTTON_L;
-	if (DownUsbKeys[KB_S])
+	if (DownUsbKeys[KS_S])
 		J |= VBA_BUTTON_R;
-	if (DownUsbKeys[KB_ENTER])
+	if (DownUsbKeys[KS_Return])
 		J |= VBA_BUTTON_START;
-	if (DownUsbKeys[KB_BKSP])
+	if (DownUsbKeys[KS_BackSpace])
 	J |= VBA_BUTTON_SELECT;
 #endif
 	return J;
@@ -607,13 +607,13 @@ u32 DPadWASD(unsigned short pad)
 {
 	u32 J = 0;
 #ifdef HW_RVL
-	if (DownUsbKeys[KB_W])
+	if (DownUsbKeys[KS_W])
 		J |= VBA_UP;
-	if (DownUsbKeys[KB_S])
+	if (DownUsbKeys[KS_S])
 		J |= VBA_DOWN;
-	if (DownUsbKeys[KB_A])
+	if (DownUsbKeys[KS_A])
 		J |= VBA_LEFT;
-	if (DownUsbKeys[KB_D])
+	if (DownUsbKeys[KS_D])
 		J |= VBA_RIGHT;
 #endif
 	return J;
@@ -623,13 +623,13 @@ u32 DPadArrowKeys(unsigned short pad)
 {
 	u32 J = 0;
 #ifdef HW_RVL
-	if (DownUsbKeys[KB_UP])
+	if (DownUsbKeys[KS_Up])
 		J |= VBA_UP;
-	if (DownUsbKeys[KB_DOWN])
+	if (DownUsbKeys[KS_Down])
 		J |= VBA_DOWN;
-	if (DownUsbKeys[KB_LEFT])
+	if (DownUsbKeys[KS_Left])
 		J |= VBA_LEFT;
-	if (DownUsbKeys[KB_RIGHT])
+	if (DownUsbKeys[KS_Right])
 		J |= VBA_RIGHT;
 #endif
 	return J;
@@ -993,7 +993,7 @@ bool MenuRequested()
 			(userInput[i].pad.substickX < -70) ||
 			(userInput[i].wpad.btns_h & WPAD_BUTTON_HOME) ||
 			(userInput[i].wpad.btns_h & WPAD_CLASSIC_BUTTON_HOME) ||
-			(DownUsbKeys[KB_ESC])
+			(DownUsbKeys[KS_Escape])
 		)
 		{
 			return true;

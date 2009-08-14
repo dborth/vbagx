@@ -153,7 +153,7 @@ void ZeldaAgesCheat()
 			case 2: case 0xb: case 0x10: case 0x18:
 				j++;
 				break;
-			case 7: case 0x12: 
+			case 7: case 0x12:
 				j+=3;
 		}
 		gbWriteMemory(0xC688 + i, j);
@@ -232,14 +232,14 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 	// Rumble when they lose health!
 	u8 Health = gbReadMemory(0xDB5A);
 	static u8 OldHealth = 0;
-	if (Health < OldHealth) 
+	if (Health < OldHealth)
 		systemGameRumble(20);
 	OldHealth = Health;
 
 	bool ActionButton=0, SwordButton=0, ShieldButton=0, PullButton=0,
 	ItemsButton=0, QuestButton=0, MapButton=0, SpeedButton=0, CheatButton=0, MidnaButton=0,
-#ifdef HW_RVL	
-	LeftItemButton=0, DownItemButton=0, RightItemButton=0,  
+#ifdef HW_RVL
+	LeftItemButton=0, DownItemButton=0, RightItemButton=0,
 #endif
 	BItemButton=0, UseLeftItemButton=0, UseRightItemButton=0;
 
@@ -308,7 +308,7 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 		// Must use Wiimote for these buttons
 		CheatButton = wp->btns_d & WPAD_BUTTON_2;
 	}
-	CheatButton = CheatButton || DownUsbKeys[KB_C];
+	CheatButton = CheatButton || DownUsbKeys[KS_C];
 #endif
 	// Gamecube controls are based on Twilight Princess for the Gamecube
 	{
@@ -498,7 +498,7 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 	if (ItemsButton) {
 		if (QuestScreen) QuestScreen = false;
 		else J |= VBA_BUTTON_START;
-	}	
+	}
 	// Quest Status
 	if (QuestButton) {
 		StartCount = 80;
@@ -530,7 +530,7 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 		J |= VBA_SPEED;
 		QuestScreen = false;
 	}
-	
+
 	return J;
 }
 
@@ -543,7 +543,7 @@ static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	// There is Zelda 1 & 2 for Wii VC wiimote but it doesn't make sense to use their controls,
 	// so let user choose sideways wiimote controls.
 	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad);
-	
+
 	// Rumble when they lose health!
 	u8 Health;
 	if (Seasons) Health = gbReadMemory(0xC6A2); // health in quarters... note C6A3 is max health
@@ -556,29 +556,29 @@ static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	static int DesiredSubscreen = -1;
 	int Subscreen = 0;
 	switch (gbReadMemory(0xCBCB)) {
-		case 0: 
+		case 0:
 			Subscreen = 0;
 			break;
-		case 1: 
+		case 1:
 			Subscreen = 1+gbReadMemory(0xCBCF);
 			break;
-		case 2: 
+		case 2:
 			Subscreen = 4;
 			break;
-		case 3: 
+		case 3:
 			Subscreen = 5;
 			break;
 	}
-	
+
 	bool ActionButton=0, SwordButton=0, ShieldButton=0, PullButton=0,
 	ItemsButton=0, QuestButton=0, MapButton=0, SpeedButton=0, CheatButton=0, MidnaButton=0,
-#ifdef HW_RVL	
-	LeftItemButton=0, DownItemButton=0, RightItemButton=0, BItemButton=0, 
+#ifdef HW_RVL
+	LeftItemButton=0, DownItemButton=0, RightItemButton=0, BItemButton=0,
 #endif
 	UseLeftItemButton=0, UseRightItemButton=0;
 
 	bool OnItemScreen = (Subscreen == 1);
-	
+
 #ifdef HW_RVL
 	static int SwordCount = 0;
 	WPADData * wp = WPAD_Data(pad);
@@ -639,7 +639,7 @@ static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
 		// Must use Wiimote for these buttons
 		CheatButton = wp->btns_d & WPAD_BUTTON_2;
 	}
-	CheatButton = CheatButton || DownUsbKeys[KB_C];
+	CheatButton = CheatButton || DownUsbKeys[KS_C];
 #endif
 	// Gamecube controls are based on Twilight Princess for the Gamecube
 	{
@@ -814,16 +814,16 @@ static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
 		if (Seasons) ZeldaSeasonsCheat();
 		else ZeldaAgesCheat();
 	}
-	
+
 	if (DesiredSubscreen == Subscreen)
 		DesiredSubscreen = -1;
 	static int OldSubscreen = 0;
-	if (Subscreen != OldSubscreen) { 
+	if (Subscreen != OldSubscreen) {
 		if (Subscreen==1) DelayCount = 80; // wait for items screen to fade in
 		else DelayCount = 20; // wait to swap subscreens
 	}
 	OldSubscreen = Subscreen;
-		
+
 	if (DelayCount > 0) {
 		// do nothing
 		DelayCount--;
@@ -951,7 +951,7 @@ u32 MinishCapInput(unsigned short pad)
 
 	bool ActionButton=0, SwordButton=0, ShieldButton=0, PullButton=0,
 	ItemsButton=0, QuestButton=0, MapButton=0, SpeedButton=0, CheatButton=0, MidnaButton=0,
-	LeftItemButton=0, DownItemButton=0, RightItemButton=0,  
+	LeftItemButton=0, DownItemButton=0, RightItemButton=0,
 	BItemButton=0, UseLeftItemButton=0, UseRightItemButton=0;
 
 
@@ -1172,7 +1172,7 @@ u32 MinishCapInput(unsigned short pad)
 	}
 	OldCursorRow = CursorRow;
 	OldCursorCol = CursorCol;
-	
+
 	static int SwordCount = 0;
 	// Nunchuk controls are based on Twilight Princess for the Wii
 	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
@@ -1235,7 +1235,7 @@ u32 MinishCapInput(unsigned short pad)
 		// Must use Wiimote for these buttons
 		CheatButton = wp->btns_h & WPAD_BUTTON_2;
 	}
-	CheatButton = CheatButton || DownUsbKeys[KB_C];
+	CheatButton = CheatButton || DownUsbKeys[KS_C];
 #endif
 	// Gamecube controls are based on Twilight Princess for the Gamecube
 	{
@@ -1446,7 +1446,7 @@ u32 MinishCapInput(unsigned short pad)
 	// Camera (use as extra way of pressing A without using DPad)
 	if (SpeedButton)
 		J |= VBA_BUTTON_A;
-	// Pull (I was going to check RButtonAction, but the in-game text always tells you to 
+	// Pull (I was going to check RButtonAction, but the in-game text always tells you to
 	// use R as the action button, so let's just make Gamecube R = Gameboy R)
 	if (PullButton)
 		J |= VBA_BUTTON_R;

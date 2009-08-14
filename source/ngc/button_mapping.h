@@ -20,8 +20,8 @@ enum {
 	CTRLR_KEYBOARD
 };
 
-const char ctrlrName[4][20] =
-{ "GameCube Controller", "Wiimote", "Nunchuk + Wiimote", "Classic Controller" };
+const char ctrlrName[5][20] =
+{ "GameCube Controller", "Wiimote", "Nunchuk + Wiimote", "Classic Controller", "Keyboard & Mouse" };
 
 typedef struct _btn_map {
 	u32 btn;					// button 'id'

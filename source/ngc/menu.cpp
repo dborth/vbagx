@@ -2250,7 +2250,7 @@ ButtonMappingWindow()
 				}
 			}
 			if(userInput[0].wpad.btns_d == WPAD_BUTTON_HOME)
-				pressed = KB_ESC;
+				pressed = KS_Escape;
 		}
 		else
 		{
@@ -2283,7 +2283,7 @@ ButtonMappingWindow()
 	}
 
 	if(mapMenuCtrl == CTRLR_KEYBOARD) {
-		if (pressed == KB_ESC)
+		if (pressed == KS_Escape)
 			pressed = 0;
 	} else if(pressed == WPAD_BUTTON_HOME || pressed == WPAD_CLASSIC_BUTTON_HOME)
 		pressed = 0;
