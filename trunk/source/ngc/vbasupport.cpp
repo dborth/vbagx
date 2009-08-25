@@ -16,7 +16,7 @@
 #include <malloc.h>
 #include <ogc/lwp_watchdog.h>
 
-#include "pngu/pngu.h"
+#include "pngu.h"
 
 #include "unzip.h"
 #include "Util.h"
