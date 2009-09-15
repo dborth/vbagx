@@ -42,13 +42,13 @@ LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref
 # any extra libraries we wish to link with
 #---------------------------------------------------------------------------------
 LIBS	:=	-ldb -ldi -lpng -lmxml -lwiikeyboard \
-			-lfat -lwiiuse -lz -lbte -logc -lasnd -ltremor -lfreetype -ltinysmb
+			-lfat -lwiiuse -lz -lbte -logc -lasnd -lvorbisidec -lfreetype -ltinysmb
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(CURDIR)
+LIBDIRS	:= $(PORTLIBS) -I$(PORTLIBS)/include/freetype2
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
