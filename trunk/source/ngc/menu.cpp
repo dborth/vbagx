@@ -1220,6 +1220,7 @@ static int MenuGame()
 		batteryBtn[i]->SetIcon(batteryBarImg[i]);
 		batteryBtn[i]->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
 		batteryBtn[i]->SetRumble(false);
+		batteryBtn[i]->SetSelectable(false);
 		batteryBtn[i]->SetAlpha(150);
 	}
 
