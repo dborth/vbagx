@@ -30,8 +30,7 @@ u32 FrameTimer = 0;
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
 static GXRModeObj *vmode = NULL; // Graphics Mode Object
-static int currentVideoMode = -1; // -1 - not set, 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
-unsigned int *xfb[2]; // Framebuffers
+unsigned int *xfb[2] = { NULL, NULL }; // Framebuffers
 int whichfb = 0; // Frame buffer toggle
 
 static Mtx GXmodelView2D;
@@ -39,8 +38,8 @@ static Mtx GXmodelView2D;
 u8 * gameScreenTex = NULL; // a GX texture screen capture of the game
 u8 * gameScreenTex2 = NULL; // a GX texture screen capture of the game (copy)
 
-int screenheight;
-int screenwidth;
+int screenheight = 480;
+int screenwidth = 640;
 
 /*** 3D GX ***/
 #define DEFAULT_FIFO_SIZE ( 256 * 1024 )
@@ -300,50 +299,46 @@ void StopGX()
 }
 
 /****************************************************************************
- * SetupVideoMode
+ * FindVideoMode
  *
  * Finds the optimal video mode, or uses the user-specified one
  * Also configures original video modes
  ***************************************************************************/
-static void SetupVideoMode()
+static GXRModeObj * FindVideoMode()
 {
-	if(currentVideoMode == GCSettings.videomode)
-		return; // no need to do anything
-
+	GXRModeObj * mode;
+	
 	// choose the desired video mode
 	switch(GCSettings.videomode)
 	{
 		case 1: // NTSC (480i)
-			vmode = &TVNtsc480IntDf;
+			mode = &TVNtsc480IntDf;
 			break;
 		case 2: // Progressive (480p)
-			vmode = &TVNtsc480Prog;
+			mode = &TVNtsc480Prog;
 			break;
 		case 3: // PAL (50Hz)
-			vmode = &TVPal528IntDf;
+			mode = &TVPal528IntDf;
 			break;
 		case 4: // PAL (60Hz)
-			vmode = &TVEurgb60Hz480IntDf;
+			mode = &TVEurgb60Hz480IntDf;
 			break;
 		default:
-			vmode = VIDEO_GetPreferredMode(NULL);
+			mode = VIDEO_GetPreferredMode(NULL);
 
 			#ifdef HW_DOL
 			/* we have component cables, but the preferred mode is interlaced
 			 * why don't we switch into progressive?
 			 * on the Wii, the user can do this themselves on their Wii Settings */
 			if(VIDEO_HaveComponentCable())
-				vmode = &TVNtsc480Prog;
+				mode = &TVNtsc480Prog;
 			#endif
 
-			// use hardware vertical scaling to fill screen
-			//if(vmode->viTVMode >> 2 == VI_PAL)
-			//	vmode = &TVPal574IntDfScale;
 			break;
 	}
 
 	// configure original modes (not implemented)
-	switch (vmode->viTVMode >> 2)
+	switch (mode->viTVMode >> 2)
 	{
 		case VI_PAL:
 			// 576 lines (PAL 50hz)
@@ -359,7 +354,7 @@ static void SetupVideoMode()
 	}
 
 	// check for progressive scan
-	if (vmode->viTVMode == VI_TVMODE_NTSC_PROG)
+	if (mode->viTVMode == VI_TVMODE_NTSC_PROG)
 		progressive = true;
 	else
 		progressive = false;
@@ -368,11 +363,51 @@ static void SetupVideoMode()
 	// widescreen fix
 	if(CONF_GetAspectRatio() == CONF_ASPECT_16_9)
 	{
-		vmode->viWidth = VI_MAX_WIDTH_PAL;
+		mode->viWidth = VI_MAX_WIDTH_PAL;
 	}
 	#endif
 
-	currentVideoMode = GCSettings.videomode;
+	return mode;
+}
+
+/****************************************************************************
+ * SetupVideoMode
+ *
+ * Sets up the given video mode
+ ***************************************************************************/
+static void SetupVideoMode(GXRModeObj * mode)
+{
+	if(vmode == mode)
+		return;
+	
+	VIDEO_SetPostRetraceCallback (NULL);
+	copynow = GX_FALSE;
+	VIDEO_Configure (mode);
+	VIDEO_Flush();
+
+	// Allocate the video buffers
+	if(xfb[0]) free(MEM_K1_TO_K0(xfb[0]));
+	if(xfb[1]) free(MEM_K1_TO_K0(xfb[1]));
+	xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (mode));
+	xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (mode));
+
+	// Clear framebuffers etc.
+	VIDEO_ClearFrameBuffer (mode, xfb[0], COLOR_BLACK);
+	VIDEO_ClearFrameBuffer (mode, xfb[1], COLOR_BLACK);
+	VIDEO_SetNextFramebuffer (xfb[0]);
+
+	VIDEO_SetBlack (FALSE);
+	VIDEO_Flush ();
+	VIDEO_WaitVSync ();
+		
+	if (mode->viTVMode & VI_NON_INTERLACE)
+		VIDEO_WaitVSync();
+	else
+		while (VIDEO_GetNextField())
+			VIDEO_WaitVSync();
+	
+	VIDEO_SetPostRetraceCallback ((VIRetraceCallback)copy_to_xfb);
+	vmode = mode;
 }
 
 /****************************************************************************
@@ -385,36 +420,8 @@ static void SetupVideoMode()
 void
 InitializeVideo ()
 {
-	SetupVideoMode();
-	VIDEO_Configure (vmode);
-
-	screenheight = 480;
-	screenwidth = 640;
-
-	// Allocate the video buffers
-	xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
-	xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
-
-	// A console is always useful while debugging
-	//console_init (xfb[0], 20, 64, vmode->fbWidth, vmode->xfbHeight, vmode->fbWidth * 2);
-
-	// Clear framebuffers etc.
-	VIDEO_ClearFrameBuffer (vmode, xfb[0], COLOR_BLACK);
-	VIDEO_ClearFrameBuffer (vmode, xfb[1], COLOR_BLACK);
-	VIDEO_SetNextFramebuffer (xfb[0]);
-
-	VIDEO_SetPostRetraceCallback ((VIRetraceCallback)copy_to_xfb);
-
-	VIDEO_SetBlack (FALSE);
-
-	VIDEO_Flush();
-	VIDEO_WaitVSync();
-
-	if(vmode->viTVMode & VI_NON_INTERLACE)
-		VIDEO_WaitVSync();
-
-	copynow = GX_FALSE;
-
+	GXRModeObj *rmode = FindVideoMode();
+	SetupVideoMode(rmode);
 	StartGX ();
 	InitVideoThread ();
 
@@ -505,21 +512,10 @@ static inline void UpdateScaling()
 void
 ResetVideo_Emu ()
 {
-	SetupVideoMode();
-	GXRModeObj *rmode = vmode; // same mode as menu
 	Mtx44 p;
+	GXRModeObj * rmode = FindVideoMode();
 
-	// reconfigure VI
-	VIDEO_Configure (rmode);
-	VIDEO_ClearFrameBuffer (vmode, xfb[whichfb], COLOR_BLACK);
-	VIDEO_Flush();
-	VIDEO_WaitVSync();
-	if (rmode->viTVMode & VI_NON_INTERLACE)
-		VIDEO_WaitVSync();
-	else
-		while (VIDEO_GetNextField())
-			VIDEO_WaitVSync();
-
+	SetupVideoMode(rmode); // reconfigure VI
 	VIDEO_SetPreRetraceCallback(NULL);
 
 	// reconfigure GX
@@ -730,17 +726,9 @@ ResetVideo_Menu ()
 	Mtx44 p;
 	f32 yscale;
 	u32 xfbHeight;
+	GXRModeObj * rmode = FindVideoMode();
 
-	SetupVideoMode();
-	VIDEO_Configure (vmode);
-	VIDEO_Flush();
-	VIDEO_WaitVSync();
-	if (vmode->viTVMode & VI_NON_INTERLACE)
-		VIDEO_WaitVSync();
-	else
-		while (VIDEO_GetNextField())
-			VIDEO_WaitVSync();
-
+	SetupVideoMode(rmode); // reconfigure VI
 	VIDEO_SetPreRetraceCallback((VIRetraceCallback)UpdatePads);
 
 	// clears the bg to color and clears the z buffer
