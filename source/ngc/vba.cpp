@@ -15,6 +15,7 @@
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
+#include <sys/iosupport.h>
 
 #ifdef HW_RVL
 #include <di/di.h>
