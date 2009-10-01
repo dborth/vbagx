@@ -155,32 +155,33 @@ static void VMAllocGBA( void )
 * MEM2 version of GBA CPULoadROM
 ****************************************************************************/
 
-bool VMCPULoadROM(int method)
+bool VMCPULoadROM()
 {
 	VMClose();
 	VMAllocGBA();
 	GBAROMSize = 0;
+	int device = GCSettings.LoadMethod;
 	rom = (u8 *)MEM2Storage;
 
 	if(!inSz)
 	{
 		char filepath[1024];
 
-		if(!MakeFilePath(filepath, FILE_ROM, method))
+		if(!MakeFilePath(filepath, FILE_ROM))
 			return false;
 
-		GBAROMSize = LoadFile ((char *)rom, filepath, browserList[browser.selIndex].length, method, NOTSILENT);
+		GBAROMSize = LoadFile ((char *)rom, filepath, browserList[browser.selIndex].length, NOTSILENT);
 	}
 	else
 	{
-		switch (method)
+		switch (device)
 		{
-			case METHOD_SD:
-			case METHOD_USB:
-			case METHOD_SMB:
+			case DEVICE_SD:
+			case DEVICE_USB:
+			case DEVICE_SMB:
 				GBAROMSize = LoadSzFile(szpath, (unsigned char *)rom);
 				break;
-			case METHOD_DVD:
+			case DEVICE_DVD:
 				GBAROMSize = SzExtractFile(browserList[browser.selIndex].offset, (unsigned char *)rom);
 				break;
 		}
@@ -271,27 +272,13 @@ static void VMInit( void )
 * VM version of GBA CPULoadROM
 ****************************************************************************/
 
-int VMCPULoadROM(int method)
+int VMCPULoadROM()
 {
 	int res;
 	char msg[512];
 	char filepath[MAXPATHLEN];
 
-	if(!ChangeInterface(method, NOTSILENT))
-		return 0;
-
-	switch (method)
-	{
-		case METHOD_SD:
-		case METHOD_USB:
-		break;
-
-		default:
-			return 0; // not implemented
-		break;
-	}
-
-	if(!MakeFilePath(filepath, FILE_ROM, method))
+	if(!MakeFilePath(filepath, FILE_ROM))
 		return false;
 
 	// loading compressed files via VM is not supported
@@ -301,14 +288,10 @@ int VMCPULoadROM(int method)
 		return 0;
 	}
 
-	// add device to filepath
-	char fullpath[1024];
-	sprintf(fullpath, "%s%s", rootdir, filepath);
-
 	if (romfile != NULL)
 		fclose(romfile);
 
-	romfile = fopen(fullpath, "rb");
+	romfile = fopen(filepath, "rb");
 
 	if (romfile == NULL)
 	{

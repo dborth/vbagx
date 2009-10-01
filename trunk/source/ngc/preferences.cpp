@@ -38,15 +38,16 @@ static mxml_node_t *section = NULL;
 static mxml_node_t *item = NULL;
 static mxml_node_t *elem = NULL;
 
-static mxml_node_t *mxmlFindNewElement(mxml_node_t *parent, const char *nodename, const char *attr=NULL, const char *value=NULL) {
+static mxml_node_t *mxmlFindNewElement(mxml_node_t *parent, const char *nodename, const char *attr=NULL, const char *value=NULL)
+{
 	mxml_node_t *node = mxmlFindElement(parent, xml, nodename, attr, value, MXML_DESCEND);
-	if (!node) {
+	if (!node)
+	{
 		node = mxmlNewElement(parent, nodename);
 		if (attr && value) mxmlElementSetAttr(node, attr, value);
 	}
 	return node;
 }
-
 
 static char temp[20];
 
@@ -148,9 +149,8 @@ static const char * XMLSavePalCallback(mxml_node_t *node, int where)
 	return (NULL);
 }
 
-
 static int
-preparePrefsData (int method)
+preparePrefsData ()
 {
 	xml = mxmlNewXML("1.0");
 	mxmlSetWrapMargin(0); // disable line wrapping
@@ -213,11 +213,15 @@ preparePrefsData (int method)
 
 static void createXMLPalette(gamePalette *p, bool overwrite, const char *newname = NULL)
 {
-	if (!newname) newname = p->gameName;
+	if (!newname)
+		newname = p->gameName;
 	section = mxmlFindElement(xml, xml, "game", "name", newname, MXML_DESCEND);
-	if (section && !overwrite) {
+	if (section && !overwrite)
+	{
 		return;
-	} else if (!section) {
+	}
+	else if (!section)
+	{
 		section = mxmlNewElement(data, "game");
 	}
 	mxmlElementSetAttr(section, "name", newname);
@@ -243,7 +247,7 @@ static void createXMLPalette(gamePalette *p, bool overwrite, const char *newname
 }
 
 static int
-preparePalData (int method, gamePalette pals[], int palCount)
+preparePalData (gamePalette pals[], int palCount)
 {
 	xml = mxmlNewXML("1.0");
 	mxmlSetWrapMargin(0); // disable line wrapping
@@ -251,9 +255,8 @@ preparePalData (int method, gamePalette pals[], int palCount)
 	data = mxmlNewElement(xml, "palette");
 	mxmlElementSetAttr(data, "app", APPNAME);
 	mxmlElementSetAttr(data, "version", APPVERSION);
-	for (int i=0; i<palCount; i++) {
+	for (int i=0; i<palCount; i++)
 		createXMLPalette(&pals[i], false);
-	}
 
 	int datasize = mxmlSaveString(xml, (char *)savebuffer, SAVEBUFFERSIZE, XMLSavePalCallback);
 
@@ -261,7 +264,6 @@ preparePalData (int method, gamePalette pals[], int palCount)
 
 	return datasize;
 }
-
 
 /****************************************************************************
  * loadXMLSetting
@@ -328,53 +330,77 @@ static void loadXMLController(unsigned int controller[], const char * name)
 
 static void loadXMLPaletteFromSection(gamePalette &pal)
 {
-	if (section) {
+	if (section)
+	{
 		strncpy(pal.gameName, mxmlElementGetAttr(section, "name"), 17);
 		item = mxmlFindElement(section, xml, "bkgr", NULL, NULL, MXML_DESCEND);
-		if(item) {
+		if (item)
+		{
 			const char * tmp = mxmlElementGetAttr(item, "c0");
-			if(tmp) pal.palette[0] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[0] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c1");
-			if(tmp) pal.palette[1] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[1] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c2");
-			if(tmp) pal.palette[2] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[2] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c3");
-			if(tmp) pal.palette[3] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[3] = strtoul(tmp, NULL, 16);
 		}
 		item = mxmlFindElement(section, xml, "wind", NULL, NULL, MXML_DESCEND);
-		if(item) {
+		if (item)
+		{
 			const char * tmp = mxmlElementGetAttr(item, "c0");
-			if(tmp) pal.palette[4] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[4] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c1");
-			if(tmp) pal.palette[5] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[5] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c2");
-			if(tmp) pal.palette[6] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[6] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c3");
-			if(tmp) pal.palette[7] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[7] = strtoul(tmp, NULL, 16);
 		}
 		item = mxmlFindElement(section, xml, "obj0", NULL, NULL, MXML_DESCEND);
-		if(item) {
+		if (item)
+		{
 			const char * tmp = mxmlElementGetAttr(item, "c0");
-			if(tmp) pal.palette[8] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[8] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c1");
-			if(tmp) pal.palette[9] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[9] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c2");
-			if(tmp) pal.palette[10] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[10] = strtoul(tmp, NULL, 16);
 		}
 		item = mxmlFindElement(section, xml, "obj1", NULL, NULL, MXML_DESCEND);
-		if(item) {
+		if (item)
+		{
 			const char * tmp = mxmlElementGetAttr(item, "c0");
-			if(tmp) pal.palette[11] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[11] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c1");
-			if(tmp) pal.palette[12] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[12] = strtoul(tmp, NULL, 16);
 			tmp = mxmlElementGetAttr(item, "c2");
-			if(tmp) pal.palette[13] = strtoul(tmp, NULL, 16);
+			if (tmp)
+				pal.palette[13] = strtoul(tmp, NULL, 16);
 		}
 		const char *use = mxmlElementGetAttr(section, "use");
-		if (use) {
-			if (atoi(use)==0) pal.use = 0;
-			else pal.use = 1;
-		} else {
+		if (use)
+		{
+			if (atoi(use) == 0)
+				pal.use = 0;
+			else
+				pal.use = 1;
+		}
+		else
+		{
 			pal.use = 1;
 		}
 	}
@@ -387,7 +413,7 @@ static void loadXMLPaletteFromSection(gamePalette &pal)
  ***************************************************************************/
 
 static bool
-decodePrefsData (int method)
+decodePrefsData ()
 {
 	bool result = false;
 
@@ -480,7 +506,7 @@ decodePrefsData (int method)
 }
 
 static bool
-decodePalsData (int method)
+decodePalsData ()
 {
 	bool result = false;
 
@@ -520,23 +546,40 @@ decodePalsData (int method)
 /****************************************************************************
  * Save Preferences
  ***************************************************************************/
+static char prefpath[MAXPATHLEN] = { 0 };
+
 bool
 SavePrefs (bool silent)
 {
-	char filepath[1024];
+	char filepath[MAXPATHLEN];
 	int datasize;
 	int offset = 0;
-	int method = appLoadMethod;
-
-	// We'll save using the first available method (probably SD) since this
-	// is the method preferences will be loaded from by default
-	if(method == METHOD_AUTO)
-		method = autoSaveMethod(silent);
-
-	if(method == METHOD_AUTO)
-		return false;
-
-	if(!MakeFilePath(filepath, FILE_PREF, method))
+	int device = 0;
+	
+	if(prefpath[0] != 0)
+	{
+		strcpy(filepath, prefpath);
+		FindDevice(filepath, &device);
+	}
+	else if(appPath[0] != 0)
+	{
+		sprintf(filepath, "%s%s", appPath, PREF_FILE_NAME);
+		FindDevice(filepath, &device);
+	}
+	else
+	{
+		device = autoLoadMethod();
+		
+		if(device == 0)
+			return false;
+		
+		if(device == DEVICE_MC_SLOTA || device == DEVICE_MC_SLOTB)
+			sprintf(filepath, "%s%s", pathPrefix[device], PREF_FILE_NAME);
+		else
+			sprintf(filepath, "%ssnes9x/%s", pathPrefix[device], PREF_FILE_NAME);
+	}
+	
+	if(device == 0)
 		return false;
 
 	if (!silent)
@@ -545,9 +588,9 @@ SavePrefs (bool silent)
 	FixInvalidSettings();
 
 	AllocSaveBuffer ();
-	datasize = preparePrefsData (method);
+	datasize = preparePrefsData ();
 
-	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
+	if(device == DEVICE_MC_SLOTA || device == DEVICE_MC_SLOTB)
 	{
 		// Set the comments
 		char prefscomment[2][32];
@@ -557,7 +600,7 @@ SavePrefs (bool silent)
 		SetMCSaveComments(prefscomment);
 	}
 
-	offset = SaveFile(filepath, datasize, method, silent);
+	offset = SaveFile(filepath, datasize, silent);
 
 	FreeSaveBuffer ();
 
@@ -573,26 +616,25 @@ SavePrefs (bool silent)
 }
 
 /****************************************************************************
- * Load Preferences from specified method
+ * Load Preferences from specified filepath
  ***************************************************************************/
 bool
-LoadPrefsFromMethod (int method)
+LoadPrefsFromMethod (char * filepath)
 {
 	bool retval = false;
-	char filepath[1024];
 	int offset = 0;
-
-	if(!MakeFilePath(filepath, FILE_PREF, method))
-		return false;
 
 	AllocSaveBuffer ();
 
-	offset = LoadFile(filepath, method, SILENT);
+	offset = LoadFile(filepath, SILENT);
 
 	if (offset > 0)
-		retval = decodePrefsData (method);
+		retval = decodePrefsData ();
 
 	FreeSaveBuffer ();
+	
+	if(retval)
+		strcpy(prefpath, filepath);
 
 	return retval;
 }
@@ -609,29 +651,28 @@ bool LoadPrefs()
 		return true;
 
 	bool prefFound = false;
+	char filepath[4][MAXPATHLEN];
+	int numDevices;
+	
+#ifdef HW_RVL
+	numDevices = 3;
+	sprintf(filepath[0], "%s/%s", appPath, PREF_FILE_NAME);
+	sprintf(filepath[1], "sd:/%s/%s", APPFOLDER, PREF_FILE_NAME);
+	sprintf(filepath[2], "usb:/%s/%s", APPFOLDER, PREF_FILE_NAME);
+#else
+	numDevices = 4;
+	sprintf(filepath[0], "carda:/%s/%s", APPFOLDER, PREF_FILE_NAME);
+	sprintf(filepath[1], "cardb:/%s/%s", APPFOLDER, PREF_FILE_NAME);
+	sprintf(filepath[2], "mca:/%s", PREF_FILE_NAME);
+	sprintf(filepath[3], "mcb:/%s", PREF_FILE_NAME);
+#endif
 
-	if(appLoadMethod == METHOD_SD)
+	for(int i=0; i<numDevices; i++)
 	{
-		if(ChangeInterface(METHOD_SD, SILENT))
-			prefFound = LoadPrefsFromMethod(METHOD_SD);
-	}
-	else if(appLoadMethod == METHOD_USB)
-	{
-		if(ChangeInterface(METHOD_USB, SILENT))
-			prefFound = LoadPrefsFromMethod(METHOD_USB);
-	}
-	else
-	{
-		if(ChangeInterface(METHOD_SD, SILENT))
-			prefFound = LoadPrefsFromMethod(METHOD_SD);
-		if(!prefFound && ChangeInterface(METHOD_USB, SILENT))
-			prefFound = LoadPrefsFromMethod(METHOD_USB);
-		if(!prefFound && TestMC(CARD_SLOTA, SILENT))
-			prefFound = LoadPrefsFromMethod(METHOD_MC_SLOTA);
-		if(!prefFound && TestMC(CARD_SLOTB, SILENT))
-			prefFound = LoadPrefsFromMethod(METHOD_MC_SLOTB);
-		if(!prefFound && ChangeInterface(METHOD_SMB, SILENT))
-			prefFound = LoadPrefsFromMethod(METHOD_SMB);
+		prefFound = LoadPrefsFromMethod(filepath[i]);
+		
+		if(prefFound)
+			break;
 	}
 
 	prefLoaded = true; // attempted to load preferences
@@ -647,15 +688,32 @@ bool SavePalettes(bool silent)
 	char filepath[1024];
 	int datasize;
 	int offset = 0;
-	int method = GCSettings.SaveMethod;
+	int device = 0;
 
-	if(method == METHOD_AUTO)
-		method = autoSaveMethod(silent);
-
-	if(method == METHOD_AUTO)
-		return false;
-
-	if (!MakeFilePath(filepath, FILE_PAL, method))
+	if(prefpath[0] != 0)
+	{
+		strcpy(filepath, prefpath);
+		FindDevice(filepath, &device);
+	}
+	else if(appPath[0] != 0)
+	{
+		sprintf(filepath, "%s%s", appPath, PAL_FILE_NAME);
+		FindDevice(filepath, &device);
+	}
+	else
+	{
+		device = autoLoadMethod();
+		
+		if(device == 0)
+			return false;
+		
+		if(device == DEVICE_MC_SLOTA || device == DEVICE_MC_SLOTB)
+			sprintf(filepath, "%s%s", pathPrefix[device], PAL_FILE_NAME);
+		else
+			sprintf(filepath, "%ssnes9x/%s", pathPrefix[device], PAL_FILE_NAME);
+	}
+	
+	if(device == 0)
 		return false;
 
 	// Now create the XML palette file
@@ -664,9 +722,9 @@ bool SavePalettes(bool silent)
 		ShowAction("Saving palette...");
 
 	AllocSaveBuffer();
-	datasize = preparePalData(method, palettes, loadedPalettes);
+	datasize = preparePalData(palettes, loadedPalettes);
 
-	if (method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
+	if (device == DEVICE_MC_SLOTA || device == DEVICE_MC_SLOTB)
 	{
 		// Set the comments
 		char prefscomment[2][32];
@@ -676,7 +734,7 @@ bool SavePalettes(bool silent)
 		SetMCSaveComments(prefscomment);
 	}
 
-	offset = SaveFile(filepath, datasize, method, silent);
+	offset = SaveFile(filepath, datasize, silent);
 
 	FreeSaveBuffer();
 
@@ -694,12 +752,16 @@ bool SavePalettes(bool silent)
 static void AddPalette(gamePalette pal, const char *gameName, bool overwrite)
 {
 	for (int i=0; i < loadedPalettes; i++)
-		if (strcmp(palettes[i].gameName, gameName)==0) {
-			if (overwrite) {
+		if (strcmp(palettes[i].gameName, gameName)==0)
+		{
+			if (overwrite)
+			{
 				palettes[i] = pal;
 				strncpy(palettes[i].gameName, gameName, 17);
 				return;
-			} else {
+			}
+			else
+			{
 				return;
 			}
 		}
@@ -722,25 +784,35 @@ bool SavePaletteAs(bool silent, const char *name)
 bool LoadPalettes()
 {
 	bool retval = false;
-	char filepath[1024];
 	int offset = 0;
-	int method = GCSettings.SaveMethod;
-
-	if(method == METHOD_AUTO)
-		method = autoSaveMethod(SILENT);
-
-	if(method == METHOD_AUTO)
-		return false;
-
-	if(!MakeFilePath(filepath, FILE_PAL, method))
-		return false;
-
+	char filepath[4][MAXPATHLEN];
+	int numDevices;
+	
 	AllocSaveBuffer ();
+	
+#ifdef HW_RVL
+	numDevices = 3;
+	sprintf(filepath[0], "%s/%s", appPath, PAL_FILE_NAME);
+	sprintf(filepath[1], "sd:/%s/%s", APPFOLDER, PAL_FILE_NAME);
+	sprintf(filepath[2], "usb:/%s/%s", APPFOLDER, PAL_FILE_NAME);
+#else
+	numDevices = 4;
+	sprintf(filepath[0], "carda:/%s/%s", APPFOLDER, PAL_FILE_NAME);
+	sprintf(filepath[1], "cardb:/%s/%s", APPFOLDER, PAL_FILE_NAME);
+	sprintf(filepath[2], "mca:/%s", PAL_FILE_NAME);
+	sprintf(filepath[3], "mcb:/%s", PAL_FILE_NAME);
+#endif
 
-	offset = LoadFile(filepath, method, SILENT);
+	for(int i=0; i<numDevices; i++)
+	{
+		offset = LoadFile(filepath[i], SILENT);
+		
+		if(offset > 0)
+			break;
+	}
 
 	if (offset > 0)
-		retval = decodePalsData (method);
+		retval = decodePalsData ();
 
 	FreeSaveBuffer ();
 
@@ -751,7 +823,7 @@ bool LoadPalettes()
 	if (!retval)
 		retval = SavePalettes(SILENT);
 
-	return true;
+	return retval;
 }
 
 void SetPalette(const char *gameName)

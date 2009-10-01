@@ -37,7 +37,6 @@
 BROWSERINFO browser;
 BROWSERENTRY * browserList = NULL; // list of files/folders in browser
 
-char rootdir[10];
 char szpath[MAXPATHLEN];
 bool inSz = false;
 
@@ -46,65 +45,62 @@ bool ROMLoaded = false;
 
 /****************************************************************************
 * autoLoadMethod()
-* Auto-determines and sets the load method
-* Returns method set
+* Auto-determines and sets the load device
+* Returns device set
 ****************************************************************************/
 int autoLoadMethod()
 {
-	ShowAction ("Attempting to determine load method...");
+	ShowAction ("Attempting to determine load device...");
 
-	int method = METHOD_AUTO;
+	int device = DEVICE_AUTO;
 
-	if(ChangeInterface(METHOD_SD, SILENT))
-		method = METHOD_SD;
-	else if(ChangeInterface(METHOD_USB, SILENT))
-		method = METHOD_USB;
-#ifdef HW_RVL
-	// DVD support not implemented for GameCube
-	else if(ChangeInterface(METHOD_DVD, SILENT))
-		method = METHOD_DVD;
-#endif
-	else if(ChangeInterface(METHOD_SMB, SILENT))
-		method = METHOD_SMB;
+	if(ChangeInterface(DEVICE_SD, SILENT))
+		device = DEVICE_SD;
+	else if(ChangeInterface(DEVICE_USB, SILENT))
+		device = DEVICE_USB;
+	else if(ChangeInterface(DEVICE_DVD, SILENT))
+		device = DEVICE_DVD;
+	else if(ChangeInterface(DEVICE_SMB, SILENT))
+		device = DEVICE_SMB;
 	else
-		ErrorPrompt("Unable to auto-determine load method!");
+		ErrorPrompt("Unable to locate a load device!");
 
-	if(GCSettings.LoadMethod == METHOD_AUTO)
-		GCSettings.LoadMethod = method; // save method found for later use
+	if(GCSettings.LoadMethod == DEVICE_AUTO)
+		GCSettings.LoadMethod = device; // save device found for later use
 	CancelAction();
-	return method;
+	return device;
 }
 
 /****************************************************************************
 * autoSaveMethod()
-* Auto-determines and sets the save method
-* Returns method set
+* Auto-determines and sets the save device
+* Returns device set
 ****************************************************************************/
 int autoSaveMethod(bool silent)
 {
 	if(!silent)
-		ShowAction ("Attempting to determine save method...");
+		ShowAction ("Attempting to determine save device...");
 
-	int method = METHOD_AUTO;
+	int device = DEVICE_AUTO;
 
-	if(ChangeInterface(METHOD_SD, SILENT))
-		method = METHOD_SD;
-	else if(ChangeInterface(METHOD_USB, SILENT))
-		method = METHOD_USB;
-	else if(ChangeInterface(METHOD_MC_SLOTA, SILENT))
-		method = METHOD_MC_SLOTA;
-	else if(ChangeInterface(METHOD_MC_SLOTB, SILENT))
-		method = METHOD_MC_SLOTB;
-	else if(ChangeInterface(METHOD_SMB, SILENT))
-		method = METHOD_SMB;
+	if(ChangeInterface(DEVICE_SD, SILENT))
+		device = DEVICE_SD;
+	else if(ChangeInterface(DEVICE_USB, SILENT))
+		device = DEVICE_USB;
+	else if(ChangeInterface(DEVICE_MC_SLOTA, SILENT))
+		device = DEVICE_MC_SLOTA;
+	else if(ChangeInterface(DEVICE_MC_SLOTB, SILENT))
+		device = DEVICE_MC_SLOTB;
+	else if(ChangeInterface(DEVICE_SMB, SILENT))
+		device = DEVICE_SMB;
 	else if(!silent)
-		ErrorPrompt("Unable to auto-determine save method!");
+		ErrorPrompt("Unable to locate a save device!");
 
-	if(GCSettings.SaveMethod == METHOD_AUTO)
-		GCSettings.SaveMethod = method; // save method found for later use
+	if(GCSettings.SaveMethod == DEVICE_AUTO)
+		GCSettings.SaveMethod = device; // save device found for later use
 
 	CancelAction();
-	return method;
+	return device;
 }
 
 /****************************************************************************
@@ -126,6 +122,26 @@ void ResetBrowser()
 	// set aside space for 1 entry
 	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY));
 	memset(browserList, 0, sizeof(BROWSERENTRY));
+	browser.size = 1;
+}
+
+bool AddBrowserEntry()
+{
+	BROWSERENTRY * newBrowserList = (BROWSERENTRY *)realloc(browserList, (browser.size+1) * sizeof(BROWSERENTRY));
+
+	if(!newBrowserList) // failed to allocate required memory
+	{
+		ResetBrowser();
+		ErrorPrompt("Out of memory: too many files!");
+		return false;
+	}
+	else
+	{
+		browserList = newBrowserList;
+	}
+	memset(&(browserList[browser.size]), 0, sizeof(BROWSERENTRY)); // clear the new entry
+	browser.size++;
+	return true;
 }
 
 /****************************************************************************
@@ -134,6 +150,9 @@ void ResetBrowser()
  ***************************************************************************/
 static void CleanupPath(char * path)
 {
+	if(!path || path[0] == 0)
+		return;
+	
 	int pathlen = strlen(path);
 	int j = 0;
 	for(int i=0; i < pathlen && i < MAXPATHLEN; i++)
@@ -145,23 +164,41 @@ static void CleanupPath(char * path)
 			path[j++] = path[i];
 	}
 	path[j] = 0;
+}
 
-	if(strlen(path) == 0)
-		sprintf(path, "/");
+bool IsDeviceRoot(char * path)
+{
+	if(path == NULL || path[0] == 0)
+		return false;
+
+	if(strcmp(path, "sd:/") == 0 ||
+		strcmp(path, "usb:/") == 0 ||
+		strcmp(path, "dvd:/") == 0 ||
+		strcmp(path, "smb:/") == 0)
+	{
+		return true;
+	}
+	return false;
 }
 
 /****************************************************************************
  * UpdateDirName()
  * Update curent directory name for file browser
  ***************************************************************************/
-int UpdateDirName(int method)
+int UpdateDirName()
 {
 	int size=0;
 	char * test;
 	char temp[1024];
+	int device = 0;
+
+	if(browser.numEntries == 0)
+		return 1;
+
+	FindDevice(browser.dir, &device);
 
 	// update DVD directory
-	if(method == METHOD_DVD)
+	if(device == DEVICE_DVD)
 		SetDVDdirectory(browserList[browser.selIndex].offset, browserList[browser.selIndex].length);
 
 	/* current directory doesn't change */
@@ -172,18 +209,26 @@ int UpdateDirName(int method)
 	/* go up to parent directory */
 	else if (strcmp(browserList[browser.selIndex].filename,"..") == 0)
 	{
-		/* determine last subdirectory namelength */
-		sprintf(temp,"%s",browser.dir);
-		test = strtok(temp,"/");
-		while (test != NULL)
+		// already at the top level
+		if(IsDeviceRoot(browser.dir))
 		{
-			size = strlen(test);
-			test = strtok(NULL,"/");
+			browser.dir[0] = 0; // remove device - we are going to the device listing screen
 		}
-
-		/* remove last subdirectory name */
-		size = strlen(browser.dir) - size - 1;
-		browser.dir[size] = 0;
+		else
+		{
+			/* determine last subdirectory namelength */
+			sprintf(temp,"%s",browser.dir);
+			test = strtok(temp,"/");
+			while (test != NULL)
+			{
+				size = strlen(test);
+				test = strtok(NULL,"/");
+			}
+	
+			/* remove last subdirectory name */
+			size = strlen(browser.dir) - size - 1;
+			browser.dir[size] = 0;
+		}
 
 		return 1;
 	}
@@ -205,7 +250,7 @@ int UpdateDirName(int method)
 	}
 }
 
-bool MakeFilePath(char filepath[], int type, int method, char * filename, int filenum)
+bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 {
 	char file[512];
 	char folder[1024];
@@ -239,7 +284,7 @@ bool MakeFilePath(char filepath[], int type, int method, char * filename, int fi
 
 				if(filenum >= -1)
 				{
-					if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
+					if(GCSettings.SaveMethod == DEVICE_MC_SLOTA || GCSettings.SaveMethod == DEVICE_MC_SLOTB)
 					{
 						if(filenum > 9)
 						{
@@ -271,28 +316,16 @@ bool MakeFilePath(char filepath[], int type, int method, char * filename, int fi
 					sprintf(file, "%s", filename);
 				}
 				break;
-			case FILE_CHEAT:
-				sprintf(folder, GCSettings.CheatFolder);
-				sprintf(file, "%s.cht", ROMFilename);
-				break;
-			case FILE_PREF:
-				sprintf(folder, appPath);
-				sprintf(file, "%s", PREF_FILE_NAME);
-				break;
-			case FILE_PAL:
-				sprintf(folder, appPath);
-				sprintf(file, "%s", PAL_FILE_NAME);
-				break;
 		}
-		switch(method)
+		switch(GCSettings.SaveMethod)
 		{
-			case METHOD_MC_SLOTA:
-			case METHOD_MC_SLOTB:
-				sprintf (temppath, "%s", file);
+			case DEVICE_MC_SLOTA:
+			case DEVICE_MC_SLOTB:
+				sprintf (temppath, "%s%s", pathPrefix[GCSettings.SaveMethod], file);
 				temppath[31] = 0; // truncate filename
 				break;
 			default:
-				sprintf (temppath, "/%s/%s", folder, file);
+				sprintf (temppath, "%s%s/%s", pathPrefix[GCSettings.SaveMethod], folder, file);
 				break;
 		}
 	}
@@ -441,23 +474,16 @@ void ShortenFilename(char * returnstring, char * inputstring)
  *
  * Opens the selected 7z file, and parses a listing of the files within
  ***************************************************************************/
-int BrowserLoadSz(int method)
+int BrowserLoadSz()
 {
 	char filepath[MAXPATHLEN];
 	memset(filepath, 0, MAXPATHLEN);
 
 	// we'll store the 7z filepath for extraction later
-	if(!MakeFilePath(szpath, FILE_ROM, method))
+	if(!MakeFilePath(szpath, FILE_ROM))
 		return 0;
 
-	// add device to filepath
-	if(method != METHOD_DVD)
-	{
-		sprintf(filepath, "%s%s", rootdir, szpath);
-		memcpy(szpath, filepath, MAXPATHLEN);
-	}
-
-	int szfiles = SzParse(szpath, method);
+	int szfiles = SzParse(szpath);
 	if(szfiles)
 	{
 		browser.numEntries = szfiles;
@@ -474,19 +500,24 @@ int BrowserLoadSz(int method)
  *
  * Loads the selected ROM
  ***************************************************************************/
-int BrowserLoadFile(int method)
+int BrowserLoadFile()
 {
+	int device;
+			
+	if(!FindDevice(browser.dir, &device))
+		return 0;
+
 	// store the filename (w/o ext) - used for sram/freeze naming
 	StripExt(ROMFilename, browserList[browser.selIndex].filename);
 
-	ROMLoaded = LoadVBAROM(method);
+	ROMLoaded = LoadVBAROM();
 
 	if (!ROMLoaded)
 	{
 		if(inSz)
 		{
 			browser.selIndex = 0;
-			BrowserChangeFolder(method);
+			BrowserChangeFolder();
 		}
 
 		ErrorPrompt("Error loading ROM!");
@@ -494,9 +525,9 @@ int BrowserLoadFile(int method)
 	else
 	{
 		if (GCSettings.AutoLoad == 1)
-			LoadBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SRAM, SILENT);
+			LoadBatteryOrStateAuto(FILE_SRAM, SILENT);
 		else if (GCSettings.AutoLoad == 2)
-			LoadBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SNAPSHOT, SILENT);
+			LoadBatteryOrStateAuto(FILE_SNAPSHOT, SILENT);
 		ResetBrowser();
 	}
 	CancelAction();
@@ -508,37 +539,98 @@ int BrowserLoadFile(int method)
  *
  * Update current directory and set new entry list if directory has changed
  ***************************************************************************/
-int BrowserChangeFolder(int method)
+int BrowserChangeFolder()
 {
+	int device = 0;
+	FindDevice(browser.dir, &device);
+	
 	if(inSz && browser.selIndex == 0) // inside a 7z, requesting to leave
 	{
-		if(method == METHOD_DVD)
+		if(device == DEVICE_DVD)
 			SetDVDdirectory(browserList[0].offset, browserList[0].length);
 
 		inSz = false;
 		SzClose();
 	}
 
-	if(!UpdateDirName(method))
+	if(!UpdateDirName())
 		return -1;
 
 	CleanupPath(browser.dir);
-	strcpy(GCSettings.LoadFolder, browser.dir);
+	HaltParseThread(); // halt parsing
+	ResetBrowser(); // reset browser
 
-	switch (method)
+	if(browser.dir[0] != 0)
 	{
-		case METHOD_DVD:
-			ParseDVDdirectory();
-			break;
-
-		default:
-			ParseDirectory(method);
-			break;
+		switch (device)
+		{
+			case DEVICE_DVD:
+				ParseDVDdirectory();
+				break;
+	
+			default:
+				ParseDirectory();
+				break;
+		}
 	}
 
-	if (!browser.numEntries)
+	if(browser.numEntries == 0)
 	{
-		ErrorPrompt("Error reading directory!");
+		browser.dir[0] = 0;
+		int i=0;
+		
+		AddBrowserEntry();
+		sprintf(browserList[i].filename, "sd:/");
+		sprintf(browserList[i].displayname, "SD Card");
+		browserList[i].length = 0;
+		browserList[i].mtime = 0;
+		browserList[i].isdir = 1;
+		browserList[i].icon = ICON_SD;
+		i++;
+
+		AddBrowserEntry();
+		sprintf(browserList[i].filename, "usb:/");
+		sprintf(browserList[i].displayname, "USB Mass Storage");
+		browserList[i].length = 0;
+		browserList[i].mtime = 0;
+		browserList[i].isdir = 1;
+		browserList[i].icon = ICON_USB;
+		i++;
+
+#ifdef HW_RVL
+		AddBrowserEntry();
+		sprintf(browserList[i].filename, "smb:/");
+		sprintf(browserList[i].displayname, "Network Share");
+		browserList[i].length = 0;
+		browserList[i].mtime = 0;
+		browserList[i].isdir = 1;
+		browserList[i].icon = ICON_SMB;
+		i++;
+#endif
+
+		AddBrowserEntry();
+		sprintf(browserList[i].filename, "dvd:/");
+		sprintf(browserList[i].displayname, "Data DVD");
+		browserList[i].length = 0;
+		browserList[i].mtime = 0;
+		browserList[i].isdir = 1;
+		browserList[i].icon = ICON_DVD;
+		i++;
+		
+		browser.numEntries += i;
+	}
+	
+	if(browser.dir[0] == 0)
+	{
+		GCSettings.LoadFolder[0] = 0;
+		GCSettings.LoadMethod = 0;
+	}
+	else
+	{
+		char * path = StripDevice(browser.dir);
+		if(path != NULL)
+			strcpy(GCSettings.LoadFolder, path);
+		FindDevice(browser.dir, &GCSettings.LoadMethod);
 	}
 
 	return browser.numEntries;
@@ -551,25 +643,17 @@ int BrowserChangeFolder(int method)
 int
 OpenGameList ()
 {
-	int method = GCSettings.LoadMethod;
+	int device = GCSettings.LoadMethod;
 
-	if(method == METHOD_AUTO)
-		method = autoLoadMethod();
+	if(device == DEVICE_AUTO)
+		device = autoLoadMethod();
 
 	// change current dir to roms directory
-	switch(method)
-	{
-		case METHOD_DVD:
-			browser.dir[0] = 0;
-			if(MountDVD(NOTSILENT))
-				if(ParseDVDdirectory()) // Parse root directory
-					SwitchDVDFolder(GCSettings.LoadFolder); // switch to ROM folder
-			break;
-		default:
-			sprintf(browser.dir, "/%s/", GCSettings.LoadFolder);
-			CleanupPath(browser.dir);
-			ParseDirectory(method); // Parse root directory
-			break;
-	}
+	if(device > 0)
+		sprintf(browser.dir, "%s%s", pathPrefix[device], GCSettings.LoadFolder);
+	else
+		browser.dir[0] = 0;
+	
+	BrowserChangeFolder();
 	return browser.numEntries;
 }

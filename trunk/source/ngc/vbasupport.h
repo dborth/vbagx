@@ -20,12 +20,12 @@ extern u32 RomIdCode;
 extern bool TiltSideways;
 extern char RomTitle[];
 
-bool LoadVBAROM(int method);
+bool LoadVBAROM();
 void InitialisePalette();
 bool IsGameboyGame();
-bool LoadBatteryOrState(char * filepath, int method, int action, bool silent);
-bool LoadBatteryOrStateAuto(int method, int action, bool silent);
-bool SaveBatteryOrState(char * filepath, int method, int action, bool silent);
-bool SaveBatteryOrStateAuto(int method, int action, bool silent);
+bool LoadBatteryOrState(char * filepath, int action, bool silent);
+bool LoadBatteryOrStateAuto(int action, bool silent);
+bool SaveBatteryOrState(char * filepath, int action, bool silent);
+bool SaveBatteryOrStateAuto(int action, bool silent);
 
 #endif

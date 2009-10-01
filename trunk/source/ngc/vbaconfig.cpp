@@ -51,8 +51,8 @@ DefaultSettings ()
 	/************** GameCube/Wii Settings *********************/
 	ResetControls(); // controller button mappings
 
-	GCSettings.LoadMethod = METHOD_AUTO; // Auto, SD, DVD, USB, Network (SMB)
-	GCSettings.SaveMethod = METHOD_AUTO; // Auto, SD, Memory Card Slot A, Memory Card Slot B, USB, Network (SMB)
+	GCSettings.LoadMethod = DEVICE_AUTO; // Auto, SD, DVD, USB, Network (SMB)
+	GCSettings.SaveMethod = DEVICE_AUTO; // Auto, SD, Memory Card Slot A, Memory Card Slot B, USB, Network (SMB)
 	sprintf (GCSettings.LoadFolder,"vbagx/roms"); // Path to game files
 	sprintf (GCSettings.SaveFolder,"vbagx/saves"); // Path to save files
 	sprintf (GCSettings.CheatFolder,"vbagx/cheats"); // Path to cheat files
