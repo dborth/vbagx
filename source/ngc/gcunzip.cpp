@@ -101,7 +101,7 @@ IsZipFile (char *buffer)
 ******************************************************************************/
 
 int
-UnZipBuffer (unsigned char *outbuffer, int method)
+UnZipBuffer (unsigned char *outbuffer, int device)
 {
 	PKZIPHEADER pkzip;
 	int zipoffset = 0;
@@ -116,9 +116,9 @@ UnZipBuffer (unsigned char *outbuffer, int method)
 	int sizeread = 0;
 
 	// Read Zip Header
-	switch (method)
+	switch (device)
 	{
-		case METHOD_DVD:
+		case DEVICE_DVD:
 			sizeread = dvd_safe_read (readbuffer, ZIPCHUNK, 0);
 			break;
 		default:
@@ -188,9 +188,9 @@ UnZipBuffer (unsigned char *outbuffer, int method)
 		zipoffset = 0;
 		zipchunk = ZIPCHUNK;
 
-		switch (method)
+		switch (device)
 		{
-			case METHOD_DVD:
+			case DEVICE_DVD:
 				readoffset += ZIPCHUNK;
 				sizeread = dvd_safe_read (readbuffer, ZIPCHUNK, readoffset);
 				break;
@@ -223,17 +223,17 @@ done:
 ***************************************************************************/
 
 char *
-GetFirstZipFilename (int method)
+GetFirstZipFilename ()
 {
 	char * firstFilename = NULL;
 	char tempbuffer[ZIPCHUNK];
 	char filepath[1024];
 
-	if(!MakeFilePath(filepath, FILE_ROM, method))
+	if(!MakeFilePath(filepath, FILE_ROM))
 		return NULL;
 
 	// read start of ZIP
-	if(LoadFile (tempbuffer, filepath, ZIPCHUNK, method, NOTSILENT))
+	if(LoadFile (tempbuffer, filepath, ZIPCHUNK, NOTSILENT))
 	{
 		tempbuffer[28] = 0; // truncate - filename length is 2 bytes long (bytes 26-27)
 		int namelength = tempbuffer[26]; // filename length starts 26 bytes in
@@ -338,7 +338,7 @@ static SZ_RESULT SzFileReadImp(void *object, void **buffer, size_t maxRequiredSi
 	// read data
 	switch (szMethod)
 	{
-		case METHOD_DVD:
+		case DEVICE_DVD:
 			sizeread = dvd_safe_read(sz_buffer, maxRequiredSize, offset);
 			break;
 		default:
@@ -383,9 +383,14 @@ static SZ_RESULT SzFileSeekImp(void *object, CFileSize pos)
 * It parses the entire 7z for full browsing capability
 ***************************************************************************/
 
-int SzParse(char * filepath, int method)
+int SzParse(char * filepath)
 {
 	if(!filepath)
+		return 0;
+	
+	int device;
+	
+	if(!FindDevice(browser.dir, &device))
 		return 0;
 
 	int nbfiles = 0;
@@ -400,22 +405,22 @@ int SzParse(char * filepath, int method)
 	SzArchiveStream.pos = 0;
 
 	// open file
-	switch (method)
+	switch (device)
 	{
-		case METHOD_SD:
-		case METHOD_USB:
-		case METHOD_SMB:
+		case DEVICE_SD:
+		case DEVICE_USB:
+		case DEVICE_SMB:
 			file = fopen (filepath, "rb");
 			if(!file)
 				return 0;
 			break;
-		case METHOD_DVD:
+		case DEVICE_DVD:
 			SwitchDVDFolder(filepath);
 			break;
 	}
 
-	// set szMethod to current chosen load method
-	szMethod = method;
+	// set szMethod to current chosen load device
+	szMethod = device;
 
 	// set handler functions for reading data from SD/USB/SMB/DVD
 	SzArchiveStream.InStream.Read = SzFileReadImp;
@@ -502,11 +507,11 @@ int SzParse(char * filepath, int method)
 	CancelAction();
 
 	// close file
-	switch (method)
+	switch (device)
 	{
-		case METHOD_SD:
-		case METHOD_USB:
-		case METHOD_SMB:
+		case DEVICE_SD:
+		case DEVICE_USB:
+		case DEVICE_SMB:
 			fclose(file);
 			break;
 	}

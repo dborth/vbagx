@@ -258,21 +258,19 @@ int MemCPUWriteBatteryFile(char * membuffer)
 * action = FILE_SNAPSHOT - Load state
 ****************************************************************************/
 
-bool LoadBatteryOrState(char * filepath, int method, int action, bool silent)
+bool LoadBatteryOrState(char * filepath, int action, bool silent)
 {
 	bool result = false;
 	int offset = 0;
-
-	if(method == METHOD_AUTO)
-		method = autoSaveMethod(silent); // we use 'Save' because we need R/W
-
-	if(method == METHOD_AUTO)
-		return false;
+	int device;
+		
+	if(!FindDevice(filepath, &device))
+		return 0;
 
 	AllocSaveBuffer();
 
 	// load the file into savebuffer
-	offset = LoadFile(filepath, method, silent);
+	offset = LoadFile(filepath, silent);
 
 	// load savebuffer into VBA memory
 	if (offset > 0)
@@ -312,44 +310,34 @@ bool LoadBatteryOrState(char * filepath, int method, int action, bool silent)
 	return result;
 }
 
-bool LoadBatteryOrStateAuto(int method, int action, bool silent)
+bool LoadBatteryOrStateAuto(int action, bool silent)
 {
-	if(method == METHOD_AUTO)
-		method = autoSaveMethod(silent);
-
-	if(method == METHOD_AUTO)
-		return false;
-
 	char filepath[MAXPATHLEN];
-	char fullpath[MAXPATHLEN];
 	char filepath2[MAXPATHLEN];
-	char fullpath2[MAXPATHLEN];
 
-	if(!MakeFilePath(filepath, action, method, ROMFilename, 0))
+	if(!MakeFilePath(filepath, action, ROMFilename, 0))
 		return false;
 
 	if (action==FILE_SRAM)
 	{
-		if (LoadBatteryOrState(filepath, method, action, SILENT))
+		if (LoadBatteryOrState(filepath, action, SILENT))
 			return true;
 
 		// look for file with no number or Auto appended
-		if(!MakeFilePath(filepath2, action, method, ROMFilename, -1))
+		if(!MakeFilePath(filepath2, action, ROMFilename, -1))
 			return false;
 
-		if(LoadBatteryOrState(filepath2, method, action, silent))
+		if(LoadBatteryOrState(filepath2, action, silent))
 		{
 			// rename this file - append Auto
-			sprintf(fullpath, "%s%s", rootdir, filepath); // add device to path
-			sprintf(fullpath2, "%s%s", rootdir, filepath2); // add device to path
-			rename(fullpath2, fullpath); // rename file (to avoid duplicates)
+			rename(filepath2, filepath); // rename file (to avoid duplicates)
 			return true;
 		}
 		return false;
 	}
 	else
 	{
-		return LoadBatteryOrState(filepath, method, action, silent);
+		return LoadBatteryOrState(filepath, action, silent);
 	}
 }
 
@@ -360,21 +348,19 @@ bool LoadBatteryOrStateAuto(int method, int action, bool silent)
 * action = 1 - Save state
 ****************************************************************************/
 
-bool SaveBatteryOrState(char * filepath, int method, int action, bool silent)
+bool SaveBatteryOrState(char * filepath, int action, bool silent)
 {
 	bool result = false;
 	int offset = 0;
 	int datasize = 0; // we need the actual size of the data written
 	int imgSize = 0; // image screenshot bytes written
-
-	if(method == METHOD_AUTO)
-		method = autoSaveMethod(silent);
-
-	if(method == METHOD_AUTO)
-		return false;
+	int device;
+	
+	if(!FindDevice(filepath, &device))
+		return 0;
 
 	// save screenshot - I would prefer to do this from gameScreenTex
-	if(action == FILE_SNAPSHOT && gameScreenTex2 != NULL && method != METHOD_MC_SLOTA && method != METHOD_MC_SLOTB)
+	if(action == FILE_SNAPSHOT && gameScreenTex2 != NULL && device != DEVICE_MC_SLOTA && device != DEVICE_MC_SLOTB)
 	{
 		AllocSaveBuffer ();
 
@@ -392,7 +378,7 @@ bool SaveBatteryOrState(char * filepath, int method, int action, bool silent)
 			strncpy(screenpath, filepath, 1024);
 			screenpath[strlen(screenpath)-4] = 0;
 			sprintf(screenpath, "%s.png", screenpath);
-			SaveFile(screenpath, imgSize, method, silent);
+			SaveFile(screenpath, imgSize, silent);
 		}
 
 		FreeSaveBuffer ();
@@ -401,7 +387,7 @@ bool SaveBatteryOrState(char * filepath, int method, int action, bool silent)
 	AllocSaveBuffer();
 
 	// set comments for Memory Card saves
-	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
+	if(device == DEVICE_MC_SLOTA || device == DEVICE_MC_SLOTB)
 	{
 		char savecomments[2][32];
 		char savetype[10];
@@ -468,7 +454,7 @@ bool SaveBatteryOrState(char * filepath, int method, int action, bool silent)
 	// write savebuffer into file
 	if(datasize > 0)
 	{
-		offset = SaveFile(filepath, datasize, method, silent);
+		offset = SaveFile(filepath, datasize, silent);
 
 		if(offset > 0)
 		{
@@ -488,20 +474,14 @@ bool SaveBatteryOrState(char * filepath, int method, int action, bool silent)
 	return result;
 }
 
-bool SaveBatteryOrStateAuto(int method, int action, bool silent)
+bool SaveBatteryOrStateAuto(int action, bool silent)
 {
-	if(method == METHOD_AUTO)
-		method = autoSaveMethod(silent);
-
-	if(method == METHOD_AUTO)
-		return false;
-
 	char filepath[1024];
 
-	if(!MakeFilePath(filepath, action, method, ROMFilename, 0))
+	if(!MakeFilePath(filepath, action, ROMFilename, 0))
 		return false;
 
-	return SaveBatteryOrState(filepath, method, action, silent);
+	return SaveBatteryOrState(filepath, action, silent);
 }
 
 /****************************************************************************
@@ -878,7 +858,7 @@ static void ApplyPerImagePreferences()
 	}
 }
 
-void LoadPatch(int method)
+void LoadPatch()
 {
 	int patchsize = 0;
 	int patchtype;
@@ -893,7 +873,7 @@ void LoadPatch(int method)
 
 	for(patchtype=0; patchtype<3; patchtype++)
 	{
-		patchsize = LoadFile(patchpath[patchtype], method, SILENT);
+		patchsize = LoadFile(patchpath[patchtype], SILENT);
 
 		if(patchsize)
 			break;
@@ -932,7 +912,7 @@ void LoadPatch(int method)
 
 extern bool gbUpdateSizes();
 
-bool LoadGBROM(int method)
+bool LoadGBROM()
 {
 	gbRom = (u8 *)memalign(32, 1024*1024*4); // allocate 4 MB to GB ROM
 	bios = (u8 *)calloc(1,0x100);
@@ -943,21 +923,23 @@ bool LoadGBROM(int method)
 	{
 		char filepath[1024];
 
-		if(!MakeFilePath(filepath, FILE_ROM, method))
+		if(!MakeFilePath(filepath, FILE_ROM))
 			return false;
 
-		gbRomSize = LoadFile ((char *)gbRom, filepath, browserList[browser.selIndex].length, method, NOTSILENT);
+		gbRomSize = LoadFile ((char *)gbRom, filepath, browserList[browser.selIndex].length, NOTSILENT);
 	}
 	else
 	{
-		switch (method)
+		int device = GCSettings.LoadMethod;
+		
+		switch (device)
 		{
-			case METHOD_SD:
-			case METHOD_USB:
-			case METHOD_SMB:
+			case DEVICE_SD:
+			case DEVICE_USB:
+			case DEVICE_SMB:
 				gbRomSize = LoadSzFile(szpath, (unsigned char *)gbRom);
 				break;
-			case METHOD_DVD:
+			case DEVICE_DVD:
 				gbRomSize = SzExtractFile(browserList[browser.selIndex].offset, (unsigned char *)gbRom);
 				break;
 		}
@@ -969,7 +951,7 @@ bool LoadGBROM(int method)
 	return gbUpdateSizes();
 }
 
-bool LoadVBAROM(int method)
+bool LoadVBAROM()
 {
 	cartridgeType = 0;
 	bool loaded = false;
@@ -982,7 +964,7 @@ bool LoadVBAROM(int method)
 	else if(utilIsZipFile(browserList[browser.selIndex].filename))
 	{
 		// we need to check the file extension of the first file in the archive
-		char * zippedFilename = GetFirstZipFilename (method);
+		char * zippedFilename = GetFirstZipFilename ();
 
 		if(zippedFilename != NULL)
 		{
@@ -1023,7 +1005,7 @@ bool LoadVBAROM(int method)
 			emulator = GBASystem;
 			srcWidth = 240;
 			srcHeight = 160;
-			loaded = VMCPULoadROM(method);
+			loaded = VMCPULoadROM();
 			srcPitch = 484;
 			soundSetSampleRate(44100 / 2);
 			cpuSaveType = 0;
@@ -1051,7 +1033,7 @@ bool LoadVBAROM(int method)
 				gbBorderRowSkip = 0;
 			}
 
-			loaded = LoadGBROM(method);
+			loaded = LoadGBROM();
 			srcPitch = 324;
 			soundSetSampleRate(44100);
 			break;
@@ -1075,7 +1057,7 @@ bool LoadVBAROM(int method)
 			//if (gbHardware & 5)
 			//gbCPUInit(gbBiosFileName, useBios);
 
-			LoadPatch(method);
+			LoadPatch();
 
 			// Apply preferences specific to this game
 			gbApplyPerImagePreferences();
@@ -1099,7 +1081,7 @@ bool LoadVBAROM(int method)
 
 			soundReset();
 			CPUInit(NULL, false);
-			LoadPatch(method);
+			LoadPatch();
 			CPUReset();
 		}
 
@@ -1124,9 +1106,6 @@ bool LoadVBAROM(int method)
 
 void InitialisePalette()
 {
-	#ifdef CARLLOG
-	log("InitialisePalette();");
-	#endif
 	int i;
 	// Build GBPalette
 	for( i = 0; i < 24; )

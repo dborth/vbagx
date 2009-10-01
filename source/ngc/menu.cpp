@@ -931,76 +931,63 @@ static int MenuGameSelection()
 	#endif
 
 	// populate initial directory listing
-	if(OpenGameList() <= 0)
-	{
-		int choice = WindowPrompt(
-		"Error",
-		"Games directory is inaccessible on selected load device.",
-		"Retry",
-		"Check Settings");
+	OpenGameList();
 
-		if(choice)
-			menu = MENU_GAMESELECTION;
-		else
-			menu = MENU_SETTINGS_FILE;
-	}
-	else
-	{
-		gameBrowser.ResetState();
-		gameBrowser.fileList[0]->SetState(STATE_SELECTED);
-		gameBrowser.TriggerUpdate();
+	gameBrowser.ResetState();
+	gameBrowser.fileList[0]->SetState(STATE_SELECTED);
+	gameBrowser.TriggerUpdate();
 
-		while(menu == MENU_NONE)
+	while(menu == MENU_NONE)
+	{
+		usleep(THREAD_SLEEP);
+
+		// update gameWindow based on arrow buttons
+		// set MENU_EXIT if A button pressed on a game
+		for(i=0; i < FILE_PAGESIZE; i++)
 		{
-			usleep(THREAD_SLEEP);
-
-			// update gameWindow based on arrow buttons
-			// set MENU_EXIT if A button pressed on a game
-			for(i=0; i < FILE_PAGESIZE; i++)
+			if(gameBrowser.fileList[i]->GetState() == STATE_CLICKED)
 			{
-				if(gameBrowser.fileList[i]->GetState() == STATE_CLICKED)
+				gameBrowser.fileList[i]->ResetState();
+				// check corresponding browser entry
+				if(browserList[browser.selIndex].isdir || IsSz())
 				{
-					gameBrowser.fileList[i]->ResetState();
-					// check corresponding browser entry
-					if(browserList[browser.selIndex].isdir || IsSz())
-					{
-						if(IsSz())
-							res = BrowserLoadSz(GCSettings.LoadMethod);
-						else
-							res = BrowserChangeFolder(GCSettings.LoadMethod);
+					if(IsSz())
+						res = BrowserLoadSz();
+					else
+						res = BrowserChangeFolder();
 
-						if(res)
-						{
-							gameBrowser.ResetState();
-							gameBrowser.fileList[0]->SetState(STATE_SELECTED);
-							gameBrowser.TriggerUpdate();
-						}
-						else
-						{
-							menu = MENU_GAMESELECTION;
-							break;
-						}
+					if(res)
+					{
+						gameBrowser.ResetState();
+						gameBrowser.fileList[0]->SetState(STATE_SELECTED);
+						gameBrowser.TriggerUpdate();
 					}
 					else
 					{
-						#ifdef HW_RVL
-						ShutoffRumble();
-						#endif
-						mainWindow->SetState(STATE_DISABLED);
-						if(BrowserLoadFile(GCSettings.LoadMethod))
-							menu = MENU_EXIT;
-						else
-							mainWindow->SetState(STATE_DEFAULT);
+						menu = MENU_GAMESELECTION;
+						break;
 					}
 				}
+				else
+				{
+					#ifdef HW_RVL
+					ShutoffRumble();
+					#endif
+					mainWindow->SetState(STATE_DISABLED);
+					if(BrowserLoadFile())
+						menu = MENU_EXIT;
+					else
+						mainWindow->SetState(STATE_DEFAULT);
+				}
 			}
-
-			if(settingsBtn.GetState() == STATE_CLICKED)
-				menu = MENU_SETTINGS;
-			else if(exitBtn.GetState() == STATE_CLICKED)
-				ExitRequested = 1;
 		}
+
+		if(settingsBtn.GetState() == STATE_CLICKED)
+			menu = MENU_SETTINGS;
+		else if(exitBtn.GetState() == STATE_CLICKED)
+			ExitRequested = 1;
 	}
+
 	HaltGui();
 	mainWindow->Remove(&titleTxt);
 	mainWindow->Remove(&buttonWindow);
@@ -1274,19 +1261,19 @@ static int MenuGame()
 
 		if (GCSettings.AutoSave == 1)
 		{
-			SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SRAM, SILENT); // save battery
+			SaveBatteryOrStateAuto(FILE_SRAM, SILENT); // save battery
 		}
 		else if (GCSettings.AutoSave == 2)
 		{
 			if (WindowPrompt("Save", "Save Snapshot?", "Save", "Don't Save") )
-				SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SNAPSHOT, NOTSILENT); // save state
+				SaveBatteryOrStateAuto(FILE_SNAPSHOT, NOTSILENT); // save state
 		}
 		else if (GCSettings.AutoSave == 3)
 		{
 			if (WindowPrompt("Save", "Save SRAM and Snapshot?", "Save", "Don't Save") )
 			{
-				SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SRAM, NOTSILENT); // save battery
-				SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SNAPSHOT, NOTSILENT); // save state
+				SaveBatteryOrStateAuto(FILE_SRAM, NOTSILENT); // save battery
+				SaveBatteryOrStateAuto(FILE_SNAPSHOT, NOTSILENT); // save state
 			}
 		}
 	}
@@ -1445,7 +1432,7 @@ static int FindGameSaveNum(char * savefile, int method)
 	int romlen = strlen(ROMFilename);
 	int savelen = strlen(savefile);
 
-	if(romlen > 26 && (method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB))
+	if(romlen > 26 && (method == DEVICE_MC_SLOTA || method == DEVICE_MC_SLOTB))
 		romlen = 26; // memory card filenames are a maximum of 32 chars
 
 	int diff = savelen-romlen;
@@ -1453,7 +1440,7 @@ static int FindGameSaveNum(char * savefile, int method)
 	if(strncmp(savefile, ROMFilename, romlen) != 0)
 		return -1;
 
-	if(method == METHOD_MC_SLOTA || method == METHOD_MC_SLOTB)
+	if(method == DEVICE_MC_SLOTA || method == DEVICE_MC_SLOTB)
 	{
 		if(diff == 2)
 			n = atoi(&savefile[savelen-2]);
@@ -1493,7 +1480,7 @@ static int MenuGameSaves(int action)
 	struct tm * timeinfo;
 	int method = GCSettings.SaveMethod;
 
-	if(method == METHOD_AUTO)
+	if(method == DEVICE_AUTO)
 		autoSaveMethod(NOTSILENT);
 
 	if(!ChangeInterface(method, NOTSILENT))
@@ -1563,18 +1550,18 @@ static int MenuGameSaves(int action)
 
 	memset(&saves, 0, sizeof(saves));
 
-	if(method == METHOD_MC_SLOTA)
+	if(method == DEVICE_MC_SLOTA)
 	{
 		ParseMCDirectory(CARD_SLOTA);
 	}
-	else if(method == METHOD_MC_SLOTB)
+	else if(method == DEVICE_MC_SLOTB)
 	{
 		ParseMCDirectory(CARD_SLOTB);
 	}
 	else
 	{
-		strncpy(browser.dir, GCSettings.SaveFolder, 200);
-		ParseDirectory(GCSettings.SaveMethod, true);
+		sprintf(browser.dir, "%s%s", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder);
+		ParseDirectory(true);
 	}
 
 	len = strlen(ROMFilename);
@@ -1604,18 +1591,18 @@ static int MenuGameSaves(int action)
 			saves.files[saves.type[j]][n] = 1;
 			strncpy(saves.filename[j], browserList[i].filename, MAXJOLIET);
 
-			if(method != METHOD_MC_SLOTA && method != METHOD_MC_SLOTB)
+			if(method != DEVICE_MC_SLOTA && method != DEVICE_MC_SLOTB)
 			{
 				if(saves.type[j] == FILE_SNAPSHOT)
 				{
-					sprintf(scrfile, "%s/%s.png", GCSettings.SaveFolder, tmp);
+					sprintf(scrfile, "%s%s/%s.png", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, tmp);
 
 					AllocSaveBuffer();
-					if(LoadFile(scrfile, GCSettings.SaveMethod, SILENT))
+					if(LoadFile(scrfile, SILENT))
 						saves.previewImg[j] = new GuiImageData(savebuffer);
 					FreeSaveBuffer();
 				}
-				snprintf(filepath, 1024, "%s%s/%s", rootdir, GCSettings.SaveFolder, saves.filename[j]);
+				snprintf(filepath, 1024, "%s%s/%s", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, saves.filename[j]);
 				if (stat(filepath, &filestat) == 0)
 				{
 					timeinfo = localtime(&filestat.st_mtime);
@@ -1657,15 +1644,15 @@ static int MenuGameSaves(int action)
 
 			if(action == 0) // load
 			{
-				MakeFilePath(filepath, saves.type[ret], method, saves.filename[ret]);
+				MakeFilePath(filepath, saves.type[ret], saves.filename[ret]);
 				switch(saves.type[ret])
 				{
 					case FILE_SRAM:
-						result = LoadBatteryOrState(filepath, GCSettings.SaveMethod, saves.type[ret], NOTSILENT);
+						result = LoadBatteryOrState(filepath, saves.type[ret], NOTSILENT);
 						emulator.emuReset();
 						break;
 					case FILE_SNAPSHOT:
-						result = LoadBatteryOrState(filepath, GCSettings.SaveMethod, saves.type[ret], NOTSILENT);
+						result = LoadBatteryOrState(filepath, saves.type[ret], NOTSILENT);
 						break;
 				}
 				if(result)
@@ -1681,8 +1668,8 @@ static int MenuGameSaves(int action)
 
 					if(i < 100)
 					{
-						MakeFilePath(filepath, FILE_SRAM, method, ROMFilename, i);
-						SaveBatteryOrState(filepath, GCSettings.SaveMethod, FILE_SRAM, NOTSILENT);
+						MakeFilePath(filepath, FILE_SRAM, ROMFilename, i);
+						SaveBatteryOrState(filepath, FILE_SRAM, NOTSILENT);
 						menu = MENU_GAME_SAVE;
 					}
 				}
@@ -1694,21 +1681,21 @@ static int MenuGameSaves(int action)
 
 					if(i < 100)
 					{
-						MakeFilePath(filepath, FILE_SNAPSHOT, method, ROMFilename, i);
-						SaveBatteryOrState(filepath, GCSettings.SaveMethod, FILE_SNAPSHOT, NOTSILENT);
+						MakeFilePath(filepath, FILE_SNAPSHOT, ROMFilename, i);
+						SaveBatteryOrState(filepath, FILE_SNAPSHOT, NOTSILENT);
 						menu = MENU_GAME_SAVE;
 					}
 				}
 				else // overwrite SRAM/Snapshot
 				{
-					MakeFilePath(filepath, saves.type[ret], method, saves.filename[ret]);
+					MakeFilePath(filepath, saves.type[ret], saves.filename[ret]);
 					switch(saves.type[ret])
 					{
 						case FILE_SRAM:
-							SaveBatteryOrState(filepath, GCSettings.SaveMethod, FILE_SRAM, NOTSILENT);
+							SaveBatteryOrState(filepath, FILE_SRAM, NOTSILENT);
 							break;
 						case FILE_SNAPSHOT:
-							SaveBatteryOrState(filepath, GCSettings.SaveMethod, FILE_SNAPSHOT, NOTSILENT);
+							SaveBatteryOrState(filepath, FILE_SNAPSHOT, NOTSILENT);
 							break;
 					}
 					menu = MENU_GAME_SAVE;
@@ -3126,35 +3113,35 @@ static int MenuSettingsFile()
 
 			// no USB ports on GameCube
 			#ifdef HW_DOL
-			if(GCSettings.LoadMethod == METHOD_USB)
+			if(GCSettings.LoadMethod == DEVICE_USB)
 				GCSettings.LoadMethod++;
-			if(GCSettings.SaveMethod == METHOD_USB)
+			if(GCSettings.SaveMethod == DEVICE_USB)
 				GCSettings.SaveMethod++;
 			#endif
 
 			// saving to DVD is impossible
-			if(GCSettings.SaveMethod == METHOD_DVD)
+			if(GCSettings.SaveMethod == DEVICE_DVD)
 				GCSettings.SaveMethod++;
 
 			// disable DVD in GC mode (not implemented)
 			#ifdef HW_DOL
-			if(GCSettings.LoadMethod == METHOD_DVD)
+			if(GCSettings.LoadMethod == DEVICE_DVD)
 				GCSettings.LoadMethod++;
 			#endif
 
 			// disable SMB in GC mode (stalls out)
 			#ifdef HW_DOL
-			if(GCSettings.LoadMethod == METHOD_SMB)
+			if(GCSettings.LoadMethod == DEVICE_SMB)
 				GCSettings.LoadMethod++;
-			if(GCSettings.SaveMethod == METHOD_SMB)
+			if(GCSettings.SaveMethod == DEVICE_SMB)
 				GCSettings.SaveMethod++;
 			#endif
 
 			// disable MC saving in Wii mode - does not work for some reason!
 			#ifdef HW_RVL
-			if(GCSettings.SaveMethod == METHOD_MC_SLOTA)
+			if(GCSettings.SaveMethod == DEVICE_MC_SLOTA)
 				GCSettings.SaveMethod++;
-			if(GCSettings.SaveMethod == METHOD_MC_SLOTB)
+			if(GCSettings.SaveMethod == DEVICE_MC_SLOTB)
 				GCSettings.SaveMethod++;
 			options.name[7][0] = 0;
 			#endif
@@ -3165,18 +3152,18 @@ static int MenuSettingsFile()
 			if(GCSettings.SaveMethod > 6)
 				GCSettings.SaveMethod = 0;
 
-			if (GCSettings.LoadMethod == METHOD_AUTO) sprintf (options.value[0],"Auto Detect");
-			else if (GCSettings.LoadMethod == METHOD_SD) sprintf (options.value[0],"SD");
-			else if (GCSettings.LoadMethod == METHOD_USB) sprintf (options.value[0],"USB");
-			else if (GCSettings.LoadMethod == METHOD_DVD) sprintf (options.value[0],"DVD");
-			else if (GCSettings.LoadMethod == METHOD_SMB) sprintf (options.value[0],"Network");
+			if (GCSettings.LoadMethod == DEVICE_AUTO) sprintf (options.value[0],"Auto Detect");
+			else if (GCSettings.LoadMethod == DEVICE_SD) sprintf (options.value[0],"SD");
+			else if (GCSettings.LoadMethod == DEVICE_USB) sprintf (options.value[0],"USB");
+			else if (GCSettings.LoadMethod == DEVICE_DVD) sprintf (options.value[0],"DVD");
+			else if (GCSettings.LoadMethod == DEVICE_SMB) sprintf (options.value[0],"Network");
 
-			if (GCSettings.SaveMethod == METHOD_AUTO) sprintf (options.value[1],"Auto Detect");
-			else if (GCSettings.SaveMethod == METHOD_SD) sprintf (options.value[1],"SD");
-			else if (GCSettings.SaveMethod == METHOD_USB) sprintf (options.value[1],"USB");
-			else if (GCSettings.SaveMethod == METHOD_SMB) sprintf (options.value[1],"Network");
-			else if (GCSettings.SaveMethod == METHOD_MC_SLOTA) sprintf (options.value[1],"MC Slot A");
-			else if (GCSettings.SaveMethod == METHOD_MC_SLOTB) sprintf (options.value[1],"MC Slot B");
+			if (GCSettings.SaveMethod == DEVICE_AUTO) sprintf (options.value[1],"Auto Detect");
+			else if (GCSettings.SaveMethod == DEVICE_SD) sprintf (options.value[1],"SD");
+			else if (GCSettings.SaveMethod == DEVICE_USB) sprintf (options.value[1],"USB");
+			else if (GCSettings.SaveMethod == DEVICE_SMB) sprintf (options.value[1],"Network");
+			else if (GCSettings.SaveMethod == DEVICE_MC_SLOTA) sprintf (options.value[1],"MC Slot A");
+			else if (GCSettings.SaveMethod == DEVICE_MC_SLOTB) sprintf (options.value[1],"MC Slot B");
 
 			snprintf (options.value[2], 30, "%s", GCSettings.LoadFolder);
 			snprintf (options.value[3], 30, "%s", GCSettings.SaveFolder);

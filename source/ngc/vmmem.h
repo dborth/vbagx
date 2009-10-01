@@ -11,7 +11,7 @@
 #ifndef __VBAVMHDR__
 #define __VBAVMHDR__
 
-bool VMCPULoadROM(int method);
+bool VMCPULoadROM();
 void VMClose();
 
 #ifdef USE_VM

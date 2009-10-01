@@ -52,8 +52,7 @@ int ConfigRequested = 0;
 int ShutdownRequested = 0;
 int ResetRequested = 0;
 int ExitRequested = 0;
-char appPath[1024];
-int appLoadMethod = METHOD_AUTO;
+char appPath[1024] = { 0 };
 
 extern FILE *out;
 
@@ -89,7 +88,7 @@ void ExitApp()
 	SavePrefs(SILENT);
 
 	if (ROMLoaded && !ConfigRequested && GCSettings.AutoSave == 1)
-		SaveBatteryOrStateAuto(GCSettings.SaveMethod, FILE_SRAM, SILENT);
+		SaveBatteryOrStateAuto(FILE_SRAM, SILENT);
 
 	ExitCleanup();
 
@@ -175,35 +174,6 @@ static void ipl_set_config(unsigned char c)
 	exi[0] &= 0x405;	//deselect IPL
 }
 #endif
-
-static void CreateAppPath(char origpath[])
-{
-#ifdef HW_DOL
-	sprintf(appPath, GCSettings.SaveFolder);
-#else
-	char path[1024];
-	strncpy(path, origpath, 1024); // make a copy so we don't mess up original
-
-	char * loc;
-	int pos = -1;
-
-	if(strncmp(path, "sd:/", 5) == 0 || strncmp(path, "fat:/", 5) == 0)
-		appLoadMethod = METHOD_SD;
-	else if(strncmp(path, "usb:/", 5) == 0)
-		appLoadMethod = METHOD_USB;
-
-	loc = strrchr(path,'/');
-	if (loc != NULL)
-		*loc = 0; // strip file name
-
-	loc = strchr(path,'/'); // looking for first / (after sd: or usb:)
-	if (loc != NULL)
-		pos = loc - path + 1;
-
-	if(pos >= 0 && pos < 1024)
-		sprintf(appPath, &(path[pos]));
-#endif
-}
 
 /****************************************************************************
  * USB Gecko Debugging
@@ -318,9 +288,10 @@ int main(int argc, char *argv[])
 	InitGUIThreads();
 
 	// store path app was loaded from
-	sprintf(appPath, "vbagx");
+#ifdef HW_RVL
 	if(argc > 0 && argv[0] != NULL)
 		CreateAppPath(argv[0]);
+#endif
 
 	StartWiiKeyboardMouse();
 
