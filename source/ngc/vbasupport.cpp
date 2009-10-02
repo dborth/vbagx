@@ -867,9 +867,9 @@ void LoadPatch()
 
 	char patchpath[3][512];
 	memset(patchpath, 0, sizeof(patchpath));
-	sprintf(patchpath[0], "%s/%s.ips",browser.dir,ROMFilename);
-	sprintf(patchpath[1], "%s/%s.ups",browser.dir,ROMFilename);
-	sprintf(patchpath[2], "%s/%s.ppf",browser.dir,ROMFilename);
+	sprintf(patchpath[0], "%s%s.ips",browser.dir,ROMFilename);
+	sprintf(patchpath[1], "%s%s.ups",browser.dir,ROMFilename);
+	sprintf(patchpath[2], "%s%s.ppf",browser.dir,ROMFilename);
 
 	for(patchtype=0; patchtype<3; patchtype++)
 	{
