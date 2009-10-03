@@ -260,7 +260,7 @@ int MemCPUWriteBatteryFile(char * membuffer)
 bool LoadBatteryOrState(char * filepath, int action, bool silent)
 {
 	bool result = false;
-	int offset = 0;
+	size_t offset = 0;
 	int device;
 		
 	if(!FindDevice(filepath, &device))
@@ -350,9 +350,9 @@ bool LoadBatteryOrStateAuto(int action, bool silent)
 bool SaveBatteryOrState(char * filepath, int action, bool silent)
 {
 	bool result = false;
-	int offset = 0;
-	int datasize = 0; // we need the actual size of the data written
-	int imgSize = 0; // image screenshot bytes written
+	size_t offset = 0;
+	size_t datasize = 0; // we need the actual size of the data written
+	size_t imgSize = 0; // image screenshot bytes written
 	int device;
 	
 	if(!FindDevice(filepath, &device))
@@ -939,7 +939,7 @@ bool LoadGBROM()
 				gbRomSize = LoadSzFile(szpath, (unsigned char *)gbRom);
 				break;
 			case DEVICE_DVD:
-				gbRomSize = SzExtractFile(browserList[browser.selIndex].offset, (unsigned char *)gbRom);
+				gbRomSize = SzExtractFile(browserList[browser.selIndex].filenum, (unsigned char *)gbRom);
 				break;
 		}
 	}
