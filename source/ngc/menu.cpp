@@ -28,7 +28,6 @@
 #include "networkop.h"
 #include "memcardop.h"
 #include "fileop.h"
-#include "dvd.h"
 #include "vbaconfig.h"
 #include "preferences.h"
 #include "button_mapping.h"
@@ -3122,12 +3121,6 @@ static int MenuSettingsFile()
 			// saving to DVD is impossible
 			if(GCSettings.SaveMethod == DEVICE_DVD)
 				GCSettings.SaveMethod++;
-
-			// disable DVD in GC mode (not implemented)
-			#ifdef HW_DOL
-			if(GCSettings.LoadMethod == DEVICE_DVD)
-				GCSettings.LoadMethod++;
-			#endif
 
 			// disable SMB in GC mode (stalls out)
 			#ifdef HW_DOL

@@ -160,7 +160,7 @@ bool VMCPULoadROM()
 	VMClose();
 	VMAllocGBA();
 	GBAROMSize = 0;
-	int device = GCSettings.LoadMethod;
+
 	rom = (u8 *)MEM2Storage;
 
 	if(!inSz)
@@ -174,17 +174,7 @@ bool VMCPULoadROM()
 	}
 	else
 	{
-		switch (device)
-		{
-			case DEVICE_SD:
-			case DEVICE_USB:
-			case DEVICE_SMB:
-				GBAROMSize = LoadSzFile(szpath, (unsigned char *)rom);
-				break;
-			case DEVICE_DVD:
-				GBAROMSize = SzExtractFile(browserList[browser.selIndex].offset, (unsigned char *)rom);
-				break;
-		}
+		GBAROMSize = LoadSzFile(szpath, (unsigned char *)rom);
 	}
 
 	if(GBAROMSize)
