@@ -648,10 +648,10 @@ FreeSaveBuffer ()
  * Loads the selected file # from the specified 7z into rbuffer
  * Returns file size
  ***************************************************************************/
-u32
+size_t
 LoadSzFile(char * filepath, unsigned char * rbuffer)
 {
-	u32 size = 0;
+	size_t size = 0;
 
 	// stop checking if devices were removed/inserted
 	// since we're loading a file
@@ -680,12 +680,12 @@ LoadSzFile(char * filepath, unsigned char * rbuffer)
 /****************************************************************************
  * LoadFile
  ***************************************************************************/
-u32
-LoadFile (char * rbuffer, char *filepath, u32 length, bool silent)
+size_t
+LoadFile (char * rbuffer, char *filepath, size_t length, bool silent)
 {
 	char zipbuffer[2048];
-	u32 size = 0;
-	u32 readsize = 0;
+	size_t size = 0;
+	size_t readsize = 0;
 	int retry = 1;
 	int device;
 	
@@ -736,8 +736,8 @@ LoadFile (char * rbuffer, char *filepath, u32 length, bool silent)
 
 								memcpy (rbuffer, zipbuffer, readsize); // copy what we already read
 
-								u32 offset = readsize;
-								u32 nextread = 0;
+								size_t offset = readsize;
+								size_t nextread = 0;
 								while(offset < size)
 								{
 									if(size - offset > 4*1024) nextread = 4*1024;
@@ -782,7 +782,7 @@ LoadFile (char * rbuffer, char *filepath, u32 length, bool silent)
 	return size;
 }
 
-u32 LoadFile(char * filepath, bool silent)
+size_t LoadFile(char * filepath, bool silent)
 {
 	return LoadFile((char *)savebuffer, filepath, 0, silent);
 }
@@ -791,10 +791,10 @@ u32 LoadFile(char * filepath, bool silent)
  * SaveFile
  * Write buffer to file
  ***************************************************************************/
-u32
-SaveFile (char * buffer, char *filepath, u32 datasize, bool silent)
+size_t
+SaveFile (char * buffer, char *filepath, size_t datasize, bool silent)
 {
-	u32 written = 0;
+	size_t written = 0;
 	int retry = 1;
 	int device;
 		
@@ -823,7 +823,7 @@ SaveFile (char * buffer, char *filepath, u32 datasize, bool silent)
 
 			if (file > 0)
 			{
-				u32 writesize, nextwrite;
+				size_t writesize, nextwrite;
 				while(written < datasize)
 				{
 					if(datasize - written > 4*1024) nextwrite=4*1024;
@@ -854,7 +854,7 @@ SaveFile (char * buffer, char *filepath, u32 datasize, bool silent)
 	return written;
 }
 
-u32 SaveFile(char * filepath, u32 datasize, bool silent)
+size_t SaveFile(char * filepath, size_t datasize, bool silent)
 {
 	return SaveFile((char *)savebuffer, filepath, datasize, silent);
 }

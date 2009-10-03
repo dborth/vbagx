@@ -504,7 +504,7 @@ int BrowserLoadSz()
 int BrowserLoadFile()
 {
 	int device;
-			
+
 	if(!FindDevice(browser.dir, &device))
 		return 0;
 
@@ -544,7 +544,7 @@ int BrowserChangeFolder()
 {
 	int device = 0;
 	FindDevice(browser.dir, &device);
-	
+
 	if(inSz && browser.selIndex == 0) // inside a 7z, requesting to leave
 	{
 		inSz = false;
