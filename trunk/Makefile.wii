@@ -41,7 +41,7 @@ LDFLAGS		= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with
 #---------------------------------------------------------------------------------
-LIBS	:=	-ldb -ldi -lpng -lmxml -lwiikeyboard \
+LIBS	:=	-ldb -ldi -liso9660 -lpng -lmxml -lwiikeyboard \
 			-lfat -lwiiuse -lz -lbte -logc -lasnd -lvorbisidec -lfreetype -ltinysmb
 
 #---------------------------------------------------------------------------------

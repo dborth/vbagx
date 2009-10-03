@@ -29,7 +29,6 @@
 #include "vbasupport.h"
 #include "preferences.h"
 #include "audio.h"
-#include "dvd.h"
 #include "networkop.h"
 #include "filebrowser.h"
 #include "fileop.h"
@@ -277,7 +276,6 @@ int main(int argc, char *argv[])
 	DVD_Init ();
 	#endif
 
-	SetDVDDriveType(); // Check if DVD drive belongs to a Wii
 	InitialiseSound();
 	InitialisePalette();
 	DefaultSettings (); // Set defaults

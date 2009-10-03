@@ -21,7 +21,6 @@
 #endif
 
 #include "vba.h"
-#include "dvd.h"
 #include "vbasupport.h"
 #include "vmmem.h"
 #include "filebrowser.h"
@@ -196,10 +195,6 @@ int UpdateDirName()
 		return 1;
 
 	FindDevice(browser.dir, &device);
-
-	// update DVD directory
-	if(device == DEVICE_DVD)
-		SetDVDdirectory(browserList[browser.selIndex].offset, browserList[browser.selIndex].length);
 
 	/* current directory doesn't change */
 	if (strcmp(browserList[browser.selIndex].filename,".") == 0)
@@ -552,9 +547,6 @@ int BrowserChangeFolder()
 	
 	if(inSz && browser.selIndex == 0) // inside a 7z, requesting to leave
 	{
-		if(device == DEVICE_DVD)
-			SetDVDdirectory(browserList[0].offset, browserList[0].length);
-
 		inSz = false;
 		SzClose();
 	}
@@ -567,18 +559,7 @@ int BrowserChangeFolder()
 	ResetBrowser(); // reset browser
 
 	if(browser.dir[0] != 0)
-	{
-		switch (device)
-		{
-			case DEVICE_DVD:
-				ParseDVDdirectory();
-				break;
-	
-			default:
-				ParseDirectory();
-				break;
-		}
-	}
+		ParseDirectory();
 
 	if(browser.numEntries == 0)
 	{

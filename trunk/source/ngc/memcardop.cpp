@@ -21,7 +21,6 @@
 #include "preferences.h"
 #include "filebrowser.h"
 #include "fileop.h"
-#include "dvd.h"
 #include "images/saveicon.h"
 
 static u8 * SysArea = NULL;
