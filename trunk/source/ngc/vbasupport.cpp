@@ -36,7 +36,6 @@
 #include "vba.h"
 #include "fileop.h"
 #include "filebrowser.h"
-#include "dvd.h"
 #include "memcardop.h"
 #include "audio.h"
 #include "vmmem.h"
