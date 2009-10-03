@@ -22,7 +22,6 @@
 
 #include "vba.h"
 #include "fileop.h"
-#include "dvd.h"
 #include "menu.h"
 #include "filebrowser.h"
 #include "gcunzip.h"
