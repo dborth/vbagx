@@ -268,14 +268,14 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 	}
 	else
 	{
+		if(GCSettings.SaveMethod == DEVICE_AUTO)
+			GCSettings.SaveMethod = autoSaveMethod(SILENT);
+
+		if(GCSettings.SaveMethod == DEVICE_AUTO)
+			return false;
+
 		switch(type)
 		{
-			if(GCSettings.SaveMethod == DEVICE_AUTO)
-				GCSettings.SaveMethod = autoSaveMethod(SILENT);
-			
-			if(GCSettings.SaveMethod == DEVICE_AUTO)
-				return false;
-			
 			case FILE_SRAM:
 			case FILE_SNAPSHOT:
 				sprintf(folder, GCSettings.SaveFolder);
