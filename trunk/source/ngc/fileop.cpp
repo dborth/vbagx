@@ -502,25 +502,29 @@ bool ParseDirEntries()
 			continue;
 		}
 		
-		if(AddBrowserEntry())
+		if(!AddBrowserEntry())
 		{
-			strncpy(browserList[browser.numEntries+i].filename, filename, MAXJOLIET);
-			browserList[browser.numEntries+i].length = filestat.st_size;
-			browserList[browser.numEntries+i].mtime = filestat.st_mtime;
-			browserList[browser.numEntries+i].isdir = (filestat.st_mode & _IFDIR) == 0 ? 0 : 1; // flag this as a dir
-	
-			if(browserList[browser.numEntries+i].isdir)
-			{
-				if(strcmp(filename, "..") == 0)
-					sprintf(browserList[browser.numEntries+i].displayname, "Up One Level");
-				else
-					strncpy(browserList[browser.numEntries+i].displayname, browserList[browser.numEntries+i].filename, MAXJOLIET);
-				browserList[browser.numEntries+i].icon = ICON_FOLDER;
-			}
+			i=0;
+			parseHalt = true;
+			break;
+		}
+
+		strncpy(browserList[browser.numEntries+i].filename, filename, MAXJOLIET);
+		browserList[browser.numEntries+i].length = filestat.st_size;
+		browserList[browser.numEntries+i].mtime = filestat.st_mtime;
+		browserList[browser.numEntries+i].isdir = (filestat.st_mode & _IFDIR) == 0 ? 0 : 1; // flag this as a dir
+
+		if(browserList[browser.numEntries+i].isdir)
+		{
+			if(strcmp(filename, "..") == 0)
+				sprintf(browserList[browser.numEntries+i].displayname, "Up One Level");
 			else
-			{
-				StripExt(browserList[browser.numEntries+i].displayname, browserList[browser.numEntries+i].filename); // hide file extension
-			}
+				strncpy(browserList[browser.numEntries+i].displayname, browserList[browser.numEntries+i].filename, MAXJOLIET);
+			browserList[browser.numEntries+i].icon = ICON_FOLDER;
+		}
+		else
+		{
+			StripExt(browserList[browser.numEntries+i].displayname, browserList[browser.numEntries+i].filename); // hide file extension
 		}
 	}
 
@@ -658,7 +662,7 @@ LoadSzFile(char * filepath, unsigned char * rbuffer)
 	HaltDeviceThread();
 
 	// halt parsing
-	parseHalt = true;
+	HaltParseThread();
 
 	file = fopen (filepath, "rb");
 	if (file > 0)
@@ -692,86 +696,92 @@ LoadFile (char * rbuffer, char *filepath, size_t length, bool silent)
 	if(!FindDevice(filepath, &device))
 		return 0;
 
-	if(device == DEVICE_MC_SLOTA)
-		return LoadMCFile (rbuffer, CARD_SLOTA, StripDevice(filepath), silent);
-	else if(device == DEVICE_MC_SLOTB)
-		return LoadMCFile (rbuffer, CARD_SLOTB, StripDevice(filepath), silent);
-
 	// stop checking if devices were removed/inserted
 	// since we're loading a file
 	HaltDeviceThread();
 
 	// halt parsing
-	parseHalt = true;
+	HaltParseThread();
 
-	// open the file
-	while(!size && retry == 1)
+	if(device == DEVICE_MC_SLOTA)
 	{
-		if(ChangeInterface(device, silent))
+		size = LoadMCFile (rbuffer, CARD_SLOTA, StripDevice(filepath), silent);
+	}
+	else if(device == DEVICE_MC_SLOTB)
+	{
+		size = LoadMCFile (rbuffer, CARD_SLOTB, StripDevice(filepath), silent);
+	}
+	else
+	{
+		// open the file
+		while(!size && retry == 1)
 		{
-			file = fopen (filepath, "rb");
-
-			if(file > 0)
+			if(ChangeInterface(device, silent))
 			{
-				if(length > 0 && length <= 2048) // do a partial read (eg: to check file header)
+				file = fopen (filepath, "rb");
+	
+				if(file > 0)
 				{
-					size = fread (rbuffer, 1, length, file);
-				}
-				else // load whole file
-				{
-					readsize = fread (zipbuffer, 1, 2048, file);
-
-					if(readsize > 0)
+					if(length > 0 && length <= 2048) // do a partial read (eg: to check file header)
 					{
-						if (IsZipFile (zipbuffer))
+						size = fread (rbuffer, 1, length, file);
+					}
+					else // load whole file
+					{
+						readsize = fread (zipbuffer, 1, 2048, file);
+	
+						if(readsize > 0)
 						{
-							size = UnZipBuffer ((unsigned char *)rbuffer); // unzip
-						}
-						else
-						{
-							struct stat fileinfo;
-							if(fstat(file->_file, &fileinfo) == 0)
+							if (IsZipFile (zipbuffer))
 							{
-								size = fileinfo.st_size;
-
-								memcpy (rbuffer, zipbuffer, readsize); // copy what we already read
-
-								size_t offset = readsize;
-								size_t nextread = 0;
-								while(offset < size)
+								size = UnZipBuffer ((unsigned char *)rbuffer); // unzip
+							}
+							else
+							{
+								struct stat fileinfo;
+								if(fstat(file->_file, &fileinfo) == 0)
 								{
-									if(size - offset > 4*1024) nextread = 4*1024;
-									else nextread = size-offset;
-									ShowProgress ("Loading...", offset, size);
-									readsize = fread (rbuffer + offset, 1, nextread, file); // read in next chunk
-
-									if(readsize <= 0 || readsize > nextread)
-										break; // read failure
-
-									if(readsize > 0)
-										offset += readsize;
+									size = fileinfo.st_size;
+	
+									memcpy (rbuffer, zipbuffer, readsize); // copy what we already read
+	
+									size_t offset = readsize;
+									size_t nextread = 0;
+									while(offset < size)
+									{
+										if(size - offset > 4*1024) nextread = 4*1024;
+										else nextread = size-offset;
+										ShowProgress ("Loading...", offset, size);
+										readsize = fread (rbuffer + offset, 1, nextread, file); // read in next chunk
+	
+										if(readsize <= 0 || readsize > nextread)
+											break; // read failure
+	
+										if(readsize > 0)
+											offset += readsize;
+									}
+									CancelAction();
+	
+									if(offset != size) // # bytes read doesn't match # expected
+										size = 0;
 								}
-								CancelAction();
-
-								if(offset != size) // # bytes read doesn't match # expected
-									size = 0;
 							}
 						}
 					}
+					fclose (file);
 				}
-				fclose (file);
 			}
-		}
-		if(!size)
-		{
-			if(!silent)
+			if(!size)
 			{
-				unmountRequired[device] = true;
-				retry = ErrorPromptRetry("Error loading file!");
-			}
-			else
-			{
-				retry = 0;
+				if(!silent)
+				{
+					unmountRequired[device] = true;
+					retry = ErrorPromptRetry("Error loading file!");
+				}
+				else
+				{
+					retry = 0;
+				}
 			}
 		}
 	}
@@ -804,46 +814,55 @@ SaveFile (char * buffer, char *filepath, size_t datasize, bool silent)
 	if(datasize == 0)
 		return 0;
 
+	// stop checking if devices were removed/inserted
+	// since we're loading a file
+	HaltDeviceThread();
+
+	// halt parsing
+	HaltParseThread();
+
 	ShowAction("Saving...");
 
 	if(device == DEVICE_MC_SLOTA)
-		return SaveMCFile (buffer, CARD_SLOTA, StripDevice(filepath), datasize, silent);
-	else if(device == DEVICE_MC_SLOTB)
-		return SaveMCFile (buffer, CARD_SLOTB, StripDevice(filepath), datasize, silent);
-
-	// stop checking if devices were removed/inserted
-	// since we're saving a file
-	HaltDeviceThread();
-
-	while(!written && retry == 1)
 	{
-		if(ChangeInterface(device, silent))
+		written = SaveMCFile (buffer, CARD_SLOTA, StripDevice(filepath), datasize, silent);
+	}
+	else if(device == DEVICE_MC_SLOTB)
+	{
+		written = SaveMCFile (buffer, CARD_SLOTB, StripDevice(filepath), datasize, silent);
+	}
+	else
+	{
+		while(!written && retry == 1)
 		{
-			file = fopen (filepath, "wb");
-
-			if (file > 0)
+			if(ChangeInterface(device, silent))
 			{
-				size_t writesize, nextwrite;
-				while(written < datasize)
+				file = fopen (filepath, "wb");
+	
+				if (file > 0)
 				{
-					if(datasize - written > 4*1024) nextwrite=4*1024;
-					else nextwrite = datasize-written;
-					writesize = fwrite (buffer+written, 1, nextwrite, file);
-					if(writesize != nextwrite) break; // write failure
-					written += writesize;
+					size_t writesize, nextwrite;
+					while(written < datasize)
+					{
+						if(datasize - written > 4*1024) nextwrite=4*1024;
+						else nextwrite = datasize-written;
+						writesize = fwrite (buffer+written, 1, nextwrite, file);
+						if(writesize != nextwrite) break; // write failure
+						written += writesize;
+					}
+	
+					if(written != datasize) written = 0;
+					fclose (file);
 				}
-
-				if(written != datasize) written = 0;
-				fclose (file);
 			}
-		}
-		if(!written)
-		{
-			unmountRequired[device] = true;
-			if(!silent)
-				retry = ErrorPromptRetry("Error saving file!");
-			else
-				retry = 0;
+			if(!written)
+			{
+				unmountRequired[device] = true;
+				if(!silent)
+					retry = ErrorPromptRetry("Error saving file!");
+				else
+					retry = 0;
+			}
 		}
 	}
 
