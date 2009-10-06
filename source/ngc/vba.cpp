@@ -61,9 +61,6 @@ extern FILE *out;
 
 static void ExitCleanup()
 {
-#ifdef HW_RVL
-	ShutoffRumble();
-#endif
 	ShutdownAudio();
 	StopGX();
 	if (out) fclose(out);
@@ -84,6 +81,10 @@ static void ExitCleanup()
 
 void ExitApp()
 {
+#ifdef HW_RVL
+	ShutoffRumble();
+#endif
+
 	SavePrefs(SILENT);
 
 	if (ROMLoaded && !ConfigRequested && GCSettings.AutoSave == 1)
