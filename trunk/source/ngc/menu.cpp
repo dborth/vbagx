@@ -987,6 +987,7 @@ static int MenuGameSelection()
 			ExitRequested = 1;
 	}
 
+	HaltParseThread(); // halt parsing
 	HaltGui();
 	mainWindow->Remove(&titleTxt);
 	mainWindow->Remove(&buttonWindow);

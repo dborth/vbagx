@@ -547,6 +547,7 @@ decodePalsData ()
  * Save Preferences
  ***************************************************************************/
 static char prefpath[MAXPATHLEN] = { 0 };
+static char palpath[MAXPATHLEN] = { 0 };
 
 bool
 SavePrefs (bool silent)
@@ -568,7 +569,7 @@ SavePrefs (bool silent)
 	}
 	else
 	{
-		device = autoLoadMethod();
+		device = autoSaveMethod(silent);
 		
 		if(device == 0)
 			return false;
@@ -576,7 +577,7 @@ SavePrefs (bool silent)
 		if(device == DEVICE_MC_SLOTA || device == DEVICE_MC_SLOTB)
 			sprintf(filepath, "%s%s", pathPrefix[device], PREF_FILE_NAME);
 		else
-			sprintf(filepath, "%ssnes9x/%s", pathPrefix[device], PREF_FILE_NAME);
+			sprintf(filepath, "%s%s/%s", pathPrefix[device], APPFOLDER, PREF_FILE_NAME);
 	}
 	
 	if(device == 0)
@@ -690,9 +691,9 @@ bool SavePalettes(bool silent)
 	int offset = 0;
 	int device = 0;
 
-	if(prefpath[0] != 0)
+	if(palpath[0] != 0)
 	{
-		strcpy(filepath, prefpath);
+		strcpy(filepath, palpath);
 		FindDevice(filepath, &device);
 	}
 	else if(appPath[0] != 0)
@@ -702,7 +703,7 @@ bool SavePalettes(bool silent)
 	}
 	else
 	{
-		device = autoLoadMethod();
+		device = autoSaveMethod(silent);
 		
 		if(device == 0)
 			return false;
@@ -710,7 +711,7 @@ bool SavePalettes(bool silent)
 		if(device == DEVICE_MC_SLOTA || device == DEVICE_MC_SLOTB)
 			sprintf(filepath, "%s%s", pathPrefix[device], PAL_FILE_NAME);
 		else
-			sprintf(filepath, "%ssnes9x/%s", pathPrefix[device], PAL_FILE_NAME);
+			sprintf(filepath, "%s%s/%s", pathPrefix[device], APPFOLDER, PAL_FILE_NAME);
 	}
 	
 	if(device == 0)
@@ -787,6 +788,7 @@ bool LoadPalettes()
 	int offset = 0;
 	char filepath[4][MAXPATHLEN];
 	int numDevices;
+	int i;
 	
 	AllocSaveBuffer ();
 	
@@ -803,7 +805,7 @@ bool LoadPalettes()
 	sprintf(filepath[3], "mcb:/%s", PAL_FILE_NAME);
 #endif
 
-	for(int i=0; i<numDevices; i++)
+	for(i=0; i<numDevices; i++)
 	{
 		offset = LoadFile(filepath[i], SILENT);
 		
@@ -813,6 +815,9 @@ bool LoadPalettes()
 
 	if (offset > 0)
 		retval = decodePalsData ();
+	
+	if(retval)
+		strcpy(palpath, filepath[i]);
 
 	FreeSaveBuffer ();
 
