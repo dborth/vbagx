@@ -929,19 +929,7 @@ bool LoadGBROM()
 	}
 	else
 	{
-		int device = GCSettings.LoadMethod;
-		
-		switch (device)
-		{
-			case DEVICE_SD:
-			case DEVICE_USB:
-			case DEVICE_SMB:
-				gbRomSize = LoadSzFile(szpath, (unsigned char *)gbRom);
-				break;
-			case DEVICE_DVD:
-				gbRomSize = SzExtractFile(browserList[browser.selIndex].filenum, (unsigned char *)gbRom);
-				break;
-		}
+		gbRomSize = LoadSzFile(szpath, (unsigned char *)gbRom);
 	}
 
 	if(gbRomSize <= 0)
