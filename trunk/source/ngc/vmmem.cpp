@@ -268,7 +268,7 @@ int VMCPULoadROM()
 	char filepath[MAXPATHLEN];
 
 	if(!MakeFilePath(filepath, FILE_ROM))
-		return false;
+		return 0;
 
 	// loading compressed files via VM is not supported
 	if(!utilIsGBAImage(filepath))
@@ -304,9 +304,8 @@ int VMCPULoadROM()
 		return 0;
 	}
 
-	struct stat fileinfo;
-	fstat(romfile->_file, &fileinfo);
-	GBAROMSize = fileinfo.st_size;
+	fseeko(romfile,0,SEEK_END);
+	GBAROMSize = ftello(romfile);
 
 	vmpageno = 0;
 	vmpage[0].pageptr = rombase;
