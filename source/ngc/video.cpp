@@ -516,7 +516,6 @@ ResetVideo_Emu ()
 	GXRModeObj * rmode = FindVideoMode();
 
 	SetupVideoMode(rmode); // reconfigure VI
-	VIDEO_SetPreRetraceCallback(NULL);
 
 	// reconfigure GX
 	GX_SetViewport (0, 0, rmode->fbWidth, rmode->efbHeight, 0, 1);
@@ -729,7 +728,6 @@ ResetVideo_Menu ()
 	GXRModeObj * rmode = FindVideoMode();
 
 	SetupVideoMode(rmode); // reconfigure VI
-	VIDEO_SetPreRetraceCallback((VIRetraceCallback)UpdatePads);
 
 	// clears the bg to color and clears the z buffer
 	GXColor background = {0, 0, 0, 255};
@@ -792,6 +790,7 @@ void Menu_Render()
 	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
 	GX_SetColorUpdate(GX_TRUE);
 	GX_CopyDisp(xfb[whichfb],GX_TRUE);
+	GX_DrawDone();
 	VIDEO_SetNextFramebuffer(xfb[whichfb]);
 	VIDEO_Flush();
 	VIDEO_WaitVSync();
@@ -847,7 +846,6 @@ void Menu_DrawImg(f32 xpos, f32 ypos, u16 width, u16 height, u8 data[],
 	GX_Color4u8(0xFF,0xFF,0xFF,alpha);
 	GX_TexCoord2f32(0, 1);
 	GX_End();
-	GX_DrawDone();
 	GX_LoadPosMtxImm (GXmodelView2D, GX_PNMTX0);
 
 	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
@@ -886,5 +884,4 @@ void Menu_DrawRectangle(f32 x, f32 y, f32 width, f32 height, GXColor color, u8 f
 		GX_Color4u8(color.r, color.g, color.b, color.a);
 	}
 	GX_End();
-	GX_DrawDone();
 }
