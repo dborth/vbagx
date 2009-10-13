@@ -111,15 +111,6 @@ vbgetback (void *arg)
 }
 
 /****************************************************************************
- * InitVideoThread
- ***************************************************************************/
-void
-InitVideoThread ()
-{
-	LWP_CreateThread (&vbthread, vbgetback, NULL, vbstack, TSTACK, 100);
-}
-
-/****************************************************************************
  * copy_to_xfb
  *
  * Stock code to copy the GX buffer to the current display mode.
@@ -136,7 +127,6 @@ copy_to_xfb (u32 arg)
 	}
 	FrameTimer++;
 }
-
 
 /****************************************************************************
  * Scaler Support Functions
@@ -260,29 +250,6 @@ static inline void draw_cursor(Mtx v)
 		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
 }
 #endif
-
-/****************************************************************************
- * StartGX
- *
- * Initialises GX and sets it up for use
- ***************************************************************************/
-static void StartGX ()
-{
-	GXColor background = { 0, 0, 0, 0xff };
-
-	/*** Clear out FIFO area ***/
-	memset (gp_fifo, 0, DEFAULT_FIFO_SIZE);
-
-	/*** Initialise GX ***/
-	GX_Init (&gp_fifo, DEFAULT_FIFO_SIZE);
-	GX_SetCopyClear (background, 0x00ffffff);
-
-	GX_SetDispCopyGamma (GX_GM_1_0);
-	GX_SetCullMode (GX_CULL_NONE);
-
-	GX_CopyDisp (xfb[whichfb], GX_TRUE); // reset xfb
-	GX_Flush();
-}
 
 /****************************************************************************
  * StopGX
@@ -420,10 +387,21 @@ static void SetupVideoMode(GXRModeObj * mode)
 void
 InitializeVideo ()
 {
+	VIDEO_Init();
 	GXRModeObj *rmode = FindVideoMode();
 	SetupVideoMode(rmode);
-	StartGX ();
-	InitVideoThread ();
+
+	LWP_CreateThread (&vbthread, vbgetback, NULL, vbstack, TSTACK, 68);
+
+	// Initialise GX
+	GXColor background = { 0, 0, 0, 0xff };
+	memset (gp_fifo, 0, DEFAULT_FIFO_SIZE);
+	GX_Init (&gp_fifo, DEFAULT_FIFO_SIZE);
+	GX_SetCopyClear (background, 0x00ffffff);
+	GX_SetDispCopyGamma (GX_GM_1_0);
+	GX_SetCullMode (GX_CULL_NONE);
+	GX_CopyDisp (xfb[whichfb], GX_TRUE); // reset xfb
+	GX_Flush();
 
 	#ifdef HW_RVL
 	pointer[0] = new GuiImageData(player1_point_png);
