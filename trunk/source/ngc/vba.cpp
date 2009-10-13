@@ -250,20 +250,12 @@ int main(int argc, char *argv[])
 
 	InitDeviceThread();
 	VIDEO_Init();
-	PAD_Init();
-
-	#ifdef HW_RVL
-	WPAD_Init();
-	#endif
+	SetupPads();
 
 	InitializeVideo();
 	ResetVideo_Menu (); // change to menu video mode
 
 	#ifdef HW_RVL
-	// read wiimote accelerometer and IR data
-	WPAD_SetDataFormat(WPAD_CHAN_ALL,WPAD_FMT_BTNS_ACC_IR);
-	WPAD_SetVRes(WPAD_CHAN_ALL,screenwidth,screenheight);
-
 	// Wii Power/Reset buttons
 	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
 	SYS_SetPowerCallback(ShutdownCB);
