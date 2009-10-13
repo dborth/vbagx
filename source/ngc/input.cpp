@@ -145,7 +145,7 @@ void ResetControls(int wiiCtrl)
 /****************************************************************************
  * UpdatePads
  *
- * called by PostRetraceCallback in InitGCVideo - scans pad and wpad
+ * Scans pad and wpad
  ***************************************************************************/
 void
 UpdatePads()
@@ -157,11 +157,6 @@ UpdatePads()
 
 	for(int i=3; i >= 0; i--)
 	{
-		#ifdef HW_RVL
-		memcpy(&userInput[i].wpad, WPAD_Data(i), sizeof(WPADData));
-		#endif
-
-		userInput[i].chan = i;
 		userInput[i].pad.btns_d = PAD_ButtonsDown(i);
 		userInput[i].pad.btns_u = PAD_ButtonsUp(i);
 		userInput[i].pad.btns_h = PAD_ButtonsHeld(i);
@@ -171,6 +166,33 @@ UpdatePads()
 		userInput[i].pad.substickY = PAD_SubStickY(i);
 		userInput[i].pad.triggerL = PAD_TriggerL(i);
 		userInput[i].pad.triggerR = PAD_TriggerR(i);
+	}
+}
+
+/****************************************************************************
+ * SetupPads
+ *
+ * Sets up userInput triggers for use
+ ***************************************************************************/
+void
+SetupPads()
+{
+	PAD_Init();
+
+	#ifdef HW_RVL
+	WPAD_Init();
+
+	// read wiimote accelerometer and IR data
+	WPAD_SetDataFormat(WPAD_CHAN_ALL,WPAD_FMT_BTNS_ACC_IR);
+	WPAD_SetVRes(WPAD_CHAN_ALL, screenwidth, screenheight);
+	#endif
+
+	for(int i=0; i < 4; i++)
+	{
+		userInput[i].chan = i;
+		#ifdef HW_RVL
+		userInput[i].wpad = WPAD_Data(i);
+		#endif
 	}
 }
 
@@ -770,9 +792,9 @@ static u32 DecodeJoy(unsigned short pad)
 	CursorVisible = false;
 
 #ifdef HW_RVL
-	CursorX = userInput[pad].wpad.ir.x;
-	CursorY = userInput[pad].wpad.ir.y;
-	CursorValid = userInput[pad].wpad.ir.valid;
+	CursorX = userInput[pad].wpad->ir.x;
+	CursorY = userInput[pad].wpad->ir.y;
+	CursorValid = userInput[pad].wpad->ir.valid;
 #else
 	CursorX = CursorY = CursorValid = 0;
 #endif
@@ -973,9 +995,9 @@ static u32 DecodeJoy(unsigned short pad)
 	{
 		if ((userInput[pad].pad.btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
 		#ifdef HW_RVL
-		|| ( (userInput[pad].wpad.exp.type == WPAD_EXP_NONE) && (userInput[pad].wpad.btns_h & btnmap[CTRLR_WIIMOTE][i]) ) // wiimote
-		|| ( (userInput[pad].wpad.exp.type == WPAD_EXP_CLASSIC) && (userInput[pad].wpad.btns_h & btnmap[CTRLR_CLASSIC][i]) ) // classic controller
-		|| ( (userInput[pad].wpad.exp.type == WPAD_EXP_NUNCHUK) && (userInput[pad].wpad.btns_h & btnmap[CTRLR_NUNCHUK][i]) ) // nunchuk + wiimote
+		|| ( (userInput[pad].wpad->exp.type == WPAD_EXP_NONE) && (userInput[pad].wpad->btns_h & btnmap[CTRLR_WIIMOTE][i]) ) // wiimote
+		|| ( (userInput[pad].wpad->exp.type == WPAD_EXP_CLASSIC) && (userInput[pad].wpad->btns_h & btnmap[CTRLR_CLASSIC][i]) ) // classic controller
+		|| ( (userInput[pad].wpad->exp.type == WPAD_EXP_NUNCHUK) && (userInput[pad].wpad->btns_h & btnmap[CTRLR_NUNCHUK][i]) ) // nunchuk + wiimote
 		|| ( (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) ) // keyboard
 		#endif
 		)
@@ -991,8 +1013,8 @@ bool MenuRequested()
 	{
 		if (
 			(userInput[i].pad.substickX < -70) ||
-			(userInput[i].wpad.btns_h & WPAD_BUTTON_HOME) ||
-			(userInput[i].wpad.btns_h & WPAD_CLASSIC_BUTTON_HOME) ||
+			(userInput[i].wpad->btns_h & WPAD_BUTTON_HOME) ||
+			(userInput[i].wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME) ||
 			(DownUsbKeys[KS_Escape])
 		)
 		{
