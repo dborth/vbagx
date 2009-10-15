@@ -23,6 +23,7 @@
 #include "audio.h"
 #include "video.h"
 #include "input.h"
+#include "gui/gui.h"
 #include "gameinput.h"
 #include "vbasupport.h"
 #include "wiiusbsupport.h"
@@ -287,8 +288,8 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 	// but with R as the B button like in Twilight Princess
 	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
 		J |= StandardDPad(pad);
-		signed char wm_sx = WPAD_Stick(pad,1,0); // CC right joystick
-		signed char wm_sy = WPAD_Stick(pad,1,1); // CC right joystick
+		s8 wm_sx = userInput[pad].WPAD_StickX(1); // CC right joystick
+		s8 wm_sy = userInput[pad].WPAD_StickY(1); // CC right joystick
 		static bool StickReady = true;
 		ActionButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
 		SwordButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
@@ -313,7 +314,7 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 	// Gamecube controls are based on Twilight Princess for the Gamecube
 	{
 		u32 gc = PAD_ButtonsHeld(pad);
-		signed char gc_px = PAD_SubStickX(pad);
+		s8 gc_px = PAD_SubStickX(pad);
 		if (gc_px > 70) J |= VBA_SPEED;
 		ActionButton = ActionButton || gc & PAD_BUTTON_A;
 		PullButton = PullButton || gc & PAD_TRIGGER_R;
@@ -619,8 +620,8 @@ static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	// but with R as the B button like in Twilight Princess
 	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
 		J |= StandardDPad(pad);
-		signed char wm_sx = WPAD_Stick(pad,1,0); // CC right joystick
-		signed char wm_sy = WPAD_Stick(pad,1,1); // CC right joystick
+		s8 wm_sx = userInput[pad].WPAD_StickX(1); // CC right joystick
+		s8 wm_sy = userInput[pad].WPAD_StickY(1); // CC right joystick
 		static bool StickReady = true;
 		ActionButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
 		SwordButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
@@ -645,7 +646,7 @@ static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	{
 		u32 gc = PAD_ButtonsHeld(pad);
 		u32 pressed = PAD_ButtonsDown(pad);
-		signed char gc_px = PAD_SubStickX(pad);
+		s8 gc_px = PAD_SubStickX(pad);
 		if (gc_px > 70) J |= VBA_SPEED;
 		ActionButton = ActionButton || gc & PAD_BUTTON_A;
 		PullButton = PullButton || gc & PAD_TRIGGER_R;
@@ -1214,8 +1215,8 @@ u32 MinishCapInput(unsigned short pad)
 	// but with R as the B button like in Twilight Princess
 	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
 		J |= StandardDPad(pad);
-		signed char wm_sx = WPAD_Stick(pad,1,0); // CC right joystick
-		signed char wm_sy = WPAD_Stick(pad,1,1); // CC right joystick
+		s8 wm_sx = userInput[pad].WPAD_StickX(1); // CC right joystick
+		s8 wm_sy = userInput[pad].WPAD_StickY(1); // CC right joystick
 		static bool StickReady = true;
 		ActionButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
 		SwordButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
@@ -1241,7 +1242,7 @@ u32 MinishCapInput(unsigned short pad)
 	{
 		u32 gc = PAD_ButtonsHeld(pad);
 		u32 pressed = PAD_ButtonsDown(pad);
-		signed char gc_px = PAD_SubStickX(pad);
+		s8 gc_px = PAD_SubStickX(pad);
 		if (gc_px > 70) J |= VBA_SPEED;
 		ActionButton = ActionButton || gc & PAD_BUTTON_A;
 		PullButton = PullButton || gc & PAD_TRIGGER_R;
