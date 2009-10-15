@@ -37,10 +37,10 @@ GuiTrigger userInput[4];
 static int rumbleCount[4] = {0,0,0,0};
 #endif
 
-bool cartridgeRumble = false, possibleCartridgeRumble = false;
-int gameRumbleCount = 0, menuRumbleCount = 0, rumbleCountAlready = 0;
+static bool cartridgeRumble = false, possibleCartridgeRumble = false;
+static int gameRumbleCount = 0, menuRumbleCount = 0, rumbleCountAlready = 0;
 
-unsigned int vbapadmap[10]; // VBA controller buttons
+static unsigned int vbapadmap[10]; // VBA controller buttons
 u32 btnmap[5][10]; // button mapping
 
 void ResetControls(int wiiCtrl)
@@ -299,71 +299,14 @@ void systemGameRumbleOnlyFor(int OnlyRumbleForFrames) {
 	gameRumbleCount = OnlyRumbleForFrames;
 }
 
-void systemMenuRumble(int RumbleForFrames) {
-	if (RumbleForFrames > menuRumbleCount) menuRumbleCount = RumbleForFrames;
-}
-
-/****************************************************************************
- * WPAD_Stick
- *
- * Get X/Y value from Wii Joystick (classic, nunchuk) input
- ***************************************************************************/
-
-s8 WPAD_Stick(u8 chan, u8 right, int axis)
-{
-	float mag = 0.0;
-	float ang = 0.0;
-	WPADData *data = WPAD_Data(chan);
-
-	switch (data->exp.type)
-	{
-		case WPAD_EXP_NUNCHUK:
-		case WPAD_EXP_GUITARHERO3:
-			if (right == 0)
-			{
-				mag = data->exp.nunchuk.js.mag;
-				ang = data->exp.nunchuk.js.ang;
-			}
-			break;
-
-		case WPAD_EXP_CLASSIC:
-			if (right == 0)
-			{
-				mag = data->exp.classic.ljs.mag;
-				ang = data->exp.classic.ljs.ang;
-			}
-			else
-			{
-				mag = data->exp.classic.rjs.mag;
-				ang = data->exp.classic.rjs.ang;
-			}
-			break;
-
-		default:
-			break;
-	}
-
-	/* calculate x/y value (angle need to be converted into radian) */
-	if (mag > 1.0) mag = 1.0;
-	else if (mag < -1.0) mag = -1.0;
-	double val;
-
-	if(axis == 0) // x-axis
-		val = mag * sin((PI * ang)/180.0f);
-	else // y-axis
-		val = mag * cos((PI * ang)/180.0f);
-
-	return (s8)(val * 128.0f);
-}
-
-u32 StandardMovement(unsigned short pad)
+u32 StandardMovement(unsigned short chan)
 {
 	u32 J = 0;
-	signed char pad_x = PAD_StickX (pad);
-	signed char pad_y = PAD_StickY (pad);
+	s8 pad_x = userInput[chan].pad.stickX;
+	s8 pad_y = userInput[chan].pad.stickY;
 	#ifdef HW_RVL
-	signed char wm_ax = WPAD_Stick ((u8)pad, 0, 0);
-	signed char wm_ay = WPAD_Stick ((u8)pad, 0, 1);
+	s8 wm_ax = userInput[0].WPAD_StickX(0);
+	s8 wm_ay = userInput[0].WPAD_StickY(0);
 	#endif
 	/***
 	Gamecube Joystick input, same as normal
@@ -714,10 +657,10 @@ u32 DecodeNunchuk(unsigned short pad)
 {
 	u32 J = 0;
 	#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
 	for (int i = 0; i < MAXJP; i++)
 	{
-		if ( (wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & btnmap[CTRLR_NUNCHUK][i]) )
+		if ( (userInput[pad].wpad->exp.type == WPAD_EXP_NUNCHUK) && 
+			 (userInput[pad].wpad->btns_h & btnmap[CTRLR_NUNCHUK][i]) )
 			J |= vbapadmap[i];
 	}
 	#endif
@@ -749,9 +692,8 @@ u32 PAD_ButtonsHeldFake(unsigned short pad)
 {
 	u32 gc = 0;
 	#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		gc = CCToGC(wp->btns_h);
+	if (userInput[pad].wpad->exp.type == WPAD_EXP_CLASSIC) {
+		gc = CCToGC(userInput[pad].wpad->btns_h);
 	}
 	#endif
 	return gc;
@@ -760,9 +702,8 @@ u32 PAD_ButtonsDownFake(unsigned short pad)
 {
 	u32 gc = 0;
 	#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		gc = CCToGC(wp->btns_d);
+	if (userInput[pad].wpad->exp.type == WPAD_EXP_CLASSIC) {
+		gc = CCToGC(userInput[pad].wpad->btns_d);
 	}
 	#endif
 	return gc;
@@ -771,9 +712,8 @@ u32 PAD_ButtonsUpFake(unsigned short pad)
 {
 	u32 gc = 0;
 	#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		gc = CCToGC(wp->btns_u);
+	if (userInput[pad].wpad->exp.type == WPAD_EXP_CLASSIC) {
+		gc = CCToGC(userInput[pad].wpad->btns_u);
 	}
 	#endif
 	return gc;

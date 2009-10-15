@@ -40,7 +40,6 @@ void DoRumble(int i);
 void systemGameRumble(int RumbleForFrames);
 void systemGameRumbleOnlyFor(int OnlyRumbleForFrames);
 void updateRumbleFrame();
-s8 WPAD_Stick(u8 chan,u8 right, int axis);
 u32 GetJoy(int which);
 bool MenuRequested();
 void SetupPads();
