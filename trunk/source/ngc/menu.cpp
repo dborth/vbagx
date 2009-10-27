@@ -988,6 +988,7 @@ static int MenuGameSelection()
 
 	HaltParseThread(); // halt parsing
 	HaltGui();
+	ResetBrowser();
 	mainWindow->Remove(&titleTxt);
 	mainWindow->Remove(&buttonWindow);
 	mainWindow->Remove(&gameBrowser);
@@ -1566,6 +1567,8 @@ static int MenuGameSaves(int action)
 	len = strlen(ROMFilename);
 
 	// find matching files
+	AllocSaveBuffer();
+
 	for(i=0; i < browser.numEntries; i++)
 	{
 		len2 = strlen(browserList[i].filename);
@@ -1596,10 +1599,9 @@ static int MenuGameSaves(int action)
 				{
 					sprintf(scrfile, "%s%s/%s.png", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, tmp);
 
-					AllocSaveBuffer();
+					memset(savebuffer, 0, SAVEBUFFERSIZE);
 					if(LoadFile(scrfile, SILENT))
 						saves.previewImg[j] = new GuiImageData(savebuffer);
-					FreeSaveBuffer();
 				}
 				snprintf(filepath, 1024, "%s%s/%s", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, saves.filename[j]);
 				if (stat(filepath, &filestat) == 0)
@@ -1613,6 +1615,7 @@ static int MenuGameSaves(int action)
 		}
 	}
 
+	FreeSaveBuffer();
 	saves.length = j;
 
 	if(saves.length == 0 && action == 0)
@@ -1733,6 +1736,7 @@ static int MenuGameSaves(int action)
 	mainWindow->Remove(&saveBrowser);
 	mainWindow->Remove(&w);
 	mainWindow->Remove(&titleTxt);
+	ResetBrowser();
 	return menu;
 }
 
