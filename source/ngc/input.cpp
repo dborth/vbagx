@@ -209,6 +209,7 @@ void ShutoffRumble()
 	{
 		WPAD_Rumble(i, 0);
 		rumbleCount[i] = 0;
+		rumbleRequest[i] = 0;
 	}
 #endif
 	PAD_ControlMotor(PAD_CHAN0, PAD_MOTOR_STOP);
