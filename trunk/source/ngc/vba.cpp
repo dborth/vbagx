@@ -244,7 +244,6 @@ int main(int argc, char *argv[])
 	#endif
 
 	#ifdef HW_RVL
-	DI_Close(); // fixes some black screen issues
 	DI_Init();	// first
 	#endif
 
