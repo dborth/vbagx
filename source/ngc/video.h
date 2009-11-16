@@ -19,9 +19,6 @@ void GX_Render_Init(int width, int height);
 void GX_Render(int width, int height, u8 * buffer, int pitch);
 void StopGX();
 void ResetVideo_Emu();
-void zoom (float speed);
-void zoom_reset ();
-
 void ResetVideo_Menu();
 void TakeScreenshot();
 void Menu_Render();

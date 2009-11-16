@@ -54,6 +54,7 @@ static GuiSound * enterSound = NULL;
 static GuiSound * exitSound = NULL;
 static GuiWindow * mainWindow = NULL;
 static GuiText * settingText = NULL;
+static GuiText * settingText2 = NULL;
 static int lastMenu = MENU_NONE;
 static int mapMenuCtrl = 0;
 
@@ -2448,26 +2449,42 @@ static int MenuSettingsMappingsMap()
  * MenuSettingsVideo
  ***************************************************************************/
 
-static void ScreenZoomWindowUpdate(void * ptr, float amount)
+static void ScreenZoomWindowUpdate(void * ptr, float h, float v)
 {
 	GuiButton * b = (GuiButton *)ptr;
 	if(b->GetState() == STATE_CLICKED)
 	{
-		GCSettings.ZoomLevel += amount;
-
-		char zoom[10];
-		sprintf(zoom, "%.2f%%", GCSettings.ZoomLevel*100);
+		char zoom[10], zoom2[10];
+		
+		if(IsGBAGame())
+		{
+			GCSettings.gbaZoomHor += h;
+			GCSettings.gbaZoomVert += v;
+			sprintf(zoom, "%.2f%%", GCSettings.gbaZoomHor*100);
+			sprintf(zoom2, "%.2f%%", GCSettings.gbaZoomVert*100);
+		}
+		else
+		{
+			GCSettings.gbZoomHor += h;
+			GCSettings.gbZoomVert += v;
+			sprintf(zoom, "%.2f%%", GCSettings.gbZoomHor*100);
+			sprintf(zoom2, "%.2f%%", GCSettings.gbZoomVert*100);
+		}
+		
 		settingText->SetText(zoom);
+		settingText2->SetText(zoom2);
 		b->ResetState();
 	}
 }
 
-static void ScreenZoomWindowLeftClick(void * ptr) { ScreenZoomWindowUpdate(ptr, -0.01); }
-static void ScreenZoomWindowRightClick(void * ptr) { ScreenZoomWindowUpdate(ptr, +0.01); }
+static void ScreenZoomWindowLeftClick(void * ptr) { ScreenZoomWindowUpdate(ptr, -0.01, 0); }
+static void ScreenZoomWindowRightClick(void * ptr) { ScreenZoomWindowUpdate(ptr, +0.01, 0); }
+static void ScreenZoomWindowUpClick(void * ptr) { ScreenZoomWindowUpdate(ptr, 0, +0.01); }
+static void ScreenZoomWindowDownClick(void * ptr) { ScreenZoomWindowUpdate(ptr, 0, -0.01); }
 
 static void ScreenZoomWindow()
 {
-	GuiWindow * w = new GuiWindow(250,250);
+	GuiWindow * w = new GuiWindow(200,200);
 	w->SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 
 	GuiTrigger trigA;
@@ -2482,6 +2499,12 @@ static void ScreenZoomWindow()
 	GuiTrigger trigRight;
 	trigRight.SetButtonOnlyInFocusTrigger(-1, WPAD_BUTTON_RIGHT | WPAD_CLASSIC_BUTTON_RIGHT, PAD_BUTTON_RIGHT);
 
+	GuiTrigger trigUp;
+	trigUp.SetButtonOnlyInFocusTrigger(-1, WPAD_BUTTON_UP | WPAD_CLASSIC_BUTTON_UP, PAD_BUTTON_UP);
+
+	GuiTrigger trigDown;
+	trigDown.SetButtonOnlyInFocusTrigger(-1, WPAD_BUTTON_DOWN | WPAD_CLASSIC_BUTTON_DOWN, PAD_BUTTON_DOWN);
+
 	GuiImageData arrowLeft(button_arrow_left_png);
 	GuiImage arrowLeftImg(&arrowLeft);
 	GuiImageData arrowLeftOver(button_arrow_left_over_png);
@@ -2489,7 +2512,8 @@ static void ScreenZoomWindow()
 	GuiButton arrowLeftBtn(arrowLeft.GetWidth(), arrowLeft.GetHeight());
 	arrowLeftBtn.SetImage(&arrowLeftImg);
 	arrowLeftBtn.SetImageOver(&arrowLeftOverImg);
-	arrowLeftBtn.SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
+	arrowLeftBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	arrowLeftBtn.SetPosition(50, 0);
 	arrowLeftBtn.SetTrigger(0, &trigA);
 	arrowLeftBtn.SetTrigger(1, &trigLeft);
 	arrowLeftBtn.SetSelectable(false);
@@ -2502,28 +2526,103 @@ static void ScreenZoomWindow()
 	GuiButton arrowRightBtn(arrowRight.GetWidth(), arrowRight.GetHeight());
 	arrowRightBtn.SetImage(&arrowRightImg);
 	arrowRightBtn.SetImageOver(&arrowRightOverImg);
-	arrowRightBtn.SetAlignment(ALIGN_RIGHT, ALIGN_MIDDLE);
+	arrowRightBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	arrowRightBtn.SetPosition(164, 0);
 	arrowRightBtn.SetTrigger(0, &trigA);
 	arrowRightBtn.SetTrigger(1, &trigRight);
 	arrowRightBtn.SetSelectable(false);
 	arrowRightBtn.SetUpdateCallback(ScreenZoomWindowRightClick);
 
-	settingText = new GuiText(NULL, 22, (GXColor){0, 0, 0, 255});
-	char zoom[10];
-	sprintf(zoom, "%.2f%%", GCSettings.ZoomLevel*100);
-	settingText->SetText(zoom);
+	GuiImageData arrowUp(button_arrow_up_png);
+	GuiImage arrowUpImg(&arrowUp);
+	GuiImageData arrowUpOver(button_arrow_up_over_png);
+	GuiImage arrowUpOverImg(&arrowUpOver);
+	GuiButton arrowUpBtn(arrowUp.GetWidth(), arrowUp.GetHeight());
+	arrowUpBtn.SetImage(&arrowUpImg);
+	arrowUpBtn.SetImageOver(&arrowUpOverImg);
+	arrowUpBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	arrowUpBtn.SetPosition(-76, -27);
+	arrowUpBtn.SetTrigger(0, &trigA);
+	arrowUpBtn.SetTrigger(1, &trigUp);
+	arrowUpBtn.SetSelectable(false);
+	arrowUpBtn.SetUpdateCallback(ScreenZoomWindowUpClick);
 
-	float currentZoom = GCSettings.ZoomLevel;
+	GuiImageData arrowDown(button_arrow_down_png);
+	GuiImage arrowDownImg(&arrowDown);
+	GuiImageData arrowDownOver(button_arrow_down_over_png);
+	GuiImage arrowDownOverImg(&arrowDownOver);
+	GuiButton arrowDownBtn(arrowDown.GetWidth(), arrowDown.GetHeight());
+	arrowDownBtn.SetImage(&arrowDownImg);
+	arrowDownBtn.SetImageOver(&arrowDownOverImg);
+	arrowDownBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	arrowDownBtn.SetPosition(-76, 27);
+	arrowDownBtn.SetTrigger(0, &trigA);
+	arrowDownBtn.SetTrigger(1, &trigDown);
+	arrowDownBtn.SetSelectable(false);
+	arrowDownBtn.SetUpdateCallback(ScreenZoomWindowDownClick);
+
+	GuiImageData screenPosition(screen_position_png);
+	GuiImage screenPositionImg(&screenPosition);
+	screenPositionImg.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+	screenPositionImg.SetPosition(0, 0);
+
+	settingText = new GuiText(NULL, 22, (GXColor){0, 0, 0, 255});
+	settingText2 = new GuiText(NULL, 22, (GXColor){0, 0, 0, 255});
+	char zoom[10], zoom2[10];
+	float currentZoomHor, currentZoomVert;
+	
+	if(IsGBAGame())
+	{
+		sprintf(zoom, "%.2f%%", GCSettings.gbaZoomHor*100);
+		sprintf(zoom2, "%.2f%%", GCSettings.gbaZoomVert*100);
+		currentZoomHor = GCSettings.gbaZoomHor;
+		currentZoomVert = GCSettings.gbaZoomVert;
+	}
+	else
+	{
+		sprintf(zoom, "%.2f%%", GCSettings.gbZoomHor*100);
+		sprintf(zoom2, "%.2f%%", GCSettings.gbZoomVert*100);
+		currentZoomHor = GCSettings.gbZoomHor;
+		currentZoomVert = GCSettings.gbZoomVert;
+	}
+
+	settingText->SetText(zoom);
+	settingText->SetPosition(108, 0);
+	settingText2->SetText(zoom2);
+	settingText2->SetPosition(-76, 0);
 
 	w->Append(&arrowLeftBtn);
 	w->Append(&arrowRightBtn);
+	w->Append(&arrowUpBtn);
+	w->Append(&arrowDownBtn);
+	w->Append(&screenPositionImg);
 	w->Append(settingText);
+	w->Append(settingText2);
+	
+	char windowName[20];
+	if(IsGBAGame())
+		sprintf(windowName, "GBA Screen Zoom");
+	else
+		sprintf(windowName, "GB Screen Zoom");
 
-	if(!SettingWindow("Screen Zoom",w))
-		GCSettings.ZoomLevel = currentZoom; // undo changes
+	if(!SettingWindow(windowName,w))
+	{
+		// undo changes
+		if(IsGBAGame())
+		{
+			GCSettings.gbaZoomHor = currentZoomHor;
+			GCSettings.gbaZoomVert = currentZoomVert;
+		}
+		else
+		{
+			GCSettings.gbZoomHor = currentZoomHor;
+			GCSettings.gbZoomVert = currentZoomVert;
+		}
+	}
 
 	delete(w);
 	delete(settingText);
+	delete(settingText2);
 }
 
 static void ScreenPositionWindowUpdate(void * ptr, int x, int y)
@@ -2643,7 +2742,8 @@ static void ScreenPositionWindow()
 
 	if(!SettingWindow("Screen Position",w))
 	{
-		GCSettings.xshift = currentX; // undo changes
+		// undo changes
+		GCSettings.xshift = currentX;
 		GCSettings.yshift = currentY;
 	}
 
@@ -2661,15 +2761,21 @@ static int MenuSettingsVideo()
 
 	sprintf(options.name[i++], "Rendering");
 	sprintf(options.name[i++], "Scaling");
-	sprintf(options.name[i++], "Screen Zoom");
+	if(IsGBAGame())
+		sprintf(options.name[i++], "GBA Screen Zoom");
+	else
+		sprintf(options.name[i++], "GB Screen Zoom");
 	sprintf(options.name[i++], "Screen Position");
 	sprintf(options.name[i++], "Video Mode");
-	sprintf(options.name[i++], "Colorize Mono GB");
+	sprintf(options.name[i++], "GB Mono Colorization");
 	sprintf(options.name[i++], "GB Palette");
 	options.length = i;
 
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
+	
+	if(IsGBAGame())
+		options.name[5][0] = 0;
 
 	if(!IsGameboyGame())
 		options.name[6][0] = 0; // disable palette option for GBA/GBC
@@ -2784,8 +2890,10 @@ static int MenuSettingsVideo()
 			else if (GCSettings.scaling == 3)
 				sprintf (options.value[1], "16:9 Correction");
 
-			sprintf (options.value[2], "%.2f%%", GCSettings.ZoomLevel*100);
-
+			if(IsGBAGame())
+				sprintf (options.value[2], "%.2f%%, %.2f%%", GCSettings.gbaZoomHor*100, GCSettings.gbaZoomVert*100);
+			else
+				sprintf (options.value[2], "%.2f%%, %.2f%%", GCSettings.gbZoomHor*100, GCSettings.gbZoomVert*100);
 			sprintf (options.value[3], "%d, %d", GCSettings.xshift, GCSettings.yshift);
 
 			switch(GCSettings.videomode)

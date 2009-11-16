@@ -720,6 +720,13 @@ bool IsGameboyGame()
 		return false;
 }
 
+bool IsGBAGame()
+{
+	if(cartridgeType == 2)
+		return true;
+	return false;
+}
+
 static void gbApplyPerImagePreferences()
 {
 	// Only works for some GB Colour roms
