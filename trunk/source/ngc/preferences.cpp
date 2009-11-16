@@ -180,7 +180,10 @@ preparePrefsData ()
 	createXMLSection("Video", "Video Settings");
 
 	createXMLSetting("videomode", "Video Mode", toStr(GCSettings.videomode));
-	createXMLSetting("ZoomLevel", "Zoom Level", FtoStr(GCSettings.ZoomLevel));
+	createXMLSetting("gbaZoomHor", "GBA Horizontal Zoom Level", FtoStr(GCSettings.gbaZoomHor));
+	createXMLSetting("gbaZoomVert", "GBA Vertical Zoom Level", FtoStr(GCSettings.gbaZoomVert));
+	createXMLSetting("gbZoomHor", "GB Horizontal Zoom Level", FtoStr(GCSettings.gbZoomHor));
+	createXMLSetting("gbZoomVert", "GB Vertical Zoom Level", FtoStr(GCSettings.gbZoomVert));
 	createXMLSetting("render", "Video Filtering", toStr(GCSettings.render));
 	createXMLSetting("scaling", "Aspect Ratio Correction", toStr(GCSettings.scaling));
 	createXMLSetting("xshift", "Horizontal Video Shift", toStr(GCSettings.xshift));
@@ -477,7 +480,10 @@ decodePrefsData ()
 			// Video Settings
 
 			loadXMLSetting(&GCSettings.videomode, "videomode");
-			loadXMLSetting(&GCSettings.ZoomLevel, "ZoomLevel");
+			loadXMLSetting(&GCSettings.gbaZoomHor, "gbaZoomHor");
+			loadXMLSetting(&GCSettings.gbaZoomVert, "gbaZoomVert");
+			loadXMLSetting(&GCSettings.gbZoomHor, "gbaZoomHor");
+			loadXMLSetting(&GCSettings.gbZoomVert, "gbaZoomVert");
 			loadXMLSetting(&GCSettings.render, "render");
 			loadXMLSetting(&GCSettings.scaling, "scaling");
 			loadXMLSetting(&GCSettings.xshift, "xshift");

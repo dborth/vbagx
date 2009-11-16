@@ -16,7 +16,7 @@
 #include "filelist.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"2.0.8"
+#define APPVERSION 		"2.0.9"
 #define APPFOLDER 		"vbagx"
 #define PREF_FILE_NAME 	"settings.xml"
 #define PAL_FILE_NAME 	"palettes.xml"
@@ -60,7 +60,10 @@ struct SGCSettings{
 	char	smbpwd[20];
 	char	smbshare[20];
 
-    float	ZoomLevel; // zoom amount
+    float	gbaZoomHor; // GBA horizontal zoom amount
+    float	gbaZoomVert; // GBA vertical zoom amount
+    float	gbZoomHor; // GB horizontal zoom amount
+    float	gbZoomVert; // GB vertical zoom amount
     int		videomode; // 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
     int		scaling; // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
 	int		render;		// 0 - original, 1 - filtered, 2 - unfiltered

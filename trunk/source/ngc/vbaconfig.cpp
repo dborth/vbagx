@@ -24,8 +24,14 @@ struct SGCSettings GCSettings;
  ***************************************************************************/
 void FixInvalidSettings()
 {
-	if(!(GCSettings.ZoomLevel > 0.5 && GCSettings.ZoomLevel < 1.5))
-		GCSettings.ZoomLevel = 1.0;
+	if(!(GCSettings.gbaZoomHor > 0.5 && GCSettings.gbaZoomHor < 1.5))
+		GCSettings.gbaZoomHor = 1.0;
+	if(!(GCSettings.gbaZoomVert > 0.5 && GCSettings.gbaZoomVert < 1.5))
+		GCSettings.gbaZoomVert = 1.0;
+	if(!(GCSettings.gbZoomHor > 0.5 && GCSettings.gbZoomHor < 1.5))
+		GCSettings.gbZoomHor = 1.0;
+	if(!(GCSettings.gbZoomVert > 0.5 && GCSettings.gbZoomVert < 1.5))
+		GCSettings.gbZoomVert = 1.0;
 	if(!(GCSettings.xshift > -50 && GCSettings.xshift < 50))
 		GCSettings.xshift = 0;
 	if(!(GCSettings.yshift > -50 && GCSettings.yshift < 50))
@@ -73,7 +79,10 @@ DefaultSettings ()
 	GCSettings.WiimoteOrientation = 0;
 
 	GCSettings.VerifySaves = 0;
-	GCSettings.ZoomLevel = 1.0; // zoom level
+	GCSettings.gbaZoomHor = 1.0; // GBA horizontal zoom level
+	GCSettings.gbaZoomVert = 1.0; // GBA vertical zoom level
+	GCSettings.gbZoomHor = 1.0; // GBA horizontal zoom level
+	GCSettings.gbZoomVert = 1.0; // GBA vertical zoom level
 	GCSettings.videomode = 0; // automatic video mode detection
 	GCSettings.render = 1; // Filtered
 	GCSettings.scaling = 1; // partial stretch

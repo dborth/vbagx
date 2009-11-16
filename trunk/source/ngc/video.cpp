@@ -463,8 +463,16 @@ static inline void UpdateScaling()
 	}
 
 	// change zoom
-	xscale *= GCSettings.ZoomLevel;
-	yscale *= GCSettings.ZoomLevel;
+	if (vwidth == 240) // GBA
+	{
+		xscale *= GCSettings.gbaZoomHor;
+		yscale *= GCSettings.gbaZoomVert;
+	}
+	else
+	{
+		xscale *= GCSettings.gbZoomHor;
+		yscale *= GCSettings.gbZoomVert;
+	}
 
 	// Set new aspect
 	square[0] = square[9]  = -xscale + GCSettings.xshift;
@@ -639,29 +647,6 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	// Return to caller, don't waste time waiting for vb
 	LWP_ResumeThread (vbthread);
-}
-
-/****************************************************************************
- * Zoom Functions
- ***************************************************************************/
-void
-zoom (float speed)
-{
-	if (GCSettings.ZoomLevel > 1)
-		GCSettings.ZoomLevel += (speed / -100.0);
-	else
-		GCSettings.ZoomLevel += (speed / -200.0);
-
-	if (GCSettings.ZoomLevel < 0.5)
-		GCSettings.ZoomLevel = 0.5;
-	else if (GCSettings.ZoomLevel > 2.0)
-		GCSettings.ZoomLevel = 2.0;
-}
-
-void
-zoom_reset ()
-{
-	GCSettings.ZoomLevel = 1.0;
 }
 
 /****************************************************************************
