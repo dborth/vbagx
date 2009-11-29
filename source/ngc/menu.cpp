@@ -26,7 +26,6 @@
 #include "filebrowser.h"
 #include "gcunzip.h"
 #include "networkop.h"
-#include "memcardop.h"
 #include "fileop.h"
 #include "vbaconfig.h"
 #include "preferences.h"
@@ -1433,22 +1432,12 @@ static int FindGameSaveNum(char * savefile, int method)
 	int romlen = strlen(ROMFilename);
 	int savelen = strlen(savefile);
 
-	if(romlen > 26 && (method == DEVICE_MC_SLOTA || method == DEVICE_MC_SLOTB))
-		romlen = 26; // memory card filenames are a maximum of 32 chars
-
 	int diff = savelen-romlen;
 
 	if(strncmp(savefile, ROMFilename, romlen) != 0)
 		return -1;
 
-	if(method == DEVICE_MC_SLOTA || method == DEVICE_MC_SLOTB)
-	{
-		if(diff == 2)
-			n = atoi(&savefile[savelen-2]);
-		else if(diff == 1)
-			n = atoi(&savefile[savelen-1]);
-	}
-	else if(savefile[romlen] == ' ')
+	if(savefile[romlen] == ' ')
 	{
 		if(diff == 5 && strncmp(&savefile[romlen+1], "Auto", 4) == 0)
 			n = 0; // found Auto save
@@ -1551,19 +1540,8 @@ static int MenuGameSaves(int action)
 
 	memset(&saves, 0, sizeof(saves));
 
-	if(method == DEVICE_MC_SLOTA)
-	{
-		ParseMCDirectory(CARD_SLOTA);
-	}
-	else if(method == DEVICE_MC_SLOTB)
-	{
-		ParseMCDirectory(CARD_SLOTB);
-	}
-	else
-	{
-		sprintf(browser.dir, "%s%s", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder);
-		ParseDirectory(true);
-	}
+	sprintf(browser.dir, "%s%s", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder);
+	ParseDirectory(true);
 
 	len = strlen(ROMFilename);
 
@@ -1594,23 +1572,20 @@ static int MenuGameSaves(int action)
 			saves.files[saves.type[j]][n] = 1;
 			strncpy(saves.filename[j], browserList[i].filename, MAXJOLIET);
 
-			if(method != DEVICE_MC_SLOTA && method != DEVICE_MC_SLOTB)
+			if(saves.type[j] == FILE_SNAPSHOT)
 			{
-				if(saves.type[j] == FILE_SNAPSHOT)
-				{
-					sprintf(scrfile, "%s%s/%s.png", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, tmp);
+				sprintf(scrfile, "%s%s/%s.png", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, tmp);
 
-					memset(savebuffer, 0, SAVEBUFFERSIZE);
-					if(LoadFile(scrfile, SILENT))
-						saves.previewImg[j] = new GuiImageData(savebuffer);
-				}
-				snprintf(filepath, 1024, "%s%s/%s", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, saves.filename[j]);
-				if (stat(filepath, &filestat) == 0)
-				{
-					timeinfo = localtime(&filestat.st_mtime);
-					strftime(saves.date[j], 20, "%a %b %d", timeinfo);
-					strftime(saves.time[j], 10, "%I:%M %p", timeinfo);
-				}
+				memset(savebuffer, 0, SAVEBUFFERSIZE);
+				if(LoadFile(scrfile, SILENT))
+					saves.previewImg[j] = new GuiImageData(savebuffer);
+			}
+			snprintf(filepath, 1024, "%s%s/%s", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, saves.filename[j]);
+			if (stat(filepath, &filestat) == 0)
+			{
+				timeinfo = localtime(&filestat.st_mtime);
+				strftime(saves.date[j], 20, "%a %b %d", timeinfo);
+				strftime(saves.time[j], 10, "%I:%M %p", timeinfo);
 			}
 			j++;
 		}
@@ -3121,7 +3096,6 @@ static int MenuSettingsFile()
 	sprintf(options.name[i++], "Cheats Folder");
 	sprintf(options.name[i++], "Auto Load");
 	sprintf(options.name[i++], "Auto Save");
-	sprintf(options.name[i++], "Verify MC Saves");
 	options.length = i;
 	options.name[4][0] = 0; // hide cheats folder (not implemented)
 
@@ -3209,10 +3183,6 @@ static int MenuSettingsFile()
 				if (GCSettings.AutoSave > 3)
 					GCSettings.AutoSave = 0;
 				break;
-
-			case 7:
-				GCSettings.VerifySaves ^= 1;
-				break;
 		}
 
 		if(ret >= 0 || firstRun)
@@ -3242,19 +3212,10 @@ static int MenuSettingsFile()
 				GCSettings.SaveMethod++;
 			#endif
 
-			// disable MC saving in Wii mode - does not work for some reason!
-			#ifdef HW_RVL
-			if(GCSettings.SaveMethod == DEVICE_MC_SLOTA)
-				GCSettings.SaveMethod++;
-			if(GCSettings.SaveMethod == DEVICE_MC_SLOTB)
-				GCSettings.SaveMethod++;
-			options.name[7][0] = 0;
-			#endif
-
 			// correct load/save methods out of bounds
 			if(GCSettings.LoadMethod > 4)
 				GCSettings.LoadMethod = 0;
-			if(GCSettings.SaveMethod > 6)
+			if(GCSettings.SaveMethod > 5)
 				GCSettings.SaveMethod = 0;
 
 			if (GCSettings.LoadMethod == DEVICE_AUTO) sprintf (options.value[0],"Auto Detect");
@@ -3267,8 +3228,6 @@ static int MenuSettingsFile()
 			else if (GCSettings.SaveMethod == DEVICE_SD) sprintf (options.value[1],"SD");
 			else if (GCSettings.SaveMethod == DEVICE_USB) sprintf (options.value[1],"USB");
 			else if (GCSettings.SaveMethod == DEVICE_SMB) sprintf (options.value[1],"Network");
-			else if (GCSettings.SaveMethod == DEVICE_MC_SLOTA) sprintf (options.value[1],"MC Slot A");
-			else if (GCSettings.SaveMethod == DEVICE_MC_SLOTB) sprintf (options.value[1],"MC Slot B");
 
 			snprintf (options.value[2], 30, "%s", GCSettings.LoadFolder);
 			snprintf (options.value[3], 30, "%s", GCSettings.SaveFolder);
@@ -3282,8 +3241,6 @@ static int MenuSettingsFile()
 			else if (GCSettings.AutoSave == 1) sprintf (options.value[6],"SRAM");
 			else if (GCSettings.AutoSave == 2) sprintf (options.value[6],"Snapshot");
 			else if (GCSettings.AutoSave == 3) sprintf (options.value[6],"Both");
-
-			sprintf (options.value[7], "%s", GCSettings.VerifySaves == true ? "On" : "Off");
 
 			optionBrowser.TriggerUpdate();
 		}

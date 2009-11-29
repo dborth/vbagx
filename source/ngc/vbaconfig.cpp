@@ -78,7 +78,6 @@ DefaultSettings ()
 
 	GCSettings.WiimoteOrientation = 0;
 
-	GCSettings.VerifySaves = 0;
 	GCSettings.gbaZoomHor = 1.0; // GBA horizontal zoom level
 	GCSettings.gbaZoomVert = 1.0; // GBA vertical zoom level
 	GCSettings.gbZoomHor = 1.0; // GBA horizontal zoom level

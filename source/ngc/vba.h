@@ -25,7 +25,7 @@
 #define SILENT 1
 
 const char pathPrefix[9][8] =
-{ "", "sd:/", "usb:/", "dvd:/", "smb:/", "mca:/", "mcb:/", "carda:/", "cardb:/" };
+{ "", "sd:/", "usb:/", "dvd:/", "smb:/", "carda:/", "cardb:/" };
 
 enum {
 	DEVICE_AUTO,
@@ -33,8 +33,6 @@ enum {
 	DEVICE_USB,
 	DEVICE_DVD,
 	DEVICE_SMB,
-	DEVICE_MC_SLOTA,
-	DEVICE_MC_SLOTB,
 	DEVICE_SD_SLOTA,
 	DEVICE_SD_SLOTB
 };
@@ -53,7 +51,6 @@ struct SGCSettings{
 	char	LoadFolder[MAXPATHLEN]; // Path to game files
 	char	SaveFolder[MAXPATHLEN]; // Path to save files
 	char	CheatFolder[MAXPATHLEN]; // Path to cheat files
-	int		VerifySaves;
 
 	char	smbip[16];
 	char	smbuser[20];

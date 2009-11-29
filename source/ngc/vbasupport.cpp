@@ -36,7 +36,6 @@
 #include "vba.h"
 #include "fileop.h"
 #include "filebrowser.h"
-#include "memcardop.h"
 #include "audio.h"
 #include "vmmem.h"
 #include "input.h"
@@ -359,7 +358,7 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 		return 0;
 
 	// save screenshot - I would prefer to do this from gameScreenTex
-	if(action == FILE_SNAPSHOT && gameScreenTex2 != NULL && device != DEVICE_MC_SLOTA && device != DEVICE_MC_SLOTB)
+	if(action == FILE_SNAPSHOT && gameScreenTex2 != NULL)
 	{
 		AllocSaveBuffer ();
 
@@ -384,23 +383,6 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 	}
 
 	AllocSaveBuffer();
-
-	// set comments for Memory Card saves
-	if(device == DEVICE_MC_SLOTA || device == DEVICE_MC_SLOTB)
-	{
-		char savecomments[2][32];
-		char savetype[10];
-		memset(savecomments, 0, 64);
-
-		if(action == FILE_SRAM)
-			sprintf(savetype, "SRAM");
-		else
-			sprintf(savetype, "Snapshot");
-
-		sprintf (savecomments[0], "%s %s", APPNAME, savetype);
-		snprintf (savecomments[1], 32, ROMFilename);
-		SetMCSaveComments(savecomments);
-	}
 
 	// put VBA memory into savebuffer, sets datasize to size of memory written
 	if(action == FILE_SRAM)
