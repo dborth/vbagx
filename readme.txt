@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 2.0.8
+                                  Version 2.0.9
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -18,7 +18,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * SRAM and State saving
 * IPS/UPS/PPF patch support
 * Custom controller configurations
-* SD, USB, DVD, SMB, GC Memory Card, Zip, and 7z support
+* SD, USB, DVD, SMB, Zip, and 7z support
 * Compatiblity based on VBA-M r847
 * MEM2 ROM Storage for fast access
 * Auto frame skip for those core heavy games
@@ -27,6 +27,16 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[2.0.9 - November 30, 2009]
+
+* Fixed SMB
+* Added separate horizontal/vertical zoom options, and separate GB/GBA ones
+* Improved scrolling timing - the more you scroll, the fast it goes
+* Fixed reset button on Wii console - now you can reset multiple times
+* APU optimization (dancinninjac)
+* Minor code optimizations
+* Reduce memory fragmentation - fixes out of memory crashes
 
 [2.0.8 - October 7, 2009]
 
