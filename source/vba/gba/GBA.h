@@ -90,7 +90,7 @@ extern void CPUUpdateRender();
 extern void CPUUpdateRenderBuffers(bool);
 extern bool CPUReadMemState(char *, int);
 extern bool CPUReadState(const char *);
-extern bool CPUWriteMemState(char *, int);
+extern int CPUWriteMemState(char *, int);
 extern bool CPUWriteState(const char *);
 extern int CPULoadRom(const char *);
 extern void doMirroring(bool);
