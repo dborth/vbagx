@@ -25,7 +25,7 @@ struct EmulatedSystem {
   // load memory state (rewind)
   bool (*emuReadMemState)(char *, int);
   // write memory state (rewind)
-  bool (*emuWriteMemState)(char *, int);
+  int (*emuWriteMemState)(char *, int);
   // write PNG file
   bool (*emuWritePNG)(const char *);
   // write BMP file

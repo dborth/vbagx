@@ -634,24 +634,23 @@ bool CPUWriteState(const char *file)
   return res;
 }
 
-bool CPUWriteMemState(char *memory, int available)
+int CPUWriteMemState(char *memory, int available)
 {
-  gzFile gzFile = utilMemGzOpen(memory, available, "w");
+	int pos = 0;
+	gzFile gzFile = utilMemGzOpen(memory, available, "w");
 
-  if(gzFile == NULL) {
-    return false;
-  }
+	if(gzFile == NULL)
+		return 0;
 
-  bool res = CPUWriteState(gzFile);
-
-  long pos = utilGzMemTell(gzFile)+8;
-
-  if(pos >= (available))
-    res = false;
-
-  utilGzClose(gzFile);
-
-  return res;
+	if(CPUWriteState(gzFile))
+	{
+		pos = utilGzMemTell(gzFile)+8;
+		
+		if(pos >= (available))
+			pos = 0;
+	}
+	utilGzClose(gzFile);
+	return pos;
 }
 
 static bool CPUReadState(gzFile gzFile)

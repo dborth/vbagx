@@ -3550,24 +3550,23 @@ static bool gbWriteSaveState(gzFile gzFile)
   return true;
 }
 
-bool gbWriteMemSaveState(char *memory, int available)
+int gbWriteMemSaveState(char *memory, int available)
 {
-  gzFile gzFile = utilMemGzOpen(memory, available, "w");
+	int pos = 0;
+	gzFile gzFile = utilMemGzOpen(memory, available, "w");
 
-  if(gzFile == NULL) {
-    return false;
-  }
+	if(gzFile == NULL)
+		return 0;
 
-  bool res = gbWriteSaveState(gzFile);
-
-  long pos = utilGzMemTell(gzFile)+8;
-
-  if(pos >= (available))
-    res = false;
-
-  utilGzClose(gzFile);
-
-  return res;
+	if(gbWriteSaveState(gzFile))
+	{
+		pos = utilGzMemTell(gzFile)+8;
+		
+		if(pos >= (available))
+			pos = 0;
+	}
+	utilGzClose(gzFile);
+	return pos;
 }
 
 bool gbWriteSaveState(const char *name)
