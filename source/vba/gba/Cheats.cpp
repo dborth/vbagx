@@ -1,4 +1,5 @@
 #include <string.h>
+#include <string.h>
 #include <stdio.h>
 #include <ctype.h>
 
@@ -2676,6 +2677,8 @@ void cheatsReadGameSkip( gzFile file, int version )
   if( version >= 9 ) {
     utilGzSeek( file, sizeof( cheatsList ), SEEK_CUR );
   }
+
+  bool firstCodeBreaker = true;
 
   for( int i = 0; i < nCheats; i++ ) {
     if( version < 9 ) {
