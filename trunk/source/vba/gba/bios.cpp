@@ -781,7 +781,7 @@ void BIOS_LZ77UnCompWram()
           int length = (data >> 12) + 3;
           int offset = (data & 0x0FFF);
           u32 windowOffset = dest - offset - 1;
-          for(int i = 0; i < length; i++) {
+          for(int i2 = 0; i2 < length; i2++) {
             CPUWriteByte(dest++, CPUReadByte(windowOffset++));
             len--;
             if(len == 0)

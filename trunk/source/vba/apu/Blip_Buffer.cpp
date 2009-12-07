@@ -27,10 +27,17 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 int const silent_buf_size = 1; // size used for Silent_Blip_Buffer
 
-Blip_Buffer::Blip_Buffer(): 
-	factor_(LONG_MAX), buffer_(0), buffer_size_(0), bass_shift_(0),
-	sample_rate_(0), clock_rate_(0), bass_freq_(16),length_(0)
+Blip_Buffer::Blip_Buffer()
 {
+	factor_       = LONG_MAX;
+	buffer_       = 0;
+	buffer_size_  = 0;
+	sample_rate_  = 0;
+	bass_shift_   = 0;
+	clock_rate_   = 0;
+	bass_freq_    = 16;
+	length_       = 0;
+
 	// assumptions code makes about implementation-defined features
 	#ifndef NDEBUG
 		// right shift of negative value preserves sign
@@ -196,13 +203,14 @@ void Blip_Synth_Fast_::volume_unit( double new_unit )
 
 Blip_Synth_::Blip_Synth_( short* p, int w ) :
 	impulses( p ),
-	width( w ), 
-	volume_unit_(0.0),
-	kernel_unit(0),
-	buf(0),
-	last_amp(0),
-	delta_factor(0)
-{}
+	width( w )
+{
+	volume_unit_ = 0.0;
+	kernel_unit  = 0;
+	buf          = 0;
+	last_amp     = 0;
+	delta_factor = 0;
+}
 
 #undef PI
 #define PI 3.1415926535897932384626433832795029

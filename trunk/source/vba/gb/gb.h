@@ -30,7 +30,7 @@ bool gbWriteBatteryFile(const char *);
 bool gbWriteBatteryFile(const char *, bool);
 bool gbReadBatteryFile(const char *);
 bool gbWriteSaveState(const char *);
-int gbWriteMemSaveState(char *, int);
+bool gbWriteMemSaveState(char *, int);
 bool gbReadSaveState(const char *);
 bool gbReadMemSaveState(char *, int);
 void gbSgbRenderBorder();

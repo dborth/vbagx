@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 2.1.0
+                                  Version 2.1.1
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -19,7 +19,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * IPS/UPS/PPF patch support
 * Custom controller configurations
 * SD, USB, DVD, SMB, Zip, and 7z support
-* Compatiblity based on VBA-M r847
+* Compatiblity based on VBA-M r927
 * MEM2 ROM Storage for fast access
 * Auto frame skip for those core heavy games
 * Turbo speed, video zooming, widescreen, and unfiltered video options
@@ -27,6 +27,10 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[2.1.1 - December 7, 2009]
+
+* Save state corruption issues fixed
 
 [2.1.0 - December 2, 2009]
 
