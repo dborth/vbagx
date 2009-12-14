@@ -125,7 +125,7 @@ copy_to_xfb (u32 arg)
 		GX_Flush ();
 		copynow = GX_FALSE;
 	}
-	FrameTimer++;
+	++FrameTimer;
 }
 
 /****************************************************************************
@@ -567,15 +567,17 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	long long int *dst = (long long int *) texturemem;
 	long long int *src1 = (long long int *) buffer;
 	long long int *src2 = (long long int *) (buffer + pitch);
-	long long int *src3 = (long long int *) (buffer + (pitch * 2));
+	long long int *src3 = (long long int *) (buffer + (pitch << 1));
 	long long int *src4 = (long long int *) (buffer + (pitch * 3));
 	int rowpitch = (pitch >> 3) * 3;
-	int rowadjust = ( pitch % 8 ) * 4;
-	char *ra = NULL;
+	int rowadjust = ( pitch % 8 ) << 2;
 
 	vwidth = width;
 	vheight = height;
 
+	int vwid2 = (vwidth >> 2);
+	char *ra = NULL;
+	
 	// Ensure previous vb has complete
 	while ((LWP_ThreadIsSuspended (vbthread) == 0) || (copynow == GX_TRUE))
 		usleep (50);
@@ -593,7 +595,7 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 
 	for (h = 0; h < vheight; h += 4)
 	{
-		for (w = 0; w < (vwidth >> 2); w++)
+		for (w = 0; w < vwid2; ++w)
 		{
 			*dst++ = *src1++;
 			*dst++ = *src2++;
@@ -780,8 +782,9 @@ void Menu_DrawImg(f32 xpos, f32 ypos, u16 width, u16 height, u8 data[],
 	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
 
 	Mtx m,m1,m2, mv;
-	width *=.5;
-	height*=.5;
+	width  >>= 1;
+	height >>= 1;
+
 	guMtxIdentity (m1);
 	guMtxScaleApply(m1,m1,scaleX,scaleY,1.0);
 	guVector axis = (guVector) {0 , 0, 1 };
@@ -822,26 +825,20 @@ void Menu_DrawImg(f32 xpos, f32 ypos, u16 width, u16 height, u8 data[],
  ***************************************************************************/
 void Menu_DrawRectangle(f32 x, f32 y, f32 width, f32 height, GXColor color, u8 filled)
 {
-	u8 fmt;
-	long n;
-	int i;
+	long n = 4;
 	f32 x2 = x+width;
 	f32 y2 = y+height;
 	guVector v[] = {{x,y,0.0f}, {x2,y,0.0f}, {x2,y2,0.0f}, {x,y2,0.0f}, {x,y,0.0f}};
+	u8 fmt = GX_TRIANGLEFAN;
 
 	if(!filled)
 	{
 		fmt = GX_LINESTRIP;
 		n = 5;
 	}
-	else
-	{
-		fmt = GX_TRIANGLEFAN;
-		n = 4;
-	}
 
 	GX_Begin(fmt, GX_VTXFMT0, n);
-	for(i=0; i<n; i++)
+	for(long i=0; i<n; ++i)
 	{
 		GX_Position3f32(v[i].x, v[i].y,  v[i].z);
 		GX_Color4u8(color.r, color.g, color.b, color.a);

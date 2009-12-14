@@ -284,9 +284,7 @@ Unzip the archive. You will find the following folders inside:
 
 apps			Contains Homebrew Channel ready files
 				(see Homebrew Channel instructions below)
-				
-gamecube		Contains GameCube DOL file (not required for Wii)
-				
+
 vbagx			Contains the directory structure required for storing
 				roms and saves. By default, roms are loaded from 
 				"vbagx/roms/" and saves / preferences are stored in 
@@ -906,7 +904,7 @@ right analog stick = fast forward
 -=[ Credits ]=-
 
 			Coding & menu design		Tantric
-			Additional coding			Carl Kenner
+			Additional coding			Carl Kenner, dancinninjac
 			Menu artwork				the3seashells
 			Menu sound					Peter de Man
                       
