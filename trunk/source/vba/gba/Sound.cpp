@@ -50,8 +50,8 @@ int   soundTicks         = SOUND_CLOCK_TICKS_;
 
 static float soundVolume     = 1.0f;
 static int soundEnableFlag   = 0x3ff; // emulator channels enabled
-static float soundFiltering_ = -1;
-static float soundVolume_    = -1;
+static float soundFiltering_ = -1.0f;
+static float soundVolume_    = -1.0f;
 
 void interp_rate() { /* empty for now */ }
 
@@ -82,8 +82,8 @@ public:
 	int  readIndex;
 	int  count;
 	int  writeIndex;
-	u8   fifo [32];
 	int  dac;
+	u8   fifo [32];
 private:
 
 	int  timer;
@@ -115,7 +115,7 @@ void Gba_Pcm::apply_control( int idx )
 
 	int ch = 0;
 	if ( (soundEnableFlag >> idx & 0x100) && (ioMem [NR52] & 0x80) )
-		ch = ioMem [SGCNT0_H+1] >> (idx * 4) & 3;
+		ch = ioMem [SGCNT0_H+1] >> (idx <<2) & 3;
 
 	Blip_Buffer* out = 0;
 	switch ( ch )
@@ -162,11 +162,10 @@ void Gba_Pcm::update( int dac )
 			int filter = 0;
 			if ( soundInterpolation )
 			{
-				// base filtering on how long since last sample was output
-				int period = time - last_time;
+				unsigned period = unsigned(time - last_time);
+				unsigned idx = period >> 9;
 
-				int idx = (unsigned) period / 512;
-				if ( idx >= 3 )
+				if ( idx > 3 )
 					idx = 3;
 
 				static int const filters [4] = { 0, 0, 1, 2 };
@@ -191,16 +190,24 @@ void Gba_Pcm_Fifo::timer_overflowed( int which_timer )
 			{
 				// Not filled by DMA, so fill with 16 bytes of silence
 				int reg = which ? FIFOB_L : FIFOA_L;
-				for ( int n = 4; n--; )
-				{
-					soundEvent(reg  , (u16)0);
-					soundEvent(reg+2, (u16)0);
-				}
+
+				// No loops, yay!
+				soundEvent(reg  , (u16)0);
+				soundEvent(reg+2, (u16)0);
+				//
+				soundEvent(reg  , (u16)0);
+				soundEvent(reg+2, (u16)0);
+				//
+				soundEvent(reg  , (u16)0);
+				soundEvent(reg+2, (u16)0);
+				//
+				soundEvent(reg  , (u16)0);
+				soundEvent(reg+2, (u16)0);
 			}
 		}
 
 		// Read next sample from FIFO
-		count--;
+		--count;
 		dac = fifo [readIndex];
 		readIndex = (readIndex + 1) & 31;
 		pcm.update( dac );
@@ -280,14 +287,17 @@ static void apply_volume( bool apu_only = false )
 
 	if ( gb_apu )
 	{
-		static float const apu_vols [4] = { 0.25, 0.5, 1, 0.25 };
+		static float const apu_vols [4] = { 0.25f, 0.5f, 1.0f, 0.25f };
 		gb_apu->volume( soundVolume_ * apu_vols [ioMem [SGCNT0_H] & 3] );
 	}
 
 	if ( !apu_only )
 	{
-		for ( int i = 0; i < 3; i++ )
-			pcm_synth [i].volume( 0.66 / 256 * soundVolume_ );
+		double tmpVol = 0.002578125 * soundVolume_; // 0.66 / 256 * soundVolume_
+
+		pcm_synth[0].volume( tmpVol );
+		pcm_synth[1].volume( tmpVol );
+		pcm_synth[2].volume( tmpVol );
 	}
 }
 
@@ -352,10 +362,10 @@ void flush_samples(Multi_Buffer * buffer)
 	// that don't use the length parameter of the write method.
 	// TODO: Update the Win32 audio drivers (DS, OAL, XA2), and flush all the
 	// samples at once to help reducing the audio delay on all platforms.
-	int soundBufferLen = ( soundSampleRate / 60 ) * 4;
+	int soundBufferLen = ( soundSampleRate / 60 ) << 2;
 
 	// soundBufferLen should have a whole number of sample pairs
-	assert( soundBufferLen % (2 * sizeof *soundFinalWave) == 0 );
+	assert( soundBufferLen % ((sizeof *soundFinalWave)<<1) == 0 );
 
 	// number of samples in output buffer
 	int const out_buf_size = soundBufferLen / sizeof *soundFinalWave;
@@ -376,8 +386,10 @@ static void apply_filtering()
 {
 	soundFiltering_ = soundFiltering;
 
-	int const base_freq = (int) (32768 - soundFiltering_ * 16384);
-	int const nyquist = stereo_buffer->sample_rate() / 2;
+	// Yes, I changed soundFiltering_ to soundFiltering, the reason is
+	// to eliminate a write-read dependency
+	int const base_freq = 32768 - (int) (soundFiltering * 16384.0f);
+	int const nyquist = stereo_buffer->sample_rate() >> 1;
 
 	for ( int i = 0; i < 3; i++ )
 	{
@@ -584,8 +596,8 @@ static struct {
 	gb_apu_state_t apu;
 
 	// old state
-	u8 soundDSAValue;
 	int soundDSBValue;
+	u8 soundDSAValue;
 } state;
 
 // Old GBA sound state format

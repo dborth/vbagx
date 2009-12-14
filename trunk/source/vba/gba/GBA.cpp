@@ -526,11 +526,11 @@ void CPUUpdateWindow0()
   int x01 = WIN0H & 255;
 
   if(x00 <= x01) {
-    for(int i = 0; i < 240; i++) {
+    for(int i = 0; i < 240; ++i) {
       gfxInWin0[i] = (i >= x00 && i < x01);
     }
   } else {
-    for(int i = 0; i < 240; i++) {
+    for(int i = 0; i < 240; ++i) {
       gfxInWin0[i] = (i >= x00 || i < x01);
     }
   }
@@ -542,11 +542,11 @@ void CPUUpdateWindow1()
   int x01 = WIN1H & 255;
 
   if(x00 <= x01) {
-    for(int i = 0; i < 240; i++) {
+    for(int i = 0; i < 240; ++i) {
       gfxInWin1[i] = (i >= x00 && i < x01);
     }
   } else {
-    for(int i = 0; i < 240; i++) {
+    for(int i = 0; i < 240; ++i) {
       gfxInWin1[i] = (i >= x00 || i < x01);
     }
   }
@@ -2001,7 +2001,7 @@ void CPUCompareVCOUNT()
   }
   if (layerEnableDelay>0)
   {
-      layerEnableDelay--;
+      --layerEnableDelay;
       if (layerEnableDelay==1)
           layerEnable = layerSettings & DISPCNT;
   }
@@ -2032,7 +2032,7 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
       while(c != 0) {
         CPUWriteMemory(d, 0);
         d += di;
-        c--;
+        --c;
       }
     } else {
       while(c != 0) {
@@ -2040,7 +2040,7 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
         CPUWriteMemory(d, cpuDmaLast);
         d += di;
         s += si;
-        c--;
+        --c;
       }
     }
   } else {
@@ -2051,7 +2051,7 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
       while(c != 0) {
         CPUWriteHalfWord(d, 0);
         d += di;
-        c--;
+        --c;
       }
     } else {
       while(c != 0) {
@@ -2060,7 +2060,7 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
         cpuDmaLast |= (cpuDmaLast<<16);
         d += di;
         s += si;
-        c--;
+        --c;
       }
     }
   }
@@ -2858,7 +2858,7 @@ void CPUUpdateRegister(u32 address, u16 value)
 
       for(int i = 8; i < 15; i++) {
         memoryWait32[i] = memoryWait[i] + memoryWaitSeq[i] + 1;
-        memoryWaitSeq32[i] = memoryWaitSeq[i]*2 + 1;
+        memoryWaitSeq32[i] = (memoryWaitSeq[i]<<1) + 1;
       }
 
       if((value & 0x4000) == 0x4000) {
@@ -3511,7 +3511,7 @@ void CPULoop(int ticks)
           // if in V-Blank mode, keep computing...
           if(DISPSTAT & 2) {
             lcdTicks += 1008;
-            VCOUNT++;
+            ++VCOUNT;
             UPDATE_REG(0x06, VCOUNT);
             DISPSTAT &= 0xFFFD;
             UPDATE_REG(0x04, DISPSTAT);
@@ -3540,13 +3540,13 @@ void CPULoop(int ticks)
 
           if(DISPSTAT & 2) {
             // if in H-Blank, leave it and move to drawing mode
-            VCOUNT++;
+            ++VCOUNT;
             UPDATE_REG(0x06, VCOUNT);
 
             lcdTicks += 1008;
             DISPSTAT &= 0xFFFD;
             if(VCOUNT == 160) {
-              count++;
+              ++count;
               systemFrame();
 
               if((count % 10) == 0) {
@@ -3598,7 +3598,7 @@ void CPULoop(int ticks)
               capture = (ext & 2) ? true : false;
 
               if(capture && !capturePrevious) {
-                captureNumber++;
+                ++captureNumber;
                 systemScreenCapture(captureNumber);
               }
               capturePrevious = capture;
@@ -3615,7 +3615,7 @@ void CPULoop(int ticks)
                 systemDrawScreen();
                 frameCount = 0;
               } else
-                frameCount++;
+                ++frameCount;
               if(systemPauseOnFrame())
                 ticks = 0;
             }
@@ -3631,7 +3631,7 @@ void CPULoop(int ticks)
                 case 16:
                 {
                   u16 *dest = (u16 *)pix + 242 * (VCOUNT+1);
-                  for(int x = 0; x < 240;) {
+                  for(u32 x = 0; x < 240u;) {
                     *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
                     *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
                     *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
@@ -3658,8 +3658,8 @@ void CPULoop(int ticks)
                 break;
                 case 24:
                 {
-                  u8 *dest = (u8 *)pix + 240 * VCOUNT * 3;
-                  for(int x = 0; x < 240;) {
+				  u8 *dest = (u8 *)pix +  VCOUNT * 720;
+                  for(u32 x = 0; x < 240u;) {
                     *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF];
                     dest += 3;
                     *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF];
@@ -3701,7 +3701,7 @@ void CPULoop(int ticks)
                 case 32:
                 {
                   u32 *dest = (u32 *)pix + 241 * (VCOUNT+1);
-                  for(int x = 0; x < 240; ) {
+                  for(u32 x = 0; x < 240u; ) {
                     *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
                     *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
                     *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
@@ -3767,7 +3767,7 @@ void CPULoop(int ticks)
         if(timer1On) {
           if(TM1CNT & 4) {
             if(timerOverflow & 1) {
-              TM1D++;
+              ++TM1D;
               if(TM1D == 0) {
                 TM1D += timer1Reload;
                 timerOverflow |= 2;
@@ -3798,7 +3798,7 @@ void CPULoop(int ticks)
         if(timer2On) {
           if(TM2CNT & 4) {
             if(timerOverflow & 2) {
-              TM2D++;
+              ++TM2D;
               if(TM2D == 0) {
                 TM2D += timer2Reload;
                 timerOverflow |= 4;
@@ -3827,7 +3827,7 @@ void CPULoop(int ticks)
         if(timer3On) {
           if(TM3CNT & 4) {
             if(timerOverflow & 4) {
-              TM3D++;
+              ++TM3D;
               if(TM3D == 0) {
                 TM3D += timer3Reload;
                 if(TM3CNT & 0x40) {

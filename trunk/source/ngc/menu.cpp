@@ -749,7 +749,7 @@ static void WindowCredits(void * ptr)
 	txt[i]->SetPosition(320,y); i++; y+=24;
 	txt[i] = new GuiText("Additional coding");
 	txt[i]->SetPosition(50,y); i++;
-	txt[i] = new GuiText("Carl Kenner");
+	txt[i] = new GuiText("Carl Kenner, dancinninjac");
 	txt[i]->SetPosition(320,y); i++; y+=24;
 	txt[i] = new GuiText("Menu artwork");
 	txt[i]->SetPosition(50,y); i++;
