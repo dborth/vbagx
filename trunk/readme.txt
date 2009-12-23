@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 2.1.1
+                                  Version 2.1.2
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -27,6 +27,14 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[2.1.2 - December 23, 2009]
+
+* Numerous core optimizations (thanks dancinninjac!)
+* File browser now scrolls down to the last game when returning to browser
+* Auto update for those using USB now works
+* Fixed scrollbar up/down buttons
+* Minor optimizations
 
 [2.1.1 - December 7, 2009]
 

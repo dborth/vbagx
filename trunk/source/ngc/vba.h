@@ -16,7 +16,7 @@
 #include "filelist.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"2.1.1"
+#define APPVERSION 		"2.1.2"
 #define APPFOLDER 		"vbagx"
 #define PREF_FILE_NAME 	"settings.xml"
 #define PAL_FILE_NAME 	"palettes.xml"
@@ -52,7 +52,7 @@ struct SGCSettings{
 	char	SaveFolder[MAXPATHLEN]; // Path to save files
 	char	CheatFolder[MAXPATHLEN]; // Path to cheat files
 
-	char	smbip[16];
+	char	smbip[80];
 	char	smbuser[20];
 	char	smbpwd[20];
 	char	smbshare[20];
