@@ -638,9 +638,14 @@ LoadPrefsFromMethod (char * path)
 		retval = decodePrefsData ();
 
 	FreeSaveBuffer ();
-	
+
 	if(retval)
-		strcpy(prefpath, filepath);
+	{
+		strcpy(prefpath, path);
+
+		if(appPath[0] == 0)
+			strcpy(appPath, prefpath);
+	}
 
 	return retval;
 }
@@ -661,10 +666,12 @@ bool LoadPrefs()
 	int numDevices;
 	
 #ifdef HW_RVL
-	numDevices = 3;
+	numDevices = 5;
 	sprintf(filepath[0], "%s", appPath);
-	sprintf(filepath[1], "sd:/%s", APPFOLDER);
-	sprintf(filepath[2], "usb:/%s", APPFOLDER);
+	sprintf(filepath[1], "sd:/apps/%s", APPFOLDER);
+	sprintf(filepath[2], "usb:/apps/%s", APPFOLDER);
+	sprintf(filepath[3], "sd:/%s", APPFOLDER);
+	sprintf(filepath[4], "usb:/%s", APPFOLDER);
 #else
 	numDevices = 2;
 	sprintf(filepath[0], "carda:/%s", APPFOLDER);
