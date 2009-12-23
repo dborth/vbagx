@@ -473,6 +473,8 @@ int BrowserLoadFile()
 	if(!FindDevice(browser.dir, &device))
 		return 0;
 
+	strcpy(loadedFile, browserList[browser.selIndex].filename);
+
 	// store the filename (w/o ext) - used for sram/freeze naming
 	StripExt(ROMFilename, browserList[browser.selIndex].filename);
 
