@@ -929,6 +929,7 @@ static int MenuGameSelection()
 	#endif
 
 	// populate initial directory listing
+	selectLoadedFile = 1;
 	OpenGameList();
 
 	gameBrowser.ResetState();
@@ -938,6 +939,13 @@ static int MenuGameSelection()
 	while(menu == MENU_NONE)
 	{
 		usleep(THREAD_SLEEP);
+
+		if(selectLoadedFile == 2)
+		{
+			selectLoadedFile = 0;
+			mainWindow->ChangeFocus(&gameBrowser);
+			gameBrowser.TriggerUpdate();
+		}
 
 		// update gameWindow based on arrow buttons
 		// set MENU_EXIT if A button pressed on a game
