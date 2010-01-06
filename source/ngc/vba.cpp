@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 {
 	//USBGeckoOutput(); // uncomment to enable USB gecko output
 	__exception_setreload(8);
-	
+
 	#ifdef HW_DOL
 	ipl_set_config(6); // disable Qoob modchip
 	#endif

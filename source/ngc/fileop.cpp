@@ -845,28 +845,18 @@ SaveFile (char * buffer, char *filepath, size_t datasize, bool silent)
 			retry = ErrorPromptRetry("Error creating file!");
 			continue;
 		}
-		
-		printf("datasize: %d\n", datasize);
 
 		while(written < datasize)
 		{
 			if(datasize - written > 4096) nextwrite=4096;
 			else nextwrite = datasize-written;
 			writesize = fwrite (buffer+written, 1, nextwrite, file);
-			if(writesize != nextwrite)
-				{
-				printf("writesize (%d) != nextwrite (%d)!\n", writesize, nextwrite);
-				break; // write failure
-				}
+			if(writesize != nextwrite) break; // write failure
 			written += writesize;
 		}
 		fclose (file);
 
-		if(written != datasize)
-		{
-			printf("wrote 0!\n");
-			written = 0;
-		}
+		if(written != datasize) written = 0;
 
 		if(!written)
 		{
