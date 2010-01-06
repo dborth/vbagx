@@ -9,10 +9,11 @@ int eepromMode = EEPROM_IDLE;
 int eepromByte = 0;
 int eepromBits = 0;
 int eepromAddress = 0;
+//--DCN (restructuring for alignment)
+int eepromSize = 512;
 u8 eepromData[0x2000];
 u8 eepromBuffer[16];
 bool eepromInUse = false;
-int eepromSize = 512;
 
 variable_desc eepromSaveData[] = {
   { &eepromMode, sizeof(int) },
@@ -78,7 +79,7 @@ int eepromRead(u32 /* address */)
     return 1;
   case EEPROM_READDATA:
     {
-      eepromBits++;
+      ++eepromBits;
       if(eepromBits == 4) {
         eepromMode = EEPROM_READDATA2;
         eepromBits = 0;
@@ -88,13 +89,14 @@ int eepromRead(u32 /* address */)
     }
   case EEPROM_READDATA2:
     {
-      int data = 0;
+	  //--DCN
       int address = eepromAddress << 3;
       int mask = 1 << (7 - (eepromBits & 7));
-      data = (eepromData[address+eepromByte] & mask) ? 1 : 0;
-      eepromBits++;
+      int data = (eepromData[address+eepromByte] & mask) ? 1 : 0;
+
+      ++eepromBits;
       if((eepromBits & 7) == 0)
-        eepromByte++;
+        ++eepromByte;
       if(eepromBits == 0x40)
         eepromMode = EEPROM_IDLE;
       return data;
@@ -120,9 +122,9 @@ void eepromWrite(u32 /* address */, u8 value)
   case EEPROM_READADDRESS:
     eepromBuffer[eepromByte] <<= 1;
     eepromBuffer[eepromByte] |= bit;
-    eepromBits++;
+    ++eepromBits;
     if((eepromBits & 7) == 0) {
-      eepromByte++;
+      ++eepromByte;
     }
     if(cpuDmaCount == 0x11 || cpuDmaCount == 0x51) {
       if(eepromBits == 0x11) {
@@ -141,8 +143,8 @@ void eepromWrite(u32 /* address */, u8 value)
           eepromBits = 0;
         }
       }
-    } else {
-      if(eepromBits == 9) {
+	//--DCN (else, if into else if, may be an improvement; couldn't hurt)
+	} else if(eepromBits == 9) {
         eepromInUse = true;
         eepromAddress = (eepromBuffer[0] & 0x3F);
         if(!(eepromBuffer[0] & 0x40)) {
@@ -155,7 +157,6 @@ void eepromWrite(u32 /* address */, u8 value)
           eepromByte = 0;
           eepromBits = 0;
         }
-      }
     }
     break;
   case EEPROM_READDATA:
@@ -166,15 +167,21 @@ void eepromWrite(u32 /* address */, u8 value)
   case EEPROM_WRITEDATA:
     eepromBuffer[eepromByte] <<= 1;
     eepromBuffer[eepromByte] |= bit;
-    eepromBits++;
+    ++eepromBits;
     if((eepromBits & 7) == 0) {
-      eepromByte++;
+      ++eepromByte;
     }
     if(eepromBits == 0x40) {
       eepromInUse = true;
       // write data;
-      for(int i = 0; i < 8; i++) {
-        eepromData[(eepromAddress << 3) + i] = eepromBuffer[i];
+	  //--DCN
+	  int eeprom3 = eepromAddress << 3;
+      for(int i = 0; i < 8; i+=4) {
+		
+        eepromData[eeprom3 + i+1] = eepromBuffer[i+1];
+		eepromData[eeprom3 + i+2] = eepromBuffer[i+2];
+		eepromData[eeprom3 + i+3] = eepromBuffer[i+3];
+		eepromData[eeprom3 + i+4] = eepromBuffer[i+4];
       }
       systemSaveUpdateCounter = SYSTEM_SAVE_UPDATED;
     } else if(eepromBits == 0x41) {

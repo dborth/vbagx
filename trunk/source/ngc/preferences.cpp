@@ -480,8 +480,8 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.videomode, "videomode");
 			loadXMLSetting(&GCSettings.gbaZoomHor, "gbaZoomHor");
 			loadXMLSetting(&GCSettings.gbaZoomVert, "gbaZoomVert");
-			loadXMLSetting(&GCSettings.gbZoomHor, "gbaZoomHor");
-			loadXMLSetting(&GCSettings.gbZoomVert, "gbaZoomVert");
+			loadXMLSetting(&GCSettings.gbZoomHor, "gbZoomHor");
+			loadXMLSetting(&GCSettings.gbZoomVert, "gbZoomVert");
 			loadXMLSetting(&GCSettings.render, "render");
 			loadXMLSetting(&GCSettings.scaling, "scaling");
 			loadXMLSetting(&GCSettings.xshift, "xshift");
