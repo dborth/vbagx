@@ -45,6 +45,7 @@
 #include "gcunzip.h"
 #include "gamesettings.h"
 #include "preferences.h"
+#include "fastmath.h"
 
 //#define CARLLOG
 
@@ -124,7 +125,7 @@ bool systemPauseOnFrame()
 }
 
 static u32 lastTime = 0;
-#define RATE60HZ 166666.67 // 1/6 second or 166666.67 usec
+#define RATE60HZ 166666.67f // 1/6 second or 166666.67 usec
 
 void system10Frames(int rate)
 {
@@ -132,26 +133,26 @@ void system10Frames(int rate)
 	u32 diff = diff_usec(lastTime, time);
 
 	// expected diff - actual diff
-	u32 timeOff = RATE60HZ - diff;
+	u32 timeOff = ftou(RATE60HZ - utof(diff));
 
-	if(timeOff > 0 && timeOff < 100000) // we're running ahead!
+	if(timeOff < 100000u)
 		usleep(timeOff); // let's take a nap
 	else
 		timeOff = 0; // timeoff was not valid
 
-	int speed = (RATE60HZ/diff)*100;
+	int speed = int((RATE60HZ/utof(diff))*100.0f);
 
 	if (cartridgeType == 2) // GBA games require frameskipping
 	{
 		// consider increasing skip
-		if(speed < 98)
-			systemFrameSkip += 1;
-		else if(speed < 80)
-			systemFrameSkip += 2;
+		if(speed < 60)
+			systemFrameSkip += 4;
 		else if(speed < 70)
 			systemFrameSkip += 3;
-		else if(speed < 60)
-			systemFrameSkip += 4;
+		else if(speed < 80)
+			systemFrameSkip += 2;
+		else if(speed < 98)
+			++systemFrameSkip;
 
 		// consider decreasing skip
 		else if(speed > 185)
@@ -159,7 +160,7 @@ void system10Frames(int rate)
 		else if(speed > 145)
 			systemFrameSkip -= 2;
 		else if(speed > 125)
-			systemFrameSkip -= 1;
+			--systemFrameSkip;
 
 		// correct invalid frame skip values
 		if(systemFrameSkip > 20)
@@ -505,47 +506,43 @@ u8 systemGetSensorDarkness()
 
 void systemUpdateSolarSensor()
 {
-	u8 d, sun;
+	u8 sun = 0x0; //sun = 0xE8 - 0xE8 (case 0 and default)
+
 	switch (SunBars)
 	{
-		case 0:
-			d = 0xE8;
-			break;
 		case 1:
-			d = 0xE0;
+			sun = 0xE8 -  0xE0;
 			break;
 		case 2:
-			d = 0xDA;
+			sun = 0xE8 -  0xDA;
 			break;
 		case 3:
-			d = 0xD0;
+			sun = 0xE8 -  0xD0;
 			break;
 		case 4:
-			d = 0xC8;
+			sun = 0xE8 -  0xC8;
 			break;
 		case 5:
-			d = 0xC0;
+			sun = 0xE8 -  0xC0;
 			break;
 		case 6:
-			d = 0xB0;
+			sun = 0xE8 -  0xB0;
 			break;
 		case 7:
-			d = 0xA0;
+			sun = 0xE8 -  0xA0;
 			break;
 		case 8:
-			d = 0x88;
+			sun = 0xE8 -  0x88;
 			break;
 		case 9:
-			d = 0x70;
+			sun = 0xE8 -  0x70;
 			break;
 		case 10:
-			d = 0x50;
+			sun = 0xE8 -  0x50;
 			break;
 		default:
-			d = 0xE8;
 			break;
 	}
-	sun = 0xE8 - d;
 
 	struct tm *newtime;
 	time_t long_time;
@@ -559,27 +556,26 @@ void systemUpdateSolarSensor()
 	}
 	else if (newtime->tm_hour > 20 || newtime->tm_hour < 6)
 	{
-		sun = sun / 9; // almost total darkness 8pm-9pm, 5am-6am
+		sun /= 9; // almost total darkness 8pm-9pm, 5am-6am
 	}
 	else if (newtime->tm_hour > 18 || newtime->tm_hour < 7)
 	{
-		sun = sun / 2; // half darkness 6pm-8pm, 6am-7am
+		sun >>= 1;
 	}
 
 #ifdef HW_RVL
 	// pointing the Gun Del Sol at the ground blocks the sun light,
 	// because sometimes you need the shade.
-	int chan = 0; // first wiimote
-	WPADData *Data = WPAD_Data(chan);
+	WPADData *Data = WPAD_Data(0);// first wiimote
 	WPADData data = *Data;
-	float f;
+	float f = 1.0f;
 	if (data.orient.pitch > 0)
+	{
 		f = 1.0f - (data.orient.pitch/85.0f);
-	else
-		f = 1.0f;
-	if (f < 0)
-		f=0;
-	sun *= f;
+		if (f < 0)
+			f = 0;
+	}
+	sun = int(float(int(sun)) * f);
 #endif
 	sensorDarkness = 0xE8 - sun;
 }
@@ -587,9 +583,7 @@ void systemUpdateSolarSensor()
 void systemUpdateMotionSensor()
 {
 #ifdef HW_RVL
-	int chan = 0; // first wiimote
-
-	WPADData *Data = WPAD_Data(chan);
+	WPADData *Data = WPAD_Data(0); // first wiimote
 	WPADData data = *Data;
 	static float OldTiltAngle, OldAvg;
 	static bool WasFlat = false;
@@ -599,31 +593,31 @@ void systemUpdateMotionSensor()
 	{
 		sensorY = 2047+(data.gforce.x*50);
 		sensorX = 2047+(data.gforce.y*50);
-		TiltAngle = ((-data.orient.pitch) + OldTiltAngle)/2.0f;
+		TiltAngle = ((-data.orient.pitch) + OldTiltAngle)*0.5f;
 		OldTiltAngle = -data.orient.pitch;
 	}
 	else
 	{
 		sensorX = 2047-(data.gforce.x*50);
 		sensorY = 2047+(data.gforce.y*50);
-		TiltAngle = ((data.orient.roll) + OldTiltAngle)/2.0f;
+		TiltAngle = ((data.orient.roll) + OldTiltAngle)*0.5f;
 		OldTiltAngle = data.orient.roll;
 	}
 	DeltaAngle = TiltAngle - OldAvg;
-	if (DeltaAngle> 180)
-		DeltaAngle -= 360;
-	else if (DeltaAngle < -180)
-		DeltaAngle += 360;
+	if (DeltaAngle > 180.0f)
+		DeltaAngle -= 360.0f;
+	else if (DeltaAngle < -180.0f)
+		DeltaAngle += 360.0f;
 	OldAvg = TiltAngle;
 
-	if (TiltAngle < 3.0f && TiltAngle> -3.0f)
+	if(absf(TiltAngle) < 3.0f)
 	{
 		WasFlat = true;
 		TiltAngle = 0;
 	}
 	else
 	{
-		if (WasFlat) TiltAngle = TiltAngle / 2.0f;
+		if (WasFlat) TiltAngle *= 0.5f;
 		WasFlat = false;
 	}
 
@@ -650,10 +644,10 @@ static bool ValidGameId(u32 id)
 {
 	if (id == 0)
 		return false;
-	for (int i = 1; i <= 4; i++)
+	for (unsigned i = 1u; i <= 4u; ++i)
 	{
 		u8 b = id & 0xFF;
-		id = id >> 8;
+		id >>= 8;
 		if (!(b >= 'A' && b <= 'Z') && !(b >= '0' && b <= '9'))
 			return false;
 	}
@@ -662,12 +656,10 @@ static bool ValidGameId(u32 id)
 
 bool IsGameboyGame()
 {
-	if(cartridgeType == 1 && !gbCgbMode && !gbSgbMode)
+	if(cartridgeType == 1 || gbCgbMode || gbSgbMode)
 		return true;
-	else
-		return false;
+	return false;
 }
-
 bool IsGBAGame()
 {
 	if(cartridgeType == 2)
@@ -768,7 +760,7 @@ static void ApplyPerImagePreferences()
 	RomIdCode = rom[0xac] | (rom[0xad] << 8) | (rom[0xae] << 16) | (rom[0xaf] << 24);
 	RomTitle[0] = '\0';
 
-	for(int i=0; i < gameSettingsCount; i++)
+	for(int i=0; i < gameSettingsCount; ++i)
 	{
 		if(gameSettings[i].gameID[0] == rom[0xac] &&
 			gameSettings[i].gameID[1] == rom[0xad] &&
@@ -815,7 +807,7 @@ static void ApplyPerImagePreferences()
 void LoadPatch()
 {
 	int patchsize = 0;
-	int patchtype;
+	int patchtype = 0;
 
 	AllocSaveBuffer ();
 
@@ -825,7 +817,7 @@ void LoadPatch()
 	sprintf(patchpath[1], "%s%s.ups",browser.dir,ROMFilename);
 	sprintf(patchpath[2], "%s%s.ppf",browser.dir,ROMFilename);
 
-	for(patchtype=0; patchtype<3; patchtype++)
+	for(; patchtype<3; patchtype++)
 	{
 		patchsize = LoadFile(patchpath[patchtype], SILENT);
 
@@ -949,7 +941,7 @@ bool LoadVBAROM()
 			srcHeight = 160;
 			loaded = VMCPULoadROM();
 			srcPitch = 484;
-			soundSetSampleRate(44100 / 2);
+			soundSetSampleRate(22050); //44100 / 2
 			cpuSaveType = 0;
 			break;
 
