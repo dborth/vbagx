@@ -583,7 +583,8 @@ u8 ZeroTable[256] = {
 
 int inline gbGetValue(int min,int max,int v)
 {
-  return (int)(min+(float)(max-min)*(2.0*(v/31.0)-(v/31.0)*(v/31.0)));
+	float o31 = float(v) / 31.0f;
+	return (min +((int)((float)(max-min)* o31*(2.0f - o31))));	
 }
 
 void gbGenFilter()
@@ -631,9 +632,9 @@ void gbCopyMemory(u16 d, u16 s, int count)
 {
   while(count) {
     gbMemoryMap[d>>12][d & 0x0fff] = gbMemoryMap[s>>12][s & 0x0fff];
-    s++;
-    d++;
-    count--;
+    ++s;
+    ++d;
+    --count;
   }
 }
 
@@ -670,7 +671,7 @@ void gbDoHdma()
     gbDmaTicks = 9;
 
   if (IFF & 0x80)
-    gbDmaTicks++;
+    ++gbDmaTicks;
 
 }
 
@@ -888,16 +889,14 @@ void  gbWriteMemory(register u16 address, register u8 value)
       {
         bool temp = false;
 
-        if ((gbTimerOn  && !gbTimerModeChange)  && (gbTimerMode & 2) &&
+		if (((gbTimerOn  && !gbTimerModeChange)  && (gbTimerMode & 2) &&
             !(gbInternalTimer & 0x80) && (gbInternalTimer & (gbTimerClockTicks>>1)) &&
-            !(gbInternalTimer & (gbTimerClockTicks>>5)))
-          temp = true;
-        else if ((!gbTimerOn && !gbTimerModeChange && gbTimerOnChange ) &&  ((gbTimerTicks-1) < (gbTimerClockTicks>>1)))
-          temp = true;
-        else if (gbTimerOn && gbTimerModeChange && !gbTimerOnChange)
-        {
-          switch(gbTimerMode & 3)
-          {
+            !(gbInternalTimer & (gbTimerClockTicks>>5))) 
+			||
+			((!gbTimerOn && !gbTimerModeChange && gbTimerOnChange ) &&  ((gbTimerTicks-1) < (gbTimerClockTicks>>1)))){
+				temp = true;
+        }else if (gbTimerOn && gbTimerModeChange && !gbTimerOnChange){
+          switch(gbTimerMode & 3){
             case 0x00:
               temp = false;
               break;
@@ -1016,8 +1015,6 @@ void  gbWriteMemory(register u16 address, register u8 value)
 
           //  systemDrawScreen();
 
-
-
           gbRegisterLYLCDCOffOn = (register_LY + 144) % 154;
 
           gbLcdTicks = GBLCD_MODE_2_CLOCK_TICKS - (gbSpeed ? 2 : 1);
@@ -1122,13 +1119,24 @@ void  gbWriteMemory(register u16 address, register u8 value)
         temp = ((GBLY_INCREMENT_CLOCK_TICKS-GBLCD_MODE_2_CLOCK_TICKS) -
                gbLcdLYIncrementTicks);
 
-      if (temp >=0)
-      {
-        for (int i=temp<<(gbSpeed ? 1 : 2);i<300;i++)
-          if (temp < 300)
-            gbSCYLine[i] = value;
+      if (temp >=0){
+		if (temp < 300){
+		
+			int i = temp << (gbSpeed ? 1 : 2);
+			
+			if((i % 2) == 0){ // Divisible by 2
+				// If it is divisible by 2, it'll go much faster
+				for (; i < 300; i += 2){
+					gbSCYLine[i] =
+					gbSCYLine[i+1] = value;
+				}
+			}else{    // Not divisible by 2
+				for (; i < 300; ++i){
+					gbSCYLine[i] = value;
+				}
+			}
+		}
       }
-
       else
         memset(gbSCYLine, value, sizeof(gbSCYLine));
 
@@ -1146,9 +1154,22 @@ void  gbWriteMemory(register u16 address, register u8 value)
 
       if (temp >=0)
       {
-        for (int i=temp<<(gbSpeed ? 1 : 2);i<300;i++)
-          if (temp < 300)
-            gbSCXLine[i] = value;
+		if (temp < 300){
+			int i = temp << (gbSpeed ? 1 : 2);
+				
+			if((i % 2) == 0){ // Divisible by 2
+				// If it is divisible by 2, it'll go much faster
+				for (; i < 300; i += 2){
+					gbSCXLine[i] =
+					gbSCXLine[i+1] = value;
+				}
+			}else{    // Not divisible by 2
+				for (; i < 300; ++i){
+					gbSCXLine[i] = value;
+				}
+			}
+			
+		}
       }
 
       else
@@ -1178,11 +1199,8 @@ void  gbWriteMemory(register u16 address, register u8 value)
 
     // DMA!
     case 0x46: {
-      int source = value * 0x0100;
-
-      gbCopyMemory(0xfe00,
-                   source,
-                   0xa0);
+	  int source = value << 8;	  
+      gbCopyMemory(0xfe00, source, 0xa0);
       gbMemory[0xff46] = register_DMA = value;
       return;
     }
@@ -1200,9 +1218,21 @@ void  gbWriteMemory(register u16 address, register u8 value)
 
       if (temp >=0)
       {
-        for (int i=temp<<(gbSpeed ? 1 : 2);i<300;i++)
-          if (temp < 300)
-            gbBgpLine[i] = value;
+		if (temp < 300){
+			int i = temp << (gbSpeed ? 1 : 2);
+				
+			if((i % 2) == 0){ // Divisible by 2
+				// If it is divisible by 2, it'll go much faster
+				for (; i < 300; i += 2){
+					gbBgpLine[i] =
+					gbBgpLine[i+1] = value;
+				}
+			}else{    // Not divisible by 2
+				for (; i < 300; ++i){
+					gbBgpLine[i] = value;
+				}
+			}
+		}
       }
       else
         memset(gbBgpLine,value,sizeof(gbBgpLine));
@@ -1223,9 +1253,21 @@ void  gbWriteMemory(register u16 address, register u8 value)
 
       if (temp >=0)
       {
-        for (int i=temp<<(gbSpeed ? 1 : 2);i<300;i++)
-          if (temp < 300)
-            gbObp0Line[i] = value;
+		if (temp < 300){
+			int i = temp << (gbSpeed ? 1 : 2);
+				
+			if((i % 2) == 0){ // Divisible by 2
+				// If it is divisible by 2, it'll go much faster
+				for (; i < 300; i += 2){
+					gbObp0Line[i] =
+					gbObp0Line[i+1] = value;
+				}
+			}else{    // Not divisible by 2
+				for (; i < 300; ++i){
+					gbObp0Line[i] = value;
+				}
+			}
+		}
       }
       else
         memset(gbObp0Line,value,sizeof(gbObp0Line));
@@ -1246,9 +1288,21 @@ void  gbWriteMemory(register u16 address, register u8 value)
 
       if (temp >=0)
       {
-        for (int i=temp<<(gbSpeed ? 1 : 2);i<300;i++)
-          if (temp < 300)
-            gbObp1Line[i] = value;
+		if (temp < 300){
+			int i = temp << (gbSpeed ? 1 : 2);
+				
+			if((i % 2) == 0){ // Divisible by 2
+				// If it is divisible by 2, it'll go much faster
+				for (; i < 300; i += 2){
+					gbObp1Line[i] =
+					gbObp1Line[i+1] = value;
+				}
+			}else{    // Not divisible by 2
+				for (; i < 300; ++i){
+					gbObp1Line[i] = value;
+				}
+			}
+		}
       }
       else
         memset(gbObp1Line,value,sizeof(gbObp1Line));
@@ -1284,11 +1338,11 @@ void  gbWriteMemory(register u16 address, register u8 value)
     // VBK
     case 0x4f: {
       if(gbCgbMode) {
-        value = value & 1;
+		value &= 1;
         if(value == gbVramBank)
           return;
 
-        int vramAddress = value * 0x2000;
+        int vramAddress = value << 13; //* 0x2000
         gbMemoryMap[0x08] = &gbVram[vramAddress];
         gbMemoryMap[0x09] = &gbVram[vramAddress + 0x1000];
 
@@ -1365,7 +1419,7 @@ void  gbWriteMemory(register u16 address, register u8 value)
     case 0x55: {
 
       if(gbCgbMode) {
-        gbHdmaBytes = 16 + (value & 0x7f) * 16;
+		gbHdmaBytes = 16 + ((value & 0x7f) <<4);
         if(gbHdmaOn) {
           if(value & 0x80) {
             gbMemory[0xff55] = register_HDMA5 = (value & 0x7f);
@@ -1384,10 +1438,10 @@ void  gbWriteMemory(register u16 address, register u8 value)
             // account... according to GB DEV FAQs, the setup time is the same
             // for single and double speed, but the actual transfer takes the
             // same time
-            if(gbSpeed)
-              gbDmaTicks = 2+16 * ((value & 0x7f) +1);
+			if(gbSpeed)
+              gbDmaTicks = 2 + (((value & 0x7f) + 1) << 4);
             else
-              gbDmaTicks = 1+8 * ((value & 0x7f)+1);
+              gbDmaTicks = 1 + (((value & 0x7f) + 1) << 3);
 
             gbCopyMemory((gbHdmaDestination & 0x1ff0) | 0x8000,
                          gbHdmaSource & 0xfff0,
@@ -1395,11 +1449,17 @@ void  gbWriteMemory(register u16 address, register u8 value)
             gbHdmaDestination += gbHdmaBytes;
             gbHdmaSource += gbHdmaBytes;
 
-            gbMemory[0xff51] = register_HDMA1 = 0xff;// = (gbHdmaSource >> 8) & 0xff;
-            gbMemory[0xff52] = register_HDMA2 = 0xff;// = gbHdmaSource & 0xf0;
-            gbMemory[0xff53] = register_HDMA3 = 0xff;// = ((gbHdmaDestination - 0x8000) >> 8) & 0x1f;
-            gbMemory[0xff54] = register_HDMA4 = 0xff;// = gbHdmaDestination & 0xf0;
-            gbMemory[0xff55] = register_HDMA5 = 0xff;
+			// Spacial alignemnt
+			gbMemory[0xff51] = 
+			gbMemory[0xff52] = 
+			gbMemory[0xff53] = 
+			gbMemory[0xff54] = 
+			gbMemory[0xff55] = 0xff;
+			register_HDMA1 = 
+            register_HDMA2 =
+            register_HDMA3 = 
+            register_HDMA4 = 
+            register_HDMA5 = 0xff;
           }
         }
         return;
@@ -1532,7 +1592,7 @@ void  gbWriteMemory(register u16 address, register u8 value)
         if(bank == gbWramBank)
           return;
 
-        int wramAddress = bank * 0x1000;
+        int wramAddress = bank << 12; //* 0x1000
         gbMemoryMap[0x0d] = &gbWram[wramAddress];
 
         gbWramBank = bank;
@@ -1777,20 +1837,18 @@ u8 gbReadMemory(register u16 address)
           int joy = 0;
           if(gbSgbMode && gbSgbMultiplayer) {
             switch(gbSgbNextController) {
-            case 0x0f:
-              joy = 0;
-              break;
-            case 0x0e:
-              joy = 1;
-              break;
-            case 0x0d:
-              joy = 2;
-              break;
-            case 0x0c:
-              joy = 3;
-              break;
-            default:
-              joy = 0;
+				case 0x0f:
+				default:
+				  break;
+				case 0x0e:
+				  joy = 1;
+				  break;
+				case 0x0d:
+				  joy = 2;
+				  break;
+				case 0x0c:
+				  joy = 3;
+				  break;
             }
           }
           int joystate = gbJoymask[joy];
@@ -1810,20 +1868,18 @@ u8 gbReadMemory(register u16 address)
           int joy = 0;
           if(gbSgbMode && gbSgbMultiplayer) {
             switch(gbSgbNextController) {
-            case 0x0f:
-              joy = 0;
-              break;
-            case 0x0e:
-              joy = 1;
-              break;
-            case 0x0d:
-              joy = 2;
-              break;
-            case 0x0c:
-              joy = 3;
-              break;
-            default:
-              joy = 0;
+				case 0x0f:
+				default:
+				  break;
+				case 0x0e:
+				  joy = 1;
+				  break;
+				case 0x0d:
+				  joy = 2;
+				  break;
+				case 0x0c:
+				  joy = 3;
+				  break;
             }
           }
           int joystate = gbJoymask[joy];
@@ -2017,24 +2073,24 @@ void gbSpeedSwitch()
   gbBlackScreen = true;
   if(gbSpeed == 0) {
     gbSpeed = 1;
-    GBLCD_MODE_0_CLOCK_TICKS = 51 * 2;
-    GBLCD_MODE_1_CLOCK_TICKS = 1140 * 2;
-    GBLCD_MODE_2_CLOCK_TICKS = 20 * 2;
-    GBLCD_MODE_3_CLOCK_TICKS = 43 * 2;
-    GBLY_INCREMENT_CLOCK_TICKS = 114 * 2;
+    GBLCD_MODE_0_CLOCK_TICKS = 51 << 1;
+    GBLCD_MODE_1_CLOCK_TICKS = 1140 << 1;
+    GBLCD_MODE_2_CLOCK_TICKS = 20 << 1;
+    GBLCD_MODE_3_CLOCK_TICKS = 43 << 1;
+    GBLY_INCREMENT_CLOCK_TICKS = 114 << 1;
     GBDIV_CLOCK_TICKS = 64;
     GBTIMER_MODE_0_CLOCK_TICKS = 256;
     GBTIMER_MODE_1_CLOCK_TICKS = 4;
     GBTIMER_MODE_2_CLOCK_TICKS = 16;
     GBTIMER_MODE_3_CLOCK_TICKS = 64;
-    GBSERIAL_CLOCK_TICKS = 128 * 2;
-    gbLcdTicks *= 2;
-    gbLcdTicksDelayed *=2;
-    gbLcdTicksDelayed--;
-    gbLcdLYIncrementTicks *= 2;
-    gbLcdLYIncrementTicksDelayed *= 2;
-    gbLcdLYIncrementTicksDelayed--;
-    gbSerialTicks *= 2;
+    GBSERIAL_CLOCK_TICKS = 128 << 1;
+    gbLcdTicks <<= 1;
+    gbLcdTicksDelayed <<= 1;
+    --gbLcdTicksDelayed;
+    gbLcdLYIncrementTicks <<= 1;
+    gbLcdLYIncrementTicksDelayed <<= 1;
+    --gbLcdLYIncrementTicksDelayed;
+    gbSerialTicks <<= 1;
     //SOUND_CLOCK_TICKS = soundQuality * 24 * 2;
     //soundTicks *= 2;
     gbLine99Ticks = 3;
@@ -2052,17 +2108,17 @@ void gbSpeedSwitch()
     GBTIMER_MODE_3_CLOCK_TICKS = 64;
     GBSERIAL_CLOCK_TICKS = 128;
     gbLcdTicks >>= 1;
-    gbLcdTicksDelayed++;
+    ++gbLcdTicksDelayed;
     gbLcdTicksDelayed >>=1;
     gbLcdLYIncrementTicks >>= 1;
-    gbLcdLYIncrementTicksDelayed++;
+    ++gbLcdLYIncrementTicksDelayed;
     gbLcdLYIncrementTicksDelayed >>= 1;
-    gbSerialTicks /= 2;
+    gbSerialTicks >>= 1;
     //SOUND_CLOCK_TICKS = soundQuality * 24;
     //soundTicks /= 2;
     gbLine99Ticks = 1;
     if (gbHardware & 8)
-      gbLine99Ticks++;
+      ++gbLine99Ticks;
   }
   gbDmaTicks += (134)*GBLY_INCREMENT_CLOCK_TICKS + (37<<(gbSpeed ? 1 : 0));
 }
@@ -2110,18 +2166,15 @@ void gbGetHardwareType()
   gbCgbMode = 0;
   gbSgbMode = 0;
   if(gbRom[0x143] & 0x80) {
-    if((gbEmulatorType == 0) ||
-       gbEmulatorType == 1 ||
-       gbEmulatorType == 4) {
+	if((1<<gbEmulatorType) & ((1<<0)|(1<<1)|(1<<4))){ 
       gbCgbMode = 1;
     }
   }
 
   if((gbCgbMode == 0 ) && (gbRom[0x146] == 0x03)) {
-    if(gbEmulatorType == 0 ||
-       gbEmulatorType == 2 ||
-       gbEmulatorType == 5)
+	if((1<<gbEmulatorType) & ((1<<0)|(1<<2)|(1<<5))){ 
       gbSgbMode = 1;
+    }
   }
 
   gbHardware = 1; // GB
@@ -3698,17 +3751,24 @@ static bool gbReadSaveState(gzFile gzFile)
   memset(pix, 0, 257*226*sizeof(u32));
 
   if(version < GBSAVE_GAME_VERSION_6) {
-    utilGzRead(gzFile, gbPalette, 64 * sizeof(u16));
-  } else
-    utilGzRead(gzFile, gbPalette, 128 * sizeof(u16));
+    utilGzRead(gzFile, gbPalette,  (sizeof(u16)<<6));
+  } else{
+    utilGzRead(gzFile, gbPalette, (sizeof(u16)<<7));
+  }
 
-  if (version < 11)
-    utilGzRead(gzFile, gbPalette, 128 * sizeof(u16));
+  if (version < 11){
+    utilGzRead(gzFile, gbPalette, (sizeof(u16)<<7));
+  }
 
   if(version < GBSAVE_GAME_VERSION_10) {
-    if(!gbCgbMode && !gbSgbMode) {
-      for(int i = 0; i < 8; i++)
-        gbPalette[i] = systemGbPalette[gbPaletteOption*8+i];
+    if(gbCgbMode || gbSgbMode) {
+		int gbp8 = gbPaletteOption << 3;
+		for(int i = 0; i < 8; i+=4){
+			gbPalette[i  ] = systemGbPalette[gbp8+i  ];
+			gbPalette[i+1] = systemGbPalette[gbp8+i+1];
+			gbPalette[i+2] = systemGbPalette[gbp8+i+2];
+			gbPalette[i+3] = systemGbPalette[gbp8+i+3];
+		}
     }
   }
 
@@ -3837,9 +3897,9 @@ static bool gbReadSaveState(gzFile gzFile)
     if(value == 0)
       value = 1;
 
-    gbMemoryMap[0x08] = &gbVram[register_VBK * 0x2000];
-    gbMemoryMap[0x09] = &gbVram[register_VBK * 0x2000 + 0x1000];
-    gbMemoryMap[0x0d] = &gbWram[value * 0x1000];
+	gbMemoryMap[0x08] = &gbVram[register_VBK << 13];
+    gbMemoryMap[0x09] = &gbVram[(register_VBK << 13) + 0x1000];
+    gbMemoryMap[0x0d] = &gbWram[value << 12];
   }
 
   gbSoundReadGame(version, gzFile);
@@ -3889,7 +3949,7 @@ static bool gbReadSaveState(gzFile gzFile)
     GBDIV_CLOCK_TICKS = 64;
 
     if (gbSpeed)
-      gbDivTicks /=2;
+		gbDivTicks >>=1; 
 
     if ((gbLcdMode == 0) && (register_STAT & 8))
       gbInt48Signal |= 1;
@@ -3940,7 +4000,7 @@ static bool gbReadSaveState(gzFile gzFile)
   }
 
   if (gbSpeed)
-    gbLine99Ticks *= 2;
+	gbLine99Ticks <<= 1;
 
   systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
@@ -3949,7 +4009,6 @@ static bool gbReadSaveState(gzFile gzFile)
 
   return true;
 }
-
 bool gbReadMemSaveState(char *memory, int available)
 {
   gzFile gzFile = utilMemGzOpen(memory, available, "r");
@@ -4084,8 +4143,11 @@ bool gbUpdateSizes()
 
   if(gbRomSize < gbRomSizes[gbRom[0x148]]) {
     gbRom = (u8 *)realloc(gbRom, gbRomSizes[gbRom[0x148]]);
-    for (int i = gbRomSize; i<gbRomSizes[gbRom[0x148]]; i++)
+
+	int gbrSize = gbRomSizes[gbRom[0x148]];
+	for (int i = gbRomSize; i < gbrSize; ++i){
         gbRom[i] = 0x00; // Not sure if it's 0x00, 0xff or random data...
+	}
   }
   // (it's in the case a cart is 'lying' on its size.
   else if ((gbRomSize>gbRomSizes[gbRom[0x148]]) && (genericflashcardEnable))
@@ -4096,10 +4158,10 @@ bool gbUpdateSizes()
     {
       while (!((gbRomSize & 1) || (gbRom[0x148] == 7)))
       {
-        gbRom[0x148]++;
+        ++gbRom[0x148];
         gbRomSize>>=1;
       }
-      gbRom[0x148]++;
+      ++gbRom[0x148];
     }
     gbRom = (u8 *)realloc(gbRom, gbRomSizes[gbRom[0x148]]);
   }
@@ -4118,17 +4180,29 @@ bool gbUpdateSizes()
   u8 ramsize = genericflashcardEnable ? 5 : gbRom[0x149];
   gbRom[0x149] = ramsize;
 
-  if ((gbRom[2] == 0x6D) && (gbRom[5] == 0x47) && (gbRom[6] == 0x65) && (gbRom[7] == 0x6E) &&
-      (gbRom[8] == 0x69) && (gbRom[9] == 0x65) && (gbRom[0xA] == 0x28) && (gbRom[0xB] == 0x54))
+  if(((gbRom[2] - 0x6D) | (gbRom[5] - 0x47) | (gbRom[6] - 0x65) | (gbRom[7] - 0x6E) |
+      (gbRom[8] - 0x69) | (gbRom[9] - 0x65) | (gbRom[0xA] - 0x28) | (gbRom[0xB] - 0x54)) == 0)
   {
     gbCheatingDevice = 1; // GameGenie
-    for (int i = 0; i < 0x20; i++) // Cleans GG hardware registers
-      gbRom[0x4000+i] = 0;
+
+	for (int i = 0; i < 0x20; i+=8){ // Cleans GG hardware registers
+		gbRom[0x4000+i] = 
+		gbRom[0x4001+i] = 
+		gbRom[0x4002+i] = 
+		gbRom[0x4003+i] = 
+		gbRom[0x4004+i] = 
+		gbRom[0x4005+i] = 
+		gbRom[0x4006+i] = 
+		gbRom[0x4007+i] = 0;
+	}
   }
-  else if (((gbRom[0x104] == 0x44) && (gbRom[0x156] == 0xEA) && (gbRom[0x158] == 0x7F) &&
-            (gbRom[0x159] == 0xEA) && (gbRom[0x15B] == 0x7F)) || ((gbRom[0x165] == 0x3E) &&
-            (gbRom[0x166] == 0xD9) && (gbRom[0x16D] == 0xE1) && (gbRom[0x16E] == 0x7F)))
-    gbCheatingDevice = 2; // GameShark
+  else if((((gbRom[0x104] - 0x44) | (gbRom[0x156] - 0xEA) | (gbRom[0x158] - 0x7F) |
+            (gbRom[0x159] - 0xEA) | (gbRom[0x15B] - 0x7F)) == 0)							
+			|| (((gbRom[0x165] - 0x3E) | (gbRom[0x166] - 0xD9) | (gbRom[0x16D] - 0xE1) | (gbRom[0x16E] - 0x7F)) == 0))
+  
+  {
+	gbCheatingDevice = 2; // GameShark
+  }
   else gbCheatingDevice = 0;
 
   if(ramsize > 5) {
@@ -4143,16 +4217,6 @@ bool gbUpdateSizes()
   gbRomType = gbRom[0x147];
   if (genericflashcardEnable)
   {
-    /*if (gbRomType<2)
-      gbRomType =3;
-    else if ((gbRomType == 0xc) || (gbRomType == 0xf) || (gbRomType == 0x12) ||
-             (gbRomType == 0x16) || (gbRomType == 0x1a) || (gbRomType == 0x1d))
-      gbRomType++;
-    else if ((gbRomType == 0xb) || (gbRomType == 0x11) || (gbRomType == 0x15) ||
-             (gbRomType == 0x19) || (gbRomType == 0x1c))
-      gbRomType+=2;
-    else if ((gbRomType == 0x5) || (gbRomType == 0x6))
-      gbRomType = 0x1a;*/
       gbRomType = 0x1b;
   }
   else if (gbCheatingDevice == 1)
@@ -4308,7 +4372,6 @@ bool gbUpdateSizes()
 
   return true;
 }
-
 int gbGetNextEvent (int clockTicks)
 {
   if (register_LCDC & 0x80)
@@ -4349,26 +4412,27 @@ void gbDrawLine()
       u16 * dest = (u16 *)pix +
                    (gbBorderLineSkip+2) * (register_LY + gbBorderRowSkip+1)
                    + gbBorderColumnSkip;
-      for(int x = 0; x < 160; ) {
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
+      for(u32 x = 0; x < 160u; ) {
+		dest[x  ] = systemColorMap16[gbLineMix[x  ]];
+        dest[x+1] = systemColorMap16[gbLineMix[x+1]];
+        dest[x+2] = systemColorMap16[gbLineMix[x+2]];
+        dest[x+3] = systemColorMap16[gbLineMix[x+3]];
 
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
+        dest[x+4] = systemColorMap16[gbLineMix[x+4]];
+        dest[x+5] = systemColorMap16[gbLineMix[x+5]];
+        dest[x+6] = systemColorMap16[gbLineMix[x+6]];
+        dest[x+7] = systemColorMap16[gbLineMix[x+7]];
 
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
+        dest[x+8] = systemColorMap16[gbLineMix[x+8]];
+        dest[x+9] = systemColorMap16[gbLineMix[x+9]];
+        dest[x+10] = systemColorMap16[gbLineMix[x+10]];
+        dest[x+11] = systemColorMap16[gbLineMix[x+11]];
 
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
-        *dest++ = systemColorMap16[gbLineMix[x++]];
+        dest[x+12] = systemColorMap16[gbLineMix[x+12]];
+        dest[x+13] = systemColorMap16[gbLineMix[x+13]];
+        dest[x+14] = systemColorMap16[gbLineMix[x+14]];
+        dest[x+15] = systemColorMap16[gbLineMix[x+15]];
+		x += 16;
       }
       if(gbBorderOn)
         dest += gbBorderColumnSkip;
@@ -4381,7 +4445,7 @@ void gbDrawLine()
       u8 *dest = (u8 *)pix +
                  3*(gbBorderLineSkip * (register_LY + gbBorderRowSkip) +
                  gbBorderColumnSkip);
-      for(int x = 0; x < 160;) {
+      for(u32 x = 0; x < 160;) {
         *((u32 *)dest) = systemColorMap32[gbLineMix[x++]];
         dest+= 3;
         *((u32 *)dest) = systemColorMap32[gbLineMix[x++]];
@@ -4426,32 +4490,32 @@ void gbDrawLine()
       u32 * dest = (u32 *)pix +
                    (gbBorderLineSkip+1) * (register_LY + gbBorderRowSkip+1)
                    + gbBorderColumnSkip;
-      for(int x = 0; x < 160;) {
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
+      for(u32 x = 0; x < 160u; ) {
+		dest[x  ] = systemColorMap32[gbLineMix[x  ]];
+        dest[x+1] = systemColorMap32[gbLineMix[x+1]];
+        dest[x+2] = systemColorMap32[gbLineMix[x+2]];
+        dest[x+3] = systemColorMap32[gbLineMix[x+3]];
 
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
+        dest[x+4] = systemColorMap32[gbLineMix[x+4]];
+        dest[x+5] = systemColorMap32[gbLineMix[x+5]];
+        dest[x+6] = systemColorMap32[gbLineMix[x+6]];
+        dest[x+7] = systemColorMap32[gbLineMix[x+7]];
 
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
+        dest[x+8] = systemColorMap32[gbLineMix[x+8]];
+        dest[x+9] = systemColorMap32[gbLineMix[x+9]];
+        dest[x+10] = systemColorMap32[gbLineMix[x+10]];
+        dest[x+11] = systemColorMap32[gbLineMix[x+11]];
 
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
-        *dest++ = systemColorMap32[gbLineMix[x++]];
+        dest[x+12] = systemColorMap32[gbLineMix[x+12]];
+        dest[x+13] = systemColorMap32[gbLineMix[x+13]];
+        dest[x+14] = systemColorMap32[gbLineMix[x+14]];
+        dest[x+15] = systemColorMap32[gbLineMix[x+15]];
+		x+=16;
       }
     }
     break;
   }
 }
-
 void gbEmulate(int ticksToStop)
 {
   gbRegister tempRegister;
@@ -4526,7 +4590,7 @@ void gbEmulate(int ticksToStop)
       // PC.W is not incremented for the first byte of the next instruction.
       if (IFF & 2)
       {
-        PC.W--;
+        --PC.W;
         IFF &= ~2;
       }
 
@@ -4791,12 +4855,28 @@ void gbEmulate(int ticksToStop)
                     if (wx<0)
                         wx = 0;
 
-                    if((wx <= 159) && (tempgbWindowLine <= 143))
-                      for (int i = wx; i<300; i++)
-                        if (gbSpeed)
-                          gbSpritesTicks[i]+=3;
-                        else
-                          gbSpritesTicks[i]+=1;
+                    if((wx <= 159) && (tempgbWindowLine <= 143)){
+
+						int i = 300 - 4;
+						if (gbSpeed){
+							do{
+								gbSpritesTicks[i]+=3;
+								gbSpritesTicks[i+1]+=3;
+								gbSpritesTicks[i+2]+=3;
+								gbSpritesTicks[i+3]+=3;
+								i-=4;
+							}while(i>=0);
+							
+						}else{
+							do{
+								++gbSpritesTicks[i];
+								++gbSpritesTicks[i+1];
+								++gbSpritesTicks[i+2];
+								++gbSpritesTicks[i+3];
+								i-=4;
+							}while(i>=0);
+						}
+					}
                   }
                 }
               }
@@ -4867,11 +4947,9 @@ void gbEmulate(int ticksToStop)
                 // set the LY increment counter
 
                 if(register_LCDC & 0x80) {
-                    if (gbHardware & 0xa)
-                    {
-
-                    register_IF |= 1; // V-Blank interrupt
-                    gbInterruptLaunched |=1;
+                    if (gbHardware & 0xa){
+						register_IF |= 1; // V-Blank interrupt
+						gbInterruptLaunched |=1;
                     }
 
 
@@ -4880,7 +4958,7 @@ void gbEmulate(int ticksToStop)
                 gbLcdTicksDelayed += GBLCD_MODE_1_CLOCK_TICKS;
                 gbLcdModeDelayed = 1;
 
-                gbFrameCount++;
+                ++gbFrameCount;
                 systemFrame();
 
                 if((gbFrameCount % 10) == 0)
@@ -4899,15 +4977,12 @@ void gbEmulate(int ticksToStop)
                 if(systemReadJoypads()) {
                   // read joystick
                   if(gbSgbMode && gbSgbMultiplayer) {
-                    if(gbSgbFourPlayers) {
-                      gbJoymask[0] = systemReadJoypad(0);
-                      gbJoymask[1] = systemReadJoypad(1);
+					gbJoymask[0] = systemReadJoypad(0);
+                    gbJoymask[1] = systemReadJoypad(1);
+					if(gbSgbFourPlayers) {
                       gbJoymask[2] = systemReadJoypad(2);
                       gbJoymask[3] = systemReadJoypad(3);
-                    } else {
-                      gbJoymask[0] = systemReadJoypad(0);
-                      gbJoymask[1] = systemReadJoypad(1);
-                    }
+                    } 
                   } else {
                     gbJoymask[0] = systemReadJoypad(-1);
                   }
@@ -4930,7 +5005,7 @@ void gbEmulate(int ticksToStop)
                 gbCapture = (newmask & 2) ? true : false;
 
                 if(gbCapture && !gbCapturePrevious) {
-                  gbCaptureNumber++;
+                  ++gbCaptureNumber;
                   systemScreenCapture(gbCaptureNumber);
                 }
                 gbCapturePrevious = gbCapture;
@@ -4946,7 +5021,7 @@ void gbEmulate(int ticksToStop)
             }
             gbFrameSkipCount = 0;
           } else
-             gbFrameSkipCount++;
+              ++gbFrameSkipCount;
 
               } else {
                 // go the the OAM being accessed mode
@@ -4999,11 +5074,19 @@ void gbEmulate(int ticksToStop)
                       if (!gbCgbMode)
                       color = gbColorOption ? gbColorFilter[gbPalette[3] & 0x7FFF] :
                         gbPalette[3] & 0x7FFF;
-                      for(int i = 0; i < 160; i++)
-                      {
-                        gbLineMix[i] = color;
-                        gbLineBuffer[i] = 0;
-                      }
+
+						int i = 160-4;
+						do{
+							gbLineMix[i  ] = 
+							gbLineMix[i+1] = 
+							gbLineMix[i+2] = 
+							gbLineMix[i+3] = color;
+							gbLineBuffer[i] = 
+							gbLineBuffer[i+1] = 
+							gbLineBuffer[i+2] = 							
+							gbLineBuffer[i+3] = 0;
+							i-=4;
+						}while(i >= 0);
                     }
                     gbDrawLine();
                   }
@@ -5056,7 +5139,7 @@ void gbEmulate(int ticksToStop)
     {
 
       // Used to update the screen with white lines when it's off.
-      // (it looks strange, but it's kinda accurate :p)
+      // (it looks strange, but it's kinda accurate)
       // You can try the Mario Demo Vx.x for exemple
       // (check the bottom 2 lines while moving)
      if (!gbWhiteScreen)
@@ -5072,18 +5155,27 @@ void gbEmulate(int ticksToStop)
         {
           gbWhiteScreen = 1;
           u8 register_LYLcdOff = ((register_LY+154)%154);
-          for (register_LY=0;register_LY <=  0x90;register_LY++)
+          for (register_LY=0;register_LY <=  0x90;++register_LY)
           {
             u16 color = gbColorOption ? gbColorFilter[0x7FFF] :
                         0x7FFF;
             if (!gbCgbMode)
             color = gbColorOption ? gbColorFilter[gbPalette[0] & 0x7FFF] :
                         gbPalette[0] & 0x7FFF;
-            for(int i = 0; i < 160; i++)
-            {
-              gbLineMix[i] = color;
-              gbLineBuffer[i] = 0;
-            }
+
+			int i = 160 - 4;
+			do{
+			
+				gbLineMix[i  ] = 
+				gbLineMix[i+1] = 
+				gbLineMix[i+2] = 
+				gbLineMix[i+3] = color;
+				gbLineBuffer[i] = 
+				gbLineBuffer[i+1] = 
+				gbLineBuffer[i+2] = 							
+				gbLineBuffer[i+3] = 0;
+				i-=4;
+			}while(i >= 0);
             gbDrawLine();
           }
           register_LY = register_LYLcdOff;
@@ -5106,11 +5198,20 @@ void gbEmulate(int ticksToStop)
             if (!gbCgbMode)
             color = gbColorOption ? gbColorFilter[gbPalette[0] & 0x7FFF] :
                         gbPalette[0] & 0x7FFF;
-            for(int i = 0; i < 160; i++)
-            {
-              gbLineMix[i] = color;
-              gbLineBuffer[i] = 0;
-            }
+
+			int i = 160 - 4;
+			do{
+				gbLineMix[i  ] = 
+				gbLineMix[i+1] = 
+				gbLineMix[i+2] = 
+				gbLineMix[i+3] = color;
+				gbLineBuffer[i] = 
+				gbLineBuffer[i+1] = 
+				gbLineBuffer[i+2] = 							
+				gbLineBuffer[i+3] = 0;
+				i-=4;
+			}while(i >= 0);
+
             gbDrawLine();
           }
           else if ((register_LY==144) && (!systemFrameSkip))
@@ -5132,20 +5233,17 @@ void gbEmulate(int ticksToStop)
             if(systemReadJoypads()) {
               // read joystick
               if(gbSgbMode && gbSgbMultiplayer) {
-                if(gbSgbFourPlayers) {
-                  gbJoymask[0] = systemReadJoypad(0);
+				  gbJoymask[0] = systemReadJoypad(0);
                   gbJoymask[1] = systemReadJoypad(1);
+				if(gbSgbFourPlayers) {
                   gbJoymask[2] = systemReadJoypad(2);
                   gbJoymask[3] = systemReadJoypad(3);
-                } else {
-                  gbJoymask[0] = systemReadJoypad(0);
-                  gbJoymask[1] = systemReadJoypad(1);
                 }
               } else {
                 gbJoymask[0] = systemReadJoypad(-1);
               }
             }
-            gbFrameCount++;
+            ++gbFrameCount;
 
             systemFrame();
 
@@ -5176,7 +5274,7 @@ void gbEmulate(int ticksToStop)
 
         while(gbSerialTicks <= 0) {
           // increment number of shifted bits
-          gbSerialBits++;
+          ++gbSerialBits;
           linkProc();
           if(gbSerialOn && (gbMemory[0xff02] & 1)) {
             if(gbSerialBits == 8) {
@@ -5200,7 +5298,7 @@ void gbEmulate(int ticksToStop)
             // shift serial byte to right and put a 1 bit in its place
             //      gbMemory[0xff01] = 0x80 | (gbMemory[0xff01]>>1);
             // increment number of shifted bits
-            gbSerialBits++;
+            ++gbSerialBits;
             if(gbSerialBits == 8) {
               // end of transmission
               if(gbSerialFunction) // external device
@@ -5239,7 +5337,7 @@ void gbEmulate(int ticksToStop)
       gbTimerTicks= ((gbInternalTimer) & gbTimerMask[gbTimerMode])+1-clockTicks;
 
       while(gbTimerTicks <= 0) {
-        register_TIMA++;
+        ++register_TIMA;
         // timer overflow!
         if((register_TIMA & 0xff) == 0) {
           // reload timer modulo
@@ -5334,7 +5432,7 @@ void gbEmulate(int ticksToStop)
 
         if (gbIntBreak == 2)
         {
-          gbDmaTicks--;
+          --gbDmaTicks;
           gbIntBreak = 0;
         }
 
@@ -5380,14 +5478,11 @@ void gbEmulate(int ticksToStop)
         if(systemReadJoypads()) {
           // read joystick
           if(gbSgbMode && gbSgbMultiplayer) {
-            if(gbSgbFourPlayers) {
-              gbJoymask[0] = systemReadJoypad(0);
-              gbJoymask[1] = systemReadJoypad(1);
+			gbJoymask[0] = systemReadJoypad(0);
+            gbJoymask[1] = systemReadJoypad(1);
+			if(gbSgbFourPlayers) {
               gbJoymask[2] = systemReadJoypad(2);
               gbJoymask[3] = systemReadJoypad(3);
-            } else {
-              gbJoymask[0] = systemReadJoypad(0);
-              gbJoymask[1] = systemReadJoypad(1);
             }
           } else {
             gbJoymask[0] = systemReadJoypad(-1);

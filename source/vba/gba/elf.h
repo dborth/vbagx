@@ -14,23 +14,23 @@ enum LocationType {
 
 struct ELFHeader {
   u32 magic;
-  u8 clazz;
-  u8 data;
-  u8 version;
-  u8 pad[9];
-  u16 e_type;
-  u16 e_machine;
   u32 e_version;
   u32 e_entry;
   u32 e_phoff;
   u32 e_shoff;
   u32 e_flags;
+  u16 e_type;
+  u16 e_machine;
   u16 e_ehsize;
   u16 e_phentsize;
   u16 e_phnum;
   u16 e_shentsize;
   u16 e_shnum;
   u16 e_shstrndx;
+  u8 clazz;
+  u8 data;
+  u8 version;
+  u8 pad[9];
 };
 
 struct ELFProgramHeader {
@@ -61,9 +61,9 @@ struct ELFSymbol {
   u32 name;
   u32 value;
   u32 size;
+  u16 shndx;
   u8 info;
   u8 other;
-  u16 shndx;
 };
 
 struct ELFBlock {
@@ -75,21 +75,21 @@ struct ELFAttr {
   u32 name;
   u32 form;
   union {
-    u32 value;
+	ELFBlock *block;
+	u32 value;
     char *string;
     u8 *data;
-    bool flag;
-    ELFBlock *block;
+	bool flag;
   };
 };
 
 struct ELFAbbrev {
   u32 number;
   u32 tag;
-  bool hasChildren;
   int numAttrs;
   ELFAttr *attrs;
   ELFAbbrev *next;
+  bool hasChildren;
 };
 
 enum TypeEnum {
@@ -163,12 +163,12 @@ struct Object {
   char *name;
   int file;
   int line;
-  bool external;
   Type *type;
   ELFBlock *location;
   u32 startScope;
   u32 endScope;
   Object *next;
+  bool external;
 };
 
 struct Function {
@@ -177,12 +177,12 @@ struct Function {
   u32 highPC;
   int file;
   int line;
-  bool external;
   Type *returnType;
   Object *parameters;
   Object *variables;
   ELFBlock *frameBase;
   Function *next;
+  bool external;
 };
 
 struct LineInfoItem {
@@ -193,8 +193,8 @@ struct LineInfoItem {
 
 struct LineInfo {
   int fileCount;
-  char **files;
   int number;
+  char **files;
   LineInfoItem *lines;
 };
 
@@ -219,7 +219,6 @@ struct CompileUnit {
   char *compdir;
   u32 lowPC;
   u32 highPC;
-  bool hasLineInfo;
   u32 lineInfo;
   LineInfo *lineInfoTable;
   Function *functions;
@@ -227,6 +226,7 @@ struct CompileUnit {
   Object *variables;
   Type *types;
   CompileUnit *next;
+  bool hasLineInfo;
 };
 
 struct DebugInfo {
