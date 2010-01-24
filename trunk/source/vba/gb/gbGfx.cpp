@@ -78,7 +78,7 @@ void gbRenderLine()
   if(y >= 144)
     return;
 
-  int SpritesTicks = gbSpritesTicks[x]*(gbSpeed ? 2 : 4);
+  int SpritesTicks = gbSpritesTicks[x] << (gbSpeed ? 1 : 2);
   int sx = gbSCXLine[(gbSpeed ? 0 : 4)+SpritesTicks];
   int sy = gbSCYLine[(gbSpeed ? 11 : 5)+SpritesTicks];
 
@@ -92,7 +92,7 @@ void gbRenderLine()
   int bx = 1 << (7 - (sx & 7));
   int by = sy & 7;
 
-  int tile_map_line_y = tile_map + ty * 32;
+  int tile_map_line_y = tile_map + (ty <<5);
 
   int tile_map_address = tile_map_line_y + tx;
 
@@ -102,24 +102,22 @@ void gbRenderLine()
 
   u8 tile = bank0[tile_map_address];
 
-  tile_map_address++;
+  ++tile_map_address;
 
   if(!(register_LCDC & 0x10))
         tile ^= 0x80;
 
-  int tile_pattern_address = tile_pattern + tile * 16 + by*2;
+  int tile_pattern_address = tile_pattern + (tile<< 4) + (by<<1);
 
   if(register_LCDC & 0x80) {
     if((register_LCDC & 0x01 || gbCgbMode) && (layerSettings & 0x0100)) {
       while(x < 160) {
 
-
-
         u8 tile_a = 0;
         u8 tile_b = 0;
 
         if(attrs & 0x40) {
-          tile_pattern_address = tile_pattern + tile * 16 + (7-by)*2;
+			tile_pattern_address = tile_pattern + (tile<<4) + ((7-by)<<1);
         }
 
         if(attrs & 0x08) {
@@ -145,7 +143,7 @@ void gbRenderLine()
             gbLineBuffer[x] |= 0x300;
 
           if(gbCgbMode) {
-            c = c + (attrs & 7)*4;
+			c += (attrs & 7)<<2;
           } else {
 		    // Get the background palette to use (from the delayed pipeline)
 			u8 BgPal = gbBgpLine[x+(gbSpeed ? 5 : 11)+SpritesTicks];
@@ -160,7 +158,7 @@ void gbRenderLine()
               if(c == 0)
                 palette = 0;
 
-              c = c + 4*palette;
+              c += palette<<2;
 			// Mono Game Boy requires special palette handling
             } else {
 			  if (BgPal!=oldBgPal) {
@@ -168,12 +166,11 @@ void gbRenderLine()
 				oldBgPal = BgPal;
 			  }
 	          if (!ColorizeGameboy) c = (BgPal>>(c<<1)) &3;
-              else c += 0;
 			}
           }
           gbLineMix[x] = gbColorOption ? gbColorFilter[gbPalette[c] & 0x7FFF] :
             gbPalette[c] & 0x7FFF;
-          x++;
+          ++x;
           if(x >= 160)
             break;
           bx >>= 1;
@@ -181,7 +178,7 @@ void gbRenderLine()
 
         bx = 128;
 
-        SpritesTicks = gbSpritesTicks[x]*(gbSpeed ? 2 : 4);
+		SpritesTicks = gbSpritesTicks[x] << (gbSpeed ? 1 : 2);
 
         sx = gbSCXLine[x+(gbSpeed ? 0 : 4)+SpritesTicks];
 
@@ -198,9 +195,9 @@ void gbRenderLine()
 
         by = sy & 7;
 
-        tile_pattern_address = tile_pattern + tile * 16 + by * 2;
+		tile_pattern_address = tile_pattern + (tile<<4) + (by<<1);
 
-        tile_map_line_y = tile_map + ty * 32;
+        tile_map_line_y = tile_map + (ty<<5);
 
         tile_map_address = tile_map_line_y + tx;
 
@@ -212,7 +209,7 @@ void gbRenderLine()
         if(!(register_LCDC & 0x10))
           tile ^= 0x80;
 
-        tile_pattern_address = tile_pattern + tile * 16 + by * 2;
+		tile_pattern_address = tile_pattern + (tile<<4) + (by<<1);
       }
     } else {
       // Use gbBgp[0] instead of 0 (?)
@@ -220,11 +217,11 @@ void gbRenderLine()
       // Also added the gbColorOption (fixes Dracula Densetsu II color problems)
       for(int i = 0; i < 160; i++)
       {
-        u16 color = gbColorOption ? gbColorFilter[0x7FFF] :
-                    0x7FFF;
+        u16 color = gbColorOption ? gbColorFilter[0x7FFF] : 0x7FFF;
         if (!gbCgbMode) {
 		    // Get the background palette to use (from the delayed pipeline)
-			u8 BgPal = gbBgpLine[i+(gbSpeed ? 5 : 11)+gbSpritesTicks[i]*(gbSpeed ? 2 : 4)];
+
+			u8 BgPal = gbBgpLine[i+(gbSpeed ? 5 : 11)+(gbSpritesTicks[i] << (gbSpeed ? 1 : 2))];
 			if ((BgPal!=oldBgPal) && !gbSgbMode) {
 			  gbSetBGPalette(BgPal);
 			  oldBgPal = BgPal;
@@ -280,7 +277,7 @@ void gbRenderLine()
           by = gbWindowLine & 7;
 
           // Tries to emulate the 'window scrolling bug' when wx == 0 (ie. wx-7 == -7).
-          // Nothing close to perfect, but good enought for now...
+          // Nothing close to perfect, but good enough for now...
           if (wx == -7)
           {
             swx = 7-((gbSCXLine[0]-1) & 7);
@@ -303,7 +300,7 @@ void gbRenderLine()
             wx = 0;
           }
 
-          tile_map_line_y = tile_map + ty * 32;
+          tile_map_line_y = tile_map + (ty<<5);
 
           tile_map_address = tile_map_line_y + tx;
 
@@ -313,25 +310,29 @@ void gbRenderLine()
           u8 attrs = 0;
           if(bank1)
             attrs = bank1[tile_map_address];
-          tile_map_address++;
+          ++tile_map_address;
 
-          if((register_LCDC & 16) == 0) {
+		  if((register_LCDC & 16) == 0) {
             if(tile < 128) tile += 128;
             else tile -= 128;
           }
 
-          tile_pattern_address = tile_pattern + tile * 16 + by*2;
+		  tile_pattern_address = tile_pattern + (tile<<4) + (by<<1);
 
-          if (wx)
-          for (i = 0; i<swx; i++)
-            gbLineMix[i] = gbWindowColor[i];
+		  if (wx){
+		    i = swx - 1;
+			do{
+				gbLineMix[i] = gbWindowColor[i];
+				--i;
+			}while(i >= 0);
+		  }
 
           while(x < 160) {
             u8 tile_a = 0;
             u8 tile_b = 0;
 
             if(attrs & 0x40) {
-              tile_pattern_address = tile_pattern + tile * 16 + (7-by)*2;
+			  tile_pattern_address = tile_pattern + (tile<<4) + ((7-by)<<1);
             }
 
             if(attrs & 0x08) {
@@ -359,7 +360,7 @@ void gbRenderLine()
                 gbLineBuffer[x] = 0x100 + c;
 
               if(gbCgbMode) {
-                c = c + (attrs & 7) * 4;
+				c += (attrs & 7) <<2;
               } else {
 		        // Get the background palette to use (from the delayed pipeline)
 			    u8 BgPal = gbBgpLine[x+(gbSpeed ? 5 : 11)+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)];
@@ -374,7 +375,7 @@ void gbRenderLine()
                   if(c == 0)
                     palette = 0;
 
-                  c = c + 4*palette;
+				  c += palette<<2;
 			    // Mono Game Boy requires special palette handling
 			    } else {
 				  if (BgPal!=oldBgPal) {
@@ -388,12 +389,12 @@ void gbRenderLine()
               gbLineMix[x] = gbColorOption ? gbColorFilter[gbPalette[c] & 0x7FFF] :
                 gbPalette[c] & 0x7FFF;
               }
-              x++;
+              ++x;
               if(x >= 160)
                 break;
               bx >>= 1;
             }
-            tx++;
+            ++tx;
             if(tx == 32)
               tx = 0;
             bx = 128;
@@ -405,12 +406,12 @@ void gbRenderLine()
               if(tile < 128) tile += 128;
               else tile -= 128;
             }
-            tile_pattern_address = tile_pattern + tile * 16 + by * 2;
+			tile_pattern_address = tile_pattern + (tile<<4) + (by<<1);
           }
 
           //for (i = swx; i<160; i++)
           //  gbLineMix[i] = gbWindowColor[i];
-          gbWindowLine++;
+          ++gbWindowLine;
         }
       }
     }
@@ -423,16 +424,25 @@ void gbRenderLine()
         gbWindowLine = 0;
     }
   } else {
-    u16 color = gbColorOption ? gbColorFilter[0x7FFF] :
-                0x7FFF;
+    u16 color = gbColorOption ? gbColorFilter[0x7FFF] : 0x7FFF;
     if (!gbCgbMode)
     color = gbColorOption ? gbColorFilter[gbPalette[0] & 0x7FFF] :
             gbPalette[0] & 0x7FFF;
-    for(int i = 0; i < 160; i++)
-    {
-      gbLineMix[i] = color;
-      gbLineBuffer[i] = 0;
-    }
+
+	int i = 160 - 4;
+	do{
+	
+	  gbLineMix[i] = 
+	  gbLineMix[i+1] = 
+	  gbLineMix[i+2] = 
+      gbLineMix[i+3] = color;
+      gbLineBuffer[i] = 
+	  gbLineBuffer[i+1] = 
+	  gbLineBuffer[i+2] = 
+	  gbLineBuffer[i+3] = 0;
+	  
+	  i-=4;
+    }while(i>=0);
   }
 }
 
@@ -466,7 +476,7 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
   if(!gbCgbMode) {
     if(flags & 0x10) {
       pal = gbObp1;
-	  ObjPal = gbObp1Line[x+11+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)];
+	  ObjPal = gbObp1Line[x+11+(gbSpritesTicks[x] << (gbSpeed ? 1 : 2))];
 	  if (ObjPal!=oldObj1Pal && !gbSgbMode) {
 		gbSetObj1Palette(ObjPal);
 		oldObj1Pal = ObjPal;
@@ -474,7 +484,7 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
 	  PalOffset = 12;
     } else {
       pal = gbObp0;
-	  ObjPal = gbObp0Line[x+11+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)];
+  	  ObjPal = gbObp0Line[x+11+(gbSpritesTicks[x] << (gbSpeed ? 1 : 2))];
 	  if (ObjPal!=oldObj0Pal && !gbSgbMode) {
 		gbSetObj0Palette(ObjPal);
 		oldObj0Pal = ObjPal;
@@ -492,7 +502,7 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
 
   int prio =  flags & 0x80;
 
-  int address = init + tile * 16 + 2*t;
+  int address = init + (tile<<4) + (t<<1);
   int a = 0;
   int b = 0;
 
@@ -504,11 +514,11 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
     b = bank0[address++];
   }
 
-  for(int xx = 0; xx < 8; xx++) {
+  for(int xx = 0; xx < 8; ++xx) {
     u8 mask = 1 << (7-xx);
     u8 c = 0;
     if( (a & mask))
-      c++;
+      ++c;
     if( (b & mask))
       c+=2;
 
@@ -519,7 +529,7 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
     if(flipx)
       xxx = (7-xx+x);
 
-    if(xxx < 0 || xxx > 159)
+	if(unsigned(xxx-1) >= 159)
       continue;
 
     u16 color = gbLineBuffer[xxx];
@@ -530,12 +540,13 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
         continue;
     }
     // Fixes OAM-BG priority for Moorhuhn 2
-    if(color >= 0x300 && color != 0x300 && (register_LCDC & 1))
+    if(color >= 0x300 && color != 0x300 && (register_LCDC & 1)){
+	
       continue;
-    else if(color >= 0x200 && color < 0x300) {
+	}else if(color >= 0x200 && color < 0x300) {
       int sprite = color & 0xff;
 
-      int spriteX = gbMemory[0xfe00 + 4 * sprite + 1] - 8;
+	  int spriteX = gbMemory[0xfe00 + (sprite<<2) + 1] - 8;
 
       if(spriteX == x) {
         if(sprite < spriteNumber)
@@ -558,7 +569,7 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
 
     // make sure that sprites will work even in CGB mode
     if(gbCgbMode) {
-      c = c + (flags & 0x07)*4 + 32;
+	  c += ((flags & 0x07)<<2) + 32;
     } else {
 	  // Super Game Boy has its own special palettes
       if(gbSgbMode) {
@@ -571,7 +582,7 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
         if(c == 0)
           palette = 0;
 
-        c = c + 4*palette;
+		c += palette<<2;
 	  // Monochrome Game Boy 
 	  } else {
 	    if (!ColorizeGameboy) c = (ObjPal>>(c<<1)) &3;
@@ -602,7 +613,7 @@ void gbDrawSprites(bool draw)
     int yc = register_LY;
 
     int address = 0xfe00;
-    for(int i = 0; i < 40; i++) {
+    for(int i = 0; i < 40; ++i) {
       y = gbMemory[address++];
       x = gbMemory[address++];
       int tile = gbMemory[address++];
@@ -610,24 +621,74 @@ void gbDrawSprites(bool draw)
         tile &= 254;
       int flags = gbMemory[address++];
 
-      if(x > 0 && y > 0 && x < 168 && y < 160) {
+	  // Subtract 1 because we're not checking against greater-equal 0
+	  if(unsigned(x-1) < 167 && unsigned(y-1) < 159) {
         // check if sprite intersects current line
         int t = yc -y + 16;
-        if((size && t >=0 && t < 16) || (!size && t >= 0 && t < 8)) {
+
+		if((size && (unsigned(t) < 16u)) || (!size && (unsigned(t) < 8u))) {
           if (draw)
             gbDrawSpriteTile(tile,x-8,yc,t,flags,size,i);
           else
           {
-            for (int j = x-8; j<300; j++)
-              if (j>=0)
-              {
-                if (gbSpeed)
-                  gbSpritesTicks[j] += 5;
-                else
-                  gbSpritesTicks[j] += 2+(count&1);
-              }
+			int j = x - 8;
+			// Less than 0 or divisible by 4
+			if(j < 0 || (j & 3) == 0){ 
+				
+				// If it's less than 0, set it to 0, and then we KNOW
+				// that it can be incremented by 4.
+				if(j < 0) j = 0;
+				// Yeah, we have to check twice. It's either that or 
+				// have a (rather large) duplicate if-else statement
+			
+				if(gbSpeed){
+					for (; j<300; j+=4){
+						gbSpritesTicks[j] += 5;	
+						gbSpritesTicks[j+1] += 5;
+						gbSpritesTicks[j+2] += 5;
+						gbSpritesTicks[j+3] += 5;
+					}
+				}else{
+					int count2 = 2 + (count & 1);
+					for (; j<300; j+=4){
+						gbSpritesTicks[j] += count2;
+						gbSpritesTicks[j+1] += count2;
+						gbSpritesTicks[j+2] += count2;
+						gbSpritesTicks[j+3] += count2;
+					}
+				}
+			}
+			//divisible by 2 at least?
+			else if((j & 1) == 0){
+				if(gbSpeed){
+					for (; j<300; j+=2){
+						gbSpritesTicks[j] += 5;
+						gbSpritesTicks[j+1] += 5;	
+					}
+				}else{
+					int count2 = 2 + (count & 1);
+					for (; j<300; j+=2){
+						gbSpritesTicks[j] += count2;
+						gbSpritesTicks[j+1] += count2;
+					}
+				}
+			
+			}
+			// Not divisible by 4 OR 2: use the old one
+			else{	
+				if(gbSpeed){
+					for (; j<300; ++j){
+						gbSpritesTicks[j] += 5;	
+					}
+				}else{
+					int count2 = 2 + (count & 1);
+					for (; j<300; ++j){
+						gbSpritesTicks[j] += count2;
+					}
+				}
+			}
           }
-          count++;
+          ++count;
         }
       }
       // sprite limit reached!

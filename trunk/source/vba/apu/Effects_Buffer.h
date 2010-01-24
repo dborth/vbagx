@@ -23,14 +23,14 @@ public:
 	// Global configuration
 	struct config_t
 	{
-		bool enabled; // false = disable all effects
+		pan_vol_t side_chans [2]; // left and right side channel volume and pan
 
 		// Current sound is echoed at adjustable left/right delay,
 		// with reduced treble and volume (feedback).
-		float treble;   // 1.0 = full treble, 0.1 = very little, 0.0 = silent
-		int delay [2];  // left, right delays (msec)
-		float feedback; // 0.0 = no echo, 0.5 = each echo half previous, 1.0 = cacophony
-		pan_vol_t side_chans [2]; // left and right side channel volume and pan
+		float treble;       // 1.0 = full treble, 0.1 = very little, 0.0 = silent
+		float feedback;     // 0.0 = no echo, 0.5 = each echo half previous, 1.0 = cacophony
+		int delay [2];      // left, right delays (msec)
+		bool enabled;       // false = disable all effects
 	};
 	config_t& config() { return config_; }
 
@@ -123,10 +123,10 @@ class Simple_Effects_Buffer : public Effects_Buffer {
 public:
 	struct config_t
 	{
-		bool enabled;   // false = disable all effects
 		float echo;     // 0.0 = none, 1.0 = lots
 		float stereo;   // 0.0 = channels in center, 1.0 = channels on left/right
 		bool surround;  // true = put some channels in back
+		bool enabled;   // false = disable all effects
 	};
 	config_t& config() { return config_; }
 
