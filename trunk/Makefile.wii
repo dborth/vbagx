@@ -18,7 +18,7 @@ include $(DEVKITPPC)/wii_rules
 TARGET		:=	vbagx_wii
 TARGETDIR   :=  executables
 BUILD		:=	build_wii
-SOURCES		:=	source/ngc/images source/ngc/sounds source/ngc/fonts \
+SOURCES		:=	source/ngc/images source/ngc/sounds source/ngc/fonts source/ngc/lang \
 				source/ngc/gui source/ngc source/sz source/unzip \
 				source/vba source/vba/apu source/vba/common \
 				source/vba/gb source/vba/gba
@@ -72,6 +72,7 @@ CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 sFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S)))
 TTFFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.ttf)))
+LANGFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.lang)))
 PNGFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.png)))
 OGGFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.ogg)))
 PCMFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.pcm)))
@@ -87,7 +88,8 @@ endif
 
 export OFILES	:=	$(addsuffix .o,$(BINFILES)) \
 					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) \
-					$(TTFFILES:.ttf=.ttf.o) $(PNGFILES:.png=.png.o) \
+					$(TTFFILES:.ttf=.ttf.o) $(LANGFILES:.lang=.lang.o) \
+					$(PNGFILES:.png=.png.o) \
 					$(OGGFILES:.ogg=.ogg.o) $(PCMFILES:.pcm=.pcm.o)
 
 #---------------------------------------------------------------------------------
@@ -139,9 +141,13 @@ $(OUTPUT).dol: $(OUTPUT).elf
 $(OUTPUT).elf: $(OFILES)
 
 #---------------------------------------------------------------------------------
-# This rule links in binary data with .ttf and .png extensions
+# This rule links in binary data with these extensions: ttf lang png ogg pcm
 #---------------------------------------------------------------------------------
 %.ttf.o : %.ttf
+	@echo $(notdir $<)
+	$(bin2o)
+	
+%.lang.o : %.lang
 	@echo $(notdir $<)
 	$(bin2o)
 
