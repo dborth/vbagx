@@ -43,6 +43,19 @@ enum {
 	FILE_ROM
 };
 
+enum {
+	LANG_JAPANESE = 0,
+	LANG_ENGLISH,
+	LANG_GERMAN,
+	LANG_FRENCH,
+	LANG_SPANISH,
+	LANG_ITALIAN,
+	LANG_DUTCH,
+	LANG_SIMP_CHINESE,
+	LANG_TRAD_CHINESE,
+	LANG_KOREAN
+};
+
 struct SGCSettings{
 	float	gbaZoomHor;    // GBA horizontal zoom amount
     float	gbaZoomVert;   // GBA vertical zoom amount
@@ -64,6 +77,7 @@ struct SGCSettings{
 	int		MusicVolume;
 	int		SFXVolume;
 	int		Rumble;
+	int 	language;
 	char	LoadFolder[MAXPATHLEN];  // Path to game files
 	char	SaveFolder[MAXPATHLEN];  // Path to save files
 	char	CheatFolder[MAXPATHLEN]; // Path to cheat files
