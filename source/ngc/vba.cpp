@@ -35,7 +35,6 @@
 #include "menu.h"
 #include "input.h"
 #include "video.h"
-#include "vbaconfig.h"
 #include "gamesettings.h"
 #include "wiiusbsupport.h"
 

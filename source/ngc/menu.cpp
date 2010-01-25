@@ -27,9 +27,9 @@
 #include "gcunzip.h"
 #include "networkop.h"
 #include "fileop.h"
-#include "vbaconfig.h"
 #include "preferences.h"
 #include "button_mapping.h"
+#include "gettext.h"
 #include "input.h"
 #include "filelist.h"
 #include "gui/gui.h"
@@ -100,6 +100,14 @@ HaltGui()
 	// wait for thread to finish
 	while(!LWP_ThreadIsSuspended(guithread))
 		usleep(THREAD_SLEEP);
+}
+
+void ResetText()
+{
+	LoadLanguage();
+
+	if(mainWindow)
+		mainWindow->ResetText();
 }
 
 /****************************************************************************
@@ -3290,6 +3298,7 @@ static int MenuSettingsMenu()
 	sprintf(options.name[i++], "Music Volume");
 	sprintf(options.name[i++], "Sound Effects Volume");
 	sprintf(options.name[i++], "Rumble");
+	sprintf(options.name[i++], "Language");
 	options.length = i;
 
 	for(i=0; i < options.length; i++)
@@ -3366,6 +3375,11 @@ static int MenuSettingsMenu()
 			case 4:
 				GCSettings.Rumble ^= 1;
 				break;
+			case 5:
+				GCSettings.language++;
+				if(GCSettings.language > LANG_KOREAN)
+					GCSettings.language = 0;
+				break;
 		}
 
 		if(ret >= 0 || firstRun)
@@ -3415,6 +3429,20 @@ static int MenuSettingsMenu()
 			else
 				sprintf (options.value[4], "Disabled");
 
+			switch(GCSettings.language)
+			{
+				case LANG_JAPANESE:		sprintf(options.value[5], "Japanese"); break;
+				case LANG_ENGLISH:		sprintf(options.value[5], "English"); break;
+				case LANG_GERMAN:		sprintf(options.value[5], "German"); break;
+				case LANG_FRENCH:		sprintf(options.value[5], "French"); break;
+				case LANG_SPANISH:		sprintf(options.value[5], "Spanish"); break;
+				case LANG_ITALIAN:		sprintf(options.value[5], "Italian"); break;
+				case LANG_DUTCH:		sprintf(options.value[5], "Dutch"); break;
+				case LANG_SIMP_CHINESE:	sprintf(options.value[5], "Chinese (Simplified)"); break;
+				case LANG_TRAD_CHINESE:	sprintf(options.value[5], "Chinese (Traditional)"); break;
+				case LANG_KOREAN:		sprintf(options.value[5], "Korean"); break;
+			}
+			
 			optionBrowser.TriggerUpdate();
 		}
 
@@ -3427,6 +3455,7 @@ static int MenuSettingsMenu()
 	mainWindow->Remove(&optionBrowser);
 	mainWindow->Remove(&w);
 	mainWindow->Remove(&titleTxt);
+	ResetText();
 	return menu;
 }
 
