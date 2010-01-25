@@ -29,9 +29,9 @@ typedef struct _btn_map {
 } BtnMap;
 
 typedef struct _ctrlr_map {
-	u16 type;					// controller type
+	BtnMap map[150];			// controller button map
 	int num_btns;				// number of buttons on the controller
-	BtnMap map[150];		// controller button map
+	u16 type;					// controller type
 } CtrlrMap;
 
 // externs:

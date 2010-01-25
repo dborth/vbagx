@@ -29,6 +29,7 @@
 #include "gba/GBA.h"
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
+#include "fastmath.h"
 
 int rumbleRequest[4] = {0,0,0,0};
 GuiTrigger userInput[4];
@@ -155,8 +156,8 @@ UpdatePads()
 	#endif
 	PAD_ScanPads();
 
-	for(int i=3; i >= 0; i--)
-	{
+	int i = 3;
+	do {
 		userInput[i].pad.btns_d = PAD_ButtonsDown(i);
 		userInput[i].pad.btns_u = PAD_ButtonsUp(i);
 		userInput[i].pad.btns_h = PAD_ButtonsHeld(i);
@@ -166,7 +167,8 @@ UpdatePads()
 		userInput[i].pad.substickY = PAD_SubStickY(i);
 		userInput[i].pad.triggerL = PAD_TriggerL(i);
 		userInput[i].pad.triggerR = PAD_TriggerR(i);
-	}
+		--i;
+	} while(i >= 0);
 }
 
 /****************************************************************************
@@ -222,20 +224,23 @@ void ShutoffRumble()
 void DoRumble(int i)
 {
 	if(!GCSettings.Rumble) return;
-	if(rumbleRequest[i] && rumbleCount[i] < 3)
+	if(rumbleRequest[i])
 	{
-		WPAD_Rumble(i, 1); // rumble on
-		rumbleCount[i]++;
-	}
-	else if(rumbleRequest[i])
-	{
-		rumbleCount[i] = 12;
-		rumbleRequest[i] = 0;
+		if(rumbleCount[i] < 3)
+		{
+			WPAD_Rumble(i, 1); // rumble on
+			++rumbleCount[i];
+		}
+		else
+		{
+			rumbleCount[i] = 12;
+			rumbleRequest[i] = 0;
+		}
 	}
 	else
 	{
 		if(rumbleCount[i])
-			rumbleCount[i]--;
+			--rumbleCount[i];
 		WPAD_Rumble(i, 0); // rumble off
 	}
 }
@@ -249,10 +254,18 @@ static void updateRumble()
 	if (ConfigRequested) r = (menuRumbleCount > 0);
 	else r = cartridgeRumble || possibleCartridgeRumble || (gameRumbleCount > 0) || (menuRumbleCount > 0);
 
-	if (SilenceNeeded>0) {
-		if (r) SilenceNeeded = 5;
-		else SilenceNeeded--;
-		if (SilenceNeeded>0) r = false;
+	if (SilenceNeeded > 0)
+	{
+		if (r)
+		{
+			SilenceNeeded = 5;
+			// It will always be greater than 0 after that!
+			r = false;
+		}
+		else
+		{
+			if (--SilenceNeeded > 0) r = false;
+		}
 	}
 
 #ifdef HW_RVL
@@ -269,16 +282,16 @@ void updateRumbleFrame() {
 		SilenceNeeded = 5;
 		rumbleCountAlready = 0;
 	} else if (ConfigRequested) {
-		if (menuRumbleCount>0) rumbleCountAlready++;
+		if (menuRumbleCount>0) ++rumbleCountAlready;
 		else rumbleCountAlready=0;
 	} else {
 		if (gameRumbleCount>0 || menuRumbleCount>0 || possibleCartridgeRumble)
-			rumbleCountAlready++;
+			++rumbleCountAlready;
 		else rumbleCountAlready=0;
 	}
 	updateRumble();
-	if (gameRumbleCount>0 && !ConfigRequested) gameRumbleCount--;
-	if (menuRumbleCount>0) menuRumbleCount--;
+	if (gameRumbleCount>0 && !ConfigRequested) --gameRumbleCount;
+	if (menuRumbleCount>0) --menuRumbleCount;
 }
 
 void systemPossibleCartridgeRumble(bool RumbleOn) {
@@ -315,22 +328,39 @@ u32 StandardMovement(unsigned short chan)
 	// Is XY inside the "zone"?
 	if (pad_x * pad_x + pad_y * pad_y > PADCAL * PADCAL)
 	{
-		if (pad_x > 0 && pad_y == 0) J |= VBA_RIGHT;
-		if (pad_x < 0 && pad_y == 0) J |= VBA_LEFT;
-		if (pad_x == 0 && pad_y > 0) J |= VBA_UP;
-		if (pad_x == 0 && pad_y < 0) J |= VBA_DOWN;
-
-		if (pad_x != 0 && pad_y != 0)
+		if (pad_y == 0)
 		{
-			if ((float)pad_y / pad_x >= -2.41421356237 && (float)pad_y / pad_x < 2.41421356237)
+			if(pad_x > 0)
+			{ 
+				J |= VBA_RIGHT;
+			}
+			else if(pad_x < 0)
+			{
+				J |= VBA_LEFT;
+			}
+		}
+		if (pad_x == 0)
+		{
+			if(pad_y > 0)
+			{
+				J |= VBA_UP;
+			}
+			else if(pad_y < 0)
+			{
+				J |= VBA_DOWN;
+			}
+		}
+
+		if ((pad_x|pad_y) != 0)
+		{
+			if ((fabs((double)(pad_y) / (double)(pad_x))) < 2.41421356237)
 			{
 				if (pad_x >= 0)
 					J |= VBA_RIGHT;
 				else
 					J |= VBA_LEFT;
 			}
-
-			if ((float)pad_x / pad_y >= -2.41421356237 && (float)pad_x / pad_y < 2.41421356237)
+			if ((fabs((double)(pad_x) / (double)(pad_y))) < 2.41421356237)
 			{
 				if (pad_y >= 0)
 					J |= VBA_UP;
@@ -347,33 +377,39 @@ u32 StandardMovement(unsigned short chan)
 	if (wm_ax * wm_ax + wm_ay * wm_ay > PADCAL * PADCAL)
 	{
 		/*** we don't want division by zero ***/
-		if (wm_ax > 0 && wm_ay == 0)
-			J |= VBA_RIGHT;
-		if (wm_ax < 0 && wm_ay == 0)
-			J |= VBA_LEFT;
-		if (wm_ax == 0 && wm_ay > 0)
-			J |= VBA_UP;
-		if (wm_ax == 0 && wm_ay < 0)
-			J |= VBA_DOWN;
+		if (wm_ay == 0)
+		{
+			if(wm_ax > 0)
+			{ 
+				J |= VBA_RIGHT;
+			}
+			else if(pad_x < 0)
+			{
+				J |= VBA_LEFT;
+			}
+		}
+		if (wm_ax == 0)
+		{
+			if(wm_ay > 0)
+			{
+				J |= VBA_UP;
+			}
+			else if(pad_y < 0)
+			{
+				J |= VBA_DOWN;
+			}
+		}
 
 		if (wm_ax != 0 && wm_ay != 0)
 		{
-
-			/*** Recalc left / right ***/
-			float t;
-
-			t = (float) wm_ay / wm_ax;
-			if (t >= -2.41421356237 && t < 2.41421356237)
+			if ((fabs((double)(wm_ay) / (double)(wm_ax))) < 2.41421356237)
 			{
 				if (wm_ax >= 0)
 					J |= VBA_RIGHT;
 				else
 					J |= VBA_LEFT;
 			}
-
-			/*** Recalc up / down ***/
-			t = (float) wm_ax / wm_ay;
-			if (t >= -2.41421356237 && t < 2.41421356237)
+			if ((fabs((double)(wm_ax) / (double)(wm_ay))) < 2.41421356237)
 			{
 				if (wm_ay >= 0)
 					J |= VBA_UP;
@@ -605,7 +641,7 @@ u32 DecodeKeyboard(unsigned short pad)
 {
 	u32 J = 0;
 	#ifdef HW_RVL
-	for (int i = 0; i < MAXJP; i++)
+	for (u32 i = 0; i < MAXJP; ++i)
 	{
 		if (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) // keyboard
 			J |= vbapadmap[i];
@@ -618,7 +654,7 @@ u32 DecodeGamecube(unsigned short pad)
 {
 	u32 J = 0;
 	u32 jp = PAD_ButtonsHeld(pad);
-	for (int i = 0; i < MAXJP; i++)
+	for (u32 i = 0; i < MAXJP; ++i)
 	{
 		if (jp & btnmap[CTRLR_GCPAD][i])
 			J |= vbapadmap[i];
@@ -631,11 +667,18 @@ u32 DecodeWiimote(unsigned short pad)
 	u32 J = 0;
 	#ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
-	for (int i = 0; i < MAXJP; i++)
+
+	u32 wpad_btns_h = wp->btns_h;
+
+	if(wp->exp.type == WPAD_EXP_NONE)
 	{
-		if ( (wp->exp.type == WPAD_EXP_NONE) && (wp->btns_h & btnmap[CTRLR_WIIMOTE][i]) )
-			J |= vbapadmap[i];
+		for (u32 i = 0; i < MAXJP; ++i)
+		{
+			if (wpad_btns_h & btnmap[CTRLR_WIIMOTE][i] )
+				J |= vbapadmap[i];
+		}
 	}
+
 	#endif
 	return J;
 }
@@ -645,10 +688,13 @@ u32 DecodeClassic(unsigned short pad)
 	u32 J = 0;
 	#ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
-	for (int i = 0; i < MAXJP; i++)
-	{
-		if ( (wp->exp.type == WPAD_EXP_CLASSIC) && (wp->btns_h & btnmap[CTRLR_CLASSIC][i]) )
-			J |= vbapadmap[i];
+	u32 wpad_btns_h = wp->btns_h;
+	
+	if(wp->exp.type == WPAD_EXP_CLASSIC){
+		for (u32 i = 0; i < MAXJP; ++i){
+			if (wpad_btns_h & btnmap[CTRLR_CLASSIC][i] )
+				J |= vbapadmap[i];
+		}
 	}
 	#endif
 	return J;
@@ -658,11 +704,13 @@ u32 DecodeNunchuk(unsigned short pad)
 {
 	u32 J = 0;
 	#ifdef HW_RVL
-	for (int i = 0; i < MAXJP; i++)
-	{
-		if ( (userInput[pad].wpad->exp.type == WPAD_EXP_NUNCHUK) && 
-			 (userInput[pad].wpad->btns_h & btnmap[CTRLR_NUNCHUK][i]) )
-			J |= vbapadmap[i];
+	u32 wpad_btns_h = userInput[pad].wpad->btns_h;
+	
+	if(userInput[pad].wpad->exp.type == WPAD_EXP_NUNCHUK){
+		for (u32 i = 0; i < MAXJP; ++i){
+			if (wpad_btns_h & btnmap[CTRLR_NUNCHUK][i] )
+				J |= vbapadmap[i];
+		}
 	}
 	#endif
 	return J;
@@ -923,44 +971,88 @@ static u32 DecodeJoy(unsigned short pad)
 	u32 J = StandardMovement(pad);
 
 	// Turbo feature
-	if(
-		userInput[0].pad.substickX > 70 ||
-		userInput[0].WPAD_Stick(1,0) > 70
-	)
+	if(userInput[0].pad.substickX > 70 || userInput[0].WPAD_Stick(1,0) > 70)
 		J |= VBA_SPEED;
 
 	// Report pressed buttons (gamepads)
-	int i;
+	u32 pad_btns_h   = userInput[pad].pad.btns_h; // GCN
 
-	for (i = 0; i < MAXJP; i++)
-	{
-		if ((userInput[pad].pad.btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
-		#ifdef HW_RVL
-		|| ( (userInput[pad].wpad->exp.type == WPAD_EXP_NONE) && (userInput[pad].wpad->btns_h & btnmap[CTRLR_WIIMOTE][i]) ) // wiimote
-		|| ( (userInput[pad].wpad->exp.type == WPAD_EXP_CLASSIC) && (userInput[pad].wpad->btns_h & btnmap[CTRLR_CLASSIC][i]) ) // classic controller
-		|| ( (userInput[pad].wpad->exp.type == WPAD_EXP_NUNCHUK) && (userInput[pad].wpad->btns_h & btnmap[CTRLR_NUNCHUK][i]) ) // nunchuk + wiimote
-		|| ( (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) ) // keyboard
-		#endif
-		)
+#ifdef HW_RVL
+	u32 wpad_btns_h = userInput[pad].wpad->btns_h;
+	int wpad_exp_type = userInput[pad].wpad->exp.type;
+
+	if(wpad_exp_type == WPAD_EXP_NONE)
+	{ // wiimote
+
+		for (u32 i =0; i < MAXJP; ++i)
+		{
+			if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
+					|| ( (wpad_btns_h & btnmap[CTRLR_WIIMOTE][i]) )
+					|| ( (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) ) )// keyboard
 			J |= vbapadmap[i];
-	}
+		}
 
+	}
+	else if(wpad_exp_type == WPAD_EXP_CLASSIC)
+	{ // classic controller
+
+		for (u32 i =0; i < MAXJP; ++i)
+		{
+			if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
+					|| ( (wpad_btns_h & btnmap[CTRLR_CLASSIC][i]) )
+					|| ( (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) ) )// keyboard
+			J |= vbapadmap[i];
+		}
+
+	}
+	else if(wpad_exp_type == WPAD_EXP_NUNCHUK)
+	{ // nunchuk + wiimote
+
+		for (u32 i =0; i < MAXJP; ++i)
+		{
+			if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
+					|| ( (wpad_btns_h & btnmap[CTRLR_NUNCHUK][i]) )
+					|| ( (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) ) )// keyboard
+			J |= vbapadmap[i];
+		}
+
+	}
+	else
+	// Check out this trickery!
+	// If all else fails OR if HW_RVL is undefined, the result is the same
+#endif
+	{
+		for (u32 i = 0; i < MAXJP; ++i)
+		{
+			if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]))
+				J |= vbapadmap[i];
+		}
+	}
 	return J;
 }
 
 bool MenuRequested()
 {
-	for(int i=0; i<4; i++)
-	{
-		if (
-			(userInput[i].pad.substickX < -70) ||
-			(userInput[i].wpad->btns_h & WPAD_BUTTON_HOME) ||
-			(userInput[i].wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME) ||
-			(DownUsbKeys[KS_Escape])
+	if( (DownUsbKeys[KS_Escape]) 
+		||
+		(userInput[0].pad.substickX < -70) ||
+		(userInput[0].wpad->btns_h & WPAD_BUTTON_HOME) ||
+		(userInput[0].wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME)
+		||
+		(userInput[1].pad.substickX < -70) ||
+		(userInput[1].wpad->btns_h & WPAD_BUTTON_HOME) ||
+		(userInput[1].wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME)
+		||
+		(userInput[2].pad.substickX < -70) ||
+		(userInput[2].wpad->btns_h & WPAD_BUTTON_HOME) ||
+		(userInput[2].wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME)
+		||
+		(userInput[3].pad.substickX < -70) ||
+		(userInput[3].wpad->btns_h & WPAD_BUTTON_HOME) ||
+		(userInput[3].wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME)
 		)
-		{
-			return true;
-		}
+	{
+		return true;
 	}
 	return false;
 }

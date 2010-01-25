@@ -256,19 +256,23 @@ UpdateGUI (void *arg)
 		mainWindow->Draw();
 
 		#ifdef HW_RVL
-		for(i=3; i >= 0; i--) // so that player 1's cursor appears on top!
+		i = 3;
+		do
 		{
 			if(userInput[i].wpad->ir.valid)
 				Menu_DrawImg(userInput[i].wpad->ir.x-48, userInput[i].wpad->ir.y-48,
 					96, 96, pointer[i]->GetImage(), userInput[i].wpad->ir.angle, 1, 1, 255);
 			DoRumble(i);
-		}
+			--i;
+		} while(i>=0);
 		#endif
 
 		Menu_Render();
 
-		for(i=3; i >= 0; i--)
-			mainWindow->Update(&userInput[i]);
+		mainWindow->Update(&userInput[3]);
+		mainWindow->Update(&userInput[2]);
+		mainWindow->Update(&userInput[1]);
+		mainWindow->Update(&userInput[0]);
 
 		#ifdef HW_RVL
 		if(updateFound)
@@ -408,12 +412,12 @@ ProgressWindow(char *title, char *msg)
 		{
 			if(count % 5 == 0)
 			{
-				angle+=45;
-				if(angle >= 360)
+				angle+=45.0f;
+				if(angle >= 360.0f)
 					angle = 0;
 				throbberImg.SetAngle(angle);
 			}
-			count++;
+			++count;
 		}
 	}
 
@@ -479,10 +483,8 @@ ShowProgress (const char *msg, int done, int total)
 
 	if(total < (256*1024))
 		return;
-	else if(done > total) // this shouldn't happen
-		done = total;
 
-	if(done/total > 0.99)
+	if(done > total) // this shouldn't happen
 		done = total;
 
 	if(showProgress != 1)
@@ -810,22 +812,24 @@ static void WindowCredits(void * ptr)
 		bgTopImg->Draw();
 		creditsWindow.Draw();
 
-		for(i=3; i >= 0; i--)
-		{
-			#ifdef HW_RVL
-			if(userInput[i].wpad->ir.valid)
-				Menu_DrawImg(userInput[i].wpad->ir.x-48, userInput[i].wpad->ir.y-48,
-					96, 96, pointer[i]->GetImage(), userInput[i].wpad->ir.angle, 1, 1, 255);
+		#ifdef HW_RVL
+		i = 3;
+		do {	
+		if(userInput[i].wpad->ir.valid)
+			Menu_DrawImg(userInput[i].wpad->ir.x-48, userInput[i].wpad->ir.y-48,
+				96, 96, pointer[i]->GetImage(), userInput[i].wpad->ir.angle, 1, 1, 255);
 			DoRumble(i);
-			#endif
-		}
+			--i;
+		} while(i >= 0);
+		#endif
 
 		Menu_Render();
 
-		for(i=0; i < 4; i++)
-		{
-			if(userInput[i].wpad->btns_d || userInput[i].pad.btns_d)
-				exit = true;
+		if((userInput[0].wpad->btns_d || userInput[0].pad.btns_d) ||
+		   (userInput[1].wpad->btns_d || userInput[1].pad.btns_d) ||
+		   (userInput[2].wpad->btns_d || userInput[2].pad.btns_d) ||
+		   (userInput[3].wpad->btns_d || userInput[3].pad.btns_d)){ 
+			exit = true;
 		}
 		usleep(THREAD_SLEEP);
 	}
@@ -949,7 +953,7 @@ static int MenuGameSelection()
 
 		// update gameWindow based on arrow buttons
 		// set MENU_EXIT if A button pressed on a game
-		for(i=0; i < FILE_PAGESIZE; i++)
+		for(i=0; i < FILE_PAGESIZE; ++i)
 		{
 			if(gameBrowser.fileList[i]->GetState() == STATE_CLICKED)
 			{
@@ -1192,7 +1196,7 @@ static int MenuGame()
 	GuiImage * batteryBarImg[4];
 	GuiButton * batteryBtn[4];
 
-	for(i=0; i < 4; i++)
+	for(i=0; i < 4; ++i)
 	{
 		if(i == 0)
 			sprintf(txt, "P %d", i+1);
@@ -1298,7 +1302,7 @@ static int MenuGame()
 			if(WPAD_Probe(i, NULL) == WPAD_ERR_NONE)
 			{
 				newStatus = true;
-				newLevel = (userInput[i].wpad->battery_level / 100.0) * 4;
+				newLevel = int(userInput[i].wpad->battery_level / 100.0) << 2;
 				if(newLevel > 4) newLevel = 4;
 			}
 			else
@@ -1334,7 +1338,7 @@ static int MenuGame()
 		if (isBoktai)
 		{
 			if (sunBtn->GetState() == STATE_CLICKED) {
-				SunBars++;
+				++SunBars;
 				if (SunBars>10) SunBars=0;
 				menu = MENU_GAME;
 			}
@@ -1415,7 +1419,7 @@ static int MenuGame()
 	}
 
 	#ifdef HW_RVL
-	for(i=0; i < 4; i++)
+	for(i=0; i < 4; ++i)
 	{
 		delete batteryTxt[i];
 		delete batteryImg[i];
@@ -1439,7 +1443,6 @@ static int FindGameSaveNum(char * savefile, int method)
 	int n = -1;
 	int romlen = strlen(ROMFilename);
 	int savelen = strlen(savefile);
-
 	int diff = savelen-romlen;
 
 	if(strncmp(savefile, ROMFilename, romlen) != 0)
@@ -1466,16 +1469,19 @@ static int FindGameSaveNum(char * savefile, int method)
  ***************************************************************************/
 static int MenuGameSaves(int action)
 {
+	SaveList saves;
+	struct stat filestat;
+	struct tm * timeinfo;
+
 	int menu = MENU_NONE;
 	int ret, result;
 	int i, n, type, len, len2;
 	int j = 0;
-	SaveList saves;
+
 	char filepath[1024];
 	char scrfile[1024];
 	char tmp[MAXJOLIET];
-	struct stat filestat;
-	struct tm * timeinfo;
+
 	int method = GCSettings.SaveMethod;
 
 	if(method == DEVICE_AUTO)
@@ -1595,7 +1601,7 @@ static int MenuGameSaves(int action)
 				strftime(saves.date[j], 20, "%a %b %d", timeinfo);
 				strftime(saves.time[j], 10, "%I:%M %p", timeinfo);
 			}
-			j++;
+			++j;
 		}
 	}
 
@@ -3728,12 +3734,16 @@ static void PaletteWindow(const char *name)
 }
 
 GXColor GetCol(int i) {
-	u32 c;
-	if (i>=0 && i<=13) c = CurrentPalette.palette[i];
-	else c = 0;
-	u8 r = (c >> 16) & 255;
-	u8 g = (c >> 8) & 255;
-	u8 b = (c) & 255;
+	int c = 0;
+	u8 r=0, g=0, b=0;
+	if (unsigned(i) <= 13)
+	{ 
+		c = CurrentPalette.palette[i];
+		r = (c >> 16) & 255;
+		g = (c >> 8) & 255;
+		b = (c) & 255;
+		
+	}
 	return (GXColor){r,g,b,255};
 }
 
