@@ -44,36 +44,33 @@ enum {
 };
 
 struct SGCSettings{
-    int		AutoLoad;
+	float	gbaZoomHor;    // GBA horizontal zoom amount
+    float	gbaZoomVert;   // GBA vertical zoom amount
+    float	gbZoomHor;     // GB horizontal zoom amount
+    float	gbZoomVert;    // GB vertical zoom amount
+	int		AutoLoad;
     int		AutoSave;
-    int		LoadMethod; // For ROMS: Auto, SD, DVD, USB, Network (SMB)
-	int		SaveMethod; // For SRAM, Freeze, Prefs: Auto, SD, USB, SMB
-	char	LoadFolder[MAXPATHLEN]; // Path to game files
-	char	SaveFolder[MAXPATHLEN]; // Path to save files
-	char	CheatFolder[MAXPATHLEN]; // Path to cheat files
-
-	char	smbip[80];
-	char	smbuser[20];
-	char	smbpwd[20];
-	char	smbshare[20];
-
-    float	gbaZoomHor; // GBA horizontal zoom amount
-    float	gbaZoomVert; // GBA vertical zoom amount
-    float	gbZoomHor; // GB horizontal zoom amount
-    float	gbZoomVert; // GB vertical zoom amount
-    int		videomode; // 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
-    int		scaling; // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
-	int		render;		// 0 - original, 1 - filtered, 2 - unfiltered
-	int		xshift;		// video output shift
+    int		LoadMethod;    // For ROMS: Auto, SD, DVD, USB, Network (SMB)
+	int		SaveMethod;    // For SRAM, Freeze, Prefs: Auto, SD, USB, SMB
+    int		videomode;     // 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
+    int		scaling;       // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
+	int		render;		   // 0 - original, 1 - filtered, 2 - unfiltered
+	int		xshift;		   // video output shift
 	int		yshift;
-	int     colorize; // colorize Mono Gameboy games
-
-	int		WiiControls; // Match Wii Game
+	int     colorize;      // colorize Mono Gameboy games
+	int		WiiControls;   // Match Wii Game
 	int		WiimoteOrientation;
 	int		ExitAction;
 	int		MusicVolume;
 	int		SFXVolume;
 	int		Rumble;
+	char	LoadFolder[MAXPATHLEN];  // Path to game files
+	char	SaveFolder[MAXPATHLEN];  // Path to save files
+	char	CheatFolder[MAXPATHLEN]; // Path to cheat files
+	char	smbip[80];
+	char	smbuser[20];
+	char	smbpwd[20];
+	char	smbshare[20];
 };
 
 void ExitApp();

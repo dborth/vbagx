@@ -28,8 +28,6 @@
 CtrlrMap ctrlr_def[5] = {
 // Gamecube controller btn def
 {
-	CTRLR_GCPAD,
-	13,
 	{
 		{PAD_BUTTON_DOWN, "DOWN"},
 		{PAD_BUTTON_UP, "UP"},
@@ -46,12 +44,12 @@ CtrlrMap ctrlr_def[5] = {
 		{PAD_TRIGGER_Z, "Z"},
 		{0, ""},
 		{0, ""}
-	}
+	},
+	13,
+	CTRLR_GCPAD
 },
 // Wiimote btn def
 {
-	CTRLR_WIIMOTE,
-	11,
 	{
 		{WPAD_BUTTON_DOWN, "DOWN"},
 		{WPAD_BUTTON_UP, "UP"},
@@ -68,12 +66,12 @@ CtrlrMap ctrlr_def[5] = {
 		{0, ""},
 		{0, ""},
 		{0, ""}
-	}
+	},
+	11,
+	CTRLR_WIIMOTE
 },
 // Nunchuk btn def
 {
-	CTRLR_NUNCHUK,
-	13,
 	{
 		{WPAD_BUTTON_DOWN, "DOWN"},
 		{WPAD_BUTTON_UP, "UP"},
@@ -90,12 +88,12 @@ CtrlrMap ctrlr_def[5] = {
 		{WPAD_NUNCHUK_BUTTON_C, "C"},
 		{0, ""},
 		{0, ""}
-	}
+	},
+	13,
+	CTRLR_NUNCHUK
 },
 // Classic btn def
 {
-	CTRLR_CLASSIC,
-	15,
 	{
 		{WPAD_CLASSIC_BUTTON_DOWN, "DOWN"},
 		{WPAD_CLASSIC_BUTTON_UP, "UP"},
@@ -112,12 +110,12 @@ CtrlrMap ctrlr_def[5] = {
 		{WPAD_CLASSIC_BUTTON_FULL_R, "R"},
 		{WPAD_CLASSIC_BUTTON_ZL, "ZL"},
 		{WPAD_CLASSIC_BUTTON_ZR, "ZR"}
-	}
+	},
+	15,
+	CTRLR_CLASSIC
 },
 // Keyboard btn def
 {
-	CTRLR_KEYBOARD,
-	66,
 	{
 		{KS_A, "A"},
 		{KS_B, "B"},
@@ -185,6 +183,8 @@ CtrlrMap ctrlr_def[5] = {
 		{MOUSEL, "MOUSEL"},
 		{MOUSER, "MOUSER"},
 		{MOUSEM, "MOUSEM"}
-	}
+	},
+	66,
+	CTRLR_KEYBOARD
 }
 };

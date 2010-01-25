@@ -198,13 +198,11 @@ bool VMCPULoadROM()
 ****************************************************************************/
 static void VMFindFree( void )
 {
-	int i;
-
-	vmpageno++;
+	++vmpageno;
 	vmpageno &= MAXVMMASK;
-	if ( vmpageno == 0 ) vmpageno++;
+	if ( vmpageno == 0 ) ++vmpageno;
 
-	for ( i = 1; i < MAXVMPAGE; i++ )
+	for (unsigned i = 1; i < MAXVMPAGE; ++i )
 	{
 		/** Remove any other pointer to this vmpage **/
 		if ( vmpage[i].pageno == vmpageno )
@@ -237,14 +235,30 @@ static void VMAllocate( int pageid )
 ****************************************************************************/
 static void VMInit( void )
 {
-	int i;
-
 	/** Clear down pointers **/
 	memset(&vmpage, 0, sizeof(VMPAGE) * MAXVMPAGE);
-	for ( i = 0; i < MAXVMPAGE; i++ )
+
+	if(MAXVMPAGE % 4 == 0)
 	{
-		vmpage[i].pageno = -1;
-		vmpage[i].pagetype = MEM_UN;
+		for (unsigned i =0 ; i < MAXVMPAGE; i+=4 )
+		{
+			vmpage[i  ].pageno = -1;
+			vmpage[i  ].pagetype = MEM_UN;
+			vmpage[i+1].pageno = -1;
+			vmpage[i+1].pagetype = MEM_UN;
+			vmpage[i+2].pageno = -1;
+			vmpage[i+2].pagetype = MEM_UN;
+			vmpage[i+3].pageno = -1;
+			vmpage[i+3].pagetype = MEM_UN;
+		}
+	}
+	else
+	{
+		for (unsigned i =0 ; i < MAXVMPAGE; ++i )
+		{
+			vmpage[i].pageno = -1;
+			vmpage[i].pagetype = MEM_UN;
+		}
 	}
 
 	/** Allocate physical **/
@@ -327,10 +341,9 @@ int VMCPULoadROM()
 ****************************************************************************/
 static void VMNewPage( int pageid )
 {
-	int res;
+	int res = fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
 	char msg[512];
 
-	res = fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
 	if (res) // fseek returns non-zero on a failure
 	{
 		sprintf(msg, "Seek error! - Offset %d / %08x %d\n", pageid, pageid << VMSHIFTBITS, res);
@@ -351,17 +364,13 @@ static void VMNewPage( int pageid )
  ****************************************************************************/
 u32 VMRead32( u32 address )
 {
-	int pageid;
-	u32 badaddress;
-	char msg[512];
-
 	if ( address >= (u32)GBAROMSize )
 	{
-		badaddress = ( ( ( address >> 1 ) & 0xffff ) << 16 ) | ( ( ( address + 2 ) >> 1 ) & 0xffff );
-		return badaddress;
+		return u32(( ( ( address >> 1 ) & 0xffff ) << 16 ) | ( ( ( address + 2 ) >> 1 ) & 0xffff ));
 	}
 
-	pageid = address >> VMSHIFTBITS;
+	int pageid = address >> VMSHIFTBITS;
+	char msg[512];
 
 	switch( vmpage[pageid].pagetype )
 	{
@@ -387,14 +396,12 @@ u32 VMRead32( u32 address )
  ****************************************************************************/
 u16 VMRead16( u32 address )
 {
-	int pageid;
-
 	if ( address >= (u32)GBAROMSize )
 	{
 		return ( address >> 1 ) & 0xffff;
 	}
 
-	pageid = address >> VMSHIFTBITS;
+	int pageid = address >> VMSHIFTBITS;
 
 	switch( vmpage[pageid].pagetype )
 	{
@@ -419,14 +426,12 @@ u16 VMRead16( u32 address )
  ****************************************************************************/
 u8 VMRead8( u32 address )
 {
-	int pageid;
-
 	if ( address >= (u32)GBAROMSize )
 	{
 		return ( address >> 1 ) & 0xff;
 	}
 
-	pageid = address >> VMSHIFTBITS;
+	int pageid = address >> VMSHIFTBITS;
 
 	switch( vmpage[pageid].pagetype )
 	{
