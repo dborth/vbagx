@@ -776,6 +776,7 @@ bool LoadPrefs()
 	if(prefFound)
 		FixInvalidSettings();
 
+	ResetText();
 	return prefFound;
 }
 

@@ -24,6 +24,7 @@ void InfoPrompt(const char * msg);
 void ShowAction (const char *msg);
 void CancelAction();
 void ShowProgress (const char *msg, int done, int total);
+void ResetText();
 
 enum
 {
