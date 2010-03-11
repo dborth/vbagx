@@ -25,13 +25,12 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "wiiusbsupport.h"
 #include "gba/GBA.h"
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
 
 u32 MetroidZeroInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeClassic(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeClassic(pad);
 	u8 BallState = CPUReadByte(0x30015df); // 0 = stand, 1 = crouch, 2 = ball
 	u16 Health = CPUReadByte(0x3001536); // 0 = stand, 1 = crouch, 2 = ball
 	static u16 OldHealth = 0;
@@ -240,7 +239,7 @@ u32 MetroidZeroInput(unsigned short pad) {
 }
 
 u32 MetroidFusionInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeClassic(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeClassic(pad);
 	u8 BallState = CPUReadByte(0x3001329); // 0 = stand, 2 = crouch, 5 = ball
 	u16 Health = CPUReadHalfWord(0x3001310); 
 	static u16 OldHealth = 0;
@@ -421,7 +420,7 @@ u32 MetroidFusionInput(unsigned short pad) {
 }
 
 u32 Metroid1Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeClassic(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeClassic(pad);
 	u8 BallState = CPUReadByte(0x3007500); // 3 = ball, other = stand
 	u8 MissileState = CPUReadByte(0x300730E); // 1 = missile, 0 = beam
 	u16 Health = CPUReadHalfWord(0x3007306); // Binary Coded Decimal
@@ -535,7 +534,7 @@ u32 Metroid1Input(unsigned short pad) {
 }
 
 u32 Metroid2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeClassic(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeClassic(pad);
 	u8 BallState = gbReadMemory(0xD020); // 4 = crouch, 5 = ball, other = stand
 	u8 MissileState = gbReadMemory(0xD04D); // 8 = missile hatch open, 0 = missile closed
 	u8 Health = gbReadMemory(0xD051); // Binary Coded Decimal

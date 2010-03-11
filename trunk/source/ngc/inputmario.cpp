@@ -25,7 +25,6 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "wiiusbsupport.h"
 #include "gba/GBA.h"
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
@@ -147,7 +146,7 @@ u32 MarioKartInput(unsigned short pad) {
 }
 
 u32 Mario1DXInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 
@@ -233,7 +232,7 @@ u32 Mario1DXInput(unsigned short pad) {
 }
 
 u32 Mario1ClassicInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 
@@ -304,7 +303,7 @@ u32 Mario1ClassicInput(unsigned short pad) {
 }
 
 u32 MarioLand1Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) | DecodeGamecube(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	bool run = false;
@@ -371,7 +370,7 @@ u32 MarioLand1Input(unsigned short pad) {
 }
 
 u32 MarioLand2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) | DecodeGamecube(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	bool run = false;
@@ -460,7 +459,7 @@ u32 MarioLand2Input(unsigned short pad) {
 
 u32 Mario2Input(unsigned short pad)
 {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeWiimote(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	bool run = false;
@@ -539,7 +538,7 @@ u32 Mario2Input(unsigned short pad)
 }
 
 u32 MarioWorldInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	u8 CarryState = CPUReadByte(0x3003F06); // 01 = carrying, 00 = not carrying
 	u8 InYoshisMouth = CPUReadByte(0x3003F53); // FF = nothing, 00 = no level, else thing
 	u8 FallState = CPUReadByte(0x3003FA1); // 0B = jump, 24 = fall
@@ -668,7 +667,7 @@ u32 MarioWorldInput(unsigned short pad) {
 
 u32 Mario3Input(unsigned short pad)
 {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	bool run = false;
@@ -745,7 +744,7 @@ u32 Mario3Input(unsigned short pad)
 
 u32 YoshiIslandInput(unsigned short pad)
 {
-	u32 J = StandardMovement(pad) | DecodeWiimote(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeWiimote(pad) | DecodeGamecube(pad);
 
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -828,7 +827,7 @@ u32 YoshiIslandInput(unsigned short pad)
 
 u32 UniversalGravitationInput(unsigned short pad) {
 	TiltScreen = true;
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	if (wp->exp.type == WPAD_EXP_NUNCHUK) {

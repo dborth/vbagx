@@ -24,7 +24,6 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "wiiusbsupport.h"
 #include "gui/gui.h"
 #include "gba/GBA.h"
 #include "gba/bios.h"
@@ -42,7 +41,7 @@ static bool cartridgeRumble = false, possibleCartridgeRumble = false;
 static int gameRumbleCount = 0, menuRumbleCount = 0, rumbleCountAlready = 0;
 
 static unsigned int vbapadmap[10]; // VBA controller buttons
-u32 btnmap[5][10]; // button mapping
+u32 btnmap[4][10]; // button mapping
 
 void ResetControls(int wiiCtrl)
 {
@@ -124,22 +123,6 @@ void ResetControls(int wiiCtrl)
 		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_RIGHT;
 		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_2;
 		btnmap[CTRLR_NUNCHUK][i++] = WPAD_BUTTON_1;
-	}
-
-	/*** Keyboard map ***/
-	if(wiiCtrl == CTRLR_KEYBOARD || wiiCtrl == -1)
-	{
-		i=0;
-		btnmap[CTRLR_KEYBOARD][i++] = KS_X; // VBA stupidly has B on the right instead of left
-		btnmap[CTRLR_KEYBOARD][i++] = KS_Z;
-		btnmap[CTRLR_KEYBOARD][i++] = KS_BackSpace;
-		btnmap[CTRLR_KEYBOARD][i++] = KS_Return;
-		btnmap[CTRLR_KEYBOARD][i++] = KS_Up;
-		btnmap[CTRLR_KEYBOARD][i++] = KS_Down;
-		btnmap[CTRLR_KEYBOARD][i++] = KS_Left;
-		btnmap[CTRLR_KEYBOARD][i++] = KS_Right;
-		btnmap[CTRLR_KEYBOARD][i++] = KS_A;
-		btnmap[CTRLR_KEYBOARD][i++] = KS_S;
 	}
 }
 
@@ -418,13 +401,6 @@ u32 StandardMovement(unsigned short chan)
 			}
 		}
 	}
-
-	// Turbo feature, keyboard or gamecube only
-	if(DownUsbKeys[KS_space])
-		J |= VBA_SPEED;
-	// Capture feature
-	if(DownUsbKeys[KS_Print_Screen] | DownUsbKeys[KS_F12])
-		J |= VBA_CAPTURE;
 #endif
 	return J;
 }
@@ -570,83 +546,6 @@ u32 StandardGamecube(unsigned short pad)
 		J |= VBA_BUTTON_R;
 	if (jp & PAD_TRIGGER_Z || jp & PAD_BUTTON_Y)
 		J |= VBA_SPEED;
-	return J;
-}
-
-u32 StandardKeyboard(unsigned short pad)
-{
-	u32 J = 0;
-#ifdef HW_RVL
-	if (DownUsbKeys[KS_Up])
-		J |= VBA_UP;
-	if (DownUsbKeys[KS_Down])
-		J |= VBA_DOWN;
-	if (DownUsbKeys[KS_Left])
-		J |= VBA_LEFT;
-	if (DownUsbKeys[KS_Right])
-		J |= VBA_RIGHT;
-	if (DownUsbKeys[KS_space])
-		J |= VBA_SPEED;
-	if (DownUsbKeys[KS_F12] || DownUsbKeys[KS_Print_Screen])
-		J |= VBA_CAPTURE;
-	if (DownUsbKeys[KS_X])
-		J |= VBA_BUTTON_A;
-	if (DownUsbKeys[KS_Z])
-		J |= VBA_BUTTON_B;
-	if (DownUsbKeys[KS_A])
-		J |= VBA_BUTTON_L;
-	if (DownUsbKeys[KS_S])
-		J |= VBA_BUTTON_R;
-	if (DownUsbKeys[KS_Return])
-		J |= VBA_BUTTON_START;
-	if (DownUsbKeys[KS_BackSpace])
-	J |= VBA_BUTTON_SELECT;
-#endif
-	return J;
-}
-
-u32 DPadWASD(unsigned short pad)
-{
-	u32 J = 0;
-#ifdef HW_RVL
-	if (DownUsbKeys[KS_W])
-		J |= VBA_UP;
-	if (DownUsbKeys[KS_S])
-		J |= VBA_DOWN;
-	if (DownUsbKeys[KS_A])
-		J |= VBA_LEFT;
-	if (DownUsbKeys[KS_D])
-		J |= VBA_RIGHT;
-#endif
-	return J;
-}
-
-u32 DPadArrowKeys(unsigned short pad)
-{
-	u32 J = 0;
-#ifdef HW_RVL
-	if (DownUsbKeys[KS_Up])
-		J |= VBA_UP;
-	if (DownUsbKeys[KS_Down])
-		J |= VBA_DOWN;
-	if (DownUsbKeys[KS_Left])
-		J |= VBA_LEFT;
-	if (DownUsbKeys[KS_Right])
-		J |= VBA_RIGHT;
-#endif
-	return J;
-}
-
-u32 DecodeKeyboard(unsigned short pad)
-{
-	u32 J = 0;
-	#ifdef HW_RVL
-	for (u32 i = 0; i < MAXJP; ++i)
-	{
-		if (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) // keyboard
-			J |= vbapadmap[i];
-	}
-	#endif
 	return J;
 }
 
@@ -987,8 +886,7 @@ static u32 DecodeJoy(unsigned short pad)
 		for (u32 i =0; i < MAXJP; ++i)
 		{
 			if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
-					|| ( (wpad_btns_h & btnmap[CTRLR_WIIMOTE][i]) )
-					|| ( (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) ) )// keyboard
+					|| ( (wpad_btns_h & btnmap[CTRLR_WIIMOTE][i]) ))
 			J |= vbapadmap[i];
 		}
 
@@ -999,8 +897,7 @@ static u32 DecodeJoy(unsigned short pad)
 		for (u32 i =0; i < MAXJP; ++i)
 		{
 			if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
-					|| ( (wpad_btns_h & btnmap[CTRLR_CLASSIC][i]) )
-					|| ( (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) ) )// keyboard
+					|| ( (wpad_btns_h & btnmap[CTRLR_CLASSIC][i]) ))
 			J |= vbapadmap[i];
 		}
 
@@ -1011,8 +908,7 @@ static u32 DecodeJoy(unsigned short pad)
 		for (u32 i =0; i < MAXJP; ++i)
 		{
 			if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
-					|| ( (wpad_btns_h & btnmap[CTRLR_NUNCHUK][i]) )
-					|| ( (DownUsbKeys[btnmap[CTRLR_KEYBOARD][i]]) ) )// keyboard
+					|| ( (wpad_btns_h & btnmap[CTRLR_NUNCHUK][i]) ))
 			J |= vbapadmap[i];
 		}
 
@@ -1033,9 +929,7 @@ static u32 DecodeJoy(unsigned short pad)
 
 bool MenuRequested()
 {
-	if( (DownUsbKeys[KS_Escape]) 
-		||
-		(userInput[0].pad.substickX < -70) ||
+	if( (userInput[0].pad.substickX < -70) ||
 		(userInput[0].wpad->btns_h & WPAD_BUTTON_HOME) ||
 		(userInput[0].wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME)
 		||

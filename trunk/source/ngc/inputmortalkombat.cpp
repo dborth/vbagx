@@ -25,7 +25,6 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "wiiusbsupport.h"
 #include "gba/GBA.h"
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
@@ -118,7 +117,7 @@ static u32  VBA_FORWARD=VBA_RIGHT, VBA_BACK=VBA_LEFT;
 static int ChameleonChangeTime = 0;
 
 u32 GetMKInput(unsigned short pad, int rumbleTime=4) {
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad);
+	u32 J = StandardMovement(pad) | DecodeWiimote(pad);
     HP=0;LP=0;HK=0;LK=0;BL=0;Throw=0;CS=0;F=0;B=0;Select=0;Start=0;SpecialMove=0;
 
 	// Rumble when they lose health!
