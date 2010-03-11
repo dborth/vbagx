@@ -30,7 +30,6 @@
 #include "fileop.h"
 #include "input.h"
 #include "gcunzip.h"
-#include "wiiusbsupport.h"
 
 BROWSERINFO browser;
 BROWSERENTRY * browserList = NULL; // list of files/folders in browser

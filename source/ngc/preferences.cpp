@@ -205,7 +205,6 @@ preparePrefsData ()
 	createXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap", "Wiimote");
 	createXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap", "Classic Controller");
 	createXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap", "Nunchuk");
-	createXMLController(btnmap[CTRLR_KEYBOARD], "kbpadmap", "Keyboard");
 
 	int datasize = mxmlSaveString(xml, (char *)savebuffer, SAVEBUFFERSIZE, XMLSaveCallback);
 
@@ -505,7 +504,6 @@ decodePrefsData ()
 			loadXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap");
 			loadXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap");
 			loadXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap");
-			loadXMLController(btnmap[CTRLR_KEYBOARD], "kbpadmap");
 		}
 		mxmlDelete(xml);
 	}

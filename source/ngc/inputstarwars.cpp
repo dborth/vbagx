@@ -25,13 +25,12 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "wiiusbsupport.h"
 #include "gba/GBA.h"
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
 
 u32 LegoStarWars1Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -40,14 +39,6 @@ u32 LegoStarWars1Input(unsigned short pad) {
 	OldHealth = Health;
 
 #ifdef HW_RVL
-	if (DownUsbKeys[KS_Return]) J |= VBA_BUTTON_START; // start
-	if (DownUsbKeys[KS_K] || DownUsbKeys[KS_Control_L]) J |= VBA_BUTTON_SELECT; // change chars
-	if (DownUsbKeys[KS_U]) J |= VBA_BUTTON_A; // jump
-	if (DownUsbKeys[KS_H]) J |= VBA_BUTTON_B; // attack
-	if (DownUsbKeys[KS_J]) J |= VBA_BUTTON_R; // force power, special ability
-	if (DownUsbKeys[KS_I]) J |= VBA_BUTTON_L; // build, use force (supposed to be J too)
-	if (DownUsbKeys[KS_space]) J |= VBA_SPEED; // fast forward
-
 	WPADData * wp = WPAD_Data(pad);
 
 	// Start/Select
@@ -85,7 +76,7 @@ u32 LegoStarWars1Input(unsigned short pad) {
 }
 
 u32 LegoStarWars2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -94,14 +85,6 @@ u32 LegoStarWars2Input(unsigned short pad) {
 	OldHealth = Health;
 
 #ifdef HW_RVL
-	if (DownUsbKeys[KS_Return]) J |= VBA_BUTTON_START; // start
-	if (DownUsbKeys[KS_K] || DownUsbKeys[KS_Control_L]) J |= VBA_BUTTON_SELECT; // change chars
-	if (DownUsbKeys[KS_U]) J |= VBA_BUTTON_A; // jump
-	if (DownUsbKeys[KS_H]) J |= VBA_BUTTON_B; // attack
-	if (DownUsbKeys[KS_J]) J |= VBA_BUTTON_L; // force power, special ability
-	if (DownUsbKeys[KS_I]) J |= VBA_BUTTON_R; // build, use force (supposed to be J too)
-	if (DownUsbKeys[KS_space]) J |= VBA_SPEED; // fast forward
-
 	WPADData * wp = WPAD_Data(pad);
 
 	// Start/Select
@@ -143,7 +126,7 @@ u32 LegoStarWars2Input(unsigned short pad) {
 }
 
 u32 SWObiWanInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = gbReadMemory(0xCFF2);
 	static u8 OldHealth = 0;
@@ -191,7 +174,7 @@ u32 SWObiWanInput(unsigned short pad) {
 }
 
 u32 SWEpisode2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = CPUReadByte(0x3002fb3);
 	static u8 OldHealth = 0;
@@ -239,7 +222,7 @@ u32 SWEpisode2Input(unsigned short pad) {
 }
 
 u32 SWEpisode3Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;//CPUReadByte(0x3002fb3);
 	static u8 OldHealth = 0;
@@ -292,7 +275,7 @@ u32 SWEpisode3Input(unsigned short pad) {
 }
 
 u32 SWJediPowerBattlesInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;//CPUReadByte(0x3002fb3);
 	static u8 OldHealth = 0;
@@ -345,7 +328,7 @@ u32 SWJediPowerBattlesInput(unsigned short pad) {
 }
 
 u32 SWTrilogyInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;//CPUReadByte(0x3002fb3);
 	static u8 OldHealth = 0;
@@ -398,7 +381,7 @@ u32 SWTrilogyInput(unsigned short pad) {
 }
 
 u32 SWEpisode4Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -451,7 +434,7 @@ u32 SWEpisode4Input(unsigned short pad) {
 }
 
 u32 SWEpisode5Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -504,7 +487,7 @@ u32 SWEpisode5Input(unsigned short pad) {
 }
 
 u32 SWEpisode6Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -557,7 +540,7 @@ u32 SWEpisode6Input(unsigned short pad) {
 }
 
 u32 SWYodaStoriesInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;//gbReadMemory(0xD58A); // actually health bar progress
 	static u8 OldHealth = 0;
@@ -610,7 +593,7 @@ u32 SWYodaStoriesInput(unsigned short pad) {
 }
 
 u32 SWNDAInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 	// Rumble when they lose health!
 	u8 Health = 0;
 	static u8 OldHealth = 0;

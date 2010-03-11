@@ -12,7 +12,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 -=[ Features ]=-
 
-* Wiimote, Nunchuk, Classic, Gamecube controller, Keyboard and Mouse support
+* Wiimote, Nunchuk, Classic, and Gamecube controller support
 * Rotation sensors, Solar sensors, and Rumble support
 * Optional special Wii controls built-in for some games
 * SRAM and State saving
@@ -320,10 +320,6 @@ This document doesn't cover how to do any of that.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                          INSTRUCTIONS                         ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
-Note! A USB Mouse must be plugged in before starting the emulator, or it
-won't be recognised. A mouse or keyboard is not required. Keyboards might or
-might not need to be unplugged and replugged to work.
-
 If you have upgraded from a previous version, the emulator may start with a
 message that your preferences have been reset. You will need to set your 
 preferences how you want them.
@@ -336,8 +332,6 @@ Navigate the menu with the D-Pad, or the Wiimote pointer, and select options
 with the A button. Press the B button to swap between controlling a list box 
 and controlling the buttons. Pressing the Home button will exit from the
 main menu. You can choose what exiting will do by using the settings menu.
-
-Keyboard and mouse do not work in the menu yet. 
 
 Click on the logo to see the credits.
 
@@ -424,18 +418,9 @@ B = Gameboy B Button
 R = Gameboy R Button
 L = Gameboy L Button
 
-Keyboard:
-X = Gameboy A Button
-Z = Gameboy B Button
-S = Gameboy R Button
-A = Gameboy L Button
-Enter = Gameboy Start Button
-Backspace = Gameboy Select Button
-Space = Fast forward
-
 You can configure the controls how you want from the controls menu. Different
 controls will be used depending on what you have plugged into the Wii Remote.
-Nunchuk means Nunchuk + Wii Remote. Gamecube controllers and Keyboards can
+Nunchuk means Nunchuk + Wii Remote. Gamecube controllers can
 be used at the same time as Wii Remotes and all control the same player.
 When configuring controls, press HOME to cancel.
 
@@ -829,8 +814,7 @@ C = Change characters, talk to people
 Turn "Match Wii Controls" ON to use these controls.
 
 All the Harry Potter games use the same controls as Harry Potter & The Order
-Of The Phoenix on the Wii. They also use the keyboard controls from the PC
-version of each game. Spell gestures are not supported yet.
+Of The Phoenix on the Wii. Spell gestures are not supported yet.
 
 The Harry Potter Wii controls are:
 ==================================

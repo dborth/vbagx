@@ -26,7 +26,6 @@
 #include "gui/gui.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "wiiusbsupport.h"
 #include "gba/GBA.h"
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
@@ -220,10 +219,9 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 	static int DelayCount = 0;
 	bool OnItemScreen = gbReadMemory(0xC16C) == 0x20; // 0x20 = items, 0x10 = normal
 
-	// There are no Zelda games for PC, so let user choose keyboard controls.
 	// There is Zelda 1 & 2 for Wii VC wiimote but it doesn't make sense to use their controls,
 	// so let user choose sideways wiimote controls.
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad);
+	u32 J = StandardMovement(pad) | DecodeWiimote(pad);
 
 	u8 CursorPos = gbReadMemory(0xC1B6) + 2;
 	u8 SelItem = 0;
@@ -309,7 +307,7 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 		// Must use Wiimote for these buttons
 		CheatButton = wp->btns_d & WPAD_BUTTON_2;
 	}
-	CheatButton = CheatButton || DownUsbKeys[KS_C];
+	CheatButton = CheatButton;
 #endif
 	// Gamecube controls are based on Twilight Princess for the Gamecube
 	{
@@ -540,10 +538,9 @@ static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	if (Seasons) ItemsAddr = 0xC680;
 	else ItemsAddr = 0xC688;
 	static u32 OldJ = 0;
-	// There are no Zelda games for PC, so let user choose keyboard controls.
 	// There is Zelda 1 & 2 for Wii VC wiimote but it doesn't make sense to use their controls,
 	// so let user choose sideways wiimote controls.
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad);
+	u32 J = StandardMovement(pad) | DecodeWiimote(pad);
 
 	// Rumble when they lose health!
 	u8 Health;
@@ -640,7 +637,7 @@ static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
 		// Must use Wiimote for these buttons
 		CheatButton = wp->btns_d & WPAD_BUTTON_2;
 	}
-	CheatButton = CheatButton || DownUsbKeys[KS_C];
+	CheatButton = CheatButton;
 #endif
 	// Gamecube controls are based on Twilight Princess for the Gamecube
 	{
@@ -898,7 +895,7 @@ u32 OracleOfSeasonsInput(unsigned short pad)
 
 u32 MinishCapInput(unsigned short pad)
 {
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad);
+	u32 J = StandardMovement(pad) | DecodeWiimote(pad);
 
 	// Rumble when they lose health!
 	u8 Health = CPUReadByte(0x2002aea);
@@ -1236,7 +1233,7 @@ u32 MinishCapInput(unsigned short pad)
 		// Must use Wiimote for these buttons
 		CheatButton = wp->btns_h & WPAD_BUTTON_2;
 	}
-	CheatButton = CheatButton || DownUsbKeys[KS_C];
+	CheatButton = CheatButton;
 #endif
 	// Gamecube controls are based on Twilight Princess for the Gamecube
 	{

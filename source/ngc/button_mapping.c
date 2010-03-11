@@ -17,7 +17,6 @@
 #include <wiiuse/wpad.h>
 
 #include "button_mapping.h"
-#include "wiiusbsupport.h"
 
 /****************************************************************************
  * Controller Button Descriptions:
@@ -25,7 +24,7 @@
  * and for displaying the name of said button
  ***************************************************************************/
 
-CtrlrMap ctrlr_def[5] = {
+CtrlrMap ctrlr_def[4] = {
 // Gamecube controller btn def
 {
 	{
@@ -113,78 +112,5 @@ CtrlrMap ctrlr_def[5] = {
 	},
 	15,
 	CTRLR_CLASSIC
-},
-// Keyboard btn def
-{
-	{
-		{KS_A, "A"},
-		{KS_B, "B"},
-		{KS_C, "C"},
-		{KS_D, "D"},
-		{KS_E, "E"},
-		{KS_F, "F"},
-		{KS_G, "G"},
-		{KS_H, "H"},
-		{KS_I, "I"},
-		{KS_J, "J"},
-		{KS_K, "K"},
-		{KS_L, "L"},
-		{KS_M, "M"},
-		{KS_N, "N"},
-		{KS_O, "O"},
-		{KS_P, "P"},
-		{KS_Q, "Q"},
-		{KS_R, "R"},
-		{KS_S, "S"},
-		{KS_T, "T"},
-		{KS_U, "U"},
-		{KS_V, "V"},
-		{KS_W, "W"},
-		{KS_X, "X"},
-		{KS_Y, "Y"},
-		{KS_Z, "Z"},
-		{KS_1, "1"},
-		{KS_2, "2"},
-		{KS_3, "3"},
-		{KS_4, "4"},
-		{KS_5, "5"},
-		{KS_6, "6"},
-		{KS_7, "7"},
-		{KS_8, "8"},
-		{KS_9, "9"},
-		{KS_0, "0"},
-		{KS_Return, "ENTER"},
-		{KS_Escape, "ESC"},
-		{KS_BackSpace, "BKSP"},
-		{KS_Tab, "TAB"},
-		{KS_space, "SPACE"},
-		{KS_F1, "F1"},
-		{KS_F2, "F2"},
-		{KS_F3, "F3"},
-		{KS_F4, "F4"},
-		{KS_F5, "F5"},
-		{KS_F6, "F6"},
-		{KS_F7, "F7"},
-		{KS_F8, "F8"},
-		{KS_F9, "F9"},
-		{KS_F10, "F10"},
-		{KS_F11, "F11"},
-		{KS_F12, "F12"},
-		{KS_Right, "RIGHT"},
-		{KS_Left, "LEFT"},
-		{KS_Down, "DOWN"},
-		{KS_Up, "UP"},
-		{KS_Control_L, "LCTRL"},
-		{KS_Shift_L, "LSHFT"},
-		{KS_Alt_L, "LALT"},
-		{KS_Control_R, "RCTRL"},
-		{KS_Shift_R, "RSHFT"},
-		{KS_Alt_R, "RALT"},
-		{MOUSEL, "MOUSEL"},
-		{MOUSER, "MOUSER"},
-		{MOUSEM, "MOUSEM"}
-	},
-	66,
-	CTRLR_KEYBOARD
 }
 };

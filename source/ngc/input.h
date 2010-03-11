@@ -32,7 +32,7 @@
 #define VBA_CAPTURE			2048
 
 extern int rumbleRequest[4];
-extern u32 btnmap[5][10];
+extern u32 btnmap[4][10];
 
 void ResetControls(int wc = -1);
 void ShutoffRumble();

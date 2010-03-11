@@ -34,7 +34,6 @@
 #include "filelist.h"
 #include "gui/gui.h"
 #include "menu.h"
-#include "wiiusbsupport.h"
 #include "gamesettings.h"
 
 #define THREAD_SLEEP 100
@@ -2025,7 +2024,7 @@ static int MenuSettingsMappings()
 	GuiImage classicBtnIcon(&iconClassic);
 	GuiButton classicBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	classicBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	classicBtn.SetPosition(0, 250);
+	classicBtn.SetPosition(-125, 250);
 	classicBtn.SetLabel(&classicBtnTxt);
 	classicBtn.SetImage(&classicBtnImg);
 	classicBtn.SetImageOver(&classicBtnImgOver);
@@ -2034,28 +2033,6 @@ static int MenuSettingsMappings()
 	classicBtn.SetSoundClick(&btnSoundClick);
 	classicBtn.SetTrigger(&trigA);
 	classicBtn.SetEffectGrow();
-
-	GuiText keyboardBtnTxt1("Keyboard", 24, (GXColor){0, 0, 0, 255});
-	GuiText keyboardBtnTxt2("&", 18, (GXColor){0, 0, 0, 255});
-	GuiText keyboardBtnTxt3("Mouse", 24, (GXColor){0, 0, 0, 255});
-	keyboardBtnTxt1.SetPosition(0, -20);
-	keyboardBtnTxt3.SetPosition(0, +20);
-	GuiImage keyboardBtnImg(&btnLargeOutline);
-	GuiImage keyboardBtnImgOver(&btnLargeOutlineOver);
-	//GuiImage keyboardBtnIcon(&iconkeyboard);
-	GuiButton keyboardBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
-	keyboardBtn.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
-	keyboardBtn.SetPosition(50, 250);
-	keyboardBtn.SetLabel(&keyboardBtnTxt1, 0);
-	keyboardBtn.SetLabel(&keyboardBtnTxt2, 1);
-	keyboardBtn.SetLabel(&keyboardBtnTxt3, 2);
-	keyboardBtn.SetImage(&keyboardBtnImg);
-	keyboardBtn.SetImageOver(&keyboardBtnImgOver);
-	//keyboardBtn.SetIcon(&keyboardBtnIcon);
-	keyboardBtn.SetSoundOver(&btnSoundOver);
-	keyboardBtn.SetSoundClick(&btnSoundClick);
-	keyboardBtn.SetTrigger(&trigA);
-	keyboardBtn.SetEffectGrow();
 
 	GuiText nunchukBtnTxt1("Wiimote", 24, (GXColor){0, 0, 0, 255});
 	GuiText nunchukBtnTxt2("&", 18, (GXColor){0, 0, 0, 255});
@@ -2066,8 +2043,8 @@ static int MenuSettingsMappings()
 	GuiImage nunchukBtnImgOver(&btnLargeOutlineOver);
 	GuiImage nunchukBtnIcon(&iconNunchuk);
 	GuiButton nunchukBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
-	nunchukBtn.SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-	nunchukBtn.SetPosition(-50, 250);
+	nunchukBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	nunchukBtn.SetPosition(125, 250);
 	nunchukBtn.SetLabel(&nunchukBtnTxt1, 0);
 	nunchukBtn.SetLabel(&nunchukBtnTxt2, 1);
 	nunchukBtn.SetLabel(&nunchukBtnTxt3, 2);
@@ -2102,7 +2079,6 @@ static int MenuSettingsMappings()
 	w.Append(&wiimoteBtn);
 	w.Append(&nunchukBtn);
 	w.Append(&classicBtn);
-	w.Append(&keyboardBtn);
 #endif
 	w.Append(&backBtn);
 
@@ -2114,12 +2090,7 @@ static int MenuSettingsMappings()
 	{
 		usleep(THREAD_SLEEP);
 
-		if(keyboardBtn.GetState() == STATE_CLICKED)
-		{
-			menu = MENU_GAMESETTINGS_MAPPINGS_MAP;
-			mapMenuCtrl = CTRLR_KEYBOARD;
-		}
-		else if(wiimoteBtn.GetState() == STATE_CLICKED)
+		if(wiimoteBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_GAMESETTINGS_MAPPINGS_MAP;
 			mapMenuCtrl = CTRLR_WIIMOTE;
@@ -2232,18 +2203,6 @@ ButtonMappingWindow()
 			if(userInput[0].wpad->btns_d == WPAD_BUTTON_HOME)
 				pressed = WPAD_BUTTON_HOME;
 		}
-		else if(mapMenuCtrl == CTRLR_KEYBOARD)
-		{
-			pressed = 0;
-			for (int i=4; i<=234; i++) {
-				if (DownUsbKeys[i]) {
-					pressed = i;
-					break;
-				}
-			}
-			if(userInput[0].wpad->btns_d == WPAD_BUTTON_HOME)
-				pressed = KS_Escape;
-		}
 		else
 		{
 			pressed = userInput[0].wpad->btns_d;
@@ -2274,10 +2233,7 @@ ButtonMappingWindow()
 		}
 	}
 
-	if(mapMenuCtrl == CTRLR_KEYBOARD) {
-		if (pressed == KS_Escape)
-			pressed = 0;
-	} else if(pressed == WPAD_BUTTON_HOME || pressed == WPAD_CLASSIC_BUTTON_HOME)
+	if(pressed == WPAD_BUTTON_HOME || pressed == WPAD_CLASSIC_BUTTON_HOME)
 		pressed = 0;
 
 	HaltGui();

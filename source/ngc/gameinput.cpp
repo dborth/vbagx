@@ -17,7 +17,6 @@
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
-#include <wiikeyboard/wsksymdef.h>
 
 #include "vba.h"
 #include "button_mapping.h"
@@ -26,7 +25,6 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "wiiusbsupport.h"
 #include "gba/GBA.h"
 #include "gba/bios.h"
 #include "gba/GBAinline.h"
@@ -43,7 +41,7 @@ void DebugPrintf(const char *format, ...) {
 }
 
 u32 TMNTInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
 	static bool wait = false;
 	static int holdcount = 0;
@@ -152,7 +150,7 @@ u32 TMNTInput(unsigned short pad) {
 }
 
 u32 TMNT1Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
@@ -233,7 +231,7 @@ u32 TMNT1Input(unsigned short pad) {
 }
 
 u32 TMNT2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
@@ -315,7 +313,7 @@ u32 TMNT2Input(unsigned short pad) {
 }
 
 u32 TMNT3Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
@@ -396,7 +394,7 @@ u32 TMNT3Input(unsigned short pad) {
 }
 
 u32 TMNTGBAInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0;
 
@@ -480,7 +478,7 @@ u32 TMNTGBAInput(unsigned short pad) {
 }
 
 u32 TMNTGBA2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
 	//static bool wait = false;
 	//static int holdcount = 0;
@@ -568,7 +566,7 @@ u32 TMNTGBA2Input(unsigned short pad) {
 }
 
 u32 HarryPotter1GBCInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad) 
+	u32 J = StandardMovement(pad) | StandardDPad(pad) 
 			| DecodeGamecube(pad);
 	//u8 ScreenMode = gbReadMemory(0xFFCF);
 	//u8 CursorItem = gbReadMemory(0xFFD5);
@@ -612,7 +610,7 @@ u32 HarryPotter1GBCInput(unsigned short pad) {
 }
 
 u32 HarryPotter2GBCInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) | DecodeKeyboard(pad) 
+	u32 J = StandardMovement(pad) | StandardDPad(pad) 
 			| DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -653,7 +651,7 @@ u32 HarryPotter2GBCInput(unsigned short pad) {
 }
 
 u32 HarryPotter1Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) 
+	u32 J = StandardMovement(pad) 
 			| DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -701,7 +699,7 @@ u32 HarryPotter1Input(unsigned short pad) {
 }
 
 u32 HarryPotter2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) 
+	u32 J = StandardMovement(pad) 
 			| DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -751,7 +749,7 @@ u32 HarryPotter2Input(unsigned short pad) {
 }
 
 u32 HarryPotter3Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) 
+	u32 J = StandardMovement(pad) 
 			| DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -801,16 +799,8 @@ u32 HarryPotter3Input(unsigned short pad) {
 }
 
 u32 HarryPotter4Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DPadArrowKeys(pad) 
-			| DecodeGamecube(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
-	if (DownUsbKeys[KS_A]) J |= VBA_BUTTON_L;
-	if (DownUsbKeys[KS_D]) J |= VBA_BUTTON_R;
-	if (DownUsbKeys[KS_Return] || DownUsbKeys[KS_X]) J |= VBA_BUTTON_A;
-	if (DownUsbKeys[KS_C]) J |= VBA_BUTTON_B;
-	if (DownUsbKeys[KS_Tab]) J |= VBA_BUTTON_SELECT;
-	if (DownUsbKeys[KS_space]) J |= VBA_BUTTON_START;
-	if (DownUsbKeys[KS_Shift_L] || DownUsbKeys[KS_Shift_R]) J |= VBA_SPEED;
 
 	WPADData * wp = WPAD_Data(pad);
 
@@ -859,16 +849,8 @@ u32 HarryPotter4Input(unsigned short pad) {
 }
 
 u32 HarryPotter5Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
-	// Keyboard controls based on Harry Potter 5 for PC 
-	if (DownUsbKeys[KS_Left]) J |= VBA_BUTTON_L;
-	if (DownUsbKeys[KS_Right]) J |= VBA_BUTTON_R;
-	if (DownUsbKeys[KS_Up] || DownUsbKeys[KS_Down]) J |= VBA_BUTTON_B;
-	if (DownUsbKeys[KS_Return]) J |= VBA_BUTTON_A;
-	if (DownUsbKeys[KS_Tab]) J |= VBA_BUTTON_SELECT;
-	if (DownUsbKeys[KS_space]) J |= VBA_BUTTON_START;
-	if (DownUsbKeys[KS_Shift_L] || DownUsbKeys[KS_Shift_R]) J |= VBA_SPEED;
 
 	WPADData * wp = WPAD_Data(pad);
 
@@ -929,7 +911,7 @@ u32 HarryPotter5Input(unsigned short pad) {
 u32 TwistedInput(unsigned short pad) {
 	// Change this to true if you want to see the screen tilt.
 	TiltScreen = false;
-	u32 J = StandardMovement(pad) | DecodeKeyboard(pad) | DecodeGamecube(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 
@@ -977,7 +959,7 @@ u32 TwistedInput(unsigned short pad) {
 
 u32 KirbyTntInput(unsigned short pad) {
 	TiltScreen = false;
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
@@ -1021,7 +1003,7 @@ u32 KirbyTntInput(unsigned short pad) {
 }
 
 u32 MohInfiltratorInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	if (wp->exp.type == WPAD_EXP_NONE)
@@ -1060,7 +1042,7 @@ u32 MohInfiltratorInput(unsigned short pad) {
 }
 
 u32 MohUndergroundInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeClassic(pad) | DecodeWiimote(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad);
+	u32 J = StandardMovement(pad) | DecodeClassic(pad) | DecodeWiimote(pad) | DecodeGamecube(pad);
 	static bool crouched = false;
 #ifdef HW_RVL	
 	WPADData * wp = WPAD_Data(pad);
@@ -1118,7 +1100,7 @@ u32 MohUndergroundInput(unsigned short pad) {
 
 u32 BoktaiInput(unsigned short pad) {
 	u32 J = StandardMovement(pad) | StandardDPad(pad)
-			| DecodeKeyboard(pad) | DecodeGamecube(pad) | DecodeClassic(pad);
+			| DecodeGamecube(pad) | DecodeClassic(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	static bool GunRaised = false;
@@ -1167,7 +1149,7 @@ u32 BoktaiInput(unsigned short pad) {
 
 u32 Boktai2Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | StandardDPad(pad)
-			| DecodeKeyboard(pad) | DecodeGamecube(pad) | DecodeClassic(pad);
+			| DecodeGamecube(pad) | DecodeClassic(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	static bool GunRaised = false;
@@ -1220,9 +1202,9 @@ u32 Boktai2Input(unsigned short pad) {
 
 u32 OnePieceInput(unsigned short pad) {
 	// Only Nunchuk and Gamecube controls available
-	// Keyboard, Wiimote and Classic controls depend on user configuration
+	// Wiimote and Classic controls depend on user configuration
 	u32 J = StandardMovement(pad) 
-		    | DecodeKeyboard(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+		    | DecodeWiimote(pad) | DecodeClassic(pad);
 	static u32 LastDir = VBA_RIGHT;
 	bool JumpButton=0, AttackButton=0, ViewButton=0, CharacterButton=0, PauseButton=0,
 	DashButton=0, GrabButton=0, SpeedButton=0, AttackUpButton = 0;
@@ -1272,10 +1254,10 @@ u32 OnePieceInput(unsigned short pad) {
 }
 
 u32 HobbitInput(unsigned short pad) {
-	// Only Nunchuk and Keyboard controls available
+	// Only Nunchuk controls available
 	// Wiimote, Gamecube and Classic controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad) | 
-	DPadArrowKeys(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | 
+	DecodeWiimote(pad) | DecodeClassic(pad);
 	bool AbilityButton=0, AttackButton=0, UseButton=0, ChangeSkillButton=0, PauseButton=0,
 	ItemsButton=0, SpeedButton=0;
 #ifdef HW_RVL
@@ -1292,20 +1274,6 @@ u32 HobbitInput(unsigned short pad) {
 		AttackButton = (fabs(wp->gforce.x)> 1.5);
 	}
 #endif
-	if (DownUsbKeys[KS_E]) UseButton = true;
-	if (DownUsbKeys[KS_Shift_L]) {
-		if (DownUsbKeys[MOUSEL] || DownUsbKeys[MOUSER]) AbilityButton = true;
-	} else {
-		if (DownUsbKeys[MOUSEL] || DownUsbKeys[MOUSER]) AttackButton = true;
-	}
-	if (DownUsbKeys[KS_F5]) AbilityButton = true;
-	if (DownUsbKeys[KS_Control_L]) AttackButton = true;
-	if (DownUsbKeys[KS_space]) AttackButton = true;
-	if (DownUsbKeys[KS_Q]) AttackButton = true;
-	if (DownUsbKeys[KS_C]) ChangeSkillButton = true;
-	if (DownUsbKeys[KS_Return]) ItemsButton = true;
-	if (DownUsbKeys[KS_BackSpace]) PauseButton = true;
-	if (DownUsbKeys[KS_F]) SpeedButton = true;
 	
 	if (AbilityButton) J |= VBA_BUTTON_B;
 	if (AttackButton) J |= VBA_BUTTON_L;
@@ -1319,10 +1287,10 @@ u32 HobbitInput(unsigned short pad) {
 }
 
 u32 FellowshipOfTheRingInput(unsigned short pad) {
-	// Only Nunchuk and Keyboard controls available
+	// Only Nunchuk controls available
 	// Wiimote, Gamecube and Classic controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad) | 
-	DPadArrowKeys(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | 
+	DecodeWiimote(pad) | DecodeClassic(pad);
 	bool CancelButton=0, UseButton=0, ChangeCharButton=0, PauseButton=0,
 	ItemsButton=0, SpeedButton=0, SelectButton=0;
 #ifdef HW_RVL
@@ -1340,19 +1308,7 @@ u32 FellowshipOfTheRingInput(unsigned short pad) {
 		SelectButton = wp->btns_h & WPAD_BUTTON_1;
 	}
 #endif
-	if (DownUsbKeys[KS_E]) UseButton = true;
-	if (DownUsbKeys[KS_Q]) CancelButton = true;
-	if (DownUsbKeys[MOUSEL]) UseButton = true;
-	if (DownUsbKeys[MOUSER]) CancelButton = true;
-	if (DownUsbKeys[KS_C]) ChangeCharButton = true;
-	if (DownUsbKeys[KS_Return]) PauseButton = true;
-	if (DownUsbKeys[KS_BackSpace]) ItemsButton = true;
-	if (DownUsbKeys[KS_Tab]) SelectButton = true;
-	if (DownUsbKeys[KS_F]) SpeedButton = true;
-	if (DownUsbKeys[KS_space]) SpeedButton = true;
-	if (DownUsbKeys[KS_F5]) UseButton = true;
-	if (DownUsbKeys[KS_Control_L]) UseButton = true;
-	
+
 	if (UseButton) J |= VBA_BUTTON_A;
 	if (CancelButton) J |= VBA_BUTTON_B;
 	if (ChangeCharButton) J |= VBA_BUTTON_L;
@@ -1365,10 +1321,10 @@ u32 FellowshipOfTheRingInput(unsigned short pad) {
 }
 
 u32 ReturnOfTheKingInput(unsigned short pad) {
-	// Only Nunchuk and Keyboard controls available
+	// Only Nunchuk controls available
 	// Wiimote, Gamecube and Classic controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DPadWASD(pad) | 
-	DPadArrowKeys(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | 
+	DecodeWiimote(pad) | DecodeClassic(pad);
 	bool AbilityButton=0, AttackButton=0, UseButton=0, ChangeSkillButton=0, PauseButton=0,
 	ItemsButton=0, SpeedButton=0;
 #ifdef HW_RVL
@@ -1385,20 +1341,6 @@ u32 ReturnOfTheKingInput(unsigned short pad) {
 		AttackButton = (fabs(wp->gforce.x)> 1.5);
 	}
 #endif
-	if (DownUsbKeys[KS_E]) UseButton = true;
-	if (DownUsbKeys[KS_Shift_L]) {
-		if (DownUsbKeys[MOUSEL] || DownUsbKeys[MOUSER]) AbilityButton = true;
-	} else {
-		if (DownUsbKeys[MOUSEL] || DownUsbKeys[MOUSER]) AttackButton = true;
-	}
-	if (DownUsbKeys[KS_F5]) AbilityButton = true;
-	if (DownUsbKeys[KS_Control_L]) AttackButton = true;
-	if (DownUsbKeys[KS_space]) AttackButton = true;
-	if (DownUsbKeys[KS_Q]) AttackButton = true;
-	if (DownUsbKeys[KS_C]) ChangeSkillButton = true;
-	if (DownUsbKeys[KS_Return]) ItemsButton = true;
-	if (DownUsbKeys[KS_BackSpace]) PauseButton = true;
-	if (DownUsbKeys[KS_F]) SpeedButton = true;
 	
 	if (AbilityButton) J |= VBA_BUTTON_A;
 	if (AttackButton) J |= VBA_BUTTON_B;
@@ -1413,8 +1355,8 @@ u32 ReturnOfTheKingInput(unsigned short pad) {
 
 u32 CastlevaniaAdventureInput(unsigned short pad) {
 	// Only Nunchuk and Classic controls available
-	// Wiimote, Gamecube and Keyboard controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	// Wiimote and Gamecube controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
 	bool JumpButton=0, AttackButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0;
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -1452,8 +1394,8 @@ u32 CastlevaniaAdventureInput(unsigned short pad) {
 
 u32 CastlevaniaBelmontInput(unsigned short pad) {
 	// Only Nunchuk and Classic controls available
-	// Wiimote, Gamecube and Keyboard controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	// Wiimote and Gamecube controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
 	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0;
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -1497,8 +1439,8 @@ u32 CastlevaniaBelmontInput(unsigned short pad) {
 
 u32 CastlevaniaLegendsInput(unsigned short pad) {
 	// Only Nunchuk and Classic controls available
-	// Wiimote, Gamecube and Keyboard controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	// Wiimote and Gamecube controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
 	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, HyperButton=0;
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -1545,8 +1487,8 @@ u32 CastlevaniaLegendsInput(unsigned short pad) {
 
 u32 CastlevaniaCircleMoonInput(unsigned short pad) {
 	// Only Nunchuk and Classic controls available
-	// Wiimote, Gamecube and Keyboard controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeKeyboard(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	// Wiimote and Gamecube controls depend on user configuration
+	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
 	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, HyperButton=0,
 	LButton=0, RButton=0;
 #ifdef HW_RVL
