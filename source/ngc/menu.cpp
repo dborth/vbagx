@@ -288,7 +288,8 @@ UpdateGUI (void *arg)
 		if(updateFound)
 		{
 			updateFound = false;
-			LWP_CreateThread (&updatethread, EmulatorUpdate, NULL, NULL, 0, 70);
+			if(!loadingFile)
+				LWP_CreateThread (&updatethread, EmulatorUpdate, NULL, NULL, 0, 70);
 		}
 		#endif
 

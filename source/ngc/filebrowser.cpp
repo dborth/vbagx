@@ -39,6 +39,7 @@ bool inSz = false;
 
 char ROMFilename[512];
 bool ROMLoaded = false;
+bool loadingFile = false;
 
 /****************************************************************************
 * autoLoadMethod()
@@ -477,7 +478,9 @@ int BrowserLoadFile()
 	// store the filename (w/o ext) - used for sram/freeze naming
 	StripExt(ROMFilename, browserList[browser.selIndex].filename);
 
+	loadingFile = true;
 	ROMLoaded = LoadVBAROM();
+	loadingFile = false;
 
 	if (!ROMLoaded)
 	{
