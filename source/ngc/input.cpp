@@ -233,6 +233,8 @@ static int SilenceNeeded = 0;
 
 static void updateRumble()
 {
+	if(!GCSettings.Rumble) return;
+
 	bool r = false;
 	if (ConfigRequested) r = (menuRumbleCount > 0);
 	else r = cartridgeRumble || possibleCartridgeRumble || (gameRumbleCount > 0) || (menuRumbleCount > 0);
@@ -258,7 +260,10 @@ static void updateRumble()
 	PAD_ControlMotor(PAD_CHAN0, r?PAD_MOTOR_RUMBLE:PAD_MOTOR_STOP);
 }
 
-void updateRumbleFrame() {
+void updateRumbleFrame()
+{
+	if(!GCSettings.Rumble) return;
+
 	// If we already rumbled continuously for more than 50 frames,
 	// then disable rumbling for a while.
 	if (rumbleCountAlready > 70) {
