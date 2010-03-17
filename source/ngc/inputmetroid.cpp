@@ -41,7 +41,9 @@ u32 MetroidZeroInput(unsigned short pad) {
 	OldHealth = Health;
 
 	static int Morph = 0;
+#ifdef HW_RVL
 	static int AimCount = 0;
+#endif
 	static int MissileCount = 0;
 
 	if (BallState == 2) // Can't exit morph ball without pressing C!
@@ -422,7 +424,9 @@ u32 MetroidFusionInput(unsigned short pad) {
 u32 Metroid1Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeClassic(pad);
 	u8 BallState = CPUReadByte(0x3007500); // 3 = ball, other = stand
+#ifdef HW_RVL
 	u8 MissileState = CPUReadByte(0x300730E); // 1 = missile, 0 = beam
+#endif
 	u16 Health = CPUReadHalfWord(0x3007306); // Binary Coded Decimal
 	static u16 OldHealth = 0;
 
@@ -536,7 +540,9 @@ u32 Metroid1Input(unsigned short pad) {
 u32 Metroid2Input(unsigned short pad) {
 	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeClassic(pad);
 	u8 BallState = gbReadMemory(0xD020); // 4 = crouch, 5 = ball, other = stand
+#ifdef HW_RVL
 	u8 MissileState = gbReadMemory(0xD04D); // 8 = missile hatch open, 0 = missile closed
+#endif
 	u8 Health = gbReadMemory(0xD051); // Binary Coded Decimal
 	static u8 OldHealth = 0;
 
@@ -546,7 +552,9 @@ u32 Metroid2Input(unsigned short pad) {
 	OldHealth = Health;
 
 	static int Morph = 0;
+#ifdef HW_RVL
 	static int AimCount = 0;
+#endif
 
 	if (BallState == 5) // Can't exit morph ball without pressing C!
 		J &= ~VBA_UP;

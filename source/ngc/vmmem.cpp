@@ -30,8 +30,6 @@
 #define MEM_VM  0x01
 #define MEM_UN  0x80
 
-unsigned int MEM2Storage = 0x91000000;
-
 int GBAROMSize = 0;
 
 #ifdef USE_VM
@@ -159,8 +157,6 @@ bool VMCPULoadROM()
 	VMClose();
 	VMAllocGBA();
 	GBAROMSize = 0;
-
-	rom = (u8 *)MEM2Storage;
 
 	if(!inSz)
 	{
