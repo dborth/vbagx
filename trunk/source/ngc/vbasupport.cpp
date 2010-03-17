@@ -47,8 +47,6 @@
 #include "preferences.h"
 #include "fastmath.h"
 
-//#define CARLLOG
-
 static u32 start;
 int cartridgeType = 0;
 u32 RomIdCode;
@@ -688,14 +686,6 @@ static void gbApplyPerImagePreferences()
 	else
 		strncpy(RomTitle, (const char *) &gbRom[0x134], 15);
 
-#ifdef CARLLOG
-	if (RomIdCode !=0) {
-		log("******** %2x \"%c%c%c%c\" \"%s\"", Colour, gbRom[0x13f], gbRom[0x140], gbRom[0x141], gbRom[0x142], title);
-	} else {
-		log("******** %2x \"%s\"", Colour, title);
-	}
-#endif
-
 	if (RomIdCode == 0)
 	{
 		if (strcmp(RomTitle, "ZELDA") == 0)
@@ -860,7 +850,7 @@ extern bool gbUpdateSizes();
 
 bool LoadGBROM()
 {
-	gbRom = (u8 *)memalign(32, 1024*1024*4); // allocate 4 MB to GB ROM
+	gbRom = (u8 *)malloc(1024*1024*4); // allocate 4 MB to GB ROM
 	bios = (u8 *)calloc(1,0x100);
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
@@ -922,7 +912,7 @@ bool LoadVBAROM()
 	if(cartridgeType != 1 && cartridgeType != 2)
 	{
 		// Not zip gba agb gbc cgb sgb gb mb bin elf or dmg!
-		ErrorPrompt("Invalid filename extension! Not a rom?");
+		ErrorPrompt("Unrecognized file extension!");
 		return false;
 	}
 

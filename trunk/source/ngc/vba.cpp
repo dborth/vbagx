@@ -23,6 +23,7 @@
 
 #include "FreeTypeGX.h"
 
+#include "gba/Globals.h"
 #include "gba/Sound.h"
 
 #include "utils/usb2storage.h"
@@ -334,6 +335,8 @@ int main(int argc, char *argv[])
 #ifdef HW_RVL
 	if(argc > 0 && argv[0] != NULL)
 		CreateAppPath(argv[0]);
+
+	rom = (u8 *)malloc(1024*1024*32); // allocate 32 MB to GBA ROM
 #endif
 
 	while(1) // main loop
