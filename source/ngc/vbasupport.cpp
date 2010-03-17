@@ -896,14 +896,12 @@ bool LoadVBAROM()
 				cartridgeType = 2;
 			else if(utilIsGBImage(zippedFilename))
 				cartridgeType = 1;
-			else {
-				ErrorPrompt("Rom must be 1st file in zip, or unzipped!");
+			else
 				return false;
-			}
 		}
 		else // loading the file failed
 		{
-			ErrorPrompt("Empty or invalid zip file!");
+			ErrorPrompt("Empty or invalid ZIP file!");
 			return false;
 		}
 	}

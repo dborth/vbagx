@@ -352,7 +352,7 @@ bool MountDVD(bool silent)
 			if(silent)
 				break;
 			
-			retry = ErrorPromptRetry("Invalid DVD.");
+			retry = ErrorPromptRetry("Unrecognized DVD format.");
 		}
 		else
 		{
@@ -586,7 +586,6 @@ bool ParseDirEntries()
 int
 ParseDirectory(bool waitParse)
 {
-	char msg[128];
 	int retry = 1;
 	bool mounted = false;
 	
@@ -603,10 +602,7 @@ ParseDirectory(bool waitParse)
 			return -1;
 
 		if(dirIter == NULL)
-		{
-			sprintf(msg, "Error opening %s", browser.dir);
-			retry = ErrorPromptRetry(msg);
-		}
+			retry = ErrorPromptRetry("Error opening directory");
 	}
 
 	// if we can't open the dir, try higher levels
@@ -711,7 +707,7 @@ LoadSzFile(char * filepath, unsigned char * rbuffer)
 	}
 	else
 	{
-		ErrorPrompt("Error opening file");
+		ErrorPrompt("Error opening file!");
 	}
 
 	// go back to checking if devices were inserted/removed

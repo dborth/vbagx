@@ -274,7 +274,6 @@ static void VMInit( void )
 int VMCPULoadROM()
 {
 	int res;
-	char msg[512];
 	char filepath[MAXPATHLEN];
 
 	if(!MakeFilePath(filepath, FILE_ROM))
@@ -283,7 +282,7 @@ int VMCPULoadROM()
 	// loading compressed files via VM is not supported
 	if(!utilIsGBAImage(filepath))
 	{
-		InfoPrompt("Compressed GBA files are not supported!");
+		ErrorPrompt("Compressed GBA files are not supported!");
 		return 0;
 	}
 
@@ -294,7 +293,7 @@ int VMCPULoadROM()
 
 	if (romfile == NULL)
 	{
-		InfoPrompt("Error opening file!");
+		ErrorPrompt("Error opening file!");
 		return 0;
 	}
 
@@ -308,8 +307,7 @@ int VMCPULoadROM()
 	res = fread(rom, 1, (1 << VMSHIFTBITS), romfile);
 	if ( res != (1 << VMSHIFTBITS ) )
 	{
-		sprintf(msg, "Error reading file! %i \n",res);
-		InfoPrompt(msg);
+		ErrorPrompt("Error reading file!");
 		VMClose();
 		return 0;
 	}
@@ -338,12 +336,10 @@ int VMCPULoadROM()
 static void VMNewPage( int pageid )
 {
 	int res = fseek( romfile, pageid << VMSHIFTBITS, SEEK_SET );
-	char msg[512];
 
 	if (res) // fseek returns non-zero on a failure
 	{
-		sprintf(msg, "Seek error! - Offset %d / %08x %d\n", pageid, pageid << VMSHIFTBITS, res);
-		InfoPrompt(msg);
+		ErrorPrompt("Seek error!");
 		VMClose();
 		ExitApp();
 	}
@@ -366,7 +362,6 @@ u32 VMRead32( u32 address )
 	}
 
 	int pageid = address >> VMSHIFTBITS;
-	char msg[512];
 
 	switch( vmpage[pageid].pagetype )
 	{
@@ -377,8 +372,7 @@ u32 VMRead32( u32 address )
 		return READ32LE( vmpage[pageid].pageptr + ( address & VMSHIFTMASK ) );
 
 		default:
-		sprintf(msg, "VM32 : Unknown page type! (%d) [%d]", vmpage[pageid].pagetype, pageid);
-		InfoPrompt(msg);
+		ErrorPrompt("VM32: Unknown page type!");
 		VMClose();
 		ExitApp();
 		return 0;
@@ -408,7 +402,7 @@ u16 VMRead16( u32 address )
 		return READ16LE( vmpage[pageid].pageptr + ( address & VMSHIFTMASK ) );
 
 		default:
-		InfoPrompt("VM16 : Unknown page type!");
+		ErrorPrompt("VM16: Unknown page type!");
 		VMClose();
 		ExitApp();
 		return 0;
@@ -438,7 +432,7 @@ u8 VMRead8( u32 address )
 		return (u8)vmpage[pageid].pageptr[ (address & VMSHIFTMASK) ];
 
 		default:
-		InfoPrompt("VM8 : Unknown page type!");
+		ErrorPrompt("VM8: Unknown page type!");
 		VMClose();
 		ExitApp();
 		return 0;
