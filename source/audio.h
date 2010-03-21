@@ -11,7 +11,7 @@
 #ifndef __AUDIOMIXER__
 #define __AUDIOMIXER__
 
-#include "common/SoundDriver.h"
+#include "vba/common/SoundDriver.h"
 
 void InitialiseSound();
 void StopAudio();

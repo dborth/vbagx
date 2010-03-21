@@ -16,7 +16,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "vba.h"
+#include "vbagx.h"
 #include "menu.h"
 #include "input.h"
 

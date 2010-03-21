@@ -24,7 +24,7 @@
 #include <ogc/dvd.h>
 #include <iso9660.h>
 
-#include "vba.h"
+#include "vbagx.h"
 #include "vbasupport.h"
 #include "fileop.h"
 #include "networkop.h"

@@ -18,16 +18,17 @@
 #include <unistd.h>
 #include <wiiuse/wpad.h>
 
-#include "vba.h"
+#include "vbagx.h"
 #include "button_mapping.h"
 #include "audio.h"
 #include "video.h"
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "gba/GBA.h"
-#include "gba/bios.h"
-#include "gba/GBAinline.h"
+
+#include "vba/gba/GBA.h"
+#include "vba/gba/bios.h"
+#include "vba/gba/GBAinline.h"
 
 extern bool CalibrateWario;
 
