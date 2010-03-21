@@ -3472,7 +3472,7 @@ static int MenuSettingsNetwork()
 	GuiOptionBrowser optionBrowser(552, 248, &options);
 	optionBrowser.SetPosition(0, 108);
 	optionBrowser.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	optionBrowser.SetCol2Position(275);
+	optionBrowser.SetCol2Position(290);
 
 	HaltGui();
 	GuiWindow w(screenwidth, screenheight);
