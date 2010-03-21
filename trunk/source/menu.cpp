@@ -20,7 +20,7 @@
 #include <di/di.h>
 #endif
 
-#include "vba.h"
+#include "vbagx.h"
 #include "vbasupport.h"
 #include "video.h"
 #include "filebrowser.h"
@@ -29,12 +29,12 @@
 #include "fileop.h"
 #include "preferences.h"
 #include "button_mapping.h"
-#include "gettext.h"
 #include "input.h"
 #include "filelist.h"
-#include "gui/gui.h"
 #include "menu.h"
 #include "gamesettings.h"
+#include "gui/gui.h"
+#include "utils/gettext.h"
 
 #define THREAD_SLEEP 100
 

@@ -20,7 +20,7 @@
 #include <di/di.h>
 #endif
 
-#include "vba.h"
+#include "vbagx.h"
 #include "vbasupport.h"
 #include "vmmem.h"
 #include "filebrowser.h"

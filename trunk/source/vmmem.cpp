@@ -15,16 +15,16 @@
 #include <fat.h>
 #include <sys/dir.h>
 
-#include "gba/GBA.h"
-#include "gba/Globals.h"
-#include "Util.h"
-#include "common/Port.h"
-
-#include "vba.h"
+#include "vbagx.h"
 #include "fileop.h"
 #include "menu.h"
 #include "filebrowser.h"
 #include "gcunzip.h"
+
+#include "vba/gba/GBA.h"
+#include "vba/gba/Globals.h"
+#include "vba/Util.h"
+#include "vba/common/Port.h"
 
 #define MEM_BAD	0xff
 #define MEM_VM  0x01

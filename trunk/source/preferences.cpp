@@ -15,7 +15,7 @@
 #include <ogcsys.h>
 #include <mxml.h>
 
-#include "vba.h"
+#include "vbagx.h"
 #include "menu.h"
 #include "fileop.h"
 #include "filebrowser.h"

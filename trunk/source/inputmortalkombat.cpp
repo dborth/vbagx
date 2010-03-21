@@ -18,17 +18,18 @@
 #include <unistd.h>
 #include <wiiuse/wpad.h>
 
-#include "vba.h"
+#include "vbagx.h"
 #include "button_mapping.h"
 #include "audio.h"
 #include "video.h"
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "gba/GBA.h"
-#include "gba/bios.h"
-#include "gba/GBAinline.h"
-#include "gb/gbGlobals.h"
+
+#include "vba/gba/GBA.h"
+#include "vba/gba/bios.h"
+#include "vba/gba/GBAinline.h"
+#include "vba/gb/gbGlobals.h"
 
 void DebugPrintf(const char *format, ...);
 void gbSetSpritePal(u8 WhichPal, u32 bright, u32 medium, u32 dark);

@@ -21,14 +21,7 @@
 #include <di/di.h>
 #endif
 
-#include "FreeTypeGX.h"
-
-#include "gba/Globals.h"
-#include "gba/Sound.h"
-
-#include "utils/usb2storage.h"
-#include "utils/mload.h"
-#include "vba.h"
+#include "vbagx.h"
 #include "vbasupport.h"
 #include "preferences.h"
 #include "audio.h"
@@ -39,6 +32,12 @@
 #include "input.h"
 #include "video.h"
 #include "gamesettings.h"
+#include "utils/usb2storage.h"
+#include "utils/mload.h"
+#include "utils/FreeTypeGX.h"
+
+#include "vba/gba/Globals.h"
+#include "vba/gba/Sound.h"
 
 extern "C" {
 extern void __exception_setreload(int t);

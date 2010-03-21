@@ -16,9 +16,22 @@
 #include <malloc.h>
 #include <ogc/lwp_watchdog.h>
 
-#include "pngu.h"
+#include "vbagx.h"
+#include "fileop.h"
+#include "filebrowser.h"
+#include "audio.h"
+#include "vmmem.h"
+#include "input.h"
+#include "gameinput.h"
+#include "video.h"
+#include "menu.h"
+#include "gcunzip.h"
+#include "gamesettings.h"
+#include "preferences.h"
+#include "fastmath.h"
+#include "utils/pngu.h"
+#include "utils/unzip/unzip.h"
 
-#include "unzip.h"
 #include "Util.h"
 #include "common/Port.h"
 #include "gba/Flash.h"
@@ -32,20 +45,6 @@
 #include "gb/gbGlobals.h"
 #include "gb/gbCheats.h"
 #include "gb/gbSound.h"
-
-#include "vba.h"
-#include "fileop.h"
-#include "filebrowser.h"
-#include "audio.h"
-#include "vmmem.h"
-#include "input.h"
-#include "gameinput.h"
-#include "video.h"
-#include "menu.h"
-#include "gcunzip.h"
-#include "gamesettings.h"
-#include "preferences.h"
-#include "fastmath.h"
 
 static u32 start;
 int cartridgeType = 0;

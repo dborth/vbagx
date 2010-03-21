@@ -12,8 +12,8 @@
 
 #include <unistd.h>
 
-#include "FreeTypeGX.h"
 #include "filelist.h"
+#include "utils/FreeTypeGX.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
 #define APPVERSION 		"2.1.2"
