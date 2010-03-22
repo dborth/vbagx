@@ -6,7 +6,7 @@
 
 #include "gettext.h"
 #include "filelist.h"
-#include "vba.h"
+#include "vbagx.h"
 
 typedef struct _MSG
 {

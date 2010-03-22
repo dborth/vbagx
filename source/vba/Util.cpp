@@ -29,7 +29,7 @@
 #include "gba/Globals.h"
 #include "gba/RTC.h"
 #include "common/Port.h"
-#include "unzip.h"
+#include "../utils/unzip/unzip.h"
 
 extern "C" {
 #include "common/memgzio.h"

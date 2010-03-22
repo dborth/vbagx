@@ -8,9 +8,9 @@
 #include "gb.h"
 #include "gbCheats.h"
 #include "gbGlobals.h"
-#include "vba.h"
-#include "../ngc/menu.h"
-#include "../ngc/fastmath.h"
+#include "../../vbagx.h"
+#include "../../menu.h"
+#include "../../fastmath.h"
 
 #define CARLLOG
 
