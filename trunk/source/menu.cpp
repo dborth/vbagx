@@ -1815,17 +1815,16 @@ static int MenuGameSettings()
 	videoBtn.SetEffectGrow();
 
 	#ifdef HW_RVL
-	GuiText wiiControlsBtnTxt1("Match Wii", 22, (GXColor){0, 0, 0, 255});
+	GuiText wiiControlsBtnTxt1("Match Wii Controls", 22, (GXColor){0, 0, 0, 255});
 	#else
-	GuiText wiiControlsBtnTxt1("Match GC", 22, (GXColor){0, 0, 0, 255});
+	GuiText wiiControlsBtnTxt1("Match GC Controls", 22, (GXColor){0, 0, 0, 255});
 	#endif
-	GuiText wiiControlsBtnTxt2("Controls", 22, (GXColor){0, 0, 0, 255});
 	if (GCSettings.WiiControls) sprintf(s, "ON");
 	else sprintf(s, "OFF");
-	GuiText wiiControlsBtnTxt3(s, 18, (GXColor){0, 0, 0, 255});
-	wiiControlsBtnTxt1.SetPosition(0, -16);
-	wiiControlsBtnTxt2.SetPosition(0, +8);
-	wiiControlsBtnTxt3.SetPosition(0, +28);
+	GuiText wiiControlsBtnTxt2(s, 18, (GXColor){0, 0, 0, 255});
+	wiiControlsBtnTxt1.SetPosition(0, -10);
+	wiiControlsBtnTxt1.SetWrap(true, btnLargeOutline.GetWidth()-30);
+	wiiControlsBtnTxt2.SetPosition(0, +30);
 	GuiImage wiiControlsBtnImg(&btnLargeOutline);
 	GuiImage wiiControlsBtnImgOver(&btnLargeOutlineOver);
 	GuiImage wiiControlsBtnIcon(&iconWiiControls);
@@ -1834,7 +1833,6 @@ static int MenuGameSettings()
 	wiiControlsBtn.SetPosition(0, 250);
 	wiiControlsBtn.SetLabel(&wiiControlsBtnTxt1, 0);
 	wiiControlsBtn.SetLabel(&wiiControlsBtnTxt2, 1);
-	wiiControlsBtn.SetLabel(&wiiControlsBtnTxt3, 2);
 	wiiControlsBtn.SetImage(&wiiControlsBtnImg);
 	wiiControlsBtn.SetImageOver(&wiiControlsBtnImgOver);
 	wiiControlsBtn.SetIcon(&wiiControlsBtnIcon);
@@ -1919,7 +1917,7 @@ static int MenuGameSettings()
 			GCSettings.WiiControls ^= 1;
 			if (GCSettings.WiiControls) sprintf(s, "ON");
 			else sprintf(s, "OFF");
-			wiiControlsBtnTxt3.SetText(s);
+			wiiControlsBtnTxt2.SetText(s);
 			wiiControlsBtn.ResetState();
 		}
 		/*else if(cheatsBtn.GetState() == STATE_CLICKED)
