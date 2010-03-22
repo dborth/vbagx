@@ -11,7 +11,7 @@
 #ifndef VBASUPPORT_H
 #define VBASUPPORT_H
 
-#include "System.h"
+#include "vba/System.h"
 
 extern struct EmulatedSystem emulator;
 extern int cartridgeType;

@@ -14,17 +14,17 @@
 #include <string.h>
 #include <zlib.h>
 
-extern "C" {
-#include "utils/sz/7zCrc.h"
-#include "utils/sz/7zIn.h"
-#include "utils/sz/7zExtract.h"
-}
-
 #include "vbagx.h"
 #include "fileop.h"
 #include "filebrowser.h"
 #include "menu.h"
 #include "gcunzip.h"
+
+extern "C" {
+#include "utils/sz/7zCrc.h"
+#include "utils/sz/7zIn.h"
+#include "utils/sz/7zExtract.h"
+}
 
 #define ZIPCHUNK 2048
 
