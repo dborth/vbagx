@@ -3,7 +3,7 @@
  *
  * Tantric September 2008
  *
- * vba.h
+ * vbagx.h
  *
  * This file controls overall program flow. Most things start and end here!
  ***************************************************************************/
@@ -16,7 +16,7 @@
 #include "utils/FreeTypeGX.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"2.1.2"
+#define APPVERSION 		"2.1.3"
 #define APPFOLDER 		"vbagx"
 #define PREF_FILE_NAME 	"settings.xml"
 #define PAL_FILE_NAME 	"palettes.xml"

@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 2.1.2
+                                  Version 2.1.3
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -27,6 +27,19 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[2.1.3 - March 30, 2010]
+
+* Fixed ROM allocation. Should solve some unexplained crashes
+* Numerous performance optimizations (thanks dancinninja!)
+* DVD / USB 2.0 support via IOS 202. DVDx support has been dropped. It is
+  highly recommended to install IOS 202 via the included installer
+* Multi-language support (only French translation is fully complete)
+* Thank you to everyone who submitted translations
+* SMB improvements/bug fixes
+* Minor video & input performance optimizations
+* Disabling rumble now also disables in-game rumbling
+* Fixed saving of GB screen position adjustment
 
 [2.1.2 - December 23, 2009]
 

@@ -3,7 +3,7 @@
  *
  * Tantric September 2008
  *
- * vba.cpp
+ * vbagx.cpp
  *
  * This file controls overall program flow. Most things start and end here!
  ***************************************************************************/
