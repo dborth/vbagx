@@ -8,8 +8,8 @@
  * Menu flow routines - handles all menu logic
  ***************************************************************************/
 
-#ifndef _NGCMENU_
-#define _NGCMENU_
+#ifndef _MENU_H
+#define _MENU_H
 
 #include <ogcsys.h>
 #include "gui/gui.h"

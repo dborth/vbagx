@@ -107,7 +107,7 @@ u32 inline CPUReadMemoryQuick( u32 addr )
 }
 
 /*****************************************************************************
- * End of NGC VM override
+ * End of VM override
  ****************************************************************************/
 
 static inline u32 CPUReadMemory(u32 address)
