@@ -56,6 +56,10 @@ int autoLoadMethod()
 		device = DEVICE_SD;
 	else if(ChangeInterface(DEVICE_USB, SILENT))
 		device = DEVICE_USB;
+	else if(ChangeInterface(DEVICE_SD_SLOTA, SILENT))
+		device = DEVICE_SD_SLOTA;
+	else if(ChangeInterface(DEVICE_SD_SLOTB, SILENT))
+		device = DEVICE_SD_SLOTB;
 	else if(ChangeInterface(DEVICE_DVD, SILENT))
 		device = DEVICE_DVD;
 	else if(ChangeInterface(DEVICE_SMB, SILENT))
@@ -85,6 +89,10 @@ int autoSaveMethod(bool silent)
 		device = DEVICE_SD;
 	else if(ChangeInterface(DEVICE_USB, SILENT))
 		device = DEVICE_USB;
+	else if(ChangeInterface(DEVICE_SD_SLOTA, SILENT))
+		device = DEVICE_SD_SLOTA;
+	else if(ChangeInterface(DEVICE_SD_SLOTB, SILENT))
+		device = DEVICE_SD_SLOTB;
 	else if(ChangeInterface(DEVICE_SMB, SILENT))
 		device = DEVICE_SMB;
 	else if(!silent)
@@ -165,10 +173,12 @@ bool IsDeviceRoot(char * path)
 	if(path == NULL || path[0] == 0)
 		return false;
 
-	if(strcmp(path, "sd:/") == 0 ||
-		strcmp(path, "usb:/") == 0 ||
-		strcmp(path, "dvd:/") == 0 ||
-		strcmp(path, "smb:/") == 0)
+	if( strcmp(path, "sd:/")    == 0 ||
+		strcmp(path, "usb:/")   == 0 ||
+		strcmp(path, "dvd:/")   == 0 ||
+		strcmp(path, "smb:/")   == 0 ||
+		strcmp(path, "carda:/") == 0 ||
+		strcmp(path, "cardb:/") == 0)
 	{
 		return true;
 	}
@@ -489,8 +499,7 @@ int BrowserLoadFile()
 			browser.selIndex = 0;
 			BrowserChangeFolder();
 		}
-
-		ErrorPrompt("Error loading ROM!");
+		ErrorPrompt("Error loading game!");
 	}
 	else
 	{
@@ -513,7 +522,7 @@ int BrowserChangeFolder()
 {
 	int device = 0;
 	FindDevice(browser.dir, &device);
-
+	
 	if(inSz && browser.selIndex == 0) // inside a 7z, requesting to leave
 	{
 		inSz = false;
@@ -535,6 +544,7 @@ int BrowserChangeFolder()
 		browser.dir[0] = 0;
 		int i=0;
 		
+#ifdef HW_RVL
 		AddBrowserEntry();
 		sprintf(browserList[i].filename, "sd:/");
 		sprintf(browserList[i].displayname, "SD Card");
@@ -553,7 +563,6 @@ int BrowserChangeFolder()
 		browserList[i].icon = ICON_USB;
 		i++;
 
-#ifdef HW_RVL
 		AddBrowserEntry();
 		sprintf(browserList[i].filename, "smb:/");
 		sprintf(browserList[i].displayname, "Network Share");
@@ -562,8 +571,25 @@ int BrowserChangeFolder()
 		browserList[i].isdir = 1;
 		browserList[i].icon = ICON_SMB;
 		i++;
+#else
+		AddBrowserEntry();
+		sprintf(browserList[i].filename, "carda:/");
+		sprintf(browserList[i].displayname, "SD Gecko Slot A");
+		browserList[i].length = 0;
+		browserList[i].mtime = 0;
+		browserList[i].isdir = 1;
+		browserList[i].icon = ICON_SD;
+		i++;
+		
+		AddBrowserEntry();
+		sprintf(browserList[i].filename, "cardb:/");
+		sprintf(browserList[i].displayname, "SD Gecko Slot B");
+		browserList[i].length = 0;
+		browserList[i].mtime = 0;
+		browserList[i].isdir = 1;
+		browserList[i].icon = ICON_SD;
+		i++;
 #endif
-
 		AddBrowserEntry();
 		sprintf(browserList[i].filename, "dvd:/");
 		sprintf(browserList[i].displayname, "Data DVD");
