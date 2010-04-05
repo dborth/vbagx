@@ -17,9 +17,10 @@ bool gbSoundGetDeclicking();
 // Effects configuration
 struct gb_effects_config_t
 {
+	bool enabled;   // false = disable all effects
+
 	float echo;     // 0.0 = none, 1.0 = lots
 	float stereo;   // 0.0 = channels in center, 1.0 = channels on left/right
-	bool enabled;   // false = disable all effects
 	bool surround;  // true = put some channels in back
 };
 
