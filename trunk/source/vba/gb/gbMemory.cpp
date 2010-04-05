@@ -334,7 +334,7 @@ void memoryUpdateMBC3Clock()
     gbDataMBC3.mapperSeconds += (int)(diff % 60);
     if(gbDataMBC3.mapperSeconds > 59) {
       gbDataMBC3.mapperSeconds -= 60;
-      ++gbDataMBC3.mapperMinutes;
+      gbDataMBC3.mapperMinutes++;
     }
 
     diff /= 60;
@@ -342,7 +342,7 @@ void memoryUpdateMBC3Clock()
     gbDataMBC3.mapperMinutes += (int)(diff % 60);
     if(gbDataMBC3.mapperMinutes > 59) {
       gbDataMBC3.mapperMinutes -= 60;
-      ++gbDataMBC3.mapperHours;
+      gbDataMBC3.mapperHours++;
     }
 
     diff /= 60;
@@ -350,7 +350,7 @@ void memoryUpdateMBC3Clock()
     gbDataMBC3.mapperHours += (int)(diff % 24);
     if(gbDataMBC3.mapperHours > 23) {
       gbDataMBC3.mapperHours -= 24;
-      ++gbDataMBC3.mapperDays;
+      gbDataMBC3.mapperDays++;
     }
     diff /= 24;
 
@@ -567,7 +567,7 @@ void mapperMBC5ROM(u16 address, u8 value)
       gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
 
     } else {
-	  value &= 1;
+      value = value & 1;
       if(value == gbDataMBC5.mapperROMHighAddress)
         break;
 
@@ -818,7 +818,7 @@ void mapperMBC7RAM(u16 address, u8 value)
           // receiving command
           gbDataMBC7.buffer <<= 1;
           gbDataMBC7.buffer |= (value & 0x02)?1:0;
-          ++gbDataMBC7.count;
+          gbDataMBC7.count++;
           if(gbDataMBC7.count==2) {
             // finished receiving command
             gbDataMBC7.state=2;
@@ -830,7 +830,7 @@ void mapperMBC7RAM(u16 address, u8 value)
           // receive address
           gbDataMBC7.buffer <<= 1;
           gbDataMBC7.buffer |= (value&0x02)?1:0;
-          ++gbDataMBC7.count;
+          gbDataMBC7.count++;
           if(gbDataMBC7.count==8) {
           // finish receiving
             gbDataMBC7.state=3;
@@ -850,7 +850,7 @@ void mapperMBC7RAM(u16 address, u8 value)
         case 3:
           gbDataMBC7.buffer <<= 1;
           gbDataMBC7.buffer |= (value&0x02)?1:0;
-          ++gbDataMBC7.count;
+          gbDataMBC7.count++;
 
           switch(gbDataMBC7.code) {
           case 0:
@@ -1238,7 +1238,7 @@ void memoryUpdateTAMA5Clock()
     gbDataTAMA5.mapperSeconds += (int)(diff % 60);
     if(gbDataTAMA5.mapperSeconds > 59) {
       gbDataTAMA5.mapperSeconds -= 60;
-      ++gbDataTAMA5.mapperMinutes;
+      gbDataTAMA5.mapperMinutes++;
     }
 
     diff /= 60;
@@ -1246,7 +1246,7 @@ void memoryUpdateTAMA5Clock()
     gbDataTAMA5.mapperMinutes += (int)(diff % 60);
     if(gbDataTAMA5.mapperMinutes > 59) {
       gbDataTAMA5.mapperMinutes -= 60;
-      ++gbDataTAMA5.mapperHours;
+      gbDataTAMA5.mapperHours++;
     }
 
     diff /= 60;
@@ -1255,23 +1255,23 @@ void memoryUpdateTAMA5Clock()
     diff /= 24;
     if(gbDataTAMA5.mapperHours > 23) {
       gbDataTAMA5.mapperHours -= 24;
-      ++diff;
+      diff++;
 
     }
 
     time_t days = diff;
     while (days)
     {
-      ++gbDataTAMA5.mapperDays;
-      --days;
+      gbDataTAMA5.mapperDays++;
+      days--;
       if (gbDataTAMA5.mapperDays>gbDaysinMonth[gbDataTAMA5.mapperMonths-1])
       {
         gbDataTAMA5.mapperDays = 1;
-        ++gbDataTAMA5.mapperMonths;
+        gbDataTAMA5.mapperMonths++;
         if (gbDataTAMA5.mapperMonths>12)
         {
            gbDataTAMA5.mapperMonths = 1;
-           ++gbDataTAMA5.mapperYears;
+           gbDataTAMA5.mapperYears++;
            if ((gbDataTAMA5.mapperYears & 3) == 0)
              gbDaysinMonth[1] = 29;
            else
@@ -1376,11 +1376,11 @@ void mapperTAMA5RAM(u16 address, u8 value)
               gbDataTAMA5.mapperLYears    = gbDataTAMA5.mapperYears;
               gbDataTAMA5.mapperLControl = gbDataTAMA5.mapperControl;
 
-              int seconds = ((gbDataTAMA5.mapperLSeconds / 10)<<4) + gbDataTAMA5.mapperLSeconds %10;
+              int seconds = (gbDataTAMA5.mapperLSeconds / 10)*16 + gbDataTAMA5.mapperLSeconds %10;
               int secondsL = (gbDataTAMA5.mapperLSeconds % 10);
               int secondsH = (gbDataTAMA5.mapperLSeconds / 10);
-              int minutes = ((gbDataTAMA5.mapperLMinutes / 10)<<4) + gbDataTAMA5.mapperLMinutes %10;
-              int hours = ((gbDataTAMA5.mapperLHours / 10)<<4) + gbDataTAMA5.mapperLHours %10;
+              int minutes = (gbDataTAMA5.mapperLMinutes / 10)*16 + gbDataTAMA5.mapperLMinutes %10;
+              int hours = (gbDataTAMA5.mapperLHours / 10)*16 + gbDataTAMA5.mapperLHours %10;
               int DaysL = gbDataTAMA5.mapperLDays % 10;
               int DaysH = gbDataTAMA5.mapperLDays /10;
               int MonthsL = gbDataTAMA5.mapperLMonths % 10;
@@ -1438,11 +1438,11 @@ void mapperTAMA5RAM(u16 address, u8 value)
             }
             else if (gbDataTAMA5.mapperRamByteSelect == 0x44)
             {
-			  gbDataTAMA5.mapperMinutes = (data>>4)*10 + (data & 15);
+              gbDataTAMA5.mapperMinutes = (data/16)*10 + data%16;
             }
             else if (gbDataTAMA5.mapperRamByteSelect == 0x54)
             {
-              gbDataTAMA5.mapperHours = (data>>4)*10 + (data & 15);
+              gbDataTAMA5.mapperHours = (data/16)*10 + data%16;
             }
             else
             {
@@ -1462,13 +1462,14 @@ void mapperTAMA5RAM(u16 address, u8 value)
         // I put it there...
         if (value == 0x0a)
         {
-		for (int i = 0; i<0x10; i++){
-			int i16 = i<<4;
-            for (int j = 0; j<0x10; j+=4){
-				gbTAMA5ram[(i16 + j    ) | 2] = gbTAMA5ram[i16 + j    ];
-				gbTAMA5ram[(i16 + j + 1) | 2] = gbTAMA5ram[i16 + j + 1];
-			}
-		}
+          for (int i = 0; i<0x10; i++)
+            for (int j = 0; j<0x10; j++)
+              if (!(j&2))
+                gbTAMA5ram[((i*0x10)+j) | 2] = gbTAMA5ram[(i*0x10)+j];
+          // Enable this to see the content of the flashrom in 0xe000
+          /*for (int k = 0; k<0x100; k++)
+            gbMemoryMap[0xe][k] = gbTAMA5ram[k];*/
+
           gbMemoryMap[0xa][0] = gbDataTAMA5.mapperRAMEnable = 1;
         }
         else

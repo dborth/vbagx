@@ -10,9 +10,8 @@
 #include "gbGlobals.h"
 #include "../../vbagx.h"
 #include "../../menu.h"
-#include "../../fastmath.h"
 
-#define CARLLOG
+//#define CARLLOG
 
 bool ColorizeGameboy = true;
 
@@ -38,20 +37,18 @@ const float BL[4] = {0.1f, 0.4f, 0.7f, 1.0f};
 // factor is from 0 to 1. 0 = no extra whiteness, 1 = 100% whiteness
 u16 changeColourWhiteness(u16 rgb, float factor) {
 	if (factor==0.0f) return rgb;
-	int f1factor = (0x1f*factor);
-	int factorm1 = 1-factor;
 	int r = (rgb & 0x1f);
-	r = (r * factorm1)+ f1factor;
+	r = (r * (1-factor))+(0x1f*factor);
 	if (r>31) { 
 	  r=31; 
 	}
 	int g = ((rgb >> 5) & 0x1f);
-	g = (g * factorm1)+f1factor;
+	g = (g * (1-factor))+(0x1f*factor);
 	if (g>31) { 
 	  g=31; 
 	}
 	int b = ((rgb >> 10) & 0x1f);
-	b = (b * factorm1)+f1factor;
+	b = (b * (1-factor))+(0x1f*factor);
 	if (b>31) { 
 	  b=31; 
 	}
@@ -63,26 +60,27 @@ u16 changeColourWhiteness(u16 rgb, float factor) {
 u16 changeColourBrightness(u16 rgb, float factor) {
 	if (factor==1.0f) return rgb;
 	int bonus = 0;
-	int r = int(float(rgb & 0x1f) * factor);
+	int r = (rgb & 0x1f);
+	r = r * factor;
 	if (r>31) { 
 	  r=31; 
-	  bonus+= (1 >> 1);
+	  bonus+=(r-30)/2;
 	}
-	int g = int(float((rgb >> 5) & 0x1f) * factor);
-	
+	int g = ((rgb >> 5) & 0x1f);
+	g = g * factor;
 	if (g>31) { 
 	  g=31; 
-	  bonus+=(1 >> 1);
+	  bonus+=(g-30)/2;
 	}
-	int b = int(float((rgb >> 10) & 0x1f) * factor);
-	
+	int b = ((rgb >> 10) & 0x1f);
+	b = b * factor;
 	if (b>31) { 
 	  b=31; 
-	  bonus += (1 >> 1);
+	  bonus+=(b-30)/2;
 	}
-	r += bonus;
-	g += bonus;
-	b += bonus;
+	r+=bonus;
+	g+=bonus;
+	b+=bonus;
 	if (r>31) r=31;
 	if (g>31) g=31;
 	if (b>31) b=31;
@@ -113,8 +111,8 @@ void gbSetBGPalette(u8 value, bool ColoursChanged=false) {
       log("Bg Pal: %c %c %c %c", DN[gbObp0[0]], DN[gbObp0[1]], DN[gbObp0[2]], DN[gbObp0[3]]);
 #endif
 	  // check for duplicates
-	  for (unsigned i=0; i<=2u; ++i)
-		for (unsigned j=i+1; j<=3u; ++j)
+	  for (int i=0; i<=2; i++)
+		for (int j=i+1; j<=3; j++)
 		  if (gbBgp[i]==gbBgp[j]) {
 			dup=true;
 			dupDarkness = gbBgp[i];
@@ -122,26 +120,19 @@ void gbSetBGPalette(u8 value, bool ColoursChanged=false) {
 		  }
 	  // We haven't had a full palette yet, so guess...
 	  if (dup && !HadBgPal) {
+		int index;
 	    if (gbBgp[0]>gbBgp[3]) {
-			DarkestToBrightestIndex[0] = 0;
-			DarkestToBrightestIndex[1] = 1;
-			DarkestToBrightestIndex[2] = 2;
-			DarkestToBrightestIndex[3] = 3;
-			
-			Darkness[0] = gbBgp[0];
-			Darkness[1] = gbBgp[1];
-			Darkness[2] = gbBgp[2];
-			Darkness[3] = gbBgp[3];
+			for (int Colour=0; Colour<=3; Colour++) {
+				index = Colour;
+				DarkestToBrightestIndex[Colour]=index;
+				Darkness[Colour]=gbBgp[index];
+			}
 		} else {
-			DarkestToBrightestIndex[0] = 3;
-			DarkestToBrightestIndex[1] = 2;
-			DarkestToBrightestIndex[2] = 1;
-			DarkestToBrightestIndex[3] = 0;
-			
-			Darkness[0] = gbBgp[3];
-			Darkness[1] = gbBgp[2];
-			Darkness[2] = gbBgp[1];
-			Darkness[3] = gbBgp[0];
+			for (int Colour=0; Colour<=3; Colour++) {
+				index = 3-Colour;
+				DarkestToBrightestIndex[Colour]=index;
+				Darkness[Colour]=gbBgp[index];
+			}
 		}
 		// brightness of brightest colour
 		BrightnessForBrightest = BL[3-gbBgp[DarkestToBrightestIndex[3]]];
@@ -150,12 +141,12 @@ void gbSetBGPalette(u8 value, bool ColoursChanged=false) {
 		HadBgPal = true;
 		// now we need to map them from darkest to brightest
 		int Colour = 0;
-		for (int darkness = 3; darkness>=0; --darkness) {
-		  for (int index=0; index<=3; ++index) {
+		for (int darkness = 3; darkness>=0; darkness--) {
+		  for (int index=0; index<=3; index++) {
 			if (gbBgp[index]==darkness) {
 				DarkestToBrightestIndex[Colour]=index;
 				Darkness[Colour]=gbBgp[index];
-				++Colour;
+				Colour++;
 				break;
 			}
 		  }
@@ -175,16 +166,13 @@ void gbSetBGPalette(u8 value, bool ColoursChanged=false) {
   if (dupDarkness==0) {
 	// Multiple colours set to white
 	BrightnessFactor = 0;
-	WhitenessFactor += BL[3-gbBgp[0]]
-					 + BL[3-gbBgp[1]]
-					 + BL[3-gbBgp[2]]
-					 + BL[3-gbBgp[3]]
-					 - BL[3] - BL[2] - BL[1]- BL[0];
-					 
-	float MaxWhiteness =  BL[3] + BL[3] + BL[3] + BL[3]
-						-BL[3] -BL[2] -BL[1] -BL[0];
-						
-	WhitenessFactor /= (MaxWhiteness+0.4f);
+	float MaxWhiteness = 0;
+	int i;
+	for (i=0; i<=3; i++) {
+		WhitenessFactor+=BL[3-gbBgp[i]]-BL[3-i];
+		MaxWhiteness+=BL[3]-BL[3-i];
+	}
+	WhitenessFactor = WhitenessFactor / (MaxWhiteness+0.4f);
   // check if they are trying to make the palette brighter
   } else if (NewBrightnessForBrightest==1.0f && BrightnessForBrightest==1.0f) {
 	float NewBrightnessForDarkest = BL[3-gbBgp[DarkestToBrightestIndex[0]]];
@@ -196,7 +184,7 @@ void gbSetBGPalette(u8 value, bool ColoursChanged=false) {
   }
   if (WhitenessFactor) {
 	  // BG colours
-	  for (int colour = 0; colour <= 3; ++colour) {
+	  for (int colour = 0; colour <= 3; colour++) {
 		u16 colourRGB = systemMonoPalette[colour];
 		float colourBrightness = BL[colour];
 		float indexBrightness = BL[3-Darkness[colour]];
@@ -204,7 +192,7 @@ void gbSetBGPalette(u8 value, bool ColoursChanged=false) {
 		gbPalette[0+DarkestToBrightestIndex[colour]] = changeColourWhiteness(colourRGB, WhitenessFactor);
 	  }
 	  // Window colours
-	  for (int colour = 0; colour <= 3; ++colour) {
+	  for (int colour = 0; colour <= 3; colour++) {
 		u16 colourRGB = systemMonoPalette[4+colour];
 		float colourBrightness = BL[colour];
 		float indexBrightness = BL[3-Darkness[colour]];
@@ -213,14 +201,14 @@ void gbSetBGPalette(u8 value, bool ColoursChanged=false) {
 	  }
   } else {
 	  // BG colours
-	  for (int colour = 0; colour <= 3; ++colour) {
+	  for (int colour = 0; colour <= 3; colour++) {
 		u16 colourRGB = systemMonoPalette[colour];
 		float colourBrightness = BL[colour];
 		float indexBrightness = BL[3-Darkness[colour]]*BrightnessFactor;
 		gbPalette[0+DarkestToBrightestIndex[colour]] = changeColourBrightness(colourRGB, indexBrightness/colourBrightness);
 	  }
 	  // Window colours
-	  for (int colour = 0; colour <= 3; ++colour) {
+	  for (int colour = 0; colour <= 3; colour++) {
 		u16 colourRGB = systemMonoPalette[4+colour];
 		float colourBrightness = BL[colour];
 		float indexBrightness = BL[3-Darkness[colour]]*BrightnessFactor;
@@ -262,21 +250,19 @@ void gbSetObj0Palette(u8 value, bool ColoursChanged = false) {
 		  }
 	  	  // We haven't had a full palette yet, so guess...
 	  if (dup && !HadObj1Pal) {
-		if (gbObp0[1]>gbObp0[3]) {
-			DarkestToBrightestIndex[0] = 1;
-			DarkestToBrightestIndex[1] = 2;
-			DarkestToBrightestIndex[2] = 3;
-			Darkness[0] = gbObp0[1];
-			Darkness[1] = gbObp0[2];
-			Darkness[2] = gbObp0[3];
-			
+		int index;
+	    if (gbObp0[1]>gbObp0[3]) {
+			for (int Colour=0; Colour<=2; Colour++) {
+				index = Colour+1;
+				DarkestToBrightestIndex[Colour]=index;
+				Darkness[Colour]=gbObp0[index];
+			}
 		} else {
-			DarkestToBrightestIndex[0] = 3;
-			DarkestToBrightestIndex[1] = 2;
-			DarkestToBrightestIndex[2] = 1;
-			Darkness[0] = gbObp0[3];
-			Darkness[1] = gbObp0[2];
-			Darkness[2] = gbObp0[1];
+			for (int Colour=0; Colour<=2; Colour++) {
+				index = 2-Colour+1;
+				DarkestToBrightestIndex[Colour]=index;
+				Darkness[Colour]=gbObp0[index];
+			}
 		}
 		// brightness of brightest colour
 		BrightnessForBrightest = BL[3-gbObp0[DarkestToBrightestIndex[2]]];
@@ -285,12 +271,12 @@ void gbSetObj0Palette(u8 value, bool ColoursChanged = false) {
 		HadObj0Pal = true;
 		// now we need to map them from darkest to brightest
 		int Colour = 0;
-		for (int darkness = 3; darkness>=0; --darkness) {
+		for (int darkness = 3; darkness>=0; darkness--) {
 		  for (int index=1; index<=3; index++) {
 			if (gbObp0[index]==darkness) {
 				DarkestToBrightestIndex[Colour]=index;
 				Darkness[Colour]=gbObp0[index];
-				++Colour;
+				Colour++;
 				break;
 			}
 		  }
@@ -310,16 +296,13 @@ void gbSetObj0Palette(u8 value, bool ColoursChanged = false) {
   if (dupDarkness==0) {
 	// Multiple colours set to white
 	BrightnessFactor = 0;
-	WhitenessFactor+= BL[3-gbObp0[1]]
-					+ BL[3-gbObp0[2]]
-					+ BL[3-gbObp0[3]]
-					-BL[3] -BL[2] -BL[1];
-	
-	float MaxWhiteness =  BL[3] + BL[3] + BL[3] 
-						- BL[3] - BL[2] - BL[1];
-
-						
-	WhitenessFactor /= (MaxWhiteness+0.3f);
+	float MaxWhiteness = 0;
+	int i;
+	for (i=1; i<=3; i++) {
+		WhitenessFactor+=BL[3-gbObp0[i]]-BL[3-(i-1)];
+		MaxWhiteness+=BL[3]-BL[3-(i-1)];
+	}
+	WhitenessFactor = WhitenessFactor / (MaxWhiteness+0.3f);
   // check if they are trying to make the palette brighter
   } else if (NewBrightnessForBrightest==1.0f && BrightnessForBrightest==1.0f) {
 	float NewBrightnessForDarkest = BL[3-gbObp0[DarkestToBrightestIndex[0]]];
@@ -379,21 +362,19 @@ void gbSetObj1Palette(u8 value, bool ColoursChanged = false) {
 		  }
 	  // We haven't had a full palette yet, so guess...
 	  if (dup && !HadObj1Pal) {
-		if (gbObp0[1]>gbObp0[3]) {
-			DarkestToBrightestIndex[0] = 1;
-			DarkestToBrightestIndex[1] = 2;
-			DarkestToBrightestIndex[2] = 3;
-			Darkness[0] = gbObp0[1];
-			Darkness[1] = gbObp0[2];
-			Darkness[2] = gbObp0[3];
+		int index;
+	    if (gbObp1[1]>gbObp1[3]) {
+			for (int Colour=0; Colour<=2; Colour++) {
+				index = Colour+1;
+				DarkestToBrightestIndex[Colour]=index;
+				Darkness[Colour]=gbObp1[index];
+			}
 		} else {
-			DarkestToBrightestIndex[0] = 3;
-			DarkestToBrightestIndex[1] = 2;
-			DarkestToBrightestIndex[2] = 1;
-			Darkness[0] = gbObp0[3];
-			Darkness[1] = gbObp0[2];
-			Darkness[2] = gbObp0[1];
-			
+			for (int Colour=0; Colour<=2; Colour++) {
+				index = 2-Colour+1;
+				DarkestToBrightestIndex[Colour]=index;
+				Darkness[Colour]=gbObp1[index];
+			}
 		}
 		// brightness of brightest colour
 		BrightnessForBrightest = BL[3-gbObp1[DarkestToBrightestIndex[2]]];
@@ -427,14 +408,13 @@ void gbSetObj1Palette(u8 value, bool ColoursChanged = false) {
   if (dupDarkness==0) {
 	// Multiple colours set to white
 	BrightnessFactor = 0;
-	WhitenessFactor+= BL[3-gbObp1[1]]
-					+ BL[3-gbObp1[2]]
-					+ BL[3-gbObp1[3]]
-					-BL[3] -BL[2] -BL[1];
-	
-	float MaxWhiteness =  BL[3] + BL[3] + BL[3] 
-						- BL[3] - BL[2] - BL[1];
-	WhitenessFactor /= (MaxWhiteness+0.3f);
+	float MaxWhiteness = 0;
+	int i;
+	for (i=1; i<=3; i++) {
+		WhitenessFactor+=BL[3-gbObp1[i]]-BL[3-(i-1)];
+		MaxWhiteness+=BL[3]-BL[3-(i-1)];
+	}
+	WhitenessFactor = WhitenessFactor / (MaxWhiteness+0.3f);
   // check if they are trying to make the palette brighter
   } else if (NewBrightnessForBrightest==1.0f && BrightnessForBrightest==1.0f) {
 	float NewBrightnessForDarkest = BL[3-gbObp1[DarkestToBrightestIndex[0]]];
@@ -473,16 +453,10 @@ bool StartColorizing() {
 }
 
 void StopColorizing() {
-	if(!ColorizeGameboy || gbSgbMode || gbCgbMode) return;
-
-	int gbpo12 = gbPaletteOption*12;
-	for(int i = 0; i < 12; i+=4){
-		gbPalette[i] = systemGbPalette[gbpo12+i];
-		gbPalette[i+1] = systemGbPalette[gbpo12+i+1];
-		gbPalette[i+2] = systemGbPalette[gbpo12+i+2];
-		gbPalette[i+3] = systemGbPalette[gbpo12+i+3];
-	}
-	ColorizeGameboy = false;
+  if(!ColorizeGameboy || gbSgbMode || gbCgbMode) return;
+  for(int i = 0; i < 12; i++)
+    gbPalette[i] = systemGbPalette[gbPaletteOption*12+i];
+  ColorizeGameboy = false;
 }
 
 // convert 0xRRGGBB to our 15 bit format
@@ -497,9 +471,7 @@ void gbSetSpritePal(u8 WhichPal, u32 bright, u32 medium, u32 dark) {
   // cancel if we already set to these colours
   if (WhichPal>0) {
 	int p = WhichPal-1;
-	if(((OldObpBright[p] - bright) | (OldObpMedium[p] - medium) | (OldObpDark[p] - dark)) == 0){
-		return;
-	}
+	if (OldObpBright[p]==bright && OldObpMedium[p]==medium && OldObpDark[p]==dark) return;
   }
   int index = 0;
   // check if we are setting both sprite palettes at once
@@ -562,9 +534,9 @@ void gbSetBgPal(u8 WhichPal, u32 bright) {
 	u8 r = (bright >> 16) & 0xFF;
 	u8 g = (bright >> 8) & 0xFF;
 	u8 b = (bright >> 0) & 0xFF;
-	u32 medium = ((ftou((utof(r)*0.7f))) << 16) | ((ftou((utof(g)*0.7f))) << 8) | ((ftou((utof(b)*0.7f))) << 0);
-	u32 dark   = ((ftou((utof(r)*0.4f))) << 16) | ((ftou((utof(g)*0.4f))) << 8) | ((ftou((utof(b)*0.4f))) << 0);
-	u32 black  = ((ftou((utof(r)*0.1f))) << 16) | ((ftou((utof(g)*0.1f))) << 8) | ((ftou((utof(b)*0.1f))) << 0);
+	u32 medium = (((u32)(r*0.7f)) << 16) | (((u32)(g*0.7f)) << 8) | (((u32)(b*0.7f)) << 0);
+	u32 dark = (((u32)(r*0.4f)) << 16) | (((u32)(g*0.4f)) << 8) | (((u32)(b*0.4f)) << 0);
+	u32 black = (((u32)(r*0.1f)) << 16) | (((u32)(g*0.1f)) << 8) | (((u32)(b*0.1f)) << 0);
 	gbSetBgPal(WhichPal, bright, medium, dark, black);
 }
 
@@ -581,7 +553,7 @@ void gbPaletteReset() {
 	oldBgp = 0xFC;
 	oldObp0 = oldObp1 = 0xFF;
 	OldBgBright=0; OldBgMedium=0; OldBgDark=0; OldBgBlack=0;
-	OldObpBright[0]= OldObpBright[1]=
-	OldObpMedium[0]= OldObpMedium[1]=
-	OldObpDark[0]= OldObpDark[1] =0;
+	for (int i=0; i<=1; i++) {
+		OldObpBright[i]=OldObpMedium[i]=OldObpDark[i]=0;
+	}
 }

@@ -60,7 +60,7 @@ void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* ri
 
 void Gb_Apu::synth_volume( int iv )
 {
-	double v = volume_ * iv * 0.005 / osc_count;
+	double v = volume_ * 0.60 / osc_count / 15 /*steps*/ / 8 /*master vol range*/ * iv;
 	good_synth.volume( v );
 	med_synth .volume( v );
 }
@@ -88,18 +88,8 @@ void Gb_Apu::volume( double v )
 
 void Gb_Apu::reset_regs()
 {
-	int i = 24; // 32 - 8
-	do {
-		regs [i] =
-		regs [i+1] = 
-		regs [i+2] =
-		regs [i+3] =
-		regs [i+4] =
-		regs [i+5] =
-		regs [i+6] =
-		regs [i+7] = 0;
-		i-=8;
-	} while(i>=0);
+	for ( int i = 0; i < 0x20; i++ )
+		regs [i] = 0;
 
 	square1.reset();
 	square2.reset();
@@ -126,7 +116,7 @@ void Gb_Apu::reduce_clicks( bool reduce )
 	if ( reduce && wave.mode != mode_agb ) // AGB already eliminates clicks
 		dac_off_amp = -Gb_Osc::dac_bias;
 
-	for ( int i = 0; i < osc_count; ++i )
+	for ( int i = 0; i < osc_count; i++ )
 		oscs [i]->dac_off_amp = dac_off_amp;
 
 	// AGB always eliminates clicks on wave channel using same method
@@ -140,7 +130,7 @@ void Gb_Apu::reset( mode_t mode, bool agb_wave )
 	if ( agb_wave )
 		mode = mode_agb; // using AGB wave features implies AGB hardware
 	wave.agb_mask = agb_wave ? 0xFF : 0;
-	for ( int i = 0; i < osc_count; ++i )
+	for ( int i = 0; i < osc_count; i++ )
 		oscs [i]->mode = mode;
 	reduce_clicks( reduce_clicks_ );
 
@@ -157,18 +147,13 @@ void Gb_Apu::reset( mode_t mode, bool agb_wave )
 		{0x84,0x40,0x43,0xAA,0x2D,0x78,0x92,0x3C,0x60,0x59,0x59,0xB0,0x34,0xB8,0x2E,0xDA},
 		{0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0xFF},
 	};
-	unsigned i = 0;
-	unsigned initialSize = sizeof(initial_wave[0]);
-		
-	// Init both banks (does nothing if not in AGB mode)
-	// TODO: verify that this works
-	write_register( 0, 0xFF1A,  0x40 );
-	for (; i < initialSize; ++i ){
-		write_register( 0, i + wave_ram, initial_wave [(mode != mode_dmg)] [i] );
-	}
-	write_register( 0, 0xFF1A,  0 );
-	for ( i = 0; i < initialSize; ++i ){
-		write_register( 0, i + wave_ram, initial_wave [(mode != mode_dmg)] [i] );
+	for ( int b = 2; --b >= 0; )
+	{
+		// Init both banks (does nothing if not in AGB mode)
+		// TODO: verify that this works
+		write_register( 0, 0xFF1A, b * 0x40 );
+		for ( unsigned i = 0; i < sizeof initial_wave [0]; i++ )
+			write_register( 0, i + wave_ram, initial_wave [(mode != mode_dmg)] [i] );
 	}
 }
 
@@ -188,8 +173,8 @@ Gb_Apu::Gb_Apu()
 	oscs [2] = &wave;
 	oscs [3] = &noise;
 
-	int i = osc_count - 1;
-	do {
+	for ( int i = osc_count; --i >= 0; )
+	{
 		Gb_Osc& o = *oscs [i];
 		o.regs        = &regs [i * 5];
 		o.output      = 0;
@@ -199,8 +184,7 @@ Gb_Apu::Gb_Apu()
 		o.outputs [3] = 0;
 		o.good_synth  = &good_synth;
 		o.med_synth   = &med_synth;
-		--i;
-	} while(i >= 0);
+	}
 
 	reduce_clicks_ = false;
 	set_tempo( 1.0 );
@@ -288,8 +272,8 @@ void Gb_Apu::silence_osc( Gb_Osc& o )
 
 void Gb_Apu::apply_stereo()
 {
-	int i = osc_count - 1;
-	do {
+	for ( int i = osc_count; --i >= 0; )
+	{
 		Gb_Osc& o = *oscs [i];
 		Blip_Buffer* out = o.outputs [calc_output( i )];
 		if ( o.output != out )
@@ -297,8 +281,7 @@ void Gb_Apu::apply_stereo()
 			silence_osc( o );
 			o.output = out;
 		}
-		--i;
-	} while(i >=0);
+	}
 }
 
 void Gb_Apu::write_register( blip_time_t time, unsigned addr, int data )
@@ -343,11 +326,8 @@ void Gb_Apu::write_register( blip_time_t time, unsigned addr, int data )
 		else if ( addr == vol_reg && data != old_data )
 		{
 			// Master volume
-			int i = osc_count - 1;
-			do {
+			for ( int i = osc_count; --i >= 0; )
 				silence_osc( *oscs [i] );
-				--i;
-			} while( i >=0);
 
 			apply_volume();
 		}
@@ -360,11 +340,8 @@ void Gb_Apu::write_register( blip_time_t time, unsigned addr, int data )
 		{
 			// Power control
 			frame_phase = 0;
-			int i = osc_count - 1;
-			do {
+			for ( int i = osc_count; --i >= 0; )
 				silence_osc( *oscs [i] );
-				--i;
-			} while( i >=0);
 
 			reset_regs();
 			if ( wave.mode != mode_dmg )
