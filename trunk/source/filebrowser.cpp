@@ -483,11 +483,6 @@ int BrowserLoadFile()
 	if(!FindDevice(browser.dir, &device))
 		return 0;
 
-	strcpy(loadedFile, browserList[browser.selIndex].filename);
-
-	// store the filename (w/o ext) - used for sram/freeze naming
-	StripExt(ROMFilename, browserList[browser.selIndex].filename);
-
 	loadingFile = true;
 	ROMLoaded = LoadVBAROM();
 	loadingFile = false;
@@ -507,6 +502,10 @@ int BrowserLoadFile()
 			LoadBatteryOrStateAuto(FILE_SRAM, SILENT);
 		else if (GCSettings.AutoLoad == 2)
 			LoadBatteryOrStateAuto(FILE_SNAPSHOT, SILENT);
+
+		// store the filename (w/o ext) - used for sram/freeze naming
+		StripExt(ROMFilename, browserList[browser.selIndex].filename);
+		strcpy(loadedFile, browserList[browser.selIndex].filename);
 		ResetBrowser();
 	}
 	CancelAction();
