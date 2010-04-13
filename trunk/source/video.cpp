@@ -29,7 +29,7 @@ u32 FrameTimer = 0;
 
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
-static GXRModeObj *vmode = NULL; // Graphics Mode Object
+GXRModeObj *vmode = NULL; // Graphics Mode Object
 unsigned int *xfb[2] = { NULL, NULL }; // Framebuffers
 int whichfb = 0; // Frame buffer toggle
 
@@ -304,22 +304,6 @@ static GXRModeObj * FindVideoMode()
 			break;
 	}
 
-	// configure original modes (not implemented)
-	switch (mode->viTVMode >> 2)
-	{
-		case VI_PAL:
-			// 576 lines (PAL 50hz)
-			break;
-
-		case VI_NTSC:
-			// 480 lines (NTSC 60hz)
-			break;
-
-		default:
-			// 480 lines (PAL 60Hz)
-			break;
-	}
-
 	// check for progressive scan
 	if (mode->viTVMode == VI_TVMODE_NTSC_PROG)
 		progressive = true;
@@ -327,11 +311,45 @@ static GXRModeObj * FindVideoMode()
 		progressive = false;
 
 	#ifdef HW_RVL
-	// widescreen fix
-	if(CONF_GetAspectRatio() == CONF_ASPECT_16_9)
+	bool pal = false;
+
+	if (mode == &TVPal528IntDf)
+		pal = true;
+
+	if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
 	{
-		mode->viWidth = 678;
-		mode->viXOrigin = (VI_MAX_WIDTH_NTSC - 678) / 2;
+		mode->fbWidth = 640;
+		mode->efbHeight = 456;
+		mode->viWidth = 686;
+
+		if (pal)
+		{
+			mode->xfbHeight = 542;
+			mode->viHeight = 542;
+		}
+		else
+		{
+			mode->xfbHeight = 456;
+			mode->viHeight = 456;
+		}
+	}
+	else
+	{
+		if (pal)
+			mode = &TVPal574IntDfScale;
+
+		mode->viWidth = 672;
+	}
+
+	if (pal)
+	{
+		mode->viXOrigin = (VI_MAX_WIDTH_PAL - mode->viWidth) / 2;
+		mode->viYOrigin = (VI_MAX_HEIGHT_PAL - mode->viHeight) / 2;
+	}
+	else
+	{
+		mode->viXOrigin = (VI_MAX_WIDTH_NTSC - mode->viWidth) / 2;
+		mode->viYOrigin = (VI_MAX_HEIGHT_NTSC - mode->viHeight) / 2;
 	}
 	#endif
 
