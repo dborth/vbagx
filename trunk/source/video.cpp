@@ -403,13 +403,6 @@ InitializeVideo ()
 	GX_SetCullMode (GX_CULL_NONE);
 	GX_CopyDisp (xfb[whichfb], GX_TRUE); // reset xfb
 	GX_Flush();
-
-	#ifdef HW_RVL
-	pointer[0] = new GuiImageData(player1_point_png);
-	pointer[1] = new GuiImageData(player2_point_png);
-	pointer[2] = new GuiImageData(player3_point_png);
-	pointer[3] = new GuiImageData(player4_point_png);
-	#endif
 }
 
 
