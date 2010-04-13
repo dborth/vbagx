@@ -42,6 +42,9 @@
 GuiImageData * pointer[4];
 #endif
 
+static GuiTrigger * trigA = NULL;
+static GuiTrigger * trig2 = NULL;
+
 static GuiButton * btnLogo = NULL;
 static GuiImage * gameScreenImg = NULL;
 static GuiImage * bgImg = NULL;
@@ -127,11 +130,6 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
 	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
 	GuiImageData btnOutline(button_png);
 	GuiImageData btnOutlineOver(button_over_png);
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
 
 	GuiImageData dialogBox(dialogue_box_png);
 	GuiImage dialogBoxImg(&dialogBox);
@@ -165,7 +163,8 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
 	btn1.SetImageOver(&btn1ImgOver);
 	btn1.SetSoundOver(&btnSoundOver);
 	btn1.SetSoundClick(&btnSoundClick);
-	btn1.SetTrigger(&trigA);
+	btn1.SetTrigger(trigA);
+	btn1.SetTrigger(trig2);
 	btn1.SetState(STATE_SELECTED);
 	btn1.SetEffectGrow();
 
@@ -180,7 +179,8 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
 	btn2.SetImageOver(&btn2ImgOver);
 	btn2.SetSoundOver(&btnSoundOver);
 	btn2.SetSoundClick(&btnSoundClick);
-	btn2.SetTrigger(&trigA);
+	btn2.SetTrigger(trigA);
+	btn2.SetTrigger(trig2);
 	btn2.SetEffectGrow();
 
 	promptWindow.Append(&dialogBoxImg);
@@ -327,11 +327,6 @@ ProgressWindow(char *title, char *msg)
 	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
 	GuiImageData btnOutline(button_png);
 	GuiImageData btnOutlineOver(button_over_png);
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
 
 	GuiImageData dialogBox(dialogue_box_png);
 	GuiImage dialogBoxImg(&dialogBox);
@@ -563,11 +558,6 @@ static void OnScreenKeyboard(char * var, u32 maxlen)
 	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
 	GuiImageData btnOutline(button_png);
 	GuiImageData btnOutlineOver(button_over_png);
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
 
 	GuiText okBtnTxt("OK", 22, (GXColor){0, 0, 0, 255});
 	GuiImage okBtnImg(&btnOutline);
@@ -582,7 +572,8 @@ static void OnScreenKeyboard(char * var, u32 maxlen)
 	okBtn.SetImageOver(&okBtnImgOver);
 	okBtn.SetSoundOver(&btnSoundOver);
 	okBtn.SetSoundClick(&btnSoundClick);
-	okBtn.SetTrigger(&trigA);
+	okBtn.SetTrigger(trigA);
+	okBtn.SetTrigger(trig2);
 	okBtn.SetEffectGrow();
 
 	GuiText cancelBtnTxt("Cancel", 22, (GXColor){0, 0, 0, 255});
@@ -596,7 +587,8 @@ static void OnScreenKeyboard(char * var, u32 maxlen)
 	cancelBtn.SetImageOver(&cancelBtnImgOver);
 	cancelBtn.SetSoundOver(&btnSoundOver);
 	cancelBtn.SetSoundClick(&btnSoundClick);
-	cancelBtn.SetTrigger(&trigA);
+	cancelBtn.SetTrigger(trigA);
+	cancelBtn.SetTrigger(trig2);
 	cancelBtn.SetEffectGrow();
 
 	keyboard.Append(&okBtn);
@@ -646,11 +638,6 @@ SettingWindow(const char * title, GuiWindow * w)
 	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
 	GuiImageData btnOutline(button_png);
 	GuiImageData btnOutlineOver(button_over_png);
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
 
 	GuiImageData dialogBox(dialogue_box_png);
 	GuiImage dialogBoxImg(&dialogBox);
@@ -672,7 +659,8 @@ SettingWindow(const char * title, GuiWindow * w)
 	okBtn.SetImageOver(&okBtnImgOver);
 	okBtn.SetSoundOver(&btnSoundOver);
 	okBtn.SetSoundClick(&btnSoundClick);
-	okBtn.SetTrigger(&trigA);
+	okBtn.SetTrigger(trigA);
+	okBtn.SetTrigger(trig2);
 	okBtn.SetEffectGrow();
 
 	GuiText cancelBtnTxt("Cancel", 22, (GXColor){0, 0, 0, 255});
@@ -686,7 +674,8 @@ SettingWindow(const char * title, GuiWindow * w)
 	cancelBtn.SetImageOver(&cancelBtnImgOver);
 	cancelBtn.SetSoundOver(&btnSoundOver);
 	cancelBtn.SetSoundClick(&btnSoundClick);
-	cancelBtn.SetTrigger(&trigA);
+	cancelBtn.SetTrigger(trigA);
+	cancelBtn.SetTrigger(trig2);
 	cancelBtn.SetEffectGrow();
 
 	promptWindow.Append(&dialogBoxImg);
@@ -888,11 +877,7 @@ static int MenuGameSelection()
 	GuiImageData iconSettings(icon_settings_png);
 	GuiImageData btnOutline(button_long_png);
 	GuiImageData btnOutlineOver(button_long_over_png);
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
+
 	GuiTrigger trigHome;
 	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0);
 
@@ -911,7 +896,8 @@ static int MenuGameSelection()
 	settingsBtn.SetImageOver(&settingsBtnImgOver);
 	settingsBtn.SetSoundOver(&btnSoundOver);
 	settingsBtn.SetSoundClick(&btnSoundClick);
-	settingsBtn.SetTrigger(&trigA);
+	settingsBtn.SetTrigger(trigA);
+	settingsBtn.SetTrigger(trig2);
 	settingsBtn.SetEffectGrow();
 
 	GuiText exitBtnTxt("Exit", 22, (GXColor){0, 0, 0, 255});
@@ -929,7 +915,8 @@ static int MenuGameSelection()
 	exitBtn.SetImageOver(&exitBtnImgOver);
 	exitBtn.SetSoundOver(&btnSoundOver);
 	exitBtn.SetSoundClick(&btnSoundClick);
-	exitBtn.SetTrigger(&trigA);
+	exitBtn.SetTrigger(trigA);
+	exitBtn.SetTrigger(trig2);
 	exitBtn.SetTrigger(&trigHome);
 	exitBtn.SetEffectGrow();
 
@@ -1065,12 +1052,6 @@ static int MenuGame()
 	GuiImageData batteryRed(battery_red_png);
 	GuiImageData batteryBar(battery_bar_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiTrigger trigHome;
 	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0);
 
@@ -1092,7 +1073,8 @@ static int MenuGame()
 	saveBtn.SetIcon(&saveBtnIcon);
 	saveBtn.SetSoundOver(&btnSoundOver);
 	saveBtn.SetSoundClick(&btnSoundClick);
-	saveBtn.SetTrigger(&trigA);
+	saveBtn.SetTrigger(trigA);
+	saveBtn.SetTrigger(trig2);
 	saveBtn.SetEffectGrow();
 
 	GuiText loadBtnTxt("Load", 22, (GXColor){0, 0, 0, 255});
@@ -1108,7 +1090,8 @@ static int MenuGame()
 	loadBtn.SetIcon(&loadBtnIcon);
 	loadBtn.SetSoundOver(&btnSoundOver);
 	loadBtn.SetSoundClick(&btnSoundClick);
-	loadBtn.SetTrigger(&trigA);
+	loadBtn.SetTrigger(trigA);
+	loadBtn.SetTrigger(trig2);
 	loadBtn.SetEffectGrow();
 
 	// Boktai adds an extra button for setting the sun.
@@ -1139,7 +1122,8 @@ static int MenuGame()
 		sunBtn->SetImageOver(sunBtnImgOver);
 		sunBtn->SetSoundOver(&btnSoundOver);
 		sunBtn->SetSoundClick(&btnSoundClick);
-		sunBtn->SetTrigger(&trigA);
+		sunBtn->SetTrigger(trigA);
+		sunBtn->SetTrigger(trig2);
 		sunBtn->SetEffectGrow();
 	}
 
@@ -1156,7 +1140,8 @@ static int MenuGame()
 	resetBtn.SetIcon(&resetBtnIcon);
 	resetBtn.SetSoundOver(&btnSoundOver);
 	resetBtn.SetSoundClick(&btnSoundClick);
-	resetBtn.SetTrigger(&trigA);
+	resetBtn.SetTrigger(trigA);
+	resetBtn.SetTrigger(trig2);
 	resetBtn.SetEffectGrow();
 
 	GuiText gameSettingsBtnTxt("Game Settings", 22, (GXColor){0, 0, 0, 255});
@@ -1173,7 +1158,8 @@ static int MenuGame()
 	gameSettingsBtn.SetIcon(&gameSettingsBtnIcon);
 	gameSettingsBtn.SetSoundOver(&btnSoundOver);
 	gameSettingsBtn.SetSoundClick(&btnSoundClick);
-	gameSettingsBtn.SetTrigger(&trigA);
+	gameSettingsBtn.SetTrigger(trigA);
+	gameSettingsBtn.SetTrigger(trig2);
 	gameSettingsBtn.SetEffectGrow();
 
 	GuiText mainmenuBtnTxt("Main Menu", 22, (GXColor){0, 0, 0, 255});
@@ -1187,7 +1173,8 @@ static int MenuGame()
 	mainmenuBtn.SetImageOver(&mainmenuBtnImgOver);
 	mainmenuBtn.SetSoundOver(&btnSoundOver);
 	mainmenuBtn.SetSoundClick(&btnSoundClick);
-	mainmenuBtn.SetTrigger(&trigA);
+	mainmenuBtn.SetTrigger(trigA);
+	mainmenuBtn.SetTrigger(trig2);
 	mainmenuBtn.SetEffectGrow();
 
 	GuiText closeBtnTxt("Close", 20, (GXColor){0, 0, 0, 255});
@@ -1201,7 +1188,8 @@ static int MenuGame()
 	closeBtn.SetImageOver(&closeBtnImgOver);
 	closeBtn.SetSoundOver(&btnSoundOver);
 	closeBtn.SetSoundClick(&btnSoundClick);
-	closeBtn.SetTrigger(&trigA);
+	closeBtn.SetTrigger(trigA);
+	closeBtn.SetTrigger(trig2);
 	closeBtn.SetTrigger(&trigHome);
 	closeBtn.SetEffectGrow();
 
@@ -1530,12 +1518,6 @@ static int MenuGameSaves(int action)
 	GuiImageData btnCloseOutline(button_small_png);
 	GuiImageData btnCloseOutlineOver(button_small_over_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiTrigger trigHome;
 	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0);
 
@@ -1550,7 +1532,8 @@ static int MenuGameSaves(int action)
 	backBtn.SetImageOver(&backBtnImgOver);
 	backBtn.SetSoundOver(&btnSoundOver);
 	backBtn.SetSoundClick(&btnSoundClick);
-	backBtn.SetTrigger(&trigA);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
 	backBtn.SetEffectGrow();
 
 	GuiText closeBtnTxt("Close", 20, (GXColor){0, 0, 0, 255});
@@ -1564,7 +1547,8 @@ static int MenuGameSaves(int action)
 	closeBtn.SetImageOver(&closeBtnImgOver);
 	closeBtn.SetSoundOver(&btnSoundOver);
 	closeBtn.SetSoundClick(&btnSoundClick);
-	closeBtn.SetTrigger(&trigA);
+	closeBtn.SetTrigger(trigA);
+	closeBtn.SetTrigger(trig2);
 	closeBtn.SetTrigger(&trigHome);
 	closeBtn.SetEffectGrow();
 
@@ -1784,12 +1768,6 @@ static int MenuGameSettings()
 	GuiImageData btnCloseOutline(button_small_png);
 	GuiImageData btnCloseOutlineOver(button_small_over_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiTrigger trigHome;
 	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0);
 
@@ -1807,7 +1785,8 @@ static int MenuGameSettings()
 	mappingBtn.SetIcon(&mappingBtnIcon);
 	mappingBtn.SetSoundOver(&btnSoundOver);
 	mappingBtn.SetSoundClick(&btnSoundClick);
-	mappingBtn.SetTrigger(&trigA);
+	mappingBtn.SetTrigger(trigA);
+	mappingBtn.SetTrigger(trig2);
 	mappingBtn.SetEffectGrow();
 
 	GuiText videoBtnTxt("Video", 22, (GXColor){0, 0, 0, 255});
@@ -1824,7 +1803,8 @@ static int MenuGameSettings()
 	videoBtn.SetIcon(&videoBtnIcon);
 	videoBtn.SetSoundOver(&btnSoundOver);
 	videoBtn.SetSoundClick(&btnSoundClick);
-	videoBtn.SetTrigger(&trigA);
+	videoBtn.SetTrigger(trigA);
+	videoBtn.SetTrigger(trig2);
 	videoBtn.SetEffectGrow();
 
 	#ifdef HW_RVL
@@ -1851,7 +1831,8 @@ static int MenuGameSettings()
 	wiiControlsBtn.SetIcon(&wiiControlsBtnIcon);
 	wiiControlsBtn.SetSoundOver(&btnSoundOver);
 	wiiControlsBtn.SetSoundClick(&btnSoundClick);
-	wiiControlsBtn.SetTrigger(&trigA);
+	wiiControlsBtn.SetTrigger(trigA);
+	wiiControlsBtn.SetTrigger(trig2);
 	wiiControlsBtn.SetEffectGrow();
 
 	/*GuiText cheatsBtnTxt("Cheats", 22, (GXColor){0, 0, 0, 255});
@@ -1867,7 +1848,7 @@ static int MenuGameSettings()
 	cheatsBtn.SetIcon(&cheatsBtnIcon);
 	cheatsBtn.SetSoundOver(&btnSoundOver);
 	cheatsBtn.SetSoundClick(&btnSoundClick);
-	cheatsBtn.SetTrigger(&trigA);
+	cheatsBtn.SetTrigger(trigA);
 	cheatsBtn.SetEffectGrow();*/
 
 	GuiText closeBtnTxt("Close", 20, (GXColor){0, 0, 0, 255});
@@ -1881,7 +1862,8 @@ static int MenuGameSettings()
 	closeBtn.SetImageOver(&closeBtnImgOver);
 	closeBtn.SetSoundOver(&btnSoundOver);
 	closeBtn.SetSoundClick(&btnSoundClick);
-	closeBtn.SetTrigger(&trigA);
+	closeBtn.SetTrigger(trigA);
+	closeBtn.SetTrigger(trig2);
 	closeBtn.SetTrigger(&trigHome);
 	closeBtn.SetEffectGrow();
 
@@ -1896,7 +1878,8 @@ static int MenuGameSettings()
 	backBtn.SetImageOver(&backBtnImgOver);
 	backBtn.SetSoundOver(&btnSoundOver);
 	backBtn.SetSoundClick(&btnSoundClick);
-	backBtn.SetTrigger(&trigA);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
 	backBtn.SetEffectGrow();
 
 	HaltGui();
@@ -1990,12 +1973,6 @@ static int MenuSettingsMappings()
 	GuiImageData iconGamecube(icon_settings_gamecube_png);
 	GuiImageData iconNunchuk(icon_settings_nunchuk_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiText gamecubeBtnTxt("GameCube Controller", 22, (GXColor){0, 0, 0, 255});
 	gamecubeBtnTxt.SetWrap(true, btnLargeOutline.GetWidth()-30);
 	GuiImage gamecubeBtnImg(&btnLargeOutline);
@@ -2010,7 +1987,8 @@ static int MenuSettingsMappings()
 	gamecubeBtn.SetIcon(&gamecubeBtnIcon);
 	gamecubeBtn.SetSoundOver(&btnSoundOver);
 	gamecubeBtn.SetSoundClick(&btnSoundClick);
-	gamecubeBtn.SetTrigger(&trigA);
+	gamecubeBtn.SetTrigger(trigA);
+	gamecubeBtn.SetTrigger(trig2);
 	gamecubeBtn.SetEffectGrow();
 
 	GuiText wiimoteBtnTxt("Wiimote", 22, (GXColor){0, 0, 0, 255});
@@ -2026,7 +2004,8 @@ static int MenuSettingsMappings()
 	wiimoteBtn.SetIcon(&wiimoteBtnIcon);
 	wiimoteBtn.SetSoundOver(&btnSoundOver);
 	wiimoteBtn.SetSoundClick(&btnSoundClick);
-	wiimoteBtn.SetTrigger(&trigA);
+	wiimoteBtn.SetTrigger(trigA);
+	wiimoteBtn.SetTrigger(trig2);
 	wiimoteBtn.SetEffectGrow();
 
 	GuiText classicBtnTxt("Classic Controller", 22, (GXColor){0, 0, 0, 255});
@@ -2043,7 +2022,8 @@ static int MenuSettingsMappings()
 	classicBtn.SetIcon(&classicBtnIcon);
 	classicBtn.SetSoundOver(&btnSoundOver);
 	classicBtn.SetSoundClick(&btnSoundClick);
-	classicBtn.SetTrigger(&trigA);
+	classicBtn.SetTrigger(trigA);
+	classicBtn.SetTrigger(trig2);
 	classicBtn.SetEffectGrow();
 
 	GuiText nunchukBtnTxt1("Wiimote", 22, (GXColor){0, 0, 0, 255});
@@ -2065,7 +2045,8 @@ static int MenuSettingsMappings()
 	nunchukBtn.SetIcon(&nunchukBtnIcon);
 	nunchukBtn.SetSoundOver(&btnSoundOver);
 	nunchukBtn.SetSoundClick(&btnSoundClick);
-	nunchukBtn.SetTrigger(&trigA);
+	nunchukBtn.SetTrigger(trigA);
+	nunchukBtn.SetTrigger(trig2);
 	nunchukBtn.SetEffectGrow();
 
 	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
@@ -2079,7 +2060,8 @@ static int MenuSettingsMappings()
 	backBtn.SetImageOver(&backBtnImgOver);
 	backBtn.SetSoundOver(&btnSoundOver);
 	backBtn.SetSoundClick(&btnSoundClick);
-	backBtn.SetTrigger(&trigA);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
 	backBtn.SetEffectGrow();
 
 	HaltGui();
@@ -2145,11 +2127,6 @@ ButtonMappingWindow()
 	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
 	GuiImageData btnOutline(button_png);
 	GuiImageData btnOutlineOver(button_over_png);
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
 
 	GuiImageData dialogBox(dialogue_box_png);
 	GuiImage dialogBoxImg(&dialogBox);
@@ -2283,12 +2260,6 @@ static int MenuSettingsMappingsMap()
 	GuiImageData btnShortOutline(button_short_png);
 	GuiImageData btnShortOutlineOver(button_short_over_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
@@ -2300,7 +2271,8 @@ static int MenuSettingsMappingsMap()
 	backBtn.SetImageOver(&backBtnImgOver);
 	backBtn.SetSoundOver(&btnSoundOver);
 	backBtn.SetSoundClick(&btnSoundClick);
-	backBtn.SetTrigger(&trigA);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
 	backBtn.SetEffectGrow();
 
 	GuiText resetBtnTxt("Reset", 22, (GXColor){0, 0, 0, 255});
@@ -2314,7 +2286,8 @@ static int MenuSettingsMappingsMap()
 	resetBtn.SetImageOver(&resetBtnImgOver);
 	resetBtn.SetSoundOver(&btnSoundOver);
 	resetBtn.SetSoundClick(&btnSoundClick);
-	resetBtn.SetTrigger(&trigA);
+	resetBtn.SetTrigger(trigA);
+	resetBtn.SetTrigger(trig2);
 	resetBtn.SetEffectGrow();
 
 	i=0;
@@ -2455,12 +2428,6 @@ static void ScreenZoomWindow()
 	GuiWindow * w = new GuiWindow(200,200);
 	w->SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiTrigger trigLeft;
 	trigLeft.SetButtonOnlyInFocusTrigger(-1, WPAD_BUTTON_LEFT | WPAD_CLASSIC_BUTTON_LEFT, PAD_BUTTON_LEFT);
 
@@ -2482,8 +2449,9 @@ static void ScreenZoomWindow()
 	arrowLeftBtn.SetImageOver(&arrowLeftOverImg);
 	arrowLeftBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	arrowLeftBtn.SetPosition(50, 0);
-	arrowLeftBtn.SetTrigger(0, &trigA);
-	arrowLeftBtn.SetTrigger(1, &trigLeft);
+	arrowLeftBtn.SetTrigger(trigA);
+	arrowLeftBtn.SetTrigger(trig2);
+	arrowLeftBtn.SetTrigger(&trigLeft);
 	arrowLeftBtn.SetSelectable(false);
 	arrowLeftBtn.SetUpdateCallback(ScreenZoomWindowLeftClick);
 
@@ -2496,8 +2464,9 @@ static void ScreenZoomWindow()
 	arrowRightBtn.SetImageOver(&arrowRightOverImg);
 	arrowRightBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	arrowRightBtn.SetPosition(164, 0);
-	arrowRightBtn.SetTrigger(0, &trigA);
-	arrowRightBtn.SetTrigger(1, &trigRight);
+	arrowRightBtn.SetTrigger(trigA);
+	arrowRightBtn.SetTrigger(trig2);
+	arrowRightBtn.SetTrigger(&trigRight);
 	arrowRightBtn.SetSelectable(false);
 	arrowRightBtn.SetUpdateCallback(ScreenZoomWindowRightClick);
 
@@ -2510,8 +2479,9 @@ static void ScreenZoomWindow()
 	arrowUpBtn.SetImageOver(&arrowUpOverImg);
 	arrowUpBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	arrowUpBtn.SetPosition(-76, -27);
-	arrowUpBtn.SetTrigger(0, &trigA);
-	arrowUpBtn.SetTrigger(1, &trigUp);
+	arrowUpBtn.SetTrigger(trigA);
+	arrowUpBtn.SetTrigger(trig2);
+	arrowUpBtn.SetTrigger(&trigUp);
 	arrowUpBtn.SetSelectable(false);
 	arrowUpBtn.SetUpdateCallback(ScreenZoomWindowUpClick);
 
@@ -2524,8 +2494,9 @@ static void ScreenZoomWindow()
 	arrowDownBtn.SetImageOver(&arrowDownOverImg);
 	arrowDownBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	arrowDownBtn.SetPosition(-76, 27);
-	arrowDownBtn.SetTrigger(0, &trigA);
-	arrowDownBtn.SetTrigger(1, &trigDown);
+	arrowDownBtn.SetTrigger(trigA);
+	arrowDownBtn.SetTrigger(trig2);
+	arrowDownBtn.SetTrigger(&trigDown);
 	arrowDownBtn.SetSelectable(false);
 	arrowDownBtn.SetUpdateCallback(ScreenZoomWindowDownClick);
 
@@ -2619,12 +2590,6 @@ static void ScreenPositionWindow()
 	w->SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	w->SetPosition(0, -10);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiTrigger trigLeft;
 	trigLeft.SetButtonOnlyInFocusTrigger(-1, WPAD_BUTTON_LEFT | WPAD_CLASSIC_BUTTON_LEFT, PAD_BUTTON_LEFT);
 
@@ -2645,8 +2610,9 @@ static void ScreenPositionWindow()
 	arrowLeftBtn.SetImage(&arrowLeftImg);
 	arrowLeftBtn.SetImageOver(&arrowLeftOverImg);
 	arrowLeftBtn.SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
-	arrowLeftBtn.SetTrigger(0, &trigA);
-	arrowLeftBtn.SetTrigger(1, &trigLeft);
+	arrowLeftBtn.SetTrigger(trigA);
+	arrowLeftBtn.SetTrigger(trig2);
+	arrowLeftBtn.SetTrigger(&trigLeft);
 	arrowLeftBtn.SetSelectable(false);
 	arrowLeftBtn.SetUpdateCallback(ScreenPositionWindowLeftClick);
 
@@ -2658,8 +2624,9 @@ static void ScreenPositionWindow()
 	arrowRightBtn.SetImage(&arrowRightImg);
 	arrowRightBtn.SetImageOver(&arrowRightOverImg);
 	arrowRightBtn.SetAlignment(ALIGN_RIGHT, ALIGN_MIDDLE);
-	arrowRightBtn.SetTrigger(0, &trigA);
-	arrowRightBtn.SetTrigger(1, &trigRight);
+	arrowRightBtn.SetTrigger(trigA);
+	arrowRightBtn.SetTrigger(trig2);
+	arrowRightBtn.SetTrigger(&trigRight);
 	arrowRightBtn.SetSelectable(false);
 	arrowRightBtn.SetUpdateCallback(ScreenPositionWindowRightClick);
 
@@ -2671,8 +2638,9 @@ static void ScreenPositionWindow()
 	arrowUpBtn.SetImage(&arrowUpImg);
 	arrowUpBtn.SetImageOver(&arrowUpOverImg);
 	arrowUpBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	arrowUpBtn.SetTrigger(0, &trigA);
-	arrowUpBtn.SetTrigger(1, &trigUp);
+	arrowUpBtn.SetTrigger(trigA);
+	arrowUpBtn.SetTrigger(trig2);
+	arrowUpBtn.SetTrigger(&trigUp);
 	arrowUpBtn.SetSelectable(false);
 	arrowUpBtn.SetUpdateCallback(ScreenPositionWindowUpClick);
 
@@ -2684,8 +2652,9 @@ static void ScreenPositionWindow()
 	arrowDownBtn.SetImage(&arrowDownImg);
 	arrowDownBtn.SetImageOver(&arrowDownOverImg);
 	arrowDownBtn.SetAlignment(ALIGN_CENTRE, ALIGN_BOTTOM);
-	arrowDownBtn.SetTrigger(0, &trigA);
-	arrowDownBtn.SetTrigger(1, &trigDown);
+	arrowDownBtn.SetTrigger(trigA);
+	arrowDownBtn.SetTrigger(trig2);
+	arrowDownBtn.SetTrigger(&trigDown);
 	arrowDownBtn.SetSelectable(false);
 	arrowDownBtn.SetUpdateCallback(ScreenPositionWindowDownClick);
 
@@ -2757,12 +2726,6 @@ static int MenuSettingsVideo()
 	GuiImageData btnOutline(button_png);
 	GuiImageData btnOutlineOver(button_over_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
@@ -2774,7 +2737,8 @@ static int MenuSettingsVideo()
 	backBtn.SetImageOver(&backBtnImgOver);
 	backBtn.SetSoundOver(&btnSoundOver);
 	backBtn.SetSoundClick(&btnSoundClick);
-	backBtn.SetTrigger(&trigA);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
 	backBtn.SetEffectGrow();
 
 	GuiOptionBrowser optionBrowser(552, 248, &options);
@@ -2924,12 +2888,6 @@ static int MenuSettings()
 	GuiImageData iconMenu(icon_settings_menu_png);
 	GuiImageData iconNetwork(icon_settings_network_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiText savingBtnTxt1("Saving", 22, (GXColor){0, 0, 0, 255});
 	GuiText savingBtnTxt2("&", 18, (GXColor){0, 0, 0, 255});
 	GuiText savingBtnTxt3("Loading", 22, (GXColor){0, 0, 0, 255});
@@ -2949,7 +2907,8 @@ static int MenuSettings()
 	savingBtn.SetIcon(&fileBtnIcon);
 	savingBtn.SetSoundOver(&btnSoundOver);
 	savingBtn.SetSoundClick(&btnSoundClick);
-	savingBtn.SetTrigger(&trigA);
+	savingBtn.SetTrigger(trigA);
+	savingBtn.SetTrigger(trig2);
 	savingBtn.SetEffectGrow();
 
 	GuiText menuBtnTxt("Menu", 22, (GXColor){0, 0, 0, 255});
@@ -2966,7 +2925,8 @@ static int MenuSettings()
 	menuBtn.SetIcon(&menuBtnIcon);
 	menuBtn.SetSoundOver(&btnSoundOver);
 	menuBtn.SetSoundClick(&btnSoundClick);
-	menuBtn.SetTrigger(&trigA);
+	menuBtn.SetTrigger(trigA);
+	menuBtn.SetTrigger(trig2);
 	menuBtn.SetEffectGrow();
 
 	GuiText networkBtnTxt("Network", 22, (GXColor){0, 0, 0, 255});
@@ -2983,7 +2943,8 @@ static int MenuSettings()
 	networkBtn.SetIcon(&networkBtnIcon);
 	networkBtn.SetSoundOver(&btnSoundOver);
 	networkBtn.SetSoundClick(&btnSoundClick);
-	networkBtn.SetTrigger(&trigA);
+	networkBtn.SetTrigger(trigA);
+	networkBtn.SetTrigger(trig2);
 	networkBtn.SetEffectGrow();
 
 	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
@@ -2997,7 +2958,8 @@ static int MenuSettings()
 	backBtn.SetImageOver(&backBtnImgOver);
 	backBtn.SetSoundOver(&btnSoundOver);
 	backBtn.SetSoundClick(&btnSoundClick);
-	backBtn.SetTrigger(&trigA);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
 	backBtn.SetEffectGrow();
 
 	GuiText resetBtnTxt("Reset Settings", 22, (GXColor){0, 0, 0, 255});
@@ -3011,7 +2973,8 @@ static int MenuSettings()
 	resetBtn.SetImageOver(&resetBtnImgOver);
 	resetBtn.SetSoundOver(&btnSoundOver);
 	resetBtn.SetSoundClick(&btnSoundClick);
-	resetBtn.SetTrigger(&trigA);
+	resetBtn.SetTrigger(trigA);
+	resetBtn.SetTrigger(trig2);
 	resetBtn.SetEffectGrow();
 
 	HaltGui();
@@ -3104,12 +3067,6 @@ static int MenuSettingsFile()
 	GuiImageData btnOutline(button_long_png);
 	GuiImageData btnOutlineOver(button_long_over_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
@@ -3121,7 +3078,8 @@ static int MenuSettingsFile()
 	backBtn.SetImageOver(&backBtnImgOver);
 	backBtn.SetSoundOver(&btnSoundOver);
 	backBtn.SetSoundClick(&btnSoundClick);
-	backBtn.SetTrigger(&trigA);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
 	backBtn.SetEffectGrow();
 
 	GuiOptionBrowser optionBrowser(552, 248, &options);
@@ -3281,12 +3239,6 @@ static int MenuSettingsMenu()
 	GuiImageData btnOutline(button_long_png);
 	GuiImageData btnOutlineOver(button_long_over_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
@@ -3298,7 +3250,8 @@ static int MenuSettingsMenu()
 	backBtn.SetImageOver(&backBtnImgOver);
 	backBtn.SetSoundOver(&btnSoundOver);
 	backBtn.SetSoundClick(&btnSoundClick);
-	backBtn.SetTrigger(&trigA);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
 	backBtn.SetEffectGrow();
 
 	GuiOptionBrowser optionBrowser(552, 248, &options);
@@ -3460,12 +3413,6 @@ static int MenuSettingsNetwork()
 	GuiImageData btnOutline(button_long_png);
 	GuiImageData btnOutlineOver(button_long_over_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
@@ -3477,7 +3424,8 @@ static int MenuSettingsNetwork()
 	backBtn.SetImageOver(&backBtnImgOver);
 	backBtn.SetSoundOver(&btnSoundOver);
 	backBtn.SetSoundClick(&btnSoundClick);
-	backBtn.SetTrigger(&trigA);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
 	backBtn.SetEffectGrow();
 
 	GuiOptionBrowser optionBrowser(552, 248, &options);
@@ -3595,12 +3543,6 @@ static void PaletteWindow(const char *name)
 	w->SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	w->SetPosition(0, -10);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiImageData arrowUp(button_arrow_up_png);
 	GuiImageData arrowDown(button_arrow_down_png);
 	GuiImageData arrowUpOver(button_arrow_up_over_png);
@@ -3613,7 +3555,8 @@ static void PaletteWindow(const char *name)
 	moreRedBtn.SetImageOver(&moreRedOverImg);
 	moreRedBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	moreRedBtn.SetPosition(-150,-60);
-	moreRedBtn.SetTrigger(0, &trigA);
+	moreRedBtn.SetTrigger(trigA);
+	moreRedBtn.SetTrigger(trig2);
 	moreRedBtn.SetSelectable(true);
 	moreRedBtn.SetUpdateCallback(MoreRedClick);
 
@@ -3624,7 +3567,8 @@ static void PaletteWindow(const char *name)
 	lessRedBtn.SetImageOver(&lessRedOverImg);
 	lessRedBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	lessRedBtn.SetPosition(-150,+50);
-	lessRedBtn.SetTrigger(0, &trigA);
+	lessRedBtn.SetTrigger(trigA);
+	lessRedBtn.SetTrigger(trig2);
 	lessRedBtn.SetSelectable(true);
 	lessRedBtn.SetUpdateCallback(LessRedClick);
 
@@ -3635,7 +3579,8 @@ static void PaletteWindow(const char *name)
 	moreGreenBtn.SetImageOver(&moreGreenOverImg);
 	moreGreenBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	moreGreenBtn.SetPosition(-50,-60);
-	moreGreenBtn.SetTrigger(0, &trigA);
+	moreGreenBtn.SetTrigger(trigA);
+	moreGreenBtn.SetTrigger(trig2);
 	moreGreenBtn.SetSelectable(true);
 	moreGreenBtn.SetUpdateCallback(MoreGreenClick);
 
@@ -3646,7 +3591,8 @@ static void PaletteWindow(const char *name)
 	lessGreenBtn.SetImageOver(&lessGreenOverImg);
 	lessGreenBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	lessGreenBtn.SetPosition(-50,+50);
-	lessGreenBtn.SetTrigger(0, &trigA);
+	lessGreenBtn.SetTrigger(trigA);
+	lessGreenBtn.SetTrigger(trig2);
 	lessGreenBtn.SetSelectable(true);
 	lessGreenBtn.SetUpdateCallback(LessGreenClick);
 
@@ -3657,7 +3603,8 @@ static void PaletteWindow(const char *name)
 	moreBlueBtn.SetImageOver(&moreBlueOverImg);
 	moreBlueBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	moreBlueBtn.SetPosition(50,-60);
-	moreBlueBtn.SetTrigger(0, &trigA);
+	moreBlueBtn.SetTrigger(trigA);
+	moreBlueBtn.SetTrigger(trig2);
 	moreBlueBtn.SetSelectable(true);
 	moreBlueBtn.SetUpdateCallback(MoreBlueClick);
 
@@ -3668,7 +3615,8 @@ static void PaletteWindow(const char *name)
 	lessBlueBtn.SetImageOver(&lessBlueOverImg);
 	lessBlueBtn.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	lessBlueBtn.SetPosition(50,+50);
-	lessBlueBtn.SetTrigger(0, &trigA);
+	lessBlueBtn.SetTrigger(trigA);
+	lessBlueBtn.SetTrigger(trig2);
 	lessBlueBtn.SetSelectable(true);
 	lessBlueBtn.SetUpdateCallback(LessBlueClick);
 
@@ -3778,12 +3726,6 @@ static int MenuPalette()
 	GuiImageData btnCloseOutline(button_small_png);
 	GuiImageData btnCloseOutlineOver(button_small_over_png);
 
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
 	GuiTrigger trigHome;
 	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0);
 
@@ -3798,7 +3740,8 @@ static int MenuPalette()
 	bg0Btn.SetImageOver(&bg0BtnImgOver);
 	bg0Btn.SetSoundOver(&btnSoundOver);
 	bg0Btn.SetSoundClick(&btnSoundClick);
-	bg0Btn.SetTrigger(&trigA);
+	bg0Btn.SetTrigger(trigA);
+	bg0Btn.SetTrigger(trig2);
 	bg0Btn.SetEffectGrow();
 
 	GuiText bg1BtnTxt("BG 1", 24, GetCol(1));
@@ -3812,7 +3755,8 @@ static int MenuPalette()
 	bg1Btn.SetImageOver(&bg1BtnImgOver);
 	bg1Btn.SetSoundOver(&btnSoundOver);
 	bg1Btn.SetSoundClick(&btnSoundClick);
-	bg1Btn.SetTrigger(&trigA);
+	bg1Btn.SetTrigger(trigA);
+	bg1Btn.SetTrigger(trig2);
 	bg1Btn.SetEffectGrow();
 
 	GuiText bg2BtnTxt("BG 2", 24, GetCol(2));
@@ -3826,7 +3770,8 @@ static int MenuPalette()
 	bg2Btn.SetImageOver(&bg2BtnImgOver);
 	bg2Btn.SetSoundOver(&btnSoundOver);
 	bg2Btn.SetSoundClick(&btnSoundClick);
-	bg2Btn.SetTrigger(&trigA);
+	bg2Btn.SetTrigger(trigA);
+	bg2Btn.SetTrigger(trig2);
 	bg2Btn.SetEffectGrow();
 
 	GuiText bg3BtnTxt("BG 3", 24, GetCol(3));
@@ -3840,7 +3785,8 @@ static int MenuPalette()
 	bg3Btn.SetImageOver(&bg3BtnImgOver);
 	bg3Btn.SetSoundOver(&btnSoundOver);
 	bg3Btn.SetSoundClick(&btnSoundClick);
-	bg3Btn.SetTrigger(&trigA);
+	bg3Btn.SetTrigger(trigA);
+	bg3Btn.SetTrigger(trig2);
 	bg3Btn.SetEffectGrow();
 
 	GuiText win0BtnTxt("WIN 0", 24, GetCol(4));
@@ -3854,7 +3800,8 @@ static int MenuPalette()
 	win0Btn.SetImageOver(&win0BtnImgOver);
 	win0Btn.SetSoundOver(&btnSoundOver);
 	win0Btn.SetSoundClick(&btnSoundClick);
-	win0Btn.SetTrigger(&trigA);
+	win0Btn.SetTrigger(trigA);
+	win0Btn.SetTrigger(trig2);
 	win0Btn.SetEffectGrow();
 
 	GuiText win1BtnTxt("WIN 1", 24, GetCol(5));
@@ -3868,7 +3815,8 @@ static int MenuPalette()
 	win1Btn.SetImageOver(&win1BtnImgOver);
 	win1Btn.SetSoundOver(&btnSoundOver);
 	win1Btn.SetSoundClick(&btnSoundClick);
-	win1Btn.SetTrigger(&trigA);
+	win1Btn.SetTrigger(trigA);
+	win1Btn.SetTrigger(trig2);
 	win1Btn.SetEffectGrow();
 
 	GuiText win2BtnTxt("WIN 2", 24, GetCol(6));
@@ -3882,7 +3830,8 @@ static int MenuPalette()
 	win2Btn.SetImageOver(&win2BtnImgOver);
 	win2Btn.SetSoundOver(&btnSoundOver);
 	win2Btn.SetSoundClick(&btnSoundClick);
-	win2Btn.SetTrigger(&trigA);
+	win2Btn.SetTrigger(trigA);
+	win2Btn.SetTrigger(trig2);
 	win2Btn.SetEffectGrow();
 
 	GuiText win3BtnTxt("WIN 3", 24, GetCol(7));
@@ -3896,7 +3845,8 @@ static int MenuPalette()
 	win3Btn.SetImageOver(&win3BtnImgOver);
 	win3Btn.SetSoundOver(&btnSoundOver);
 	win3Btn.SetSoundClick(&btnSoundClick);
-	win3Btn.SetTrigger(&trigA);
+	win3Btn.SetTrigger(trigA);
+	win3Btn.SetTrigger(trig2);
 	win3Btn.SetEffectGrow();
 
 	GuiText obj0BtnTxt("OBJ 0", 24, GetCol(8));
@@ -3910,7 +3860,8 @@ static int MenuPalette()
 	obj0Btn.SetImageOver(&obj0BtnImgOver);
 	obj0Btn.SetSoundOver(&btnSoundOver);
 	obj0Btn.SetSoundClick(&btnSoundClick);
-	obj0Btn.SetTrigger(&trigA);
+	obj0Btn.SetTrigger(trigA);
+	obj0Btn.SetTrigger(trig2);
 	obj0Btn.SetEffectGrow();
 
 	GuiText obj1BtnTxt("OBJ 1", 24, GetCol(9));
@@ -3924,7 +3875,8 @@ static int MenuPalette()
 	obj1Btn.SetImageOver(&obj1BtnImgOver);
 	obj1Btn.SetSoundOver(&btnSoundOver);
 	obj1Btn.SetSoundClick(&btnSoundClick);
-	obj1Btn.SetTrigger(&trigA);
+	obj1Btn.SetTrigger(trigA);
+	obj1Btn.SetTrigger(trig2);
 	obj1Btn.SetEffectGrow();
 
 	GuiText obj2BtnTxt("OBJ 2", 24, GetCol(10));
@@ -3938,7 +3890,8 @@ static int MenuPalette()
 	obj2Btn.SetImageOver(&obj2BtnImgOver);
 	obj2Btn.SetSoundOver(&btnSoundOver);
 	obj2Btn.SetSoundClick(&btnSoundClick);
-	obj2Btn.SetTrigger(&trigA);
+	obj2Btn.SetTrigger(trigA);
+	obj2Btn.SetTrigger(trig2);
 	obj2Btn.SetEffectGrow();
 
 	GuiText spr0BtnTxt("SPR 0", 24, GetCol(11));
@@ -3952,7 +3905,8 @@ static int MenuPalette()
 	spr0Btn.SetImageOver(&spr0BtnImgOver);
 	spr0Btn.SetSoundOver(&btnSoundOver);
 	spr0Btn.SetSoundClick(&btnSoundClick);
-	spr0Btn.SetTrigger(&trigA);
+	spr0Btn.SetTrigger(trigA);
+	spr0Btn.SetTrigger(trig2);
 	spr0Btn.SetEffectGrow();
 
 	GuiText spr1BtnTxt("SPR 1", 24, GetCol(12));
@@ -3966,7 +3920,8 @@ static int MenuPalette()
 	spr1Btn.SetImageOver(&spr1BtnImgOver);
 	spr1Btn.SetSoundOver(&btnSoundOver);
 	spr1Btn.SetSoundClick(&btnSoundClick);
-	spr1Btn.SetTrigger(&trigA);
+	spr1Btn.SetTrigger(trigA);
+	spr1Btn.SetTrigger(trig2);
 	spr1Btn.SetEffectGrow();
 
 	GuiText spr2BtnTxt("SPR 2", 24, GetCol(13));
@@ -3980,7 +3935,8 @@ static int MenuPalette()
 	spr2Btn.SetImageOver(&spr2BtnImgOver);
 	spr2Btn.SetSoundOver(&btnSoundOver);
 	spr2Btn.SetSoundClick(&btnSoundClick);
-	spr2Btn.SetTrigger(&trigA);
+	spr2Btn.SetTrigger(trigA);
+	spr2Btn.SetTrigger(trig2);
 	spr2Btn.SetEffectGrow();
 
 	GuiText importBtnTxt("Load / Save", 22, (GXColor){0, 0, 0, 255});
@@ -3995,7 +3951,8 @@ static int MenuPalette()
 	importBtn.SetImageOver(&importBtnImgOver);
 	importBtn.SetSoundOver(&btnSoundOver);
 	importBtn.SetSoundClick(&btnSoundClick);
-	importBtn.SetTrigger(&trigA);
+	importBtn.SetTrigger(trigA);
+	importBtn.SetTrigger(trig2);
 	importBtn.SetEffectGrow();
 
 	GuiText closeBtnTxt("Close", 20, (GXColor){0, 0, 0, 255});
@@ -4009,7 +3966,8 @@ static int MenuPalette()
 	closeBtn.SetImageOver(&closeBtnImgOver);
 	closeBtn.SetSoundOver(&btnSoundOver);
 	closeBtn.SetSoundClick(&btnSoundClick);
-	closeBtn.SetTrigger(&trigA);
+	closeBtn.SetTrigger(trigA);
+	closeBtn.SetTrigger(trig2);
 	closeBtn.SetTrigger(&trigHome);
 	closeBtn.SetEffectGrow();
 
@@ -4024,7 +3982,8 @@ static int MenuPalette()
 	backBtn.SetImageOver(&backBtnImgOver);
 	backBtn.SetSoundOver(&btnSoundOver);
 	backBtn.SetSoundClick(&btnSoundClick);
-	backBtn.SetTrigger(&trigA);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
 	backBtn.SetEffectGrow();
 
 	HaltGui();
@@ -4236,8 +4195,25 @@ static int MenuPalette()
 void
 MainMenu (int menu)
 {
+	static bool init = false;
 	int currentMenu = menu;
 	lastMenu = MENU_NONE;
+	
+	if(!init)
+	{
+		init = true;
+		#ifdef HW_RVL
+		pointer[0] = new GuiImageData(player1_point_png);
+		pointer[1] = new GuiImageData(player2_point_png);
+		pointer[2] = new GuiImageData(player3_point_png);
+		pointer[3] = new GuiImageData(player4_point_png);
+		#endif
+
+		trigA = new GuiTrigger;
+		trigA->SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
+		trig2 = new GuiTrigger;
+		trig2->SetSimpleTrigger(-1, WPAD_BUTTON_2, 0);
+	}
 
 	mainWindow = new GuiWindow(screenwidth, screenheight);
 
@@ -4253,12 +4229,6 @@ MainMenu (int menu)
 		mainWindow->Append(gameScreenImg);
 		bgImg->SetVisible(false);
 	}
-
-	GuiTrigger trigA;
-	if(GCSettings.WiimoteOrientation)
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_2 | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	else
-		trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
 
 	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND_PCM);
 	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
@@ -4282,7 +4252,8 @@ MainMenu (int menu)
 	btnLogo->SetLabel(&logoTxt);
 	btnLogo->SetSoundOver(&btnSoundOver);
 	btnLogo->SetSoundClick(&btnSoundClick);
-	btnLogo->SetTrigger(&trigA);
+	btnLogo->SetTrigger(trigA);
+	btnLogo->SetTrigger(trig2);
 	btnLogo->SetUpdateCallback(WindowCredits);
 
 	mainWindow->Append(bgTopImg);
