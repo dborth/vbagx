@@ -375,7 +375,7 @@ ProgressWindow(char *title, char *msg)
 	}
 
 	// wait to see if progress flag changes soon
-	progsleep = 400000;
+	progsleep = 800000;
 
 	while(progsleep > 0)
 	{
@@ -4223,9 +4223,11 @@ MainMenu (int menu)
 
 	if(gameScreenTex)
 	{
-		gameScreenImg = new GuiImage(gameScreenTex, screenwidth, screenheight);
+		gameScreenImg = new GuiImage(gameScreenTex, vmode->fbWidth, vmode->efbHeight);
 		gameScreenImg->SetAlpha(192);
 		gameScreenImg->ColorStripe(30);
+		gameScreenImg->SetScaleX(screenwidth/(float)vmode->fbWidth);
+		gameScreenImg->SetScaleY(screenheight/(float)vmode->efbHeight);
 		mainWindow->Append(gameScreenImg);
 		bgImg->SetVisible(false);
 	}
