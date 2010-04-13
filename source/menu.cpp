@@ -1291,7 +1291,12 @@ static int MenuGame()
 		#endif
 
 		w.SetEffect(EFFECT_FADE, 15);
+	}
 
+	ResumeGui();
+
+	if(lastMenu == MENU_NONE)
+	{
 		if (GCSettings.AutoSave == 1)
 		{
 			SaveBatteryOrStateAuto(FILE_SRAM, SILENT); // save battery
@@ -1310,8 +1315,6 @@ static int MenuGame()
 			}
 		}
 	}
-
-	ResumeGui();
 
 	while(menu == MENU_NONE)
 	{
@@ -4365,10 +4368,6 @@ MainMenu (int menu)
 	ShutoffRumble();
 	#endif
 
-	// wait for keys to be depressed
-	while(MenuRequested())
-		usleep(THREAD_SLEEP);
-
 	CancelAction();
 	HaltGui();
 
@@ -4405,5 +4404,12 @@ MainMenu (int menu)
 	{
 		free(gameScreenTex2);
 		gameScreenTex2 = NULL;
+	}
+
+	// wait for keys to be depressed
+	while(MenuRequested())
+	{
+		UpdatePads();
+		usleep(THREAD_SLEEP);
 	}
 }
