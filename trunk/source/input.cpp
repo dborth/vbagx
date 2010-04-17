@@ -197,15 +197,14 @@ SetupPads()
 	}
 }
 
-#ifdef HW_RVL
-
 /****************************************************************************
  * ShutoffRumble
  ***************************************************************************/
-
 void ShutoffRumble()
 {
 #ifdef HW_RVL
+	if(CONF_GetPadMotorMode() == 0)
+		return;
 	for(int i=0;i<4;i++)
 	{
 		WPAD_Rumble(i, 0);
@@ -219,31 +218,29 @@ void ShutoffRumble()
 /****************************************************************************
  * DoRumble
  ***************************************************************************/
-
 void DoRumble(int i)
 {
-	if(!GCSettings.Rumble) return;
-	if(rumbleRequest[i])
+#ifdef HW_RVL
+	if(CONF_GetPadMotorMode() == 0 || !GCSettings.Rumble) return;
+
+	if(rumbleRequest[i] && rumbleCount[i] < 3)
 	{
-		if(rumbleCount[i] < 3)
-		{
-			WPAD_Rumble(i, 1); // rumble on
-			++rumbleCount[i];
-		}
-		else
-		{
-			rumbleCount[i] = 12;
-			rumbleRequest[i] = 0;
-		}
+		WPAD_Rumble(i, 1); // rumble on
+		rumbleCount[i]++;
+	}
+	else if(rumbleRequest[i])
+	{
+		rumbleCount[i] = 12;
+		rumbleRequest[i] = 0;
 	}
 	else
 	{
 		if(rumbleCount[i])
-			--rumbleCount[i];
+			rumbleCount[i]--;
 		WPAD_Rumble(i, 0); // rumble off
 	}
-}
 #endif
+}
 
 static int SilenceNeeded = 0;
 
