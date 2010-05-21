@@ -105,14 +105,13 @@ SwitchAudioMode(int mode)
 		ASND_Pause(1);
 		AUDIO_StopDMA();
 		AUDIO_RegisterDMACallback(AudioPlayer);
-
+		#endif
 		memset(soundbuffer[0],0,3840);
 		memset(soundbuffer[1],0,3840);
 		DCFlushRange(soundbuffer[0],3840);
 		DCFlushRange(soundbuffer[1],3840);
 		AUDIO_InitDMA((u32)soundbuffer[whichab],3200);
 		AUDIO_StartDMA();
-		#endif
 	}
 	else // menu
 	{
