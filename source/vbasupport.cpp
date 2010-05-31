@@ -653,10 +653,11 @@ static bool ValidGameId(u32 id)
 
 bool IsGameboyGame()
 {
-	if(cartridgeType == 1 || gbCgbMode || gbSgbMode)
+	if(cartridgeType == 1 && !gbCgbMode && !gbSgbMode)
 		return true;
 	return false;
 }
+
 bool IsGBAGame()
 {
 	if(cartridgeType == 2)
