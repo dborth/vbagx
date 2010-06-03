@@ -329,7 +329,7 @@ int main(int argc, char *argv[])
 
 	// Initialize font system
 	InitFreeType((u8*)font_ttf, font_ttf_size);
-
+	gameScreenPng = (u8 *)malloc(50*1024);
 	InitGUIThreads();
 
 	// store path app was loaded from
