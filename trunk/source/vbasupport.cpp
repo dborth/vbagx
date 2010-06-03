@@ -122,7 +122,7 @@ bool systemPauseOnFrame()
 }
 
 static u32 lastTime = 0;
-#define RATE60HZ 166666.67f // 1/6 second or 166666.67 usec
+#define RATE60HZ 166666.67 // 1/6 second or 166666.67 usec
 
 void system10Frames(int rate)
 {
@@ -130,14 +130,14 @@ void system10Frames(int rate)
 	u32 diff = diff_usec(lastTime, time);
 
 	// expected diff - actual diff
-	u32 timeOff = ftou(RATE60HZ - utof(diff));
+	u32 timeOff = RATE60HZ - diff;
 
-	if(timeOff < 100000u)
+	if(timeOff > 0 && timeOff < 100000) // we're running ahead!
 		usleep(timeOff); // let's take a nap
 	else
 		timeOff = 0; // timeoff was not valid
 
-	int speed = int((RATE60HZ/utof(diff))*100.0f);
+	int speed = (RATE60HZ/diff)*100;
 
 	if (cartridgeType == 2) // GBA games require frameskipping
 	{
@@ -157,7 +157,7 @@ void system10Frames(int rate)
 		else if(speed > 145)
 			systemFrameSkip -= 2;
 		else if(speed > 125)
-			--systemFrameSkip;
+			systemFrameSkip -= 1;
 
 		// correct invalid frame skip values
 		if(systemFrameSkip > 20)
@@ -349,35 +349,19 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 	bool result = false;
 	int offset = 0;
 	int datasize = 0; // we need the actual size of the data written
-	int imgSize = 0; // image screenshot bytes written
 	int device;
 	
 	if(!FindDevice(filepath, &device))
 		return 0;
 
 	// save screenshot - I would prefer to do this from gameScreenTex
-	if(action == FILE_SNAPSHOT && gameScreenTex2 != NULL)
+	if(action == FILE_SNAPSHOT && gameScreenPngSize > 0)
 	{
-		AllocSaveBuffer ();
-
-		IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
-
-		if (pngContext != NULL)
-		{
-			imgSize = PNGU_EncodeFromGXTexture(pngContext, vmode->fbWidth, vmode->efbHeight, gameScreenTex2, 0);
-			PNGU_ReleaseImageContext(pngContext);
-		}
-
-		if(imgSize > 0)
-		{
-			char screenpath[1024];
-			strncpy(screenpath, filepath, 1024);
-			screenpath[strlen(screenpath)-4] = 0;
-			sprintf(screenpath, "%s.png", screenpath);
-			SaveFile(screenpath, imgSize, silent);
-		}
-
-		FreeSaveBuffer ();
+		char screenpath[1024];
+		strncpy(screenpath, filepath, 1024);
+		screenpath[strlen(screenpath)-4] = 0;
+		sprintf(screenpath, "%s.png", screenpath);
+		SaveFile((char *)gameScreenPng, screenpath, gameScreenPngSize, silent);
 	}
 
 	AllocSaveBuffer();

@@ -155,7 +155,7 @@ inline int codeTicksAccess16(u32 address) // THUMB NON SEQ
 {
   int addr = (address>>24)&15;
 
-  if (unsigned(addr - 0x08) <= (0x0D - 0x08))
+  if ((addr>=0x08) && (addr<=0x0D))
   {
     if (busPrefetchCount&0x1)
     {
@@ -167,16 +167,24 @@ inline int codeTicksAccess16(u32 address) // THUMB NON SEQ
       busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
       return memoryWaitSeq[addr]-1;
     }
+    else
+    {
+      busPrefetchCount=0;
+      return memoryWait[addr];
+    }
   }
-  busPrefetchCount = 0;
-  return memoryWait[addr];
+  else
+  {
+    busPrefetchCount = 0;
+    return memoryWait[addr];
+  }
 }
 
 inline int codeTicksAccess32(u32 address) // ARM NON SEQ
 {
   int addr = (address>>24)&15;
 
-  if (unsigned(addr - 0x08) <= (0x0D - 0x08))
+  if ((addr>=0x08) && (addr<=0x0D))
   {
     if (busPrefetchCount&0x1)
     {
@@ -188,16 +196,24 @@ inline int codeTicksAccess32(u32 address) // ARM NON SEQ
       busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
       return memoryWaitSeq[addr] - 1;
     }
+    else
+    {
+      busPrefetchCount = 0;
+      return memoryWait32[addr];
+    }
   }
+  else
+  {
     busPrefetchCount = 0;
     return memoryWait32[addr];
+  }
 }
 
 inline int codeTicksAccessSeq16(u32 address) // THUMB SEQ
 {
   int addr = (address>>24)&15;
 
-  if (unsigned(addr - 0x08) <= (0x0D - 0x08))
+  if ((addr>=0x08) && (addr<=0x0D))
   {
     if (busPrefetchCount&0x1)
     {
@@ -210,20 +226,26 @@ inline int codeTicksAccessSeq16(u32 address) // THUMB SEQ
       busPrefetchCount=0;
       return memoryWait[addr];
     }
+    else
+      return memoryWaitSeq[addr];
   }
-  else{
+  else
+  {
     busPrefetchCount = 0;
+    return memoryWaitSeq[addr];
   }
-  return memoryWaitSeq[addr];
 }
 
 inline int codeTicksAccessSeq32(u32 address) // ARM SEQ
 {
   int addr = (address>>24)&15;
 
-  if (unsigned(addr - 0x08) <= (0x0D - 0x08)){
-    if (busPrefetchCount&0x1){
-      if (busPrefetchCount&0x2){
+  if ((addr>=0x08) && (addr<=0x0D))
+  {
+    if (busPrefetchCount&0x1)
+    {
+      if (busPrefetchCount&0x2)
+      {
         busPrefetchCount = ((busPrefetchCount&0xFF)>>2) | (busPrefetchCount&0xFFFFFF00);
         return 0;
       }
@@ -231,12 +253,18 @@ inline int codeTicksAccessSeq32(u32 address) // ARM SEQ
       return memoryWaitSeq[addr];
     }
     else
-    if (busPrefetchCount>0xFF){
+    if (busPrefetchCount>0xFF)
+    {
       busPrefetchCount=0;
       return memoryWait32[addr];
     }
+    else
+      return memoryWaitSeq32[addr];
   }
-  return memoryWaitSeq32[addr];
+  else
+  {
+    return memoryWaitSeq32[addr];
+  }
 }
 
 
