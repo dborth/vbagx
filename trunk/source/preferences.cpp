@@ -556,9 +556,9 @@ decodePalsData ()
  ***************************************************************************/
 void FixInvalidSettings()
 {
-	if(GCSettings.LoadMethod > 4)
+	if(GCSettings.LoadMethod > 6)
 		GCSettings.LoadMethod = DEVICE_AUTO;
-	if(GCSettings.SaveMethod > 4)
+	if(GCSettings.SaveMethod > 6)
 		GCSettings.SaveMethod = DEVICE_AUTO;
 	if(!(GCSettings.gbaZoomHor > 0.5 && GCSettings.gbaZoomHor < 1.5))
 		GCSettings.gbaZoomHor = 1.0;
