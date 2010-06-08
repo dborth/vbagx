@@ -310,6 +310,11 @@ int main(int argc, char *argv[])
 	InitializeVideo();
 	ResetVideo_Menu (); // change to menu video mode
 	SetupPads();
+	
+	// Initialize DVD subsystem (GameCube only)
+	#ifdef HW_DOL
+	DVD_Init ();
+	#endif
 
 	#ifdef HW_RVL
 	// Wii Power/Reset buttons
@@ -320,18 +325,13 @@ int main(int argc, char *argv[])
 
 	MountAllFAT(); // Initialize libFAT for SD and USB
 
-	// Initialize DVD subsystem (GameCube only)
-	#ifdef HW_DOL
-	DVD_Init ();
-	#endif
-
 	InitialiseSound();
 	InitialisePalette();
 	DefaultSettings (); // Set defaults
 
 	// Initialize font system
 	InitFreeType((u8*)font_ttf, font_ttf_size);
-	gameScreenPng = (u8 *)malloc(50*1024);
+	gameScreenPng = (u8 *)malloc(512*1024);
 	InitGUIThreads();
 
 	// store path app was loaded from
