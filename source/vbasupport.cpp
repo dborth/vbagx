@@ -785,13 +785,12 @@ void LoadPatch()
 
 	AllocSaveBuffer ();
 
-	char patchpath[3][512];
+	char patchpath[2][512];
 	memset(patchpath, 0, sizeof(patchpath));
 	sprintf(patchpath[0], "%s%s.ips",browser.dir,ROMFilename);
 	sprintf(patchpath[1], "%s%s.ups",browser.dir,ROMFilename);
-	sprintf(patchpath[2], "%s%s.ppf",browser.dir,ROMFilename);
 
-	for(; patchtype<3; patchtype++)
+	for(; patchtype<2; patchtype++)
 	{
 		patchsize = LoadFile(patchpath[patchtype], SILENT);
 
@@ -809,19 +808,15 @@ void LoadPatch()
 		{
 			if(patchtype == 0)
 				patchApplyIPS(mf, &gbRom, &gbRomSize);
-			else if(patchtype == 1)
-				patchApplyUPS(mf, &gbRom, &gbRomSize);
 			else
-				patchApplyPPF(mf, &gbRom, &gbRomSize);
+				patchApplyUPS(mf, &gbRom, &gbRomSize);
 		}
 		else
 		{
 			if(patchtype == 0)
 				patchApplyIPS(mf, &rom, &GBAROMSize);
-			else if(patchtype == 1)
-				patchApplyUPS(mf, &rom, &GBAROMSize);
 			else
-				patchApplyPPF(mf, &rom, &GBAROMSize);
+				patchApplyUPS(mf, &rom, &GBAROMSize);
 		}
 
 		memfclose(mf); // close memory file
@@ -874,20 +869,26 @@ bool LoadVBAROM()
 		// we need to check the file extension of the first file in the archive
 		char * zippedFilename = GetFirstZipFilename ();
 
-		if(zippedFilename != NULL)
-		{
-			if(utilIsGBAImage(zippedFilename))
-				cartridgeType = 2;
-			else if(utilIsGBImage(zippedFilename))
-				cartridgeType = 1;
-			else
-				return false;
-		}
-		else // loading the file failed
+		if(zippedFilename == NULL) // loading the file failed
 		{
 			ErrorPrompt("Empty or invalid ZIP file!");
 			return false;
 		}
+
+		if(utilIsGBAImage(zippedFilename))
+		{
+			cartridgeType = 2;
+		}
+		else if(utilIsGBImage(zippedFilename))
+		{
+			cartridgeType = 1;
+		}
+		else
+		{
+			free(zippedFilename);
+			return false;
+		}
+		free(zippedFilename);
 	}
 
 	// leave before we do anything
