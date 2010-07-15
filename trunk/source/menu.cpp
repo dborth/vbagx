@@ -1564,7 +1564,7 @@ static int MenuGameSaves(int action)
 	memset(&saves, 0, sizeof(saves));
 
 	sprintf(browser.dir, "%s%s", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder);
-	ParseDirectory(true);
+	ParseDirectory(true, false);
 
 	len = strlen(ROMFilename);
 
