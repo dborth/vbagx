@@ -529,11 +529,11 @@ bool ParseDirEntries()
 			if(ext == NULL)
 				continue;
 
-			if(	stricmp(p, "agb") != 0 && stricmp(p, "gba") != 0 &&
-				stricmp(p, "bin") != 0 && stricmp(p, "elf") != 0 &&
-				stricmp(p, "mb") != 0 && stricmp(p, "dmg") != 0 &&
-				stricmp(p, "gb") != 0 && stricmp(p, "gbc") != 0 &&
-				stricmp(p, "cgb") != 0 && stricmp(p, "sgb") != 0 &&
+			if(	stricmp(ext, "agb") != 0 && stricmp(ext, "gba") != 0 &&
+				stricmp(ext, "bin") != 0 && stricmp(ext, "elf") != 0 &&
+				stricmp(ext, "mb") != 0 && stricmp(ext, "dmg") != 0 &&
+				stricmp(ext, "gb") != 0 && stricmp(ext, "gbc") != 0 &&
+				stricmp(ext, "cgb") != 0 && stricmp(ext, "sgb") != 0 &&
 				stricmp(ext, "zip") != 0 && stricmp(ext, "7z") != 0)
 				continue;
 		}
