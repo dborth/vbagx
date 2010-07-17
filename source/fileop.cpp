@@ -35,7 +35,7 @@
 
 #define THREAD_SLEEP 100
 
-unsigned char savebuffer[SAVEBUFFERSIZE] ATTRIBUTE_ALIGN(32);
+unsigned char *savebuffer;
 static mutex_t bufferLock = LWP_MUTEX_NULL;
 FILE * file; // file pointer - the only one we should ever use!
 bool unmountRequired[7] = { false, false, false, false, false, false, false };

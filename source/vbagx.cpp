@@ -32,6 +32,7 @@
 #include "input.h"
 #include "video.h"
 #include "gamesettings.h"
+#include "mem2.h"
 #include "utils/usb2storage.h"
 #include "utils/mload.h"
 #include "utils/FreeTypeGX.h"
@@ -377,20 +378,21 @@ int main(int argc, char *argv[])
 	InitialiseSound();
 	InitialisePalette();
 	DefaultSettings (); // Set defaults
-
-	// Initialize font system
-	InitFreeType((u8*)font_ttf, font_ttf_size);
-	gameScreenPng = (u8 *)malloc(512*1024);
-	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY)*MAX_BROWSER_SIZE);
-	InitGUIThreads();
-
-	// store path app was loaded from
+	InitFreeType((u8*)font_ttf, font_ttf_size); // Initialize font system
 #ifdef HW_RVL
 	if(argc > 0 && argv[0] != NULL)
-		CreateAppPath(argv[0]);
+		CreateAppPath(argv[0]); // store path app was loaded from
 
-	rom = (u8 *)malloc(1024*1024*32); // allocate 32 MB to GBA ROM
+	InitMem2Manager();
+	savebuffer = (unsigned char *)mem2_malloc(SAVEBUFFERSIZE);
+	browserList = (BROWSERENTRY *)mem2_malloc(sizeof(BROWSERENTRY)*MAX_BROWSER_SIZE);
+	rom = (u8 *)mem2_malloc(1024*1024*32); // allocate 32 MB to GBA ROM
+#else
+	savebuffer = (unsigned char *)malloc(SAVEBUFFERSIZE);
+	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY)*MAX_BROWSER_SIZE);
 #endif
+	gameScreenPng = (u8 *)malloc(512*1024);
+	InitGUIThreads();
 
 	while(1) // main loop
 	{
