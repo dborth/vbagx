@@ -135,9 +135,6 @@ int mload_init()
 	mloadVersion = IOS_IoctlvFormat(hid, mload_fd, MLOAD_GET_MLOAD_VERSION, ":"); 
 	iosBase = IOS_IoctlvFormat(hid, mload_fd, MLOAD_GET_IOS_BASE, ":");
 
-	if(mloadVersion < 0x52) // unsupported IOS202
-		return mload_close();
-
 	return mload_fd;
 }
 

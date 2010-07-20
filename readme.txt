@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                             - Visual Boy Advance GX -
-                                  Version 2.1.8
+                                  Version 2.1.9
                          http://code.google.com/p/vba-wii   
                                (Under GPL License)
  
@@ -16,7 +16,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Rotation sensors, Solar sensors, and Rumble support
 * Optional special Wii controls built-in for some games
 * SRAM and State saving
-* IPS/UPS/PPF patch support
+* IPS/UPS patch support
 * Custom controller configurations
 * SD, USB, DVD, SMB, Zip, and 7z support
 * Compatibility based on VBA-M r927
@@ -27,6 +27,10 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[2.1.9 - July 20, 2010]
+
+* Reverted USB2 changes
 
 [2.1.8 - July 14, 2010]
 
