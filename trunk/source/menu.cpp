@@ -4302,6 +4302,15 @@ MainMenu (int menu)
 	if(!LoadPrefs())
 		SavePrefs(SILENT);
 
+#ifdef HW_RVL
+	static bool checkIOS = true;
+
+	if(checkIOS && !SaneIOS())
+		ErrorPrompt("The current IOS has been altered (fake-signed). Functionality and/or stability may be adversely affected.");
+
+	checkIOS = false;
+#endif
+
 	// Load palettes
 	LoadPalettes();
 
