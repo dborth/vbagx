@@ -119,7 +119,6 @@ bool fxOn = false;
 bool windowOn = false;
 int frameCount = 0;
 char buffer[1024];
-FILE *out = NULL;
 u32 lastTime = 0;
 int count = 0;
 
@@ -3376,41 +3375,6 @@ void CPUInterrupt()
   biosProtected[1] = 0xc0;
   biosProtected[2] = 0x5e;
   biosProtected[3] = 0xe5;
-}
-
-void log(const char *defaultMsg, ...)
-{
-  char buffer[2048];
-  va_list valist;
-
-  va_start(valist, defaultMsg);
-  vsprintf(buffer, defaultMsg, valist);
-
-  if(out == NULL) {
-    out = fopen("sd:/trace.log","w");
-  }
-
-  fprintf(out,"%s\n",buffer);
-
-  va_end(valist);
-}
-
-void winlog(const char *defaultMsg, ...)
-{
-  char buffer[2048];
-  va_list valist;
-
-  va_start(valist, defaultMsg);
-  vsprintf(buffer, defaultMsg, valist);
-
-  if(out == NULL) {
-    out = fopen("sd:/trace.log","w");
-  }
-
-  fprintf(out,"%s\n",buffer);
-  //fputs(buffer, out);
-
-  va_end(valist);
 }
 
 void CPULoop(int ticks)
