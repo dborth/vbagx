@@ -27,6 +27,12 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.2.1 - August 14, 2010]
+
+* IOS 202 support removed
+* USB 2.0 support via IOS 58 added - requires that IOS58 be pre-installed
+* DVD support via AHBPROT - requires latest HBC
+
 [2.2.0 - July 22, 2010]
 
 * Fixed broken auto-update
