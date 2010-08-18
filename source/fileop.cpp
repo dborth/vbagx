@@ -110,8 +110,7 @@ HaltParseThread()
 /****************************************************************************
  * devicecallback
  *
- * This checks our devices for changes (SD/USB removed) and
- * initializes the network in the background
+ * This checks our devices for changes (SD/USB/DVD removed)
  ***************************************************************************/
 #ifdef HW_RVL
 static int devsleep;
