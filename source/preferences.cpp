@@ -576,7 +576,7 @@ void FixInvalidSettings()
 		GCSettings.MusicVolume = 40;
 	if(!(GCSettings.SFXVolume >= 0 && GCSettings.SFXVolume <= 100))
 		GCSettings.SFXVolume = 40;
-	if(GCSettings.language < 0 || GCSettings.language > LANG_KOREAN)
+	if(GCSettings.language < 0 || GCSettings.language > LANG_PORTUGUESE)
 		GCSettings.language = LANG_ENGLISH;
 	if(!(GCSettings.render >= 0 && GCSettings.render < 3))
 		GCSettings.render = 1;
