@@ -220,12 +220,13 @@ static void * netcb (void *arg)
 
 		if (res == 0)
 		{
-			networkInit = true;
-
 			struct in_addr hostip;
 			hostip.s_addr = net_gethostip();
 			if (hostip.s_addr)
+			{
 				strcpy(wiiIP, inet_ntoa(hostip));
+				networkInit = true;
+			}
 		}
 		LWP_SuspendThread(networkthread);
 	}
