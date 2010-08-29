@@ -576,7 +576,7 @@ void FixInvalidSettings()
 		GCSettings.MusicVolume = 40;
 	if(!(GCSettings.SFXVolume >= 0 && GCSettings.SFXVolume <= 100))
 		GCSettings.SFXVolume = 40;
-	if(GCSettings.language < 0 || GCSettings.language > LANG_PORTUGUESE)
+	if(GCSettings.language < 0 || GCSettings.language >= LANG_LENGTH)
 		GCSettings.language = LANG_ENGLISH;
 	if(!(GCSettings.render >= 0 && GCSettings.render < 3))
 		GCSettings.render = 1;
@@ -627,7 +627,6 @@ DefaultSettings ()
 	GCSettings.language = CONF_GetLanguage();
 
 	if(GCSettings.language == LANG_JAPANESE || 
-		GCSettings.language == LANG_ITALIAN || 
 		GCSettings.language == LANG_SIMP_CHINESE || 
 		GCSettings.language == LANG_TRAD_CHINESE || 
 		GCSettings.language == LANG_KOREAN)
