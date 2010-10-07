@@ -27,6 +27,14 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.2.2 - October 7, 2010]
+
+* Fixed "blank listing" issue for SMB
+* Improved USB compatibility and speed
+* Added Portuguese and Brazilian Portuguese translations
+* Channel updated (improved USB compatibility)
+* Other minor changes
+
 [2.2.1 - August 14, 2010]
 
 * IOS 202 support removed
