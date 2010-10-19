@@ -3323,6 +3323,9 @@ static int MenuSettingsMenu()
 				break;
 			case 5:
 				GCSettings.language++;
+				
+				if(GCSettings.language >= LANG_LENGTH)
+					GCSettings.language = LANG_JAPANESE;
 
 				if(GCSettings.language == LANG_SIMP_CHINESE)
 					GCSettings.language = LANG_PORTUGUESE;
