@@ -303,6 +303,7 @@ void USBGeckoOutput()
 ****************************************************************************/
 int main(int argc, char *argv[])
 {
+#ifdef HW_RVL
 	u32 ios = IOS_GetVersion();
 
 	if(!SupportedIOS(ios))
@@ -312,6 +313,7 @@ int main(int argc, char *argv[])
 		if(SupportedIOS(preferred))
 			IOS_ReloadIOS(preferred);
 	}
+#endif
 	
 	//USBGeckoOutput(); // uncomment to enable USB gecko output
 	__exception_setreload(8);
