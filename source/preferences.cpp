@@ -11,7 +11,7 @@
 #include <gccore.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/dir.h>
+#include <dirent.h>
 #include <ogcsys.h>
 #include <mxml.h>
 
@@ -670,7 +670,7 @@ SavePrefs (bool silent)
 		
 		sprintf(filepath, "%s%s", pathPrefix[device], APPFOLDER);
 						
-		DIR_ITER *dir = diropen(filepath);
+		DIR *dir = opendir(filepath);
 		if (!dir)
 		{
 			if(mkdir(filepath, 0777) != 0)
@@ -684,7 +684,7 @@ SavePrefs (bool silent)
 		}
 		else
 		{
-			dirclose(dir);
+			closedir(dir);
 		}
 		sprintf(filepath, "%s%s/%s", pathPrefix[device], APPFOLDER, PREF_FILE_NAME);
 		sprintf(prefpath, "%s%s", pathPrefix[device], APPFOLDER);
