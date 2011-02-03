@@ -411,11 +411,9 @@ bool ChangeInterface(int device, bool silent)
 		case DEVICE_DVD:
 			mounted = MountDVD(silent);
 			break;
-#ifdef HW_RVL
 		case DEVICE_SMB:
 			mounted = ConnectShare(silent);
 			break;
-#endif
 	}
 
 	return mounted;
