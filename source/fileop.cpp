@@ -303,7 +303,7 @@ bool MountDVD(bool silent)
 	if(unmountRequired[DEVICE_DVD])
 	{
 		unmountRequired[DEVICE_DVD] = false;
-		ISO9660_Unmount();
+		ISO9660_Unmount("dvd:");
 	}
 
 	while(retry)
@@ -317,7 +317,7 @@ bool MountDVD(bool silent)
 
 			retry = ErrorPromptRetry("No disc inserted!");
 		}
-		else if(!ISO9660_Mount())
+		else if(!ISO9660_Mount("dvd", dvd))
 		{
 			if(silent)
 				break;
