@@ -27,6 +27,13 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.2.3 - March 19, 2011]
+
+* Improved USB and controller compatibility (recompiled with latest libogc)
+* Enabled SMB on GameCube (thanks Extrems!)
+* Added Catalan translation
+* Translation updates
+
 [2.2.2 - October 7, 2010]
 
 * Fixed "blank listing" issue for SMB
