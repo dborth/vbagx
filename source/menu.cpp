@@ -67,8 +67,8 @@ static lwp_t updatethread = LWP_THREAD_NULL;
 static bool guiHalt = true;
 static int showProgress = 0;
 
-static char progressTitle[100];
-static char progressMsg[200];
+static char progressTitle[101];
+static char progressMsg[201];
 static int progressDone = 0;
 static int progressTotal = 0;
 
@@ -499,7 +499,7 @@ ShowProgress (const char *msg, int done, int total)
 	if(showProgress != 1)
 		CancelAction(); // wait for previous progress window to finish
 
-	strncpy(progressMsg, msg, 200);
+	snprintf(progressMsg, 200, "%s", msg);
 	sprintf(progressTitle, "Please Wait");
 	showProgress = 1;
 	progressTotal = total;
@@ -522,7 +522,7 @@ ShowAction (const char *msg)
 	if(showProgress != 0)
 		CancelAction(); // wait for previous progress window to finish
 
-	strncpy(progressMsg, msg, 200);
+	snprintf(progressMsg, 200, "%s", msg);
 	sprintf(progressTitle, "Please Wait");
 	showProgress = 2;
 	progressDone = 0;
@@ -1496,7 +1496,7 @@ static int MenuGameSaves(int action)
 
 	char filepath[1024];
 	char scrfile[1024];
-	char tmp[MAXJOLIET];
+	char tmp[MAXJOLIET+1];
 
 	int method = GCSettings.SaveMethod;
 
@@ -1588,7 +1588,7 @@ static int MenuGameSaves(int action)
 		else
 			continue;
 
-		strncpy(tmp, browserList[i].filename, MAXJOLIET);
+		strcpy(tmp, browserList[i].filename);
 		tmp[len2-4] = 0;
 		n = FindGameSaveNum(tmp, method);
 
@@ -1596,7 +1596,7 @@ static int MenuGameSaves(int action)
 		{
 			saves.type[j] = type;
 			saves.files[saves.type[j]][n] = 1;
-			strncpy(saves.filename[j], browserList[i].filename, MAXJOLIET);
+			strcpy(saves.filename[j], browserList[i].filename);
 
 			if(saves.type[j] == FILE_SNAPSHOT)
 			{
@@ -3486,11 +3486,10 @@ static int MenuSettingsNetwork()
 		if(ret >= 0 || firstRun)
 		{
 			firstRun = false;
-			strncpy (options.value[0], GCSettings.smbip, 25);
-			options.value[0][25] = 0;
-			strncpy (options.value[1], GCSettings.smbshare, 19);
-			strncpy (options.value[2], GCSettings.smbuser, 19);
-			strncpy (options.value[3], GCSettings.smbpwd, 19);
+			snprintf (options.value[0], 25, "%s", GCSettings.smbip);
+			snprintf (options.value[1], 19, "%s", GCSettings.smbshare);
+			snprintf (options.value[2], 19, "%s", GCSettings.smbuser);
+			snprintf (options.value[3], 19, "%s", GCSettings.smbpwd);
 			optionBrowser.TriggerUpdate();
 		}
 
