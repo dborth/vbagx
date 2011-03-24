@@ -27,6 +27,10 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.2.4 - March 23, 2011]
+
+* Fixed browser regressions with stability and speed
+
 [2.2.3 - March 19, 2011]
 
 * Improved USB and controller compatibility (recompiled with latest libogc)
