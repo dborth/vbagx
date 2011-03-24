@@ -898,6 +898,12 @@ bool LoadVBAROM()
 		ErrorPrompt("Unrecognized file extension!");
 		return false;
 	}
+	
+	if(!GetFileSize(browser.selIndex))
+	{
+		ErrorPrompt("Error loading game!");
+		return false;
+	}
 
 	srcWidth = 0;
 	srcHeight = 0;

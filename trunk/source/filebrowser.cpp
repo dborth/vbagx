@@ -533,7 +533,6 @@ int BrowserChangeFolder()
 		sprintf(browserList[i].filename, "sd:/");
 		sprintf(browserList[i].displayname, "SD Card");
 		browserList[i].length = 0;
-		browserList[i].mtime = 0;
 		browserList[i].isdir = 1;
 		browserList[i].icon = ICON_SD;
 		i++;
@@ -542,7 +541,6 @@ int BrowserChangeFolder()
 		sprintf(browserList[i].filename, "usb:/");
 		sprintf(browserList[i].displayname, "USB Mass Storage");
 		browserList[i].length = 0;
-		browserList[i].mtime = 0;
 		browserList[i].isdir = 1;
 		browserList[i].icon = ICON_USB;
 		i++;
@@ -551,7 +549,6 @@ int BrowserChangeFolder()
 		sprintf(browserList[i].filename, "carda:/");
 		sprintf(browserList[i].displayname, "SD Gecko Slot A");
 		browserList[i].length = 0;
-		browserList[i].mtime = 0;
 		browserList[i].isdir = 1;
 		browserList[i].icon = ICON_SD;
 		i++;
@@ -560,7 +557,6 @@ int BrowserChangeFolder()
 		sprintf(browserList[i].filename, "cardb:/");
 		sprintf(browserList[i].displayname, "SD Gecko Slot B");
 		browserList[i].length = 0;
-		browserList[i].mtime = 0;
 		browserList[i].isdir = 1;
 		browserList[i].icon = ICON_SD;
 		i++;
@@ -569,7 +565,6 @@ int BrowserChangeFolder()
 		sprintf(browserList[i].filename, "smb:/");
 		sprintf(browserList[i].displayname, "Network Share");
 		browserList[i].length = 0;
-		browserList[i].mtime = 0;
 		browserList[i].isdir = 1;
 		browserList[i].icon = ICON_SMB;
 		i++;
@@ -578,7 +573,6 @@ int BrowserChangeFolder()
 		sprintf(browserList[i].filename, "dvd:/");
 		sprintf(browserList[i].displayname, "Data DVD");
 		browserList[i].length = 0;
-		browserList[i].mtime = 0;
 		browserList[i].isdir = 1;
 		browserList[i].icon = ICON_DVD;
 		i++;
