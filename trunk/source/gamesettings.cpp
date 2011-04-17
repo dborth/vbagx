@@ -188,7 +188,7 @@ gameSetting gameSettings[106] = {
 	"BPEE",
 	-1,
 	1,
-	-1,
+	131072,
 	-1
 	},
 	{
@@ -356,7 +356,7 @@ gameSetting gameSettings[106] = {
 	"ALGE",
 	1,
 	-1,
-	131072,
+	-1,
 	-1
 	},
 	{
