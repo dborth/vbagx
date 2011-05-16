@@ -27,6 +27,10 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.2.5 - May 15, 2011]
+
+* Added Turkish translation
+
 [2.2.4 - March 23, 2011]
 
 * Fixed browser regressions with stability and speed
