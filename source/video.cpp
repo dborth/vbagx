@@ -35,7 +35,6 @@ int whichfb = 0; // Frame buffer toggle
 
 static Mtx GXmodelView2D;
 
-u8 * gameScreenTex = NULL; // a GX texture screen capture of the game
 u8 * gameScreenPng = NULL;
 int gameScreenPngSize = 0;
 
@@ -674,16 +673,15 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
  ***************************************************************************/
 void TakeScreenshot()
 {
-	int texSize = vmode->fbWidth * vmode->efbHeight * 4;
+	IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
 
-	if(gameScreenTex) free(gameScreenTex);
-	gameScreenTex = (u8 *)memalign(32, texSize);
-	if(gameScreenTex == NULL) return;
-	GX_SetTexCopySrc(0, 0, vmode->fbWidth, vmode->efbHeight);
-	GX_SetTexCopyDst(vmode->fbWidth, vmode->efbHeight, GX_TF_RGBA8, GX_FALSE);
-	GX_CopyTex(gameScreenTex, GX_FALSE);
-	GX_PixModeSync();
-	DCFlushRange(gameScreenTex, texSize);
+	if (pngContext != NULL)
+	{
+		gameScreenPngSize = PNGU_EncodeFromEFB(pngContext, vmode->fbWidth, vmode->efbHeight);
+		PNGU_ReleaseImageContext(pngContext);
+		gameScreenPng = (u8 *)malloc(gameScreenPngSize);
+		memcpy(gameScreenPng, savebuffer, gameScreenPngSize);
+	}
 }
 
 /****************************************************************************
