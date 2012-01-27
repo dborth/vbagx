@@ -317,58 +317,32 @@ void systemGameRumbleOnlyFor(int OnlyRumbleForFrames) {
 u32 StandardMovement(unsigned short chan)
 {
 	u32 J = 0;
+	double angle;
+	static const double THRES = 1.0 / sqrt(2.0);
+
 	s8 pad_x = userInput[chan].pad.stickX;
 	s8 pad_y = userInput[chan].pad.stickY;
 	#ifdef HW_RVL
 	s8 wm_ax = userInput[0].WPAD_StickX(0);
 	s8 wm_ay = userInput[0].WPAD_StickY(0);
 	#endif
+	
 	/***
 	Gamecube Joystick input, same as normal
 	***/
 	// Is XY inside the "zone"?
 	if (pad_x * pad_x + pad_y * pad_y > PADCAL * PADCAL)
 	{
-		if (pad_y == 0)
-		{
-			if(pad_x > 0)
-			{ 
-				J |= VBA_RIGHT;
-			}
-			else if(pad_x < 0)
-			{
-				J |= VBA_LEFT;
-			}
-		}
-		if (pad_x == 0)
-		{
-			if(pad_y > 0)
-			{
-				J |= VBA_UP;
-			}
-			else if(pad_y < 0)
-			{
-				J |= VBA_DOWN;
-			}
-		}
-
-		if ((pad_x|pad_y) != 0)
-		{
-			if ((fabs((double)(pad_y) / (double)(pad_x))) < 2.41421356237)
-			{
-				if (pad_x >= 0)
-					J |= VBA_RIGHT;
-				else
-					J |= VBA_LEFT;
-			}
-			if ((fabs((double)(pad_x) / (double)(pad_y))) < 2.41421356237)
-			{
-				if (pad_y >= 0)
-					J |= VBA_UP;
-				else
-					J |= VBA_DOWN;
-			}
-		}
+		angle = atan2(pad_y, pad_x);
+		 
+		if(cos(angle) > THRES)
+			J |= VBA_RIGHT;
+		else if(cos(angle) < -THRES)
+			J |= VBA_LEFT;
+		if(sin(angle) > THRES)
+			J |= VBA_UP;
+		else if(sin(angle) < -THRES)
+			J |= VBA_DOWN;
 	}
 #ifdef HW_RVL
 	/***
@@ -377,47 +351,16 @@ u32 StandardMovement(unsigned short chan)
 	// Is XY inside the "zone"?
 	if (wm_ax * wm_ax + wm_ay * wm_ay > PADCAL * PADCAL)
 	{
-		/*** we don't want division by zero ***/
-		if (wm_ay == 0)
-		{
-			if(wm_ax > 0)
-			{ 
-				J |= VBA_RIGHT;
-			}
-			else if(pad_x < 0)
-			{
-				J |= VBA_LEFT;
-			}
-		}
-		if (wm_ax == 0)
-		{
-			if(wm_ay > 0)
-			{
-				J |= VBA_UP;
-			}
-			else if(pad_y < 0)
-			{
-				J |= VBA_DOWN;
-			}
-		}
-
-		if (wm_ax != 0 && wm_ay != 0)
-		{
-			if ((fabs((double)(wm_ay) / (double)(wm_ax))) < 2.41421356237)
-			{
-				if (wm_ax >= 0)
-					J |= VBA_RIGHT;
-				else
-					J |= VBA_LEFT;
-			}
-			if ((fabs((double)(wm_ax) / (double)(wm_ay))) < 2.41421356237)
-			{
-				if (wm_ay >= 0)
-					J |= VBA_UP;
-				else
-					J |= VBA_DOWN;
-			}
-		}
+		angle = atan2(wm_ay, wm_ax);
+				 
+		if(cos(angle) > THRES)
+			J |= VBA_RIGHT;
+		else if(cos(angle) < -THRES)
+			J |= VBA_LEFT;
+		if(sin(angle) > THRES)
+			J |= VBA_UP;
+		else if(sin(angle) < -THRES)
+			J |= VBA_DOWN;
 	}
 #endif
 	return J;
