@@ -318,7 +318,7 @@ u32 StandardMovement(unsigned short chan)
 {
 	u32 J = 0;
 	double angle;
-	static const double THRES = cos(67.5);
+	static const double THRES = 0.38268343236508984; // cos(67.5)
 
 	s8 pad_x = userInput[chan].pad.stickX;
 	s8 pad_y = userInput[chan].pad.stickY;
