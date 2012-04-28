@@ -285,7 +285,7 @@ static GXRModeObj * FindVideoMode()
 			mode = &TVNtsc480Prog;
 			break;
 		case 3: // PAL (50Hz)
-			mode = &TVPal528IntDf;
+			mode = &TVPal576IntDfScale;
 			break;
 		case 4: // PAL (60Hz)
 			mode = &TVEurgb60Hz480IntDf;
@@ -313,17 +313,14 @@ static GXRModeObj * FindVideoMode()
 	#ifdef HW_RVL
 	bool pal = false;
 
-	if (mode == &TVPal528IntDf)
+	if (mode == &TVPal576IntDfScale)
 		pal = true;
 
 	if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
 	{
-		mode->fbWidth = 640;
-		mode->efbHeight = 456;
-		mode->viWidth = 686;
-
 		if (pal)
 		{
+			mode = &TVPal528IntDf;
 			mode->xfbHeight = 542;
 			mode->viHeight = 542;
 		}
@@ -332,12 +329,13 @@ static GXRModeObj * FindVideoMode()
 			mode->xfbHeight = 456;
 			mode->viHeight = 456;
 		}
+		
+		mode->fbWidth = 640;
+		mode->efbHeight = 456;
+		mode->viWidth = 686;
 	}
 	else
 	{
-		if (pal)
-			mode = &TVPal574IntDfScale;
-
 		mode->viWidth = 672;
 	}
 
