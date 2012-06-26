@@ -113,7 +113,7 @@ void Gb_Sweep_Square::clock_sweep()
 
 int Gb_Wave::access( unsigned addr ) const
 {
-	if ( enabled )
+	if ( enabled && mode != Gb_Apu::mode_agb )
 	{
 		addr = phase & (bank_size - 1);
 		if ( mode == Gb_Apu::mode_dmg )
@@ -442,7 +442,7 @@ static unsigned run_lfsr( unsigned s, unsigned mask, int count )
 	{
 		// won't fully replace upper 8 bits, so have to do the unoptimized way
 		while ( --count >= 0 )
-			s = (s >> 1 | mask) ^ (mask & -((s - 1) & 2));
+			s = (s >> 1 | mask) ^ (mask & (0 - ((s - 1) & 2)));
 	}
 	else
 	{
