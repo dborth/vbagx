@@ -27,6 +27,13 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.2.6 - July 6, 2012]
+
+* Support for newer Wiimotes
+* Fixed missing audio channel bug (eg: in Mario & Luigi: Superstar Saga)
+* Improved controller behavior - allow two directions to be pressed simultaneously
+* Compiled with devkitPPC r26 and libogc 1.8.11
+
 [2.2.5 - May 15, 2011]
 
 * Added Turkish translation
