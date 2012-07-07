@@ -251,11 +251,13 @@ static mutex_t gecko_mutex = 0;
 
 static ssize_t __out_write(struct _reent *r, int fd, const char *ptr, size_t len)
 {
-	u32 level;
-
-	if (!ptr || len <= 0 || !gecko)
+	if (!gecko || len == 0)
+		return len;
+	
+	if(!ptr || len < 0)
 		return -1;
 
+	u32 level;
 	LWP_MutexLock(gecko_mutex);
 	level = IRQ_Disable();
 	usb_sendbuffer(1, ptr, len);
@@ -287,13 +289,18 @@ const devoptab_t gecko_out = {
 	NULL		// device statvfs_r
 };
 
-void USBGeckoOutput()
+static void USBGeckoOutput()
 {
-	LWP_MutexInit(&gecko_mutex, false);
 	gecko = usb_isgeckoalive(1);
-	
+	LWP_MutexInit(&gecko_mutex, false);
+
 	devoptab_list[STD_OUT] = &gecko_out;
 	devoptab_list[STD_ERR] = &gecko_out;
+}
+
+extern "C" { 
+	s32 __STM_Close();
+	s32 __STM_Init();
 }
 
 /****************************************************************************
@@ -303,7 +310,7 @@ void USBGeckoOutput()
 ****************************************************************************/
 int main(int argc, char *argv[])
 {
-#ifdef HW_RVL
+	#ifdef HW_RVL
 	L2Enhance();
 	
 	u32 ios = IOS_GetVersion();
@@ -315,47 +322,49 @@ int main(int argc, char *argv[])
 		if(SupportedIOS(preferred))
 			IOS_ReloadIOS(preferred);
 	}
-#endif
-	
-	//USBGeckoOutput(); // uncomment to enable USB gecko output
-	__exception_setreload(8);
-
-	#ifdef HW_DOL
+	#else
 	ipl_set_config(6); // disable Qoob modchip
 	#endif
-
-#ifdef HW_RVL
-	StartNetworkThread();
-	DI_Init();
-#endif
-
-	InitDeviceThread();
+	
+	USBGeckoOutput(); // uncomment to enable USB gecko output
+	__exception_setreload(8);
+	
 	InitializeVideo();
 	ResetVideo_Menu (); // change to menu video mode
-	SetupPads();
 	
-	// Initialize DVD subsystem (GameCube only)
-	#ifdef HW_DOL
-	DVD_Init ();
-	#endif
-
 	#ifdef HW_RVL
 	// Wii Power/Reset buttons
-	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
+	__STM_Close();
+	__STM_Init();
+	__STM_Close();
+	__STM_Init();
 	SYS_SetPowerCallback(ShutdownCB);
 	SYS_SetResetCallback(ResetCB);
+	
+	WPAD_Init();
+	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
+	DI_Init();
+	USBStorage_Initialize();
+	StartNetworkThread();
+	#else
+	DVD_Init (); // Initialize DVD subsystem (GameCube only)
 	#endif
-
+	
+	SetupPads();
+	InitDeviceThread();
 	MountAllFAT(); // Initialize libFAT for SD and USB
+	
+	#ifdef HW_RVL
+	// store path app was loaded from
+	if(argc > 0 && argv[0] != NULL)
+		CreateAppPath(argv[0]);
+	#endif
 
 	InitialiseSound();
 	InitialisePalette();
 	DefaultSettings (); // Set defaults
 	InitFreeType((u8*)font_ttf, font_ttf_size); // Initialize font system
 #ifdef HW_RVL
-	if(argc > 0 && argv[0] != NULL)
-		CreateAppPath(argv[0]); // store path app was loaded from
-
 	InitMem2Manager();
 	savebuffer = (unsigned char *)mem2_malloc(SAVEBUFFERSIZE);
 	browserList = (BROWSERENTRY *)mem2_malloc(sizeof(BROWSERENTRY)*MAX_BROWSER_SIZE);
