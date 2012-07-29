@@ -133,8 +133,6 @@ void ResetControls(int wiiCtrl)
  *
  * Scans pad and wpad
  ***************************************************************************/
-static int padsConnected = 0;
-static u64 prev, now;
 
 void
 UpdatePads()
@@ -143,17 +141,7 @@ UpdatePads()
 	WPAD_ScanPads();
 	#endif
 
-	now = gettime();
-
-	if(!padsConnected && diff_sec(prev, now) < 2)
-		return;
-
-	prev = now;
-
-	padsConnected = PAD_ScanPads();
-
-	if(!padsConnected)
-		return;
+	PAD_ScanPads();
 
 	int i = 3;
 	do {
@@ -367,12 +355,12 @@ u32 StandardMovement(unsigned short chan)
 u32 StandardDPad(unsigned short pad)
 {
 	u32 J = 0;
-	u32 jp = PAD_ButtonsHeld(pad);
+	u32 jp = userInput[pad].pad.btns_h;
 #ifdef HW_RVL
 	u32 exp_type;
 	if ( WPAD_Probe(pad, &exp_type) != 0 )
 		exp_type = WPAD_EXP_NONE;
-	u32 wp = WPAD_ButtonsHeld(pad);
+	u32 wp = userInput[pad].wpad->btns_h;
 	if (wp & WPAD_BUTTON_RIGHT)
 		J |= VBA_RIGHT;
 	if (wp & WPAD_BUTTON_LEFT)
@@ -408,7 +396,7 @@ u32 StandardSideways(unsigned short pad)
 {
 	u32 J = 0;
 #ifdef HW_RVL
-	u32 wp = WPAD_ButtonsHeld(pad);
+	u32 wp = userInput[pad].wpad->btns_h;
 
 	if (wp & WPAD_BUTTON_RIGHT)
 		J |= VBA_UP;
@@ -448,7 +436,7 @@ u32 StandardClassic(unsigned short pad)
 {
 	u32 J = 0;
 #ifdef HW_RVL
-	u32 wp = WPAD_ButtonsHeld(pad);
+	u32 wp = userInput[pad].wpad->btns_h;
 
 	if (wp & WPAD_CLASSIC_BUTTON_RIGHT)
 		J |= VBA_RIGHT;
@@ -482,7 +470,7 @@ u32 StandardClassic(unsigned short pad)
 u32 StandardGamecube(unsigned short pad)
 {
 	u32 J = 0;
-	u32 jp = PAD_ButtonsHeld(pad);
+	u32 jp = userInput[pad].pad.btns_h;
 	if (jp & PAD_BUTTON_UP)
 		J |= VBA_UP;
 	if (jp & PAD_BUTTON_DOWN)
@@ -511,7 +499,7 @@ u32 StandardGamecube(unsigned short pad)
 u32 DecodeGamecube(unsigned short pad)
 {
 	u32 J = 0;
-	u32 jp = PAD_ButtonsHeld(pad);
+	u32 jp = userInput[pad].pad.btns_h;
 	for (u32 i = 0; i < MAXJP; ++i)
 	{
 		if (jp & btnmap[CTRLR_GCPAD][i])
@@ -912,8 +900,6 @@ bool MenuRequested()
 
 u32 GetJoy(int pad)
 {
-	UpdatePads();
-
 	// request to go back to menu
 	if (MenuRequested())
 	{
