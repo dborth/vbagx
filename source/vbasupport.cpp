@@ -440,6 +440,7 @@ void systemOnSoundShutdown()
 ****************************************************************************/
 bool systemReadJoypads()
 {
+	UpdatePads();
 	return true;
 }
 
