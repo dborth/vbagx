@@ -3,7 +3,7 @@
 * PNGU
 * 
 * Original author: frontier (http://frontier-dev.net)
-* Modified by Tantric, 2009-2010
+* This is Tantric's modified/condensed version + RGB565 decoder from original
 *
 ********************************************************************************************/
 
@@ -15,6 +15,18 @@
 #ifdef __cplusplus
 	extern "C" {
 #endif
+
+// Return codes
+#define PNGU_OK							0
+#define PNGU_ODD_WIDTH					1
+#define PNGU_ODD_STRIDE					2
+#define PNGU_INVALID_WIDTH_OR_HEIGHT	3
+#define PNGU_FILE_IS_NOT_PNG			4
+#define PNGU_UNSUPPORTED_COLOR_TYPE		5
+#define PNGU_NO_FILE_SELECTED			6
+#define PNGU_CANT_OPEN_FILE				7
+#define PNGU_CANT_READ_FILE				8
+#define PNGU_LIB_ERROR					9
 
 typedef struct
 {
@@ -67,6 +79,9 @@ u8 * DecodePNG(const u8 *src, int *width, int *height, u8 *dst, int maxwidth, in
 int PNGU_EncodeFromRGB (IMGCTX ctx, u32 width, u32 height, void *buffer, u32 stride);
 int PNGU_EncodeFromGXTexture (IMGCTX ctx, u32 width, u32 height, void *buffer, u32 stride);
 int PNGU_EncodeFromEFB (IMGCTX ctx, u32 width, u32 height);
+
+int PNGU_DecodeTo4x4RGB565 (IMGCTX ctx, u32 width, u32 height, void *buffer);
+int PNGU_EncodeFromLinearRGB565 (IMGCTX ctx, u32 width, u32 height, const void* buffer, int rowlength);
 
 #ifdef __cplusplus
 	}

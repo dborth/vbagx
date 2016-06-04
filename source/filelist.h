@@ -104,6 +104,8 @@ extern const u8		icon_settings_gamecube_png[];
 extern const u32	icon_settings_gamecube_png_size;
 extern const u8		icon_settings_nunchuk_png[];
 extern const u32	icon_settings_nunchuk_png_size;
+extern const u8		icon_settings_wiiupro_png[];
+extern const u32	icon_settings_wiiupro_png_size;
 
 extern const u8		icon_settings_file_png[];
 extern const u32	icon_settings_file_png_size;
@@ -115,6 +117,8 @@ extern const u8		icon_settings_network_png[];
 extern const u32	icon_settings_network_png_size;
 extern const u8		icon_settings_video_png[];
 extern const u32	icon_settings_video_png_size;
+extern const u8		icon_settings_screenshot_png[];
+extern const u32	icon_settings_screenshot_png_size;
 
 extern const u8		button_png[];
 extern const u32	button_png_size;
@@ -241,6 +245,9 @@ extern const u32	bg_game_selection_png_size;
 
 extern const u8		bg_game_selection_entry_png[];
 extern const u32	bg_game_selection_entry_png_size;
+
+extern const u8		bg_preview_png[];
+extern const u32	bg_preview_png_size;
 
 extern const u8		scrollbar_png[];
 extern const u32	scrollbar_png_size;

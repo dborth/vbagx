@@ -1,4 +1,4 @@
-#include <string.h>
+#include <cstdlib>
 #include "../common/Types.h"
 
 u8 *gbMemoryMap[16];
@@ -30,7 +30,7 @@ u16 gbColorFilter[32768];
 int gbColorOption = 0;
 int gbPaletteOption = 0;
 int gbEmulatorType = 0;
-int gbBorderOn = 1;
+int gbBorderOn = 0;
 int gbBorderAutomatic = 0;
 int gbBorderLineSkip = 160;
 int gbBorderRowSkip = 0;
@@ -38,3 +38,4 @@ int gbBorderColumnSkip = 0;
 int gbDmaTicks = 0;
 
 u8 (*gbSerialFunction)(u8) = NULL;
+void (*sgbBorderListener)(bool) = NULL;

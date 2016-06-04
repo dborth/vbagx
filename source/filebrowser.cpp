@@ -35,6 +35,7 @@ BROWSERINFO browser;
 BROWSERENTRY * browserList = NULL; // list of files/folders in browser
 
 char szpath[MAXPATHLEN];
+char szname[MAXPATHLEN];
 bool inSz = false;
 
 char ROMFilename[512];
@@ -211,6 +212,8 @@ int UpdateDirName()
 	
 			/* remove last subdirectory name */
 			size = strlen(browser.dir) - size - 1;
+			strncpy(GCSettings.LastFileLoaded, &browser.dir[size], strlen(browser.dir) - size - 1); //set as loaded file the previous dir
+			GCSettings.LastFileLoaded[strlen(browser.dir) - size - 1] = 0;
 			browser.dir[size] = 0;
 		}
 
@@ -255,6 +258,24 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 			sprintf(temppath, "%s%s",browser.dir,browserList[browser.selIndex].filename);
 		}
 	}
+	else if (type == FILE_BORDER_PNG)
+	{
+		const char* loadedpath = filename;
+		if (loadedpath == NULL) loadedpath = "default";
+		// Ensure that loadedname contains only the filename, not the path
+		const char* loadedname = strrchr(loadedpath, '/');
+		if (loadedname == NULL) loadedname = loadedpath;
+		
+		// Check path length
+		if ((strlen(pathPrefix[GCSettings.LoadMethod]) + strlen(GCSettings.BorderFolder) + strlen(loadedname)) >= MAXPATHLEN) {
+			ErrorPrompt("Maximum filepath length reached!");
+			filepath[0] = 0;
+			return false;
+		}
+		
+		StripExt(file, loadedname);
+		sprintf(temppath, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], GCSettings.BorderFolder, file);
+	}
 	else
 	{
 		if(GCSettings.SaveMethod == DEVICE_AUTO)
@@ -277,7 +298,14 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 					if(filenum == -1)
 						sprintf(file, "%s.%s", filename, ext);
 					else if(filenum == 0)
-						sprintf(file, "%s Auto.%s", filename, ext);
+						if (GCSettings.AppendAuto <= 0)
+						{
+							sprintf(file, "%s.%s", filename, ext);
+						}
+						else
+						{
+							sprintf(file, "%s Auto.%s", filename, ext);
+						}
 					else
 						sprintf(file, "%s %i.%s", filename, filenum, ext);
 				}
@@ -344,7 +372,7 @@ bool IsSz()
  *
  * Strips an extension from a filename
  ***************************************************************************/
-void StripExt(char* returnstring, char * inputstring)
+void StripExt(char* returnstring, const char * inputstring)
 {
 	char* loc_dot;
 
@@ -436,12 +464,11 @@ void ShortenFilename(char * returnstring, char * inputstring)
  ***************************************************************************/
 int BrowserLoadSz()
 {
-	char filepath[MAXPATHLEN];
-	memset(filepath, 0, MAXPATHLEN);
-
-	// we'll store the 7z filepath for extraction later
-	if(!MakeFilePath(szpath, FILE_ROM))
-		return 0;
+	memset(szpath, 0, MAXPATHLEN);
+	strncpy(szpath, browser.dir, strlen(browser.dir) - 1);
+	
+	strncpy(szname, strrchr(szpath, '/') + 1, strrchr(szpath, '.') - strrchr(szpath, '/'));
+	*strrchr(szname, '.') = '\0';
 
 	int szfiles = SzParse(szpath);
 	if(szfiles)
@@ -469,7 +496,7 @@ int BrowserLoadFile()
 
 	// store the filename (w/o ext) - used for sram/freeze naming
 	StripExt(ROMFilename, browserList[browser.selIndex].filename);
-	strcpy(loadedFile, browserList[browser.selIndex].filename);
+	snprintf(GCSettings.LastFileLoaded, MAXPATHLEN, "%s", browserList[browser.selIndex].filename);
 
 	loadingFile = true;
 	ROMLoaded = LoadVBAROM();
@@ -513,15 +540,25 @@ int BrowserChangeFolder()
 		SzClose();
 	}
 
-	if(!UpdateDirName())
+	if(!UpdateDirName()) 
 		return -1;
 
-	HaltParseThread(); // halt parsing
+	HaltParseThread();
 	CleanupPath(browser.dir);
-	ResetBrowser(); // reset browser
+	ResetBrowser();
 
 	if(browser.dir[0] != 0)
-		ParseDirectory();
+	{
+		if(strstr(browser.dir, ".7z"))
+		{
+			BrowserLoadSz();
+		}
+		else 
+		{
+			ParseDirectory(true, true);
+		}
+		FindAndSelectLastLoadedFile();
+	}
 
 	if(browser.numEntries == 0)
 	{

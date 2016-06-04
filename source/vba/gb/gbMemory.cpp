@@ -5,9 +5,11 @@
 #include "gb.h"
 u8 gbDaysinMonth [12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 const u8 gbDisabledRam [8] = {0x80, 0xff, 0xf0, 0x00, 0x30, 0xbf, 0xbf, 0xbf};
-extern int gbHardware;
 extern int gbGBCColorType;
 extern gbRegister PC;
+
+// for UTC offset
+#include "../../vbagx.h"
 
 mapperMBC1 gbDataMBC1 = {
   0, // RAM enable
@@ -327,7 +329,7 @@ mapperMBC3 gbDataMBC3 = {
 
 void memoryUpdateMBC3Clock()
 {
-  time_t now = time(NULL);
+  time_t now = time(NULL) - (GCSettings.OffsetMinutesUTC*60);
   time_t diff = now - gbDataMBC3.mapperLastTime;
   if(diff > 0) {
     // update the clock according to the last update time
@@ -437,6 +439,7 @@ void mapperMBC3RAM(u16 address, u8 value)
       }
     } else {
       time(&gbDataMBC3.mapperLastTime);
+      gbDataMBC3.mapperLastTime -= (GCSettings.OffsetMinutesUTC*60);
       switch(gbDataMBC3.mapperClockRegister) {
       case 0x08:
         gbDataMBC3.mapperSeconds = value;
@@ -540,7 +543,6 @@ mapperMBC5 gbDataMBC5 = {
   0  // is rumble cartridge?
 };
 
-extern int ConfigRequested;
 // MBC5 ROM write registers
 void mapperMBC5ROM(u16 address, u8 value)
 {
@@ -581,18 +583,10 @@ void mapperMBC5ROM(u16 address, u8 value)
       gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
     }
     break;
-  case 0x4000: // RAM bank select, plus rumble
-    // Some games support rumble, such as Disney Tarzan, but aren't on a
-	// rumble cartridge. As long as the RAM is less than or equal to 256Kbit
-	// we know that the last address line is not used for real RAM addresses,
-	// so it must be a rumble signal instead.
-    if(gbDataMBC5.isRumbleCartridge) {
-	  systemCartridgeRumble(value & 0x08);
+  case 0x4000: // RAM bank select
+    if(gbDataMBC5.isRumbleCartridge)
       value &= 0x07;
-	} else if (gbRamSizeMask <= 0x7FFF) {
-	  systemPossibleCartridgeRumble(value & 0x08);
-      value &= 0x07;
-    } else
+    else
       value &= 0x0f;
     if(value == gbDataMBC5.mapperRAMBank)
       break;
@@ -1231,7 +1225,7 @@ void memoryUpdateTAMA5Clock()
   else
       gbDaysinMonth[1] = 28;
 
-  time_t now = time(NULL);
+  time_t now = time(NULL) - (GCSettings.OffsetMinutesUTC*60);
   time_t diff = now - gbDataTAMA5.mapperLastTime;
   if(diff > 0) {
     // update the clock according to the last update time
@@ -1428,6 +1422,7 @@ void mapperTAMA5RAM(u16 address, u8 value)
               gbTAMA5ram[0x94] = MonthsH*16+MonthsL; // incorrect ? (not used by the game) ?
 
               time(&gbDataTAMA5.mapperLastTime);
+              gbDataMBC3.mapperLastTime -= (GCSettings.OffsetMinutesUTC*60);
 
               gbMemoryMap[0xa][0] = 1;
             }

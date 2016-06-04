@@ -78,6 +78,7 @@ extern char oldbuffer[10];
 #endif
 
 extern bool CPUReadGSASnapshot(const char *);
+extern bool CPUReadGSASPSnapshot(const char *);
 extern bool CPUWriteGSASnapshot(const char *, const char *, const char *, const char *);
 extern bool CPUWriteBatteryFile(const char *);
 extern bool CPUReadBatteryFile(const char *);
@@ -89,9 +90,14 @@ extern void CPUCleanUp();
 extern void CPUUpdateRender();
 extern void CPUUpdateRenderBuffers(bool);
 extern bool CPUReadMemState(char *, int);
-extern bool CPUReadState(const char *);
 extern bool CPUWriteMemState(char *, int);
+#ifdef __LIBRETRO__
+extern bool CPUReadState(const u8*, unsigned);
+extern unsigned int CPUWriteState(u8 *data, unsigned int size);
+#else
+extern bool CPUReadState(const char *);
 extern bool CPUWriteState(const char *);
+#endif
 extern int CPULoadRom(const char *);
 extern void doMirroring(bool);
 extern void CPUUpdateRegister(u32, u16);

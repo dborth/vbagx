@@ -15,6 +15,7 @@
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
+#include <wupc/wupc.h>
 #include <sys/iosupport.h>
 
 #ifdef HW_RVL
@@ -51,7 +52,8 @@ int ShutdownRequested = 0;
 int ResetRequested = 0;
 int ExitRequested = 0;
 char appPath[1024] = { 0 };
-char loadedFile[1024] = { 0 };
+
+
 
 /****************************************************************************
  * Shutdown / Reboot / Exit
@@ -341,6 +343,7 @@ int main(int argc, char *argv[])
 	SYS_SetPowerCallback(ShutdownCB);
 	SYS_SetResetCallback(ResetCB);
 	
+	WUPC_Init();
 	WPAD_Init();
 	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
 	DI_Init();

@@ -25,6 +25,7 @@
 #include "vba/gba/Globals.h"
 #include "vba/Util.h"
 #include "vba/common/Port.h"
+#include "goomba/goombarom.h"
 
 #define MEM_BAD	0xff
 #define MEM_VM  0x01
@@ -152,10 +153,9 @@ static void VMAllocGBA( void )
 * MEM2 version of GBA CPULoadROM
 ****************************************************************************/
 
-bool VMCPULoadROM()
+int VMCPULoadROM()
 {
 	VMClose();
-	VMAllocGBA();
 	GBAROMSize = 0;
 
 	if(!inSz)
@@ -163,7 +163,7 @@ bool VMCPULoadROM()
 		char filepath[1024];
 
 		if(!MakeFilePath(filepath, FILE_ROM))
-			return false;
+			return 0;
 
 		GBAROMSize = LoadFile ((char *)rom, filepath, browserList[browser.selIndex].length, NOTSILENT);
 	}
@@ -172,17 +172,26 @@ bool VMCPULoadROM()
 		GBAROMSize = LoadSzFile(szpath, (unsigned char *)rom);
 	}
 
+	if(gb_first_rom(rom, GBAROMSize)) {
+		int r = YesNoPrompt("This file contains uncompressed Game Boy (Color) ROMs. Do you want to run these?", true);
+		if (r) {
+			return 2;
+		}
+	}
+
+	VMAllocGBA();
+
 	if(GBAROMSize)
 	{
 		flashInit();
 		eepromInit();
 		CPUUpdateRenderBuffers( true );
-		return true;
+		return 1;
 	}
 	else
 	{
 		VMClose();
-		return false;
+		return 0;
 	}
 }
 #else

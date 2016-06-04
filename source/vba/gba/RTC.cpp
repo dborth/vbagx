@@ -8,12 +8,20 @@
 
 #include <time.h>
 #include <string.h>
-#include <stdio.h>
+
+// Defined in VGA-GX input.cpp
+void systemCartridgeRumble(bool);
+
+enum RTCSTATE
+{
+   IDLE = 0,
+   COMMAND,
+   DATA,
+   READDATA
+};
 
 u8 systemGetSensorDarkness();
 int systemGetSensorZ();
-
-enum RTCSTATE { IDLE, COMMAND, DATA, READDATA };
 
 typedef struct {
   u8 byte0;
@@ -271,6 +279,17 @@ void rtcReset()
   rtcClockData.reserved[11] = 0;
 }
 
+#ifdef __LIBRETRO__
+void rtcSaveGame(u8 *&data)
+{
+  utilWriteMem(data, &rtcClockData, sizeof(rtcClockData));
+}
+
+void rtcReadGame(const u8 *&data)
+{
+  utilReadMem(&rtcClockData, data, sizeof(rtcClockData));
+}
+#else
 void rtcSaveGame(gzFile gzFile)
 {
   utilGzWrite(gzFile, &rtcClockData, sizeof(rtcClockData));
@@ -280,3 +299,4 @@ void rtcReadGame(gzFile gzFile)
 {
   utilGzRead(gzFile, &rtcClockData, sizeof(rtcClockData));
 }
+#endif

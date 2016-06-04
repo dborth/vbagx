@@ -16,7 +16,7 @@
 #include "utils/FreeTypeGX.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"2.2.8"
+#define APPVERSION 		"2.3.3"
 #define APPFOLDER 		"vbagx"
 #define PREF_FILE_NAME 	"settings.xml"
 #define PAL_FILE_NAME 	"palettes.xml"
@@ -40,7 +40,8 @@ enum {
 enum {
 	FILE_SRAM,
 	FILE_SNAPSHOT,
-	FILE_ROM
+	FILE_ROM,
+	FILE_BORDER_PNG
 };
 
 enum {
@@ -66,16 +67,20 @@ struct SGCSettings{
     float	gbaZoomVert;   // GBA vertical zoom amount
     float	gbZoomHor;     // GB horizontal zoom amount
     float	gbZoomVert;    // GB vertical zoom amount
+	int     gbFixed;
+	int     gbaFixed;
 	int		AutoLoad;
     int		AutoSave;
     int		LoadMethod;    // For ROMS: Auto, SD, DVD, USB, Network (SMB)
 	int		SaveMethod;    // For SRAM, Freeze, Prefs: Auto, SD, USB, SMB
+    int		AppendAuto;    // 0 - no, 1 - yes
     int		videomode;     // 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
     int		scaling;       // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
 	int		render;		   // 0 - original, 1 - filtered, 2 - unfiltered
 	int		xshift;		   // video output shift
 	int		yshift;
 	int     colorize;      // colorize Mono Gameboy games
+	int     gbaFrameskip;  // turn on auto-frameskip for GBA games
 	int		WiiControls;   // Match Wii Game
 	int		WiimoteOrientation;
 	int		ExitAction;
@@ -83,15 +88,20 @@ struct SGCSettings{
 	int		SFXVolume;
 	int		Rumble;
 	int 	language;
+	int		OffsetMinutesUTC; // Used for clock on MBC3 and TAMA5
+	int 	GBHardware;    // Mapped to gbEmulatorType in VBA
+	int 	SGBBorder;
 	char	LoadFolder[MAXPATHLEN];  // Path to game files
+	char	LastFileLoaded[MAXPATHLEN]; //Last file loaded filename
 	char	SaveFolder[MAXPATHLEN];  // Path to save files
 	char	CheatFolder[MAXPATHLEN]; // Path to cheat files
+	char	ScreenshotsFolder[MAXPATHLEN]; //Path to screenshots files
+	char	BorderFolder[MAXPATHLEN];  // Path to Super Game Boy border files
 	char	smbip[80];
 	char	smbuser[20];
 	char	smbpwd[20];
 	char	smbshare[20];
 };
-
 void ExitApp();
 void ShutdownWii();
 bool SupportedIOS(u32 ios);
@@ -102,7 +112,7 @@ extern int ConfigRequested;
 extern int ShutdownRequested;
 extern int ExitRequested;
 extern char appPath[];
-extern char loadedFile[];
+
 extern FreeTypeGX *fontSystem[];
 
 #endif

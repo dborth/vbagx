@@ -47,6 +47,7 @@ extern bool ROMLoaded;
 extern bool loadingFile;
 extern char szpath[MAXPATHLEN];
 extern bool inSz;
+extern char szname[MAXPATHLEN];
 
 enum
 {
@@ -64,7 +65,7 @@ int OpenGameList();
 int autoLoadMethod();
 int autoSaveMethod(bool silent);
 int FileSortCallback(const void *f1, const void *f2);
-void StripExt(char* returnstring, char * inputstring);
+void StripExt(char* returnstring, const char* inputstring);
 bool IsSz();
 void ResetBrowser();
 bool AddBrowserEntry();

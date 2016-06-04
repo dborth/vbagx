@@ -6,7 +6,8 @@
 #include "RTC.h"
 #include "Sound.h"
 #include "agbprint.h"
-#include "vmmem.h" // Nintendo GC Virtual Memory
+#include "GBAcpu.h"
+#include "GBALink.h"
 
 extern const u32 objTilesAddress[3];
 
@@ -33,103 +34,33 @@ extern bool timer3On;
 extern int timer3Ticks;
 extern int timer3ClockReload;
 extern int cpuTotalTicks;
-extern u32 RomIdCode;
 
-#define gid(a,b,c) (a|(b<<8)|(c<<16))
-#define CORVETTE		gid('A','V','C')
-
-/*****************************************************************************
- * Nintendo GC Virtual Memory function override
- * Tantric September 2008
- ****************************************************************************/
-
-#define CPUReadByteQuickDef(addr) \
+#define CPUReadByteQuick(addr) \
   map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]
 
-#define CPUReadHalfWordQuickDef(addr) \
+#define CPUReadHalfWordQuick(addr) \
   READ16LE(((u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 
-#define CPUReadMemoryQuickDef(addr) \
+#define CPUReadMemoryQuick(addr) \
   READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
-
-u8 inline CPUReadByteQuick( u32 addr )
-{
-	switch(addr >> 24 )
-	{
-		case 0x08:
-		case 0x09:
-		case 0x0A:
-		case 0x0C:
-#ifdef USE_VM
-			return VMRead8( addr & 0x1FFFFFF );
-#endif
-		default:
-			return CPUReadByteQuickDef(addr);
-	}
-
-	return 0;
-}
-
-u16 inline CPUReadHalfWordQuick( u32 addr )
-{
-	switch(addr >> 24)
-	{
-		case 0x08:
-		case 0x09:
-		case 0x0A:
-		case 0x0C:
-#ifdef USE_VM
-			return VMRead16( addr & 0x1FFFFFF );
-#endif
-		default:
-			return CPUReadHalfWordQuickDef(addr);
-	}
-
-	return 0;
-}
-
-u32 inline CPUReadMemoryQuick( u32 addr )
-{
-	switch(addr >> 24)
-	{
-		case 0x08:
-		case 0x09:
-		case 0x0A:
-		case 0x0C:
-#ifdef USE_VM
-			return VMRead32( addr & 0x1FFFFFF );
-#endif
-		default:
-			return CPUReadMemoryQuickDef(addr);
-	}
-
-	return 0;
-}
-
-/*****************************************************************************
- * End of VM override
- ****************************************************************************/
 
 static inline u32 CPUReadMemory(u32 address)
 {
-#ifdef GBA_LOGGING
-  if(address & 3) {
-    if(systemVerbose & VERBOSE_UNALIGNED_MEMORY) {
-      log("Unaligned word read: %08x at %08x\n", address, armMode ?
-          armNextPC - 4 : armNextPC - 2);
-    }
-  }
-#endif
-
   u32 value;
+  u32 oldAddress = address;
+
+  if(address & 3) {
+	  address &= ~0x03;
+  }
+
   switch(address >> 24) {
-  case 0x00:
+  case 0:
     if(reg[15].I >> 24) {
       if(address < 0x4000) {
 #ifdef GBA_LOGGING
         if(systemVerbose & VERBOSE_ILLEGAL_READ) {
-          log("Illegal word read: %08x at %08x\n", address, armMode ?
-              armNextPC - 4 : armNextPC - 2);
+          log("Illegal word read from bios: %08x at %08x\n", address, armMode ?
+            armNextPC - 4 : armNextPC - 2);
         }
 #endif
 
@@ -139,117 +70,92 @@ static inline u32 CPUReadMemory(u32 address)
     } else
       value = READ32LE(((u32 *)&bios[address & 0x3FFC]));
     break;
-  case 0x02:
+  case 2:
     value = READ32LE(((u32 *)&workRAM[address & 0x3FFFC]));
     break;
-  case 0x03:
+  case 3:
     value = READ32LE(((u32 *)&internalRAM[address & 0x7ffC]));
     break;
-  case 0x04:
-    if((address < 0x4000400) && ioReadable[address & 0x3fc]) {
-      if(ioReadable[(address & 0x3fc) + 2])
+  case 4:
+	if((address < 0x4000400) && ioReadable[address & 0x3fc]) {
+      if(ioReadable[(address & 0x3fc) + 2]) {
         value = READ32LE(((u32 *)&ioMem[address & 0x3fC]));
-      else
+        if ((address & 0x3fc) == COMM_JOY_RECV_L)
+          UPDATE_REG(COMM_JOYSTAT, READ16LE(&ioMem[COMM_JOYSTAT]) & ~JOYSTAT_RECV);
+      } else {
         value = READ16LE(((u16 *)&ioMem[address & 0x3fc]));
-    } else goto unreadable;
-    break;
-  case 0x05:
+      }
+    }
+    else
+      goto unreadable;
+	break;
+  case 5:
     value = READ32LE(((u32 *)&paletteRAM[address & 0x3fC]));
     break;
-  case 0x06:
+  case 6:
     address = (address & 0x1fffc);
     if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
     {
-        value = 0;
-        break;
+      value = 0;
+      break;
     }
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
     value = READ32LE(((u32 *)&vram[address]));
     break;
-  case 0x07:
+  case 7:
     value = READ32LE(((u32 *)&oam[address & 0x3FC]));
     break;
-  case 0x08:
-	// Must be cartridge ROM, reading other sensors doesn't allow 32-bit access.
-  case 0x09:
-  case 0x0A:
-  case 0x0B:
-  case 0x0C:
-#ifdef USE_VM // Nintendo GC Virtual Memory
-	  value = VMRead32( address & 0x1FFFFFC );
-#else
-	  value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
-#endif
+  case 8:
+  case 9:
+  case 10:
+  case 11:
+  case 12:
+    value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
     break;
-  case 0x0D:
-    if(cpuEEPROMEnabled)
-      // no need to swap this
-      return eepromRead(address);
-    goto unreadable;
-  case 0x0E:
-	// Yoshi's Universal Gravitation (Topsy Turvy)
-	// Koro Koro
-    if(cpuEEPROMSensorEnabled) {
-      switch(address & 0x00008f00) {
-      case 0x8200:
-        return systemGetSensorX() & 255;
-      case 0x8300:
-        return (systemGetSensorX() >> 8)|0x80;
-      case 0x8400:
-        return systemGetSensorY() & 255;
-      case 0x8500:
-        return systemGetSensorY() >> 8;
-      }
-    }
-    if(cpuFlashEnabled | cpuSramEnabled)
-      // no need to swap this
-      return flashRead(address);
+  case 13:
+	value = eepromRead(address);
+	break;
+  case 14:
+  case 15:
+	value = flashRead(address) * 0x01010101;
+	break;
     // default
   default:
-  unreadable:
+unreadable:
 #ifdef GBA_LOGGING
     if(systemVerbose & VERBOSE_ILLEGAL_READ) {
       log("Illegal word read: %08x at %08x\n", address, armMode ?
-          armNextPC - 4 : armNextPC - 2);
+        armNextPC - 4 : armNextPC - 2);
     }
 #endif
-
-    if(cpuDmaHack) {
-      value = cpuDmaLast;
-    } else {
+	if(cpuDmaHack) {
+		value = cpuDmaLast;
+	} else {
       if(armState) {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-    	  value = CPUReadMemoryQuick(reg[15].I);
-#else
-        value = CPUReadMemoryQuickDef(reg[15].I);
-#endif
+		return CPUReadMemoryQuick(reg[15].I);
       } else {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        value = CPUReadHalfWordQuick(reg[15].I) |
-          CPUReadHalfWordQuick(reg[15].I) << 16;
-#else
-        value = CPUReadHalfWordQuickDef(reg[15].I) |
-          CPUReadHalfWordQuickDef(reg[15].I) << 16;
-#endif
+		return CPUReadHalfWordQuick(reg[15].I) |
+			   CPUReadHalfWordQuick(reg[15].I) << 16;
       }
-    }
+	}
+	break;
   }
 
-  if(address & 3) {
+  if(oldAddress & 3) {
 #ifdef C_CORE
-    int shift = (address & 3) << 3;
+	int shift = (oldAddress & 3) << 3;
     value = (value >> shift) | (value << (32 - shift));
 #else
 #ifdef __GNUC__
     asm("and $3, %%ecx;"
-        "shl $3 ,%%ecx;"
-        "ror %%cl, %0"
-        : "=r" (value)
-        : "r" (value), "c" (address));
+      "shl $3 ,%%ecx;"
+      "ror %%cl, %0"
+      : "=r" (value)
+      : "r" (value), "c" (oldAddress));
 #else
     __asm {
-      mov ecx, address;
+      mov ecx, oldAddress;
       and ecx, 3;
       shl ecx, 3;
       ror [dword ptr value], cl;
@@ -257,6 +163,15 @@ static inline u32 CPUReadMemory(u32 address)
 #endif
 #endif
   }
+
+#ifdef GBA_LOGGING
+  if(oldAddress & 3) {
+	  if(systemVerbose & VERBOSE_UNALIGNED_MEMORY) {
+		  log("Unaligned word read from: %08x at %08x (%08x)\n", oldAddress, armMode ?
+			  armNextPC - 4 : armNextPC - 2, value);
+	  }
+  }
+#endif
   return value;
 }
 
@@ -264,25 +179,21 @@ extern u32 myROM[];
 
 static inline u32 CPUReadHalfWord(u32 address)
 {
-#ifdef GBA_LOGGING
-  if(address & 1) {
-    if(systemVerbose & VERBOSE_UNALIGNED_MEMORY) {
-      log("Unaligned halfword read: %08x at %08x\n", address, armMode ?
-          armNextPC - 4 : armNextPC - 2);
-    }
-  }
-#endif
-
   u32 value;
+  u32 oldAddress = address;
+
+  if(address & 1) {
+	  address &= ~0x01;
+  }
 
   switch(address >> 24) {
-  case 0x00:
+  case 0:
     if (reg[15].I >> 24) {
       if(address < 0x4000) {
 #ifdef GBA_LOGGING
         if(systemVerbose & VERBOSE_ILLEGAL_READ) {
-          log("Illegal halfword read: %08x at %08x\n", address, armMode ?
-              armNextPC - 4 : armNextPC - 2);
+          log("Illegal halfword read from bios: %08x at %08x\n", oldAddress, armMode ?
+            armNextPC - 4 : armNextPC - 2);
         }
 #endif
         value = READ16LE(((u16 *)&biosProtected[address&2]));
@@ -290,13 +201,13 @@ static inline u32 CPUReadHalfWord(u32 address)
     } else
       value = READ16LE(((u16 *)&bios[address & 0x3FFE]));
     break;
-  case 0x02:
+  case 2:
     value = READ16LE(((u16 *)&workRAM[address & 0x3FFFE]));
     break;
-  case 0x03:
+  case 3:
     value = READ16LE(((u16 *)&internalRAM[address & 0x7ffe]));
     break;
-  case 0x04:
+  case 4:
     if((address < 0x4000400) && ioReadable[address & 0x3fe])
     {
       value =  READ16LE(((u16 *)&ioMem[address & 0x3fe]));
@@ -305,216 +216,182 @@ static inline u32 CPUReadHalfWord(u32 address)
         if (((address & 0x3fe) == 0x100) && timer0On)
           value = 0xFFFF - ((timer0Ticks-cpuTotalTicks) >> timer0ClockReload);
         else
-        if (((address & 0x3fe) == 0x104) && timer1On && !(TM1CNT & 4))
-          value = 0xFFFF - ((timer1Ticks-cpuTotalTicks) >> timer1ClockReload);
-        else
-        if (((address & 0x3fe) == 0x108) && timer2On && !(TM2CNT & 4))
-          value = 0xFFFF - ((timer2Ticks-cpuTotalTicks) >> timer2ClockReload);
-        else
-        if (((address & 0x3fe) == 0x10C) && timer3On && !(TM3CNT & 4))
-          value = 0xFFFF - ((timer3Ticks-cpuTotalTicks) >> timer3ClockReload);
+          if (((address & 0x3fe) == 0x104) && timer1On && !(TM1CNT & 4))
+            value = 0xFFFF - ((timer1Ticks-cpuTotalTicks) >> timer1ClockReload);
+          else
+            if (((address & 0x3fe) == 0x108) && timer2On && !(TM2CNT & 4))
+              value = 0xFFFF - ((timer2Ticks-cpuTotalTicks) >> timer2ClockReload);
+            else
+              if (((address & 0x3fe) == 0x10C) && timer3On && !(TM3CNT & 4))
+                value = 0xFFFF - ((timer3Ticks-cpuTotalTicks) >> timer3ClockReload);
       }
     }
+	else if((address < 0x4000400) && ioReadable[address & 0x3fc])
+	{
+		value = 0;
+	}
     else goto unreadable;
     break;
-  case 0x05:
+  case 5:
     value = READ16LE(((u16 *)&paletteRAM[address & 0x3fe]));
     break;
-  case 0x06:
+  case 6:
     address = (address & 0x1fffe);
     if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
     {
-        value = 0;
-        break;
+      value = 0;
+      break;
     }
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
     value = READ16LE(((u16 *)&vram[address]));
     break;
-  case 0x07:
+  case 7:
     value = READ16LE(((u16 *)&oam[address & 0x3fe]));
     break;
-  case 0x08:
-	// Use existing case statement and faster test for potential speed improvement
-	// This is possibly the GPIO port that controls the real time clock,
-	// WarioWare Twisted! tilt sensors, rumble, and solar sensors.
-    if(address >= 0x80000c4 && address <= 0x80000c8) {
-	  // this function still works if there is no real time clock
-	  // and does a normal memory read in that case.
-      value = rtcRead(address & 0xFFFFFFE);
-	  break;
-	}
-  case 0x09:
-  case 0x0A:
-  case 0x0B:
-  case 0x0C:
-#ifdef USE_VM // Nintendo GC Virtual Memory
-    	value = VMRead16( address & 0x1FFFFFE );
-#else
-    	value = READ16LE(((u16 *)&rom[address & 0x1FFFFFE]));
-#endif
+  case 8:
+  case 9:
+  case 10:
+  case 11:
+  case 12:
+    if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)
+      value = rtcRead(address);
+    else
+      value = READ16LE(((u16 *)&rom[address & 0x1FFFFFE]));
     break;
-  case 0x0D:
-    if(cpuEEPROMEnabled)
-      // no need to swap this
-      return  eepromRead(address);
-    goto unreadable;
-  case 0x0E:
-	// Yoshi's Universal Gravitation (Topsy Turvy)
-	// Koro Koro
-    if(cpuEEPROMSensorEnabled) {
-      switch(address & 0x00008f00) {
-      case 0x8200:
-        return systemGetSensorX() & 255;
-      case 0x8300:
-        return (systemGetSensorX() >> 8)|0x80;
-      case 0x8400:
-        return systemGetSensorY() & 255;
-      case 0x8500:
-        return systemGetSensorY() >> 8;
-      }
-    }
-    if(cpuFlashEnabled | cpuSramEnabled)
-      // no need to swap this
-      return flashRead(address);
+  case 13:
+	value = eepromRead(address);
+	break;
+  case 14:
+  case 15:
+	value = flashRead(address) * 0x0101;
+	break;
     // default
   default:
-  unreadable:
+unreadable:
+	if(cpuDmaHack) {
+		value = cpuDmaLast & 0xFFFF;
+	} else {
+		if(armState) {
+			value = CPUReadHalfWordQuick(reg[15].I + (address & 2));
+		} else {
+			value = CPUReadHalfWordQuick(reg[15].I);
+		}
+	}
 #ifdef GBA_LOGGING
-    if(systemVerbose & VERBOSE_ILLEGAL_READ) {
-      log("Illegal halfword read: %08x at %08x\n", address, armMode ?
-          armNextPC - 4 : armNextPC - 2);
-    }
+	if(systemVerbose & VERBOSE_ILLEGAL_READ) {
+		log("Illegal halfword read: %08x at %08x (%08x)\n", oldAddress, reg[15].I, value);
+	}
 #endif
-    if(cpuDmaHack) {
-      value = cpuDmaLast & 0xFFFF;
-    } else {
-      if(armState) {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        value = CPUReadHalfWordQuick(reg[15].I + (address & 2));
-#else
-        value = CPUReadHalfWordQuickDef(reg[15].I + (address & 2));
-#endif
-        } else {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        value = CPUReadHalfWordQuick(reg[15].I);
-#else
-        value = CPUReadHalfWordQuickDef(reg[15].I);
-#endif
-      }
-    }
-    break;
+	return value;
   }
 
-  if(address & 1) {
-    value = (value >> 8) | (value << 24);
+  if(oldAddress & 1) {
+	value = (value >> 8) | (value << 24);
+	#ifdef GBA_LOGGING
+	  if(systemVerbose & VERBOSE_UNALIGNED_MEMORY) {
+		  log("Unaligned halfword read from: %08x at %08x (%08x)\n", oldAddress, armMode ?
+			  armNextPC - 4 : armNextPC - 2, value);
+	  }
+	#endif
   }
 
   return value;
 }
 
-static inline u16 CPUReadHalfWordSigned(u32 address)
+static inline s16 CPUReadHalfWordSigned(u32 address)
 {
-  u16 value = CPUReadHalfWord(address);
+  s32 value = (s32)CPUReadHalfWord(address);
   if((address & 1))
-    value = (s8)value;
-  return value;
+  {
+#ifdef GBA_LOGGING
+	if(systemVerbose & VERBOSE_UNALIGNED_MEMORY) {
+		log("Unaligned signed halfword read from: %08x at %08x (%08x)\n", address, armMode ?
+			armNextPC - 4 : armNextPC - 2, value);
+	}
+#endif
+  }
+  return (s16)value;
 }
 
 static inline u8 CPUReadByte(u32 address)
 {
   switch(address >> 24) {
-  case 0x00:
+  case 0:
     if (reg[15].I >> 24) {
       if(address < 0x4000) {
 #ifdef GBA_LOGGING
         if(systemVerbose & VERBOSE_ILLEGAL_READ) {
-          log("Illegal byte read: %08x at %08x\n", address, armMode ?
-              armNextPC - 4 : armNextPC - 2);
+          log("Illegal byte read from bios: %08x at %08x\n", address, armMode ?
+            armNextPC - 4 : armNextPC - 2);
         }
 #endif
         return biosProtected[address & 3];
       } else goto unreadable;
     }
     return bios[address & 0x3FFF];
-  case 0x02:
+  case 2:
     return workRAM[address & 0x3FFFF];
-  case 0x03:
+  case 3:
     return internalRAM[address & 0x7fff];
-  case 0x04:
+  case 4:
     if((address < 0x4000400) && ioReadable[address & 0x3ff])
       return ioMem[address & 0x3ff];
     else goto unreadable;
-  case 0x05:
+  case 5:
     return paletteRAM[address & 0x3ff];
-  case 0x06:
+  case 6:
     address = (address & 0x1ffff);
     if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
-        return 0;
+      return 0;
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
     return vram[address];
-  case 0x07:
+  case 7:
     return oam[address & 0x3ff];
-  case 0x08:
-	// the real time clock doesn't support byte reads, so don't bother checking for it.
-  case 0x09:
-  case 0x0A:
-  case 0x0B:
-  case 0x0C:
-#ifdef USE_VM // Nintendo GC Virtual Memory
-	return VMRead8( address & 0x1FFFFFF );
-#else
+  case 8:
+  case 9:
+  case 10:
+  case 11:
+  case 12:
     return rom[address & 0x1FFFFFF];
-#endif
-  case 0x0D:
-    if(cpuEEPROMEnabled)
-      return eepromRead(address);
-    goto unreadable;
-  case 0x0E:
-	// Yoshi's Universal Gravitation (Topsy Turvy)
-	// Koro Koro
-    if(cpuEEPROMSensorEnabled) {
-      switch(address & 0x00008f00) {
-      case 0x8200:
-        return systemGetSensorX() & 255;
-      case 0x8300:
-        return (systemGetSensorX() >> 8)|0x80;
-      case 0x8400:
-        return systemGetSensorY() & 255;
-      case 0x8500:
-        return systemGetSensorY() >> 8;
-      }
-    }
-    if(cpuSramEnabled | cpuFlashEnabled)
-      return flashRead(address);
+  case 13:
+	return eepromRead(address);
+  case 14:
+  case 15:
+  {
+	if (cpuEEPROMSensorEnabled) {
+		switch (address & 0x00008f00) {
+		case 0x8200:
+			return systemGetSensorX() & 255;
+		case 0x8300:
+			return (systemGetSensorX() >> 8) | 0x80;
+		case 0x8400:
+			return systemGetSensorY() & 255;
+		case 0x8500:
+			return systemGetSensorY() >> 8;
+		}
+	}
+	return flashRead(address);
+  }
     // default
   default:
-  unreadable:
+unreadable:
 #ifdef GBA_LOGGING
     if(systemVerbose & VERBOSE_ILLEGAL_READ) {
       log("Illegal byte read: %08x at %08x\n", address, armMode ?
-          armNextPC - 4 : armNextPC - 2);
+        armNextPC - 4 : armNextPC - 2);
     }
 #endif
-    if(cpuDmaHack) {
-      return cpuDmaLast & 0xFF;
-    } else {
-      if(armState) {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        return CPUReadByteQuick(reg[15].I+(address & 3));
-#else
-        return CPUReadByteQuickDef(reg[15].I+(address & 3));
-#endif
-      } else {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        return CPUReadByteQuick(reg[15].I+(address & 1));
-#else
-        return CPUReadByteQuickDef(reg[15].I+(address & 1));
-#endif
-      }
-    }
-    break;
+	if(cpuDmaHack) {
+		return cpuDmaLast & 0xFF;
+	} else {
+		if(armState) {
+			return CPUReadByteQuick(reg[15].I + (address & 3));
+		} else {
+			return CPUReadByteQuick(reg[15].I + (address & 1));
+		}
+	}
   }
 }
 
@@ -525,19 +402,21 @@ static inline void CPUWriteMemory(u32 address, u32 value)
   if(address & 3) {
     if(systemVerbose & VERBOSE_UNALIGNED_MEMORY) {
       log("Unaligned word write: %08x to %08x from %08x\n",
-          value,
-          address,
-          armMode ? armNextPC - 4 : armNextPC - 2);
+        value,
+        address,
+        armMode ? armNextPC - 4 : armNextPC - 2);
     }
   }
 #endif
+
+  address &= 0xFFFFFFFC;
 
   switch(address >> 24) {
   case 0x02:
 #ifdef BKPT_SUPPORT
     if(*((u32 *)&freezeWorkRAM[address & 0x3FFFC]))
       cheatsWriteMemory(address & 0x203FFFC,
-                        value);
+      value);
     else
 #endif
       WRITE32LE(((u32 *)&workRAM[address & 0x3FFFC]), value);
@@ -546,7 +425,7 @@ static inline void CPUWriteMemory(u32 address, u32 value)
 #ifdef BKPT_SUPPORT
     if(*((u32 *)&freezeInternalRAM[address & 0x7ffc]))
       cheatsWriteMemory(address & 0x3007FFC,
-                        value);
+      value);
     else
 #endif
       WRITE32LE(((u32 *)&internalRAM[address & 0x7ffC]), value);
@@ -561,16 +440,15 @@ static inline void CPUWriteMemory(u32 address, u32 value)
 #ifdef BKPT_SUPPORT
     if(*((u32 *)&freezePRAM[address & 0x3fc]))
       cheatsWriteMemory(address & 0x70003FC,
-                        value);
+      value);
     else
 #endif
-    if(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE)
-    WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
+      WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
     break;
   case 0x06:
     address = (address & 0x1fffc);
     if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
-        return;
+      return;
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
 
@@ -580,16 +458,16 @@ static inline void CPUWriteMemory(u32 address, u32 value)
     else
 #endif
 
-    WRITE32LE(((u32 *)&vram[address]), value);
+      WRITE32LE(((u32 *)&vram[address]), value);
     break;
   case 0x07:
 #ifdef BKPT_SUPPORT
     if(*((u32 *)&freezeOAM[address & 0x3fc]))
       cheatsWriteMemory(address & 0x70003FC,
-                        value);
+      value);
     else
 #endif
-    WRITE32LE(((u32 *)&oam[address & 0x3fc]), value);
+      WRITE32LE(((u32 *)&oam[address & 0x3fc]), value);
     break;
   case 0x0D:
     if(cpuEEPROMEnabled) {
@@ -598,19 +476,20 @@ static inline void CPUWriteMemory(u32 address, u32 value)
     }
     goto unwritable;
   case 0x0E:
-    if(!eepromInUse | cpuSramEnabled | cpuFlashEnabled) {
+  case 0x0F:
+    if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled) {
       (*cpuSaveGameFunc)(address, (u8)value);
       break;
     }
     // default
   default:
-  unwritable:
+unwritable:
 #ifdef GBA_LOGGING
     if(systemVerbose & VERBOSE_ILLEGAL_WRITE) {
       log("Illegal word write: %08x to %08x from %08x\n",
-          value,
-          address,
-          armMode ? armNextPC - 4 : armNextPC - 2);
+        value,
+        address,
+        armMode ? armNextPC - 4 : armNextPC - 2);
     }
 #endif
     break;
@@ -623,19 +502,21 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
   if(address & 1) {
     if(systemVerbose & VERBOSE_UNALIGNED_MEMORY) {
       log("Unaligned halfword write: %04x to %08x from %08x\n",
-          value,
-          address,
-          armMode ? armNextPC - 4 : armNextPC - 2);
+        value,
+        address,
+        armMode ? armNextPC - 4 : armNextPC - 2);
     }
   }
 #endif
+
+  address &= 0xFFFFFFFE;
 
   switch(address >> 24) {
   case 2:
 #ifdef BKPT_SUPPORT
     if(*((u16 *)&freezeWorkRAM[address & 0x3FFFE]))
       cheatsWriteHalfWord(address & 0x203FFFE,
-                          value);
+      value);
     else
 #endif
       WRITE16LE(((u16 *)&workRAM[address & 0x3FFFE]),value);
@@ -644,7 +525,7 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
 #ifdef BKPT_SUPPORT
     if(*((u16 *)&freezeInternalRAM[address & 0x7ffe]))
       cheatsWriteHalfWord(address & 0x3007ffe,
-                          value);
+      value);
     else
 #endif
       WRITE16LE(((u16 *)&internalRAM[address & 0x7ffe]), value);
@@ -658,34 +539,33 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
 #ifdef BKPT_SUPPORT
     if(*((u16 *)&freezePRAM[address & 0x03fe]))
       cheatsWriteHalfWord(address & 0x70003fe,
-                          value);
+      value);
     else
 #endif
-    if(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE)
-    WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
+      WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
     break;
   case 6:
     address = (address & 0x1fffe);
     if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
-        return;
+      return;
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
 #ifdef BKPT_SUPPORT
     if(*((u16 *)&freezeVRAM[address]))
       cheatsWriteHalfWord(address + 0x06000000,
-                          value);
+      value);
     else
 #endif
-    WRITE16LE(((u16 *)&vram[address]), value);
+      WRITE16LE(((u16 *)&vram[address]), value);
     break;
   case 7:
 #ifdef BKPT_SUPPORT
     if(*((u16 *)&freezeOAM[address & 0x03fe]))
       cheatsWriteHalfWord(address & 0x70003fe,
-                          value);
+      value);
     else
 #endif
-    WRITE16LE(((u16 *)&oam[address & 0x3fe]), value);
+      WRITE16LE(((u16 *)&oam[address & 0x3fe]), value);
     break;
   case 8:
   case 9:
@@ -701,19 +581,20 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
     }
     goto unwritable;
   case 14:
-    if(!eepromInUse | cpuSramEnabled | cpuFlashEnabled) {
+  case 15:
+    if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled) {
       (*cpuSaveGameFunc)(address, (u8)value);
       break;
     }
     goto unwritable;
   default:
-  unwritable:
+unwritable:
 #ifdef GBA_LOGGING
     if(systemVerbose & VERBOSE_ILLEGAL_WRITE) {
       log("Illegal halfword write: %04x to %08x from %08x\n",
-          value,
-          address,
-          armMode ? armNextPC - 4 : armNextPC - 2);
+        value,
+        address,
+        armMode ? armNextPC - 4 : armNextPC - 2);
     }
 #endif
     break;
@@ -837,7 +718,8 @@ static inline void CPUWriteByte(u32 address, u8 b)
     }
     goto unwritable;
   case 14:
-    if (!(saveType == 5) && (!eepromInUse | cpuSramEnabled | cpuFlashEnabled)) {
+  case 15:
+    if ((saveType != 5) && ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)) {
 
       //if(!cpuEEPROMEnabled && (cpuSramEnabled | cpuFlashEnabled)) {
 

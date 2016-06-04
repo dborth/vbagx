@@ -40,7 +40,7 @@ u8  gbSgbScreenBuffer[4160];
 
 inline void gbSgbDraw24Bit(u8 *p, u16 v)
 {
-  *((u32*) p) = systemColorMap32[v];
+  memcpy(p, &systemColorMap32[v], 3);
 }
 
 inline void gbSgbDraw32Bit(u32 *p, u16 v)
@@ -188,9 +188,9 @@ void gbSgbRenderScreenToBuffer()
 
 void gbSgbDrawBorderTile(int x, int y, int tile, int attr)
 {
-  u16 *dest = (u16*)pix + ((y+1) * (256+2)) + x;
+  u16 *dest = (u16*)pix + (y * (256+2)) + x;
   u8 *dest8 = (u8*)pix + ((y*256)+x)*3;
-  u32 *dest32 = (u32*)pix + ((y+1)*257) + x;
+  u32 *dest32 = (u32*)pix + (y*257) + x;
 
   u8 *tileAddress = &gbSgbBorderChar[tile * 32];
   u8 *tileAddress2 = &gbSgbBorderChar[tile * 32 + 16];

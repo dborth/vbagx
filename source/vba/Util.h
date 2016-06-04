@@ -1,24 +1,5 @@
-// -*- C++ -*-
-// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
-// Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2004 Forgotten and the VBA development team
-
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2, or(at your option)
-// any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-
-#ifndef VBA_UTIL_H
-#define VBA_UTIL_H
+#ifndef UTIL_H
+#define UTIL_H
 
 #include "System.h"
 
@@ -29,28 +10,47 @@ enum IMAGE_TYPE {
 };
 
 // save game
-
 typedef struct {
-  void *address;
-  int size;
+	void *address;
+	int size;
 } variable_desc;
+bool utilWritePNGFile(const char *, int, int, u8 *);
+bool utilWriteBMPFile(const char *, int, int, u8 *);
+void utilApplyIPS(const char *ips, uint8_t **rom, int *size);
+bool utilIsGBAImage(const char *);
+bool utilIsGBImage(const char *);
+bool utilIsGzipFile(const char *);
+void utilStripDoubleExtension(const char *, char *);
+IMAGE_TYPE utilFindType(const char *);
+uint8_t *utilLoad(const char *, bool (*)(const char*), uint8_t *, int &);
 
-extern bool utilIsGBAImage(const char *);
-extern bool utilIsGBImage(const char *);
-extern bool utilIsZipFile(const char *);
+void utilPutDword(uint8_t *, uint32_t);
+void utilPutWord(uint8_t *, uint16_t);
+void utilWriteData(gzFile, variable_desc *);
+void utilReadData(gzFile, variable_desc *);
+void utilReadDataSkip(gzFile, variable_desc *);
+int utilReadInt(gzFile);
+void utilWriteInt(gzFile, int);
+gzFile utilGzOpen(const char *file, const char *mode);
+gzFile utilMemGzOpen(char *memory, int available, const char *mode);
+int utilGzWrite(gzFile file, const voidp buffer, unsigned int len);
+int utilGzRead(gzFile file, voidp buffer, unsigned int len);
+int utilGzClose(gzFile file);
+z_off_t utilGzSeek(gzFile file, z_off_t offset, int whence);
+long utilGzMemTell(gzFile file);
+void utilGBAFindSave(const u8 *, const int);
+void utilUpdateSystemColorMaps(bool lcd = false);
+bool utilFileExists( const char *filename );
 
-extern void utilPutDword(u8 *, u32);
-extern void utilPutWord(u8 *, u16);
-extern void utilWriteData(gzFile, variable_desc *);
-extern void utilReadData(gzFile, variable_desc *);
-extern void utilReadDataSkip(gzFile, variable_desc *);
-extern int utilReadInt(gzFile);
-extern void utilWriteInt(gzFile, int);
-extern gzFile utilGzOpen(const char *file, const char *mode);
-extern gzFile utilMemGzOpen(char *memory, int available, const char *mode);
-extern int utilGzWrite(gzFile file, const voidp buffer, unsigned int len);
-extern int utilGzRead(gzFile file, voidp buffer, unsigned int len);
-extern int utilGzClose(gzFile file);
-extern z_off_t utilGzSeek(gzFile file, z_off_t offset, int whence);
-extern long utilGzMemTell(gzFile file);
+
+#ifdef __LIBRETRO__
+void utilWriteIntMem(uint8_t *& data, int);
+void utilWriteMem(uint8_t *& data, const void *in_data, unsigned size);
+void utilWriteDataMem(uint8_t *& data, variable_desc *);
+
+int utilReadIntMem(const uint8_t *& data);
+void utilReadMem(void *buf, const uint8_t *& data, unsigned size);
+void utilReadDataMem(const uint8_t *& data, variable_desc *);
 #endif
+
+#endif // UTIL_H
