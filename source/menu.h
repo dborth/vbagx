@@ -21,6 +21,7 @@ void MainMenu (int menuitem);
 void ErrorPrompt(const char * msg);
 int ErrorPromptRetry(const char * msg);
 void InfoPrompt(const char * msg);
+int YesNoPrompt(const char *msg, bool yesDefault);
 void ShowAction (const char *msg);
 void CancelAction();
 void ShowProgress (const char *msg, int done, int total);
@@ -43,7 +44,8 @@ enum
 	MENU_GAMESETTINGS_MAPPINGS_MAP,
 	MENU_GAMESETTINGS_VIDEO,
 	MENU_GAMESETTINGS_CHEATS,
-	MENU_GAMESETTINGS_PALETTE
+	MENU_GAMESETTINGS_PALETTE,
+	MENU_SETTINGS_EMULATION
 };
 
 #endif

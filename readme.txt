@@ -1,8 +1,8 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
-                            - Visual Boy Advance GX -
-                         http://code.google.com/p/vba-wii   
-                               (Under GPL License)
+                  - Visual Boy Advance GX -
+               https://github.com/dborth/vba-wii
+                     (Under GPL License)
  
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
@@ -18,14 +18,85 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * IPS/UPS patch support
 * Custom controller configurations
 * SD, USB, DVD, SMB, Zip, and 7z support
-* Compatibility based on VBA-M r927
+* Compatibility based on VBA-M r1231
 * MEM2 ROM Storage for fast access
-* Auto frame skip for those core heavy games
+* Auto frame skip (optional) for those core heavy games
 * Turbo speed, video zooming, widescreen, and unfiltered video options
+* Native loading/saving of ROMS and SRAM from Goomba (a GB emulator for GBA)
+* Improved video rendering from RetroArch
+* Screenshots can be displayed on the main menu
+* Fixed pixel ratio mode (1x, 2x, and 3x)
+* Borders (from Super Game Boy games or custom from .png)
+* Wii U Pro Controller support
+* 240p support
 
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
 |0O×øo·                         UPDATE HISTORY                        ·oø×O0|
 `¨•¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨ ¨¨¨¨¨¨¨¨¨¨¨¨¨'
+
+[2.3.3] - Zopenko
+
+* fixes the gc pad down on file browser
+* added koston default green gb color screen
+* added the screenshot/preview button
+* added the wiiupro icon on the controller settings
+* increased and centered the screenshot image
+* added the screenshot white image background
+
+[2.3.2 - March 4, 2015] - libertyernie
+
+* Wii U: if widescreen is enabled in the Wii U setting, VBA GX will use a 16:9
+  aspect ratio, except while playing a game with fixed pixel mode turned on
+* There are now three options for border in the emulation settings menu (see
+  "Super Game Boy borders" section for details)
+  * PNG borders now supported for GBA games
+* Video mode "PAL (50Hz)" renamed to "PAL (576i)"
+* Video mode "PAL (60Hz)" renamed to "European RGB (480i)"
+* 240p support added (NTSC and European RGB modes)
+* All video modes now use a width of 704 for the best pixel aspect ratio
+
+[2.3.1b - November 8, 2014] - Glitch
+
+* Added FIX94's libwupc for WiiU Pro Controllers
+* Added tueidj's vWii Widescreen Fix
+
+[2.3.1 - October 14, 2014] - libertyernie
+
+* Super Game Boy border support
+  * Borders can be loaded from (and are automatically saved to) PNG files
+  * Any border loaded from the game itself will override the custom PNG border
+* Custom palette support from 2.2.8 restored
+* Option added to select Game Boy hardware (GB/SGB/GBC/auto)
+* Fixed pixel ratio mode added
+  * Overrides zoom and aspect ratio settings
+  * To squish the picture so it appears correctly on a 16:9 TV, you can open
+    the settings.xml file and add 10 to the gbFixed/gbaFixed value. However,
+	setting your TV to 4:3 mode will yield a better picture.
+* Real-time clock fixes for GB/GBC games, including Pokémon G/S/C
+  * RTC data in save file stored as little-endian
+  * Option added for UTC offset in the main menu (only required if you use the
+    same SRAM on other, time-zone-aware platforms)
+* New option for selecting "sharp" or "soft" filtering settings
+  * "Sharp" was the default for 480p, "soft" was the default for 480i
+
+[2.3.0 - September 10, 2014] - libertyernie
+
+* VBA-M core updated to r1231
+* Tiled rendering used for GBA games (new VBA-M feature, originally from
+  RetroArch) - provides a major speed boost!
+* Changes from cebolleto's version
+  * Screenshots can be displayed for each game on the menu
+  * Nicer 7-Zip support
+  * When you leave a folder, the folder you just left will be selected
+* New options available:
+  * Disable the " Auto" string being appended to save files
+  * Disable frameskip entirely on GBA
+* Keyboard fixed (from libwiigui r56)
+* GUI prompt is now purple instead of green (button colors more intuitive)
+* Goomba and Goomba Color ROM support:
+  * Any Game Boy ROM stored within a Goomba ROM can be loaded "natively" in
+    the Game Boy (Color) emulator (or the Goomba ROM can be loaded as GBA)
+  * Game Boy SRAM stored within Goomba SRAM is loaded and saved correctly
 
 [2.2.8 - July 29, 2012]
 
@@ -508,9 +579,8 @@ Z = Gameboy A Button
 C = Gameboy B Button
 
 Classic Controller:
-Use the buttons as labelled.
-A = Gameboy A Button
-B = Gameboy B Button
+B = Gameboy A Button
+Y = Gameboy B Button
 R = Gameboy R Button
 L = Gameboy L Button
 
@@ -534,6 +604,43 @@ HOME, Escape: returns you to the emulator's game menu. Then press B to go
 to the main menu and B again to return to the game.
 A+B, Spacebar, or right analog stick: fast forward
 Right analog stick: zoom (if enabled)
+
+-=[ Super Game Boy borders ]=-
+
+VBA-GX has supported Super Game Boy borders since 2.3.1. You can enable this
+feature in the Emulation settings on the main menu.
+
+Borders can be loaded from two locations:
+* PNG files in the borders folder (by default, /vbagx/borders)
+* The game itself
+
+Borders will only be loaded from the game itself when the emulator is running
+in Super Game Boy mode, and the border setting in Emulation settings is set to
+"From game (SGB only)". (You can also use the Emulation settings menu to
+force SGB mode even for Game Boy Color games.) If the borders folder exists,
+but no border for the game is present, the loaded Super Game Boy border will
+be written to a .png file, which can be loaded later in "From .png file" mode.
+
+In addition, if the borders folder exists but there is no border for the game,
+the first border loaded from the game will be written to a PNG file so it can
+be loaded in the future (even in Game Boy Color mode.) This means after you
+run a game once in SGB mode, you can then use the same border in GBC mode.
+
+If the border setting is set to "From .png file", borders will be loaded
+from the borders folder. Borders can be up to 640x480 and will work for both
+Game Boy (Color) and Game Boy Advance games.
+
+For both loading and saving, the PNG filename is [TITLE].png, where [TITLE]
+is the ROM title defined at 0x134 (for GB games) or 0xA0 (for GBA games). For
+example, POKEMON_SFXAAXE.png will be loaded for Pokémon Silver. If no PNG file
+by that name exists, VBA-GX will try loading default.png (for GB games) or
+defaultgba.png (for GBA games) instead.
+
+Since the borders are rendered along with the video output of the game, the
+pixels in the border will be the same size as game pixels. This means that
+a Game Boy game will appear in the middle 160x144 pixels of the border, and a
+Game Boy Advance game will appear in the middle 240x160 pixels, regardless of
+the resolution of the border PNG image.
 
 -=[ Match Wii Controls ]=-
 
@@ -577,8 +684,8 @@ Medal Of Honour Underground, Medal Of Honour Infiltrator
 
 One Piece can be played with One Piece Unlimited Adventure controls.
 
-Boktai 1, Boktai 2, Boktai 3, Kirby's Tilt n Tumble, and WarioWare Twisted 
-can be played with controls I designed for them.
+Boktai 1, Boktai 2, Boktai 3, and Kirby's Tilt n Tumble can be played with
+controls designed for them.
 
 -=[ Zelda, Match Wii Controls ]=-
 
@@ -740,8 +847,11 @@ A = spin attack
 X/Y = shoot, run, hold on to things, yoshi's tongue, etc.
 ZL or sometimes L = crouch or lay egg. Press in the air to butt stomp.
 + = pause
-L/R sometimes look around
+L/R = look around (if the game supports it)
+ZR = fast forward (8-bit Game Boy only)
 
+In Super Mario World and Super Mario Land 2, you can use the A or R
+buttons for a spin jump.
 
 -=[ Yoshi's Universal Gravitation (Topsy Turvy), Match Wii Controls ]=-
 
@@ -834,20 +944,9 @@ Z or 1 = change element, or change subscreen (L)
 
 -=[ WarioWare Twisted, Match Wii Controls ]=-
 
-Turn "Match Wii Controls" ON to use these controls.
-
-WarioWare Twisted uses similar controls to the Gameboy game.
-
-The Wii WarioWare Twisted controls are:
-=======================================
-
-Rotate the Wii Remote to rotate.
-
-Hold Z to lock the current menu item.
-
-A = Select
-B = Cancel
-+ = Start
+NOTE: For unknown reasons (but probably related to the update of the VBA-M
+emulator code), WarioWare Twisted will no longer work on VBA-GX. For now, you
+will need to go back to VBA-GX 2.2.8 to play it.
 
 -=[ Kirby's Tilt n Tumble, Match Wii Controls ]=-
 
@@ -987,15 +1086,55 @@ Z = grab
 right analog stick = fast forward
 1 = select (maybe does nothing)
 
+-=[ Kid Dracula, Match Wii Controls ]=-
+
+Turn "Match Wii Controls" ON to use these controls.
+
+(There's no Kid Dracula game for the Wii, but this is a good opportunity to
+show off some fancy memory-swapping tricks. -libertyernie)
+
+The Kid Dracula Wii controls (remote + nunchuk) are:
+====================================================
+
+A = jump
+B = use selected weapon
+Z = use NOR weapon (fireball)
+C = use BAT weapon (turn into bat for 5 sec)
++ = pause
+- = switch item
+1/2 = fast forward
+
+The Kid Dracula Classic Controller controls are:
+================================================
+
+A/B = jump
+Y = use selected weapon
+X = use NOR weapon (fireball)
+R/ZR = use BAT weapon (turn into bat for 5 sec)
++ = pause
+- = switch item
+1/2 = fast forward
+
+In Kid Dracula, pressing the "fire" button will always shoot a small fireball,
+but holding the button for a second or so to charge up the shoot lets you use
+whichever item is selected.
+
+Pressing B (nunchuk) or Y (classic) will switch back to whatever item was
+selected before you pressed Z/C (nunchuk) or X/R/ZR (classic), unless you have
+switched items since then.
+
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
 -=[ Credits ]=-
 
 			Coding & menu design		Tantric
+			Codebase update & Goomba	libertyernie
+			Menu screenshots			cebolleto
+			GBA tiled rendering			bgK (for RetroArch)
 			Additional coding			Carl Kenner, dancinninjac
 			Menu artwork				the3seashells
 			Menu sound					Peter de Man
-                      
+			                      
 			¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨
 			VBA GameCube/Wii			SoftDev, emukidid
 
@@ -1009,6 +1148,6 @@ right analog stick = fast forward
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                                   VBAGX Web Site
-                          http://code.google.com/p/vba-wii
+                          https://github.com/dborth/vba-wii
  
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤

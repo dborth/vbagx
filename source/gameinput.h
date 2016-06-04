@@ -115,7 +115,7 @@
 #define CVCLASSIC		gid('F','A','D')
 #define CVDOUBLE		gid('B','X','K')
 
-
+#define KIDDRACULA		0xFF0014
 
 #define MARBLEMADNESS   0xFF000A
 
@@ -205,6 +205,7 @@ u32 CastlevaniaAdventureInput(unsigned short pad);
 u32 CastlevaniaBelmontInput(unsigned short pad);
 u32 CastlevaniaLegendsInput(unsigned short pad);
 u32 CastlevaniaCircleMoonInput(unsigned short pad);
+u32 KidDraculaInput(unsigned short pad);
 
 #endif
 

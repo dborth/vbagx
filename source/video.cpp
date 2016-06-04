@@ -11,6 +11,7 @@
 
 #include <gccore.h>
 #include <ogcsys.h>
+#include <ogc/machine/processor.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,6 +20,7 @@
 #include "vbagx.h"
 #include "menu.h"
 #include "input.h"
+#include "vbasupport.h"
 
 s32 CursorX, CursorY;
 bool CursorVisible;
@@ -40,6 +42,11 @@ int gameScreenPngSize = 0;
 
 int screenheight = 480;
 int screenwidth = 640;
+
+u16 *InitialBorder = NULL;
+int InitialBorderWidth = 0;
+int InitialBorderHeight = 0;
+bool SGBBorderLoadedFromGame = false;
 
 /*** 3D GX ***/
 #define DEFAULT_FIFO_SIZE ( 256 * 1024 )
@@ -160,7 +167,7 @@ static inline void draw_init(void)
 
 	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565,
 		GX_CLAMP, GX_CLAMP, GX_FALSE);
-	if (!(GCSettings.render&1))
+	if (GCSettings.render == 2)
 		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
 }
 
@@ -246,7 +253,7 @@ static inline void draw_cursor(Mtx v)
 
 	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565,
 		GX_CLAMP, GX_CLAMP, GX_FALSE);
-	if (!(GCSettings.render&1))
+	if (GCSettings.render == 2)
 		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
 }
 #endif
@@ -290,6 +297,12 @@ static GXRModeObj * FindVideoMode()
 		case 4: // PAL (60Hz)
 			mode = &TVEurgb60Hz480IntDf;
 			break;
+		case 5: // NTSC (240p)
+			mode = &TVNtsc240Ds;
+			break;
+		case 6: // PAL (60Hz 240p)
+			mode = &TVEurgb60Hz240Ds;
+			break;
 		default:
 			mode = VIDEO_GetPreferredMode(NULL);
 
@@ -316,7 +329,7 @@ static GXRModeObj * FindVideoMode()
 	if (mode == &TVPal576IntDfScale)
 		pal = true;
 
-	if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
+	/*if (CONF_GetAspectRatio() == CONF_ASPECT_16_9 && mode->xfbHeight != 240)
 	{
 		if (pal)
 		{
@@ -334,9 +347,9 @@ static GXRModeObj * FindVideoMode()
 		mode->efbHeight = 456;
 		mode->viWidth = 686;
 	}
-	else
+	else*/
 	{
-		mode->viWidth = 672;
+		mode->viWidth = 704;
 	}
 
 	if (pal)
@@ -453,10 +466,7 @@ static inline void UpdateScaling()
 		TvAspectRatio = 4.0f/3.0f;
 	#endif
 
-	if (vwidth == 240) // GBA
-		GameboyAspectRatio = 240.0f/160.0f; // assumes square pixels on GB Advance
-	else // GB or GBC
-		GameboyAspectRatio = 160.0f/144.0f; // assumes square pixels on GB Colour
+	GameboyAspectRatio = ((vwidth * 1.0) / vheight);
 
 	if (TvAspectRatio>GameboyAspectRatio)
 	{
@@ -476,16 +486,36 @@ static inline void UpdateScaling()
 	}
 
 	// change zoom
-	if (vwidth == 240) // GBA
+	float zoomHor, zoomVert;
+	int fixed;
+	if (cartridgeType == 2) // GBA
 	{
-		xscale *= GCSettings.gbaZoomHor;
-		yscale *= GCSettings.gbaZoomVert;
+		zoomHor = GCSettings.gbaZoomHor;
+		zoomVert = GCSettings.gbaZoomVert;
+		fixed = GCSettings.gbaFixed;
 	}
 	else
 	{
-		xscale *= GCSettings.gbZoomHor;
-		yscale *= GCSettings.gbZoomVert;
+		zoomHor = GCSettings.gbZoomHor;
+		zoomVert = GCSettings.gbZoomVert;
+		fixed = GCSettings.gbFixed;
 	}
+
+	if (fixed) {
+		xscale = 320;
+		yscale = 240;
+	} else {
+		xscale *= zoomHor;
+		yscale *= zoomVert;
+	}
+	
+	#ifdef HW_RVL
+	if (fixed && CONF_GetAspectRatio() == CONF_ASPECT_16_9 && (*(u32*)(0xCD8005A0) >> 16) == 0xCAFE) // Wii U
+	{
+		/* vWii widescreen patch by tueidj */
+		write32(0xd8006a0, fixed ? 0x30000002 : 0x30000004), mask32(0xd8006a8, 0, 2);
+	}
+	#endif
 
 	// Set new aspect
 	square[0] = square[9]  = -xscale + GCSettings.xshift;
@@ -498,7 +528,23 @@ static inline void UpdateScaling()
 
 	memset(&view, 0, sizeof(Mtx));
 	guLookAt(view, &cam.pos, &cam.up, &cam.view);
-	GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
+	if (fixed) {
+		int ratio = fixed % 10;
+		bool widescreen = fixed / 10;
+	
+		float vw = vwidth * ratio;
+		if (widescreen) vw /= 4.0 / 3.0;
+		float vh = vheight * ratio;
+		
+		// 240p adjustment
+		if (GCSettings.videomode == 5 || GCSettings.videomode == 6) vw *= 2;
+		
+		float vx = (vmode->fbWidth - vw) / 2;
+		float vy = (vmode->efbHeight - vh) / 2;
+		GX_SetViewport(vx, vy, vw, vh, 0, 1);
+	} else {
+		GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
+	}
 
 	updateScaling = 0;
 }
@@ -523,7 +569,13 @@ ResetVideo_Emu ()
 
 	GX_SetDispCopySrc (0, 0, rmode->fbWidth, rmode->efbHeight);
 	GX_SetDispCopyDst (rmode->fbWidth, rmode->xfbHeight);
-	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render == 1) ? GX_TRUE : GX_FALSE, rmode->vfilter);	// deflickering filter only for filtered mode
+	u8 sharp[7] = {0,0,21,22,21,0,0};
+	u8 soft[7] = {8,8,10,12,10,8,8};
+	u8* vfilter =
+		GCSettings.render == 3 ? sharp
+		: GCSettings.render == 4 ? soft
+		: rmode->vfilter;
+	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render != 2) ? GX_TRUE : GX_FALSE, vfilter);	// deflickering filter only for filtered mode
 
 	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 	
@@ -542,7 +594,7 @@ ResetVideo_Emu ()
 	// reinitialize texture
 	GX_InvalidateTexAll ();
 	GX_InitTexObj (&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);	// initialize the texture obj we are going to use
-	if (!(GCSettings.render&1))
+	if (GCSettings.render == 2)
 		GX_InitTexObjLOD(&texobj,GX_NEAR,GX_NEAR_MIP_NEAR,2.5,9.0,0.0,GX_FALSE,GX_FALSE,GX_ANISO_1); // original/unfiltered video mode: force texture filtering OFF
 
 	GX_Flush();
@@ -569,26 +621,55 @@ void GX_Render_Init(int width, int height)
 	vheight = height;
 }
 
+bool borderAreaEmpty(const u16* buffer) {
+	u16 reference = buffer[0];
+	for (int y=0; y<40; y++) {
+		for (int x=0; x<256; x++) {
+			if (buffer[258*y + x] != reference) return false;
+		}
+	}
+	for (int y=40; y<184; y++) {
+		for (int x=0; x<48; x++) {
+			if (buffer[258*y + x] != reference) return false;
+		}
+		for (int x=208; x<224; x++) {
+			if (buffer[258*y + x] != reference) return false;
+		}
+	}
+	for (int y=184; y<224; y++) {
+		for (int x=0; x<256; x++) {
+			if (buffer[258*y + x] != reference) return false;
+		}
+	}
+	return true;
+}
+
 /****************************************************************************
 * GX_Render
 *
 * Pass in a buffer, width and height to update as a tiled RGB565 texture
+* (2 bytes per pixel)
 ****************************************************************************/
-void GX_Render(int width, int height, u8 * buffer, int pitch)
+void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 {
+	int borderWidth = InitialBorder ? InitialBorderWidth : gbWidth;
+	int borderHeight = InitialBorder ? InitialBorderHeight : gbHeight;
+
 	int h, w;
-	long long int *dst = (long long int *) texturemem;
+	int gbPitch = gbWidth * 2 + 4;
+	long long int *dst = (long long int *) texturemem; // Pointer in 8-byte units / 4-pixel units
 	long long int *src1 = (long long int *) buffer;
-	long long int *src2 = (long long int *) (buffer + pitch);
-	long long int *src3 = (long long int *) (buffer + (pitch << 1));
-	long long int *src4 = (long long int *) (buffer + (pitch * 3));
-	int rowpitch = (pitch >> 3) * 3;
-	int rowadjust = ( pitch % 8 ) << 2;
+	long long int *src2 = (long long int *) (buffer + gbPitch);
+	long long int *src3 = (long long int *) (buffer + (gbPitch << 1));
+	long long int *src4 = (long long int *) (buffer + (gbPitch * 3));
+	int srcrowpitch = (gbPitch >> 3) * 3;
+	int srcrowadjust = ( gbPitch % 8 ) << 2;
+	int dstrowpitch = borderWidth - gbWidth;
 
-	vwidth = width;
-	vheight = height;
+	vwidth = borderWidth;
+	vheight = borderHeight;
 
-	int vwid2 = (vwidth >> 2);
+	int vwid2 = (gbWidth >> 2);
 	char *ra = NULL;
 	
 	// Ensure previous vb has complete
@@ -605,8 +686,27 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 	GX_InvalidateTexAll();
 	GX_SetTevOp(GX_TEVSTAGE0, GX_DECAL);
 	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
-
-	for (h = 0; h < vheight; h += 4)
+	
+	if (gbWidth == 256 && gbHeight == 224 && !SGBBorderLoadedFromGame) {
+		if (borderAreaEmpty((u16*)buffer)) {
+			// TODO: don't paint empty SGB border
+		} else {
+			// don't try to load the default border anymore
+			SGBBorderLoadedFromGame = true;
+			SaveSGBBorderIfNoneExists(buffer);
+		}
+	}
+	
+	// The InitialBorder, if any, should already be properly tiled
+	if (InitialBorder) {
+		memcpy(dst, InitialBorder, borderWidth * borderHeight * 2);
+		
+		int rows_to_skip = (borderHeight - gbHeight) / 2;
+		if (rows_to_skip > 0) dst += rows_to_skip * borderWidth / 4;
+		dst += (borderWidth - gbWidth) / 2;
+	}
+	
+	for (h = 0; h < gbHeight; h += 4)
 	{
 		for (w = 0; w < vwid2; ++w)
 		{
@@ -616,24 +716,25 @@ void GX_Render(int width, int height, u8 * buffer, int pitch)
 			*dst++ = *src4++;
 		}
 
-		src1 += rowpitch;
-		src2 += rowpitch;
-		src3 += rowpitch;
-		src4 += rowpitch;
+		src1 += srcrowpitch;
+		src2 += srcrowpitch;
+		src3 += srcrowpitch;
+		src4 += srcrowpitch;
+		dst += dstrowpitch;
 
-		if ( rowadjust )
+		if ( srcrowadjust )
 		{
 			ra = (char *)src1;
-			src1 = (long long int *)(ra + rowadjust);
+			src1 = (long long int *)(ra + srcrowadjust);
 			ra = (char *)src2;
-			src2 = (long long int *)(ra + rowadjust);
+			src2 = (long long int *)(ra + srcrowadjust);
 			ra = (char *)src3;
-			src3 = (long long int *)(ra + rowadjust);
+			src3 = (long long int *)(ra + srcrowadjust);
 			ra = (char *)src4;
-			src4 = (long long int *)(ra + rowadjust);
+			src4 = (long long int *)(ra + srcrowadjust);
 		}
 	}
-
+	
 	// load texture into GX
 	DCFlushRange(texturemem, texturesize);
 
@@ -690,6 +791,14 @@ void TakeScreenshot()
 void
 ResetVideo_Menu ()
 {
+	#ifdef HW_RVL
+	if (CONF_GetAspectRatio() == CONF_ASPECT_16_9 && (*(u32*)(0xCD8005A0) >> 16) == 0xCAFE) // Wii U
+	{
+		/* vWii widescreen patch by tueidj */
+		write32(0xd8006a0, 0x30000004), mask32(0xd8006a8, 0, 2);
+	}
+	#endif
+	
 	Mtx44 p;
 	f32 yscale;
 	u32 xfbHeight;

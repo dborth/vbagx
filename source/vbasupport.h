@@ -28,5 +28,6 @@ bool LoadBatteryOrState(char * filepath, int action, bool silent);
 bool LoadBatteryOrStateAuto(int action, bool silent);
 bool SaveBatteryOrState(char * filepath, int action, bool silent);
 bool SaveBatteryOrStateAuto(int action, bool silent);
+bool SavePreviewImg (char * filepath, bool silent);
 
 #endif

@@ -1,8 +1,8 @@
 .PHONY = all wii gc wii-clean gc-clean wii-run gc-run
 
-all: wii gc
+all: wii
 
-clean: wii-clean gc-clean
+clean: wii-clean
 
 run: wii-run
 

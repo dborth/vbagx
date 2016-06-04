@@ -3,7 +3,7 @@
  * PNGU
  * 
  * Original author: frontier (http://frontier-dev.net)
- * Modified by Tantric, 2009-2010
+ * This is Tantric's modified/condensed version + RGB565 decoder from original
  *
  ***************************************************************************/
 
@@ -16,18 +16,6 @@
 #define PNGU_SOURCE_BUFFER				1
 #define PNGU_SOURCE_DEVICE				2
 
-// Return codes
-#define PNGU_OK							0
-#define PNGU_ODD_WIDTH					1
-#define PNGU_ODD_STRIDE					2
-#define PNGU_INVALID_WIDTH_OR_HEIGHT	3
-#define PNGU_FILE_IS_NOT_PNG			4
-#define PNGU_UNSUPPORTED_COLOR_TYPE		5
-#define PNGU_NO_FILE_SELECTED			6
-#define PNGU_CANT_OPEN_FILE				7
-#define PNGU_CANT_READ_FILE				8
-#define PNGU_LIB_ERROR					9
-
 // Color types
 #define PNGU_COLOR_TYPE_GRAY			1
 #define PNGU_COLOR_TYPE_GRAY_ALPHA		2
@@ -37,7 +25,7 @@
 #define PNGU_COLOR_TYPE_UNKNOWN 		6
 
 // PNGU Image context struct
-struct _IMGCTX
+struct _IMGCTX 
 {
 	int source;
 	void *buffer;
@@ -311,7 +299,7 @@ static int pngu_decode (IMGCTX ctx, u32 width, u32 height, u32 stripAlpha)
 		return PNGU_INVALID_WIDTH_OR_HEIGHT;
 
 	// Check if color type is supported by PNGU
-	if ( (ctx->prop.imgColorType == PNGU_COLOR_TYPE_PALETTE) || (ctx->prop.imgColorType == PNGU_COLOR_TYPE_UNKNOWN) )
+	if (ctx->prop.imgColorType == PNGU_COLOR_TYPE_UNKNOWN)
 		return PNGU_UNSUPPORTED_COLOR_TYPE;
 
 	// Scale 16 bit samples to 8 bit
@@ -329,6 +317,10 @@ static int pngu_decode (IMGCTX ctx, u32 width, u32 height, u32 stripAlpha)
 	// Transform grayscale images to RGB
 	if ( (ctx->prop.imgColorType == PNGU_COLOR_TYPE_GRAY) || (ctx->prop.imgColorType == PNGU_COLOR_TYPE_GRAY_ALPHA) )
 		png_set_gray_to_rgb (ctx->png_ptr);
+		
+	// Transform palette images to RGB
+	if (ctx->prop.imgColorType == PNGU_COLOR_TYPE_PALETTE)
+		png_set_palette_to_rgb(ctx->png_ptr);
 
 	// Flush transformations
 	png_read_update_info (ctx->png_ptr, ctx->info_ptr);
@@ -477,6 +469,70 @@ static u8 * PNGU_DecodeTo4x4RGBA8 (IMGCTX ctx, u32 width, u32 height, int * dstW
 	*dstHeight = padHeight;
 	DCFlushRange(dst, len);
 	return dst;
+}
+
+
+int PNGU_DecodeTo4x4RGB565 (IMGCTX ctx, u32 width, u32 height, void *buffer)
+{
+	int result;
+	u32 x, y, qwidth, qheight;
+
+	// width and height need to be divisible by four
+	if ((width % 4) || (height % 4))
+		return PNGU_INVALID_WIDTH_OR_HEIGHT;
+
+	result = pngu_decode (ctx, width, height, 1);
+	if (result != PNGU_OK)
+		return result;
+
+	// Copy image to the output buffer
+	qwidth = width / 4;
+	qheight = height / 4;
+
+	for (y = 0; y < qheight; y++)
+		for (x = 0; x < qwidth; x++)
+		{
+			int blockbase = (y * qwidth + x) * 4;
+
+			u64 field64 = *((u64 *)(ctx->row_pointers[y*4]+x*12));
+			u64 field32 = (u64) *((u32 *)(ctx->row_pointers[y*4]+x*12+8));
+			((u64 *) buffer)[blockbase] = 
+				(((field64 & 0xF800000000000000ULL) | ((field64 & 0xFC000000000000ULL) << 3) | ((field64 & 0xF80000000000ULL) << 5)) | 
+				(((field64 & 0xF800000000ULL) << 8) | ((field64 & 0xFC000000ULL) << 11) | ((field64 & 0xF80000ULL) << 13)) | 
+				(((field64 & 0xF800ULL) << 16) | ((field64 & 0xFCULL) << 19) | ((field32 & 0xF8000000ULL) >> 11)) |
+				(((field32 & 0xF80000ULL) >> 8) | ((field32 & 0xFC00ULL) >> 5) | ((field32 & 0xF8ULL) >> 3)));
+
+			field64 = *((u64 *)(ctx->row_pointers[y*4+1]+x*12));
+			field32 = (u64) *((u32 *)(ctx->row_pointers[y*4+1]+x*12+8));
+			((u64 *) buffer)[blockbase+1] = 
+				(((field64 & 0xF800000000000000ULL) | ((field64 & 0xFC000000000000ULL) << 3) | ((field64 & 0xF80000000000ULL) << 5)) | 
+				(((field64 & 0xF800000000ULL) << 8) | ((field64 & 0xFC000000ULL) << 11) | ((field64 & 0xF80000ULL) << 13)) | 
+				(((field64 & 0xF800ULL) << 16) | ((field64 & 0xFCULL) << 19) | ((field32 & 0xF8000000ULL) >> 11)) |
+				(((field32 & 0xF80000ULL) >> 8) | ((field32 & 0xFC00ULL) >> 5) | ((field32 & 0xF8ULL) >> 3)));
+
+			field64 = *((u64 *)(ctx->row_pointers[y*4+2]+x*12));
+			field32 = (u64) *((u32 *)(ctx->row_pointers[y*4+2]+x*12+8));
+			((u64 *) buffer)[blockbase+2] = 
+				(((field64 & 0xF800000000000000ULL) | ((field64 & 0xFC000000000000ULL) << 3) | ((field64 & 0xF80000000000ULL) << 5)) | 
+				(((field64 & 0xF800000000ULL) << 8) | ((field64 & 0xFC000000ULL) << 11) | ((field64 & 0xF80000ULL) << 13)) | 
+				(((field64 & 0xF800ULL) << 16) | ((field64 & 0xFCULL) << 19) | ((field32 & 0xF8000000ULL) >> 11)) |
+				(((field32 & 0xF80000ULL) >> 8) | ((field32 & 0xFC00ULL) >> 5) | ((field32 & 0xF8ULL) >> 3)));
+
+			field64 = *((u64 *)(ctx->row_pointers[y*4+3]+x*12));
+			field32 = (u64) *((u32 *)(ctx->row_pointers[y*4+3]+x*12+8));
+			((u64 *) buffer)[blockbase+3] = 
+				(((field64 & 0xF800000000000000ULL) | ((field64 & 0xFC000000000000ULL) << 3) | ((field64 & 0xF80000000000ULL) << 5)) | 
+				(((field64 & 0xF800000000ULL) << 8) | ((field64 & 0xFC000000ULL) << 11) | ((field64 & 0xF80000ULL) << 13)) | 
+				(((field64 & 0xF800ULL) << 16) | ((field64 & 0xFCULL) << 19) | ((field32 & 0xF8000000ULL) >> 11)) |
+				(((field32 & 0xF80000ULL) >> 8) | ((field32 & 0xFC00ULL) >> 5) | ((field32 & 0xF8ULL) >> 3)));
+		}
+	
+	// Free resources
+	free (ctx->img_data);
+	free (ctx->row_pointers);
+
+	// Success
+	return PNGU_OK;
 }
 
 IMGCTX PNGU_SelectImageFromBuffer (const void *buffer)
@@ -742,6 +798,41 @@ int PNGU_EncodeFromEFB (IMGCTX ctx, u32 width, u32 height)
 			tmpbuffer[tmpxy  ] = color.r; // R
 			tmpbuffer[tmpxy+1] = color.g; // G
 			tmpbuffer[tmpxy+2] = color.b; // B
+		}
+	}
+
+	res = PNGU_EncodeFromRGB (ctx, width, height, tmpbuffer, 0);
+	free(tmpbuffer);
+	return res;
+}
+
+// Added by libertyernie
+int PNGU_EncodeFromLinearRGB565 (IMGCTX ctx, u32 width, u32 height, const void* buffer, int rowlength)
+{
+	int res;
+	u32 x, y, tmpy1, tmpxy;
+
+	u16 * src = (u16 *)buffer;
+	unsigned char * tmpbuffer = malloc(width*height*3);
+
+	if(!tmpbuffer)
+		return PNGU_LIB_ERROR;
+
+	for(y=0; y < height; y++)
+	{
+		tmpy1 = y * width * 3;
+
+		for(x=0; x < width; x++)
+		{
+			tmpxy = x * 3 + tmpy1;
+			u16 color = *src++;
+			tmpbuffer[tmpxy  ] = (color >> 11) << 3; // R
+			tmpbuffer[tmpxy+1] = ((color >> 6) & 31) << 3; // G - discard least significant byte
+			tmpbuffer[tmpxy+2] = (color & 31) << 3; // B
+		}
+		
+		if (rowlength > width) {
+			src += (rowlength - width);
 		}
 	}
 

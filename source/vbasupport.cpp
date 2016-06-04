@@ -16,6 +16,9 @@
 #include <malloc.h>
 #include <ogc/lwp_watchdog.h>
 
+#include <sys/stat.h>
+#include <errno.h>
+
 #include "vbagx.h"
 #include "fileop.h"
 #include "filebrowser.h"
@@ -46,6 +49,9 @@
 #include "vba/gb/gbCheats.h"
 #include "vba/gb/gbSound.h"
 
+#include "goomba/goombarom.h"
+#include "goomba/goombasav.h"
+
 static u32 start;
 int cartridgeType = 0;
 u32 RomIdCode;
@@ -72,7 +78,7 @@ int systemGreenShift = 0;
 int systemColorDepth = 0;
 u16 systemGbPalette[24];
 u16 systemColorMap16[0x10000];
-u32 *systemColorMap32 = NULL;
+u32 systemColorMap32[0x10000];
 
 void gbSetPalette(u32 RRGGBB[]);
 bool StartColorizing();
@@ -141,29 +147,36 @@ void system10Frames(int rate)
 
 	if (cartridgeType == 2) // GBA games require frameskipping
 	{
-		// consider increasing skip
-		if(speed < 60)
-			systemFrameSkip += 4;
-		else if(speed < 70)
-			systemFrameSkip += 3;
-		else if(speed < 80)
-			systemFrameSkip += 2;
-		else if(speed < 98)
-			++systemFrameSkip;
-
-		// consider decreasing skip
-		else if(speed > 185)
-			systemFrameSkip -= 3;
-		else if(speed > 145)
-			systemFrameSkip -= 2;
-		else if(speed > 125)
-			systemFrameSkip -= 1;
-
-		// correct invalid frame skip values
-		if(systemFrameSkip > 20)
-			systemFrameSkip = 20;
-		else if(systemFrameSkip < 0)
+		if (!GCSettings.gbaFrameskip)
+		{
 			systemFrameSkip = 0;
+		}
+		else
+		{
+			// consider increasing skip
+			if(speed < 60)
+				systemFrameSkip += 4;
+			else if(speed < 70)
+				systemFrameSkip += 3;
+			else if(speed < 80)
+				systemFrameSkip += 2;
+			else if(speed < 98)
+				++systemFrameSkip;
+
+			// consider decreasing skip
+			else if(speed > 185)
+				systemFrameSkip -= 3;
+			else if(speed > 145)
+				systemFrameSkip -= 2;
+			else if(speed > 125)
+				systemFrameSkip -= 1;
+
+			// correct invalid frame skip values
+			if(systemFrameSkip > 20)
+				systemFrameSkip = 20;
+			else if(systemFrameSkip < 0)
+				systemFrameSkip = 0;
+		}
 	}
 	lastTime = gettime();
 }
@@ -267,7 +280,35 @@ bool LoadBatteryOrState(char * filepath, int action, bool silent)
 
 	// load the file into savebuffer
 	offset = LoadFile(filepath, silent);
-
+			
+	if (cartridgeType == 1 && goomba_is_sram(savebuffer)) {
+		void* cleaned = goomba_cleanup(savebuffer);
+		if (savebuffer == NULL) {
+			ErrorPrompt(goomba_last_error());
+			offset = 0;
+		} else {
+			if (cleaned != savebuffer) {
+				memcpy(savebuffer, cleaned, GOOMBA_COLOR_SRAM_SIZE);
+				free(cleaned);
+			}
+			stateheader* sh = stateheader_for(savebuffer, RomTitle);
+			if (sh == NULL) {
+				ErrorPrompt(goomba_last_error());
+				offset = 0;
+			} else {
+				goomba_size_t outsize;
+				void* gbc_sram = goomba_extract(savebuffer, sh, &outsize);
+				if (gbc_sram == NULL) {
+					ErrorPrompt(goomba_last_error());
+					offset = 0;
+				} else {
+					memcpy(savebuffer, gbc_sram, outsize);
+					offset = outsize;
+					free(gbc_sram);
+				}
+			}
+		}
+	}
 	// load savebuffer into VBA memory
 	if (offset > 0)
 	{
@@ -318,6 +359,9 @@ bool LoadBatteryOrStateAuto(int action, bool silent)
 	{
 		if (LoadBatteryOrState(filepath, action, SILENT))
 			return true;
+
+		if (!GCSettings.AppendAuto)
+			return false;
 
 		// look for file with no number or Auto appended
 		if(!MakeFilePath(filepath2, action, ROMFilename, -1))
@@ -372,6 +416,41 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 			datasize = MemgbWriteBatteryFile((char *)savebuffer);
 		else
 			datasize = MemCPUWriteBatteryFile((char *)savebuffer);
+		
+		if (cartridgeType == 1) {
+			const char* generic_goomba_error = "Cannot save SRAM in Goomba format (did not load correctly.)";
+			// check for goomba sram format
+			char* old_sram = (char*)malloc(GOOMBA_COLOR_SRAM_SIZE);
+			size_t br = LoadFile(old_sram, filepath, GOOMBA_COLOR_SRAM_SIZE, true);
+			if (br >= GOOMBA_COLOR_SRAM_SIZE && goomba_is_sram(old_sram)) {
+				void* cleaned = goomba_cleanup(old_sram);
+				if (cleaned == NULL) {
+					ErrorPrompt(generic_goomba_error);
+					datasize = 0;
+				} else {
+					if (cleaned != old_sram) {
+						free(old_sram);
+						old_sram = (char*)cleaned;
+					}
+					stateheader* sh = stateheader_for(old_sram, RomTitle);
+					if (sh == NULL) {
+						// Game probably doesn't use SRAM
+						datasize = 0;
+					} else {
+						void* new_sram = goomba_new_sav(old_sram, sh, savebuffer, datasize);
+						if (new_sram == NULL) {
+							ErrorPrompt(goomba_last_error());
+							datasize = 0;
+						} else {
+							memcpy(savebuffer, new_sram, GOOMBA_COLOR_SRAM_SIZE);
+							datasize = GOOMBA_COLOR_SRAM_SIZE;
+							free(new_sram);
+						}
+					}
+				}
+			}
+			free(old_sram);
+		}
 	}
 	else
 	{
@@ -410,6 +489,30 @@ bool SaveBatteryOrStateAuto(int action, bool silent)
 		return false;
 
 	return SaveBatteryOrState(filepath, action, silent);
+}
+/****************************************************************************
+ * Save Screenshot / Preview image
+ ***************************************************************************/
+
+int SavePreviewImg(char * filepath, bool silent)
+{
+	int device;
+	
+	if(!FindDevice(filepath, &device))
+		return 0;
+
+	if(gameScreenPngSize > 0)
+	{
+		char screenpath[1024];
+		strcpy(screenpath, filepath);
+		screenpath[strlen(screenpath)] = 0;
+		sprintf(screenpath, "%s.png", screenpath);
+		SaveFile((char *)gameScreenPng, screenpath, gameScreenPngSize, silent);
+	}
+
+	if(!silent)
+		InfoPrompt ("Save successful");
+	return 1;
 }
 
 /****************************************************************************
@@ -614,11 +717,14 @@ void systemUpdateMotionSensor()
 ****************************************************************************/
 static int srcWidth = 0;
 static int srcHeight = 0;
-static int srcPitch = 0;
 
 void systemDrawScreen()
 {
-	GX_Render( srcWidth, srcHeight, pix, srcPitch );
+	GX_Render(
+		srcWidth,
+		srcHeight,
+		pix
+	);
 }
 
 static bool ValidGameId(u32 id)
@@ -710,6 +816,8 @@ static void gbApplyPerImagePreferences()
 			RomIdCode = SWEP5;
 		else if (strcmp(RomTitle, "SRJ DMG") == 0)
 			RomIdCode = SWEP6;
+		else if (strcmp(RomTitle, "KID DRACULA") == 0)
+			RomIdCode = KIDDRACULA;
 	}
 	// look for matching palettes if a monochrome gameboy game
 	// (or if a Super Gameboy game, but the palette will be ignored later in that case)
@@ -825,11 +933,143 @@ void LoadPatch()
 	FreeSaveBuffer ();
 }
 
+void SaveSGBBorderIfNoneExists(const void* buffer) {
+	char* borderPath = NULL;
+	FILE* f = NULL;
+	void* rgba8 = NULL;
+	IMGCTX pngContext = NULL;
+	
+	int err;
+	
+	struct stat s;
+	borderPath = AllocAndGetPNGBorderPath(NULL);
+	
+	char* slash = strrchr(borderPath, '/');
+	*slash = '\0'; // cut string off at directory name
+	
+	err = stat(borderPath, &s);
+	if (err == -1) goto cleanup;
+	if (!S_ISDIR(s.st_mode)) goto cleanup;
+	
+	*slash = '/'; // restore slash, bring filename back
+	
+	err = stat(borderPath, &s);
+	if (err != -1 || errno != ENOENT) goto cleanup;
+	
+	f = fopen(borderPath, "wb");
+	if (!f) goto cleanup;
+	
+	rgba8 = malloc(256*224*3);
+	if (!rgba8) goto cleanup;
+	pngContext = PNGU_SelectImageFromBuffer(rgba8);
+	if (pngContext == NULL) goto cleanup;
+	
+	PNGU_EncodeFromLinearRGB565(pngContext, 256, 224, buffer, 258);
+	fwrite(rgba8, 1, 256*224*3, f);
+	
+cleanup:
+	if (borderPath) free(borderPath);
+	if (f) fclose(f);
+	if (rgba8) free(rgba8);
+	if (pngContext) PNGU_ReleaseImageContext(pngContext);
+}
+
+char* AllocAndGetPNGBorderPath(const char* title) {
+	const char* method = pathPrefix[GCSettings.LoadMethod];
+	const char* folder = GCSettings.BorderFolder;
+	
+	char tmp[13];
+	
+	// If no title was passed in, get the rom title
+	if (title == NULL) {
+		if (cartridgeType == 1) {
+			title = gb_get_title(gbRom, NULL);
+		} else if (cartridgeType == 2) {
+			memcpy(tmp, rom + 0xA0, 12);
+			tmp[12] = '\0';
+			title = tmp;
+		}
+	}
+	
+	size_t length = strlen(method) + strlen(folder) + strlen(title) + 6;
+	char* path = (char*)malloc(length);
+	if (path) sprintf(path, "%s%s/%s.png", method, folder, title);
+	return path;
+}
+
+void LoadPNGBorder(const char* fallback)
+{
+	void* png_tmp_buf = malloc(1024*1024);
+	char* borderPath = AllocAndGetPNGBorderPath(NULL);
+	PNGUPROP imgProp;
+	IMGCTX ctx = NULL;
+	char error[1024]; error[1023] = 0;
+	int r;
+	
+	bool borderLoaded = LoadFile((char*)png_tmp_buf, borderPath, 1024*1024, SILENT);
+	if (!borderLoaded) {
+		// Try default border.png
+		free(borderPath);
+		borderPath = AllocAndGetPNGBorderPath(fallback);
+		borderLoaded = LoadFile((char*)png_tmp_buf, borderPath, 1024*1024, SILENT);
+	}
+	if (!borderLoaded) goto cleanup;
+	
+	ctx = PNGU_SelectImageFromBuffer(png_tmp_buf);
+	
+	if (ctx == NULL) {
+		snprintf(error, 1023, "Error reading %s", borderPath);
+		ErrorPrompt(error);
+		goto cleanup;
+	}
+	
+	r = PNGU_GetImageProperties(ctx, &imgProp);
+	if (r != PNGU_OK) {
+		snprintf(error, 1023, "PNGU properties error (%d): %s", r, borderPath);
+		ErrorPrompt(error);
+		goto cleanup;
+	}
+	
+	if (imgProp.imgWidth > 640 || imgProp.imgHeight > 480) {
+		snprintf(error, 1023, "Wrong size (should be 640x480 or smaller): %s", borderPath);
+		ErrorPrompt(error);
+		goto cleanup;
+	}
+	
+	InitialBorder = (u16*)malloc(640*480*2);
+	r = PNGU_DecodeTo4x4RGB565 (ctx, imgProp.imgWidth, imgProp.imgHeight, InitialBorder);
+	if (r != PNGU_OK) {
+		snprintf(error, 1023, "PNGU decoding error (%d): %s", r, borderPath);
+		ErrorPrompt(error);
+		free(InitialBorder);
+		InitialBorder = NULL;
+		goto cleanup;
+	}
+	
+	InitialBorderWidth = imgProp.imgWidth;
+	InitialBorderHeight = imgProp.imgHeight;
+	
+cleanup:
+	if (png_tmp_buf) free(png_tmp_buf);
+	if (borderPath) free(borderPath);
+	if (ctx) PNGU_ReleaseImageContext(ctx);
+}
+
 extern bool gbUpdateSizes();
 
 bool LoadGBROM()
 {
-	gbRom = (u8 *)malloc(1024*1024*4); // allocate 4 MB to GB ROM
+	gbEmulatorType = GCSettings.GBHardware;
+
+	if (browserList[browser.selIndex].length > 1024*1024*8) {
+		InfoPrompt("ROM size is too large (> 8 MB)");
+		return false;
+	}
+	gbRom = (u8 *)malloc(1024*1024*8); // 32 MB is too much for sure
+	if (!gbRom) {
+		InfoPrompt("Unable to allocate 8 MB of memory");
+		return false;
+	}
 	bios = (u8 *)calloc(1,0x100);
 
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
@@ -847,6 +1087,27 @@ bool LoadGBROM()
 	{
 		gbRomSize = LoadSzFile(szpath, (unsigned char *)gbRom);
 	}
+	
+	const void* firstRom = gb_first_rom(gbRom, gbRomSize);
+	const void* secondRom = gb_next_rom(gbRom, gbRomSize, firstRom);
+	if (firstRom != NULL && firstRom != gbRom) {
+		char msgbuf[32];
+		const void* rom;
+		for (rom = firstRom; rom != NULL; rom = gb_next_rom(gbRom, gbRomSize, rom)) {
+			sprintf(msgbuf, "Load %s?", gb_get_title(rom, NULL));
+			if (secondRom == NULL || YesNoPrompt(msgbuf, true)) {
+				gbRomSize = gb_rom_size(rom);
+				memmove(gbRom, rom, gbRomSize);
+				break;
+			}
+		}
+		if (rom == NULL) {
+			InfoPrompt("No more ROMs found in the file.");
+			return false;
+		}
+	}
+	
+	if (GCSettings.SGBBorder == 2) LoadPNGBorder("default");
 
 	if(gbRomSize <= 0)
 		return false;
@@ -854,10 +1115,24 @@ bool LoadGBROM()
 	return gbUpdateSizes();
 }
 
+bool utilIsZipFile(const char* file)
+{
+  if(strlen(file) > 4)
+    {
+      char * p = strrchr(file,'.');
+      if(p != NULL)
+        {
+          if(strcasecmp(p, ".zip") == 0)
+            return true;
+        }
+	}
+	return false;
+}
+
 bool LoadVBAROM()
 {
 	cartridgeType = 0;
-	bool loaded = false;
+	int loaded = 0;
 
 	// image type (checks file extension)
 	if(utilIsGBAImage(browserList[browser.selIndex].filename))
@@ -907,49 +1182,57 @@ bool LoadVBAROM()
 
 	srcWidth = 0;
 	srcHeight = 0;
-	srcPitch = 0;
 
 	VMClose(); // cleanup GBA memory
 	gbCleanUp(); // cleanup GB memory
+	
+	if (InitialBorder != NULL) {
+		free(InitialBorder);
+		InitialBorder = NULL;
+	}
+	SGBBorderLoadedFromGame = false; // don't try to copy sgb border from game to png unless we're in sgb mode
 
-	switch(cartridgeType)
+	if(cartridgeType == 2)
 	{
-		case 2:
-			emulator = GBASystem;
-			srcWidth = 240;
-			srcHeight = 160;
-			loaded = VMCPULoadROM();
-			srcPitch = 484;
-			soundSetSampleRate(22050); //44100 / 2
-			cpuSaveType = 0;
-			break;
+		emulator = GBASystem;
+		srcWidth = 240;
+		srcHeight = 160;
+		loaded = VMCPULoadROM();
+		soundSetSampleRate(22050); //44100 / 2
+		cpuSaveType = 0;
+		if (loaded == 2) {
+			loaded = 0;
+			cartridgeType = 1;
+		} else if (loaded == 1 && GCSettings.SGBBorder == 2) {
+			LoadPNGBorder("defaultgba");
+		}
+	}
+	
+	if (cartridgeType == 1)
+	{
+		emulator = GBSystem;
+		gbBorderOn = (GCSettings.SGBBorder == 1);
 
-		case 1:
-			emulator = GBSystem;
+		if(gbBorderOn)
+		{
+			srcWidth = 256;
+			srcHeight = 224;
+			gbBorderLineSkip = 256;
+			gbBorderColumnSkip = 48;
+			gbBorderRowSkip = 40;
+			SGBBorderLoadedFromGame = false; // try to load the border during rendering
+		}
+		else
+		{
+			srcWidth = 160;
+			srcHeight = 144;
+			gbBorderLineSkip = 160;
+			gbBorderColumnSkip = 0;
+			gbBorderRowSkip = 0;
+		}
 
-			gbBorderOn = 0; // GB borders always off
-
-			if(gbBorderOn)
-			{
-				srcWidth = 256;
-				srcHeight = 224;
-				gbBorderLineSkip = 256;
-				gbBorderColumnSkip = 48;
-				gbBorderRowSkip = 40;
-			}
-			else
-			{
-				srcWidth = 160;
-				srcHeight = 144;
-				gbBorderLineSkip = 160;
-				gbBorderColumnSkip = 0;
-				gbBorderRowSkip = 0;
-			}
-
-			loaded = LoadGBROM();
-			srcPitch = 324;
-			soundSetSampleRate(44100);
-			break;
+		loaded = LoadGBROM();
+		soundSetSampleRate(44100);
 	}
 
 	if(!loaded)
@@ -960,7 +1243,11 @@ bool LoadVBAROM()
 	else
 	{
 		// Setup GX
-		GX_Render_Init(srcWidth, srcHeight);
+		if (InitialBorder) {
+			GX_Render_Init(InitialBorderWidth, InitialBorderHeight);
+		} else {
+			GX_Render_Init(srcWidth, srcHeight);
+		}
 
 		if (cartridgeType == 1)
 		{
@@ -1023,9 +1310,9 @@ void InitialisePalette()
 	// Build GBPalette
 	for( i = 0; i < 24; )
 	{
-		systemGbPalette[i++] = (0x1f) | (0x1f << 5) | (0x1f << 10);
-		systemGbPalette[i++] = (0x15) | (0x15 << 5) | (0x15 << 10);
-		systemGbPalette[i++] = (0x0c) | (0x0c << 5) | (0x0c << 10);
+		systemGbPalette[i++] = (0x1c) | (0x1e << 5) | (0x1c << 10);
+		systemGbPalette[i++] = (0x10) | (0x17 << 5) | (0x0b << 10);
+		systemGbPalette[i++] = (0x27) | (0x0c << 5) | (0x0a << 10);
 		systemGbPalette[i++] = 0;
 	}
 	// Set palette etc - Fixed to RGB565

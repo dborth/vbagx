@@ -396,13 +396,8 @@ u32 MarioLand2Input(unsigned short pad) {
 		if (wp->btns_h & WPAD_CLASSIC_BUTTON_X || wp->btns_h & WPAD_CLASSIC_BUTTON_Y || run)
 			J |= VBA_BUTTON_B;
 		// Spin attack
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_A)
+		if (wp->btns_h & WPAD_CLASSIC_BUTTON_A || wp->btns_h & WPAD_CLASSIC_BUTTON_FULL_R)
 			J |= VBA_DOWN | VBA_BUTTON_A;
-		// Camera
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_FULL_L)
-			J |= VBA_DOWN | VBA_BUTTON_B;
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_FULL_R)
-			J |= VBA_UP | VBA_BUTTON_B;
 		// Crouch
 		if (wp->btns_h & WPAD_CLASSIC_BUTTON_ZL && (!(wp->btns_h & WPAD_CLASSIC_BUTTON_A))) {
 			J |= VBA_DOWN;

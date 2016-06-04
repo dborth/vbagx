@@ -1,10 +1,3 @@
-/*
-Mode 3 is a 15-bit (32768) colour bitmap graphics mode.
-It has a single layer, background layer 2, the same size as the screen.
-It doesn't support paging, scrolling, flipping, rotation or tiles.
-
-These routines only render a single line at a time, because of the way the GBA does events.
-*/
 #include "GBA.h"
 #include "Globals.h"
 #include "GBAGfx.h"
@@ -14,20 +7,9 @@ void mode3RenderLine()
   u16 *palette = (u16 *)paletteRAM;
 
   if(DISPCNT & 0x80) {
-
-	int x = 232;	//240 - 8  
-	do{
-		lineMix[x  ] =
-		lineMix[x+1] =
-		lineMix[x+2] =
-		lineMix[x+3] =
-		lineMix[x+4] =
-		lineMix[x+5] =
-		lineMix[x+6] =
-		lineMix[x+7] = 0x7fff;
-		x-=8;
-	}while(x>=0);
-
+    for(int x = 0; x < 240; x++) {
+      lineMix[x] = 0x7fff;
+    }
     gfxLastVCOUNT = VCOUNT;
     return;
   }
@@ -54,7 +36,7 @@ void mode3RenderLine()
     background = ((customBackdropColor & 0x7FFF) | 0x30000000);
   }
 
-  for(int x = 0; x < 240; ++x) {
+  for(int x = 0; x < 240; x++) {
     u32 color = background;
     u8 top = 0x20;
 
@@ -73,7 +55,7 @@ void mode3RenderLine()
       u32 back = background;
       u8 top2 = 0x20;
 
-      if(line2[x] < background) {
+      if(line2[x] < back) {
         back = line2[x];
         top2 = 0x04;
       }
@@ -107,20 +89,9 @@ void mode3RenderLineNoWindow()
   u16 *palette = (u16 *)paletteRAM;
 
   if(DISPCNT & 0x80) {
-
-	int x = 232;	//240 - 8  
-	do{
-		lineMix[x  ] =
-		lineMix[x+1] =
-		lineMix[x+2] =
-		lineMix[x+3] =
-		lineMix[x+4] =
-		lineMix[x+5] =
-		lineMix[x+6] =
-		lineMix[x+7] = 0x7fff;
-		x-=8;
-	}while(x>=0);
-
+    for(int x = 0; x < 240; x++) {
+      lineMix[x] = 0x7fff;
+    }
     gfxLastVCOUNT = VCOUNT;
     return;
   }
@@ -147,11 +118,11 @@ void mode3RenderLineNoWindow()
     background = ((customBackdropColor & 0x7FFF) | 0x30000000);
   }
 
-  for(int x = 0; x < 240; ++x) {
+  for(int x = 0; x < 240; x++) {
     u32 color = background;
     u8 top = 0x20;
 
-    if(line2[x] < background) {
+    if(line2[x] < color) {
       color = line2[x];
       top = 0x04;
     }
@@ -171,14 +142,18 @@ void mode3RenderLineNoWindow()
             u32 back = background;
             u8 top2 = 0x20;
 
-			if(top != 0x04 && (line2[x] < background) ) {
-				back = line2[x];
-				top2 = 0x04;
+            if(line2[x] < back) {
+              if(top != 0x04) {
+                back = line2[x];
+                top2 = 0x04;
+              }
             }
 
-            if(top != 0x10 && ((u8)(lineOBJ[x]>>24) < (u8)(back >> 24))) {
-				back = lineOBJ[x];
-				top2 = 0x10;
+            if((u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
+              if(top != 0x10) {
+                back = lineOBJ[x];
+                top2 = 0x10;
+              }
             }
 
             if(top2 & (BLDMOD>>8))
@@ -203,7 +178,7 @@ void mode3RenderLineNoWindow()
       u32 back = background;
       u8 top2 = 0x20;
 
-      if(line2[x] < background) {
+      if(line2[x] < back) {
         back = line2[x];
         top2 = 0x04;
       }
@@ -237,20 +212,9 @@ void mode3RenderLineAll()
   u16 *palette = (u16 *)paletteRAM;
 
   if(DISPCNT & 0x80) {
-
-	int x = 232;	//240 - 8  
-	do{
-		lineMix[x  ] =
-		lineMix[x+1] =
-		lineMix[x+2] =
-		lineMix[x+3] =
-		lineMix[x+4] =
-		lineMix[x+5] =
-		lineMix[x+6] =
-		lineMix[x+7] = 0x7fff;
-		x-=8;
-	}while(x>=0);
-
+    for(int x = 0; x < 240; x++) {
+      lineMix[x] = 0x7fff;
+    }
     gfxLastVCOUNT = VCOUNT;
     return;
   }
@@ -304,7 +268,7 @@ void mode3RenderLineAll()
     background = ((customBackdropColor & 0x7FFF) | 0x30000000);
   }
 
-  for(int x = 0; x < 240; ++x) {
+  for(int x = 0; x < 240; x++) {
     u32 color = background;
     u8 top = 0x20;
     u8 mask = outMask;
@@ -324,7 +288,7 @@ void mode3RenderLineAll()
       }
     }
 
-    if((mask & 4) && line2[x] < background) {
+    if((mask & 4) && (line2[x] < color)) {
       color = line2[x];
       top = 0x04;
     }
@@ -339,7 +303,7 @@ void mode3RenderLineAll()
       u32 back = background;
       u8 top2 = 0x20;
 
-      if((mask & 4) && line2[x] < background) {
+      if((mask & 4) && line2[x] < back) {
         back = line2[x];
         top2 = 0x04;
       }
@@ -370,20 +334,25 @@ void mode3RenderLineAll()
             u32 back = background;
             u8 top2 = 0x20;
 
-			if((mask & 4) && (top != 0x04) && line2[x] < back) {
+            if((mask & 4) && line2[x] < back) {
+              if(top != 0x04) {
                 back = line2[x];
                 top2 = 0x04;
+              }
             }
 
-            if((mask & 16) && (top != 0x10) && (u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
+            if((mask & 16) && (u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
+              if(top != 0x10) {
                 back = lineOBJ[x];
                 top2 = 0x10;
+              }
             }
 
             if(top2 & (BLDMOD>>8))
               color = gfxAlphaBlend(color, back,
                                     coeff[COLEV & 0x1F],
                                     coeff[(COLEV >> 8) & 0x1F]);
+
           }
         }
         break;

@@ -297,7 +297,7 @@ static void count(u32 opcode, int cond_res)
  #define EMIT0(op)            #op"; "
  #define EMIT1(op,arg)        #op" "arg"; "
  #define EMIT2(op,src,dest)   #op" "src", "dest"; "
- #define CONST(val)           "$"#val
+ #define KONST(val)           "$"#val
  #define ASMVAR(cvar)         ASMVAR2 (__USER_LABEL_PREFIX__, cvar)
  #define ASMVAR2(prefix,cvar) STRING (prefix) cvar
  #define STRING(x)            #x
@@ -330,7 +330,7 @@ static void count(u32 opcode, int cond_res)
  #define EMIT0(op)            __asm op
  #define EMIT1(op,arg)        __asm op arg
  #define EMIT2(op,src,dest)   __asm op dest, src
- #define CONST(val)           val
+ #define KONST(val)           val
  #define VAR(var)             var
  #define VARL(var)            dword ptr var
  #define REGREF1(index)       reg[index]
@@ -349,15 +349,19 @@ static void count(u32 opcode, int cond_res)
 
 // Helper macros for loading value / shift count
 #define VALUE_LOAD_IMM \
-        EMIT2(and, CONST(0x0F), eax)            \
+        EMIT2(and, KONST(0x0F), eax)            \
         EMIT2(mov, REGREF2(eax,4), eax)         \
-        EMIT2(shr, CONST(7), ecx)               \
-        EMIT2(and, CONST(0x1F), ecx)
+        EMIT2(shr, KONST(7), ecx)               \
+        EMIT2(and, KONST(0x1F), ecx)
 #define VALUE_LOAD_REG \
-        EMIT2(and, CONST(0x0F), eax)            \
-        EMIT2(mov, REGREF2(eax,4), eax)         \
+        EMIT2(and, KONST(0x0F), eax)            \
+		EMIT2(cmp, KONST(0x0F), eax)			\
+		EMIT2(mov, REGREF2(eax,4), eax)         \
+		EMIT1(jne, LABELREF(3,f))				\
+		EMIT2(add, KONST(4), eax)				\
+		LABEL(3)								\
         EMIT2(movzx, ch, ecx)                   \
-        EMIT2(and, CONST(0x0F), ecx)            \
+        EMIT2(and, KONST(0x0F), ecx)            \
         EMIT2(mov, REGREF2(ecx,4), ecx)
 
 // Helper macros for setting flags
@@ -381,13 +385,13 @@ static void count(u32 opcode, int cond_res)
     ALU_HEADER                          \
     LOAD_C_FLAG                         \
     EMIT2(mov, ecx, edx)                \
-    EMIT2(shr, CONST(14), edx)          \
+    EMIT2(shr, KONST(14), edx)          \
     EMIT2(mov, ecx, eax)                \
     EMIT2(mov, ecx, esi)                \
-    EMIT2(shr, CONST(10), esi)          \
-    EMIT2(and, CONST(0x3C), edx)        \
+    EMIT2(shr, KONST(10), esi)          \
+    EMIT2(and, KONST(0x3C), edx)        \
     EMIT2(mov, REGREF1(edx), edx)       \
-    EMIT2(and, CONST(0x3C), esi)
+    EMIT2(and, KONST(0x3C), esi)
 
 #define LOAD_C_FLAG_YES EMIT2(mov, VAR(C_FLAG), bl)
 #define LOAD_C_FLAG_NO  /*nothing*/
@@ -415,14 +419,14 @@ static void count(u32 opcode, int cond_res)
     VALUE_LOAD_REG                      \
     EMIT2(test, cl, cl)                 \
     EMIT1(jz, LABELREF(0,f))            \
-    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT2(cmp, KONST(0x20), cl)         \
     EMIT1(je, LABELREF(1,f))            \
     EMIT1(ja, LABELREF(2,f))            \
     EMIT2(shl, cl, eax)                 \
     EMIT1(setc, bl)                     \
     EMIT1(jmp, LABELREF(0,f))           \
     LABEL(1)                            \
-    EMIT2(test, CONST(1), al)           \
+    EMIT2(test, KONST(1), al)           \
     EMIT1(setnz, bl)                    \
     EMIT2(xor, eax, eax)                \
     EMIT1(jmp, LABELREF(0,f))           \
@@ -432,7 +436,7 @@ static void count(u32 opcode, int cond_res)
     LABEL(0)
 #define VALUE_LSL_REG_NC \
     VALUE_LOAD_REG                      \
-    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT2(cmp, KONST(0x20), cl)         \
     EMIT1(jae, LABELREF(1,f))           \
     EMIT2(shl, cl, eax)                 \
     EMIT1(jmp, LABELREF(0,f))           \
@@ -466,7 +470,7 @@ static void count(u32 opcode, int cond_res)
     VALUE_LOAD_REG                      \
     EMIT2(test, cl, cl)                 \
     EMIT1(jz, LABELREF(0,f))            \
-    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT2(cmp, KONST(0x20), cl)         \
     EMIT1(je, LABELREF(1,f))            \
     EMIT1(ja, LABELREF(2,f))            \
     EMIT2(shr, cl, eax)                 \
@@ -483,7 +487,7 @@ static void count(u32 opcode, int cond_res)
     LABEL(0)
 #define VALUE_LSR_REG_NC \
     VALUE_LOAD_REG                      \
-    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT2(cmp, KONST(0x20), cl)         \
     EMIT1(jae, LABELREF(1,f))           \
     EMIT2(shr, cl, eax)                 \
     EMIT1(jmp, LABELREF(0,f))           \
@@ -499,7 +503,7 @@ static void count(u32 opcode, int cond_res)
     EMIT1(setc, bl)                     \
     EMIT1(jmp, LABELREF(0,f))           \
     LABEL(1)                            \
-    EMIT2(sar, CONST(31), eax)          \
+    EMIT2(sar, KONST(31), eax)          \
     EMIT1(sets, bl)                     \
     LABEL(0)
 #define VALUE_ASR_IMM_NC \
@@ -508,7 +512,7 @@ static void count(u32 opcode, int cond_res)
     EMIT2(sar, cl, eax)                 \
     EMIT1(jmp, LABELREF(0,f))           \
     LABEL(1)                            \
-    EMIT2(sar, CONST(31), eax)          \
+    EMIT2(sar, KONST(31), eax)          \
     LABEL(0)
 
 // OP Rd,Rb,Rm ASR Rs
@@ -516,23 +520,23 @@ static void count(u32 opcode, int cond_res)
     VALUE_LOAD_REG                      \
     EMIT2(test, cl, cl)                 \
     EMIT1(jz, LABELREF(0,f))            \
-    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT2(cmp, KONST(0x20), cl)         \
     EMIT1(jae, LABELREF(1,f))           \
     EMIT2(sar, cl, eax)                 \
     EMIT1(setc, bl)                     \
     EMIT1(jmp, LABELREF(0,f))           \
     LABEL(1)                            \
-    EMIT2(sar, CONST(31), eax)          \
+    EMIT2(sar, KONST(31), eax)          \
     EMIT1(sets, bl)                     \
     LABEL(0)
 #define VALUE_ASR_REG_NC \
     VALUE_LOAD_REG                      \
-    EMIT2(cmp, CONST(0x20), cl)         \
+    EMIT2(cmp, KONST(0x20), cl)         \
     EMIT1(jae, LABELREF(1,f))           \
     EMIT2(sar, cl, eax)                 \
     EMIT1(jmp, LABELREF(0,f))           \
     LABEL(1)                            \
-    EMIT2(sar, CONST(31), eax)          \
+    EMIT2(sar, KONST(31), eax)          \
     LABEL(0)
 
 // OP Rd,Rb,Rm ROR #
@@ -542,8 +546,8 @@ static void count(u32 opcode, int cond_res)
     EMIT2(ror, cl, eax)                 \
     EMIT1(jmp, LABELREF(0,f))           \
     LABEL(1)                            \
-    EMIT2(bt, CONST(0), ebx)            \
-    EMIT2(rcr, CONST(1), eax)           \
+    EMIT2(bt, KONST(0), ebx)            \
+    EMIT2(rcr, KONST(1), eax)           \
     LABEL(0)                            \
     EMIT1(setc, bl)
 #define VALUE_ROR_IMM_NC \
@@ -552,14 +556,14 @@ static void count(u32 opcode, int cond_res)
     EMIT2(ror, cl, eax)                 \
     EMIT1(jmp, LABELREF(0,f))           \
     LABEL(1)                            \
-    EMIT2(bt, CONST(0), VARL(C_FLAG))   \
-    EMIT2(rcr, CONST(1), eax)           \
+    EMIT2(bt, KONST(0), VARL(C_FLAG))   \
+    EMIT2(rcr, KONST(1), eax)           \
     LABEL(0)
 
 // OP Rd,Rb,Rm ROR Rs
 #define VALUE_ROR_REG_C \
     VALUE_LOAD_REG                      \
-    EMIT2(bt, CONST(0), ebx)            \
+    EMIT2(bt, KONST(0), ebx)            \
     EMIT2(ror, cl, eax)                 \
     EMIT1(setc, bl)
 #define VALUE_ROR_REG_NC \
@@ -571,7 +575,7 @@ static void count(u32 opcode, int cond_res)
     EMIT2(movzx, ch, ecx)               \
     EMIT2(add, ecx, ecx)                \
     EMIT2(movzx, al, eax)               \
-    EMIT2(bt, CONST(0), ebx)            \
+    EMIT2(bt, KONST(0), ebx)            \
     EMIT2(ror, cl, eax)                 \
     EMIT1(setc, bl)
 #define VALUE_IMM_NC \
@@ -584,7 +588,7 @@ static void count(u32 opcode, int cond_res)
 
 // Set condition codes iff the destination register is not R15 (PC)
 #define CHECK_PC(OP, SETCOND) \
-    EMIT2(cmp, CONST(0x3C), esi)        \
+    EMIT2(cmp, KONST(0x3C), esi)        \
     EMIT1(je, LABELREF(8,f))            \
     OP SETCOND                          \
     EMIT1(jmp, LABELREF(9,f))           \
@@ -613,18 +617,18 @@ static void count(u32 opcode, int cond_res)
     EMIT2(mov, edx, REGREF1(esi))
 #define OP_ADDS   CHECK_PC(OP_ADD, SETCOND_ADD)
 #define OP_ADC \
-    EMIT2(bt, CONST(0), VARL(C_FLAG))   \
+    EMIT2(bt, KONST(0), VARL(C_FLAG))   \
     EMIT2(adc, eax, edx)                \
     EMIT2(mov, edx, REGREF1(esi))
 #define OP_ADCS   CHECK_PC(OP_ADC, SETCOND_ADD)
 #define OP_SBC \
-    EMIT2(bt, CONST(0), VARL(C_FLAG))   \
+    EMIT2(bt, KONST(0), VARL(C_FLAG))   \
     EMIT0(cmc)                          \
     EMIT2(sbb, eax, edx)                \
     EMIT2(mov, edx, REGREF1(esi))
 #define OP_SBCS   CHECK_PC(OP_SBC, SETCOND_SUB)
 #define OP_RSC \
-    EMIT2(bt, CONST(0), VARL(C_FLAG))   \
+    EMIT2(bt, KONST(0), VARL(C_FLAG))   \
     EMIT0(cmc)                          \
     EMIT2(sbb, edx, eax)                \
     EMIT2(mov, eax, REGREF1(esi))
@@ -656,7 +660,7 @@ static void count(u32 opcode, int cond_res)
 #define OP_MVN \
     EMIT1(not, eax)                     \
     EMIT2(mov, eax, REGREF1(esi))
-#define OP_MVNS   CHECK_PC(OP_MVN, SETCOND_LOGICAL)
+#define OP_MVNS   CHECK_PC(OP_MVN EMIT2(test,eax,eax), SETCOND_LOGICAL)
 
 // ALU cleanup macro
 #define ALU_FINISH  ALU_TRAILER
@@ -677,7 +681,7 @@ static void count(u32 opcode, int cond_res)
         : "0" (offset), "c" (shift));
 
 #define RRX_OFFSET \
-    asm(EMIT2(btl,CONST(0),VAR(C_FLAG)) \
+    asm(EMIT2(btl,KONST(0),VAR(C_FLAG)) \
         "rcr $1, %0"                    \
         : "=r" (offset)                 \
         : "0" (offset));
@@ -752,27 +756,31 @@ static void count(u32 opcode, int cond_res)
 // OP Rd,Rb,Rm LSL Rs
 #ifndef VALUE_LSL_REG_C
  #define VALUE_LSL_REG_C \
-    unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
-    if (LIKELY(shift)) {                                \
-        if (shift == 32) {                              \
-            value = 0;                                  \
-            C_OUT = (reg[opcode & 0x0F].I & 1 ? true : false);\
-        } else if (LIKELY(shift < 32)) {                \
-            u32 v = reg[opcode & 0x0F].I;               \
-            C_OUT = (v >> (32 - shift)) & 1 ? true : false;\
-            value = v << shift;                         \
-        } else {                                        \
-            value = 0;                                  \
-            C_OUT = false;                              \
-        }                                               \
-    } else {                                            \
-        value = reg[opcode & 0x0F].I;                   \
+    u32 shift = reg[(opcode >> 8)&15].B.B0;                  \
+	u32 rm = reg[opcode & 0x0F].I;                           \
+	if((opcode & 0x0F) == 15) {                              \
+		rm += 4;                                             \
+	}                                                        \
+    if (LIKELY(shift)) {                                     \
+        if (shift == 32) {                                   \
+            value = 0;                                       \
+            C_OUT = (rm & 1 ? true : false);                 \
+        } else if (LIKELY(shift < 32)) {                     \
+            u32 v = rm;                                      \
+            C_OUT = (v >> (32 - shift)) & 1 ? true : false;  \
+            value = v << shift;                              \
+        } else {                                             \
+            value = 0;                                       \
+            C_OUT = false;                                   \
+        }                                                    \
+    } else {                                                 \
+        value = rm;                                          \
     }
 #endif
 // OP Rd,Rb,Rm LSR #
 #ifndef VALUE_LSR_IMM_C
  #define VALUE_LSR_IMM_C \
-    unsigned int shift = (opcode >> 7) & 0x1F;          \
+    u32 shift = (opcode >> 7) & 0x1F;                   \
     if (LIKELY(shift)) {                                \
         u32 v = reg[opcode & 0x0F].I;                   \
         C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
@@ -786,12 +794,16 @@ static void count(u32 opcode, int cond_res)
 #ifndef VALUE_LSR_REG_C
  #define VALUE_LSR_REG_C \
     unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
+	u32 rm = reg[opcode & 0x0F].I;                      \
+	if((opcode & 0x0F) == 15) {                         \
+	rm += 4;                                            \
+	}                                                   \
     if (LIKELY(shift)) {                                \
         if (shift == 32) {                              \
             value = 0;                                  \
-            C_OUT = (reg[opcode & 0x0F].I & 0x80000000 ? true : false);\
+            C_OUT = (rm & 0x80000000 ? true : false);\
         } else if (LIKELY(shift < 32)) {                \
-            u32 v = reg[opcode & 0x0F].I;               \
+            u32 v = rm;               \
             C_OUT = (v >> (shift - 1)) & 1 ? true : false;\
             value = v >> shift;                         \
         } else {                                        \
@@ -799,7 +811,7 @@ static void count(u32 opcode, int cond_res)
             C_OUT = false;                              \
         }                                               \
     } else {                                            \
-        value = reg[opcode & 0x0F].I;                   \
+        value = rm;                   \
     }
 #endif
 // OP Rd,Rb,Rm ASR #
@@ -825,13 +837,17 @@ static void count(u32 opcode, int cond_res)
 #ifndef VALUE_ASR_REG_C
  #define VALUE_ASR_REG_C \
     unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
+	u32 rm = reg[opcode & 0x0F].I;                      \
+	if((opcode & 0x0F) == 15) {                         \
+	rm += 4;                                            \
+	}                                                   \
     if (LIKELY(shift < 32)) {                           \
         if (LIKELY(shift)) {                            \
-            s32 v = reg[opcode & 0x0F].I;               \
+            s32 v = rm;               \
             C_OUT = (v >> (int)(shift - 1)) & 1 ? true : false;\
             value = v >> (int)shift;                    \
         } else {                                        \
-            value = reg[opcode & 0x0F].I;               \
+            value = rm;               \
         }                                               \
     } else {                                            \
         if (reg[opcode & 0x0F].I & 0x80000000) {        \
@@ -863,13 +879,17 @@ static void count(u32 opcode, int cond_res)
 #ifndef VALUE_ROR_REG_C
  #define VALUE_ROR_REG_C \
     unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
+	u32 rm = reg[opcode & 0x0F].I;                      \
+	if((opcode & 0x0F) == 15) {                         \
+	rm += 4;                                            \
+	}                                                   \
     if (LIKELY(shift & 0x1F)) {                         \
-        u32 v = reg[opcode & 0x0F].I;                   \
+        u32 v = rm;                   \
         C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
-        value = reg[opcode & 0x0F].I;                   \
+        value = rm;                   \
         if (shift)                                      \
             C_OUT = (value & 0x80000000 ? true : false);\
     }
@@ -950,9 +970,9 @@ static void count(u32 opcode, int cond_res)
 #endif
 #ifndef OP_RSB
  #define OP_RSB \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
-    u32 rhs = value;                                    \
-    u32 res = rhs - lhs;                                \
+    u32 lhs = value;                                    \
+    u32 rhs = reg[(opcode>>16)&15].I;                   \
+    u32 res = lhs - rhs;                                \
     reg[dest].I = res;
 #endif
 #ifndef OP_RSBS
@@ -990,9 +1010,9 @@ static void count(u32 opcode, int cond_res)
 #endif
 #ifndef OP_RSC
  #define OP_RSC \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
-    u32 rhs = value;                                    \
-    u32 res = rhs - lhs - !((u32)C_FLAG);               \
+    u32 lhs = value;                                    \
+    u32 rhs = reg[(opcode>>16)&15].I;                   \
+    u32 res = lhs - rhs - !((u32)C_FLAG);               \
     reg[dest].I = res;
 #endif
 #ifndef OP_RSCS
@@ -1516,7 +1536,7 @@ static INSN_REGPARM void arm121(u32 opcode)
 #define OP_LDR    reg[dest].I = CPUReadMemory(address)
 #define OP_LDRH   reg[dest].I = CPUReadHalfWord(address)
 #define OP_LDRB   reg[dest].I = CPUReadByte(address)
-#define OP_LDRSH  reg[dest].I = (s16)CPUReadHalfWordSigned(address)
+#define OP_LDRSH  reg[dest].I = (u32)CPUReadHalfWordSigned(address)
 #define OP_LDRSB  reg[dest].I = (s8)CPUReadByte(address)
 
 #define WRITEBACK_NONE     /*nothing*/
@@ -2591,8 +2611,7 @@ static INSN_REGPARM void armA00(u32 opcode)
     reg[15].I += 4;
     ARM_PREFETCH;
     clockTicks = codeTicksAccessSeq32(armNextPC) + 1;
-    clockTicks += 2 + codeTicksAccess32(armNextPC)
-                    + codeTicksAccessSeq32(armNextPC);
+    clockTicks = (clockTicks * 2) + codeTicksAccess32(armNextPC) + 1;
     busPrefetchCount = 0;
 }
 
@@ -2608,8 +2627,7 @@ static INSN_REGPARM void armB00(u32 opcode)
     reg[15].I += 4;
     ARM_PREFETCH;
     clockTicks = codeTicksAccessSeq32(armNextPC) + 1;
-    clockTicks += 2 + codeTicksAccess32(armNextPC)
-                    + codeTicksAccessSeq32(armNextPC);
+    clockTicks = (clockTicks * 2) + codeTicksAccess32(armNextPC) + 1;
     busPrefetchCount = 0;
 }
 
@@ -2627,9 +2645,8 @@ static INSN_REGPARM void armE01(u32 opcode)
 // SWI <comment>
 static INSN_REGPARM void armF00(u32 opcode)
 {
-    clockTicks = codeTicksAccessSeq32(armNextPC) + 1;
-    clockTicks += 2 + codeTicksAccess32(armNextPC)
-                    + codeTicksAccessSeq32(armNextPC);
+	clockTicks = codeTicksAccessSeq32(armNextPC) + 1;
+	clockTicks = (clockTicks * 2) + codeTicksAccess32(armNextPC) + 1;
     busPrefetchCount = 0;
     CPUSoftwareInterrupt(opcode & 0x00FFFFFF);
 }
@@ -2681,9 +2698,9 @@ static insnfunc_t armInsnTable[4096] = {
     arm0D0,arm0D1,arm0D2,arm0D3,arm0D4,arm0D5,arm0D6,arm0D7,  // 0D0
     arm0D0,arm0D9,arm0D2,arm0DB,arm0D4,arm0DD,arm0D6,arm0DF,  // 0D8
     arm0E0,arm0E1,arm0E2,arm0E3,arm0E4,arm0E5,arm0E6,arm0E7,  // 0E0
-    arm0E0,arm0E9,arm0E2,arm_UI,arm0E4,arm_UI,arm0E6,arm_UI,  // 0E8
+    arm0E0,arm0E9,arm0E2,arm0CB,arm0E4,arm_UI,arm0E6,arm_UI,  // 0E8
     arm0F0,arm0F1,arm0F2,arm0F3,arm0F4,arm0F5,arm0F6,arm0F7,  // 0F0
-    arm0F0,arm0F9,arm0F2,arm_UI,arm0F4,arm0DD,arm0F6,arm0DF,  // 0F8
+    arm0F0,arm0F9,arm0F2,arm0DB,arm0F4,arm0DD,arm0F6,arm0DF,  // 0F8
 
     arm100,arm_UI,arm_UI,arm_UI,arm_UI,arm_UI,arm_UI,arm_UI,  // 100
     arm_UI,arm109,arm_UI,arm10B,arm_UI,arm_UI,arm_UI,arm_UI,  // 108

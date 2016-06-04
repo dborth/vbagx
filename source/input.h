@@ -16,6 +16,7 @@
 
 #define PI 					3.14159265f
 #define PADCAL				50
+#define WUPCCAL				400
 #define MAXJP 				10 // # of mappable controller buttons
 
 #define VBA_BUTTON_A		1
