@@ -1,2 +1,935 @@
-msgid " "
-msgstr ""
+msgid "&"
+msgstr "&"
+
+msgid "16:9 Correction"
+msgstr "16:9 校正"
+
+msgid "7z decompression failed: Archive contains too many files"
+msgstr "7z 解壓縮失敗：存檔包�?�了太多檔案"
+
+msgid "7z decompression failed: Failed to read file data"
+msgstr "7z 解壓縮失敗：讀�?�檔案資料失敗"
+
+msgid "7z decompression failed: File is corrupt"
+msgstr "7z 解壓縮失敗：檔案已�??壞"
+
+msgid "7z decompression failed: File is corrupt (CRC mismatch)"
+msgstr "7z 解壓縮失敗：檔案已�??壞(CRC �?匹�?)"
+
+msgid "7z decompression failed: File uses too high of compression settings (dictionary size is too large)"
+msgstr "7z 解壓縮失敗：檔案使用高壓縮設定（數據大�?�?�大）"
+
+msgid "7z decompression failed: File uses unsupported compression settings"
+msgstr "7z 解壓縮失敗：檔案使用�?支�?�壓縮設定格�?"
+
+msgid "A (Rapid)"
+msgstr "A (連發)"
+
+msgid "Additional coding"
+msgstr "�?外的編碼"
+
+msgid "Aim Offscreen"
+msgstr "�?顯示瞄準準星"
+
+msgid "An update is available!"
+msgstr "有�?�用的更新檔�?"
+
+msgid "Are you sure that you want to reset this game? Any unsaved progress will be lost."
+msgstr "確定�?�?置這個�?�戲？所有未儲存的�?�戲進度將失去。"
+
+msgid "Are you sure that you want to reset your mappings?"
+msgstr "確定�?�?置你的控制器設定？"
+
+msgid "Are you sure that you want to reset your settings?"
+msgstr "確定�?�?置你的設定？"
+
+msgid "Maintain Aspect Ratio"
+msgstr "維�?畫�?�比例"
+
+msgid "Attempting to determine load device..."
+msgstr "試圖判定載入�?置..."
+
+msgid "Attempting to determine save device..."
+msgstr "試圖判定儲存�?置..."
+
+msgid "Auto"
+msgstr "自動"
+
+msgid "Auto Detect"
+msgstr "自動檢測"
+
+msgid "Auto Load"
+msgstr "自動載入"
+
+msgid "Auto Save"
+msgstr "自動儲存"
+
+msgid "Automatic"
+msgstr "自動"
+
+msgid "Automatic (Recommended)"
+msgstr "自動(推薦)"
+
+msgid "B (Rapid)"
+msgstr "B (連發)"
+
+msgid "Back"
+msgstr "返回"
+
+msgid "Both"
+msgstr "兩者"
+
+msgid "Controles"
+msgstr "�?作"
+
+msgid "Button Mapping"
+msgstr "按�?�設定"
+
+msgid "Button Mappings"
+msgstr "按�?�設定"
+
+msgid "Cancel"
+msgstr "�?�消"
+
+msgid "Caps"
+msgstr "簡述"
+
+msgid "Cheats"
+msgstr "金手指"
+
+msgid "Cheats file not found!"
+msgstr "無法找到金手指�?"
+
+msgid "Cheats Folder"
+msgstr "金手指檔案夾"
+
+msgid "Choose Game"
+msgstr "�?�擇�?�戲"
+
+msgid "Classic Controller"
+msgstr "傳統控制器"
+
+msgid "Close"
+msgstr "關閉"
+
+msgid "Coding"
+msgstr "編碼"
+
+msgid "Coding & menu design"
+msgstr "編碼�?��?�單設計"
+
+msgid "Compressed GBA files are not supported!"
+msgstr "�?支�?�已壓縮的GBA檔�?"
+
+msgid "Connecting to network share..."
+msgstr "正連接網路共享夾..."
+
+msgid "Controller"
+msgstr "控制器"
+
+msgid "Cover View"
+msgstr "�?�?��?覽"
+
+msgid "Covers Folder"
+msgstr "�?�?�檔案夾"
+
+msgid "Credits"
+msgstr "作者信�?�"
+
+msgid "Cropping"
+msgstr "�?切"
+
+msgid "Crosshair"
+msgstr "�??字準線"
+
+msgid "Cursor"
+msgstr "螢幕上的游標"
+
+msgid "Data DVD"
+msgstr "資料DVD"
+
+msgid "Default"
+msgstr "�?設"
+
+msgid "Directory name is too long!"
+msgstr "目錄�??稱太長�?"
+
+msgid "Disabled"
+msgstr "關閉"
+
+msgid "DISABLED"
+msgstr "關閉"
+
+msgid "distributed, or modified under the terms of the"
+msgstr "在以下�?件之下分�?或修改"
+
+msgid "Don't Save"
+msgstr "�?�?儲存"
+
+msgid "Down"
+msgstr "�?�下"
+
+msgid "DOWN"
+msgstr "�?�下"
+
+msgid "Downloading..."
+msgstr "下載中..."
+
+msgid "Dutch"
+msgstr "�?�蘭語"
+
+msgid "Empty or invalid ZIP file!"
+msgstr "空的或無效的ZIP檔�?"
+
+msgid "Enabled"
+msgstr "啟動"
+
+msgid "ENABLED"
+msgstr "啟動"
+
+msgid "English"
+msgstr "英語"
+
+msgid "Error"
+msgstr "錯誤"
+
+msgid "Error - Invalid ZIP file!"
+msgstr "錯誤 - 無效的ZIP檔�?"
+
+msgid "Error creating file!"
+msgstr "建立檔案錯誤�?"
+
+msgid "Error loading game!"
+msgstr "載入�?�戲錯誤�?"
+
+msgid "Error opening archive!"
+msgstr "開啟記錄錯誤�?"
+
+msgid "Error opening directory!"
+msgstr "開啟目錄錯誤�?"
+
+msgid "Error opening file!"
+msgstr "開啟檔案錯誤�?"
+
+msgid "Error reading file!"
+msgstr "讀�?�檔案錯誤�?"
+
+msgid "Error saving file!"
+msgstr "儲存檔案錯誤�?"
+
+msgid "Exit"
+msgstr "離開"
+
+msgid "Exit Action"
+msgstr "離開動作"
+
+msgid "Failed to connect to network share."
+msgstr "連接網路分享夾失敗。"
+
+msgid "FDS BIOS file is invalid!"
+msgstr "任天堂�?碟機 BIOS檔是無效的�?"
+
+msgid "FDS BIOS file not found!"
+msgstr "任天堂�?碟機 BIOS檔無法找到�?"
+
+msgid "Filtered"
+msgstr "已篩�?�"
+
+msgid "Filtering"
+msgstr "篩�?�中"
+
+msgid "Fire"
+msgstr "擊發"
+
+msgid "French"
+msgstr "法語"
+
+msgid "GBA Screen Zoom"
+msgstr "GBA畫�?�縮放"
+
+msgid "Game Genie ROM not found!"
+msgstr "�?�戲精�?�金手指的ROM找�?到�?"
+
+msgid "Game Settings"
+msgstr "�?�戲設定"
+
+msgid "Game Settings - Button Mappings"
+msgstr "�?�戲設定 - 按�?�設定"
+
+msgid "Game Settings - Cheats"
+msgstr "�?�戲設定 - 金手指"
+
+msgid "Game Settings - Video"
+msgstr "�?�戲設定 - 視訊"
+
+msgid "Game Timing"
+msgstr "�?�戲的速度"
+
+msgid "Game Genie DISABLED"
+msgstr "�?�戲精�?�金手指關閉"
+
+msgid "Game Genie ENABLED"
+msgstr "�?�戲精�?�金手指啟動"
+
+msgid "GameCube Controller"
+msgstr "GameCube控制器"
+
+msgid "German"
+msgstr "德語"
+
+msgid "GNU General Public License (GPL) Version 2."
+msgstr "GNU 一般公眾利用許�?��?�明 (GPL) 版本 2。"
+
+msgid "Go Back"
+msgstr "返回"
+
+msgid "Horizontal"
+msgstr "水平方�?�"
+
+msgid "Information"
+msgstr "資訊"
+
+msgid "Initializing network..."
+msgstr "連接網路中..."
+
+msgid "Insert Coin"
+msgstr "投幣"
+
+msgid "Insert Coin / Switch Disk"
+msgstr "投幣 / 切�?��?碟機"
+
+msgid "Invalid file size!"
+msgstr "無效檔案大�?�?"
+
+msgid "Invalid game file!"
+msgstr "無效�?�戲檔案�?"
+
+msgid "Invalid network settings - Check settings.xml."
+msgstr "無效網路設定 - 請檢查 settings.xml檔。"
+
+msgid "Invalid network settings - Share IP is blank."
+msgstr "無效網路設定 - 分享 IP 是空白。"
+
+msgid "Invalid network settings - Share name is blank."
+msgstr "無效網路設定 - 分享�??稱是空白。"
+
+msgid "Invalid save file"
+msgstr "無效存檔"
+
+msgid "Invalid state file"
+msgstr "無效狀態檔案"
+
+msgid "Italian"
+msgstr "義大利語"
+
+msgid "Japanese"
+msgstr "日本語"
+
+msgid "Justifier"
+msgstr "Justifier光線�?"
+
+msgid "Justifier - GameCube Controller"
+msgstr "Justifier光線�? - GameCube 控制器"
+
+msgid "Justifier - Wiimote"
+msgstr "Justifier光線�? - Wiimote �?�控器"
+
+msgid "Korean"
+msgstr "韓國語"
+
+msgid "L TRIG"
+msgstr "L TRIG"
+
+msgid "Language"
+msgstr "語言"
+
+msgid "Languages Folder"
+msgstr "語言檔案夾"
+
+msgid "Left"
+msgstr "�?�左"
+
+msgid "LEFT"
+msgstr "�?�左"
+
+msgid "Left Button"
+msgstr "左按�?�"
+
+msgid "Load"
+msgstr "載入"
+
+msgid "Load Device"
+msgstr "載入�?置"
+
+msgid "Load Folder"
+msgstr "載入檔案夾"
+
+msgid "Load Game"
+msgstr "載入�?�戲"
+
+msgid "Loading"
+msgstr "載入中"
+
+msgid "Loading DVD..."
+msgstr "載入DVD中..."
+
+msgid "Loading patch..."
+msgstr "載入修正檔中..."
+
+msgid "Loading..."
+msgstr "載入中..."
+
+msgid "Main Menu"
+msgstr "主�?�單"
+
+msgid "Match GC Controls"
+msgstr "和 GC 控制器相�?"
+
+msgid "Match Wii Controls"
+msgstr "和 Wii �?�控器相�?"
+
+msgid "Maximum filepath length reached!"
+msgid "已�?�到檔案路徑�??稱最大長度"
+
+msgid "Menu"
+msgstr "�?�單"
+
+msgid "Menu artwork"
+msgstr "�?�單�?�圖"
+
+msgid "Menu sound"
+msgstr "�?�單音樂"
+
+msgid "MINUS"
+msgstr "減去"
+
+msgid "Music Volume"
+msgstr "音樂音�?"
+
+msgid "Mute"
+msgstr "�?�音"
+
+msgid "NES Controller"
+msgstr "FC�?�戲機 控制器"
+
+msgid "NES Controllers (2)"
+msgstr "FC�?�戲機 控制器(2)"
+
+msgid "NES Controllers (4)"
+msgstr "FC�?�戲機 控制器(4)"
+
+msgid "NES Zapper"
+msgstr "FC�?�戲機 Zapper光線�?"
+
+msgid "Network"
+msgstr "網路"
+
+msgid "Network Share"
+msgstr "網路共享"
+
+msgid "New"
+msgstr "新的"
+
+msgid "New Snapshot"
+msgstr "新的截圖"
+
+msgid "New SRAM"
+msgstr "新的SRAM"
+
+msgid "No"
+msgstr "�?�"
+
+msgid "No data to save!"
+msgstr "沒有資料�?�供儲存�?"
+
+msgid "No disc inserted!"
+msgstr "沒有�?�入光碟�?"
+
+msgid "No SRAM data to save!"
+msgstr "沒有 SRAM 資料�?�供儲存�?"
+
+msgid "No game saves found."
+msgstr "找�?到�?�戲存檔。"
+
+msgid "None"
+msgstr "無"
+
+msgid "NTSC (480i)"
+msgstr "NTSC(480i)"
+
+msgid "Nunchuk"
+msgstr "Nunchuk 雙節�?控制器"
+
+msgid "Off"
+msgstr "關閉"
+
+msgid "Official Site: http://code.google.com/p/fceugc/"
+msgstr "官方網站:http://code.google.com/p/fceugc/"
+
+msgid "Official Site: http://code.google.com/p/snes9x-gx/"
+msgstr "官方網站: http://code.google.com/p/snes9x-gx/"
+
+msgid "Official Site: http://code.google.com/p/vba-wii/"
+msgstr "官方網站: http://code.google.com/p/vba-wii/"
+
+msgid "OK"
+msgstr "確定"
+
+msgid "On"
+msgstr "開啟"
+
+msgid "Original"
+msgstr "原始"
+
+msgid "Out of memory!"
+msgstr "記憶體�?足�?"
+
+msgid "Out of memory: too many files!"
+msgstr "記憶體�?足：太多檔案了�?"
+
+msgid "P1"
+msgstr "P1"
+
+msgid "P2"
+msgstr "P2"
+
+msgid "P3"
+msgstr "P3"
+
+msgid "P4"
+msgstr "P4"
+
+msgid "PAL (50Hz)"
+msgstr "PAL (50Hz)"
+
+msgid "PAL (60Hz)"
+msgstr "PAL (60Hz)"
+
+msgid "Palette saved"
+msgstr "色盤已儲存"
+
+msgid "Partial Stretch"
+msgstr "部分延伸"
+
+msgid "Pause"
+msgstr "暫�?�"
+
+msgid "Please Wait"
+msgstr "請�?等"
+
+msgid "PLUS"
+msgstr "外加"
+
+msgid "Portuguese"
+msgstr "葡�?�牙語"
+
+msgid "Brazilian Portuguese"
+msgstr "巴西葡�?�牙語"
+
+msgid "Power off Wii"
+msgstr "關閉 Wii 的電�?"
+
+msgid "Preferences saved"
+msgstr "喜好設定已儲存"
+
+msgid "Press any button on the Classic Controller now. Press Home to clear the existing mapping."
+msgstr "�?�在請在傳統控制器上按下任何�?�。按 Home �?�以清除已存在的設定。)"
+
+msgid "Press any button on the GameCube Controller now. Press Home or the C-Stick in any direction to clear the existing mapping."
+msgstr "�?�在請在GameCube控制器上按下任何�?�。按 Home 或 按C-Stick 任何方�?��?�以清除已存在的設定。)"
+
+msgid "Press any button on the GameCube Controller now. Press the C-Stick in any direction to clear the existing mapping."
+msgstr "�?�在請在GameCube控制器上按下任何�?�。按C-Stick 任何方�?��?�以清除已存在的設定。)"
+
+msgid "Press any button on the Wiimote now. Press Home to clear the existing mapping."
+msgstr "�?�在請在Wiimote�?�控器上按下任何�?�。按 Home �?�以清除已存在的設定。)"
+
+msgid "Press any button on the Wiimote or Nunchuk now. Press Home to clear the existing mapping."
+msgstr "�?�在請在Wiimote�?�控器或Nunchuk雙節�?控制器上按下任何�?�。按 Home �?�以清除已存在的設定。)"
+
+msgid "Progressive (480p)"
+msgstr "先進 (480p)"
+
+msgid "Quit Game"
+msgstr "退出�?�戲"
+
+msgid "Quit this game? Any unsaved progress will be lost."
+msgstr "退出�?�戲嗎？所有未儲存的�?�戲進度將失去。"
+
+msgid "R TRIG"
+msgstr "R TRIG"
+
+msgid "RAM saving is not available for FDS games!"
+msgstr "任天堂�?碟機�?�戲�?能夠以RAM儲存"
+
+msgid "Reboot"
+msgstr "�?新啟動"
+
+msgid "Rendering"
+msgstr "�??繪"
+
+msgid "Reset"
+msgstr "�?置"
+
+msgid "Reset Game"
+msgstr "�?置�?�戲"
+
+msgid "Reset this game? Any unsaved progress will be lost."
+msgstr "�?置�?�戲嗎？所有未儲存的�?�戲進度將失去。"
+
+msgid "Reset Mappings"
+msgstr "�?置按�?�設定"
+
+msgid "Reset Settings"
+msgstr "�?置設定"
+
+msgid "Retry"
+msgstr "�?試"
+
+msgid "Return to Loader"
+msgstr "返回 HBC"
+
+msgid "Return to Wii Menu"
+msgstr "返回 Wii �?�單"
+
+msgid "Right"
+msgstr "�?��?�"
+
+msgid "RIGHT"
+msgstr "�?��?�"
+
+msgid "Right Button"
+msgstr "�?��?�"
+
+msgid "Rumble"
+msgstr "振動"
+
+msgid "Save"
+msgstr "儲存"
+
+msgid "Save Device"
+msgstr "儲存�?置"
+
+msgid "Save failed!"
+msgstr "儲存失敗�?"
+
+msgid "Save file not found"
+msgstr "無法找到儲存檔案"
+
+msgid "Save Folder"
+msgstr "儲存檔案夾"
+
+msgid "Save Game"
+msgstr "儲存�?�戲"
+
+msgid "Save RAM and State?"
+msgstr "儲存 RAM 與 狀態？"
+
+msgid "Save Snapshot?"
+msgstr "儲存截圖嗎？"
+
+msgid "Save SRAM and Snapshot?"
+msgstr "儲存 SRAM 與截圖嗎？"
+
+msgid "Save State?"
+msgstr "儲存狀態？"
+
+msgid "Save successful"
+msgstr "儲存�?功"
+
+msgid "Saving"
+msgstr "儲存中"
+
+msgid "Saving preferences..."
+msgstr "喜愛設定儲存中..."
+
+msgid "Saving..."
+msgstr "儲存中..."
+
+msgid "Scaling"
+msgstr "比例"
+
+msgid "Screen Position"
+msgstr "畫�?�的�?置"
+
+msgid "Screen Zoom"
+msgstr "畫�?�的縮放"
+
+msgid "Select"
+msgstr "�?�擇"
+
+msgid "Seek error!"
+msgstr "�?�尋錯誤�?"
+
+msgid "Settings"
+msgstr "設定"
+
+msgid "Settings - Menu"
+msgstr "設定 - �?�單"
+
+msgid "Settings - Network"
+msgstr "設定 - 網路"
+
+msgid "Settings - Saving & Loading"
+msgstr "設定 - 儲存與載入"
+
+msgid "SD Card"
+msgstr "SD�?�"
+
+msgid "SD card not found!"
+msgstr "找�?到SD�?��?"
+
+msgid "Shift"
+msgstr "Shift�?�"
+
+msgid "Simp_chinese"
+msgstr "簡體中文"
+
+msgid "SMB Share IP"
+msgstr "SMB共享IP"
+
+msgid "SMB Share Name"
+msgstr "SMB共享�??稱"
+
+msgid "SMB Share Password"
+msgstr "SMB共享密碼"
+
+msgid "SMB Share Username"
+msgstr "SMB共享使用者�??稱"
+
+msgid "Snapshot"
+msgstr "截圖"
+
+msgid "Snapshot (Auto)"
+msgstr "截圖(自動)"
+
+msgid "SNES Controller"
+msgstr "超級任天堂 控制器"
+
+msgid "SNES Controllers (2)"
+msgstr "超級任天堂 控制器(2)"
+
+msgid "SNES Controllers (4)"
+msgstr "超級任天堂 控制器(4)"
+
+msgid "SNES Controller - Classic Controller"
+msgstr "超級任天堂 控制器 - 傳統控制器"
+
+msgid "SNES Controller - GameCube Controller"
+msgstr "超級任天堂 控制器 - GameCube控制器"
+
+msgid "SNES Controller - Nunchuk + Wiimote"
+msgstr "超級任天堂 控制器 - Nunchuk雙節�?控制器 + Wiimote�?�控器"
+
+msgid "SNES Controller - Wiimote"
+msgstr "超級任天堂 控制器 - Wiimote�?�控器"
+
+msgid "SNES Mouse"
+msgstr "超級任天堂 滑鼠"
+
+msgid "SNES Mouse - GameCube Controller"
+msgstr "超級任天堂 滑鼠 - GameCube控制器"
+
+msgid "SNES Mouse - Wiimote"
+msgstr "超級任天堂 滑鼠 - Wiimote�?�控器"
+
+msgid "Snes9x - Copyright (c) Snes9x Team 1996 - 2006"
+msgstr "Snes9x - 版權(c)為 Snes9x 團隊所有 1996 - 2006"
+
+msgid "Sound Effects Volume"
+msgstr "音效的音�?"
+
+msgid "Spanish"
+msgstr "西�?�牙語"
+
+msgid "Sprite Limit"
+msgstr "Sprite �?制"
+
+msgid "SRAM file not found"
+msgstr "找�?到 SRAM 檔"
+
+msgid "Start"
+msgstr "啟動"
+
+msgid "State"
+msgstr "狀態"
+
+msgid "State (Auto)"
+msgstr "狀態(自動)"
+
+msgid "State file not found"
+msgstr "找�?到狀態檔"
+
+msgid "Stretch to Fit"
+msgstr "伸縮至�?��?�"
+
+msgid "Super Scope"
+msgstr "Nintendo Scope光線�?"
+
+msgid "Superscope"
+msgstr "Nintendo Scope光線�?"
+
+msgid "Superscope - GameCube Controller"
+msgstr "Nintendo Scope光線�? - GameCube 控制器"
+
+msgid "Superscope - Wiimote"
+msgstr "Nintendo Scope光線�? - Wiimote�?�控器"
+
+msgid "This software is open source and may be copied,"
+msgstr "這軟體是開放�?碼且�?�能被複製，"
+
+msgid "Trad_chinese"
+msgstr "正體中文"
+
+msgid "Unable to initialize network!"
+msgstr "無法連接網路�?"
+
+msgid "Unable to locate a load device!"
+msgstr "無法找到載入�?置�?"
+
+msgid "Unable to locate a save device!"
+msgstr "無法找到儲存�?置�?"
+
+msgid "Unable to open snapshot!"
+msgstr "無法開啟截圖�?"
+
+msgid "Unfiltered"
+msgstr "未被篩�?�"
+
+msgid "Unknown file type!"
+msgstr "未知的檔案型態�?"
+
+msgid "Unrecognized DVD format."
+msgstr "未被�?�?�的DVD格�?。"
+
+msgid "Unrecognized file extension!"
+msgstr "無法識別之檔案擴展�??稱�?"
+
+msgid "Up"
+msgstr "�?�上"
+
+msgid "UP"
+msgstr "�?�上"
+
+msgid "Up One Level"
+msgstr "上一層"
+
+msgid "Update Available"
+msgstr "有�?�用的更新檔"
+
+msgid "Update failed!"
+msgstr "更新失敗�?"
+
+msgid "Update later"
+msgstr "�?後�?更新"
+
+msgid "Update now"
+msgstr "�?�在更新"
+
+msgid "Update successful!"
+msgstr "更新�?功�?"
+
+msgid "USB drive not found!"
+msgstr "找�?到USB�?置�?"
+
+msgid "USB Mass Storage"
+msgstr "USB大容�?存儲�?置"
+
+msgid "Vertical"
+msgstr "垂直方�?�"
+
+msgid "Video"
+msgstr "視訊"
+
+msgid "Video Mode"
+msgstr "視訊模�?"
+
+msgid "VM8: Unknown page type!"
+msgstr "VM8:未知的�?�?�型態�?"
+
+msgid "VM16: Unknown page type!"
+msgstr "VM16:未知的�?�?�型態�?"
+
+msgid "VM32: Unknown page type!"
+msgstr "VM32:未知的�?�?�型態�?"
+
+msgid "Wiimote"
+msgstr "Wiimote�?�控器"
+
+msgid "Wiimote Orientation"
+msgstr "Wiimote�?�控器的方�?�"
+
+msgid "Yes"
+msgstr "是"
+
+msgid "Zapper"
+msgstr "Zapper光線�?"
+
+msgid "Zapper Crosshair"
+msgstr "Zapper光線�? �??字準線"
+
+msgid "Logo"
+msgstr "標誌"
+
+msgid "Turbo On"
+msgstr "開啟連發"
+
+msgid "Turbo Off"
+msgstr "關閉連發"
+
+msgid "Automatic"
+msgstr "自動"
+
+msgid "Palette"
+msgstr "使用色盤"
+
+msgid "AspiringSquire's Real palette"
+msgstr "AspiringSquire的真實色盤"
+
+msgid "Loopy's palette"
+msgstr "Loopy的色盤"
+
+msgid "Quor's palette"
+msgstr "Quor的色盤"
+
+msgid "Chris Covell's palette"
+msgstr "Chris Covell的色盤"
+
+msgid "Matthew Conte's palette"
+msgstr "Matthew Conte的色盤"
+
+msgid "PasoFami/99 palette"
+msgstr "PasoFami/99 色盤"
+
+msgid "CrashMan's palette"
+msgstr "CrashMan的色盤"
+
+msgid "MESS palette"
+msgstr "MESS 色盤"
+
+msgid "Zaphod's VS Castlevania palette"
+msgstr "Zaphod's VS Castlevania 色盤"
+
+msgid "Zaphod's VS SMB palette"
+msgstr "Zaphod's VS SMB 色盤"
+
+msgid "VS Dr. Mario palette"
+msgstr "VS Dr. Mario 色盤"
+
+msgid "VS Castlevania palette"
+msgstr "VS Castlevania 色盤"
+
+msgid "VS SMB/VS Ice Climber palette"
+msgstr "VS SMB/VS Ice Climber 色盤"
+
+msgid "Catalan"
+msgstr "嘉泰羅尼亞語"
+
+msgid "The current IOS has been altered (fake-signed). Functionality and/or stability may be adversely affected."
+msgstr "目�?的IOS已被改變（�?�的電�?簽章）。功能 和/或 穩定性�?�能會�?�到�?利的影響。"
+
+msgid "The current IOS is unsupported. Functionality and/or stability may be adversely affected."
+msgstr "目�?的IOS�?支�?�。功能 和/或 穩定性�?�能會�?�到�?利的影響。"
+
+msgid "Turkish"
+msgstr "土耳其語"
