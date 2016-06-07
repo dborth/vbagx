@@ -9,6 +9,10 @@
 Visual Boy Advance GX is a modified port of VBA-M.
 With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
+-=[ Releases ]=-
+
+https://github.com/dborth/vba-wii/releases
+
 -=[ Features ]=-
 
 * Wiimote, Nunchuk, Classic, and Gamecube controller support
