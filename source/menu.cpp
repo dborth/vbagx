@@ -767,69 +767,60 @@ static void WindowCredits(void * ptr)
 	creditsBoxImg.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	creditsWindowBox.Append(&creditsBoxImg);
 
-	int numEntries = 30;
+	int numEntries = 25;
 	GuiText * txt[numEntries];
 
 	txt[i] = new GuiText("Credits", 20, (GXColor){0, 0, 0, 255});
 	txt[i]->SetAlignment(ALIGN_CENTRE, ALIGN_TOP); txt[i]->SetPosition(0,y); i++; y+=24;
 
-	txt[i] = new GuiText("version 2.3.2 - github.com/libertyernie/vba-wii", 20, (GXColor){0, 0, 0, 255});
+	txt[i] = new GuiText("Official Site: https://github.com/dborth/vba-wii", 20, (GXColor){0, 0, 0, 255});
 	txt[i]->SetAlignment(ALIGN_CENTRE, ALIGN_TOP); txt[i]->SetPosition(0,y); i++; y+=32;
 
 	txt[i]->SetPresets(20, (GXColor){0, 0, 0, 255}, 0,
 			FTGX_JUSTIFY_LEFT | FTGX_ALIGN_TOP, ALIGN_LEFT, ALIGN_TOP);
 
-	txt[i] = new GuiText("Coding (since 2014)");
-	txt[i]->SetPosition(40,y); i++;
-	txt[i] = new GuiText("libertyernie & Glitch");
-	txt[i]->SetPosition(335,y); i++; y+=24;
-	txt[i] = new GuiText("Menu screenshot support");
-	txt[i]->SetPosition(40,y); i++;
-	txt[i] = new GuiText("cebolleto");
-	txt[i]->SetPosition(335,y); i++; y+=24;
-	txt[i] = new GuiText("GBA tiled rendering");
-	txt[i]->SetPosition(40,y); i++;
-	txt[i] = new GuiText("bgK (for RetroArch)");
-	txt[i]->SetPosition(335,y); i++; y+=32;
-
-	txt[i] = new GuiText("Coding & menu design");
+	txt[i] = new GuiText("Main developer");
 	txt[i]->SetPosition(40,y); i++;
 	txt[i] = new GuiText("Tantric");
-	txt[i]->SetPosition(335,y); i++; y+=24;
+	txt[i]->SetPosition(250,y); i++; y+=48;
+
 	txt[i] = new GuiText("Additional coding");
 	txt[i]->SetPosition(40,y); i++;
-	txt[i] = new GuiText("Carl Kenner, dancinninjac");
-	txt[i]->SetPosition(335,y); i++; y+=24;
+	txt[i] = new GuiText("Zopenko, Glitch, libertyernie");
+	txt[i]->SetPosition(250,y); i++; y+=24;
+	txt[i] = new GuiText("cebolleto, bgK, Carl Kenner, dancinninjac");
+	txt[i]->SetPosition(250,y); i++; y+=48;
+
 	txt[i] = new GuiText("Menu artwork");
 	txt[i]->SetPosition(40,y); i++;
 	txt[i] = new GuiText("the3seashells");
-	txt[i]->SetPosition(335,y); i++; y+=24;
+	txt[i]->SetPosition(250,y); i++; y+=24;
 	txt[i] = new GuiText("Menu sound");
 	txt[i]->SetPosition(40,y); i++;
 	txt[i] = new GuiText("Peter de Man");
-	txt[i]->SetPosition(335,y); i++; y+=32;
+	txt[i]->SetPosition(250,y); i++; y+=32;
 
 	txt[i] = new GuiText("VBA GameCube");
 	txt[i]->SetPosition(40,y); i++;
 	txt[i] = new GuiText("SoftDev, emukidid");
-	txt[i]->SetPosition(335,y); i++; y+=24;
+	txt[i]->SetPosition(250,y); i++; y+=24;
 	txt[i] = new GuiText("Visual Boy Advance - M");
 	txt[i]->SetPosition(40,y); i++;
 	txt[i] = new GuiText("VBA-M Team");
-	txt[i]->SetPosition(335,y); i++; y+=24;
+	txt[i]->SetPosition(250,y); i++; y+=24;
 	txt[i] = new GuiText("Visual Boy Advance");
 	txt[i]->SetPosition(40,y); i++;
 	txt[i] = new GuiText("Forgotten");
-	txt[i]->SetPosition(335,y); i++; y+=24;
+	txt[i]->SetPosition(250,y); i++; y+=24;
 
 	txt[i] = new GuiText("libogc / devkitPPC");
 	txt[i]->SetPosition(40,y); i++;
 	txt[i] = new GuiText("shagkur & wintermute");
-	txt[i]->SetPosition(335,y); i++; y+=24;
+	txt[i]->SetPosition(250,y); i++; y+=24;
 	txt[i] = new GuiText("FreeTypeGX");
 	txt[i]->SetPosition(40,y); i++;
 	txt[i] = new GuiText("Armin Tamzarian");
-	txt[i]->SetPosition(335,y); i++; y+=32;
+	txt[i]->SetPosition(250,y); i++; y+=32;
 
 	txt[i]->SetPresets(18, (GXColor){0, 0, 0, 255}, 0,
 		FTGX_JUSTIFY_CENTER | FTGX_ALIGN_TOP, ALIGN_CENTRE, ALIGN_TOP);
