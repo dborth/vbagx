@@ -1107,6 +1107,7 @@ static int MenuGameSelection()
 	mainWindow->Remove(&buttonWindow);
 	mainWindow->Remove(&gameBrowser);
 	mainWindow->Remove(&preview);
+	mainWindow->Remove(&bgPreview);
 	MEM_DEALLOC(imgBuffer);
 	return menu;
 }
