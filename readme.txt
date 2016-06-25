@@ -1,7 +1,7 @@
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                   - Visual Boy Advance GX -
-               https://github.com/dborth/vba-wii
+               https://github.com/dborth/vbagx
                      (Under GPL License)
  
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
@@ -11,7 +11,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 -=[ Releases ]=-
 
-https://github.com/dborth/vba-wii/releases
+https://github.com/dborth/vbagx/releases
 
 -=[ Features ]=-
 
@@ -1152,6 +1152,6 @@ switched items since then.
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
  
                                   VBAGX Web Site
-                          https://github.com/dborth/vba-wii
+                          https://github.com/dborth/vbagx
  
 ¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤°`°¤ø,¸,ø¤°`°¤ø,¸¸,ø¤
