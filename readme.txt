@@ -38,7 +38,7 @@ https://github.com/dborth/vbagx/releases
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
-[2.3.3] - Zopenko
+[2.3.3]
 
 * fixes the gc pad down on file browser
 * added koston default green gb color screen
