@@ -1061,12 +1061,14 @@ bool LoadGBROM()
 {
 	gbEmulatorType = GCSettings.GBHardware;
 
-	if (browserList[browser.selIndex].length > 1024*1024*8) {
+	if (browserList[browser.selIndex].length > 1024*1024*8) 
+	{
 		InfoPrompt("ROM size is too large (> 8 MB)");
 		return false;
 	}
 	gbRom = (u8 *)malloc(1024*1024*8); // 32 MB is too much for sure
-	if (!gbRom) {
+	if (!gbRom) 
+	{
 		InfoPrompt("Unable to allocate 8 MB of memory");
 		return false;
 	}
@@ -1310,9 +1312,19 @@ void InitialisePalette()
 	// Build GBPalette
 	for( i = 0; i < 24; )
 	{
-		systemGbPalette[i++] = (0x1c) | (0x1e << 5) | (0x1c << 10);
-		systemGbPalette[i++] = (0x10) | (0x17 << 5) | (0x0b << 10);
-		systemGbPalette[i++] = (0x27) | (0x0c << 5) | (0x0a << 10);
+
+		if (GCSettings.BasicPalette == 0) //Greenish color
+		{
+			systemGbPalette[i++] = (0x1c) | (0x1e << 5) | (0x1c << 10);
+			systemGbPalette[i++] = (0x10) | (0x17 << 5) | (0x0b << 10);
+			systemGbPalette[i++] = (0x27) | (0x0c << 5) | (0x0a << 10);
+		}
+		else	// Monochrome color
+		{
+			systemGbPalette[i++] = (0x1f) | (0x1f << 5) | (0x1f << 10);
+			systemGbPalette[i++] = (0x15) | (0x15 << 5) | (0x15 << 10);
+			systemGbPalette[i++] = (0x0c) | (0x0c << 5) | (0x0c << 10);
+		}
 		systemGbPalette[i++] = 0;
 	}
 	// Set palette etc - Fixed to RGB565

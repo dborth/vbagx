@@ -773,7 +773,7 @@ static void WindowCredits(void * ptr)
 	txt[i] = new GuiText("Credits", 20, (GXColor){0, 0, 0, 255});
 	txt[i]->SetAlignment(ALIGN_CENTRE, ALIGN_TOP); txt[i]->SetPosition(0,y); i++; y+=24;
 
-	txt[i] = new GuiText("Official Site: https://github.com/dborth/vba-wii", 20, (GXColor){0, 0, 0, 255});
+	txt[i] = new GuiText("Official Site: https://github.com/dborth/vbagx", 20, (GXColor){0, 0, 0, 255});
 	txt[i]->SetAlignment(ALIGN_CENTRE, ALIGN_TOP); txt[i]->SetPosition(0,y); i++; y+=32;
 
 	txt[i]->SetPresets(20, (GXColor){0, 0, 0, 255}, 0,
@@ -973,7 +973,7 @@ static int MenuGameSelection()
 	preview.SetPosition(174, -8);
 	u8* imgBuffer = MEM_ALLOC(512 * 512 * 4);
 	int  previousBrowserIndex = -1;
-	char screenshotPath[MAXJOLIET + 1];
+	char imagePath[MAXJOLIET + 1];
 
 	HaltGui();
 	btnLogo->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
@@ -1009,15 +1009,15 @@ static int MenuGameSelection()
 			gameBrowser.TriggerUpdate();
 		}
 		
-		//update game screenshot
+		//update gamelist image
 		if(previousBrowserIndex != browser.selIndex)
 		{			
 			previousBrowserIndex = browser.selIndex;
-			snprintf(screenshotPath, MAXJOLIET, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], GCSettings.ScreenshotsFolder, browserList[browser.selIndex].displayname);
+			snprintf(imagePath, MAXJOLIET, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], GCSettings.ImageFolder, browserList[browser.selIndex].displayname);
 			
 			AllocSaveBuffer();
 			int width, height;
-			if(LoadFile(screenshotPath, SILENT))
+			if(LoadFile(imagePath, SILENT))
 			{				
 				if(DecodePNG(savebuffer, &width, &height, imgBuffer, 512, 512))
 				{
@@ -1134,6 +1134,7 @@ static int MenuGame()
 	GuiImageData iconGameSettings(icon_game_settings_png);
 	GuiImageData iconLoad(icon_game_load_png);
 	GuiImageData iconSave(icon_game_save_png);
+	GuiImageData iconDelete(icon_game_delete_png);
 	GuiImageData iconReset(icon_game_reset_png);
 
 	GuiImageData battery(battery_png);
@@ -1143,10 +1144,9 @@ static int MenuGame()
 	GuiTrigger trigHome;
 	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0);
 
-	int xOffset=125, yOffset=65;
-	if (isBoktai) {
-		xOffset=170; yOffset=70;
-	}
+	int xOffset=125;
+	if (isBoktai) 
+		xOffset=200;
 
 	GuiText saveBtnTxt("Save", 22, (GXColor){0, 0, 0, 255});
 	GuiImage saveBtnImg(&btnLargeOutline);
@@ -1154,7 +1154,7 @@ static int MenuGame()
 	GuiImage saveBtnIcon(&iconSave);
 	GuiButton saveBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	saveBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	saveBtn.SetPosition(-xOffset, 185-yOffset);
+	saveBtn.SetPosition(-200, 120);
 	saveBtn.SetLabel(&saveBtnTxt);
 	saveBtn.SetImage(&saveBtnImg);
 	saveBtn.SetImageOver(&saveBtnImgOver);
@@ -1171,7 +1171,7 @@ static int MenuGame()
 	GuiImage loadBtnIcon(&iconLoad);
 	GuiButton loadBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	loadBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	loadBtn.SetPosition(xOffset, 185-yOffset);
+	loadBtn.SetPosition(0, 120);
 	loadBtn.SetLabel(&loadBtnTxt);
 	loadBtn.SetImage(&loadBtnImg);
 	loadBtn.SetImageOver(&loadBtnImgOver);
@@ -1182,29 +1182,51 @@ static int MenuGame()
 	loadBtn.SetTrigger(trig2);
 	loadBtn.SetEffectGrow();
 
+	GuiText deleteBtnTxt("Delete", 22, (GXColor){0, 0, 0, 255});
+	GuiImage deleteBtnImg(&btnLargeOutline);
+	GuiImage deleteBtnImgOver(&btnLargeOutlineOver);
+	GuiImage deleteBtnIcon(&iconDelete);
+	GuiButton deleteBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
+	deleteBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	deleteBtn.SetPosition(200, 120);
+	deleteBtn.SetLabel(&deleteBtnTxt);
+	deleteBtn.SetImage(&deleteBtnImg);
+	deleteBtn.SetImageOver(&deleteBtnImgOver);
+	deleteBtn.SetIcon(&deleteBtnIcon);
+	deleteBtn.SetSoundOver(&btnSoundOver);
+	deleteBtn.SetSoundClick(&btnSoundClick);
+	deleteBtn.SetTrigger(trigA);
+	deleteBtn.SetTrigger(trig2);
+	deleteBtn.SetEffectGrow();
+	
 	// Boktai adds an extra button for setting the sun.
 	GuiText *sunBtnTxt = NULL;
 	GuiImage *sunBtnImg = NULL;
 	GuiImage *sunBtnImgOver = NULL;
 	GuiButton *sunBtn = NULL;
-	if (isBoktai) {
+	if (isBoktai) 
+	{
 		struct tm *newtime;
 		time_t long_time;
 
 		// regardless of the weather, there should be no sun at night time!
 		time(&long_time); // Get time as long integer.
 		newtime = localtime(&long_time); // Convert to local time.
+		
 		if (newtime->tm_hour > 21 || newtime->tm_hour < 5)
 		{
 			sprintf(s, "Weather: Night Time");
-		} else sprintf(s, "Weather: %d%% sun", SunBars*10);
+		} 
+		else 
+			sprintf(s, "Weather: %d%% sun", SunBars*10);
+		
 		sunBtnTxt = new GuiText(s, 22, (GXColor){0, 0, 0, 255});
 		sunBtnTxt->SetWrap(true, btnLargeOutline.GetWidth()-30);
 		sunBtnImg = new GuiImage(&btnLargeOutline);
 		sunBtnImgOver = new GuiImage(&btnLargeOutlineOver);
 		sunBtn = new GuiButton(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 		sunBtn->SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-		sunBtn->SetPosition(0, 185);
+		sunBtn->SetPosition(0, 250);
 		sunBtn->SetLabel(sunBtnTxt);
 		sunBtn->SetImage(sunBtnImg);
 		sunBtn->SetImageOver(sunBtnImgOver);
@@ -1221,7 +1243,7 @@ static int MenuGame()
 	GuiImage resetBtnIcon(&iconReset);
 	GuiButton resetBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	resetBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	resetBtn.SetPosition(xOffset, 185+yOffset);
+	resetBtn.SetPosition(xOffset, 250);
 	resetBtn.SetLabel(&resetBtnTxt);
 	resetBtn.SetImage(&resetBtnImg);
 	resetBtn.SetImageOver(&resetBtnImgOver);
@@ -1239,7 +1261,7 @@ static int MenuGame()
 	GuiImage gameSettingsBtnIcon(&iconGameSettings);
 	GuiButton gameSettingsBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	gameSettingsBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	gameSettingsBtn.SetPosition(-xOffset, 185+yOffset);
+	gameSettingsBtn.SetPosition(-xOffset, 250);
 	gameSettingsBtn.SetLabel(&gameSettingsBtnTxt);
 	gameSettingsBtn.SetImage(&gameSettingsBtnImg);
 	gameSettingsBtn.SetImageOver(&gameSettingsBtnImgOver);
@@ -1328,6 +1350,7 @@ static int MenuGame()
 	w.Append(&titleTxt);
 	w.Append(&saveBtn);
 	w.Append(&loadBtn);
+	w.Append(&deleteBtn);
 	w.Append(&resetBtn);
 	w.Append(&gameSettingsBtn);
 	if (isBoktai)
@@ -1443,7 +1466,8 @@ static int MenuGame()
 
 		if (isBoktai)
 		{
-			if (sunBtn->GetState() == STATE_CLICKED) {
+			if (sunBtn->GetState() == STATE_CLICKED) 
+			{
 				++SunBars;
 				if (SunBars>10) SunBars=0;
 				menu = MENU_GAME;
@@ -1457,6 +1481,10 @@ static int MenuGame()
 		else if(loadBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_GAME_LOAD;
+		}
+		else if(deleteBtn.GetState() == STATE_CLICKED)
+		{
+			menu = MENU_GAME_DELETE;
 		}
 		else if(resetBtn.GetState() == STATE_CLICKED)
 		{
@@ -1584,6 +1612,7 @@ static int MenuGameSaves(int action)
 	int j = 0;
 
 	char filepath[1024];
+	char deletepath[1024];
 	char scrfile[1024];
 	char tmp[MAXJOLIET+1];
 
@@ -1601,6 +1630,8 @@ static int MenuGameSaves(int action)
 
 	if(action == 0)
 		titleTxt.SetText("Load Game");
+	else if (action == 2)
+		titleTxt.SetText("Delete Saves");
 	else
 		titleTxt.SetText("Save Game");
 
@@ -1709,7 +1740,7 @@ static int MenuGameSaves(int action)
 	FreeSaveBuffer();
 	saves.length = j;
 
-	if(saves.length == 0 && action == 0)
+	if((saves.length == 0 && action == 0) || (saves.length == 0 && action == 2)) 
 	{
 		InfoPrompt("No game saves found.");
 		menu = MENU_GAME;
@@ -1730,7 +1761,7 @@ static int MenuGameSaves(int action)
 
 		ret = saveBrowser.GetClickedSave();
 
-		// load or save game
+		// load, save and delete save games
 		if(ret > -3)
 		{
 			result = 0;
@@ -1750,6 +1781,35 @@ static int MenuGameSaves(int action)
 				}
 				if(result)
 					menu = MENU_EXIT;
+			}
+			else if(action == 2) // delete SRAM/Snapshot
+			{
+				if (WindowPrompt("Delete File", "Delete this save file? Deleted files can not be restored.", "OK", "Cancel"))
+				{
+					MakeFilePath(filepath, saves.type[ret], saves.filename[ret]);
+					switch(saves.type[ret])
+					{
+						case FILE_SRAM:
+							strncpy(deletepath, filepath, 1024);
+							deletepath[strlen(deletepath)-4] = 0;
+							sprintf(deletepath, "%s.sav", deletepath);
+							remove(deletepath); // Delete the *.srm file (Battery save file)
+						break;
+						case FILE_SNAPSHOT:
+							strncpy(deletepath, filepath, 1024);
+							deletepath[strlen(deletepath)-4] = 0;
+							sprintf(deletepath, "%s.png", deletepath);
+							remove(deletepath); // Delete the *.png file (Screenshot file)
+							strncpy(deletepath, filepath, 1024);
+							deletepath[strlen(deletepath)-4] = 0;
+							sprintf(deletepath, "%s.sgm", deletepath);
+							remove(deletepath); // Delete the *.frz file (Save State file)
+						break;
+					}							
+				}
+				menu = MENU_GAME_DELETE;
+			
+			
 			}
 			else // save
 			{
@@ -2016,7 +2076,7 @@ static int MenuGameSettings()
 			if (WindowPrompt("Preview Screenshot", "Save a new Preview Screenshot? Current Screenshot image will be overwritten.", "OK", "Cancel"))
 			{
 				snprintf(filepath, 1024, "%s%s/%s", pathPrefix[GCSettings.SaveMethod], GCSettings.ScreenshotsFolder, ROMFilename);
-				SavePreviewImg(filepath, NOTSILENT); 
+				SavePreviewImg(filepath, SILENT); 
 			}
 		}
 		else if(closeBtn.GetState() == STATE_CLICKED)
@@ -3067,6 +3127,7 @@ static int MenuSettingsEmulation()
 	sprintf(options.name[i++], "Hardware (GB/GBC)");
 	sprintf(options.name[i++], "Super Game Boy border");
 	sprintf(options.name[i++], "Offset from UTC (hours)");
+	sprintf(options.name[i++], "GB Screen Palette");
 	options.length = i;
 
 	for(i=0; i < options.length; i++)
@@ -3135,6 +3196,9 @@ static int MenuSettingsEmulation()
 					GCSettings.OffsetMinutesUTC = -60*12;
 				}
 				break;
+			case 3:
+				GCSettings.BasicPalette ^= 1;
+				break;
 		}
 
 		if(ret >= 0 || firstRun)
@@ -3149,10 +3213,6 @@ static int MenuSettingsEmulation()
 				sprintf (options.value[0], "Super Game Boy");
 			else if (GCSettings.GBHardware == 3)
 				sprintf (options.value[0], "Game Boy");
-			else if (GCSettings.GBHardware == 4)
-				sprintf (options.value[0], "Game Boy Advance");
-			else if (GCSettings.GBHardware == 5)
-				sprintf (options.value[0], "Super Game Boy 2");
 			
 			if (GCSettings.SGBBorder == 0)
 				sprintf (options.value[1], "Off");
@@ -3163,6 +3223,12 @@ static int MenuSettingsEmulation()
 			
 			sprintf (options.value[2], "%+.2f", GCSettings.OffsetMinutesUTC / 60.0);
 
+			if (GCSettings.BasicPalette == 0)
+				sprintf (options.value[3], "Green Screen");
+			else
+				sprintf (options.value[3], "Monochrome Screen");
+			
+			
 			optionBrowser.TriggerUpdate();
 		}
 
@@ -3172,6 +3238,7 @@ static int MenuSettingsEmulation()
 		}
 	}
 	HaltGui();
+	InitialisePalette();
 	mainWindow->Remove(&optionBrowser);
 	mainWindow->Remove(&w);
 	mainWindow->Remove(&titleTxt);
@@ -3379,6 +3446,8 @@ static int MenuSettingsFile()
 	sprintf(options.name[i++], "Load Folder");
 	sprintf(options.name[i++], "Save Folder");
 	sprintf(options.name[i++], "Screenshots Folder");
+	sprintf(options.name[i++], "Covers Folder");
+	sprintf(options.name[i++], "Artworks Folder");
 	sprintf(options.name[i++], "Auto Load");
 	sprintf(options.name[i++], "Auto Save");
 	sprintf(options.name[i++], "Append Auto to .SAV Files");
@@ -3453,18 +3522,26 @@ static int MenuSettingsFile()
 				break;
 
 			case 5:
+				OnScreenKeyboard(GCSettings.CoverFolder, MAXPATHLEN);
+				break;
+
+			case 6:
+				OnScreenKeyboard(GCSettings.ArtworkFolder, MAXPATHLEN);
+				break;
+			
+			case 7:
 				GCSettings.AutoLoad++;
 				if (GCSettings.AutoLoad > 2)
 					GCSettings.AutoLoad = 0;
 				break;
 
-			case 6:
+			case 8:
 				GCSettings.AutoSave++;
 				if (GCSettings.AutoSave > 3)
 					GCSettings.AutoSave = 0;
 				break;
 
-			case 7:
+			case 9:
 				GCSettings.AppendAuto++;
 				if (GCSettings.AppendAuto > 1)
 					GCSettings.AppendAuto = 0;
@@ -3530,18 +3607,20 @@ static int MenuSettingsFile()
 			snprintf (options.value[2], 35, "%s", GCSettings.LoadFolder);
 			snprintf (options.value[3], 35, "%s", GCSettings.SaveFolder);
 			snprintf (options.value[4], 35, "%s", GCSettings.ScreenshotsFolder);
+			snprintf (options.value[5], 35, "%s", GCSettings.CoverFolder);
+			snprintf (options.value[6], 35, "%s", GCSettings.ArtworkFolder);
+			
+			if (GCSettings.AutoLoad == 0) sprintf (options.value[7],"Off");
+			else if (GCSettings.AutoLoad == 1) sprintf (options.value[7],"SRAM");
+			else if (GCSettings.AutoLoad == 2) sprintf (options.value[7],"Snapshot");
 
-			if (GCSettings.AutoLoad == 0) sprintf (options.value[5],"Off");
-			else if (GCSettings.AutoLoad == 1) sprintf (options.value[5],"SRAM");
-			else if (GCSettings.AutoLoad == 2) sprintf (options.value[5],"Snapshot");
+			if (GCSettings.AutoSave == 0) sprintf (options.value[8],"Off");
+			else if (GCSettings.AutoSave == 1) sprintf (options.value[8],"SRAM");
+			else if (GCSettings.AutoSave == 2) sprintf (options.value[8],"Snapshot");
+			else if (GCSettings.AutoSave == 3) sprintf (options.value[8],"Both");
 
-			if (GCSettings.AutoSave == 0) sprintf (options.value[6],"Off");
-			else if (GCSettings.AutoSave == 1) sprintf (options.value[6],"SRAM");
-			else if (GCSettings.AutoSave == 2) sprintf (options.value[6],"Snapshot");
-			else if (GCSettings.AutoSave == 3) sprintf (options.value[6],"Both");
-
-			if (GCSettings.AppendAuto == 0) sprintf (options.value[7],"Off");
-			else if (GCSettings.AppendAuto == 1) sprintf (options.value[7],"On");
+			if (GCSettings.AppendAuto == 0) sprintf (options.value[9],"Off");
+			else if (GCSettings.AppendAuto == 1) sprintf (options.value[9],"On");
 
 			optionBrowser.TriggerUpdate();
 		}
@@ -3575,6 +3654,7 @@ static int MenuSettingsMenu()
 	sprintf(options.name[i++], "Sound Effects Volume");
 	sprintf(options.name[i++], "Rumble");
 	sprintf(options.name[i++], "Language");
+	sprintf(options.name[i++], "Preview Image");
 	options.length = i;
 
 	for(i=0; i < options.length; i++)
@@ -3657,6 +3737,11 @@ static int MenuSettingsMenu()
 					GCSettings.language = LANG_PORTUGUESE;
 				else if(GCSettings.language == LANG_JAPANESE)
 					GCSettings.language = LANG_ENGLISH;
+				break;			
+			case 6:
+				GCSettings.PreviewImage++;
+				if(GCSettings.PreviewImage > 2)
+					GCSettings.PreviewImage = 0;
 				break;
 		}
 
@@ -3724,7 +3809,22 @@ static int MenuSettingsMenu()
 				case LANG_CATALAN:		sprintf(options.value[5], "Catalan"); break;
 				case LANG_TURKISH:		sprintf(options.value[5], "Turkish"); break;
 			}
-			
+	
+			switch(GCSettings.PreviewImage)
+			{
+				case 0:	
+					sprintf(options.value[6], "Screenshots"); 
+					snprintf(GCSettings.ImageFolder, MAXJOLIET, "%s", GCSettings.ScreenshotsFolder);
+					break; 
+				case 1:	
+					sprintf(options.value[6], "Covers");	  
+					snprintf(GCSettings.ImageFolder, MAXJOLIET, "%s", GCSettings.CoverFolder);
+					break; 
+				case 2:	
+					sprintf(options.value[6], "Artworks");
+					snprintf(GCSettings.ImageFolder, MAXJOLIET, "%s", GCSettings.ArtworkFolder);
+					break; 
+			}
 			optionBrowser.TriggerUpdate();
 		}
 
@@ -4671,6 +4771,9 @@ MainMenu (int menu)
 			case MENU_GAME_SAVE:
 				currentMenu = MenuGameSaves(1);
 				break;
+			case MENU_GAME_DELETE:
+				currentMenu = MenuGameSaves(2);
+				break;	
 			case MENU_GAMESETTINGS:
 				currentMenu = MenuGameSettings();
 				break;

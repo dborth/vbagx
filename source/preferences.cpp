@@ -167,8 +167,11 @@ preparePrefsData ()
 	createXMLSetting("SaveMethod", "Save Method", toStr(GCSettings.SaveMethod));
 	createXMLSetting("LoadFolder", "Load Folder", GCSettings.LoadFolder);
 	createXMLSetting("SaveFolder", "Save Folder", GCSettings.SaveFolder);
-	//createXMLSetting("CheatFolder", "Cheats Folder", GCSettings.CheatFolder);
-
+	createXMLSetting("ScreenshotsFolder", "Screenshots Folder", GCSettings.ScreenshotsFolder);
+	createXMLSetting("CoverFolder", "Covers Folder", GCSettings.CoverFolder);
+	createXMLSetting("ArtworkFolder", "Artworks Folder", GCSettings.ArtworkFolder);
+	createXMLSetting("ImageFolder", "Image Folder", GCSettings.ImageFolder);
+	
 	createXMLSection("Network", "Network Settings");
 
 	createXMLSetting("smbip", "Share Computer IP", GCSettings.smbip);
@@ -197,7 +200,12 @@ preparePrefsData ()
 	createXMLSetting("SFXVolume", "Sound Effects Volume", toStr(GCSettings.SFXVolume));
 	createXMLSetting("Rumble", "Rumble", toStr(GCSettings.Rumble));
 	createXMLSetting("language", "Language", toStr(GCSettings.language));
+	createXMLSetting("PreviewImage", "Preview Image", toStr(GCSettings.PreviewImage));
 
+	createXMLSection("Emulation", "Emulation Settings");
+
+	createXMLSetting("BasicPalette", "Basic Color Palette for GB", toStr(GCSettings.BasicPalette));
+	
 	createXMLSection("Controller", "Controller Settings");
 
 	createXMLSetting("WiiControls", "Match Wii Game", toStr(GCSettings.WiiControls));
@@ -448,9 +456,6 @@ decodePrefsData ()
 					result = false;
 				else if(verMajor < 2) // less than version 2.0.0
 					result = false; // reset settings (sorry, should update settings instead)
-				else if((verMajor*100 + verMinor*10 + verPoint) > 
-						(curMajor*100 + curMinor*10 + curPoint)) // some future version
-					result = false; // reset settings
 				else
 					result = true;
 			}
@@ -466,8 +471,11 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.SaveMethod, "SaveMethod");
 			loadXMLSetting(GCSettings.LoadFolder, "LoadFolder", sizeof(GCSettings.LoadFolder));
 			loadXMLSetting(GCSettings.SaveFolder, "SaveFolder", sizeof(GCSettings.SaveFolder));
-			//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder", sizeof(GCSettings.CheatFolder));
-
+			loadXMLSetting(GCSettings.ScreenshotsFolder, "ScreenshotsFolder", sizeof(GCSettings.ScreenshotsFolder));
+			loadXMLSetting(GCSettings.CoverFolder, "CoverFolder", sizeof(GCSettings.CoverFolder));
+			loadXMLSetting(GCSettings.ArtworkFolder, "ArtworkFolder", sizeof(GCSettings.ArtworkFolder));
+			loadXMLSetting(GCSettings.ImageFolder, "ImageFolder", sizeof(GCSettings.ImageFolder));
+			
 			// Network Settings
 
 			loadXMLSetting(GCSettings.smbip, "smbip", sizeof(GCSettings.smbip));
@@ -496,7 +504,13 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.SFXVolume, "SFXVolume");
 			loadXMLSetting(&GCSettings.Rumble, "Rumble");
 			loadXMLSetting(&GCSettings.language, "language");
+			loadXMLSetting(&GCSettings.PreviewImage, "PreviewImage");
 
+			// Emulation Settings
+
+			loadXMLSetting(&GCSettings.BasicPalette, "BasicPalette");
+			
+			
 			// Controller Settings
 
 			loadXMLSetting(&GCSettings.WiiControls, "WiiControls");
@@ -599,7 +613,11 @@ DefaultSettings ()
 	GCSettings.SaveMethod = DEVICE_AUTO; // Auto, SD, USB, Network (SMB)
 	sprintf (GCSettings.LoadFolder, "%s/roms", APPFOLDER); // Path to game files
 	sprintf (GCSettings.SaveFolder, "%s/saves", APPFOLDER); // Path to save files
-	sprintf (GCSettings.CheatFolder, "%s/cheats", APPFOLDER); // Path to cheat files
+	sprintf (GCSettings.ScreenshotsFolder, "%s/screenshots", APPFOLDER); // Path to screenshot files
+	sprintf (GCSettings.CoverFolder, "%s/covers", APPFOLDER); // Path to cover files
+	sprintf (GCSettings.ArtworkFolder, "%s/artworks", APPFOLDER); // Path to artwork files
+	sprintf (GCSettings.ImageFolder, "%s/screenshots", APPFOLDER);
+
 	GCSettings.AutoLoad = 1;
 	GCSettings.AutoSave = 1;
 
@@ -623,6 +641,10 @@ DefaultSettings ()
 	GCSettings.MusicVolume = 40;
 	GCSettings.SFXVolume = 40;
 	GCSettings.Rumble = 1;
+	GCSettings.PreviewImage = 0;
+	
+	GCSettings.BasicPalette = 0;
+	
 #ifdef HW_RVL
 	GCSettings.language = CONF_GetLanguage();
 

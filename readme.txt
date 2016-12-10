@@ -38,14 +38,31 @@ https://github.com/dborth/vbagx/releases
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
-[2.3.3]
+[2.3.4 - September 15, 2016]
 
-* fixes the gc pad down on file browser
-* added koston default green gb color screen
-* added the screenshot/preview button
-* added the wiiupro icon on the controller settings
-* increased and centered the screenshot image
-* added the screenshot white image background
+* Added the delete save file (SRAM / Snapshot) option
+* Changed the box colors for the SRAM and Snapshots files to match the color 
+  scheme of the emu GUI
+* Change the "Power off Wii" exit option to completely turn off the wii, 
+  ignoring the WC24 settings
+* Updated settings file name in order to have it's own settings file name
+* Added an option to switch between screenshots, covers, or artwork images, 
+  with their respective named folders at the device's root. You can set which
+  one to show, by going to Settings > Menu > Preview Image. The .PNG image file
+  needs to have the same name as the ROM (e.g.: Mother 3.png)
+* Removed sound from GUI (thanks to Askot) 
+* Added option to switch between the Green or Monochrome GB color screen. You 
+  can set which one to show by going to Settings > Emulation > GB Screen Palette
+
+[2.3.3 - June 25, 2016]
+
+* Fixed the GC pad Down input on the File browser window
+* Added Koston's green gb color screen
+* Added the Screenshot Button
+* Increased and Centered the Screenshot image and reduce game list width
+* Added a background for the preview image
+* Added the WiiuPro Controller icon on the controller settings
+* Fix DSI error / Bug from Emulator Main Menu
 
 [2.3.2 - March 4, 2015] - libertyernie
 

@@ -91,7 +91,7 @@ void ExitApp()
 	ExitCleanup();
 
 	if(ShutdownRequested)
-		SYS_ResetSystem(SYS_POWEROFF, 0, 0);
+		SYS_ResetSystem(SYS_POWEROFF_STANDBY, 0, 0);
 
 	#ifdef HW_RVL
 	if(GCSettings.ExitAction == 0) // Auto
@@ -123,7 +123,7 @@ void ExitApp()
 	}
 	else if(GCSettings.ExitAction == 2) // Shutdown Wii
 	{
-		SYS_ResetSystem(SYS_POWEROFF, 0, 0);
+		SYS_ResetSystem(SYS_POWEROFF_STANDBY, 0, 0);
 	}
 	else // Exit to Loader
 	{

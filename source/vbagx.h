@@ -16,7 +16,7 @@
 #include "utils/FreeTypeGX.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"2.3.3"
+#define APPVERSION 		"2.3.4"
 #define APPFOLDER 		"vbagx"
 #define PREF_FILE_NAME 	"settings.xml"
 #define PAL_FILE_NAME 	"palettes.xml"
@@ -27,7 +27,8 @@
 const char pathPrefix[9][8] =
 { "", "sd:/", "usb:/", "dvd:/", "smb:/", "carda:/", "cardb:/" };
 
-enum {
+enum 
+{
 	DEVICE_AUTO,
 	DEVICE_SD,
 	DEVICE_USB,
@@ -37,14 +38,16 @@ enum {
 	DEVICE_SD_SLOTB
 };
 
-enum {
+enum 
+{
 	FILE_SRAM,
 	FILE_SNAPSHOT,
 	FILE_ROM,
 	FILE_BORDER_PNG
 };
 
-enum {
+enum 
+{
 	LANG_JAPANESE = 0,
 	LANG_ENGLISH,
 	LANG_GERMAN,
@@ -62,7 +65,8 @@ enum {
 	LANG_LENGTH
 };
 
-struct SGCSettings{
+struct SGCSettings
+{
 	float	gbaZoomHor;    // GBA horizontal zoom amount
     float	gbaZoomVert;   // GBA vertical zoom amount
     float	gbZoomHor;     // GB horizontal zoom amount
@@ -88,15 +92,22 @@ struct SGCSettings{
 	int		SFXVolume;
 	int		Rumble;
 	int 	language;
+	int		PreviewImage;
+	
 	int		OffsetMinutesUTC; // Used for clock on MBC3 and TAMA5
 	int 	GBHardware;    // Mapped to gbEmulatorType in VBA
 	int 	SGBBorder;
+	int		BasicPalette;	// 0 - Green   1 - Monochrome
+	
 	char	LoadFolder[MAXPATHLEN];  // Path to game files
 	char	LastFileLoaded[MAXPATHLEN]; //Last file loaded filename
 	char	SaveFolder[MAXPATHLEN];  // Path to save files
-	char	CheatFolder[MAXPATHLEN]; // Path to cheat files
 	char	ScreenshotsFolder[MAXPATHLEN]; //Path to screenshots files
+	char	CoverFolder[MAXPATHLEN]; 	//Path to cover files
+	char	ArtworkFolder[MAXPATHLEN]; 	//Path to artwork files
+	char 	ImageFolder[MAXPATHLEN]; 	//Saved image folder path 
 	char	BorderFolder[MAXPATHLEN];  // Path to Super Game Boy border files
+
 	char	smbip[80];
 	char	smbuser[20];
 	char	smbpwd[20];
