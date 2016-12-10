@@ -28,7 +28,7 @@ INCLUDES 	:=  source source/vba
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) \
+CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) -DNO_SOUND \
 				-DWORDS_BIGENDIAN -DNO_LINK -DNO_FEX \
 				-DTILED_RENDERING \
 				-DC_CORE -D__ppc__ -D__POWERPC__ -DFINAL_VERSION \
