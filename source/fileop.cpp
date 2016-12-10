@@ -886,7 +886,8 @@ SaveFile (char * buffer, char *filepath, size_t datasize, bool silent)
 	// halt parsing
 	HaltParseThread();
 
-	ShowAction("Saving...");
+	if(!silent)
+		ShowAction("Saving...");
 
 	while(!written && retry == 1)
 	{
@@ -927,7 +928,8 @@ SaveFile (char * buffer, char *filepath, size_t datasize, bool silent)
 	// go back to checking if devices were inserted/removed
 	ResumeDeviceThread();
 
-	CancelAction();
+	if(!silent)
+		CancelAction();
 	return written;
 }
 

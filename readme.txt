@@ -38,6 +38,10 @@ https://github.com/dborth/vbagx/releases
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.3.5 - December 10, 2016]
+
+* Hide saving dialog that pops up briefly when returning from a game
+
 [2.3.4 - September 15, 2016]
 
 * Added the delete save file (SRAM / Snapshot) option
