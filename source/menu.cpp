@@ -1212,7 +1212,6 @@ static int MenuGame()
 		// regardless of the weather, there should be no sun at night time!
 		time(&long_time); // Get time as long integer.
 		newtime = localtime(&long_time); // Convert to local time.
-		
 		if (newtime->tm_hour > 21 || newtime->tm_hour < 5)
 		{
 			sprintf(s, "Weather: Night Time");
@@ -3213,6 +3212,10 @@ static int MenuSettingsEmulation()
 				sprintf (options.value[0], "Super Game Boy");
 			else if (GCSettings.GBHardware == 3)
 				sprintf (options.value[0], "Game Boy");
+			else if (GCSettings.GBHardware == 4)
+				sprintf (options.value[0], "Game Boy Advance");
+			else if (GCSettings.GBHardware == 5)
+				sprintf (options.value[0], "Super Game Boy 2");
 			
 			if (GCSettings.SGBBorder == 0)
 				sprintf (options.value[1], "Off");
