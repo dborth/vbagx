@@ -116,3 +116,4 @@ blargg_err_t Gb_Apu::load_state( gb_apu_state_t const& in )
 
 	return 0;
 }
+

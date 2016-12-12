@@ -38,6 +38,13 @@ https://github.com/dborth/vbagx/releases
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.3.6 - December 11, 2016]
+
+* Restored Wiiflow mode plugin by fix94
+* Restored fix filebrowser window overlapping
+* Change all files End Of Line to windows mode
+* Remove update check for updates
+
 [2.3.5 - December 10, 2016]
 
 * Hide saving dialog that pops up briefly when returning from a game
@@ -1159,7 +1166,7 @@ switched items since then.
 			Additional coding			Carl Kenner, dancinninjac
 			Menu artwork				the3seashells
 			Menu sound					Peter de Man
-			                      
+
 			จจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจจ
 			VBA GameCube/Wii			SoftDev, emukidid
 

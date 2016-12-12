@@ -16,7 +16,7 @@
 #include "utils/FreeTypeGX.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
-#define APPVERSION 		"2.3.5"
+#define APPVERSION 		"2.3.6"
 #define APPFOLDER 		"vbagx"
 #define PREF_FILE_NAME 	"settings.xml"
 #define PAL_FILE_NAME 	"palettes.xml"
@@ -68,23 +68,23 @@ enum
 struct SGCSettings
 {
 	float	gbaZoomHor;    // GBA horizontal zoom amount
-    float	gbaZoomVert;   // GBA vertical zoom amount
-    float	gbZoomHor;     // GB horizontal zoom amount
-    float	gbZoomVert;    // GB vertical zoom amount
-	int     gbFixed;
-	int     gbaFixed;
+	float	gbaZoomVert;   // GBA vertical zoom amount
+	float	gbZoomHor;     // GB horizontal zoom amount
+	float	gbZoomVert;    // GB vertical zoom amount
+	int		gbFixed;
+	int		gbaFixed;
 	int		AutoLoad;
-    int		AutoSave;
-    int		LoadMethod;    // For ROMS: Auto, SD, DVD, USB, Network (SMB)
+	int		AutoSave;
+	int		LoadMethod;    // For ROMS: Auto, SD, DVD, USB, Network (SMB)
 	int		SaveMethod;    // For SRAM, Freeze, Prefs: Auto, SD, USB, SMB
-    int		AppendAuto;    // 0 - no, 1 - yes
-    int		videomode;     // 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
-    int		scaling;       // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
+	int		AppendAuto;    // 0 - no, 1 - yes
+	int		videomode;     // 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
+	int		scaling;       // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
 	int		render;		   // 0 - original, 1 - filtered, 2 - unfiltered
 	int		xshift;		   // video output shift
 	int		yshift;
-	int     colorize;      // colorize Mono Gameboy games
-	int     gbaFrameskip;  // turn on auto-frameskip for GBA games
+	int		colorize;      // colorize Mono Gameboy games
+	int		gbaFrameskip;  // turn on auto-frameskip for GBA games
 	int		WiiControls;   // Match Wii Game
 	int		WiimoteOrientation;
 	int		ExitAction;
@@ -107,6 +107,10 @@ struct SGCSettings
 	char	ArtworkFolder[MAXPATHLEN]; 	//Path to artwork files
 	char 	ImageFolder[MAXPATHLEN]; 	//Saved image folder path 
 	char	BorderFolder[MAXPATHLEN];  // Path to Super Game Boy border files
+
+	char	Exit_Dol_File[MAXPATHLEN]; // Exit Path
+	char	LoaderName[20]; // Menu Loader Name
+	u32		Exit_Channel[2]; // Exit Channel
 
 	char	smbip[80];
 	char	smbuser[20];

@@ -166,12 +166,16 @@ preparePrefsData ()
 	createXMLSetting("LoadMethod", "Load Method", toStr(GCSettings.LoadMethod));
 	createXMLSetting("SaveMethod", "Save Method", toStr(GCSettings.SaveMethod));
 	createXMLSetting("LoadFolder", "Load Folder", GCSettings.LoadFolder);
+	createXMLSetting("LastFileLoaded", "Last File Loaded", GCSettings.LastFileLoaded);
 	createXMLSetting("SaveFolder", "Save Folder", GCSettings.SaveFolder);
+	createXMLSetting("AppendAuto", "Append Auto to .SAV Files", toStr(GCSettings.AppendAuto));
+	//createXMLSetting("CheatFolder", "Cheats Folder", GCSettings.CheatFolder);
 	createXMLSetting("ScreenshotsFolder", "Screenshots Folder", GCSettings.ScreenshotsFolder);
+	createXMLSetting("BorderFolder", "SGB Borders Folder", GCSettings.BorderFolder);
 	createXMLSetting("CoverFolder", "Covers Folder", GCSettings.CoverFolder);
 	createXMLSetting("ArtworkFolder", "Artworks Folder", GCSettings.ArtworkFolder);
 	createXMLSetting("ImageFolder", "Image Folder", GCSettings.ImageFolder);
-	
+
 	createXMLSection("Network", "Network Settings");
 
 	createXMLSetting("smbip", "Share Computer IP", GCSettings.smbip);
@@ -186,11 +190,14 @@ preparePrefsData ()
 	createXMLSetting("gbaZoomVert", "GBA Vertical Zoom Level", FtoStr(GCSettings.gbaZoomVert));
 	createXMLSetting("gbZoomHor", "GB Horizontal Zoom Level", FtoStr(GCSettings.gbZoomHor));
 	createXMLSetting("gbZoomVert", "GB Vertical Zoom Level", FtoStr(GCSettings.gbZoomVert));
+	createXMLSetting("gbFixed", "GB Fixed Pixel Ratio", toStr(GCSettings.gbFixed));
+	createXMLSetting("gbaFixed", "GBA Fixed Pixel Ratio", toStr(GCSettings.gbaFixed));
 	createXMLSetting("render", "Video Filtering", toStr(GCSettings.render));
 	createXMLSetting("scaling", "Aspect Ratio Correction", toStr(GCSettings.scaling));
 	createXMLSetting("xshift", "Horizontal Video Shift", toStr(GCSettings.xshift));
 	createXMLSetting("yshift", "Vertical Video Shift", toStr(GCSettings.yshift));
 	createXMLSetting("colorize", "Colorize Mono Gameboy", toStr(GCSettings.colorize));
+	createXMLSetting("gbaFrameskip", "GBA Frameskip", toStr(GCSettings.gbaFrameskip));
 
 	createXMLSection("Menu", "Menu Settings");
 
@@ -213,6 +220,12 @@ preparePrefsData ()
 	createXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap", "Wiimote");
 	createXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap", "Classic Controller");
 	createXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap", "Nunchuk");
+
+	createXMLSection("Emulation", "Emulation Settings");
+
+	createXMLSetting("OffsetMinutesUTC", "Offset from UTC (minutes)", toStr(GCSettings.OffsetMinutesUTC));
+	createXMLSetting("GBHardware", "Hardware (GB/GBC)", toStr(GCSettings.GBHardware));
+	createXMLSetting("SGBBorder", "Border (GB/GBC)", toStr(GCSettings.SGBBorder));
 
 	int datasize = mxmlSaveString(xml, (char *)savebuffer, SAVEBUFFERSIZE, XMLSaveCallback);
 
@@ -456,6 +469,9 @@ decodePrefsData ()
 					result = false;
 				else if(verMajor < 2) // less than version 2.0.0
 					result = false; // reset settings (sorry, should update settings instead)
+				else if((verMajor*100 + verMinor*10 + verPoint) > 
+						(curMajor*100 + curMinor*10 + curPoint)) // some future version
+					result = false; // reset settings
 				else
 					result = true;
 			}
@@ -470,12 +486,16 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.LoadMethod, "LoadMethod");
 			loadXMLSetting(&GCSettings.SaveMethod, "SaveMethod");
 			loadXMLSetting(GCSettings.LoadFolder, "LoadFolder", sizeof(GCSettings.LoadFolder));
+			loadXMLSetting(GCSettings.LastFileLoaded, "LastFileLoaded", sizeof(GCSettings.LastFileLoaded));
 			loadXMLSetting(GCSettings.SaveFolder, "SaveFolder", sizeof(GCSettings.SaveFolder));
+			loadXMLSetting(&GCSettings.AppendAuto, "AppendAuto");
+			//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder", sizeof(GCSettings.CheatFolder));
 			loadXMLSetting(GCSettings.ScreenshotsFolder, "ScreenshotsFolder", sizeof(GCSettings.ScreenshotsFolder));
+			loadXMLSetting(GCSettings.BorderFolder, "BorderFolder", sizeof(GCSettings.BorderFolder));
 			loadXMLSetting(GCSettings.CoverFolder, "CoverFolder", sizeof(GCSettings.CoverFolder));
 			loadXMLSetting(GCSettings.ArtworkFolder, "ArtworkFolder", sizeof(GCSettings.ArtworkFolder));
 			loadXMLSetting(GCSettings.ImageFolder, "ImageFolder", sizeof(GCSettings.ImageFolder));
-			
+
 			// Network Settings
 
 			loadXMLSetting(GCSettings.smbip, "smbip", sizeof(GCSettings.smbip));
@@ -490,11 +510,14 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.gbaZoomVert, "gbaZoomVert");
 			loadXMLSetting(&GCSettings.gbZoomHor, "gbZoomHor");
 			loadXMLSetting(&GCSettings.gbZoomVert, "gbZoomVert");
+			loadXMLSetting(&GCSettings.gbaFixed, "gbaFixed");
+			loadXMLSetting(&GCSettings.gbFixed, "gbFixed");
 			loadXMLSetting(&GCSettings.render, "render");
 			loadXMLSetting(&GCSettings.scaling, "scaling");
 			loadXMLSetting(&GCSettings.xshift, "xshift");
 			loadXMLSetting(&GCSettings.yshift, "yshift");
 			loadXMLSetting(&GCSettings.colorize, "colorize");
+			loadXMLSetting(&GCSettings.gbaFrameskip, "gbaFrameskip");
 
 			// Menu Settings
 
@@ -506,11 +529,6 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.language, "language");
 			loadXMLSetting(&GCSettings.PreviewImage, "PreviewImage");
 
-			// Emulation Settings
-
-			loadXMLSetting(&GCSettings.BasicPalette, "BasicPalette");
-			
-			
 			// Controller Settings
 
 			loadXMLSetting(&GCSettings.WiiControls, "WiiControls");
@@ -518,6 +536,14 @@ decodePrefsData ()
 			loadXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap");
 			loadXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap");
 			loadXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap");
+			
+			// Emulation Settings
+			
+			loadXMLSetting(&GCSettings.OffsetMinutesUTC, "OffsetMinutesUTC");
+			loadXMLSetting(&GCSettings.GBHardware, "GBHardware");
+			loadXMLSetting(&GCSettings.SGBBorder, "SGBBorder");
+			loadXMLSetting(&GCSettings.BasicPalette, "BasicPalette");
+
 		}
 		mxmlDelete(xml);
 	}
@@ -592,9 +618,9 @@ void FixInvalidSettings()
 		GCSettings.SFXVolume = 40;
 	if(GCSettings.language < 0 || GCSettings.language >= LANG_LENGTH)
 		GCSettings.language = LANG_ENGLISH;
-	if(!(GCSettings.render >= 0 && GCSettings.render < 3))
+	if(!(GCSettings.render >= 0 && GCSettings.render < 5))
 		GCSettings.render = 1;
-	if(!(GCSettings.videomode >= 0 && GCSettings.videomode < 5))
+	if(!(GCSettings.videomode >= 0 && GCSettings.videomode < 7))
 		GCSettings.videomode = 0;
 }
 
@@ -613,13 +639,16 @@ DefaultSettings ()
 	GCSettings.SaveMethod = DEVICE_AUTO; // Auto, SD, USB, Network (SMB)
 	sprintf (GCSettings.LoadFolder, "%s/roms", APPFOLDER); // Path to game files
 	sprintf (GCSettings.SaveFolder, "%s/saves", APPFOLDER); // Path to save files
-	sprintf (GCSettings.ScreenshotsFolder, "%s/screenshots", APPFOLDER); // Path to screenshot files
+	//sprintf (GCSettings.CheatFolder, "%s/cheats", APPFOLDER); // Path to cheat files
+	sprintf (GCSettings.ScreenshotsFolder, "%s/screenshots", APPFOLDER);
+	sprintf (GCSettings.BorderFolder, "%s/borders", APPFOLDER);
 	sprintf (GCSettings.CoverFolder, "%s/covers", APPFOLDER); // Path to cover files
 	sprintf (GCSettings.ArtworkFolder, "%s/artworks", APPFOLDER); // Path to artwork files
 	sprintf (GCSettings.ImageFolder, "%s/screenshots", APPFOLDER);
 
 	GCSettings.AutoLoad = 1;
 	GCSettings.AutoSave = 1;
+	GCSettings.AppendAuto = 1;
 
 	GCSettings.WiimoteOrientation = 0;
 
@@ -627,6 +656,8 @@ DefaultSettings ()
 	GCSettings.gbaZoomVert = 1.0; // GBA vertical zoom level
 	GCSettings.gbZoomHor = 1.0; // GBA horizontal zoom level
 	GCSettings.gbZoomVert = 1.0; // GBA vertical zoom level
+	GCSettings.gbFixed = 0; // not fixed - use zoom level
+	GCSettings.gbaFixed = 0; // not fixed - use zoom level
 	GCSettings.videomode = 0; // automatic video mode detection
 	GCSettings.render = 1; // Filtered
 	GCSettings.scaling = 1; // partial stretch
@@ -635,6 +666,7 @@ DefaultSettings ()
 	GCSettings.xshift = 0; // horizontal video shift
 	GCSettings.yshift = 0; // vertical video shift
 	GCSettings.colorize = 0; // Colorize mono gameboy games
+	GCSettings.gbaFrameskip = 1; // Turn auto-frameskip on for GBA games
 
 	GCSettings.WiimoteOrientation = 0;
 	GCSettings.ExitAction = 0;
@@ -656,6 +688,9 @@ DefaultSettings ()
 #else
 	GCSettings.language = LANG_ENGLISH;
 #endif
+	GCSettings.OffsetMinutesUTC = 0;
+	GCSettings.GBHardware = 0;
+	GCSettings.SGBBorder = 0;
 }
 
 

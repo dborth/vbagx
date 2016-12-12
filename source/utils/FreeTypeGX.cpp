@@ -244,14 +244,14 @@ ftgxCharData *FreeTypeGX::cacheGlyphData(wchar_t charCode)
 			textureHeight = adjustTextureHeight(glyphBitmap->rows);
 
 			this->fontData[charCode] = (ftgxCharData){
-				ftSlot->bitmap_left,
-				ftSlot->advance.x >> 6,
-				gIndex,
+				(s16)(ftSlot->bitmap_left),
+				(u16)(ftSlot->advance.x >> 6),
+				(u16)(gIndex),
 				textureWidth,
 				textureHeight,
-				ftSlot->bitmap_top,
-				ftSlot->bitmap_top,
-				glyphBitmap->rows - ftSlot->bitmap_top,
+				(s16)(ftSlot->bitmap_top),
+				(s16)(ftSlot->bitmap_top),
+				(s16)(glyphBitmap->rows - ftSlot->bitmap_top),
 				NULL
 			};
 			this->loadGlyphData(glyphBitmap, &this->fontData[charCode]);
