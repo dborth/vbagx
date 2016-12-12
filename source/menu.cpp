@@ -3179,7 +3179,7 @@ static int MenuSettingsEmulation()
 		{
 			case 0:
 				GCSettings.GBHardware++;
-				if (GCSettings.GBHardware > 3)
+				if (GCSettings.GBHardware > 5)
 					GCSettings.GBHardware = 0;
 				break;
 			
