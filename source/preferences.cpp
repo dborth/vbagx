@@ -813,7 +813,7 @@ bool LoadPrefs()
 		return true;
 
 	bool prefFound = false;
-	char filepath[4][MAXPATHLEN];
+	char filepath[5][MAXPATHLEN];
 	int numDevices;
 	
 #ifdef HW_RVL
