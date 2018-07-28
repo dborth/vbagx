@@ -32,7 +32,7 @@ u32 FrameTimer = 0;
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
 GXRModeObj *vmode = NULL; // Graphics Mode Object
-unsigned int *xfb[2] = { NULL, NULL }; // Framebuffers
+u32 *xfb[2] = { NULL, NULL }; // Framebuffers
 int whichfb = 0; // Frame buffer toggle
 
 static Mtx GXmodelView2D;

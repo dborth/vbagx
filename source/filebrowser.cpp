@@ -346,7 +346,7 @@ int FileSortCallback(const void *f1, const void *f2)
 	if(((BROWSERENTRY *)f1)->isdir && !(((BROWSERENTRY *)f2)->isdir)) return -1;
 	if(!(((BROWSERENTRY *)f1)->isdir) && ((BROWSERENTRY *)f2)->isdir) return 1;
 
-	return stricmp(((BROWSERENTRY *)f1)->filename, ((BROWSERENTRY *)f2)->filename);
+	return strcasecmp(((BROWSERENTRY *)f1)->filename, ((BROWSERENTRY *)f2)->filename);
 }
 
 /****************************************************************************
@@ -361,7 +361,7 @@ bool IsSz()
 		char * p = strrchr(browserList[browser.selIndex].filename, '.');
 
 		if (p != NULL)
-			if(stricmp(p, ".7z") == 0)
+			if(strcasecmp(p, ".7z") == 0)
 				return true;
 	}
 	return false;

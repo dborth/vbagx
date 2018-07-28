@@ -13,12 +13,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wiiuse/wpad.h>
-#include <wupc/wupc.h>
 #include <sys/stat.h>
 
 #ifdef HW_RVL
 #include <di/di.h>
+#include <wiiuse/wpad.h>
+#include <wupc/wupc.h>
 #endif
 
 #include "vbagx.h"
