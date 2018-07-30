@@ -11,6 +11,7 @@
 #define _VBAGX_H_
 
 #include <unistd.h>
+#include <sys/param.h>
 
 #include "filelist.h"
 #include "utils/FreeTypeGX.h"
