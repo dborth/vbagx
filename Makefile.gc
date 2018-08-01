@@ -35,8 +35,11 @@ CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) \
 				-DSDL -DNO_PNG -DHAVE_ZUTIL_H \
 				-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
 				-fomit-frame-pointer \
-				-Wno-unused-parameter -Wno-strict-aliasing -Wno-parentheses
-CXXFLAGS	=	$(CFLAGS)
+				-Wno-unused-parameter -Wno-strict-aliasing -Wno-parentheses -Wno-format -Wno-stringop-truncation \
+				-Wno-maybe-uninitialized -Wno-unused-but-set-variable -Wno-stringop-overflow -Wno-narrowing \
+				-Wno-misleading-indentation -Wno-unused-function -Wno-sign-compare -Wno-unused-variable \
+				-Wno-memset-elt-size -Wno-attributes -Wno-tautological-compare
+CXXFLAGS	=	$(CFLAGS) -Wno-reorder
 LDFLAGS		=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
 #---------------------------------------------------------------------------------

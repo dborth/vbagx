@@ -18,7 +18,6 @@
 #ifdef HW_RVL
 #include <di/di.h>
 #include <wiiuse/wpad.h>
-#include <wupc/wupc.h>
 #endif
 
 #include "vbagx.h"
@@ -69,7 +68,6 @@ static GuiText * settingText = NULL;
 static GuiText * settingText2 = NULL;
 static int lastMenu = MENU_NONE;
 static int mapMenuCtrl = 0;
-static int wiiuproCtrl = 0;
 
 static lwp_t guithread = LWP_THREAD_NULL;
 static lwp_t progressthread = LWP_THREAD_NULL;
@@ -252,27 +250,6 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
 	return WindowPrompt(title, msg, btn1Label, btn2Label, false);
 }
 
-#ifdef HW_RVL
-/****************************************************************************
- * EmulatorUpdate
- *
- * Prompts for confirmation, and downloads/installs updates
- ***************************************************************************/
-static void *
-EmulatorUpdate (void *arg)
-{
-	bool installUpdate = WindowPrompt(
-		"Update Available",
-		"An update is available!",
-		"Update now",
-		"Update later");
-	if(installUpdate)
-		if(DownloadUpdate())
-			ExitRequested = 1;
-	return NULL;
-}
-#endif
-
 /****************************************************************************
  * UpdateGUI
  *
@@ -312,15 +289,6 @@ UpdateGUI (void *arg)
 		mainWindow->Update(&userInput[2]);
 		mainWindow->Update(&userInput[1]);
 		mainWindow->Update(&userInput[0]);
-
-		#ifdef HW_RVL
-		if(updateFound)
-		{
-			updateFound = false;
-			if(!loadingFile)
-				LWP_CreateThread (&updatethread, EmulatorUpdate, NULL, NULL, 0, 70);
-		}
-		#endif
 
 		if(ExitRequested || ShutdownRequested)
 		{
@@ -776,8 +744,7 @@ static void WindowCredits(void * ptr)
 	txt[i] = new GuiText("Official Site: https://github.com/dborth/vbagx", 20, (GXColor){0, 0, 0, 255});
 	txt[i]->SetAlignment(ALIGN_CENTRE, ALIGN_TOP); txt[i]->SetPosition(0,y); i++; y+=32;
 
-	txt[i]->SetPresets(20, (GXColor){0, 0, 0, 255}, 0,
-			FTGX_JUSTIFY_LEFT | FTGX_ALIGN_TOP, ALIGN_LEFT, ALIGN_TOP);
+	GuiText::SetPresets(20, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_LEFT | FTGX_ALIGN_TOP, ALIGN_LEFT, ALIGN_TOP);
 
 	txt[i] = new GuiText("Main developer");
 	txt[i]->SetPosition(40,y); i++;
@@ -822,8 +789,7 @@ static void WindowCredits(void * ptr)
 	txt[i] = new GuiText("Armin Tamzarian");
 	txt[i]->SetPosition(250,y); i++; y+=32;
 
-	txt[i]->SetPresets(18, (GXColor){0, 0, 0, 255}, 0,
-		FTGX_JUSTIFY_CENTER | FTGX_ALIGN_TOP, ALIGN_CENTRE, ALIGN_TOP);
+	GuiText::SetPresets(18, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_CENTER | FTGX_ALIGN_TOP, ALIGN_CENTRE, ALIGN_TOP);
 
 	txt[i] = new GuiText("This software is open source and may be copied,");
 	txt[i]->SetPosition(0,y); i++; y+=20;
@@ -869,10 +835,10 @@ static void WindowCredits(void * ptr)
 
 		Menu_Render();
 
-		if((userInput[0].wpad->btns_d || userInput[0].pad.btns_d || userInput[0].wupcdata.btns_d) ||
-		   (userInput[1].wpad->btns_d || userInput[1].pad.btns_d || userInput[1].wupcdata.btns_d) ||
-		   (userInput[2].wpad->btns_d || userInput[2].pad.btns_d || userInput[2].wupcdata.btns_d) ||
-		   (userInput[3].wpad->btns_d || userInput[3].pad.btns_d || userInput[3].wupcdata.btns_d))
+		if((userInput[0].wpad->btns_d || userInput[0].pad.btns_d) ||
+		   (userInput[1].wpad->btns_d || userInput[1].pad.btns_d) ||
+		   (userInput[2].wpad->btns_d || userInput[2].pad.btns_d) ||
+		   (userInput[3].wpad->btns_d || userInput[3].pad.btns_d))
 		{
  			exit = true;
  		}
@@ -882,7 +848,6 @@ static void WindowCredits(void * ptr)
 	// clear buttons pressed
 	for(i=0; i < 4; i++)
 	{
-		userInput[i].wupcdata.btns_d = 0;
 		userInput[i].wpad->btns_d = 0;
 		userInput[i].pad.btns_d = 0;
 	}
@@ -1426,17 +1391,8 @@ static int MenuGame()
 			}
 			else
 			{
-				struct WUPCData *data = WUPC_Data(i);
-				if(data != NULL)
-				{
-					newStatus = true;
-					newLevel = data->battery;
-				}
-				else
-				{
-					newStatus = false;
-					newLevel = 0;
-				}
+				newStatus = false;
+				newLevel = 0;
 			}
 
 			if(status[i] != newStatus || level[i] != newLevel)
@@ -2126,7 +2082,6 @@ static int MenuSettingsMappings()
 	GuiImageData iconClassic(icon_settings_classic_png);
 	GuiImageData iconGamecube(icon_settings_gamecube_png);
 	GuiImageData iconNunchuk(icon_settings_nunchuk_png);
-	GuiImageData iconWiiupro(icon_settings_wiiupro_png);
 
 	GuiText gamecubeBtnTxt("GameCube Controller", 22, (GXColor){0, 0, 0, 255});
 	gamecubeBtnTxt.SetWrap(true, btnLargeOutline.GetWidth()-30);
@@ -2181,24 +2136,6 @@ static int MenuSettingsMappings()
 	classicBtn.SetTrigger(trig2);
 	classicBtn.SetEffectGrow();
 
-	GuiText wiiuproBtnTxt("Wii U Pro Controller", 22, (GXColor){0, 0, 0, 255});
-	wiiuproBtnTxt.SetWrap(true, btnLargeOutline.GetWidth()-20);
-	GuiImage wiiuproBtnImg(&btnLargeOutline);
-	GuiImage wiiuproBtnImgOver(&btnLargeOutlineOver);
-	GuiImage wiiuproBtnIcon(&iconWiiupro);
-	GuiButton wiiuproBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
-	wiiuproBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	wiiuproBtn.SetPosition(0, 250);
-	wiiuproBtn.SetLabel(&wiiuproBtnTxt);
-	wiiuproBtn.SetImage(&wiiuproBtnImg);
-	wiiuproBtn.SetImageOver(&wiiuproBtnImgOver);
-	wiiuproBtn.SetIcon(&wiiuproBtnIcon);
-	wiiuproBtn.SetSoundOver(&btnSoundOver);
-	wiiuproBtn.SetSoundClick(&btnSoundClick);
-	wiiuproBtn.SetTrigger(trigA);
-	wiiuproBtn.SetTrigger(trig2);
-	wiiuproBtn.SetEffectGrow();
-
 	GuiText nunchukBtnTxt1("Wiimote", 22, (GXColor){0, 0, 0, 255});
 	GuiText nunchukBtnTxt2("&", 18, (GXColor){0, 0, 0, 255});
 	GuiText nunchukBtnTxt3("Nunchuk", 22, (GXColor){0, 0, 0, 255});
@@ -2246,7 +2183,6 @@ static int MenuSettingsMappings()
 	w.Append(&wiimoteBtn);
 	w.Append(&nunchukBtn);
 	w.Append(&classicBtn);
-	w.Append(&wiiuproBtn);
 #endif
 	w.Append(&backBtn);
 
@@ -2270,13 +2206,6 @@ static int MenuSettingsMappings()
 		}
 		else if(classicBtn.GetState() == STATE_CLICKED)
 		{
-			wiiuproCtrl = 0;
-			menu = MENU_GAMESETTINGS_MAPPINGS_MAP;
-			mapMenuCtrl = CTRLR_CLASSIC;
-		}
-		else if(wiiuproBtn.GetState() == STATE_CLICKED)
-		{
-			wiiuproCtrl = 1;
 			menu = MENU_GAMESETTINGS_MAPPINGS_MAP;
 			mapMenuCtrl = CTRLR_CLASSIC;
 		}
@@ -2331,14 +2260,7 @@ ButtonMappingWindow()
 			sprintf(msg, "Press any button on the Wiimote now. Press Home to clear the existing mapping.");
 			break;
 		case CTRLR_CLASSIC:
-			if(wiiuproCtrl == 1)
-			{
-				sprintf(msg, "Press any button on the Wii U Pro Controller now. Press Home to clear the existing mapping.");
-			}
-			else
-			{
-				sprintf(msg, "Press any button on the Classic Controller now. Press Home to clear the existing mapping.");
-			}
+			sprintf(msg, "Press any button on the Classic Controller now. Press Home to clear the existing mapping.");
 			break;
 		case CTRLR_NUNCHUK:
 			sprintf(msg, "Press any button on the Wiimote or Nunchuk now. Press Home to clear the existing mapping.");
@@ -2407,8 +2329,6 @@ ButtonMappingWindow()
 						break;
 				}
 			}
-			if(pressed == 0)
-				pressed = userInput[0].wupcdata.btns_d;
 		}
 	}
 
@@ -2438,14 +2358,7 @@ static int MenuSettingsMappingsMap()
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
 	titleTxt.SetPosition(50,30);
 
-	if(wiiuproCtrl == 1)
-	{
-		sprintf(menuSubtitle, "%s", "Wii U Pro Controller");
-	}
-	else
-	{
-		sprintf(menuSubtitle, "%s", ctrlrName[mapMenuCtrl]);
-	}
+	sprintf(menuSubtitle, "%s", ctrlrName[mapMenuCtrl]);
 	GuiText subtitleTxt(menuSubtitle, 20, (GXColor){255, 255, 255, 255});
 	subtitleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
 	subtitleTxt.SetPosition(50,60);
@@ -2575,7 +2488,7 @@ static int MenuSettingsMappingsMap()
 			optionBrowser.TriggerUpdate();
 		}
 	}
-	wiiuproCtrl = 0;
+
 	HaltGui();
 	mainWindow->Remove(&optionBrowser);
 	mainWindow->Remove(&w);
@@ -4720,6 +4633,8 @@ MainMenu (int menu)
 	mainWindow->Append(bgTopImg);
 	mainWindow->Append(bgBottomImg);
 	mainWindow->Append(btnLogo);
+
+	printf("in main menu()\n");
 
 	if(currentMenu == MENU_GAMESELECTION)
 		ResumeGui();

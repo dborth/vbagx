@@ -15,7 +15,6 @@
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
-#include <wupc/wupc.h>
 #include <sys/iosupport.h>
 #include <string>
 
@@ -163,7 +162,7 @@ void ShutdownCB()
 {
 	ShutdownRequested = 1;
 }
-void ResetCB()
+void ResetCB(u32 irq, void *ctx)
 {
 	ResetRequested = 1;
 }
@@ -273,7 +272,7 @@ bool SaneIOS(u32 ios)
 static bool gecko = false;
 static mutex_t gecko_mutex = 0;
 
-static ssize_t __out_write(struct _reent *r, void* fd, const char *ptr, size_t len)
+static ssize_t __out_write(struct _reent *r, int fd, const char *ptr, size_t len)
 {
 	if (!gecko || len == 0)
 		return len;
@@ -365,12 +364,10 @@ int main(int argc, char *argv[])
 	SYS_SetPowerCallback(ShutdownCB);
 	SYS_SetResetCallback(ResetCB);
 	
-	WUPC_Init();
 	WPAD_Init();
 	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
 	DI_Init();
 	USBStorage_Initialize();
-	StartNetworkThread();
 	#else
 	DVD_Init (); // Initialize DVD subsystem (GameCube only)
 	#endif

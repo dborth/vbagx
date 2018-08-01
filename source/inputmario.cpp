@@ -874,7 +874,7 @@ u32 UniversalGravitationInput(unsigned short pad) {
 			J |= VBA_DOWN;
 		if (wp->btns_h & WPAD_CLASSIC_BUTTON_FULL_R)
 			J |= VBA_UP;
-		if (WPAD_CLASSIC_BUTTON_ZR)
+		if (wp->btns_h & WPAD_CLASSIC_BUTTON_ZR)
 			J |= VBA_SPEED;
 	} else {
 		J |= StandardSideways(pad);

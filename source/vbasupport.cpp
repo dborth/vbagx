@@ -33,7 +33,6 @@
 #include "preferences.h"
 #include "fastmath.h"
 #include "utils/pngu.h"
-#include "utils/unzip/unzip.h"
 
 #include "vba/Util.h"
 #include "vba/common/Port.h"

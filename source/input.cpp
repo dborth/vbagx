@@ -16,7 +16,6 @@
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
-#include <wupc/wupc.h>
 #include <ogc/lwp_watchdog.h>
 
 #include "vbagx.h"
@@ -139,7 +138,6 @@ void
 UpdatePads()
 {
 	#ifdef HW_RVL
-	WUPC_UpdateButtonStats();
 	WPAD_ScanPads();
 	#endif
 
@@ -156,15 +154,6 @@ UpdatePads()
 		userInput[i].pad.substickY = PAD_SubStickY(i);
 		userInput[i].pad.triggerL = PAD_TriggerL(i);
 		userInput[i].pad.triggerR = PAD_TriggerR(i);
-		#ifdef HW_RVL
-		userInput[i].wupcdata.btns_d = WUPC_ButtonsDown(i);
-		userInput[i].wupcdata.btns_u = WUPC_ButtonsUp(i);
-		userInput[i].wupcdata.btns_h = WUPC_ButtonsHeld(i);
-		userInput[i].wupcdata.stickX = WUPC_lStickX(i);
-		userInput[i].wupcdata.stickY = WUPC_lStickY(i);
-		userInput[i].wupcdata.substickX = WUPC_rStickX(i);
-		userInput[i].wupcdata.substickY = WUPC_rStickY(i);
-		#endif
 		--i;
 	} while(i >= 0);
 }
@@ -322,9 +311,6 @@ u32 StandardMovement(unsigned short chan)
 	#ifdef HW_RVL
 	s8 wm_ax = userInput[0].WPAD_StickX(0);
 	s8 wm_ay = userInput[0].WPAD_StickY(0);
-
-	s16 wupc_ax = userInput[chan].wupcdata.stickX;
-	s16 wupc_ay = userInput[chan].wupcdata.stickY;
 	#endif
 	
 	/***
@@ -361,19 +347,6 @@ u32 StandardMovement(unsigned short chan)
 		else if(sin(angle) < -THRES)
 			J |= VBA_DOWN; 
 	}
-	/* WiiU Pro Controller */
-	if (wupc_ax * wupc_ax + wupc_ay * wupc_ay > WUPCCAL * WUPCCAL)
-	{
-		angle = atan2(wupc_ay, wupc_ax);
-		if(cos(angle) > THRES)
-			J |= VBA_RIGHT;
-		else if(cos(angle) < -THRES)
-			J |= VBA_LEFT;
-		if(sin(angle) > THRES)
-			J |= VBA_UP;
-		else if(sin(angle) < -THRES)
-			J |= VBA_DOWN;
-	}
 #endif
 	return J;
 }
@@ -406,16 +379,6 @@ u32 StandardDPad(unsigned short pad)
 		if (wp & WPAD_CLASSIC_BUTTON_RIGHT)
 			J |= VBA_RIGHT;
 	}
-	/* WiiU Pro Controller */
-	u32 wupcp = userInput[pad].wupcdata.btns_h;
-		if (wupcp & WPAD_CLASSIC_BUTTON_UP)
-			J |= VBA_UP;
-		if (wupcp & WPAD_CLASSIC_BUTTON_DOWN)
-			J |= VBA_DOWN;
-		if (wupcp & WPAD_CLASSIC_BUTTON_LEFT)
-			J |= VBA_LEFT;
-		if (wupcp & WPAD_CLASSIC_BUTTON_RIGHT)
-			J |= VBA_RIGHT;
 	
 #endif
 
@@ -474,8 +437,7 @@ u32 StandardClassic(unsigned short pad)
 {
 	u32 J = 0;
 #ifdef HW_RVL
-	u32 wp = userInput[pad].wpad->btns_h
-		| userInput[pad].wupcdata.btns_h; /* just add pro controller */
+	u32 wp = userInput[pad].wpad->btns_h;
 
 	if (wp & WPAD_CLASSIC_BUTTON_RIGHT)
 		J |= VBA_RIGHT;
@@ -574,14 +536,6 @@ u32 DecodeClassic(unsigned short pad)
 	#ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
 	u32 wpad_btns_h = wp->btns_h;
-
-	/* WiiU Pro Controller */
-	u32 wupc_btns_h = userInput[pad].wupcdata.btns_h;
-	for (u32 i = 0; i < MAXJP; ++i)
-	{
-		if(wupc_btns_h & btnmap[CTRLR_CLASSIC][i])
-			J |= vbapadmap[i];
-	}
 	
 	if(wp->exp.type == WPAD_EXP_CLASSIC){
 		for (u32 i = 0; i < MAXJP; ++i){
@@ -867,7 +821,7 @@ static u32 DecodeJoy(unsigned short pad)
 	u32 J = StandardMovement(pad);
 
 	// Turbo feature
-	if(userInput[0].pad.substickX > 70 || userInput[0].WPAD_Stick(1,0) > 70 || userInput[0].wupcdata.substickX > 560)
+	if(userInput[0].pad.substickX > 70 || userInput[0].WPAD_Stick(1,0) > 70)
 		J |= VBA_SPEED;
 
 	// Report pressed buttons (gamepads)
@@ -923,36 +877,24 @@ static u32 DecodeJoy(unsigned short pad)
 		}
 	}
 
-#ifdef HW_RVL
-	/* WiiU Pro Controller */
-	u32 wupc_btns_h = userInput[pad].wupcdata.btns_h;
-	for (u32 i =0; i < MAXJP; ++i)
-	{
-		if(wupc_btns_h & btnmap[CTRLR_CLASSIC][i])
-			J |= vbapadmap[i];
-	}
-#endif
-
 	return J;
 }
 
 bool MenuRequested()
 {
-for(int i=0; i<4; i++)
- 	{
+	for(int i=0; i<4; i++) {
 		if (
 			(userInput[i].pad.substickX < -70)
 			#ifdef HW_RVL
 			|| (userInput[i].wpad->btns_h & WPAD_BUTTON_HOME) ||
-			(userInput[i].wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME) ||
-			(userInput[i].wupcdata.btns_h & WPAD_CLASSIC_BUTTON_HOME)
+			(userInput[i].wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME)
 			#endif
 		)
 		{
 			return true; 
 		}
-	return false; 
-}
+	}
+	return false;
 }
 
 u32 GetJoy(int pad)
