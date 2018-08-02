@@ -633,7 +633,6 @@ DefaultSettings ()
 	GCSettings.SaveMethod = DEVICE_AUTO; // Auto, SD, USB, Network (SMB)
 	sprintf (GCSettings.LoadFolder, "%s/roms", APPFOLDER); // Path to game files
 	sprintf (GCSettings.SaveFolder, "%s/saves", APPFOLDER); // Path to save files
-	//sprintf (GCSettings.CheatFolder, "%s/cheats", APPFOLDER); // Path to cheat files
 	sprintf (GCSettings.ScreenshotsFolder, "%s/screenshots", APPFOLDER);
 	sprintf (GCSettings.BorderFolder, "%s/borders", APPFOLDER);
 	sprintf (GCSettings.CoverFolder, "%s/covers", APPFOLDER); // Path to cover files
@@ -838,6 +837,17 @@ bool LoadPrefs()
 
 	if(prefFound)
 		FixInvalidSettings();
+
+	// attempt to create directories if they don't exist
+	if(GCSettings.LoadMethod != DEVICE_AUTO) {
+		char dirPath[MAXPATHLEN];
+		sprintf(dirPath, "%s%s", pathPrefix[GCSettings.LoadMethod], GCSettings.ScreenshotsFolder);
+		CreateDirectory(dirPath);
+		sprintf(dirPath, "%s%s", pathPrefix[GCSettings.LoadMethod], GCSettings.CoverFolder);
+		CreateDirectory(dirPath);
+		sprintf(dirPath, "%s%s", pathPrefix[GCSettings.LoadMethod], GCSettings.ArtworkFolder);
+		CreateDirectory(dirPath);
+	}
 
 	ResetText();
 	return prefFound;
