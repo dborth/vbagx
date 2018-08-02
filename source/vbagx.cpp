@@ -272,7 +272,7 @@ bool SaneIOS(u32 ios)
 static bool gecko = false;
 static mutex_t gecko_mutex = 0;
 
-static ssize_t __out_write(struct _reent *r, int fd, const char *ptr, size_t len)
+static ssize_t __out_write(struct _reent *r, void* fd, const char *ptr, size_t len)
 {
 	if (!gecko || len == 0)
 		return len;
