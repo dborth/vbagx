@@ -38,6 +38,13 @@ https://github.com/dborth/vbagx/releases
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.3.7]
+
+* Allow loader to pass two arguments instead of three (libertyernie)
+* don't reset settings when going back to an older version
+* Fix a few potential crashes caused by the GUI
+* Compiled with latest libOGC/devkitPPC
+
 [2.3.6 - December 11, 2016]
 
 * Restored Wiiflow mode plugin by fix94
