@@ -38,7 +38,7 @@ https://github.com/dborth/vbagx/releases
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
-[2.3.7 - August 14, 2018]
+[2.3.7]
 
 * Allow loader to pass two arguments instead of three (libertyernie)
 * don't reset settings when going back to an older version
