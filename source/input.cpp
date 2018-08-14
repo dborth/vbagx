@@ -869,25 +869,22 @@ static u32 DecodeJoy(unsigned short pad)
 	}
 	else if(wpad_exp_type == WPAD_EXP_CLASSIC)
 	{ // classic controller
-
-		for (u32 i =0; i < MAXJP; ++i)
-		{
-			if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
-					|| ( (wpad_btns_h & btnmap[CTRLR_CLASSIC][i]) ))
-			J |= vbapadmap[i];
+		if (isWUPC) {
+			for (u32 i =0; i < MAXJP; ++i)
+			{
+				if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
+						|| ( (wpad_btns_h & btnmap[CTRLR_CLASSIC][i]) ))
+				J |= vbapadmap[i];
+			}
 		}
-
-	}
-	else if(wpad_exp_type == WPAD_EXP_CLASSIC && isWUPC)
-	{ // wii u pro
-
-		for (u32 i =0; i < MAXJP; ++i)
-		{
-			if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
-					|| ( (wpad_btns_h & btnmap[CTRLR_WUPC][i]) ))
-			J |= vbapadmap[i];
+		else {
+			for (u32 i =0; i < MAXJP; ++i)
+			{
+				if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
+						|| ( (wpad_btns_h & btnmap[CTRLR_WUPC][i]) ))
+				J |= vbapadmap[i];
+			}
 		}
-
 	}
 	else if(wpad_exp_type == WPAD_EXP_NUNCHUK)
 	{ // nunchuk + wiimote
