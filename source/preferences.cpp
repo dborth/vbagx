@@ -222,6 +222,7 @@ preparePrefsData ()
 	createXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap", "Wiimote");
 	createXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap", "Classic Controller");
 	createXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap", "Nunchuk");
+	createXMLController(btnmap[CTRLR_WUPC], "wupcpadmap", "Wii U Pro Controller");
 
 	createXMLSection("Emulation", "Emulation Settings");
 
@@ -530,6 +531,7 @@ decodePrefsData ()
 			loadXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap");
 			loadXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap");
 			loadXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap");
+			loadXMLController(btnmap[CTRLR_WUPC], "wupcpadmap");
 			
 			// Emulation Settings
 			
