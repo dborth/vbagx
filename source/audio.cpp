@@ -103,7 +103,10 @@ SwitchAudioMode(int mode)
 	{
 		#ifndef NO_SOUND
 		ASND_Pause(1);
+		ASND_End();
 		AUDIO_StopDMA();
+		AUDIO_RegisterDMACallback(NULL);
+		DSP_Halt();
 		AUDIO_RegisterDMACallback(AudioPlayer);
 		#endif
 		memset(soundbuffer[0],0,3840);
@@ -117,6 +120,7 @@ SwitchAudioMode(int mode)
 	{
 		IsPlaying = 0;
 		#ifndef NO_SOUND
+		DSP_Unhalt();
 		ASND_Init();
 		ASND_Pause(0);
 		#else
