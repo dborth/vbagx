@@ -579,7 +579,7 @@ u32 DecodeNunchuk(unsigned short pad)
 	
 	if(wp->exp.type == WPAD_EXP_NUNCHUK){
 		for (u32 i = 0; i < MAXJP; ++i){
-			if (wpad_btns_h & btnmap[WPAD_EXP_NUNCHUK][i] )
+			if (wpad_btns_h & btnmap[CTRLR_NUNCHUK][i] )
 				J |= vbapadmap[i];
 		}
 	}
