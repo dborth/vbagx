@@ -873,7 +873,7 @@ static u32 DecodeJoy(unsigned short pad)
 			for (u32 i =0; i < MAXJP; ++i)
 			{
 				if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
-						|| ( (wpad_btns_h & btnmap[CTRLR_CLASSIC][i]) ))
+						|| ( (wpad_btns_h & btnmap[CTRLR_WUPC][i]) ))
 				J |= vbapadmap[i];
 			}
 		}
@@ -881,7 +881,7 @@ static u32 DecodeJoy(unsigned short pad)
 			for (u32 i =0; i < MAXJP; ++i)
 			{
 				if ((pad_btns_h & btnmap[CTRLR_GCPAD][i]) // gamecube controller
-						|| ( (wpad_btns_h & btnmap[CTRLR_WUPC][i]) ))
+						|| ( (wpad_btns_h & btnmap[CTRLR_CLASSIC][i]) ))
 				J |= vbapadmap[i];
 			}
 		}
