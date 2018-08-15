@@ -2342,15 +2342,18 @@ ButtonMappingWindow()
 						if(pressed > 0x1000)
 							pressed = 0; // not a valid input
 						break;
-
 					case CTRLR_CLASSIC:
-					case CTRLR_WUPC:
-						if(userInput[0].wpad->exp.type != WPAD_EXP_CLASSIC)
+						if(userInput[0].wpad->exp.type != WPAD_EXP_CLASSIC && userInput[0].wpad->exp.classic.type < 2)
 							pressed = 0; // not a valid input
 						else if(pressed <= 0x1000)
 							pressed = 0;
 						break;
-
+					case CTRLR_WUPC:
+						if(userInput[0].wpad->exp.type != WPAD_EXP_CLASSIC && userInput[0].wpad->exp.classic.type == 2)
+							pressed = 0; // not a valid input
+						else if(pressed <= 0x1000)
+							pressed = 0;
+						break;
 					case CTRLR_NUNCHUK:
 						if(userInput[0].wpad->exp.type != WPAD_EXP_NUNCHUK)
 							pressed = 0; // not a valid input
