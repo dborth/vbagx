@@ -20,7 +20,7 @@ enum {
 	CTRLR_WUPC
 };
 
-const char ctrlrName[5][0x20] =
+const char ctrlrName[5][32] =
 { "GameCube Controller", "Wiimote", "Nunchuk + Wiimote", "Classic Controller", "Wii U Pro Controller" };
 
 typedef struct _btn_map {
