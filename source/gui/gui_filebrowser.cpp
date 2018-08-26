@@ -9,7 +9,7 @@
  ***************************************************************************/
 
 #include "gui.h"
-#include "filebrowser.h"
+#include "../filebrowser.h"
 
 /**
  * Constructor for the GuiFileBrowser class.
@@ -52,7 +52,7 @@ GuiFileBrowser::GuiFileBrowser(int w, int h)
 	scrollbarImg = new GuiImage(scrollbar);
 	scrollbarImg->SetParent(this);
 	scrollbarImg->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-	scrollbarImg->SetPosition(5, 30);
+	scrollbarImg->SetPosition(0, 30);
 
 	arrowDown = new GuiImageData(scrollbar_arrowdown_png);
 	arrowDownImg = new GuiImage(arrowDown);
@@ -78,7 +78,6 @@ GuiFileBrowser::GuiFileBrowser(int w, int h)
 	arrowUpBtn->SetTrigger(trigHeldA);
 	arrowUpBtn->SetSoundOver(btnSoundOver);
 	arrowUpBtn->SetSoundClick(btnSoundClick);
-	arrowUpBtn->SetPosition(5, 0);
 
 	arrowDownBtn = new GuiButton(arrowDownImg->GetWidth(), arrowDownImg->GetHeight());
 	arrowDownBtn->SetParent(this);
@@ -91,7 +90,6 @@ GuiFileBrowser::GuiFileBrowser(int w, int h)
 	arrowDownBtn->SetTrigger(trigHeldA);
 	arrowDownBtn->SetSoundOver(btnSoundOver);
 	arrowDownBtn->SetSoundClick(btnSoundClick);
-	arrowDownBtn->SetPosition(5, 0);
 
 	scrollbarBoxBtn = new GuiButton(scrollbarBoxImg->GetWidth(), scrollbarBoxImg->GetHeight());
 	scrollbarBoxBtn->SetParent(this);
@@ -104,7 +102,6 @@ GuiFileBrowser::GuiFileBrowser(int w, int h)
 	scrollbarBoxBtn->SetClickable(false);
 	scrollbarBoxBtn->SetHoldable(true);
 	scrollbarBoxBtn->SetTrigger(trigHeldA);
-	scrollbarBoxBtn->SetPosition(5, 30);
 
 	for(int i=0; i<FILE_PAGESIZE; ++i)
 	{
@@ -433,7 +430,7 @@ void GuiFileBrowser::Update(GuiTrigger * t)
 	if(positionWiimote > 0)
 	{
 		position = positionWiimote; // follow wiimote cursor
-		scrollbarBoxBtn->SetPosition(5,position+36);
+		scrollbarBoxBtn->SetPosition(0,position+36);
 	}
 	else if(listChanged || numEntries != browser.numEntries)
 	{
@@ -449,7 +446,7 @@ void GuiFileBrowser::Update(GuiTrigger * t)
 		{
 			position = 156 * (browser.pageIndex + FILE_PAGESIZE/2) / (float)browser.numEntries;
 		}
-		scrollbarBoxBtn->SetPosition(5,position+36);
+		scrollbarBoxBtn->SetPosition(0,position+36);
 	}
 
 	listChanged = false;

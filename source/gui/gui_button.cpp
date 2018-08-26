@@ -156,6 +156,7 @@ void GuiButton::Draw()
 			label[0]->Draw();
 			
 		if(labelOver[1])
+			
 			labelOver[1]->Draw();	
 		else if(label[1])
 			label[1]->Draw();
@@ -272,7 +273,7 @@ void GuiButton::Update(GuiTrigger * t)
 					(wm_btns == wm_btns_trig ||
 					(cc_btns == cc_btns_trig && t->wpad->exp.type == EXP_CLASSIC))) ||
 					(t->pad.btns_d == trigger[i]->pad.btns_d && t->pad.btns_d > 0))
-
+					
 				{
 					if(t->chan == stateChan || stateChan == -1)
 					{
@@ -319,7 +320,7 @@ void GuiButton::Update(GuiTrigger * t)
 				cc_btns = t->wpad->btns_d >> 16;
 				cc_btns_h = t->wpad->btns_h >> 16;
 				cc_btns_trig = trigger[i]->wpad->btns_h >> 16;
-
+				
 				if(
 					(t->wpad->btns_d > 0 &&
 					(wm_btns == wm_btns_trig ||
@@ -336,7 +337,7 @@ void GuiButton::Update(GuiTrigger * t)
 					(wm_btns_h == wm_btns_trig ||
 					(cc_btns_h == cc_btns_trig && t->wpad->exp.type == EXP_CLASSIC))) ||
 					(t->pad.btns_h == trigger[i]->pad.btns_h && t->pad.btns_h > 0))
-
+					
 				{
 					if(trigger[i]->type == TRIGGER_HELD)
 						held = true;

@@ -927,9 +927,9 @@ static int MenuGameSelection()
 	buttonWindow.Append(&exitBtn);
 
 	GuiFileBrowser gameBrowser(330, 268);
-	gameBrowser.SetPosition(30, 98);
+	gameBrowser.SetPosition(20, 98);
 	ResetBrowser();
-	
+
 	GuiImage bgPreview(&bgPreviewImg);
 	bgPreview.SetPosition(365, 98);
 	
@@ -973,34 +973,6 @@ static int MenuGameSelection()
 			mainWindow->ChangeFocus(&gameBrowser);
 			gameBrowser.TriggerUpdate();
 		}
-		
-		//update gamelist image
-		if(previousBrowserIndex != browser.selIndex)
-		{			
-			previousBrowserIndex = browser.selIndex;
-			snprintf(imagePath, MAXJOLIET, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], GCSettings.ImageFolder, browserList[browser.selIndex].displayname);
-			
-			AllocSaveBuffer();
-			int width, height;
-			if(LoadFile(imagePath, SILENT))
-			{				
-				if(DecodePNG(savebuffer, &width, &height, imgBuffer, 512, 512))
-				{
-					preview.SetImage(imgBuffer, width, height);
-					preview.SetScale( MIN(225.0f / width, 235.0f / height) );
-				}
-				else
-				{
-					preview.SetImage(NULL, 0, 0);
-				}
-			}
-			else 
-			{
-				preview.SetImage(NULL, 0, 0);
-				
-			}
-			FreeSaveBuffer();
-		}
 
 		// update gameWindow based on arrow buttons
 		// set MENU_EXIT if A button pressed on a game
@@ -1027,8 +999,7 @@ static int MenuGameSelection()
 						menu = MENU_GAMESELECTION;
 						break;
 					}
-					
-					
+
 					titleTxt.SetText(inSz ? szname : "Choose Game");
 					
 					ResumeGui();
@@ -1048,7 +1019,32 @@ static int MenuGameSelection()
 			}
 		}
 		
-		
+		//update gamelist image
+		if(previousBrowserIndex != browser.selIndex)
+		{
+			previousBrowserIndex = browser.selIndex;
+			snprintf(imagePath, MAXJOLIET, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], GCSettings.ImageFolder, browserList[browser.selIndex].displayname);
+
+			AllocSaveBuffer();
+			int width, height;
+			if(LoadFile(imagePath, SILENT))
+			{
+				if(DecodePNG(savebuffer, &width, &height, imgBuffer, 512, 512))
+				{
+					preview.SetImage(imgBuffer, width, height);
+					preview.SetScale( MIN(225.0f / width, 235.0f / height) );
+				}
+				else
+				{
+					preview.SetImage(NULL, 0, 0);
+				}
+			}
+			else
+			{
+				preview.SetImage(NULL, 0, 0);
+			}
+			FreeSaveBuffer();
+		}
 
 		if(settingsBtn.GetState() == STATE_CLICKED)
 			menu = MENU_SETTINGS;
@@ -1062,13 +1058,11 @@ static int MenuGameSelection()
 	mainWindow->Remove(&titleTxt);
 	mainWindow->Remove(&buttonWindow);
 	mainWindow->Remove(&gameBrowser);
-	mainWindow->Remove(&preview);
 	mainWindow->Remove(&bgPreview);
+	mainWindow->Remove(&preview);
 	MEM_DEALLOC(imgBuffer);
 	return menu;
 }
-
-extern char DebugStr[50];
 
 /****************************************************************************
  * MenuGame
@@ -1084,7 +1078,6 @@ static int MenuGame()
     char s[64];
 
 	GuiText titleTxt(ROMFilename, 22, (GXColor){255, 255, 255, 255});
-	if (DebugStr[0]) titleTxt.SetText(DebugStr);
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
 	titleTxt.SetPosition(50,50);
 
