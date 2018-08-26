@@ -4658,8 +4658,6 @@ MainMenu (int menu)
 	mainWindow->Append(bgBottomImg);
 	mainWindow->Append(btnLogo);
 
-	printf("in main menu()\n");
-
 	if(currentMenu == MENU_GAMESELECTION)
 		ResumeGui();
 

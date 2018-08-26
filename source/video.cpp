@@ -324,35 +324,12 @@ static GXRModeObj * FindVideoMode()
 		progressive = false;
 
 	#ifdef HW_RVL
-	bool pal = false;
+	if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
+		mode->viWidth = 678;
+	else
+		mode->viWidth = 672;
 
-	if (mode == &TVPal576IntDfScale)
-		pal = true;
-
-	/*if (CONF_GetAspectRatio() == CONF_ASPECT_16_9 && mode->xfbHeight != 240)
-	{
-		if (pal)
-		{
-			mode = &TVPal528IntDf;
-			mode->xfbHeight = 542;
-			mode->viHeight = 542;
-		}
-		else
-		{
-			mode->xfbHeight = 456;
-			mode->viHeight = 456;
-		}
-		
-		mode->fbWidth = 640;
-		mode->efbHeight = 456;
-		mode->viWidth = 686;
-	}
-	else*/
-	{
-		mode->viWidth = 704;
-	}
-
-	if (pal)
+	if (mode->viTVMode >> 2 == VI_PAL)
 	{
 		mode->viXOrigin = (VI_MAX_WIDTH_PAL - mode->viWidth) / 2;
 		mode->viYOrigin = (VI_MAX_HEIGHT_PAL - mode->viHeight) / 2;
@@ -363,7 +340,6 @@ static GXRModeObj * FindVideoMode()
 		mode->viYOrigin = (VI_MAX_HEIGHT_NTSC - mode->viHeight) / 2;
 	}
 	#endif
-
 	return mode;
 }
 
