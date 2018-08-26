@@ -22,8 +22,7 @@ static char * GetDisplayText(char * t)
 	if(len < MAX_KEYBOARD_DISPLAY)
 		return t;
 
-	strncpy(tmptxt, &t[len-MAX_KEYBOARD_DISPLAY], MAX_KEYBOARD_DISPLAY);
-	tmptxt[MAX_KEYBOARD_DISPLAY-1] = 0;
+	snprintf(tmptxt, MAX_KEYBOARD_DISPLAY, "%s", &t[len-MAX_KEYBOARD_DISPLAY]);
 	return &tmptxt[0];
 }
 
@@ -41,8 +40,7 @@ GuiKeyboard::GuiKeyboard(char * t, u32 max)
 	focus = 0; // allow focus
 	alignmentHor = ALIGN_CENTRE;
 	alignmentVert = ALIGN_MIDDLE;
-	strncpy(kbtextstr, t, max);
-	kbtextstr[max] = 0;
+	snprintf(kbtextstr, 255, "%s", t);
 	kbtextmaxlen = max;
 
 	Key thekeys[4][11] = {
@@ -108,7 +106,7 @@ GuiKeyboard::GuiKeyboard(char * t, u32 max)
 	keyTextboxImg->SetPosition(0, 0);
 	this->Append(keyTextboxImg);
 
-	kbText = new GuiText(GetDisplayText(kbtextstr), 20, (GXColor){0, 0, 0, 0xff});
+	kbText = new GuiText(GetDisplayText(kbtextstr), 22, (GXColor){0, 0, 0, 0xff});
 	kbText->SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
 	kbText->SetPosition(0, 13);
 	this->Append(kbText);
@@ -130,7 +128,7 @@ GuiKeyboard::GuiKeyboard(char * t, u32 max)
 
 	keyBackImg = new GuiImage(keyMedium);
 	keyBackOverImg = new GuiImage(keyMediumOver);
-	keyBackText = new GuiText("Back", 20, (GXColor){0, 0, 0, 0xff});
+	keyBackText = new GuiText("Back", 22, (GXColor){0, 0, 0, 0xff});
 	keyBack = new GuiButton(keyMedium->GetWidth(), keyMedium->GetHeight());
 	keyBack->SetImage(keyBackImg);
 	keyBack->SetImageOver(keyBackOverImg);
@@ -145,7 +143,7 @@ GuiKeyboard::GuiKeyboard(char * t, u32 max)
 
 	keyCapsImg = new GuiImage(keyMedium);
 	keyCapsOverImg = new GuiImage(keyMediumOver);
-	keyCapsText = new GuiText("Caps", 20, (GXColor){0, 0, 0, 0xff});
+	keyCapsText = new GuiText("Caps", 22, (GXColor){0, 0, 0, 0xff});
 	keyCaps = new GuiButton(keyMedium->GetWidth(), keyMedium->GetHeight());
 	keyCaps->SetImage(keyCapsImg);
 	keyCaps->SetImageOver(keyCapsOverImg);
@@ -160,7 +158,7 @@ GuiKeyboard::GuiKeyboard(char * t, u32 max)
 
 	keyShiftImg = new GuiImage(keyMedium);
 	keyShiftOverImg = new GuiImage(keyMediumOver);
-	keyShiftText = new GuiText("Shift", 20, (GXColor){0, 0, 0, 0xff});
+	keyShiftText = new GuiText("Shift", 22, (GXColor){0, 0, 0, 0xff});
 	keyShift = new GuiButton(keyMedium->GetWidth(), keyMedium->GetHeight());
 	keyShift->SetImage(keyShiftImg);
 	keyShift->SetImageOver(keyShiftOverImg);
@@ -198,9 +196,9 @@ GuiKeyboard::GuiKeyboard(char * t, u32 max)
 				txt[0] = keys[i][j].ch;
 				keyImg[i][j] = new GuiImage(key);
 				keyImgOver[i][j] = new GuiImage(keyOver);
-				keyTxt[i][j] = new GuiText(txt, 20, (GXColor){0, 0, 0, 0xff});
+				keyTxt[i][j] = new GuiText(txt, 22, (GXColor){0, 0, 0, 0xff});
 				keyTxt[i][j]->SetAlignment(ALIGN_CENTRE, ALIGN_BOTTOM);
-				keyTxt[i][j]->SetPosition(0, -10);
+				keyTxt[i][j]->SetPosition(0, -8);
 				keyBtn[i][j] = new GuiButton(key->GetWidth(), key->GetHeight());
 				keyBtn[i][j]->SetImage(keyImg[i][j]);
 				keyBtn[i][j]->SetImageOver(keyImgOver[i][j]);
@@ -291,7 +289,7 @@ void GuiKeyboard::Update(GuiTrigger * t)
 	else if(keyBack->GetState() == STATE_CLICKED)
 	{
 		if(strlen(kbtextstr) > 0)
-		{	
+		{
 			kbtextstr[strlen(kbtextstr)-1] = 0;
 			kbText->SetText(GetDisplayText(kbtextstr));
 		}
