@@ -3280,6 +3280,7 @@ static int MenuSettings()
 	emulationBtn.SetSoundOver(&btnSoundOver);
 	emulationBtn.SetSoundClick(&btnSoundClick);
 	emulationBtn.SetTrigger(trigA);
+	emulationBtn.SetTrigger(trig2);
 	emulationBtn.SetEffectGrow();
 
 	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
