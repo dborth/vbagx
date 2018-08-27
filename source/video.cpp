@@ -409,8 +409,6 @@ InitializeVideo ()
 	GX_SetCopyClear (background, 0x00ffffff);
 	GX_SetDispCopyGamma (GX_GM_1_0);
 	GX_SetCullMode (GX_CULL_NONE);
-	GX_CopyDisp (xfb[whichfb], GX_TRUE); // reset xfb
-	GX_Flush();
 }
 
 
