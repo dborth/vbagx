@@ -3,7 +3,7 @@
   <name>Visual Boy Advance GX</name>
   <coder>Tantric</coder>
   <version>2.3.7</version>
-  <release_date>20180814</release_date>
+  <release_date>20180828</release_date>
   <short_description>GBA/GBC/GB Emulator</short_description>
   <long_description>A port of Visual Boy Advance - M to the Wii.</long_description>
   <ahb_access />
