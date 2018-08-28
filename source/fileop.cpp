@@ -23,6 +23,7 @@
 #include <di/di.h>
 #include <ogc/dvd.h>
 #include <iso9660.h>
+#include <fat.h>
 
 #include "vbagx.h"
 #include "vbasupport.h"
@@ -35,7 +36,7 @@
 
 #define THREAD_SLEEP 100
 
-unsigned char *savebuffer;
+unsigned char *savebuffer = NULL;
 static mutex_t bufferLock = LWP_MUTEX_NULL;
 FILE * file; // file pointer - the only one we should ever use!
 bool unmountRequired[7] = { false, false, false, false, false, false, false };
@@ -473,22 +474,6 @@ static char *GetExt(char *file)
 	return ext;
 }
 
-bool GetFileSize(int i)
-{
-	if(browserList[i].length > 0)
-		return true;
-
-	struct stat filestat;
-	char path[MAXPATHLEN+1];
-	snprintf(path, MAXPATHLEN, "%s%s", browser.dir, browserList[i].filename);
-
-	if(stat(path, &filestat) < 0)
-		return false;
-
-	browserList[i].length = filestat.st_size;
-	return true;
-}
-
 void FindAndSelectLastLoadedFile () 
 {
 	int indexFound = -1;
@@ -674,7 +659,6 @@ ParseDirectory(bool waitParse, bool filter)
 		AddBrowserEntry();
 		sprintf(browserList[0].filename, "..");
 		sprintf(browserList[0].displayname, "Up One Level");
-		browserList[0].length = 0;
 		browserList[0].isdir = 1; // flag this as a dir
 		browserList[0].icon = ICON_FOLDER;
 		browser.numEntries++;
@@ -776,7 +760,7 @@ LoadSzFile(char * filepath, unsigned char * rbuffer)
  * LoadFile
  ***************************************************************************/
 size_t
-LoadFile (char * rbuffer, char *filepath, size_t length, bool silent)
+LoadFile (char * rbuffer, char *filepath, size_t length, size_t buffersize, bool silent)
 {
 	char zipbuffer[2048];
 	size_t size = 0, offset = 0, readsize = 0;
@@ -828,7 +812,7 @@ LoadFile (char * rbuffer, char *filepath, size_t length, bool silent)
 
 			if (IsZipFile (zipbuffer))
 			{
-				size = UnZipBuffer ((unsigned char *)rbuffer); // unzip
+				size = UnZipBuffer ((unsigned char *)rbuffer, buffersize); // unzip
 			}
 			else
 			{
@@ -836,27 +820,23 @@ LoadFile (char * rbuffer, char *filepath, size_t length, bool silent)
 				size = ftello(file);
 				fseeko(file,0,SEEK_SET);
 
-				while(!feof(file))
-				{
-					// If the size requested is *less* than the filesize, only read that much - we don't want to overrun the buffer
-					int toread = 4096;
-					if (length > 0 && offset+toread > length) {
-						toread = length - offset;
-					}
-
-					ShowProgress ("Loading...", offset, size);
-					readsize = fread (rbuffer + offset, 1, 4096, file); // read in next chunk
-
-					if(readsize <= 0)
-						break; // reading finished (or failed)
-
-					offset += readsize;
-					if (length > 0 && offset >= length) {
-						break;
-					}
+				if(size > buffersize) {
+					size = 0;
 				}
-				size = offset;
-				CancelAction();
+				else {
+					while(!feof(file))
+					{
+						ShowProgress ("Loading...", offset, size);
+						readsize = fread (rbuffer + offset, 1, 4096, file); // read in next chunk
+
+						if(readsize <= 0)
+							break; // reading finished (or failed)
+
+						offset += readsize;
+					}
+					size = offset;
+					CancelAction();
+				}
 			}
 		}
 		retry = 0;
@@ -871,19 +851,7 @@ LoadFile (char * rbuffer, char *filepath, size_t length, bool silent)
 
 size_t LoadFile(char * filepath, bool silent)
 {
-	struct stat filestat;
-
-	if(stat(filepath, &filestat) != 0) {
-		return 0;
-	}
-
-	int size = filestat.st_size;
-
-	if(size >= SAVEBUFFERSIZE) {
-		return 0;
-	}
-
-	return LoadFile((char *)savebuffer, filepath, 0, silent);
+	return LoadFile((char *)savebuffer, filepath, 0, SAVEBUFFERSIZE, silent);
 }
 
 /****************************************************************************
@@ -952,7 +920,6 @@ SaveFile (char * buffer, char *filepath, size_t datasize, bool silent)
 
 	// go back to checking if devices were inserted/removed
 	ResumeDeviceThread();
-
 	if(!silent)
 		CancelAction();
 	return written;

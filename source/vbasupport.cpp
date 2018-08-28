@@ -420,7 +420,7 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 			const char* generic_goomba_error = "Cannot save SRAM in Goomba format (did not load correctly.)";
 			// check for goomba sram format
 			char* old_sram = (char*)malloc(GOOMBA_COLOR_SRAM_SIZE);
-			size_t br = LoadFile(old_sram, filepath, GOOMBA_COLOR_SRAM_SIZE, true);
+			size_t br = LoadFile(old_sram, filepath, GOOMBA_COLOR_SRAM_SIZE, GOOMBA_COLOR_SRAM_SIZE, true);
 			if (br >= GOOMBA_COLOR_SRAM_SIZE && goomba_is_sram(old_sram)) {
 				void* cleaned = goomba_cleanup(old_sram);
 				if (cleaned == NULL) {
@@ -1005,12 +1005,12 @@ void LoadPNGBorder(const char* fallback)
 	char error[1024]; error[1023] = 0;
 	int r;
 	
-	bool borderLoaded = LoadFile((char*)png_tmp_buf, borderPath, 1024*1024, SILENT);
+	bool borderLoaded = LoadFile((char*)png_tmp_buf, borderPath, 0, 1024*1024, SILENT);
 	if (!borderLoaded) {
 		// Try default border.png
 		free(borderPath);
 		borderPath = AllocAndGetPNGBorderPath(fallback);
-		borderLoaded = LoadFile((char*)png_tmp_buf, borderPath, 1024*1024, SILENT);
+		borderLoaded = LoadFile((char*)png_tmp_buf, borderPath, 0, 1024*1024, SILENT);
 	}
 	if (!borderLoaded) goto cleanup;
 	
@@ -1060,12 +1060,7 @@ bool LoadGBROM()
 {
 	gbEmulatorType = GCSettings.GBHardware;
 
-	if (browserList[browser.selIndex].length > 1024*1024*8) 
-	{
-		InfoPrompt("ROM size is too large (> 8 MB)");
-		return false;
-	}
-	gbRom = (u8 *)malloc(1024*1024*8); // 32 MB is too much for sure
+	gbRom = (u8 *)malloc(1024*1024*8);
 	if (!gbRom) 
 	{
 		InfoPrompt("Unable to allocate 8 MB of memory");
@@ -1082,7 +1077,7 @@ bool LoadGBROM()
 		if(!MakeFilePath(filepath, FILE_ROM))
 			return false;
 
-		gbRomSize = LoadFile ((char *)gbRom, filepath, browserList[browser.selIndex].length, NOTSILENT);
+		gbRomSize = LoadFile ((char *)gbRom, filepath, 0, (1024*1024*8), NOTSILENT);
 	}
 	else
 	{
@@ -1172,12 +1167,6 @@ bool LoadVBAROM()
 	{
 		// Not zip gba agb gbc cgb sgb gb mb bin elf or dmg!
 		ErrorPrompt("Unrecognized file extension!");
-		return false;
-	}
-	
-	if(!GetFileSize(browser.selIndex))
-	{
-		ErrorPrompt("Error loading game!");
 		return false;
 	}
 

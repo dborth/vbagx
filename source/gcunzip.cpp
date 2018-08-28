@@ -97,7 +97,7 @@ IsZipFile (char *buffer)
 ******************************************************************************/
 
 size_t
-UnZipBuffer (unsigned char *outbuffer)
+UnZipBuffer (unsigned char *outbuffer, size_t buffersize)
 {
 	PKZIPHEADER pkzip;
 	size_t zipoffset = 0;
@@ -121,6 +121,10 @@ UnZipBuffer (unsigned char *outbuffer)
 	memcpy (&pkzip, readbuffer, sizeof (PKZIPHEADER));
 
 	pkzip.uncompressedSize = FLIP32 (pkzip.uncompressedSize);
+
+	if(pkzip.uncompressedSize > buffersize) {
+		return 0;
+	}
 
 	ShowProgress ("Loading...", 0, pkzip.uncompressedSize);
 
@@ -211,7 +215,7 @@ GetFirstZipFilename ()
 		return NULL;
 
 	// read start of ZIP
-	if(LoadFile (tempbuffer, filepath, ZIPCHUNK, NOTSILENT) < 35)
+	if(LoadFile (tempbuffer, filepath, ZIPCHUNK, ZIPCHUNK, NOTSILENT) < 35)
 		return NULL;
 
 	tempbuffer[28] = 0; // truncate - filename length is 2 bytes long (bytes 26-27)
@@ -428,7 +432,6 @@ int SzParse(char * filepath)
 			sprintf(browserList[0].filename, "..");
 			sprintf(browserList[0].displayname, "Up One Level");
 			browserList[0].isdir = 1;
-			browserList[0].length = filelen;
 			browserList[0].icon = ICON_FOLDER;
 
 			// get contents and parse them into file list structure

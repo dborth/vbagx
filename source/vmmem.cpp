@@ -165,7 +165,7 @@ int VMCPULoadROM()
 		if(!MakeFilePath(filepath, FILE_ROM))
 			return 0;
 
-		GBAROMSize = LoadFile ((char *)rom, filepath, browserList[browser.selIndex].length, NOTSILENT);
+		GBAROMSize = LoadFile ((char *)rom, filepath, 0, (1024*1024*32), NOTSILENT);
 	}
 	else
 	{
