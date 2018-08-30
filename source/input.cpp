@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
@@ -31,6 +30,8 @@
 #include "vba/gba/GBA.h"
 #include "vba/gba/bios.h"
 #include "vba/gba/GBAinline.h"
+
+#define ANALOG_SENSITIVITY 30
 
 int rumbleRequest[4] = {0,0,0,0};
 GuiTrigger userInput[4];
@@ -318,8 +319,6 @@ void systemGameRumbleOnlyFor(int OnlyRumbleForFrames) {
 u32 StandardMovement(unsigned short chan)
 {
 	u32 J = 0;
-	double angle;
-	static const double THRES = 0.38268343236508984; // cos(67.5)
 
 	s8 pad_x = userInput[chan].pad.stickX;
 	s8 pad_y = userInput[chan].pad.stickY;
@@ -331,37 +330,26 @@ u32 StandardMovement(unsigned short chan)
 	/***
 	Gamecube Joystick input, same as normal
 	***/
-	// Is XY inside the "zone"?
-	if (pad_x * pad_x + pad_y * pad_y > PADCAL * PADCAL)
-	{
-		angle = atan2(pad_y, pad_x);
-		 
-		if(cos(angle) > THRES)
-			J |= VBA_RIGHT;
-		else if(cos(angle) < -THRES)
-			J |= VBA_LEFT;
-		if(sin(angle) > THRES)
-			J |= VBA_UP;
-		else if(sin(angle) < -THRES)
-			J |= VBA_DOWN;
-	}
+	if (pad_y > ANALOG_SENSITIVITY)
+		J |= VBA_UP;
+	else if (pad_y < -ANALOG_SENSITIVITY)
+		J |= VBA_DOWN;
+	if (pad_x < -ANALOG_SENSITIVITY)
+		J |= VBA_LEFT;
+	else if (pad_x > ANALOG_SENSITIVITY)
+		J |= VBA_RIGHT;
 #ifdef HW_RVL
 	/***
 	Wii Joystick (classic, nunchuk) input
 	***/
-	// Is XY inside the "zone"?
-	if (wm_ax * wm_ax + wm_ay * wm_ay > PADCAL * PADCAL)
-	{
-		angle = atan2(wm_ay, wm_ax);
-		if(cos(angle) > THRES)
-			J |= VBA_RIGHT;
-		else if(cos(angle) < -THRES)
-			J |= VBA_LEFT;
-		if(sin(angle) > THRES)
-			J |= VBA_UP;
-		else if(sin(angle) < -THRES)
-			J |= VBA_DOWN; 
-	}
+	if (wm_ay > ANALOG_SENSITIVITY)
+		J |= VBA_UP;
+	else if (wm_ay < -ANALOG_SENSITIVITY)
+		J |= VBA_DOWN;
+	if (wm_ax < -ANALOG_SENSITIVITY)
+		J |= VBA_LEFT;
+	else if (wm_ax > ANALOG_SENSITIVITY)
+		J |= VBA_RIGHT;
 #endif
 	return J;
 }
