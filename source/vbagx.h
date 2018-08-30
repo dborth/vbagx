@@ -94,6 +94,7 @@ struct SGCSettings
 	int		Rumble;
 	int 	language;
 	int		PreviewImage;
+	int		AutoloadGame;
 	
 	int		OffsetMinutesUTC; // Used for clock on MBC3 and TAMA5
 	int 	GBHardware;    // Mapped to gbEmulatorType in VBA
@@ -108,10 +109,6 @@ struct SGCSettings
 	char	ArtworkFolder[MAXPATHLEN]; 	//Path to artwork files
 	char 	ImageFolder[MAXPATHLEN]; 	//Saved image folder path 
 	char	BorderFolder[MAXPATHLEN];  // Path to Super Game Boy border files
-
-	char	Exit_Dol_File[MAXPATHLEN]; // Exit Path
-	char	LoaderName[20]; // Menu Loader Name
-	u32		Exit_Channel[2]; // Exit Channel
 
 	char	smbip[80];
 	char	smbuser[20];
