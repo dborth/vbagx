@@ -6,8 +6,7 @@
 #include "RTC.h"
 #include "Sound.h"
 #include "agbprint.h"
-#include "GBAcpu.h"
-#include "GBALink.h"
+#include "vmmem.h" // Nintendo GC Virtual Memory
 
 extern const u32 objTilesAddress[3];
 
@@ -34,15 +33,82 @@ extern bool timer3On;
 extern int timer3Ticks;
 extern int timer3ClockReload;
 extern int cpuTotalTicks;
+extern u32 RomIdCode;
 
-#define CPUReadByteQuick(addr) \
+#define gid(a,b,c) (a|(b<<8)|(c<<16))
+#define CORVETTE		gid('A','V','C')
+
+/*****************************************************************************
+ * Nintendo GC Virtual Memory function override
+ * Tantric September 2008
+ ****************************************************************************/
+
+#define CPUReadByteQuickDef(addr) \
   map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]
 
-#define CPUReadHalfWordQuick(addr) \
+#define CPUReadHalfWordQuickDef(addr) \
   READ16LE(((u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 
-#define CPUReadMemoryQuick(addr) \
+#define CPUReadMemoryQuickDef(addr) \
   READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
+
+u8 inline CPUReadByteQuick( u32 addr )
+{
+	switch(addr >> 24 )
+	{
+		case 0x08:
+		case 0x09:
+		case 0x0A:
+		case 0x0C:
+#ifdef USE_VM
+			return VMRead8( addr & 0x1FFFFFF );
+#endif
+		default:
+			return CPUReadByteQuickDef(addr);
+	}
+
+	return 0;
+}
+
+u16 inline CPUReadHalfWordQuick( u32 addr )
+{
+	switch(addr >> 24)
+	{
+		case 0x08:
+		case 0x09:
+		case 0x0A:
+		case 0x0C:
+#ifdef USE_VM
+			return VMRead16( addr & 0x1FFFFFF );
+#endif
+		default:
+			return CPUReadHalfWordQuickDef(addr);
+	}
+
+	return 0;
+}
+
+u32 inline CPUReadMemoryQuick( u32 addr )
+{
+	switch(addr >> 24)
+	{
+		case 0x08:
+		case 0x09:
+		case 0x0A:
+		case 0x0C:
+#ifdef USE_VM
+			return VMRead32( addr & 0x1FFFFFF );
+#endif
+		default:
+			return CPUReadMemoryQuickDef(addr);
+	}
+
+	return 0;
+}
+
+/*****************************************************************************
+ * End of VM override
+ ****************************************************************************/
 
 static inline u32 CPUReadMemory(u32 address)
 {
@@ -80,8 +146,8 @@ static inline u32 CPUReadMemory(u32 address)
 	if((address < 0x4000400) && ioReadable[address & 0x3fc]) {
       if(ioReadable[(address & 0x3fc) + 2]) {
         value = READ32LE(((u32 *)&ioMem[address & 0x3fC]));
-        if ((address & 0x3fc) == COMM_JOY_RECV_L)
-          UPDATE_REG(COMM_JOYSTAT, READ16LE(&ioMem[COMM_JOYSTAT]) & ~JOYSTAT_RECV);
+        //if ((address & 0x3fc) == COMM_JOY_RECV_L)
+        //  UPDATE_REG(COMM_JOYSTAT, READ16LE(&ioMem[COMM_JOYSTAT]) & ~JOYSTAT_RECV);
       } else {
         value = READ16LE(((u16 *)&ioMem[address & 0x3fc]));
       }
@@ -96,8 +162,8 @@ static inline u32 CPUReadMemory(u32 address)
     address = (address & 0x1fffc);
     if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
     {
-      value = 0;
-      break;
+        value = 0;
+        break;
     }
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
@@ -107,39 +173,68 @@ static inline u32 CPUReadMemory(u32 address)
     value = READ32LE(((u32 *)&oam[address & 0x3FC]));
     break;
   case 8:
+	// Must be cartridge ROM, reading other sensors doesn't allow 32-bit access.
   case 9:
   case 10:
   case 11:
   case 12:
-    value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
+#ifdef USE_VM // Nintendo GC Virtual Memory
+	  value = VMRead32( address & 0x1FFFFFC );
+#else
+	  value = READ32LE(((u32 *)&rom[address&0x1FFFFFC]));
+#endif
     break;
   case 13:
 	value = eepromRead(address);
 	break;
   case 14:
   case 15:
-	value = flashRead(address) * 0x01010101;
-	break;
+	// Yoshi's Universal Gravitation (Topsy Turvy)
+	// Koro Koro
+    if(cpuEEPROMSensorEnabled) {
+      switch(address & 0x00008f00) {
+      case 0x8200:
+        return systemGetSensorX() & 255;
+      case 0x8300:
+        return (systemGetSensorX() >> 8)|0x80;
+      case 0x8400:
+        return systemGetSensorY() & 255;
+      case 0x8500:
+        return systemGetSensorY() >> 8;
+      }
+    }
+    value = flashRead(address) * 0x01010101;
+    break;
     // default
   default:
-unreadable:
+  unreadable:
 #ifdef GBA_LOGGING
     if(systemVerbose & VERBOSE_ILLEGAL_READ) {
       log("Illegal word read: %08x at %08x\n", address, armMode ?
-        armNextPC - 4 : armNextPC - 2);
+          armNextPC - 4 : armNextPC - 2);
     }
 #endif
-	if(cpuDmaHack) {
-		value = cpuDmaLast;
-	} else {
+
+    if(cpuDmaHack) {
+      value = cpuDmaLast;
+    } else {
       if(armState) {
-		return CPUReadMemoryQuick(reg[15].I);
+#ifdef USE_VM // Nintendo GC Virtual Memory
+    	return CPUReadMemoryQuick(reg[15].I);
+#else
+        return CPUReadMemoryQuickDef(reg[15].I);
+#endif
       } else {
-		return CPUReadHalfWordQuick(reg[15].I) |
-			   CPUReadHalfWordQuick(reg[15].I) << 16;
+#ifdef USE_VM // Nintendo GC Virtual Memory
+        return CPUReadHalfWordQuick(reg[15].I) |
+          CPUReadHalfWordQuick(reg[15].I) << 16;
+#else
+        return CPUReadHalfWordQuickDef(reg[15].I) |
+          CPUReadHalfWordQuickDef(reg[15].I) << 16;
+#endif
       }
-	}
-	break;
+    }
+    break;
   }
 
   if(oldAddress & 3) {
@@ -216,14 +311,14 @@ static inline u32 CPUReadHalfWord(u32 address)
         if (((address & 0x3fe) == 0x100) && timer0On)
           value = 0xFFFF - ((timer0Ticks-cpuTotalTicks) >> timer0ClockReload);
         else
-          if (((address & 0x3fe) == 0x104) && timer1On && !(TM1CNT & 4))
-            value = 0xFFFF - ((timer1Ticks-cpuTotalTicks) >> timer1ClockReload);
-          else
-            if (((address & 0x3fe) == 0x108) && timer2On && !(TM2CNT & 4))
-              value = 0xFFFF - ((timer2Ticks-cpuTotalTicks) >> timer2ClockReload);
-            else
-              if (((address & 0x3fe) == 0x10C) && timer3On && !(TM3CNT & 4))
-                value = 0xFFFF - ((timer3Ticks-cpuTotalTicks) >> timer3ClockReload);
+        if (((address & 0x3fe) == 0x104) && timer1On && !(TM1CNT & 4))
+          value = 0xFFFF - ((timer1Ticks-cpuTotalTicks) >> timer1ClockReload);
+        else
+        if (((address & 0x3fe) == 0x108) && timer2On && !(TM2CNT & 4))
+          value = 0xFFFF - ((timer2Ticks-cpuTotalTicks) >> timer2ClockReload);
+        else
+        if (((address & 0x3fe) == 0x10C) && timer3On && !(TM3CNT & 4))
+          value = 0xFFFF - ((timer3Ticks-cpuTotalTicks) >> timer3ClockReload);
       }
     }
 	else if((address < 0x4000400) && ioReadable[address & 0x3fc])
@@ -239,8 +334,8 @@ static inline u32 CPUReadHalfWord(u32 address)
     address = (address & 0x1fffe);
     if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
     {
-      value = 0;
-      break;
+        value = 0;
+        break;
     }
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
@@ -250,34 +345,66 @@ static inline u32 CPUReadHalfWord(u32 address)
     value = READ16LE(((u16 *)&oam[address & 0x3fe]));
     break;
   case 8:
+	// Use existing case statement and faster test for potential speed improvement
+	// This is possibly the GPIO port that controls the real time clock,
+	// WarioWare Twisted! tilt sensors, rumble, and solar sensors.
+    if(address >= 0x80000c4 && address <= 0x80000c8) {
+	  // this function still works if there is no real time clock
+	  // and does a normal memory read in that case.
+      value = rtcRead(address & 0xFFFFFFE);
+	  break;
+	}
   case 9:
   case 10:
   case 11:
   case 12:
-    if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)
-      value = rtcRead(address);
-    else
-      value = READ16LE(((u16 *)&rom[address & 0x1FFFFFE]));
+#ifdef USE_VM // Nintendo GC Virtual Memory
+    	value = VMRead16( address & 0x1FFFFFE );
+#else
+    	value = READ16LE(((u16 *)&rom[address & 0x1FFFFFE]));
+#endif
     break;
   case 13:
 	value = eepromRead(address);
 	break;
   case 14:
   case 15:
-	value = flashRead(address) * 0x0101;
+	// Yoshi's Universal Gravitation (Topsy Turvy)
+	// Koro Koro
+    if(cpuEEPROMSensorEnabled) {
+      switch(address & 0x00008f00) {
+      case 0x8200:
+        return systemGetSensorX() & 255;
+      case 0x8300:
+        return (systemGetSensorX() >> 8)|0x80;
+      case 0x8400:
+        return systemGetSensorY() & 255;
+      case 0x8500:
+        return systemGetSensorY() >> 8;
+      }
+    }
+    value = flashRead(address) * 0x0101;
 	break;
     // default
   default:
-unreadable:
-	if(cpuDmaHack) {
-		value = cpuDmaLast & 0xFFFF;
-	} else {
-		if(armState) {
-			value = CPUReadHalfWordQuick(reg[15].I + (address & 2));
-		} else {
-			value = CPUReadHalfWordQuick(reg[15].I);
-		}
-	}
+  unreadable:
+    if(cpuDmaHack) {
+      value = cpuDmaLast & 0xFFFF;
+    } else {
+      if(armState) {
+#ifdef USE_VM // Nintendo GC Virtual Memory
+        value = CPUReadHalfWordQuick(reg[15].I + (address & 2));
+#else
+        value = CPUReadHalfWordQuickDef(reg[15].I + (address & 2));
+#endif
+        } else {
+#ifdef USE_VM // Nintendo GC Virtual Memory
+        value = CPUReadHalfWordQuick(reg[15].I);
+#else
+        value = CPUReadHalfWordQuickDef(reg[15].I);
+#endif
+      }
+    }
 #ifdef GBA_LOGGING
 	if(systemVerbose & VERBOSE_ILLEGAL_READ) {
 		log("Illegal halfword read: %08x at %08x (%08x)\n", oldAddress, reg[15].I, value);
@@ -343,55 +470,71 @@ static inline u8 CPUReadByte(u32 address)
   case 6:
     address = (address & 0x1ffff);
     if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
-      return 0;
+        return 0;
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
     return vram[address];
   case 7:
     return oam[address & 0x3ff];
   case 8:
+	// the real time clock doesn't support byte reads, so don't bother checking for it.
   case 9:
   case 10:
   case 11:
   case 12:
+#ifdef USE_VM // Nintendo GC Virtual Memory
+	return VMRead8( address & 0x1FFFFFF );
+#else
     return rom[address & 0x1FFFFFF];
+#endif
   case 13:
 	return eepromRead(address);
   case 14:
   case 15:
   {
-	if (cpuEEPROMSensorEnabled) {
-		switch (address & 0x00008f00) {
-		case 0x8200:
-			return systemGetSensorX() & 255;
-		case 0x8300:
-			return (systemGetSensorX() >> 8) | 0x80;
-		case 0x8400:
-			return systemGetSensorY() & 255;
-		case 0x8500:
-			return systemGetSensorY() >> 8;
-		}
-	}
-	return flashRead(address);
+	// Yoshi's Universal Gravitation (Topsy Turvy)
+	// Koro Koro
+    if(cpuEEPROMSensorEnabled) {
+      switch(address & 0x00008f00) {
+      case 0x8200:
+        return systemGetSensorX() & 255;
+      case 0x8300:
+        return (systemGetSensorX() >> 8)|0x80;
+      case 0x8400:
+        return systemGetSensorY() & 255;
+      case 0x8500:
+        return systemGetSensorY() >> 8;
+      }
+    }
+    return flashRead(address);
   }
     // default
   default:
-unreadable:
+  unreadable:
 #ifdef GBA_LOGGING
     if(systemVerbose & VERBOSE_ILLEGAL_READ) {
       log("Illegal byte read: %08x at %08x\n", address, armMode ?
-        armNextPC - 4 : armNextPC - 2);
+          armNextPC - 4 : armNextPC - 2);
     }
 #endif
-	if(cpuDmaHack) {
-		return cpuDmaLast & 0xFF;
-	} else {
-		if(armState) {
-			return CPUReadByteQuick(reg[15].I + (address & 3));
-		} else {
-			return CPUReadByteQuick(reg[15].I + (address & 1));
-		}
-	}
+    if(cpuDmaHack) {
+      return cpuDmaLast & 0xFF;
+    } else {
+      if(armState) {
+#ifdef USE_VM // Nintendo GC Virtual Memory
+        return CPUReadByteQuick(reg[15].I+(address & 3));
+#else
+        return CPUReadByteQuickDef(reg[15].I+(address & 3));
+#endif
+      } else {
+#ifdef USE_VM // Nintendo GC Virtual Memory
+        return CPUReadByteQuick(reg[15].I+(address & 1));
+#else
+        return CPUReadByteQuickDef(reg[15].I+(address & 1));
+#endif
+      }
+    }
+    break;
   }
 }
 
@@ -402,9 +545,9 @@ static inline void CPUWriteMemory(u32 address, u32 value)
   if(address & 3) {
     if(systemVerbose & VERBOSE_UNALIGNED_MEMORY) {
       log("Unaligned word write: %08x to %08x from %08x\n",
-        value,
-        address,
-        armMode ? armNextPC - 4 : armNextPC - 2);
+          value,
+          address,
+          armMode ? armNextPC - 4 : armNextPC - 2);
     }
   }
 #endif
@@ -416,7 +559,7 @@ static inline void CPUWriteMemory(u32 address, u32 value)
 #ifdef BKPT_SUPPORT
     if(*((u32 *)&freezeWorkRAM[address & 0x3FFFC]))
       cheatsWriteMemory(address & 0x203FFFC,
-      value);
+                        value);
     else
 #endif
       WRITE32LE(((u32 *)&workRAM[address & 0x3FFFC]), value);
@@ -425,7 +568,7 @@ static inline void CPUWriteMemory(u32 address, u32 value)
 #ifdef BKPT_SUPPORT
     if(*((u32 *)&freezeInternalRAM[address & 0x7ffc]))
       cheatsWriteMemory(address & 0x3007FFC,
-      value);
+                        value);
     else
 #endif
       WRITE32LE(((u32 *)&internalRAM[address & 0x7ffC]), value);
@@ -440,9 +583,10 @@ static inline void CPUWriteMemory(u32 address, u32 value)
 #ifdef BKPT_SUPPORT
     if(*((u32 *)&freezePRAM[address & 0x3fc]))
       cheatsWriteMemory(address & 0x70003FC,
-      value);
+                        value);
     else
 #endif
+    if(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE)
       WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
     break;
   case 0x06:
@@ -542,6 +686,7 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
       value);
     else
 #endif
+    if(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE)
       WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
     break;
   case 6:

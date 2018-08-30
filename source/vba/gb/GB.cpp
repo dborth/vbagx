@@ -1433,10 +1433,12 @@ void  gbWriteMemory(register u16 address, register u8 value)
         int paletteHiLo  = (v & 0x01);
 
         // No access to gbPalette during mode 3 (Color Panel Demo)
-        if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
-           (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
-           ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
-           ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
+		// CAK - The following check has to be commented out for
+		// colourised roms like Metroid 2 DX
+        //if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
+        //   (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
+        //   ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
+        //   ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
         {
           gbMemory[0xff69] = value;
           gbPalette[paletteIndex] = (paletteHiLo ?
@@ -1487,10 +1489,12 @@ void  gbWriteMemory(register u16 address, register u8 value)
         paletteIndex += 32;
 
         // No access to gbPalette during mode 3 (Color Panel Demo)
-        if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
-           (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
-           ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
-           ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
+		// CAK - The following check has to be commented out for
+		// colourised roms like Metroid 2 DX
+        //if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
+        //   (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
+        //   ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
+        //   ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
         {
           gbMemory[0xff6b] = value;
           gbPalette[paletteIndex] = (paletteHiLo ?
@@ -1567,7 +1571,7 @@ u8 gbReadOpcode(register u16 address)
   if(address < 0x8000)
       return gbMemoryMap[address>>12][address&0x0fff];
 
-  if (address < 0xa000)
+  if(address < 0xa000)
   {
     // A lot of 'ugly' checks... But only way to emulate this particular behaviour...
     if (
@@ -1683,13 +1687,13 @@ u8 gbReadOpcode(register u16 address)
       if (gbCgbMode)
       {
         // No access to gbPalette during mode 3 (Color Panel Demo)
-        if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
-           (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
-           ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
-           ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
+        //if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
+        //   (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
+        //   ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
+        //   ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
           return (gbMemory[address]);
-        else
-          return 0xff;
+        //else
+        //  return 0xff;
       }
       else
         return 0xff;
@@ -1733,8 +1737,7 @@ u8 gbReadMemory(register u16 address)
   if(address < 0x8000)
     return gbMemoryMap[address>>12][address&0x0fff];
 
-
-  if (address < 0xa000)
+  if(address < 0xa000)
   {
     // A lot of 'ugly' checks... But only way to emulate this particular behaviour...
     if (
@@ -1759,8 +1762,7 @@ u8 gbReadMemory(register u16 address)
            )
          )
        )
-         return gbMemoryMap[address >> 12][address & 0x0fff];
-
+      return gbMemoryMap[address>>12][address&0x0fff];
     return 0xff;
   }
 
@@ -1961,13 +1963,13 @@ u8 gbReadMemory(register u16 address)
       if (gbCgbMode)
       {
         // No access to gbPalette during mode 3 (Color Panel Demo)
-        if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
-           (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
-           ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
-           ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
+        //if (((gbLcdModeDelayed != 3) && (!((gbLcdMode == 0) && (gbLcdTicks>=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-1)))) && (!gbSpeed)) ||
+        //   (gbSpeed && ((gbLcdMode == 1) || (gbLcdMode == 2) ||
+        //   ((gbLcdMode == 3) && (gbLcdTicks>(GBLCD_MODE_3_CLOCK_TICKS-2))) ||
+        //   ((gbLcdMode == 0) && (gbLcdTicks<=(GBLCD_MODE_0_CLOCK_TICKS-gbSpritesTicks[299]-2))))))
           return (gbMemory[address]);
-        else
-          return 0xff;
+        //else
+        //  return 0xff;
       }
       else
         return 0xff;
@@ -2124,7 +2126,7 @@ void gbCPUInit(const char *biosFileName, bool useBiosFile)
   useBios = false;
   if (useBiosFile)
   {
-    int size = 0x100;
+/*    int size = 0x100;
     if(utilLoad(biosFileName,
                 CPUIsGBBios,
                 bios,
@@ -2133,7 +2135,7 @@ void gbCPUInit(const char *biosFileName, bool useBiosFile)
         useBios = true;
       else
         systemMessage(MSG_INVALID_BIOS_FILE_SIZE, N_("Invalid BOOTROM file size"));
-    }
+    }*/
   }
 }
 
@@ -2149,12 +2151,12 @@ void gbGetHardwareType()
     }
   }
 
-  if((gbCgbMode == 0) && (gbRom[0x146] == 0x03)) {
+  if((gbCgbMode == 0 ) && (gbRom[0x146] == 0x03)) {
     if(gbEmulatorType == 0 ||
        gbEmulatorType == 2 ||
        gbEmulatorType == 5)
       gbSgbMode = 1;
-	  gbCgbMode = 0;
+      gbCgbMode = 0;
   }
 
   gbHardware = 1; // GB
@@ -2172,7 +2174,9 @@ void gbGetHardwareType()
 
 void gbReset()
 {
+  systemCartridgeRumble(false);
   gbGetHardwareType();
+  gbPaletteReset();
 
   oldRegister_WY = 146;
   gbInterruptLaunched = 0;
@@ -2468,7 +2472,7 @@ void gbReset()
   gbTimerOn = false;
 
   if(gbCgbMode) {
-    for (i = 0; i<0x20; i++)
+    for (int i = 0; i<0x20; i++)
       gbPalette[i] = 0x7fff;
 
     // This is just to show that the starting values of the OBJ palettes are different
@@ -2586,12 +2590,12 @@ void gbReset()
     }
   } else {
     if(gbSgbMode) {
-      for(i = 0; i < 8; i++)
-        gbPalette[i] = systemGbPalette[gbPaletteOption*8+i];
+      for(int i = 0; i < 12; i++)
+        gbPalette[i] = systemGbPalette[gbPaletteOption*12+i];
 
     }
-    for(i = 0; i < 8; i++)
-      gbPalette[i] = systemGbPalette[gbPaletteOption*8+i];
+    for(int i = 0; i < 12; i++)
+      gbPalette[i] = systemGbPalette[gbPaletteOption*12+i];
   }
 
   GBTIMER_MODE_0_CLOCK_TICKS = 256;
@@ -2645,6 +2649,8 @@ void gbReset()
 
   memset(&gbDataMBC5, 0, sizeof(gbDataMBC5));
   gbDataMBC5.mapperROMBank = 1;
+  if (gbRomType >= 0x1c && gbRomType<=0x1e)
+    gbDataMBC5.isRumbleCartridge = 1;
 
   memset(&gbDataHuC1, 0, sizeof(gbDataHuC1));
   gbDataHuC1.mapperROMBank = 1;
@@ -2746,7 +2752,7 @@ void gbWriteSaveMBC2(const char * name)
       return;
     }
 
-    fwrite(gbMemoryMap[0x0a],
+    fwrite(&gbMemoryMap[0x0a],
            1,
            512,
            file);
@@ -2928,7 +2934,7 @@ bool gbReadSaveMBC2(const char * name)
       return false;
     }
 
-    size_t read = fread(gbMemoryMap[0x0a],
+    size_t read = fread(&gbMemoryMap[0x0a],
                      1,
                      512,
                      file);
@@ -4007,16 +4013,18 @@ bool gbReadSaveState(const char *name)
 
 bool gbWritePNGFile(const char *fileName)
 {
-  if(gbBorderOn)
+/*  if(gbBorderOn)
     return utilWritePNGFile(fileName, 256, 224, pix);
-  return utilWritePNGFile(fileName, 160, 144, pix);
+  return utilWritePNGFile(fileName, 160, 144, pix);*/
+	return false;
 }
 
 bool gbWriteBMPFile(const char *fileName)
 {
-  if(gbBorderOn)
+/*  if(gbBorderOn)
     return utilWriteBMPFile(fileName, 256, 224, pix);
-  return utilWriteBMPFile(fileName, 160, 144, pix);
+  return utilWriteBMPFile(fileName, 160, 144, pix);*/
+	return false;
 }
 
 void gbCleanUp()
@@ -4081,10 +4089,10 @@ bool gbLoadRom(const char *szFile)
 
   systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-  gbRom = utilLoad(szFile,
+/*  gbRom = utilLoad(szFile,
                    utilIsGBImage,
                    NULL,
-                   size);
+                   size);*/
   if(!gbRom)
     return false;
 
@@ -4512,6 +4520,7 @@ void gbEmulate(int ticksToStop)
       }
     }
 #endif
+
 
     u16 oldPCW = PC.W;
 

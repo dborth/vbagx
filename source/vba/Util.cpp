@@ -26,7 +26,6 @@ extern "C" {
 #include "common/memgzio.h"
 }
 
-#include "gba/gbafilter.h"
 #include "gb/gbGlobals.h"
 
 #ifndef _MSC_VER
@@ -39,7 +38,7 @@ extern int systemGreenShift;
 extern int systemBlueShift;
 
 extern u16 systemColorMap16[0x10000];
-extern u32 systemColorMap32[0x10000];
+extern u32 *systemColorMap32;
 
 static int (ZEXPORT *utilGzWriteFunc)(gzFile, const voidp, unsigned int) = NULL;
 static int (ZEXPORT *utilGzReadFunc)(gzFile, voidp, unsigned int) = NULL;
@@ -657,6 +656,7 @@ long utilGzMemTell(gzFile file)
   return memtell(file);
 }
 
+#ifndef GEKKO
 void utilGBAFindSave(const u8 *data, const int size)
 {
   u32 *p = (u32 *)data;
@@ -743,3 +743,4 @@ bool utilFileExists( const char *filename )
 		return true;
 	}
 }
+#endif

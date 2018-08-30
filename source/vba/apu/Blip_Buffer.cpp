@@ -29,7 +29,7 @@ int const silent_buf_size = 1; // size used for Silent_Blip_Buffer
 
 Blip_Buffer::Blip_Buffer()
 {
-	factor_       = (blip_ulong)LONG_MAX;
+	factor_       = LONG_MAX;
 	buffer_       = 0;
 	buffer_size_  = 0;
 	sample_rate_  = 0;
@@ -126,7 +126,7 @@ Blip_Buffer::blargg_err_t Blip_Buffer::set_sample_rate( long new_rate, int msec 
 
 blip_resampled_time_t Blip_Buffer::clock_rate_factor( long rate ) const
 {
-	double ratio = (double) sample_rate_ / rate;
+	double ratio = (double)(sample_rate_) / double(rate);
 	blip_long factor = (blip_long) floor( ratio * (1L << BLIP_BUFFER_ACCURACY) + 0.5 );
 	assert( factor > 0 || !sample_rate_ ); // fails if clock/output ratio is too large
 	return (blip_resampled_time_t) factor;
@@ -226,15 +226,17 @@ static void gen_sinc( float* out, int count, double oversample, double treble, d
 		treble = 5.0;
 
 	double const maxh = 4096.0;
-	double const rolloff = pow( 10.0, 1.0 / (maxh * 20.0) * treble / (1.0 - cutoff) );
+	double const rolloff = pow( 10.0, treble / (maxh * 20.0 * (1.0 - cutoff)) );
 	double const pow_a_n = pow( rolloff, maxh - maxh * cutoff );
-	double const to_angle = PI / 2 / maxh / oversample;
+	double const to_angle = PI / (2.0 * maxh * oversample);
 	for ( int i = 0; i < count; i++ )
 	{
-		double angle = ((i - count) * 2 + 1) * to_angle;
-		double c = rolloff * cos( (maxh - 1.0) * angle ) - cos( maxh * angle );
-		double cos_nc_angle = cos( maxh * cutoff * angle );
-		double cos_nc1_angle = cos( (maxh * cutoff - 1.0) * angle );
+		double angle = double(((i - count)<<1) + 1) * to_angle;
+		double maxhAngle = maxh * angle;
+		double c = rolloff * cos( maxhAngle -  angle ) - cos( maxhAngle );
+		double cos_nc_angle = cos( maxhAngle * cutoff );
+		double cos_nc1_angle = cos( maxhAngle * cutoff - angle );
+
 		double cos_angle = cos( angle );
 
 		c = c * pow_a_n - rolloff * cos_nc1_angle + cos_nc_angle;
@@ -250,7 +252,7 @@ void blip_eq_t::generate( float* out, int count ) const
 {
 	// lower cutoff freq for narrow kernels with their wider transition band
 	// (8 points->1.49, 16 points->1.15)
-	double oversample = blip_res * 2.25 / count + 0.85;
+	double oversample = blip_res * 2.25 / double(count) + 0.85;
 	double half_rate = sample_rate * 0.5;
 	if ( cutoff_freq )
 		oversample = half_rate / cutoff_freq;
@@ -268,7 +270,9 @@ void Blip_Synth_::adjust_impulse()
 {
 	// sum pairs for each phase and add error correction to end of first half
 	int const size = impulses_size();
-	for ( int p = blip_res; p-- >= blip_res / 2; )
+
+	int blipRes2 = blip_res >> 1;
+	for ( int p = blip_res; p-- >= blipRes2; )
 	{
 		int p2 = blip_res - 2 - p;
 		long error = kernel_unit;
@@ -290,9 +294,11 @@ void Blip_Synth_::adjust_impulse()
 
 void Blip_Synth_::treble_eq( blip_eq_t const& eq )
 {
-	float fimpulse [blip_res / 2 * (blip_widest_impulse_ - 1) + blip_res * 2];
+	int blipRes2 = blip_res >> 1;
 
-	int const half_size = blip_res / 2 * (width - 1);
+	float fimpulse [blipRes2 * (blip_widest_impulse_ - 1) + blip_res * 2];
+
+	int const half_size = blipRes2 * (width - 1);
 	eq.generate( &fimpulse [blip_res], half_size );
 
 	int i;
@@ -302,25 +308,25 @@ void Blip_Synth_::treble_eq( blip_eq_t const& eq )
 		fimpulse [blip_res + half_size + i] = fimpulse [blip_res + half_size - 1 - i];
 
 	// starts at 0
-	for ( i = 0; i < blip_res; i++ )
+	for ( i = 0; i < blip_res; ++i )
 		fimpulse [i] = 0.0f;
 
 	// find rescale factor
 	double total = 0.0;
-	for ( i = 0; i < half_size; i++ )
+	for ( i = 0; i < half_size; ++i )
 		total += fimpulse [blip_res + i];
 
 	//double const base_unit = 44800.0 - 128 * 18; // allows treble up to +0 dB
 	//double const base_unit = 37888.0; // allows treble to +5 dB
 	double const base_unit = 32768.0; // necessary for blip_unscaled to work
-	double rescale = base_unit / 2 / total;
+	double rescale = base_unit / (2 * total);
 	kernel_unit = (long) base_unit;
 
 	// integrate, first difference, rescale, convert to int
 	double sum = 0.0;
 	double next = 0.0;
 	int const size = this->impulses_size();
-	for ( i = 0; i < size; i++ )
+	for ( i = 0; i < size; ++i )
 	{
 		impulses [i] = (short) (int) floor( (next - sum) * rescale + 0.5 );
 		sum += fimpulse [i];
@@ -355,7 +361,7 @@ void Blip_Synth_::volume_unit( double new_unit )
 			// if unit is really small, might need to attenuate kernel
 			while ( factor < 2.0 )
 			{
-				shift++;
+				++shift;
 				factor *= 2.0;
 			}
 
@@ -411,7 +417,7 @@ long Blip_Buffer::read_samples( blip_sample_t* out_, long max_samples, int stere
 				blip_long s = BLIP_READER_READ( reader );
 				BLIP_READER_NEXT_IDX_( reader, bass, offset );
 				BLIP_CLAMP( s, s );
-				out [offset * 2] = (blip_sample_t) s;
+				out [offset << 1] = (blip_sample_t) s;
 			}
 			while ( ++offset );
 		}

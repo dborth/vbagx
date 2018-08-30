@@ -9,9 +9,6 @@
 #include <time.h>
 #include <string.h>
 
-// Defined in VGA-GX input.cpp
-void systemCartridgeRumble(bool);
-
 enum RTCSTATE
 {
    IDLE = 0,

@@ -1,3 +1,11 @@
+/*
+Mode 5 is a low resolution (160x128) 15-bit colour bitmap graphics mode 
+with 2 swappable pages!
+It has a single layer, background layer 2, lower resolution than the screen.
+It doesn't support scrolling, flipping, rotation or tiles.
+
+These routines only render a single line at a time, because of the way the GBA does events.
+*/
 #include "GBA.h"
 #include "Globals.h"
 #include "GBAGfx.h"
@@ -5,9 +13,20 @@
 void mode5RenderLine()
 {
   if(DISPCNT & 0x0080) {
-    for(int x = 0; x < 240; x++) {
-      lineMix[x] = 0x7fff;
-    }
+
+	int x = 232;	//240 - 8  
+	do{
+		lineMix[x  ] =
+		lineMix[x+1] =
+		lineMix[x+2] =
+		lineMix[x+3] =
+		lineMix[x+4] =
+		lineMix[x+5] =
+		lineMix[x+6] =
+		lineMix[x+7] = 0x7fff;
+		x-=8;
+	}while(x>=0);
+
     gfxLastVCOUNT = VCOUNT;
     return;
   }
@@ -36,11 +55,11 @@ void mode5RenderLine()
     background = ((customBackdropColor & 0x7FFF) | 0x30000000);
   }
 
-  for(int x = 0; x < 240; x++) {
+  for(int x = 0; x < 240; ++x) {
     u32 color = background;
     u8 top = 0x20;
 
-    if(line2[x] < color) {
+    if(line2[x] < background) {
       color = line2[x];
       top = 0x04;
     }
@@ -87,9 +106,20 @@ void mode5RenderLine()
 void mode5RenderLineNoWindow()
 {
   if(DISPCNT & 0x0080) {
-    for(int x = 0; x < 240; x++) {
-      lineMix[x] = 0x7fff;
-    }
+
+	int x = 232;	//240 - 8  
+	do{
+		lineMix[x  ] =
+		lineMix[x+1] =
+		lineMix[x+2] =
+		lineMix[x+3] =
+		lineMix[x+4] =
+		lineMix[x+5] =
+		lineMix[x+6] =
+		lineMix[x+7] = 0x7fff;
+		x-=8;
+	}while(x>=0);
+
     gfxLastVCOUNT = VCOUNT;
     return;
   }
@@ -118,11 +148,11 @@ void mode5RenderLineNoWindow()
     background = ((customBackdropColor & 0x7FFF) | 0x30000000);
   }
 
-  for(int x = 0; x < 240; x++) {
+  for(int x = 0; x < 240; ++x) {
     u32 color = background;
     u8 top = 0x20;
 
-    if(line2[x] < color) {
+    if(line2[x] < background) {
       color = line2[x];
       top = 0x04;
     }
@@ -142,18 +172,14 @@ void mode5RenderLineNoWindow()
             u32 back = background;
             u8 top2 = 0x20;
 
-            if(line2[x] < back) {
-              if(top != 0x04) {
+			if((top != 0x04) && line2[x] < background) {
                 back = line2[x];
                 top2 = 0x04;
-              }
             }
 
-            if((u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
-              if(top != 0x10) {
+            if((top != 0x10) && (u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
                 back = lineOBJ[x];
                 top2 = 0x10;
-              }
             }
 
             if(top2 & (BLDMOD>>8))
@@ -210,9 +236,19 @@ void mode5RenderLineNoWindow()
 void mode5RenderLineAll()
 {
   if(DISPCNT & 0x0080) {
-    for(int x = 0; x < 240; x++) {
-      lineMix[x] = 0x7fff;
-    }
+
+	int x = 232;	//240 - 8  
+	do{
+		lineMix[x  ] =
+		lineMix[x+1] =
+		lineMix[x+2] =
+		lineMix[x+3] =
+		lineMix[x+4] =
+		lineMix[x+5] =
+		lineMix[x+6] =
+		lineMix[x+7] = 0x7fff;
+		x-=8;
+	}while(x>=0);
     gfxLastVCOUNT = VCOUNT;
     return;
   }
@@ -268,7 +304,7 @@ void mode5RenderLineAll()
     background = ((customBackdropColor & 0x7FFF) | 0x30000000);
   }
 
-  for(int x = 0; x < 240; x++) {
+  for(int x = 0; x < 240; ++x) {
     u32 color = background;
     u8 top = 0x20;
     u8 mask = outMask;
@@ -288,7 +324,7 @@ void mode5RenderLineAll()
       }
     }
 
-    if((mask & 4) && (line2[x] < color)) {
+    if((mask & 4) && (line2[x] < background)) {
       color = line2[x];
       top = 0x04;
     }
@@ -334,18 +370,14 @@ void mode5RenderLineAll()
             u32 back = background;
             u8 top2 = 0x20;
 
-            if((mask & 4) && line2[x] < back) {
-              if(top != 0x04) {
+			if((mask & 4) && (top != 0x04) && (line2[x] < background)) {
                 back = line2[x];
                 top2 = 0x04;
-              }
             }
 
-            if((mask & 16) && (u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
-              if(top != 0x10) {
+            if((mask & 16) && (top != 0x10) && (u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
                 back = lineOBJ[x];
                 top2 = 0x10;
-              }
             }
 
             if(top2 & (BLDMOD>>8))

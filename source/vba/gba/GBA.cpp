@@ -521,11 +521,11 @@ void CPUUpdateWindow0()
   int x01 = WIN0H & 255;
 
   if(x00 <= x01) {
-    for(int i = 0; i < 240; i++) {
+    for(int i = 0; i < 240; ++i) {
       gfxInWin0[i] = (i >= x00 && i < x01);
     }
   } else {
-    for(int i = 0; i < 240; i++) {
+    for(int i = 0; i < 240; ++i) {
       gfxInWin0[i] = (i >= x00 || i < x01);
     }
   }
@@ -537,11 +537,11 @@ void CPUUpdateWindow1()
   int x01 = WIN1H & 255;
 
   if(x00 <= x01) {
-    for(int i = 0; i < 240; i++) {
+    for(int i = 0; i < 240; ++i) {
       gfxInWin1[i] = (i >= x00 && i < x01);
     }
   } else {
-    for(int i = 0; i < 240; i++) {
+    for(int i = 0; i < 240; ++i) {
       gfxInWin1[i] = (i >= x00 || i < x01);
     }
   }
@@ -666,7 +666,6 @@ bool CPUWriteState(const char *file)
 
   return res;
 }
-
 
 bool CPUWriteMemState(char *memory, int available)
 {
@@ -1325,12 +1324,12 @@ bool CPUReadBatteryFile(const char *fileName)
 
 bool CPUWritePNGFile(const char *fileName)
 {
-  return utilWritePNGFile(fileName, 240, 160, pix);
+  return false; //utilWritePNGFile(fileName, 240, 160, pix);
 }
 
 bool CPUWriteBMPFile(const char *fileName)
 {
-  return utilWriteBMPFile(fileName, 240, 160, pix);
+  return false; //utilWriteBMPFile(fileName, 240, 160, pix);
 }
 
 bool CPUIsZipFile(const char * file)
@@ -1494,7 +1493,7 @@ int CPULoadRom(const char *szFile)
     return 0;
   }
 
-  u8 *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
+  //u8 *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
 
 #ifndef NO_DEBUGGER
   if(CPUIsELF(szFile)) {
@@ -1519,7 +1518,7 @@ int CPULoadRom(const char *szFile)
     }
   } else
 #endif //NO_DEBUGGER
-  if(szFile!=NULL)
+/*  if(szFile!=NULL)
   {
 	  if(!utilLoad(szFile,
 						  utilIsGBAImage,
@@ -1538,7 +1537,7 @@ int CPULoadRom(const char *szFile)
   for(i = (romSize+1)&~1; i < 0x2000000; i+=2) {
     WRITE16LE(temp, (i >> 1) & 0xFFFF);
     temp++;
-  }
+  }*/
 
   bios = (u8 *)calloc(1,0x4000);
   if(bios == NULL) {
@@ -2201,7 +2200,7 @@ void CPUCompareVCOUNT()
   }
   if (layerEnableDelay>0)
   {
-      layerEnableDelay--;
+      --layerEnableDelay;
       if (layerEnableDelay==1)
           layerEnable = layerSettings & DISPCNT;
   }
@@ -2233,7 +2232,7 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
       while(c != 0) {
         CPUWriteMemory(d, 0);
         d += di;
-        c--;
+        --c;
       }
     } else {
       while(c != 0) {
@@ -2241,7 +2240,7 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
         CPUWriteMemory(d, cpuDmaLast);
         d += di;
         s += si;
-        c--;
+        --c;
       }
     }
   } else {
@@ -2252,7 +2251,7 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
       while(c != 0) {
         CPUWriteHalfWord(d, 0);
         d += di;
-        c--;
+        --c;
       }
     } else {
       while(c != 0) {
@@ -2261,7 +2260,7 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
         cpuDmaLast |= (cpuDmaLast<<16);
         d += di;
         s += si;
-        c--;
+        --c;
       }
     }
   }
@@ -2521,7 +2520,6 @@ void CPUCheckDMA(int reason, int dmamask)
       doDMA(dma3Source, dma3Dest, sourceIncrement, destIncrement,
             DM3CNT_L ? DM3CNT_L : 0x10000,
             DM3CNT_H & 0x0400);
-
       if(DM3CNT_H & 0x4000) {
         IF |= 0x0800;
         UPDATE_REG(0x202, IF);
@@ -2568,7 +2566,7 @@ void CPUUpdateRegister(u32 address, u16 value)
       windowOn = (layerEnable & 0x6000) ? true : false;
       if(change && !((value & 0x80))) {
         if(!(DISPSTAT & 1)) {
-          //lcdTicks = 1008;
+          lcdTicks = 1008;
           //      VCOUNT = 0;
           //      UPDATE_REG(0x06, VCOUNT);
           DISPSTAT &= 0xFFFC;
@@ -2963,65 +2961,61 @@ void CPUUpdateRegister(u32 address, u16 value)
     timerOnOffDelay|=8;
     cpuNextEvent = cpuTotalTicks;
     break;
-
-
-#ifndef NO_LINK
-  case COMM_SIOCNT:
-	  StartLink(value);
-	  break;
-
-  case COMM_SIODATA8:
-	  UPDATE_REG(COMM_SIODATA8, value);
-	  break;
+  case 0x128:
+#ifdef LINK_EMULATION
+    if (linkenable)
+    {
+      StartLink(value);
+    }
+    else
 #endif
-
+    {
+      if(value & 0x80) {
+        value &= 0xff7f;
+        if(value & 1 && (value & 0x4000)) {
+          UPDATE_REG(0x12a, 0xFF);
+          IF |= 0x80;
+          UPDATE_REG(0x202, IF);
+          value &= 0x7f7f;
+        }
+      }
+      UPDATE_REG(0x128, value);
+    }
+    break;
+  case 0x12a:
+#ifdef LINK_EMULATION
+    if(linkenable && lspeed)
+      LinkSSend(value);
+#endif
+    {
+      UPDATE_REG(0x134, value);
+    }
+    break;
   case 0x130:
-	  P1 |= (value & 0x3FF);
-	  UPDATE_REG(0x130, P1);
-	  break;
-
+    P1 |= (value & 0x3FF);
+    UPDATE_REG(0x130, P1);
+    break;
   case 0x132:
-	  UPDATE_REG(0x132, value & 0xC3FF);
-	  break;
-
-#ifndef NO_LINK
-  case COMM_RCNT:
-	  StartGPLink(value);
-	  break;
-
-  case COMM_JOYCNT:
-	  {
-		  u16 cur = READ16LE(&ioMem[COMM_JOYCNT]);
-
-		  if (value & JOYCNT_RESET)			cur &= ~JOYCNT_RESET;
-		  if (value & JOYCNT_RECV_COMPLETE)	cur &= ~JOYCNT_RECV_COMPLETE;
-		  if (value & JOYCNT_SEND_COMPLETE)	cur &= ~JOYCNT_SEND_COMPLETE;
-		  if (value & JOYCNT_INT_ENABLE)	cur |= JOYCNT_INT_ENABLE;
-
-		  UPDATE_REG(COMM_JOYCNT, cur);
-	  }
-	  break;
-
-  case COMM_JOY_RECV_L:
-	  UPDATE_REG(COMM_JOY_RECV_L, value);
-	  break;
-  case COMM_JOY_RECV_H:
-	  UPDATE_REG(COMM_JOY_RECV_H, value);	  
-	  break;
-
-  case COMM_JOY_TRANS_L:
-	  UPDATE_REG(COMM_JOY_TRANS_L, value);
-	  UPDATE_REG(COMM_JOYSTAT, READ16LE(&ioMem[COMM_JOYSTAT]) | JOYSTAT_SEND);
-	  break;
-  case COMM_JOY_TRANS_H:
-	  UPDATE_REG(COMM_JOY_TRANS_H, value);
-	  break;
-
-  case COMM_JOYSTAT:
-	  UPDATE_REG(COMM_JOYSTAT, (READ16LE(&ioMem[COMM_JOYSTAT]) & 0xf) | (value & 0xf0));
-	  break;
+    UPDATE_REG(0x132, value & 0xC3FF);
+    break;
+  case 0x134:
+#ifdef LINK_EMULATION
+    if (linkenable)
+      StartGPLink(value);
+    else
 #endif
+      UPDATE_REG(0x134, value);
 
+    break;
+  case 0x140:
+#ifdef LINK_EMULATION
+    if (linkenable)
+      StartJOYLink(value);
+    else
+#endif
+      UPDATE_REG(0x140, value);
+
+    break;
   case 0x200:
     IE = value & 0x3FFF;
     UPDATE_REG(0x200, IE);
@@ -3061,7 +3055,7 @@ void CPUUpdateRegister(u32 address, u16 value)
 
       for(int i = 8; i < 15; i++) {
         memoryWait32[i] = memoryWait[i] + memoryWaitSeq[i] + 1;
-        memoryWaitSeq32[i] = memoryWaitSeq[i]*2 + 1;
+        memoryWaitSeq32[i] = (memoryWaitSeq[i]<<1) + 1;
       }
 
       if((value & 0x4000) == 0x4000) {
@@ -3173,7 +3167,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
   saveType = 0;
   useBios = false;
 
-  if(useBiosFile) {
+/*  if(useBiosFile) {
     int size = 0x4000;
     if(utilLoad(biosFileName,
                 CPUIsGBABios,
@@ -3184,7 +3178,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
       else
         systemMessage(MSG_INVALID_BIOS_FILE_SIZE, N_("Invalid BIOS file size"));
     }
-  }
+  }*/
 
   if(!useBios) {
     memcpy(bios, myROM, sizeof(myROM));
@@ -3256,6 +3250,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 
 void CPUReset()
 {
+  systemCartridgeRumble(false);
   if(gbaSaveType == 0) {
     if(eepromInUse)
       gbaSaveType = 3;
@@ -3552,7 +3547,7 @@ void CPUReset()
 
   cpuDmaHack = false;
 
-  lastTime = systemGetClock();
+  //lastTime = systemGetClock();
 
   SWITicks = 0;
 }
@@ -3672,7 +3667,7 @@ void CPULoop(int ticks)
           // if in V-Blank mode, keep computing...
           if(DISPSTAT & 2) {
             lcdTicks += 1008;
-            VCOUNT++;
+            ++VCOUNT;
             UPDATE_REG(0x06, VCOUNT);
             DISPSTAT &= 0xFFFD;
             UPDATE_REG(0x04, DISPSTAT);
@@ -3687,7 +3682,7 @@ void CPULoop(int ticks)
             }
           }
 
-          if(VCOUNT > 227) { //Reaching last line
+          if(VCOUNT >= 228) { //Reaching last line
             DISPSTAT &= 0xFFFC;
             UPDATE_REG(0x04, DISPSTAT);
             VCOUNT = 0;
@@ -3701,26 +3696,26 @@ void CPULoop(int ticks)
 
           if(DISPSTAT & 2) {
             // if in H-Blank, leave it and move to drawing mode
-            VCOUNT++;
+            ++VCOUNT;
             UPDATE_REG(0x06, VCOUNT);
 
             lcdTicks += 1008;
             DISPSTAT &= 0xFFFD;
             if(VCOUNT == 160) {
-              count++;
+              ++count;
               systemFrame();
 
               if((count % 10) == 0) {
                 system10Frames(60);
               }
               if(count == 60) {
-                u32 time = systemGetClock();
+                /*u32 time = systemGetClock();
                 if(time != lastTime) {
                   u32 t = 100000/(time - lastTime);
                   systemShowSpeed(t);
                 } else
                   systemShowSpeed(0);
-                lastTime = time;
+                lastTime = time;*/
                 count = 0;
               }
               u32 joy = 0;
@@ -3729,7 +3724,7 @@ void CPULoop(int ticks)
                 // read default joystick
                 joy = systemReadJoypad(-1);
               P1 = 0x03FF ^ (joy & 0x3FF);
-              if(cpuEEPROMSensorEnabled)
+              //if(cpuEEPROMSensorEnabled)
                 systemUpdateMotionSensor();
               UPDATE_REG(0x130, P1);
               u16 P1CNT = READ16LE(((u16 *)&ioMem[0x132]));
@@ -3759,7 +3754,7 @@ void CPULoop(int ticks)
               capture = (ext & 2) ? true : false;
 
               if(capture && !capturePrevious) {
-                captureNumber++;
+                ++captureNumber;
                 systemScreenCapture(captureNumber);
               }
               capturePrevious = capture;
@@ -3776,7 +3771,7 @@ void CPULoop(int ticks)
                 systemDrawScreen();
                 frameCount = 0;
               } else
-                frameCount++;
+                ++frameCount;
               if(systemPauseOnFrame())
                 ticks = 0;
             }
@@ -3791,8 +3786,8 @@ void CPULoop(int ticks)
               switch(systemColorDepth) {
                 case 16:
                 {
-                  u16 *dest = (u16 *)pix + 242 * VCOUNT;
-                  for(int x = 0; x < 240;) {
+                  u16 *dest = (u16 *)pix + 242 * (VCOUNT+1);
+                  for(u32 x = 0; x < 240u;) {
                     *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
                     *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
                     *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
@@ -3819,8 +3814,8 @@ void CPULoop(int ticks)
                 break;
                 case 24:
                 {
-                  u8 *dest = (u8 *)pix + 240 * VCOUNT * 3;
-                  for(int x = 0; x < 240;) {
+				  u8 *dest = (u8 *)pix +  VCOUNT * 720;
+                  for(u32 x = 0; x < 240u;) {
                     *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF];
                     dest += 3;
                     *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF];
@@ -3861,8 +3856,8 @@ void CPULoop(int ticks)
                 break;
                 case 32:
                 {
-                  u32 *dest = (u32 *)pix + 241 * VCOUNT;
-                  for(int x = 0; x < 240; ) {
+                  u32 *dest = (u32 *)pix + 241 * (VCOUNT+1);
+                  for(u32 x = 0; x < 240u; ) {
                     *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
                     *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
                     *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
@@ -3928,7 +3923,7 @@ void CPULoop(int ticks)
         if(timer1On) {
           if(TM1CNT & 4) {
             if(timerOverflow & 1) {
-              TM1D++;
+              ++TM1D;
               if(TM1D == 0) {
                 TM1D += timer1Reload;
                 timerOverflow |= 2;
@@ -3959,7 +3954,7 @@ void CPULoop(int ticks)
         if(timer2On) {
           if(TM2CNT & 4) {
             if(timerOverflow & 2) {
-              TM2D++;
+              ++TM2D;
               if(TM2D == 0) {
                 TM2D += timer2Reload;
                 timerOverflow |= 4;
@@ -3988,7 +3983,7 @@ void CPULoop(int ticks)
         if(timer3On) {
           if(TM3CNT & 4) {
             if(timerOverflow & 4) {
-              TM3D++;
+              ++TM3D;
               if(TM3D == 0) {
                 TM3D += timer3Reload;
                 if(TM3CNT & 0x40) {
@@ -4065,7 +4060,6 @@ void CPULoop(int ticks)
 	  if(gba_link_enabled)
   	       cpuNextEvent = 1;
 #endif
-
       if(IF && (IME & 1) && armIrqEnable) {
         int res = IF & IE;
         if(stopState)
@@ -4130,6 +4124,7 @@ void CPULoop(int ticks)
     }
   }
 }
+
 
 #ifdef TILED_RENDERING
 union u8h
@@ -4397,7 +4392,6 @@ void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
       gfxDrawTextScreen<gfxReadTilePal>(control, hofs, vofs, line);
 }
 #endif
-
 
 struct EmulatedSystem GBASystem = {
   // emuMain

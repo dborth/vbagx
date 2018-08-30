@@ -1,3 +1,12 @@
+/*
+Mode 1 is a tiled graphics mode, but with background layer 2 supporting scaling and rotation.
+There is no layer 3 in this mode.
+Layers 0 and 1 can be either 16 colours (with 16 different palettes) or 256 colours. 
+There are 1024 tiles available.
+Layer 2 is 256 colours and allows only 256 tiles.
+
+These routines only render a single line at a time, because of the way the GBA does events.
+*/
 #include "GBA.h"
 #include "Globals.h"
 #include "GBAGfx.h"
@@ -7,9 +16,20 @@ void mode1RenderLine()
   u16 *palette = (u16 *)paletteRAM;
 
   if(DISPCNT & 0x80) {
-    for(int x = 0; x < 240; x++) {
-      lineMix[x] = 0x7fff;
-    }
+
+	int x = 232;	//240 - 8  
+	do{
+		lineMix[x  ] =
+		lineMix[x+1] =
+		lineMix[x+2] =
+		lineMix[x+3] =
+		lineMix[x+4] =
+		lineMix[x+5] =
+		lineMix[x+6] =
+		lineMix[x+7] = 0x7fff;
+		x-=8;
+	}while(x>=0);
+
     gfxLastVCOUNT = VCOUNT;
     return;
   }
@@ -40,49 +60,64 @@ void mode1RenderLine()
     backdrop = ((customBackdropColor & 0x7FFF) | 0x30000000);
   }
 
-  for(int x = 0; x < 240; x++) {
+  for(u32 x = 0; x < 240u; ++x) {
     u32 color = backdrop;
     u8 top = 0x20;
 
-    if(line0[x] < color) {
-      color = line0[x];
-      top = 0x01;
-    }
-
-    if((u8)(line1[x]>>24) < (u8)(color >> 24)) {
-      color = line1[x];
-      top = 0x02;
-    }
-
-    if((u8)(line2[x]>>24) < (u8)(color >> 24)) {
-      color = line2[x];
-      top = 0x04;
-    }
-
-    if((u8)(lineOBJ[x]>>24) < (u8)(color >> 24)) {
-      color = lineOBJ[x];
-      top = 0x10;
-    }
+	u8 li1 = (u8)(line1[x]>>24);
+	u8 li2 = (u8)(line2[x]>>24);
+	u8 li4 = (u8)(lineOBJ[x]>>24);	
+	
+	u8 r = 	(li2 < li1) ? (li2) : (li1);
+	
+	if(li4 < r){
+		r = 	(li4);
+	}
+	
+	if(line0[x] < backdrop) {
+	  color = line0[x];
+	  top = 0x01;
+	}
+	
+	if(r < (u8)(color >> 24)) {
+		if(r == li1){
+			color = line1[x];
+			top = 0x02;
+		}else if(r == li2){
+			color = line2[x];
+			top = 0x04;
+		}else if(r == li4){
+			color = lineOBJ[x];
+			top = 0x10;
+		}
+	}
 
     if((top & 0x10) && (color & 0x00010000)) {
       // semi-transparent OBJ
       u32 back = backdrop;
       u8 top2 = 0x20;
 
-      if((u8)(line0[x]>>24) < (u8)(back >> 24)) {
-        back = line0[x];
-        top2 = 0x01;
-      }
-
-      if((u8)(line1[x]>>24) < (u8)(back >> 24)) {
-        back = line1[x];
-        top2 = 0x02;
-      }
-
-      if((u8)(line2[x]>>24) < (u8)(back >> 24)) {
-        back = line2[x];
-        top2 = 0x04;
-      }
+		u8 li0 = (u8)(line0[x]>>24);
+		u8 li1 = (u8)(line1[x]>>24);
+		u8 li2 = (u8)(line2[x]>>24);
+		u8 r = 	(li1 < li0) ? (li1) : (li0);
+		
+		if(li2 < r) {
+			r =  (li2);
+		}
+		
+		if(r < (u8)(back >> 24)) {
+			if(r == li0){
+				back = line0[x];
+				top2 = 0x01;
+			}else if(r == li1){
+				back = line1[x];
+				top2 = 0x02;
+			}else if(r == li2){
+				back = line2[x];
+				top2 = 0x04;
+			}
+		}
 
       if(top2 & (BLDMOD>>8))
         color = gfxAlphaBlend(color, back,
@@ -113,9 +148,20 @@ void mode1RenderLineNoWindow()
   u16 *palette = (u16 *)paletteRAM;
 
   if(DISPCNT & 0x80) {
-    for(int x = 0; x < 240; x++) {
-      lineMix[x] = 0x7fff;
-    }
+
+	int x = 232;	//240 -  8  
+	do{
+		lineMix[x  ] =
+		lineMix[x+1] =
+		lineMix[x+2] =
+		lineMix[x+3] =
+		lineMix[x+4] =
+		lineMix[x+5] =
+		lineMix[x+6] =
+		lineMix[x+7] = 0x7fff;
+		x-=8;
+	}while(x>=0);
+
     gfxLastVCOUNT = VCOUNT;
     return;
   }
@@ -147,29 +193,37 @@ void mode1RenderLineNoWindow()
     backdrop = ((customBackdropColor & 0x7FFF) | 0x30000000);
   }
 
-  for(int x = 0; x < 240; x++) {
+  for(int x = 0; x < 240; ++x) {
     u32 color = backdrop;
     u8 top = 0x20;
 
-    if(line0[x] < color) {
-      color = line0[x];
-      top = 0x01;
-    }
-
-    if((u8)(line1[x]>>24) < (u8)(color >> 24)) {
-      color = line1[x];
-      top = 0x02;
-    }
-
-    if((u8)(line2[x]>>24) < (u8)(color >> 24)) {
-      color = line2[x];
-      top = 0x04;
-    }
-
-    if((u8)(lineOBJ[x]>>24) < (u8)(color >> 24)) {
-      color = lineOBJ[x];
-      top = 0x10;
-    }
+	u8 li1 = (u8)(line1[x]>>24);
+	u8 li2 = (u8)(line2[x]>>24);
+	u8 li4 = (u8)(lineOBJ[x]>>24);	
+	
+	u8 r = 	(li2 < li1) ? (li2) : (li1);
+	
+	if(li4 < r){
+		r = 	(li4);
+	}
+	
+	if(line0[x] < backdrop) {
+	  color = line0[x];
+	  top = 0x01;
+	}
+	
+	if(r < (u8)(color >> 24)) {
+		if(r == li1){
+			color = line1[x];
+			top = 0x02;
+		}else if(r == li2){
+			color = line2[x];
+			top = 0x04;
+		}else if(r == li4){
+			color = lineOBJ[x];
+			top = 0x10;
+		}
+	}
 
     if(!(color & 0x00010000)) {
       switch((BLDMOD >> 6) & 3) {
@@ -180,33 +234,26 @@ void mode1RenderLineNoWindow()
           if(top & BLDMOD) {
             u32 back = backdrop;
             u8 top2 = 0x20;
-            if((u8)(line0[x]>>24) < (u8)(back >> 24)) {
-              if(top != 0x01) {
-                back = line0[x];
-                top2 = 0x01;
-              }
-            }
 
-            if((u8)(line1[x]>>24) < (u8)(back >> 24)) {
-              if(top != 0x02) {
-                back = line1[x];
-                top2 = 0x02;
-              }
-            }
+			if((top != 0x01) && (u8)(line0[x]>>24) < (u8)(back >> 24)) {
+				back = line0[x];
+				top2 = 0x01;
+			}
 
-            if((u8)(line2[x]>>24) < (u8)(back >> 24)) {
-              if(top != 0x04) {
-                back = line2[x];
-                top2 = 0x04;
-              }
-            }
+			if((top != 0x02) && (u8)(line1[x]>>24) < (u8)(back >> 24)) {
+				back = line1[x];
+				top2 = 0x02;
+			}
 
-            if((u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
-              if(top != 0x10) {
-                back = lineOBJ[x];
-                top2 = 0x10;
-              }
-            }
+			if((top != 0x04) && (u8)(line2[x]>>24) < (u8)(back >> 24)) {
+				back = line2[x];
+				top2 = 0x04;
+			}
+
+			if((top != 0x10) && (u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
+				back = lineOBJ[x];
+				top2 = 0x10;
+			}
 
             if(top2 & (BLDMOD>>8))
               color = gfxAlphaBlend(color, back,
@@ -225,24 +272,32 @@ void mode1RenderLineNoWindow()
         break;
       }
     } else {
-      // semi-transparent OBJ
-      u32 back = backdrop;
-      u8 top2 = 0x20;
+        // semi-transparent OBJ
+        u32 back = backdrop;
+        u8 top2 = 0x20;
 
-      if((u8)(line0[x]>>24) < (u8)(back >> 24)) {
-        back = line0[x];
-        top2 = 0x01;
-      }
-
-      if((u8)(line1[x]>>24) < (u8)(back >> 24)) {
-        back = line1[x];
-        top2 = 0x02;
-      }
-
-      if((u8)(line2[x]>>24) < (u8)(back >> 24)) {
-        back = line2[x];
-        top2 = 0x04;
-      }
+		u8 li0 = (u8)(line0[x]>>24);
+		u8 li1 = (u8)(line1[x]>>24);
+		u8 li2 = (u8)(line2[x]>>24);	
+		
+		u8 r = 	(li1 < li0) ? (li1) : (li0);
+		
+		if(li2 < r) {
+			r =  (li2);
+		}
+		
+		if(r < (u8)(back >> 24)) {
+			if(r == li0){
+				back = line0[x];
+				top2 = 0x01;
+			}else if(r == li1){
+				back = line1[x];
+				top2 = 0x02;
+			}else if(r == li2){
+				back = line2[x];
+				top2 = 0x04;
+			}
+		}
 
       if(top2 & (BLDMOD>>8))
         color = gfxAlphaBlend(color, back,
@@ -273,9 +328,20 @@ void mode1RenderLineAll()
   u16 *palette = (u16 *)paletteRAM;
 
   if(DISPCNT & 0x80) {
-    for(int x = 0; x < 240; x++) {
-      lineMix[x] = 0x7fff;
-    }
+
+	int x = 232;	//240 -  8  
+	do{
+		lineMix[x  ] =
+		lineMix[x+1] =
+		lineMix[x+2] =
+		lineMix[x+3] =
+		lineMix[x+4] =
+		lineMix[x+5] =
+		lineMix[x+6] =
+		lineMix[x+7] = 0x7fff;
+		x-=8;
+	}while(x>=0);
+
     gfxLastVCOUNT = VCOUNT;
     return;
   }
@@ -333,7 +399,7 @@ void mode1RenderLineAll()
   u8 inWin1Mask = WININ >> 8;
   u8 outMask = WINOUT & 0xFF;
 
-  for(int x = 0; x < 240; x++) {
+  for(int x = 0; x < 240; ++x) {
     u32 color = backdrop;
     u8 top = 0x20;
     u8 mask = outMask;
@@ -353,22 +419,23 @@ void mode1RenderLineAll()
       }
     }
 
-    if(line0[x] < color && (mask & 1)) {
+	// At the very least, move the inexpensive 'mask' operation up front
+    if((mask & 1) && line0[x] < backdrop) {
       color = line0[x];
       top = 0x01;
     }
 
-    if((u8)(line1[x]>>24) < (u8)(color >> 24) && (mask & 2)) {
+    if((mask & 2) && (u8)(line1[x]>>24) < (u8)(color >> 24)) {
       color = line1[x];
       top = 0x02;
     }
 
-    if((u8)(line2[x]>>24) < (u8)(color >> 24) && (mask & 4)) {
+    if((mask & 4) && (u8)(line2[x]>>24) < (u8)(color >> 24)) {
       color = line2[x];
       top = 0x04;
     }
 
-    if((u8)(lineOBJ[x]>>24) < (u8)(color >> 24) && (mask & 16)) {
+    if((mask & 16) && (u8)(lineOBJ[x]>>24) < (u8)(color >> 24)) {
       color = lineOBJ[x];
       top = 0x10;
     }
@@ -378,7 +445,7 @@ void mode1RenderLineAll()
       u32 back = backdrop;
       u8 top2 = 0x20;
 
-      if((mask & 1) && (u8)(line0[x]>>24) < (u8)(back >> 24)) {
+      if((mask & 1) && (u8)(line0[x]>>24) < (u8)(backdrop >> 24)) {
         back = line0[x];
         top2 = 0x01;
       }
@@ -420,32 +487,24 @@ void mode1RenderLineAll()
             u32 back = backdrop;
             u8 top2 = 0x20;
 
-            if((mask & 1) && (u8)(line0[x]>>24) < (u8)(back >> 24)) {
-              if(top != 0x01) {
+            if((mask & 1) && (top != 0x01) && (u8)(line0[x]>>24) < (u8)(backdrop >> 24)) {
                 back = line0[x];
                 top2 = 0x01;
-              }
             }
 
-            if((mask & 2) && (u8)(line1[x]>>24) < (u8)(back >> 24)) {
-              if(top != 0x02) {
+            if((mask & 2) && (top != 0x02) && (u8)(line1[x]>>24) < (u8)(back >> 24)) {
                 back = line1[x];
                 top2 = 0x02;
-              }
             }
 
-            if((mask & 4) && (u8)(line2[x]>>24) < (u8)(back >> 24)) {
-              if(top != 0x04) {
+            if((mask & 4) && (top != 0x04) && (u8)(line2[x]>>24) < (u8)(back >> 24)) {
                 back = line2[x];
                 top2 = 0x04;
-              }
             }
 
-            if((mask & 16) && (u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
-              if(top != 0x10) {
+            if((mask & 16) && (top != 0x10) && (u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) {
                 back = lineOBJ[x];
                 top2 = 0x10;
-              }
             }
 
             if(top2 & (BLDMOD>>8))
