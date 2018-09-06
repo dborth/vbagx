@@ -15,7 +15,8 @@ https://github.com/dborth/vbagx/releases
 
 -=[ Features ]=-
 
-* Wiimote, Nunchuk, Classic, and Gamecube controller support
+* Wiimote, Nunchuk, Classic, Wii U Pro, and Gamecube controller support
+* Wii U GamePad support (requires homebrew injection into Wii U VC title)
 * Rotation sensors, Solar sensors, and Rumble support
 * Optional special Wii controls built-in for some games
 * SRAM and State saving
@@ -31,7 +32,6 @@ https://github.com/dborth/vbagx/releases
 * Screenshots can be displayed on the main menu
 * Fixed pixel ratio mode (1x, 2x, and 3x)
 * Borders (from Super Game Boy games or custom from .png)
-* Wii U Pro Controller support
 * 240p support
 
 ×—–­—–­—–­—–­ –­—–­—–­—–­—–­—–­—–­—–­—–­—–­— ­—–­—–­—–­—–­—–­—–­—–­—-­—–­-–•¬
@@ -43,6 +43,8 @@ https://github.com/dborth/vbagx/releases
 * Restored changes lost from 2.3.0 core upgrade (GameCube virtual memory, 
   optimizations from dancinninjac, GB color palettes, rotation/tilt for 
   WarioWare Twisted, in-game rumble) 
+* Improved WiiFlow integration
+* Added Wii U GamePad support (thanks Fix94!)
 
 [2.3.7 - August 28, 2018]
 

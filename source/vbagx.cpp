@@ -34,6 +34,7 @@
 #include "video.h"
 #include "gamesettings.h"
 #include "mem2.h"
+#include "utils/wiidrc.h"
 #include "utils/FreeTypeGX.h"
 
 #include "vba/gba/Globals.h"
@@ -53,8 +54,6 @@ int ShutdownRequested = 0;
 int ResetRequested = 0;
 int ExitRequested = 0;
 char appPath[1024] = { 0 };
-
-
 
 /****************************************************************************
  * Shutdown / Reboot / Exit
@@ -358,6 +357,7 @@ int main(int argc, char *argv[])
 	SYS_SetPowerCallback(ShutdownCB);
 	SYS_SetResetCallback(ResetCB);
 	
+	WiiDRC_Init();
 	WPAD_Init();
 	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
 	DI_Init();

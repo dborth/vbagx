@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <wiiuse/wpad.h>
 
+#include "utils/wiidrc.h"
 #include "button_mapping.h"
 
 /****************************************************************************
@@ -24,7 +25,7 @@
  * and for displaying the name of said button
  ***************************************************************************/
 
-CtrlrMap ctrlr_def[5] = {
+CtrlrMap ctrlr_def[6] = {
 // Gamecube controller btn def
 {
 	{
@@ -134,5 +135,27 @@ CtrlrMap ctrlr_def[5] = {
 	},
 	15,
 	CTRLR_WUPC
+},
+// Wii U Gamepad btn def
+{
+	{
+		{WIIDRC_BUTTON_DOWN, "DOWN"},
+		{WIIDRC_BUTTON_UP, "UP"},
+		{WIIDRC_BUTTON_LEFT, "LEFT"},
+		{WIIDRC_BUTTON_RIGHT, "RIGHT"},
+		{WIIDRC_BUTTON_A, "A"},
+		{WIIDRC_BUTTON_B, "B"},
+		{WIIDRC_BUTTON_X, "X"},
+		{WIIDRC_BUTTON_Y, "Y"},
+		{WIIDRC_BUTTON_PLUS, "PLUS"},
+		{WIIDRC_BUTTON_MINUS, "MINUS"},
+		{WIIDRC_BUTTON_HOME, "HOME"},
+		{WIIDRC_BUTTON_L, "L"},
+		{WIIDRC_BUTTON_R, "R"},
+		{WIIDRC_BUTTON_ZL, "ZL"},
+		{WIIDRC_BUTTON_ZR, "ZR"}
+	},
+	15,
+	CTRLR_WIIDRC
 }
 };

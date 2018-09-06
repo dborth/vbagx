@@ -217,12 +217,13 @@ preparePrefsData ()
 	
 	createXMLSection("Controller", "Controller Settings");
 
-	createXMLSetting("WiiControls", "Match Wii Game", toStr(GCSettings.WiiControls));
 	createXMLController(btnmap[CTRLR_GCPAD], "gcpadmap", "GameCube Pad");
+	createXMLSetting("WiiControls", "Match Wii Game", toStr(GCSettings.WiiControls));
 	createXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap", "Wiimote");
 	createXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap", "Classic Controller");
 	createXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap", "Nunchuk");
 	createXMLController(btnmap[CTRLR_WUPC], "wupcpadmap", "Wii U Pro Controller");
+	createXMLController(btnmap[CTRLR_WIIDRC], "drcpadmap", "Wii U Gamepad");
 
 	createXMLSection("Emulation", "Emulation Settings");
 
@@ -525,21 +526,19 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.PreviewImage, "PreviewImage");
 
 			// Controller Settings
-
-			loadXMLSetting(&GCSettings.WiiControls, "WiiControls");
 			loadXMLController(btnmap[CTRLR_GCPAD], "gcpadmap");
+			loadXMLSetting(&GCSettings.WiiControls, "WiiControls");
 			loadXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap");
 			loadXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap");
 			loadXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap");
 			loadXMLController(btnmap[CTRLR_WUPC], "wupcpadmap");
-			
+			loadXMLController(btnmap[CTRLR_WIIDRC], "drcpadmap");
 			// Emulation Settings
 			
 			loadXMLSetting(&GCSettings.OffsetMinutesUTC, "OffsetMinutesUTC");
 			loadXMLSetting(&GCSettings.GBHardware, "GBHardware");
 			loadXMLSetting(&GCSettings.SGBBorder, "SGBBorder");
 			loadXMLSetting(&GCSettings.BasicPalette, "BasicPalette");
-
 		}
 		mxmlDelete(xml);
 	}
