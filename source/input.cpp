@@ -177,8 +177,8 @@ UpdatePads()
 
 	PAD_ScanPads();
 
-	int i = 3;
-	do {
+	for(int i=3; i >= 0; i--)
+	{
 		userInput[i].pad.btns_d = PAD_ButtonsDown(i);
 		userInput[i].pad.btns_u = PAD_ButtonsUp(i);
 		userInput[i].pad.btns_h = PAD_ButtonsHeld(i);
@@ -188,17 +188,8 @@ UpdatePads()
 		userInput[i].pad.substickY = PAD_SubStickY(i);
 		userInput[i].pad.triggerL = PAD_TriggerL(i);
 		userInput[i].pad.triggerR = PAD_TriggerR(i);
-		#ifdef HW_RVL
-		userInput[i].wiidrcdata.btns_d = 0;
-		userInput[i].wiidrcdata.btns_u = 0;
-		userInput[i].wiidrcdata.btns_h = 0;
-		userInput[i].wiidrcdata.stickX = 0;
-		userInput[i].wiidrcdata.stickY = 0;
-		userInput[i].wiidrcdata.substickX = 0;
-		userInput[i].wiidrcdata.substickY = 0;
-		#endif
-		--i;
-	} while(i >= 0);
+	}
+#ifdef HW_RVL
 	if(WiiDRC_Inited() && WiiDRC_Connected())
 	{
 		userInput[0].wiidrcdata.btns_d = WiiDRC_ButtonsDown();
@@ -209,6 +200,7 @@ UpdatePads()
 		userInput[0].wiidrcdata.substickX = WiiDRC_rStickX();
 		userInput[0].wiidrcdata.substickY = WiiDRC_rStickY();
 	}
+#endif
 }
 
 /****************************************************************************
