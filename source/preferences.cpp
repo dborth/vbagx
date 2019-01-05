@@ -174,7 +174,6 @@ preparePrefsData ()
 	createXMLSetting("BorderFolder", "SGB Borders Folder", GCSettings.BorderFolder);
 	createXMLSetting("CoverFolder", "Covers Folder", GCSettings.CoverFolder);
 	createXMLSetting("ArtworkFolder", "Artwork Folder", GCSettings.ArtworkFolder);
-	createXMLSetting("ImageFolder", "Image Folder", GCSettings.ImageFolder);
 
 	createXMLSection("Network", "Network Settings");
 
@@ -490,7 +489,6 @@ decodePrefsData ()
 			loadXMLSetting(GCSettings.BorderFolder, "BorderFolder", sizeof(GCSettings.BorderFolder));
 			loadXMLSetting(GCSettings.CoverFolder, "CoverFolder", sizeof(GCSettings.CoverFolder));
 			loadXMLSetting(GCSettings.ArtworkFolder, "ArtworkFolder", sizeof(GCSettings.ArtworkFolder));
-			loadXMLSetting(GCSettings.ImageFolder, "ImageFolder", sizeof(GCSettings.ImageFolder));
 
 			// Network Settings
 
@@ -638,7 +636,6 @@ DefaultSettings ()
 	sprintf (GCSettings.BorderFolder, "%s/borders", APPFOLDER);
 	sprintf (GCSettings.CoverFolder, "%s/covers", APPFOLDER); // Path to cover files
 	sprintf (GCSettings.ArtworkFolder, "%s/artwork", APPFOLDER); // Path to artwork files
-	sprintf (GCSettings.ImageFolder, "%s/screenshots", APPFOLDER);
 
 	GCSettings.AutoLoad = 1;
 	GCSettings.AutoSave = 1;
