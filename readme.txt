@@ -38,12 +38,13 @@ https://github.com/dborth/vbagx/releases
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
-[2.3.8]
+[2.3.8 - January 4, 2019]
 
 * Restored changes lost from 2.3.0 core upgrade (GameCube virtual memory, 
   optimizations from dancinninjac, GB color palettes, rotation/tilt for 
   WarioWare Twisted, in-game rumble) 
 * Improved WiiFlow integration
+* Fixed controllers with no analog sticks
 * Added Wii U GamePad support (thanks Fix94!)
 
 [2.3.7 - August 28, 2018]
