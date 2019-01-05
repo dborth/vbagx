@@ -107,7 +107,6 @@ struct SGCSettings
 	char	ScreenshotsFolder[MAXPATHLEN]; //Path to screenshots files
 	char	CoverFolder[MAXPATHLEN]; 	//Path to cover files
 	char	ArtworkFolder[MAXPATHLEN]; 	//Path to artwork files
-	char 	ImageFolder[MAXPATHLEN]; 	//Saved image folder path 
 	char	BorderFolder[MAXPATHLEN];  // Path to Super Game Boy border files
 
 	char	smbip[80];
@@ -115,6 +114,9 @@ struct SGCSettings
 	char	smbpwd[20];
 	char	smbshare[20];
 };
+
+char* ImageFolder();
+
 void ExitApp();
 void ShutdownWii();
 bool SupportedIOS(u32 ios);

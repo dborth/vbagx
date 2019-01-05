@@ -1021,7 +1021,7 @@ static int MenuGameSelection()
 		if(previousBrowserIndex != browser.selIndex)
 		{
 			previousBrowserIndex = browser.selIndex;
-			snprintf(imagePath, MAXJOLIET, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], GCSettings.ImageFolder, browserList[browser.selIndex].displayname);
+			snprintf(imagePath, MAXJOLIET, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], ImageFolder(), browserList[browser.selIndex].displayname);
 
 			AllocSaveBuffer();
 			int width, height;
@@ -3803,15 +3803,12 @@ static int MenuSettingsMenu()
 			{
 				case 0:	
 					sprintf(options.value[6], "Screenshots"); 
-					snprintf(GCSettings.ImageFolder, MAXJOLIET, "%s", GCSettings.ScreenshotsFolder);
 					break; 
 				case 1:	
 					sprintf(options.value[6], "Covers");	  
-					snprintf(GCSettings.ImageFolder, MAXJOLIET, "%s", GCSettings.CoverFolder);
 					break; 
 				case 2:	
 					sprintf(options.value[6], "Artwork");
-					snprintf(GCSettings.ImageFolder, MAXJOLIET, "%s", GCSettings.ArtworkFolder);
 					break; 
 			}
 			optionBrowser.TriggerUpdate();
