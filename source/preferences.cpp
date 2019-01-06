@@ -848,6 +848,12 @@ bool LoadPrefs()
 		CreateDirectory(dirPath);
 	}
 
+#ifdef HW_RVL
+	bg_music = (u8 * )bg_music_ogg;
+	bg_music_size = bg_music_ogg_size;
+	LoadBgMusic();
+#endif
+
 	ChangeLanguage();
 	return prefFound;
 }
