@@ -35,6 +35,7 @@
 #include "gamesettings.h"
 #include "gui/gui.h"
 #include "utils/gettext.h"
+#include "utils/FreeTypeGX.h"
 
 #define THREAD_SLEEP 100
 
@@ -111,12 +112,64 @@ HaltGui()
 		usleep(THREAD_SLEEP);
 }
 
-void ResetText()
+static void ResetText()
 {
 	LoadLanguage();
 
 	if(mainWindow)
 		mainWindow->ResetText();
+}
+
+static int currentLanguage = -1;
+
+void ChangeLanguage() {
+	if(currentLanguage == GCSettings.language) {
+		return;
+	}
+
+	if(GCSettings.language == LANG_JAPANESE || GCSettings.language == LANG_KOREAN) {
+#ifdef HW_RVL
+		char filepath[MAXPATHLEN];
+
+		switch(GCSettings.language) {
+			case LANG_KOREAN:
+				sprintf(filepath, "%s/ko.ttf", appPath);
+				break;
+			case LANG_JAPANESE:
+				sprintf(filepath, "%s/jp.ttf", appPath);
+				break;
+		}
+
+		size_t fontSize = LoadFont(filepath);
+
+		if(fontSize > 0) {
+			HaltGui();
+			DeinitFreeType();
+			InitFreeType((u8*)ext_font_ttf, fontSize);
+		}
+		else {
+			GCSettings.language = currentLanguage;
+		}
+#else
+	GCSettings.language = currentLanguage;
+	ErrorPrompt("Unsupported language!");
+#endif
+	}
+#ifdef HW_RVL
+	else {
+		if(ext_font_ttf != NULL) {
+			HaltGui();
+			DeinitFreeType();
+			mem2_free(ext_font_ttf);
+			ext_font_ttf = NULL;
+			InitFreeType((u8*)font_ttf, font_ttf_size);
+		}
+	}
+#endif
+	HaltGui();
+	ResetText();
+	currentLanguage = GCSettings.language;
+	ResumeGui();
 }
 
 /****************************************************************************
@@ -3649,6 +3702,7 @@ static int MenuSettingsMenu()
 	int i = 0;
 	bool firstRun = true;
 	OptionList options;
+	currentLanguage = GCSettings.language;
 
 	sprintf(options.name[i++], "Exit Action");
 	sprintf(options.name[i++], "Wiimote Orientation");
@@ -3736,9 +3790,7 @@ static int MenuSettingsMenu()
 					GCSettings.language = LANG_JAPANESE;
 
 				if(GCSettings.language == LANG_SIMP_CHINESE)
-					GCSettings.language = LANG_PORTUGUESE;
-				else if(GCSettings.language == LANG_JAPANESE)
-					GCSettings.language = LANG_ENGLISH;
+					GCSettings.language = LANG_KOREAN;
 				break;			
 			case 6:
 				GCSettings.PreviewImage++;
@@ -3832,11 +3884,11 @@ static int MenuSettingsMenu()
 			menu = MENU_SETTINGS;
 		}
 	}
+	ChangeLanguage();
 	HaltGui();
 	mainWindow->Remove(&optionBrowser);
 	mainWindow->Remove(&w);
 	mainWindow->Remove(&titleTxt);
-	ResetText();
 	return menu;
 }
 

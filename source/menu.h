@@ -25,7 +25,7 @@ int YesNoPrompt(const char *msg, bool yesDefault);
 void ShowAction (const char *msg);
 void CancelAction();
 void ShowProgress (const char *msg, int done, int total);
-void ResetText();
+void ChangeLanguage();
 
 enum
 {
