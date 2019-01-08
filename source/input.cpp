@@ -685,9 +685,6 @@ u32 PAD_ButtonsUpFake(unsigned short pad)
 
 static u32 DecodeJoy(unsigned short pad)
 {
-	TiltScreen = false;
-	CursorVisible = false;
-
 #ifdef HW_RVL
 	CursorX = userInput[pad].wpad->ir.x;
 	CursorY = userInput[pad].wpad->ir.y;

@@ -910,8 +910,6 @@ u32 HarryPotter5Input(unsigned short pad) {
 
 // WarioWare Twisted
 u32 TwistedInput(unsigned short pad) {
-	// Change this to true if you want to see the screen tilt.
-	TiltScreen = false;
 	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);
@@ -959,7 +957,6 @@ u32 TwistedInput(unsigned short pad) {
 }
 
 u32 KirbyTntInput(unsigned short pad) {
-	TiltScreen = false;
 	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
 #ifdef HW_RVL
 	WPADData * wp = WPAD_Data(pad);

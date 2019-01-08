@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
 		// stop checking if devices were removed/inserted
 		// since we're starting emulation again
 		HaltDeviceThread();
-
+		ResetTiltAndCursor();
 		ResetVideo_Emu();
 
 		// GB colorizing - set palette

@@ -829,6 +829,12 @@ static void gbApplyPerImagePreferences()
 	}
 }
 
+void ResetTiltAndCursor() {
+	TiltScreen = false;
+	TiltSideways = false;
+	CursorVisible = false;
+}
+
 /****************************************************************************
  * ApplyPerImagePreferences
  * Apply game specific settings, originally from vba-over.ini
