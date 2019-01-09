@@ -45,6 +45,7 @@ https://github.com/dborth/vbagx/releases
 * Added ability to customize background music. Simply put a bg_music.ogg
   in the app directory
 * Added ability to change preview image source with + button (thanks Zalo!)
+* Fixed issue with resetting motion controls
 
 [2.3.8 - January 4, 2019]
 
