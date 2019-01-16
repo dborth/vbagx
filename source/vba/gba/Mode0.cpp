@@ -324,45 +324,27 @@ void mode0RenderLineNoWindow()
     } else {
       // semi-transparent OBJ
       u32 back = backdrop;
-      u8 top2 = 0x20; 
+      u8 top2 = 0x20;
 
-	  //--DCN	  
-	  // This is pretty much the exact same result:
-	  //	line1[x] < (back & 0xFF000000)
-	  //	
-	  //	(u8)(line0[x]>>24) < (u8)(back >> 24) 
-	  //
-	  // The only difference is that the first is stored in a u32,
-	  // and the second is stored in a u8
-	  //*
-		u8 li0 = (u8)(line0[x]>>24);
-		u8 li1 = (u8)(line1[x]>>24);
-		u8 li2 = (u8)(line2[x]>>24);
-		u8 li3 = (u8)(line3[x]>>24);	
-		
-		u8 r = 	(li1 < li0) ? (li1) : (li0);
-		
-		if(li2 < r) {
-			r = (li3 < li2) ? (li3) : (li2);
-		}else if(li3 < r){
-			r = 	(li3);
-		}
-		
-		if(r < (u8)(color >> 24)) {
-			if(r == li0){
-				back = line0[x];
-				top2 = 0x01;
-			}else if(r == li1){
-				back = line1[x];
-				top2 = 0x02;
-			}else if(r == li2){
-				back = line2[x];
-				top2 = 0x04;
-			}else if(r == li3){
-				back = line3[x];
-				top2 = 0x08;
-			}
-		}
+      if(line0[x] < back) {
+        back = line0[x];
+        top2 = 0x01;
+      }
+
+      if(line1[x] < (back & 0xFF000000)) {
+        back = line1[x];
+        top2 = 0x02;
+      }
+
+      if(line2[x] < (back & 0xFF000000)) {
+        back = line2[x];
+        top2 = 0x04;
+      }
+
+      if(line3[x] < (back & 0xFF000000)) {
+        back = line3[x];
+        top2 = 0x08;
+      }
 
       if(top2 & (BLDMOD>>8))
         color = gfxAlphaBlend(color, back,
