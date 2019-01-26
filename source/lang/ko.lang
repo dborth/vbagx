@@ -34,6 +34,9 @@ msgstr "조준 숨기기"
 msgid "An update is available!"
 msgstr "업데이트를 사용할 수 있습니다!"
 
+msgid "Append Auto to .SAVE Files"
+msgstr ".SAVE 파일에 자동 추가"
+
 msgid "Are you sure that you want to reset this game? Any unsaved progress will be lost."
 msgstr "이 게임을 재설정 하겠습니까? 저장되지 않는 진행은 손실됩니다."
 
@@ -43,6 +46,12 @@ msgstr "맵핑을 재설정 하겠습니까?"
 msgid "Are you sure that you want to reset your settings?"
 msgstr "설정을 재설정 하겠습니까?"
 
+msgid "Artwork"
+msgstr "삽화"
+
+msgid "Artwork Folder"
+msgstr "삽화 폴더"
+
 msgid "Maintain Aspect Ratio"
 msgstr "가로 세로 비율을 유지"
 
@@ -51,6 +60,9 @@ msgstr "불러온 장치 확인 시도 중..."
 
 msgid "Attempting to determine save device..."
 msgstr "저장 장치 확인 시도 중..."
+
+msgid "Audio"
+msgstr "오디오"
 
 msgid "Auto"
 msgstr "자동"
@@ -110,13 +122,16 @@ msgid "Classic Controller"
 msgstr "클래식 컨트롤러"
 
 msgid "Close"
-msgstr "とじる"
+msgstr "닫기"
 
 msgid "Coding"
 msgstr "코딩"
 
 msgid "Coding & menu design"
 msgstr "코딩 & 메뉴 디자인"
+
+msgid "Composite Direct (FBX)"
+msgstr "컴포지트 다이렉트 (FBX)"
 
 msgid "Compressed GBA files are not supported!"
 msgstr "압축된 GBA 파일은 지원하지 않습니다!"
@@ -130,6 +145,9 @@ msgstr "컨트롤러"
 msgid "Cover View"
 msgstr "커버 보기"
 
+msgid "Covers"
+msgstr "커버"
+
 msgid "Covers Folder"
 msgstr "커버 폴더"
 
@@ -142,6 +160,9 @@ msgstr "자르기"
 msgid "Crosshair"
 msgstr "십자 버튼"
 
+msgid "Current Screenshot image will be overwritten."
+msgstr "현재 스크린샷 이미지를 덮어씁니다."
+
 msgid "Cursor"
 msgstr "커서"
 
@@ -150,6 +171,18 @@ msgstr "데이터 DVD"
 
 msgid "Default"
 msgstr "기본값"
+
+msgid "Delete"
+msgstr "삭제하기"
+
+msgid "Delete files can not be restored."
+msgstr "삭제 파일은 복원할 수 없습니다."
+
+msgid "Delete this save file?"
+msgstr "이 저장 파일을 삭제 하겠습니까?"
+
+msgid "Delete this save file? Delete files can not be restored."
+msgstr "이 저장 파일을 삭제 하겠습니까? 삭제 파일은 복원할 수 없습니다."
 
 msgid "Directory name is too long!"
 msgstr "폴더명이 너무 깁니다!"
@@ -235,8 +268,17 @@ msgstr "FDS 바이오스 파일을 찾을 수 없습니다!"
 msgid "Filtered"
 msgstr "필터"
 
+msgid "Filtered (Soft)"
+msgstr "필터 (부드러움)"
+
+msgid "Filtered (Sharp)"
+msgstr "필터 (날카로움)"
+
 msgid "Filtering"
 msgstr "필터링"
+
+msgid "Font file not found!"
+msgstr "폰트 파일을 찾을 수 없습니다!"
 
 msgid "Fire"
 msgstr "발사"
@@ -274,6 +316,9 @@ msgstr "게임 지니 사용 가능"
 msgid "GameCube Controller"
 msgstr "게임큐브 컨트롤러"
 
+msgid "Gaussian (Accurate)"
+msgstr "가우스 (정확한)"
+
 msgid "German"
 msgstr "독일어"
 
@@ -286,6 +331,15 @@ msgstr "뒤로 가기"
 msgid "Horizontal"
 msgstr "수평"
 
+msgid "hq2x"
+msgstr "고품질2배율"
+
+msgid "hq2x Bold"
+msgstr "고품질2배율 선명함"
+
+msgid "hq2x Soft"
+msgstr "고품질2배율 부드러움"
+
 msgid "Information"
 msgstr "정보"
 
@@ -297,6 +351,9 @@ msgstr "동전 투입"
 
 msgid "Insert Coin / Switch Disk"
 msgstr "동전 투입 / 디스크 스위치"
+
+msgid "Interpolation"
+msgstr "보간법"
 
 msgid "Invalid file size!"
 msgstr "잘못된 파일 크기입니다!"
@@ -355,6 +412,9 @@ msgstr "왼쪽"
 msgid "Left Button"
 msgstr "왼쪽 버튼"
 
+msgid "Linear"
+msgstr "선형"
+
 msgid "Load"
 msgstr "불러오기"
 
@@ -368,7 +428,7 @@ msgid "Load Game"
 msgstr "게임 불러오기"
 
 msgid "Loading"
-msgstr "불러오기 중"
+msgstr "불러오기"
 
 msgid "Loading DVD..."
 msgstr "DVD 불러오기 중..."
@@ -408,6 +468,9 @@ msgstr "음악 볼륨"
 
 msgid "Mute"
 msgstr "무음"
+
+msgid "NES Classic (FBX)"
+msgstr "NES 클래식 (FBX)"
 
 msgid "NES Controller"
 msgstr "NES 컨트롤러"
@@ -488,16 +551,16 @@ msgid "Out of memory: too many files!"
 msgstr "메모리 부족: 너무 많은 파일!"
 
 msgid "P1"
-msgstr "1플레이어"
+msgstr "1P"
 
 msgid "P2"
-msgstr "2플레이어"
+msgstr "2P"
 
 msgid "P3"
-msgstr "3플레이어"
+msgstr "3P"
 
 msgid "P4"
-msgstr "4플레이어"
+msgstr "4P"
 
 msgid "PAL (50Hz)"
 msgstr "PAL (50Hz)"
@@ -547,11 +610,20 @@ msgstr "지금 위모트의 아무 버튼이나 누릅니다. 홈 버튼을 눌�
 msgid "Press any button on the Wiimote or Nunchuk now. Press Home to clear the existing mapping."
 msgstr "지금 위모트 또는 눈챠크의 아무 버튼이나 누릅니다. 홈 버튼을 눌러 기존 매핑을 정리합니다."
 
+msgid "Preview Image"
+msgstr "이미지 미리보기"
+
+msgid "Preview Screenshot "
+msgstr "스크린샷 미리보기"
+
 msgid "Progressive (480p)"
 msgstr "프로그레시브 (480p)"
 
-msgid "Quit Game"
-msgstr "게임 종료"
+msgid "Progressive (480p)"
+msgstr "프로그레시브 (480p)"
+
+msgid "PVM Style D93 (FBX)"
+msgstr "PVM 방식 D93 (FBX)"
 
 msgid "Quit this game? Any unsaved progress will be lost."
 msgstr "이 게임을 종료하겠습니까? 저장되지 않는 진행은 손실됩니다."
@@ -605,7 +677,7 @@ msgid "Rumble"
 msgstr "진동"
 
 msgid "Save"
-msgstr "저장"
+msgstr "저장하기"
 
 msgid "Save Device"
 msgstr "저장 장치"
@@ -621,6 +693,12 @@ msgstr "저장 폴더"
 
 msgid "Save Game"
 msgstr "저장 게임"
+
+msgid "Save a New Preview Screenshot?"
+msgstr "새 스크린샷 미리보기를 저장하겠습니까?"
+
+msgid "Save a New Preview Screenshot? Current Screenshot image will be overwritten."
+msgstr "새 스크린샷 미리보기를 저장하겠습니까? 현재 스크린샷 이미지를 덮어씁니다."
 
 msgid "Save RAM and State?"
 msgstr "RAM과 상태를 저장하겠습니까?"
@@ -638,7 +716,7 @@ msgid "Save successful"
 msgstr "저장에 성공했습니다."
 
 msgid "Saving"
-msgstr "저장 중"
+msgstr "저장하기"
 
 msgid "Saving preferences..."
 msgstr "환경 설정 저장 중..."
@@ -648,6 +726,21 @@ msgstr "저장 중..."
 
 msgid "Scaling"
 msgstr "스케일"
+
+msgid "Scanlines"
+msgstr "스캔라인"
+
+msgid "Screenshot"
+msgstr "스크린샷"
+
+msgid "ScreenShot"
+msgstr "스크린샷"
+
+msgid "Screenshots"
+msgstr "스크린샷"
+
+msgid "Screenshots Folder"
+msgstr "스크린샷 폴더"
 
 msgid "Screen Position"
 msgstr "화면 위치"
@@ -682,6 +775,9 @@ msgstr "SD 카드를 찾을 수 없습니다!"
 msgid "Shift"
 msgstr "시프트"
 
+msgid "Show Framerate"
+msgstr "프레임속도 보기"
+
 msgid "Simp_chinese"
 msgstr "간체 중국어"
 
@@ -696,6 +792,9 @@ msgstr "SMB 공유 비밀번호"
 
 msgid "SMB Share Username"
 msgstr "SMB 공유 사용자명"
+
+msgid "Smooth (FBX)"
+msgstr "매끄러움 (FBX)"
 
 msgid "Snapshot"
 msgstr "스냅샷"
@@ -736,6 +835,9 @@ msgstr "SNES 마우스 - 위모트"
 msgid "Snes9x - Copyright (c) Snes9x Team 1996 - 2006"
 msgstr "Snes9x - 제작 (c) Snes9x 팀 1996-2006"
 
+msgid "Sony CXA"
+msgstr "소니 CXA"
+
 msgid "Sound Effects Volume"
 msgstr "사운드 효과 볼륨"
 
@@ -745,10 +847,19 @@ msgstr "스페인어"
 msgid "Sprite Limit"
 msgstr "스프라이트 제한"
 
+msgid "SRAM"
+msgstr ""
+
+msgid "SRAM (Auto)"
+msgstr "SRAM (자동)"
+
 msgid "SRAM file not found"
 msgstr "SRAM 파일을 찾을 수 없습니다."
 
 msgid "Start"
+msgstr "시작"
+
+msgid "START"
 msgstr "시작"
 
 msgid "State"
@@ -765,6 +876,9 @@ msgstr "화면에 맞춤"
 
 msgid "Super Scope"
 msgstr "슈퍼 스코프"
+
+msgid "SuperFX Overclock"
+msgstr "슈퍼FX 오버클럭"
 
 msgid "Superscope"
 msgstr "슈퍼스코프"
@@ -794,7 +908,7 @@ msgid "Unable to open snapshot!"
 msgstr "스냅샷을 열 수 없습니다!"
 
 msgid "Unfiltered"
-msgstr "필터 안됨"
+msgstr "필터링되지 않음"
 
 msgid "Unknown file type!"
 msgstr "알 수 없는 파일 유형!"
@@ -827,7 +941,7 @@ msgid "Update now"
 msgstr "지금 업데이트"
 
 msgid "Update successful!"
-msgstr "공적인 업데이트!"
+msgstr "성공적인 업데이트!"
 
 msgid "USB drive not found!"
 msgstr "USB 드라이버를 찾을 수 없습니다!"
@@ -856,8 +970,14 @@ msgstr "VM32: 알 수 없는 페이지 유형!"
 msgid "Wiimote"
 msgstr "위모트"
 
+msgid "Wavebeam"
+msgstr "웨이브빔"
+
 msgid "Wiimote Orientation"
 msgstr "위모트 방향"
+
+msgid "Wii U Pro Controller"
+msgstr "위 U 프로 컨트롤러"
 
 msgid "Yes"
 msgstr "예"
@@ -920,7 +1040,7 @@ msgid "VS Castlevania palette"
 msgstr "VS 캐슬베니아 팔레트"
 
 msgid "VS SMB/VS Ice Climber palette"
-msgstr "VS SMB/VS아이스 클라이머 팔레트"
+msgstr "VS SMB/VS 아이스 클라이머 팔레트"
 
 msgid "Catalan"
 msgstr "카탈루니아어"
