@@ -38,7 +38,7 @@ https://github.com/dborth/vbagx/releases
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
-[2.3.9]
+[2.3.9 - January 25, 2019]
 
 * Added ability to load external fonts and activated Japanese/Korean 
   translations. Simply put the ko.ttf or jp.ttf in the app directory
@@ -46,6 +46,7 @@ https://github.com/dborth/vbagx/releases
   in the app directory
 * Added ability to change preview image source with + button (thanks Zalo!)
 * Fixed issue with resetting motion controls
+* Fixed issue with Mode 0 graphics transparency
 
 [2.3.8 - January 4, 2019]
 
