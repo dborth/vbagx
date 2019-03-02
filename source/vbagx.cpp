@@ -389,7 +389,6 @@ int main(int argc, char *argv[])
 	savebuffer = (unsigned char *)malloc(SAVEBUFFERSIZE);
 	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY)*MAX_BROWSER_SIZE);
 #endif
-	gameScreenPng = (u8 *)malloc(512*1024);
 	InitGUIThreads();
 
 	bool autoboot = false;

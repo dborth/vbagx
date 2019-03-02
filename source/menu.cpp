@@ -1527,8 +1527,7 @@ static int MenuGame()
 				delete gameScreenImg;
 				delete gameScreen;
 				gameScreen = NULL;
-				free(gameScreenPng);
-				gameScreenPng = NULL;
+				ClearScreenshot();
 				if(GCSettings.AutoloadGame) {
 					ExitApp();
 				}
@@ -4890,11 +4889,7 @@ MainMenu (int menu)
 	if(gameScreen)
 		delete gameScreen;
 
-	if(gameScreenPng)
-	{
-		free(gameScreenPng);
-		gameScreenPng = NULL;
-	}
+	ClearScreenshot();
 
 	// wait for keys to be depressed
 	while(MenuRequested())
