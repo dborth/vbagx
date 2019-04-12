@@ -28,7 +28,7 @@ INCLUDES 	:=  source source/vba
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) \
+CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) `freetype-config --cflags` \
 				-DWORDS_BIGENDIAN -DNO_LINK -DNO_FEX \
 				-DTILED_RENDERING \
 				-DC_CORE -D__ppc__ -D__POWERPC__ -DFINAL_VERSION \
@@ -46,7 +46,7 @@ LDFLAGS		=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 # any extra libraries we wish to link with
 #---------------------------------------------------------------------------------
 LIBS	:=	-ldi -liso9660 -lpng -lmxml	-lfat -lwiiuse -lz -lbte -lasnd -logc \
-			-lvorbisidec -logg -lfreetype -ltinysmb
+			-lvorbisidec -logg -ltinysmb `freetype-config --libs`
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -101,7 +101,7 @@ export OFILES	:=	$(addsuffix .o,$(BINFILES)) \
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD) \
-					-I$(LIBOGC_INC) -I$(PORTLIBS)/include/freetype2
+					-I$(LIBOGC_INC)
 
 #---------------------------------------------------------------------------------
 # build a list of library paths
