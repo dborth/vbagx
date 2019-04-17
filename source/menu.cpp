@@ -2436,9 +2436,6 @@ ButtonMappingWindow()
 		else if(mapMenuCtrl == CTRLR_WIIDRC)
 		{
 			pressed = userInput[0].wiidrcdata.btns_d;
-
-			if(pressed == WIIDRC_BUTTON_HOME)
-				pressed = WPAD_CLASSIC_BUTTON_HOME;
 		}
 		else
 		{
@@ -2474,8 +2471,14 @@ ButtonMappingWindow()
 		}
 	}
 
-	if(pressed == WPAD_BUTTON_HOME || pressed == WPAD_CLASSIC_BUTTON_HOME)
+	if(mapMenuCtrl == CTRLR_WIIDRC) {
+		if(pressed == WIIDRC_BUTTON_HOME) {
+			pressed = 0;
+		}
+	}
+	else if(pressed == WPAD_BUTTON_HOME || pressed == WPAD_CLASSIC_BUTTON_HOME) {
 		pressed = 0;
+	}
 
 	HaltGui();
 	mainWindow->Remove(&promptWindow);
