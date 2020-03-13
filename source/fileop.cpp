@@ -44,8 +44,8 @@ unsigned char *savebuffer = NULL;
 u8 *ext_font_ttf = NULL;
 static mutex_t bufferLock = LWP_MUTEX_NULL;
 FILE * file; // file pointer - the only one we should ever use!
-bool unmountRequired[7] = { false, false, false, false, false, false, false };
-bool isMounted[7] = { false, false, false, false, false, false, false };
+bool unmountRequired[8] = { false, false, false, false, false, false, false, false };
+bool isMounted[8] = { false, false, false, false, false, false, false, false };
 
 #ifdef HW_RVL
 	const DISC_INTERFACE* sd = &__io_wiisd;
@@ -54,6 +54,7 @@ bool isMounted[7] = { false, false, false, false, false, false, false };
 #else
 	const DISC_INTERFACE* carda = &__io_gcsda;
 	const DISC_INTERFACE* cardb = &__io_gcsdb;
+	const DISC_INTERFACE* port2 = &__io_gcsd2;
 	const DISC_INTERFACE* dvd = &__io_gcdvd;
 #endif
 
@@ -206,6 +207,7 @@ void UnmountAllFAT()
 #else
 	fatUnmount("carda:");
 	fatUnmount("cardb:");
+	fatUnmount("port2:");
 #endif
 }
 
@@ -243,11 +245,15 @@ static bool MountFAT(int device, int silent)
 			sprintf(name2, "carda:");
 			disc = carda;
 			break;
-
 		case DEVICE_SD_SLOTB:
 			sprintf(name, "cardb");
 			sprintf(name2, "cardb:");
 			disc = cardb;
+			break;
+		case DEVICE_SD_PORT2:
+			sprintf(name, "port2");
+			sprintf(name2, "port2:");
+			disc = port2;
 			break;
 #endif
 		default:
@@ -370,6 +376,11 @@ bool FindDevice(char * filepath, int * device)
 		*device = DEVICE_SD_SLOTB;
 		return true;
 	}
+	else if(strncmp(filepath, "port2:", 6) == 0)
+	{
+		*device = DEVICE_SD_PORT2;
+		return true;
+	}
 	else if(strncmp(filepath, "dvd:", 4) == 0)
 	{
 		*device = DEVICE_DVD;
@@ -410,6 +421,7 @@ bool ChangeInterface(int device, bool silent)
 #else
 		case DEVICE_SD_SLOTA:
 		case DEVICE_SD_SLOTB:
+		case DEVICE_SD_PORT2:
 #endif
 			mounted = MountFAT(device, silent);
 			break;

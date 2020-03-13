@@ -65,6 +65,8 @@ int autoLoadMethod()
 		device = DEVICE_SD_SLOTA;
 	else if(ChangeInterface(DEVICE_SD_SLOTB, SILENT))
 		device = DEVICE_SD_SLOTB;
+	else if(ChangeInterface(DEVICE_SD_PORT2, SILENT))
+		device = DEVICE_SD_PORT2;
 	else if(ChangeInterface(DEVICE_DVD, SILENT))
 		device = DEVICE_DVD;
 	else if(ChangeInterface(DEVICE_SMB, SILENT))
@@ -98,6 +100,8 @@ int autoSaveMethod(bool silent)
 		device = DEVICE_SD_SLOTA;
 	else if(ChangeInterface(DEVICE_SD_SLOTB, SILENT))
 		device = DEVICE_SD_SLOTB;
+	else if(ChangeInterface(DEVICE_SD_PORT2, SILENT))
+		device = DEVICE_SD_PORT2;
 	else if(ChangeInterface(DEVICE_SMB, SILENT))
 		device = DEVICE_SMB;
 	else if(!silent)
@@ -167,7 +171,8 @@ bool IsDeviceRoot(char * path)
 		strcmp(path, "dvd:/")   == 0 ||
 		strcmp(path, "smb:/")   == 0 ||
 		strcmp(path, "carda:/") == 0 ||
-		strcmp(path, "cardb:/") == 0)
+		strcmp(path, "cardb:/") == 0 ||
+		strcmp(path, "port2:/") == 0)
 	{
 		return true;
 	}
@@ -597,6 +602,14 @@ int BrowserChangeFolder()
 		AddBrowserEntry();
 		sprintf(browserList[i].filename, "cardb:/");
 		sprintf(browserList[i].displayname, "SD Gecko Slot B");
+		browserList[i].length = 0;
+		browserList[i].isdir = 1;
+		browserList[i].icon = ICON_SD;
+		i++;
+
+		AddBrowserEntry();
+		sprintf(browserList[i].filename, "port2:/");
+		sprintf(browserList[i].displayname, "SD in SP2");
 		browserList[i].length = 0;
 		browserList[i].isdir = 1;
 		browserList[i].icon = ICON_SD;

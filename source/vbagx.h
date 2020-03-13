@@ -26,7 +26,7 @@
 #define SILENT 1
 
 const char pathPrefix[9][8] =
-{ "", "sd:/", "usb:/", "dvd:/", "smb:/", "carda:/", "cardb:/" };
+{ "", "sd:/", "usb:/", "dvd:/", "smb:/", "carda:/", "cardb:/", "port2:/" };
 
 enum 
 {
@@ -36,7 +36,8 @@ enum
 	DEVICE_DVD,
 	DEVICE_SMB,
 	DEVICE_SD_SLOTA,
-	DEVICE_SD_SLOTB
+	DEVICE_SD_SLOTB,
+	DEVICE_SD_PORT2
 };
 
 enum 
