@@ -906,7 +906,7 @@ static u32 DecodeJoy(unsigned short pad)
 	}
 	else if(wpad_exp_type == WPAD_EXP_CLASSIC)
 	{ // classic controller
-		if (wp->exp.classic.type == 2) {
+		if (isWUPC) {
 			for (u32 i = 0; i < MAXJP; ++i)
 			{
 				if (wpad_btns_h & btnmap[CTRLR_WUPC][i] )
