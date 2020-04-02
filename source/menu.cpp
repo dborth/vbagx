@@ -1431,12 +1431,12 @@ static int MenuGame()
 		}
 		else if (GCSettings.AutoSave == 2)
 		{
-			if (WindowPrompt("Save", "Save Snapshot?", "Save", "Don't Save") )
+			if (WindowPrompt("Save", "Save State?", "Save", "Don't Save") )
 				SaveBatteryOrStateAuto(FILE_SNAPSHOT, NOTSILENT); // save state
 		}
 		else if (GCSettings.AutoSave == 3)
 		{
-			if (WindowPrompt("Save", "Save SRAM and Snapshot?", "Save", "Don't Save") )
+			if (WindowPrompt("Save", "Save SRAM and State?", "Save", "Don't Save") )
 			{
 				SaveBatteryOrStateAuto(FILE_SRAM, NOTSILENT); // save battery
 				SaveBatteryOrStateAuto(FILE_SNAPSHOT, NOTSILENT); // save state
