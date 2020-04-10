@@ -562,6 +562,12 @@ msgstr "SD 카드"
 msgid "SD card not found!"
 msgstr "SD 카드를 찾을 수 없습니다!"
 
+msgid "SD Gecko Slot A"
+msgstr ""
+
+msgid "SD Gecko Slot B"
+msgstr ""
+
 msgid "SD in SP2"
 msgstr "SD 에 SP2"
 
