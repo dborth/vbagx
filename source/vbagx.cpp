@@ -53,6 +53,7 @@ int ConfigRequested = 0;
 int ShutdownRequested = 0;
 int ResetRequested = 0;
 int ExitRequested = 0;
+bool isWiiVC = false;
 char appPath[1024] = { 0 };
 
 /****************************************************************************
@@ -358,6 +359,7 @@ int main(int argc, char *argv[])
 	SYS_SetResetCallback(ResetCB);
 	
 	WiiDRC_Init();
+	isWiiVC = WiiDRC_Inited();
 	WPAD_Init();
 	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
 	DI_Init();

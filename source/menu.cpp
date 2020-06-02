@@ -793,7 +793,7 @@ static void WindowCredits(void * ptr)
 	creditsBoxImg.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	creditsWindowBox.Append(&creditsBoxImg);
 
-	int numEntries = 25;
+	int numEntries = 24;
 	GuiText * txt[numEntries];
 
 	txt[i] = new GuiText("Credits", 20, (GXColor){0, 0, 0, 255});
@@ -845,26 +845,34 @@ static void WindowCredits(void * ptr)
 	txt[i] = new GuiText("FreeTypeGX");
 	txt[i]->SetPosition(40,y); i++;
 	txt[i] = new GuiText("Armin Tamzarian");
-	txt[i]->SetPosition(250,y); i++; y+=32;
+	txt[i]->SetPosition(250,y); i++;
 
-	GuiText::SetPresets(18, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_CENTER | FTGX_ALIGN_TOP, ALIGN_CENTRE, ALIGN_TOP);
-
-	txt[i] = new GuiText("This software is open source and may be copied,");
-	txt[i]->SetPosition(0,y); i++; y+=20;
-	txt[i] = new GuiText("distributed, or modified under the terms of the");
-	txt[i]->SetPosition(0,y); i++; y+=20;
-	txt[i] = new GuiText("GNU General Public License (GPL) Version 2.");
-	txt[i]->SetPosition(0,y); i++; y+=20;
-
-	char iosVersion[20];
+	char wiiDetails[30];
+	char wiiInfo[20];
 
 #ifdef HW_RVL
-	sprintf(iosVersion, "IOS: %d", IOS_GetVersion());
+	if(!IsWiiU()) {
+		sprintf(wiiInfo, "Wii");
+	}
+	else if(IsWiiUFastCPU()) {
+		sprintf(wiiInfo, "vWii (1.215 GHz)");
+	}
+	else {
+		sprintf(wiiInfo, "vWii (729 MHz)");
+	}
+	sprintf(wiiDetails, "IOS: %d / %s", IOS_GetVersion(), wiiInfo);
 #endif
 
-	txt[i] = new GuiText(iosVersion, 18, (GXColor){0, 0, 0, 255});
-	txt[i]->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
-	txt[i]->SetPosition(20,-20);
+	txt[i] = new GuiText(wiiDetails, 14, (GXColor){0, 0, 0, 255});
+	txt[i]->SetAlignment(ALIGN_RIGHT, ALIGN_BOTTOM);
+	txt[i]->SetPosition(-20, -46); i++;
+
+	GuiText::SetPresets(12, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_CENTER | FTGX_ALIGN_TOP, ALIGN_CENTRE, ALIGN_BOTTOM);
+
+	txt[i] = new GuiText("This software is open source and may be copied, distributed, or modified");
+	txt[i]->SetPosition(0, -32); i++;
+	txt[i] = new GuiText("under the terms of the GNU General Public License (GPL) Version 2.");
+	txt[i]->SetPosition(0, -20);
 
 	for(i=0; i < numEntries; i++)
 		creditsWindowBox.Append(txt[i]);
