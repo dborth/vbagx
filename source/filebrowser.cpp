@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <wiiuse/wpad.h>
 #include <sys/dir.h>
 #include <malloc.h>
@@ -235,7 +236,7 @@ int UpdateDirName()
 		if ((strlen(browser.dir)+1+strlen(browserList[browser.selIndex].filename)) < MAXPATHLEN)
 		{
 			/* update current directory name */
-			sprintf(browser.dir, "%s%s/",browser.dir, browserList[browser.selIndex].filename);
+			sprintf(browser.dir+strlen(browser.dir), "%s/", browserList[browser.selIndex].filename);
 			return 1;
 		}
 		else

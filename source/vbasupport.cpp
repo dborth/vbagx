@@ -402,7 +402,7 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 		char screenpath[1024];
 		strncpy(screenpath, filepath, 1024);
 		screenpath[strlen(screenpath)-4] = 0;
-		sprintf(screenpath, "%s.png", screenpath);
+		strcat(screenpath, ".png");
 		SaveFile((char *)gameScreenPng, screenpath, gameScreenPngSize, silent);
 	}
 
@@ -505,7 +505,7 @@ int SavePreviewImg(char * filepath, bool silent)
 		char screenpath[1024];
 		strcpy(screenpath, filepath);
 		screenpath[strlen(screenpath)] = 0;
-		sprintf(screenpath, "%s.png", screenpath);
+		strcat(screenpath, ".png");
 		SaveFile((char *)gameScreenPng, screenpath, gameScreenPngSize, silent);
 	}
 
