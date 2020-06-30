@@ -38,6 +38,17 @@ https://github.com/dborth/vbagx/releases
 |0Oื๘oท                         UPDATE HISTORY                        ทo๘ืO0|
 `จ•จจจจจ จจจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจ จจจจจจจจจจจจจจจจจจจจ จจจจจจจจจจจจจ'
 
+[2.4.1 - June 29, 2020]
+
+* Compiled with latest devkitPPC/libogc
+* Fixed some 3rd party controllers with invalid calibration data
+* Translation updates
+* Added Wii U vWii Channel, widescreen patch, and now reports console/CPU speed
+* Added support for serial port 2 (SP2 / SD2SP2) on Gamecube
+* Fixed Wii U Pro controller button mapping not being used in one case
+* Fixed ZL button mapping for Wii U GamePad
+* Other minor fixes
+
 [2.4.0 - April 13, 2019]
 
 * Fixed crash when used as wiiflow plugin
