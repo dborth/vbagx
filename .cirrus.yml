@@ -1,4 +1,4 @@
-snes9xgx_gamecube-wii_task:
+vbagx_gamecube-wii_task:
   container:
     image: devkitpro/devkitppc
   
