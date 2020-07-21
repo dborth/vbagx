@@ -840,7 +840,7 @@ static void WindowCredits(void * ptr)
 
 	txt[i] = new GuiText("libogc / devkitPPC");
 	txt[i]->SetPosition(40,y); i++;
-	txt[i] = new GuiText("shagkur & wintermute");
+	txt[i] = new GuiText("shagkur & WinterMute");
 	txt[i]->SetPosition(250,y); i++; y+=24;
 	txt[i] = new GuiText("FreeTypeGX");
 	txt[i]->SetPosition(40,y); i++;

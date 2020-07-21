@@ -7,11 +7,11 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## Nightly builds
 
-|Download nightly builds from continuous integration: 	| [![Build Status][vbagx_gamecube-wii]][cirrus-ci] 
+|Download nightly builds from continuous integration: 	| [![Build Status][Build]][Actions]
 |-------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
 
-[cirrus-ci]: https://cirrus-ci.com/github/dborth/vbagx
-[vbagx_gamecube-wii]: https://api.cirrus-ci.com/github/dborth/vbagx.svg?task=vbagx_gamecube-wii
+[Actions]: https://github.com/dborth/vbagx/actions
+[Build]: https://github.com/dborth/vbagx/workflows/Visual%20Boy%20Advance%20GX%20Build/badge.svg
 
 
 ## FEATURES
