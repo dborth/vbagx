@@ -1,4 +1,4 @@
-name: Visual Boy Advance GX
+name: VBA GX Build
 
 on: [push, pull_request]
 
