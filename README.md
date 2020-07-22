@@ -11,7 +11,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |-------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
 
 [Actions]: https://github.com/dborth/vbagx/actions
-[Build]: https://github.com/dborth/vbagx/workflows/Visual%20Boy%20Advance%20GX%20Build/badge.svg
+[Build]: https://github.com/dborth/vbagx/workflows/VBA%20GX%20Build/badge.svg
 
 
 ## FEATURES
