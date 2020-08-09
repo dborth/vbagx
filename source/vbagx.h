@@ -116,8 +116,6 @@ struct SGCSettings
 	char	smbshare[20];
 };
 
-char* ImageFolder();
-
 void ExitApp();
 void ShutdownWii();
 bool SupportedIOS(u32 ios);
