@@ -34,6 +34,7 @@
 #define ANALOG_SENSITIVITY 30
 
 int rumbleRequest[4] = {0,0,0,0};
+int playerMapping[4] = {0,1,2,3};
 GuiTrigger userInput[4];
 
 #ifdef HW_RVL
@@ -965,6 +966,16 @@ bool MenuRequested()
 	return false;
 }
 
+static int GetPlayerChan(int pad)
+{
+	for(int i=3; i >= 0; i--) {
+		if(playerMapping[i] == pad) {
+			return i;
+		}
+	}
+	return pad;
+}
+
 u32 GetJoy(int pad)
 {
 	// request to go back to menu
@@ -975,7 +986,9 @@ u32 GetJoy(int pad)
 		return 0;
 	}
 
-	u32 J = DecodeJoy(pad);
+	int chan = GetPlayerChan(pad);
+
+	u32 J = DecodeJoy(chan);
 	// don't allow up+down or left+right
 	if ((J & 48) == 48)
 		J &= ~16;

@@ -33,6 +33,7 @@
 #define VBA_CAPTURE			2048
 
 extern int rumbleRequest[4];
+extern int playerMapping[4];
 extern u32 btnmap[6][10];
 
 void ResetControls(int wc = -1);
