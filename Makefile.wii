@@ -41,6 +41,7 @@ CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) `freetype-config --cflags` \
 				-Wno-memset-elt-size -Wno-attributes -Wno-tautological-compare
 CXXFLAGS	=	$(CFLAGS) -Wno-reorder
 LDFLAGS		=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
+LDFLAGS		+=	-L../buildtools
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with
