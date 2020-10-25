@@ -30,13 +30,13 @@ jobs:
     - name: Upload Wii Build Artifacts
       uses: actions/upload-artifact@v2
       with: 
-        name: VisualBoyAdvanceGX-Nightly
+        name: VisualBoyAdvanceGX
         path: |
          dist/VisualBoyAdvanceGX/
     
     - name: Upload GameCube Build Artifacts
       uses: actions/upload-artifact@v2
       with: 
-        name: VisualBoyAdvanceGX-Nightly-GameCube
+        name: VisualBoyAdvanceGX-GameCube
         path: |
          dist/VisualBoyAdvanceGX-GameCube/
