@@ -19,23 +19,24 @@ jobs:
     
     - name: Copy files
       run: | 
-        cp -f hbc/* executables/VisualBoyAdvanceGX/apps/vbagx/
-        cp -f hbc/* executables/VisualBoyAdvanceGX-GameCube/
-        cp -f README.md executables/VisualBoyAdvanceGX/apps/vbagx/
-        cp -f README.md executables/VisualBoyAdvanceGX-GameCube/
+        mkdir -p dist/VisualBoyAdvanceGX/apps/vbagx
+        mkdir -p dist/VisualBoyAdvanceGX/vbagx/roms
+        mkdir dist/VisualBoyAdvanceGX/vbagx/saves
+        mkdir dist/VisualBoyAdvanceGX-GameCube/
+        cp hbc/* dist/VisualBoyAdvanceGX/apps/vbagx/
+        cp executables/vbagx-wii.dol dist/VisualBoyAdvanceGX/apps/vbagx/boot.dol
+        cp executables/vbagx-gc.dol dist/VisualBoyAdvanceGX-GameCube/
 
     - name: Upload Wii Build Artifacts
       uses: actions/upload-artifact@v2
       with: 
         name: VisualBoyAdvanceGX-Nightly
         path: |
-         executables/VisualBoyAdvanceGX/
-         !executables/VisualBoyAdvanceGX/apps/vbagx/*.elf
+         dist/VisualBoyAdvanceGX/
     
     - name: Upload GameCube Build Artifacts
       uses: actions/upload-artifact@v2
       with: 
         name: VisualBoyAdvanceGX-Nightly-GameCube
         path: |
-         executables/VisualBoyAdvanceGX-GameCube/
-         !executables/VisualBoyAdvanceGX-GameCube/*.elf
+         dist/VisualBoyAdvanceGX-GameCube/
