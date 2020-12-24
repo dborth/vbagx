@@ -23,6 +23,8 @@ jobs:
         mkdir -p dist/VisualBoyAdvanceGX/vbagx/roms
         mkdir dist/VisualBoyAdvanceGX/vbagx/saves
         mkdir dist/VisualBoyAdvanceGX-GameCube/
+        touch dist/VisualBoyAdvanceGX/vbagx/roms/romsdir
+        touch dist/VisualBoyAdvanceGX/vbagx/saves/savesdir
         cp hbc/* dist/VisualBoyAdvanceGX/apps/vbagx/
         cp executables/vbagx-wii.dol dist/VisualBoyAdvanceGX/apps/vbagx/boot.dol
         cp executables/vbagx-gc.dol dist/VisualBoyAdvanceGX-GameCube/
