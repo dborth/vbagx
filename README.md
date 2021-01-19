@@ -38,6 +38,13 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
+[2.4.2 - January 18, 2021]
+
+* Compiled with latest devkitPPC/libogc
+* Added ability to change the player mapped to a connected controller
+* Significant memory usage reductions (fonts and loading cover images)
+* Other minor fixes
+
 [2.4.1 - June 29, 2020]
 
 * Compiled with latest devkitPPC/libogc
