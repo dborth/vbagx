@@ -62,12 +62,12 @@ int autoLoadMethod()
 		device = DEVICE_SD;
 	else if(ChangeInterface(DEVICE_USB, SILENT))
 		device = DEVICE_USB;
+	else if(ChangeInterface(DEVICE_SD_PORT2, SILENT))
+		device = DEVICE_SD_PORT2;
 	else if(ChangeInterface(DEVICE_SD_SLOTA, SILENT))
 		device = DEVICE_SD_SLOTA;
 	else if(ChangeInterface(DEVICE_SD_SLOTB, SILENT))
 		device = DEVICE_SD_SLOTB;
-	else if(ChangeInterface(DEVICE_SD_PORT2, SILENT))
-		device = DEVICE_SD_PORT2;
 	else if(ChangeInterface(DEVICE_DVD, SILENT))
 		device = DEVICE_DVD;
 	else if(ChangeInterface(DEVICE_SMB, SILENT))
@@ -95,12 +95,12 @@ int autoSaveMethod(bool silent)
 		device = DEVICE_SD;
 	else if(ChangeInterface(DEVICE_USB, SILENT))
 		device = DEVICE_USB;
+	else if(ChangeInterface(DEVICE_SD_PORT2, SILENT))
+		device = DEVICE_SD_PORT2;
 	else if(ChangeInterface(DEVICE_SD_SLOTA, SILENT))
 		device = DEVICE_SD_SLOTA;
 	else if(ChangeInterface(DEVICE_SD_SLOTB, SILENT))
 		device = DEVICE_SD_SLOTB;
-	else if(ChangeInterface(DEVICE_SD_PORT2, SILENT))
-		device = DEVICE_SD_PORT2;
 	else if(ChangeInterface(DEVICE_SMB, SILENT))
 		device = DEVICE_SMB;
 	else if(!silent)
