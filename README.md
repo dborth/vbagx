@@ -38,6 +38,11 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
+[2.4.3 - January 31, 2021]
+
+* Fixed SD2SP2 issues
+* Changed max game image dimensions to 640x480 to support screenshots
+
 [2.4.2 - January 18, 2021]
 
 * Compiled with latest devkitPPC/libogc
