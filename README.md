@@ -38,6 +38,10 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
+[2.4.4 - February 6, 2021]
+
+* Fixed SD2SP2 / SD gecko issues (again)
+
 [2.4.3 - January 31, 2021]
 
 * Fixed SD2SP2 issues
