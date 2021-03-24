@@ -38,6 +38,12 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
+[2.4.5 - March 23, 2021]
+
+* Added L+R+START for back to menu for Wii Classic Controller
+* Updated French translation (thanks Tanooki16!)
+* Fixed issue with displaying screenshots
+
 [2.4.4 - February 6, 2021]
 
 * Fixed SD2SP2 / SD gecko issues (again)
