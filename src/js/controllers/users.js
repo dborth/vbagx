@@ -22,7 +22,7 @@ let User = {
     };
     localStorage.setItem("request_params", JSON.stringify(params));
     delete userData.data.token;
-    userData["userPermissions"] = [1, 4, 14, 15]; //Owner, Customer, Seller, Deliverer
+    userData.data["userPermissions"] = [1, 4, 14, 15]; //Owner, Customer, Seller, Deliverer
     localStorage.setItem("userData",JSON.stringify(userData.data));
 
     return true;
