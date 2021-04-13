@@ -1,0 +1,7 @@
+{
+  "browserWindow": {
+    "webPreferences": {
+      "nodeIntegration": true
+    }
+  }
+}

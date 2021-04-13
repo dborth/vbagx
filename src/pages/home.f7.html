@@ -1,0 +1,49 @@
+<template>
+  <div class="page" data-name="home">
+    <!-- Top Navbar -->
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner">
+        <div class="left">
+          <a href="/panel-left/" class="link icon-only">
+            <i class="icon f7-icons if-not-md">menu</i>
+            <i class="icon material-icons if-md">menu</i>
+          </a>
+        </div>
+        <div class="title sliding">Administración de app</div>
+        <div class="right">
+          <a href="/panel-right/" class="link icon-only">
+            <i class="icon f7-icons if-not-md">menu</i>
+            <i class="icon material-icons if-md">menu</i>
+          </a>
+        </div>
+        <div class="title-large">
+          <div class="title-large-text">Administración de App</div>
+        </div>
+      </div>
+    </div>
+    <!-- Scrollable page content-->
+    <div class="page-content">
+      <div class="block block-strong">
+        <p>Elija una opción</p>
+      </div>
+      <div class="block-title">Navegación</div>
+      <div class="list">
+        <ul>
+          <li>
+            <a href="/about/" class="item-content item-link">
+              <div class="item-inner">
+                <div class="item-title"><i class="icon f7-icons color-lime">info_circle</i> Acerca de</div>
+              </div>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+export default () => {
+  return $render;
+};
+</script>

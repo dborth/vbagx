@@ -1,0 +1,31 @@
+<template>
+<div class="page" data-name="about">
+  <div class="navbar">
+    <div class="navbar-bg"></div>
+    <div class="navbar-inner sliding">
+      <div class="left">
+        <a href="#" class="link back">
+          <i class="icon icon-back"></i>
+          <span class="if-not-md">Back</span>
+        </a>
+      </div>
+      <div class="title">Acerca de</div>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="block-title">Acerca de esta aplicación</div>
+    <div class="block block-strong">
+      <p>Ha sido creada con el fin de facilitar la captura de los datos y llevar un mejor control de este, así como poder ver un listado y ver el concentrado.</p>
+    </div>
+    <div class="block-footer">
+      <p>© Aplicaciones Digitales Cab, 2019-2021 (v${version})</p>
+    </div>
+  </div>
+</div>
+</template>
+<script>
+export default (props, { $f7, $on, $update }) => {
+  let version = $f7.version;
+  return $render;
+};
+</script>

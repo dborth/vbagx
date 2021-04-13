@@ -1,0 +1,72 @@
+<template>
+  <div class="page" data-name="login">
+    <div class="page-content login-screen-content">
+      <div class="login-screen-title">Ingreso</div>
+      <form>
+        <div class="list">
+          <div class="preloader" style="display: none;"></div>
+          <ul>
+            <li class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-title item-label">Usuario</div>
+                <div class="item-input-wrap">
+                  <input id="username" type="text" name="username" placeholder="Ingresa tu usuario o email" />
+                </div>
+              </div>
+            </li>
+            <li class="item-content item-input">
+              <div class="item-inner">
+                <div class="item-title item-label">Contraseña</div>
+                <div class="item-input-wrap">
+                  <input id="password" type="password" name="password" placeholder="Ingresa tu contraseña" autocomplete="off" @keypress="${pressEnter}" />
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="block list">
+          <ul>
+            <li><a class="login-btn button button-raised button-fill color-blue" href="#" @click="${checkLogin}">Ingresar</a></li>
+          </ul>
+          <div class="block-footer">
+            <p>© Aplicaciones Digitales Cab, 2019-2021 (v${version})</p>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+<script>
+import $ from 'dom7';
+import User from '../js/controllers/users.js';
+
+export default (props, { $f7, $on, $update }) => {
+  let version = $f7.version;
+
+  const checkLogin = () => {
+    $f7.preloader.show();
+    var username = $('#username').val();
+    var password = $('#password').val();
+    User.checkLogin(username, password).then(function(result){
+      $f7.preloader.hide();
+      if (result === true){
+        window.location.replace('/');
+      }
+      else{
+        $f7.toast.show( { text: result.message });
+      }
+    }).catch(function(error){
+      $f7.preloader.hide();
+      $f7.toast.show( { text: error.message });
+    });
+  };
+
+  const pressEnter = (e) => {
+    if (e.keyCode === 13) {
+      checkLogin();
+    }
+  };
+
+  return $render;
+};
+</script>

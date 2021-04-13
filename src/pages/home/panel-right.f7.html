@@ -1,0 +1,93 @@
+<template>
+<!-- Right panel with reveal effect-->
+<div class="panel panel-right panel-reveal theme-dark" @panel:open=${onPanelOpen}>
+  <div class="view">
+    <div class="page">
+      <div class="navbar">
+        <div class="navbar-inner">
+          <div class="title">Menú</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div class="list">
+          <ul>
+            <li>
+              <div class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">Usuario</div>
+                  <div class="item-input-wrap">
+                    <i class="icon f7-icons color-blue">person</i>
+                    <span id="menu-username"></span>
+                  </div>
+                </div>
+              </div>
+            </li>
+            <li>
+              <div class="item-content">
+                <div class="item-inner">
+                  <div class="item-title">Tema claro</div>
+                  <div class="item-after">
+                    <label class="toggle toggle-init">
+                      <input type="checkbox" id="light-theme" @click=${setTheme} /><i class="toggle-icon"></i>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </li>
+            <li>
+              <div class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">Sesión</div>
+                  <div class="item-input-wrap">
+                    ${isLogged ? $h`
+                    <a class="link panel-close color-green" href="#" @click=${logout}>
+                      <i class="fas fa-sign-out-alt"></i> Salir
+                    </a>
+                    ` : $h`
+                    <a class="link panel-close color-green" href="/login/">
+                      <i class="fas fa-sign-in-alt"></i> Ingresar
+                    </a>
+                    `}
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+<script>
+import $ from 'dom7'; 
+import User from '../../js/controllers/users.js';
+
+export default (props, { $f7, $on, $update }) => {
+  let isLogged = false;
+
+  const onPanelOpen = () => {
+    if (User.isLogged()){
+      let data = JSON.parse(localStorage.getItem("userData"));
+      $("#menu-username").text(data.contactName);
+      isLogged = true;
+      $update();
+    }
+  };
+
+  const logout = () => {
+    User.logOff();
+  };
+
+  const setTheme = () => {
+    /*if ($("#light-theme").prop('checked')){
+      $("#app, .panel-left, .panel-right").removeClass("theme-dark");
+    }
+    else{
+      $("#app, .panel-left, .panel-right").addClass("theme-dark");
+    }*/
+  };
+
+  return $render;
+}
+</script>

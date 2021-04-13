@@ -1,0 +1,148 @@
+<template>
+<!-- Left panel with cover effect-->
+<div class="panel panel-left panel-cover theme-dark" @panel:open=${onPanelOpen}>
+  <div class="view">
+    <div class="page">
+      <div class="navbar">
+        <div class="navbar-inner">
+          <div class="title">Left Panel</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div class="list accordion-list">
+          <ul>
+            <li class="accordion-item">
+              <a href="#" class="item-content item-link">
+                <div class="item-inner">
+                  <div class="item-title">Menú</div>
+                </div>
+              </a>
+              <div class="accordion-item-content">
+                <div class="block">
+                  <p>
+                    <a class="link panel-close" href="/menu-suggestions/">Sugerencias</a><br/>
+                    <a class="link panel-close" href="/menu-individual-order/">Menu individual</a><br/>
+                    <a class="link panel-close" href="/menu-search-results/">Resultados de Búsquedas</a><br/>
+                    </p>
+                </div>
+              </div>
+            </li>
+            
+            <li class="accordion-item">
+              <a href="#" class="item-content item-link">
+                <div class="item-inner">
+                  <div class="item-title">Compras</div>
+                </div>
+              </a>
+              <div class="accordion-item-content">
+                <div class="block">
+                  <p>
+                    <a class="link panel-close" href="/purchase-order-form/">Formato de Orden</a><br />
+                    <a class="link panel-close" href="/purchase-order-tracking/">Seguir Envío</a><br />
+                  </p>
+                </div>
+              </div>
+            </li>
+            <li class="accordion-item">
+              <a href="#" class="item-content item-link">
+                <div class="item-inner">
+                  <div class="item-title">Sitio</div>
+                </div>
+              </a>
+              <div class="accordion-item-content">
+                <div class="block">
+                  <p>
+                    <a class="link panel-close" href="/site-dashboard/">Dashboard</a><br />
+                    <a class="link panel-close" href="/site-edit/">Editar Comercio</a><br />
+                    <a class="link panel-close" href="/site-product-edit/">Editar Productos en Comercio</a><br />
+                    <a class="link panel-close" href="/site-products-list/">Lista de Productos</a><br />
+                    <a class="link panel-close" href="/site-sales-list/">Lista de Ventas</a><br />
+                  </p>
+                </div>
+              </div>
+            </li>
+            <li class="accordion-item">
+              <a href="#" class="item-content item-link">
+                <div class="item-inner">
+                  <div class="item-title">Envíos</div>
+                </div>
+              </a>
+              <div class="accordion-item-content">
+                <div class="block">
+                  <p>
+                    <a class="link panel-close" href="/deliverer-dashboard/">Dashboard</a><br />
+                    <a class="link panel-close" href="/deliverer-edit/">Editar Paquetería</a><br />
+                    <a class="link panel-close" href="/deliverer-shippings-list/">Listado de Envíos</a><br />
+                    <a class="link panel-close" href="/deliverer-shipping-details/">Detalles de Envío</a><br />
+                  </p>
+                </div>
+              </div>
+            </li>
+            <li id="is-customer-${isCustomer}" class="accordion-item" data-some="${isCustomer}">
+              <a href="#" class="item-content item-link">
+                <div class="item-inner">
+                  <div class="item-title">Clientes</div>
+                </div>
+              </a>
+              <div class="accordion-item-content">
+                <div class="block">
+                  <p>
+                    <a class="link panel-close" href="/customer-dashboard/">Dashboard</a><br />
+                    <a class="link panel-close" href="/customer-edit/">Editar Cliente</a><br />
+                    <a class="link panel-close" href="/customer-purchase-details/">Detalles de Compra</a><br />
+                    <a class="link panel-close" href="/customer-purchase-order/">Orden de Compra</a><br />
+                    <a class="link panel-close" href="/customer-purchases-list/">Lista de Compras</a><br />
+                    <a class="link panel-close" href="/customer-shipping-details/">Detalle de Envío</a><br />
+                  </p>
+                </div>
+              </div>
+            </li>
+            <li class="accordion-item">
+              <a href="#" class="item-content item-link">
+                <div class="item-inner">
+                  <div class="item-title">Usuarios</div>
+                </div>
+              </a>
+              <div class="accordion-item-content">
+                <div class="block">
+                  <p>
+                    <a class="link panel-close" href="/user-edit/">Editar</a><br />
+                    <a class="link panel-close" href="/user-new/">Nuevo</a><br />
+                    <a class="link panel-close" href="/user-reset/">Restablecer Contraseña</a><br />
+                  </p>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+<script>
+import User from '../../js/controllers/users.js';
+
+export default (props, { $f7, $on, $update }) => {
+
+  let isLogged = false;
+  let isSeller = false;
+  let isCustomer = false;
+  let isDeliverer = false;
+
+  const onPanelOpen = () => {
+    if (User.isLogged()){
+      const userData = JSON.parse(localStorage.getItem("userData"));
+      const userRoles = userData['userPermissions'];
+
+      isLogged = true,
+      isCustomer = userRoles.includes(4), //Customer,
+      isSeller = userRoles.includes(14), //Seller,
+      isDeliverer =  userRoles.includes(15), //Deliverer,
+      $update();
+    }
+  };
+
+  return $render;
+}
+</script>

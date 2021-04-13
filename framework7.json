@@ -1,0 +1,109 @@
+{
+  "cwd": "C:\\android\\projects\\comida-cab-f7-v6",
+  "type": [
+    "web",
+    "pwa",
+    "cordova"
+  ],
+  "name": "Comida Cab",
+  "framework": "core",
+  "template": "single-view",
+  "bundler": "webpack",
+  "cssPreProcessor": "less",
+  "theming": {
+    "customColor": true,
+    "color": "#44c950",
+    "darkTheme": true,
+    "iconFonts": true,
+    "fillBars": false
+  },
+  "customBuild": true,
+  "customBuildConfig": {
+    "rtl": false,
+    "darkTheme": true,
+    "lightTheme": true,
+    "themes": [
+      "ios",
+      "md",
+      "aurora"
+    ],
+    "components": [
+      "appbar",
+      "dialog",
+      "popup",
+      "login-screen",
+      "popover",
+      "actions",
+      "sheet",
+      "toast",
+      "preloader",
+      "progressbar",
+      "sortable",
+      "swipeout",
+      "accordion",
+      "contacts-list",
+      "virtual-list",
+      "list-index",
+      "timeline",
+      "tabs",
+      "panel",
+      "card",
+      "chip",
+      "form",
+      "input",
+      "checkbox",
+      "radio",
+      "toggle",
+      "range",
+      "stepper",
+      "smart-select",
+      "grid",
+      "calendar",
+      "picker",
+      "infinite-scroll",
+      "pull-to-refresh",
+      "lazy",
+      "data-table",
+      "fab",
+      "searchbar",
+      "messages",
+      "messagebar",
+      "swiper",
+      "photo-browser",
+      "notification",
+      "autocomplete",
+      "tooltip",
+      "gauge",
+      "skeleton",
+      "menu",
+      "color-picker",
+      "treeview",
+      "text-editor",
+      "area-chart",
+      "pie-chart",
+      "elevation",
+      "typography"
+    ]
+  },
+  "webpack": {
+    "developmentSourceMap": true,
+    "productionSourceMap": true,
+    "hashAssets": false,
+    "preserveAssetsPaths": false,
+    "inlineAssets": true
+  },
+  "pkg": "com.comidacab.app",
+  "cordova": {
+    "folder": "cordova",
+    "platforms": [
+      "ios",
+      "android",
+      "electron"
+    ],
+    "plugins": [
+      "cordova-plugin-statusbar",
+      "cordova-plugin-keyboard",
+      "cordova-plugin-splashscreen"
+    ]
+  }
+}
