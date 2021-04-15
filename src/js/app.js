@@ -14,7 +14,7 @@ import cordovaApp from './cordova-app.js';
 // Import Routes
 import routes from './routes.js';
 // Import Store
-import store from './store.js';
+import store from './stores/index.js';
 
 // Import main app component
 import App from '../app.f7.html';
