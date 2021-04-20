@@ -121,9 +121,10 @@
 </div>
 </template>
 <script>
+import $ from 'dom7'; 
 import User from '../../js/controllers/users.js';
 
-export default (props, { $f7, $on, $update }) => {
+export default (props, { $f7, $on, $update, $store }) => {
 
   let isLogged = false;
   let isSeller = false;
@@ -131,6 +132,12 @@ export default (props, { $f7, $on, $update }) => {
   let isDeliverer = false;
 
   const onPanelOpen = () => {
+    if ($store.getters.themeName.value != 'theme-dark'){
+      $(".panel-left").removeClass("theme-dark");
+    }
+    else{
+      $(".panel-left").addClass("theme-dark");
+    }
     if (User.isLogged()){
       const userData = JSON.parse(localStorage.getItem("userData"));
       const userRoles = userData['userPermissions'];

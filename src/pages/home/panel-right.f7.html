@@ -39,11 +39,12 @@
                 <div class="item-inner">
                   <div class="item-title item-label">Sesión</div>
                   <div class="item-input-wrap">
-                    ${isLogged ? $h`
+                    ${isLogged && $h`
                     <a class="link panel-close color-green" href="#" @click=${logout}>
                       <i class="fas fa-sign-out-alt"></i> Salir
                     </a>
-                    ` : $h`
+                    `}
+                    ${!isLogged && $h`
                     <a class="link panel-close color-green" href="/login/">
                       <i class="fas fa-sign-in-alt"></i> Ingresar
                     </a>
@@ -63,10 +64,18 @@
 import $ from 'dom7'; 
 import User from '../../js/controllers/users.js';
 
-export default (props, { $f7, $on, $update }) => {
+export default (props, { $f7, $on, $update, $store }) => {
   let isLogged = false;
+  let theme = '';
 
   const onPanelOpen = () => {
+    if ($store.getters.themeName.value != 'theme-dark'){
+      $(".panel-right").removeClass("theme-dark");
+      $('#light-theme').prop('checked', true);
+    }
+    else{
+      $(".panel-right").addClass("theme-dark");
+    }
     if (User.isLogged()){
       let data = JSON.parse(localStorage.getItem("userData"));
       $("#menu-username").text(data.contactName);
@@ -80,12 +89,15 @@ export default (props, { $f7, $on, $update }) => {
   };
 
   const setTheme = () => {
-    /*if ($("#light-theme").prop('checked')){
-      $("#app, .panel-left, .panel-right").removeClass("theme-dark");
+    if ($("#light-theme").prop('checked')){
+      $("#app, .panel-right").removeClass("theme-dark");
     }
     else{
-      $("#app, .panel-left, .panel-right").addClass("theme-dark");
-    }*/
+      $("#app, .panel-right").addClass("theme-dark");
+    }
+    theme = !$("#light-theme").prop('checked') ? 'theme-dark' : '';
+    $store.dispatch('changeTheme', theme);
+    $update();
   };
 
   return $render;
