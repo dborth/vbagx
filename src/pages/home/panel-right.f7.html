@@ -1,6 +1,6 @@
 <template>
 <!-- Right panel with reveal effect-->
-<div class="panel panel-right panel-reveal theme-dark" @panel:open=${onPanelOpen}>
+<div class="panel panel-right panel-reveal ${theme == 'theme-dark' && $h`theme-dark`}" @panel:open=${onPanelOpen}>
   <div class="view">
     <div class="page">
       <div class="navbar">
@@ -66,16 +66,10 @@ import User from '../../js/controllers/users.js';
 
 export default (props, { $f7, $on, $update, $store }) => {
   let isLogged = false;
-  let theme = '';
+  let theme = $store.getters.themeName.value;
 
   const onPanelOpen = () => {
-    if ($store.getters.themeName.value != 'theme-dark'){
-      $(".panel-right").removeClass("theme-dark");
-      $('#light-theme').prop('checked', true);
-    }
-    else{
-      $(".panel-right").addClass("theme-dark");
-    }
+    $('#light-theme').prop('checked', (theme != 'theme-dark') ? true : false );
     if (User.isLogged()){
       let data = JSON.parse(localStorage.getItem("userData"));
       $("#menu-username").text(data.contactName);
@@ -97,7 +91,6 @@ export default (props, { $f7, $on, $update, $store }) => {
     }
     theme = !$("#light-theme").prop('checked') ? 'theme-dark' : '';
     $store.dispatch('changeTheme', theme);
-    $update();
   };
 
   return $render;

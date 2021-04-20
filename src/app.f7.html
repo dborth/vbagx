@@ -1,6 +1,6 @@
 
 <template>
-  <div id="app" class="theme-dark">
+  <div id="app" class="${theme == 'theme-dark' && $h`theme-dark`}">
 
     <!-- Your main view, should have "view-main" class -->
     <div class="view view-main view-init safe-areas" data-url="/"></div>
@@ -12,6 +12,8 @@
     // Login screen demo data
     let username = '';
     let password = '';
+
+    let theme = $store.getters.themeName.value;
 
     const updateUsername = (e) => {
       username = e.target.value;

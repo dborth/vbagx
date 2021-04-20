@@ -1,6 +1,6 @@
 <template>
 <!-- Left panel with cover effect-->
-<div class="panel panel-left panel-reveal theme-dark" @panel:open=${onPanelOpen}>
+<div class="panel panel-left panel-reveal ${theme == 'theme-dark' && $h`theme-dark`}" @panel:open=${onPanelOpen}>
   <div class="view">
     <div class="page">
       <div class="navbar">
@@ -130,14 +130,9 @@ export default (props, { $f7, $on, $update, $store }) => {
   let isSeller = false;
   let isCustomer = false;
   let isDeliverer = false;
+  let theme = $store.getters.themeName.value;
 
   const onPanelOpen = () => {
-    if ($store.getters.themeName.value != 'theme-dark'){
-      $(".panel-left").removeClass("theme-dark");
-    }
-    else{
-      $(".panel-left").addClass("theme-dark");
-    }
     if (User.isLogged()){
       const userData = JSON.parse(localStorage.getItem("userData"));
       const userRoles = userData['userPermissions'];
