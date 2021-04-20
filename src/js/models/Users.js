@@ -1,5 +1,5 @@
 import AjaxHandler from './AjaxHandler.js';
-import { endpoint } from './ConnectionMode.js';
+import endpoint from './ConnectionMode.js';
 
 let Users = {
   async getLogin (userdata, password){

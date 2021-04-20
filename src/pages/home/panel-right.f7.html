@@ -41,12 +41,12 @@
                   <div class="item-input-wrap">
                     ${isLogged && $h`
                     <a class="link panel-close color-green" href="#" @click=${logout}>
-                      <i class="fas fa-sign-out-alt"></i> Salir
+                      Salir <span class="material-icons">logout</span>
                     </a>
                     `}
                     ${!isLogged && $h`
                     <a class="link panel-close color-green" href="/login/">
-                      <i class="fas fa-sign-in-alt"></i> Ingresar
+                      <span class="material-icons">login</span> Ingresar
                     </a>
                     `}
                   </div>
