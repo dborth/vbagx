@@ -1,13 +1,14 @@
 import url from './key';
 import axios from 'axios';
 
-const HTTP = axios.create({
+const http = axios.create({
   baseURL: `${url}`,
 });
 
-const token = localStorage.getItem('user-token')
+const token = localStorage.getItem('token')
+
 if (token) {
-  HTTP.defaults.headers.common['Authorization'] = token
+  http.defaults.headers.common['Authorization'] = token;
 }
 
-export default HTTP;
+export default http;

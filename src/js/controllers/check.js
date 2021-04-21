@@ -1,10 +1,10 @@
 import User from './users.js';
-
-let storage = window.localStorage;
+//import user from './../stores/user.js';
 
 let Check = {
   authorization( { to, resolve } ) {
     const router = this;
+    //if (user.isLogged.value){
     if (!User.isLogged()){
       router.navigate('/login/', { reloadCurrent: true });
     }
@@ -14,8 +14,9 @@ let Check = {
   },
   permission( { to, resolve, reject } ) {
     const router = this;
-    const userData = JSON.parse(storage.getItem("userData"));
+    const userData = JSON.parse(localStorage.getItem("userData"));
     const userRoles = userData['userPermissions'];
+    //const userRoles = localStorage.getItem("roles");
 
     let currentIndex = -1;
     for (let i = 0; i < router.routes.length; i++) {

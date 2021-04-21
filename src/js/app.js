@@ -29,9 +29,9 @@ var app = new Framework7({
   //   path: '/service-worker.js',
   // },
 
-  /*view: {
-    browserHistory: true,
-  },*/
+  // view: {
+  //   browserHistory: true,
+  // },
 
   // Input settings
   input: {

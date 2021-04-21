@@ -40,7 +40,7 @@
 import $ from 'dom7';
 import User from '../js/controllers/users.js';
 
-export default (props, { $f7, $on, $update }) => {
+export default (props, { $f7, $on, $update, $f7router }) => {
   let version = $f7.version;
 
   const checkLogin = () => {
@@ -50,7 +50,7 @@ export default (props, { $f7, $on, $update }) => {
     User.checkLogin(username, password).then(function(result){
       $f7.preloader.hide();
       if (result === true){
-        window.location.replace('/');
+        $f7router.navigate('/');
       }
       else{
         $f7.toast.show( { text: result.message });
