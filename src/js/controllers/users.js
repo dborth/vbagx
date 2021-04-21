@@ -1,11 +1,31 @@
-import { Users } from '../models/Users.js'
+import AjaxHandler from '../api/AjaxHandler.js';
+import endpoint from '../api/ConnectionMode.js';
 
 let User = {
+  async getLogin (userdata, password){
+    try{
+      let params = {
+        method : "POST",
+        url : `${endpoint}/user/login`,
+        data : {
+          UserData : userdata,
+          UserPassword : password,
+        },
+        dataType : "json",
+      }
+      var ajax = new AjaxHandler();
+      let result = await ajax.request(params);
+      return result;
+    }
+    catch(err){
+      throw err;
+    }
+  },
   async checkLogin(user, pass){
     if (user === "" || pass === ""){
       throw new Error ("Ingrese usuario/contraseña");
     }
-    let result = await Users.getLogin(user, pass);
+    let result = await this.getLogin(user, pass);
 
     if (result.data.status === false){
       throw new Error (userdata.message);
@@ -48,7 +68,6 @@ let User = {
     var expirationDate = new Date(data.expiration);
 
     if (today.getTime() > expirationDate.getTime()){
-      //this.logOff();
       return false;
     } 
     else if (today < expirationDate){

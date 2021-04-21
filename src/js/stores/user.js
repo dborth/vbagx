@@ -32,7 +32,6 @@ const user = createStore({
     logOut(){
       return new Promise((resolve, reject) => {
         dispatch('logout');
-        localStorage.removeItem('roles');
         http.defaults.headers.common['Authorization'];
         resolve();
       });

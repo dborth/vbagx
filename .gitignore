@@ -43,5 +43,5 @@ cordova/www/
 www/
 
 #Hide connection file
-/src/js/models/ConnectionMode.js
+/src/js/api/ConnectionMode.js
 /src/js/api/key.js

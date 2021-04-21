@@ -13,6 +13,9 @@ import cordovaApp from './cordova-app.js';
 // Import Routes
 import routes from './routes.js';
 
+// Import htpp (axios) instance 
+import http from './api/config.js';
+
 // Import main app component
 import App from '../app.f7.html';
 
@@ -50,6 +53,16 @@ var app = new Framework7({
         // Init cordova APIs (see cordova-app.js)
         cordovaApp.init(f7);
       }
+
+      //Intercept axios call to determine if it gets (401 Unauthorized) response
+      http.interceptors.response.use(undefined, function (err) {
+        return new Promise(function (resolve, reject) {
+          if (err.status === 401 && err.config && !err.config.__isRetryRequest) {
+            this.$store.dispatch(logout);
+          }
+          throw err;
+        });
+      });
     },
   },
 });
