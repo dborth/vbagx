@@ -18,15 +18,13 @@ const user = createStore({
           const user = response.data.user;
           const roles = response.data.roles;
           localStorage.setItem('token', token);
-          localStorage.setItem('roles', roles);
           http.defaults.headers.common['Authorization'] = token;
-          dispatch('auth_success', token, user);
+          dispatch('auth_success', token, user, roles);
           resolve(response);
         })
         .catch(err => {
           dispatch('auth_error');
           localStorage.removeItem('token');
-          localStorage.removeItem('roles');
           reject(err);
         });
       });
@@ -34,7 +32,6 @@ const user = createStore({
     logOut(){
       return new Promise((resolve, reject) => {
         dispatch('logout');
-        localStorage.removeItem('token');
         localStorage.removeItem('roles');
         http.defaults.headers.common['Authorization'];
         resolve();
@@ -46,12 +43,13 @@ const user = createStore({
       state.token = '';
     },
     auth_request(state){
-      state.status = 'loading'
+      state.status = 'loading';
     },
-    auth_success(state, token, user){
-      state.status = 'success'
-      state.token = token
-      state.user = user
+    auth_success(state, token, user, roles){
+      state.status = 'success';
+      state.token = token;
+      state.user = user;
+      state.roles = roles;
     },
     auth_error(state){
       state.status = 'error'
@@ -64,7 +62,10 @@ const user = createStore({
     },
     authStatus({ state }) {
       return state.status;
-    }
+    },
+    roles({ state }){
+      return state.roles;
+    },
   },
 })
 

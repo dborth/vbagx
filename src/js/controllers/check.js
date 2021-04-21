@@ -16,7 +16,7 @@ let Check = {
     const router = this;
     const userData = JSON.parse(localStorage.getItem("userData"));
     const userRoles = userData['userPermissions'];
-    //const userRoles = localStorage.getItem("roles");
+    //const userRoles = user.roles.value;
 
     let currentIndex = -1;
     for (let i = 0; i < router.routes.length; i++) {
