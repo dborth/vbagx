@@ -12,8 +12,6 @@ import cordovaApp from './cordova-app.js';
 
 // Import Routes
 import routes from './routes.js';
-// Import Store
-import store from './stores/index.js';
 
 // Import main app component
 import App from '../app.f7.html';
@@ -26,7 +24,6 @@ var app = new Framework7({
   component: App,          // App main component
   id: 'com.comidacab.app', // App bundle ID
   version: '2.0.0',        // App version id
-  store: store,            // App store
   routes: routes,          // App routes
   // serviceWorker: {         // Register service worker
   //   path: '/service-worker.js',

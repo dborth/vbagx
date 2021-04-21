@@ -61,12 +61,13 @@
 </div>
 </template>
 <script>
-import $ from 'dom7'; 
+import $ from 'dom7';
+import store from '../../js/stores/index.js';
 import User from '../../js/controllers/users.js';
 
-export default (props, { $f7, $on, $update, $store }) => {
+export default (props, { $f7, $on, $update }) => {
   let isLogged = false;
-  let theme = $store.getters.themeName.value;
+  let theme = store.getters.themeName.value;
 
   const onPanelOpen = () => {
     $('#light-theme').prop('checked', (theme != 'theme-dark') ? true : false );
@@ -90,7 +91,7 @@ export default (props, { $f7, $on, $update, $store }) => {
       $("#app, .panel-right").addClass("theme-dark");
     }
     theme = !$("#light-theme").prop('checked') ? 'theme-dark' : '';
-    $store.dispatch('changeTheme', theme);
+    store.dispatch('changeTheme', theme);
   };
 
   return $render;

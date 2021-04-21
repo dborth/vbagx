@@ -8,27 +8,29 @@
   </div>
 </template>
 <script>
-  export default (props, { $f7, $update, $store }) => {
-    // Login screen demo data
-    let username = '';
-    let password = '';
+import store from './js/stores/index.js';
 
-    let theme = $store.getters.themeName.value;
+export default (props, { $f7, $update }) => {
+  // Login screen demo data
+  let username = '';
+  let password = '';
 
-    const updateUsername = (e) => {
-      username = e.target.value;
-      $update();
-    }
-    const updatePassword = (e) => {
-      password = e.target.value;
-      $update();
-    }
-    const alertLoginData = () => {
-      $f7.dialog.alert('Username: ' + username + '<br/>Password: ' + password, () => {
-        $f7.loginScreen.close();
-      });
-    }
+  let theme = store.getters.themeName.value;
 
-    return $render;
+  const updateUsername = (e) => {
+    username = e.target.value;
+    $update();
   }
+  const updatePassword = (e) => {
+    password = e.target.value;
+    $update();
+  }
+  const alertLoginData = () => {
+    $f7.dialog.alert('Username: ' + username + '<br/>Password: ' + password, () => {
+      $f7.loginScreen.close();
+    });
+  }
+
+  return $render;
+}
 </script>

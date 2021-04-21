@@ -121,16 +121,17 @@
 </div>
 </template>
 <script>
-import $ from 'dom7'; 
+import $ from 'dom7';
+import store from '../../js/stores/index.js';
 import User from '../../js/controllers/users.js';
 
-export default (props, { $f7, $on, $update, $store }) => {
+export default (props, { $f7, $on, $update, }) => {
 
   let isLogged = false;
   let isSeller = false;
   let isCustomer = false;
   let isDeliverer = false;
-  let theme = $store.getters.themeName.value;
+  let theme = store.getters.themeName.value;
 
   const onPanelOpen = () => {
     if (User.isLogged()){
