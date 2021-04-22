@@ -129,7 +129,6 @@
 import $ from 'dom7';
 import store from '../../js/stores/index.js';
 import user from '../../js/stores/user.js';
-//import User from '../../js/controllers/users.js';
 
 export default (props, { $f7, $on, $update, }) => {
   let isLogged = user.getters.isLogged.value;
@@ -140,10 +139,6 @@ export default (props, { $f7, $on, $update, }) => {
   const userRoles = user.getters.roles.value;
 
   const onPanelOpen = () => {
-    //if (User.isLogged()){
-      //const userData = JSON.parse(localStorage.getItem("userData"));
-      //const userRoles = userData['userPermissions'];
-      //console.log("Roles:",userRoles.includes(4));
     if (isLogged){
       isCustomer = userRoles.includes(4); //Customer,
       isSeller = userRoles.includes(14); //Seller,

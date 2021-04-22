@@ -38,7 +38,6 @@
 </template>
 <script>
 import $ from 'dom7';
-//import User from '../js/controllers/users.js';
 import user from '../js/stores/user.js';
 
 export default (props, { $f7, $on, $update, $f7router }) => {
@@ -62,9 +61,6 @@ export default (props, { $f7, $on, $update, $f7router }) => {
       UserData : username,
       UserPassword : password,
     };
-    // var username = $('#username').val();
-    // var password = $('#password').val();
-    // User.checkLogin(username, password).then(function(result){
     user.dispatch('logIn', data).then(function(result){
       $f7.preloader.hide();
       if (result.status === 200){

@@ -1,12 +1,10 @@
 import LoginPage from '../../pages/login.f7.html';
 
-//import User from '../controllers/users.js';
 import user from '../stores/user.js';
 
 function checkAuth( { resolve } ) {
   const router = this;
   if (user.getters.isLogged.value){
-  //if (User.isLogged()){
     router.navigate('/', { reloadCurrent: true });
   }
   else {
