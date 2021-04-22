@@ -1,0 +1,33 @@
+<template>
+<div class="page" data-name="about">
+  <div class="navbar">
+    <div class="navbar-bg"></div>
+    <div class="navbar-inner sliding">
+      <div class="left">
+        <a href="/" class="link">
+          <i class="material-icons">home</i>
+          <span class="if-not-md">Home</span>
+        </a>
+      </div>
+      <div class="title">Prohibido</div>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="block-title">Contenido no autorizado</div>
+    <div class="block block-strong">
+      <p>
+        No tiene los permisos requeridos para poder visualizar el contenido solicitado.
+      </p>
+    </div>
+    <div class="block-footer">
+      <p>© Aplicaciones Digitales Cab, 2019-2021 (v${version})</p>
+    </div>
+  </div>
+</div>
+</template>
+<script>
+export default (props, { $f7, $on, $update }) => {
+  let version = $f7.version;
+  return $render;
+};
+</script>

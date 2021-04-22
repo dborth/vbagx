@@ -128,26 +128,26 @@
 <script>
 import $ from 'dom7';
 import store from '../../js/stores/index.js';
-import User from '../../js/controllers/users.js';
+import user from '../../js/stores/user.js';
+//import User from '../../js/controllers/users.js';
 
 export default (props, { $f7, $on, $update, }) => {
-
-  let isLogged = false;
+  let isLogged = user.getters.isLogged.value;
   let isSeller = false;
   let isCustomer = false;
   let isDeliverer = false;
   let theme = store.getters.themeName.value;
+  const userRoles = user.getters.roles.value;
 
   const onPanelOpen = () => {
-    if (User.isLogged()){
+    //if (User.isLogged()){
       //const userData = JSON.parse(localStorage.getItem("userData"));
       //const userRoles = userData['userPermissions'];
-      const userRoles = user.getters.roles.value;
-
-      isLogged = true,
-      isCustomer = userRoles.includes(4), //Customer,
-      isSeller = userRoles.includes(14), //Seller,
-      isDeliverer =  userRoles.includes(15), //Deliverer,
+      //console.log("Roles:",userRoles.includes(4));
+    if (isLogged){
+      isCustomer = userRoles.includes(4); //Customer,
+      isSeller = userRoles.includes(14); //Seller,
+      isDeliverer =  userRoles.includes(15); //Deliverer,
       $update();
     }
   };

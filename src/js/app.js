@@ -36,6 +36,17 @@ var app = new Framework7({
   //   browserHistory: true,
   // },
 
+  dialog: {
+    buttonOk: 'Aceptar',
+    buttonCancel: 'Cancelar',
+  },
+
+  toast: {
+    closeTimeout: 2000,
+    closeButton: true,
+    closeButtonText: "[X]"
+  },
+
   // Input settings
   input: {
     scrollIntoViewOnFocus: device.cordova && !device.electron,

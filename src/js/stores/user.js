@@ -16,12 +16,10 @@ const user = createStore({
           const token = response.data.token;
           delete response.data.token;
           const user = response.data;
-          const roles = [1, 4]; //Owner, Customer, Seller, Deliverer//response.data.roles;
-          console.log(roles);
-          console.log(user);
+          const roles = [1, 4, 14]; //Owner, Customer, Seller, Deliverer//response.data.roles;
           localStorage.setItem('token', token);
           http.defaults.headers.common['Authorization'] = token;
-          dispatch('auth_success', token, user, roles);
+          dispatch('auth_success', {token, user, roles});
           resolve(response);
         })
         .catch(err => {
@@ -47,7 +45,7 @@ const user = createStore({
     auth_request({ state }){
       state.status = 'loading';
     },
-    auth_success({ state }, token, user, roles){
+    auth_success({ state }, { token, user, roles }){
       state.status = 'success';
       state.token = token;
       state.user = user;

@@ -65,11 +65,11 @@ export default (props, { $f7, $on, $update, $f7router }) => {
     // var username = $('#username').val();
     // var password = $('#password').val();
     // User.checkLogin(username, password).then(function(result){
-    user.dispatch('logIn', data)
-    .then(function(result){
+    user.dispatch('logIn', data).then(function(result){
       $f7.preloader.hide();
       if (result.status === 200){
         $f7router.navigate('/');
+        $f7.toast.show( { text: "Ha iniciado sesión." });
       }
       else{
         $f7.toast.show( { text: result.message });

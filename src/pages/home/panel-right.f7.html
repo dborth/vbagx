@@ -17,7 +17,7 @@
                   <div class="item-title item-label">Usuario</div>
                   <div class="item-input-wrap">
                     <i class="icon f7-icons color-blue">person</i>
-                    <span id="menu-username"></span>
+                    <span id="menu-username">${displayName}</span>
                   </div>
                 </div>
               </div>
@@ -67,8 +67,9 @@ import user from '../../js/stores/user.js';
 //import User from '../../js/controllers/users.js';
 
 export default (props, { $f7, $on, $update, $f7router }) => {
-  let isLogged = user.getters.isLogged.value;
   let theme = store.getters.themeName.value;
+  let isLogged = user.getters.isLogged.value;
+  let displayName = user.getters.displayName.value['contactName'] || '';
 
   const onPanelOpen = () => {
     $('#light-theme').prop('checked', (theme != 'theme-dark') ? true : false );
@@ -78,20 +79,13 @@ export default (props, { $f7, $on, $update, $f7router }) => {
     //   isLogged = true;
     //   $update();
     // }
-    //console.log(user.getters.displayName.value);
-    console.log(user.getters.isLogged.value);
-    console.log(user.getters.authStatus.value);
-    console.log(user.getters.token.value);
-    console.log(user.getters.roles.value);
-    if (isLogged){
-
-    }
   };
 
   const logout = () => {
     //User.logOff();
     user.dispatch('logOut').then( () => {
       $f7router.navigate('/');
+      $f7.toast.show( { text: "Ha cerrado sesión." });
     });
   };
 

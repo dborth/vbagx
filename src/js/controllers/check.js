@@ -4,7 +4,7 @@ import user from './../stores/user.js';
 let Check = {
   authorization( { to, resolve } ) {
     const router = this;
-    if (user.getters.isLogged.value){
+    if (!user.getters.isLogged.value){
     //if (!User.isLogged()){
       router.navigate('/login/', { reloadCurrent: true });
     }
@@ -47,7 +47,7 @@ let Check = {
       return;
     }
     reject();
-    router.navigate('/forbidden/');
+    router.navigate('/forbidden/', { reloadCurrent: true });
   },
 };
 
