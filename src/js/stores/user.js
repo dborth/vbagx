@@ -3,7 +3,7 @@ import http from './../api/config.js';
 
 const user = createStore({
   state: {
-    status: '',
+    status: localStorage.getItem('token') ? 'success' : '',
     token: localStorage.getItem('token') || '',
     user: {},
     roles: [],
@@ -12,11 +12,13 @@ const user = createStore({
     logIn({ state, dispatch }, data){
       return new Promise((resolve, reject) => {
         dispatch('auth_request');
-        http.post('/user/login', data)
-        .then(response => {
+        http.post('/user/login', data).then(response => {
           const token = response.data.token;
-          const user = response.data.user;
-          const roles = response.data.roles;
+          delete response.data.token;
+          const user = response.data;
+          const roles = [1, 4]; //Owner, Customer, Seller, Deliverer//response.data.roles;
+          console.log(roles);
+          console.log(user);
           localStorage.setItem('token', token);
           http.defaults.headers.common['Authorization'] = token;
           dispatch('auth_success', token, user, roles);
@@ -29,9 +31,10 @@ const user = createStore({
         });
       });
     },
-    logOut(){
+    logOut({ state, dispatch }){
       return new Promise((resolve, reject) => {
         dispatch('logout');
+        localStorage.removeItem('token')
         http.defaults.headers.common['Authorization'];
         resolve();
       });
@@ -41,16 +44,16 @@ const user = createStore({
       state.status = '';
       state.token = '';
     },
-    auth_request(state){
+    auth_request({ state }){
       state.status = 'loading';
     },
-    auth_success(state, token, user, roles){
+    auth_success({ state }, token, user, roles){
       state.status = 'success';
       state.token = token;
       state.user = user;
       state.roles = roles;
     },
-    auth_error(state){
+    auth_error({ state }){
       state.status = 'error'
     },
 //End mutations
@@ -59,12 +62,18 @@ const user = createStore({
     isLogged({ state }) {
       return !!state.token;
     },
+    token({ state }) {
+      return state.token;
+    },
     authStatus({ state }) {
       return state.status;
     },
     roles({ state }){
       return state.roles;
     },
+    displayName({ state }){
+      return state.user;
+    }
   },
 })
 

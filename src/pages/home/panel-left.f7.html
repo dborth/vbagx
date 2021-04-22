@@ -27,7 +27,6 @@
                 </div>
               </div>
             </li>
-            
             <li class="accordion-item">
               <a href="#" class="item-content item-link">
                 <div class="item-inner">
@@ -43,6 +42,7 @@
                 </div>
               </div>
             </li>
+            ${isSeller && $h`
             <li class="accordion-item">
               <a href="#" class="item-content item-link">
                 <div class="item-inner">
@@ -61,6 +61,8 @@
                 </div>
               </div>
             </li>
+            `}
+            ${isDeliverer && $h`
             <li class="accordion-item">
               <a href="#" class="item-content item-link">
                 <div class="item-inner">
@@ -78,7 +80,9 @@
                 </div>
               </div>
             </li>
-            <li id="is-customer-${isCustomer}" class="accordion-item" data-some="${isCustomer}">
+            `}
+            ${isCustomer && $h`
+            <li id="is-customer" class="accordion-item" data-some="${isCustomer}">
               <a href="#" class="item-content item-link">
                 <div class="item-inner">
                   <div class="item-title">Clientes</div>
@@ -97,6 +101,7 @@
                 </div>
               </div>
             </li>
+            `}
             <li class="accordion-item">
               <a href="#" class="item-content item-link">
                 <div class="item-inner">
@@ -135,8 +140,9 @@ export default (props, { $f7, $on, $update, }) => {
 
   const onPanelOpen = () => {
     if (User.isLogged()){
-      const userData = JSON.parse(localStorage.getItem("userData"));
-      const userRoles = userData['userPermissions'];
+      //const userData = JSON.parse(localStorage.getItem("userData"));
+      //const userRoles = userData['userPermissions'];
+      const userRoles = user.getters.roles.value;
 
       isLogged = true,
       isCustomer = userRoles.includes(4), //Customer,

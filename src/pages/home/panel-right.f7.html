@@ -63,24 +63,36 @@
 <script>
 import $ from 'dom7';
 import store from '../../js/stores/index.js';
-import User from '../../js/controllers/users.js';
+import user from '../../js/stores/user.js';
+//import User from '../../js/controllers/users.js';
 
-export default (props, { $f7, $on, $update }) => {
-  let isLogged = false;
+export default (props, { $f7, $on, $update, $f7router }) => {
+  let isLogged = user.getters.isLogged.value;
   let theme = store.getters.themeName.value;
 
   const onPanelOpen = () => {
     $('#light-theme').prop('checked', (theme != 'theme-dark') ? true : false );
-    if (User.isLogged()){
-      let data = JSON.parse(localStorage.getItem("userData"));
-      $("#menu-username").text(data.contactName);
-      isLogged = true;
-      $update();
+    // if (User.isLogged()){
+    //   let data = JSON.parse(localStorage.getItem("userData"));
+    //   $("#menu-username").text(data.contactName);
+    //   isLogged = true;
+    //   $update();
+    // }
+    //console.log(user.getters.displayName.value);
+    console.log(user.getters.isLogged.value);
+    console.log(user.getters.authStatus.value);
+    console.log(user.getters.token.value);
+    console.log(user.getters.roles.value);
+    if (isLogged){
+
     }
   };
 
   const logout = () => {
-    User.logOff();
+    //User.logOff();
+    user.dispatch('logOut').then( () => {
+      $f7router.navigate('/');
+    });
   };
 
   const setTheme = () => {

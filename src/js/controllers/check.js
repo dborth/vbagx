@@ -1,11 +1,11 @@
-import User from './users.js';
-//import user from './../stores/user.js';
+//import User from './users.js';
+import user from './../stores/user.js';
 
 let Check = {
   authorization( { to, resolve } ) {
     const router = this;
-    //if (user.isLogged.value){
-    if (!User.isLogged()){
+    if (user.getters.isLogged.value){
+    //if (!User.isLogged()){
       router.navigate('/login/', { reloadCurrent: true });
     }
     else{
@@ -14,9 +14,9 @@ let Check = {
   },
   permission( { to, resolve, reject } ) {
     const router = this;
-    const userData = JSON.parse(localStorage.getItem("userData"));
-    const userRoles = userData['userPermissions'];
-    //const userRoles = user.roles.value;
+    //const userData = JSON.parse(localStorage.getItem("userData"));
+    //const userRoles = userData['userPermissions'];
+    const userRoles = user.getters.roles.value;
 
     let currentIndex = -1;
     for (let i = 0; i < router.routes.length; i++) {

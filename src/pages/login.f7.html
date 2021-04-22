@@ -10,7 +10,7 @@
               <div class="item-inner">
                 <div class="item-title item-label">Usuario</div>
                 <div class="item-input-wrap">
-                  <input id="username" type="text" name="username" placeholder="Ingresa tu usuario o email" />
+                  <input id="username" type="text" name="username" value="${username}" @input="${updateUsername}" placeholder="Ingresa tu usuario o email" autocomplete="off" />
                 </div>
               </div>
             </li>
@@ -18,7 +18,7 @@
               <div class="item-inner">
                 <div class="item-title item-label">Contraseña</div>
                 <div class="item-input-wrap">
-                  <input id="password" type="password" name="password" placeholder="Ingresa tu contraseña" autocomplete="off" @keypress="${pressEnter}" />
+                  <input id="password" type="password" name="password" alue="${password}" @input="${updatePassword}" placeholder="Ingresa tu contraseña" autocomplete="off" @keypress="${pressEnter}" />
                 </div>
               </div>
             </li>
@@ -38,18 +38,37 @@
 </template>
 <script>
 import $ from 'dom7';
-import User from '../js/controllers/users.js';
+//import User from '../js/controllers/users.js';
+import user from '../js/stores/user.js';
 
 export default (props, { $f7, $on, $update, $f7router }) => {
   let version = $f7.version;
+  let username = '';
+  let password = '';
+
+  const updateUsername = (e) => {
+    username = e.target.value;
+    $update();
+  };
+
+  const updatePassword = (e) => {
+    password = e.target.value;
+    $update();
+  }
 
   const checkLogin = () => {
     $f7.preloader.show();
-    var username = $('#username').val();
-    var password = $('#password').val();
-    User.checkLogin(username, password).then(function(result){
+    const data = {
+      UserData : username,
+      UserPassword : password,
+    };
+    // var username = $('#username').val();
+    // var password = $('#password').val();
+    // User.checkLogin(username, password).then(function(result){
+    user.dispatch('logIn', data)
+    .then(function(result){
       $f7.preloader.hide();
-      if (result === true){
+      if (result.status === 200){
         $f7router.navigate('/');
       }
       else{
