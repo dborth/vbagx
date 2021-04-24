@@ -9,10 +9,19 @@
 </template>
 <script>
 import themes from './js/stores/theme.js';
+import * as localForage from "localforage";
 
-export default (props, { $f7, $update }) => {
+export default (props, { $f7, $, $update, $onMounted }) => {
 
   let theme = themes.getters.Name.value;
+
+  $onMounted(() => {
+    localForage.getItem('theme').then( (value) => {
+      theme = value;
+      if (value != 'theme-dark'){ $("#app").removeClass("theme-dark"); }
+      themes.dispatch('changeTheme', theme);
+    });
+  });
 
   return $render;
 }

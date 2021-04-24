@@ -126,11 +126,11 @@
 </div>
 </template>
 <script>
-import $ from 'dom7';
+import * as localForage from "localforage";
 import themes from '../../js/stores/theme.js';
 import user from '../../js/stores/user.js';
 
-export default (props, { $f7, $on, $update, }) => {
+export default (props, { $f7, $, $onMounted, $update, }) => {
   let isLogged = user.getters.isLogged.value;
   let isSeller = false;
   let isCustomer = false;
@@ -139,13 +139,20 @@ export default (props, { $f7, $on, $update, }) => {
   const userRoles = user.getters.roles.value;
 
   const onPanelOpen = () => {
+  };
+
+  $onMounted(() => {
+    localForage.getItem('theme').then( (value) => {
+      if (value != 'theme-dark'){ $(".panel-left").removeClass("theme-dark"); }
+    });
+
     if (isLogged){
       isCustomer = userRoles.includes(4); //Customer,
       isSeller = userRoles.includes(14); //Seller,
       isDeliverer =  userRoles.includes(15); //Deliverer,
       $update();
     }
-  };
+  });
 
   return $render;
 }
