@@ -8,11 +8,11 @@
   </div>
 </template>
 <script>
-import store from './js/stores/index.js';
+import themes from './js/stores/theme.js';
 
 export default (props, { $f7, $update }) => {
 
-  let theme = store.getters.themeName.value;
+  let theme = themes.getters.Name.value;
 
   return $render;
 }

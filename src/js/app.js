@@ -69,7 +69,7 @@ var app = new Framework7({
       http.interceptors.response.use(undefined, function (err) {
         return new Promise(function (resolve, reject) {
           if (err.status === 401 && err.config && !err.config.__isRetryRequest) {
-            this.$store.dispatch(logout);
+            //user.dispatch('logout'); //To fix
           }
           throw err;
         });

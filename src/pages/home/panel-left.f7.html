@@ -127,7 +127,7 @@
 </template>
 <script>
 import $ from 'dom7';
-import store from '../../js/stores/index.js';
+import themes from '../../js/stores/theme.js';
 import user from '../../js/stores/user.js';
 
 export default (props, { $f7, $on, $update, }) => {
@@ -135,7 +135,7 @@ export default (props, { $f7, $on, $update, }) => {
   let isSeller = false;
   let isCustomer = false;
   let isDeliverer = false;
-  let theme = store.getters.themeName.value;
+  let theme = themes.getters.Name.value;
   const userRoles = user.getters.roles.value;
 
   const onPanelOpen = () => {

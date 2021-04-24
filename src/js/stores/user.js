@@ -15,7 +15,7 @@ const user = createStore({
         http.post('/user/login', data).then(response => {
           const token = response.data.token;
           delete response.data.token;
-          const user = response.data;
+          const user = response.data.user;
           const roles = [1, 4, 14]; //Owner, Customer, Seller, Deliverer//response.data.roles;
           localStorage.setItem('token', token);
           http.defaults.headers.common['Authorization'] = token;

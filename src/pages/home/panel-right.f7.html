@@ -62,16 +62,21 @@
 </template>
 <script>
 import $ from 'dom7';
-import store from '../../js/stores/index.js';
+import * as localForage from "localforage";
+import themes from '../../js/stores/theme.js';
 import user from '../../js/stores/user.js';
 
 export default (props, { $f7, $on, $update, $f7router }) => {
-  let theme = store.getters.themeName.value;
+  let theme = themes.getters.Name.value;
   let isLogged = user.getters.isLogged.value;
   let displayName = user.getters.displayName.value['contactName'] || '';
 
   const onPanelOpen = () => {
-    $('#light-theme').prop('checked', (theme != 'theme-dark') ? true : false );
+    localForage.getItem('theme').then((value)=>{
+      //if (value != 'theme-dark'){$('#light-theme').click()}
+      //$('#light-theme').prop('checked', (value != 'theme-dark') ? true : false );
+      //$update();
+    });
   };
 
   const logout = () => {
@@ -89,7 +94,11 @@ export default (props, { $f7, $on, $update, $f7router }) => {
       $("#app, .panel-right").addClass("theme-dark");
     }
     theme = !$("#light-theme").prop('checked') ? 'theme-dark' : '';
-    store.dispatch('changeTheme', theme);
+    localForage.setItem('theme', theme).then((val)=>{
+      // console.log("... ", theme);
+      // console.log(",,, ",val);
+      themes.dispatch('changeTheme', theme);
+    });
   };
 
   return $render;
