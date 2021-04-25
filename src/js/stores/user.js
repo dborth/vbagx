@@ -32,8 +32,8 @@ const user = createStore({
     logOut({ state, dispatch }){
       return new Promise((resolve, reject) => {
         dispatch('logout');
-        localStorage.removeItem('token')
-        http.defaults.headers.common['Authorization'];
+        localStorage.removeItem('token');
+        delete http.defaults.headers.common['Authorization'];
         resolve();
       });
     },

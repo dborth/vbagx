@@ -15,12 +15,13 @@ export default (props, { $f7, $, $update, $onMounted }) => {
 
   let theme = themes.getters.Name.value;
 
-  $onMounted(() => {
-    localForage.getItem('theme').then( (value) => {
-      theme = value;
-      if (value != 'theme-dark'){ $("#app").removeClass("theme-dark"); }
+  $onMounted(async () => {
+    const items = await localForage.length();
+    if (items > 0){
+      theme = await localForage.getItem('theme');
+      if (theme != 'theme-dark'){ $("#app").removeClass("theme-dark"); }
       themes.dispatch('changeTheme', theme);
-    });
+    }
   });
 
   return $render;

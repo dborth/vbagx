@@ -19,6 +19,9 @@ import http from './api/config.js';
 // Import main app component
 import App from '../app.f7.html';
 
+// Import user store
+import user from './stores/user.js';
+
 var device = getDevice();
 var app = new Framework7({
   name: 'Comida Cab',      // App name
@@ -69,7 +72,7 @@ var app = new Framework7({
       http.interceptors.response.use(undefined, function (err) {
         return new Promise(function (resolve, reject) {
           if (err.status === 401 && err.config && !err.config.__isRetryRequest) {
-            //user.dispatch('logout'); //To fix
+            user.dispatch('logOut').then( () => { } ); //Untested
           }
           throw err;
         });
