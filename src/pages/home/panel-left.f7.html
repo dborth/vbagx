@@ -140,8 +140,7 @@ export default (props, { $f7, $, $onMounted, $update, }) => {
   };
 
   $onMounted(async () => {
-    const selector = '.panel-left';
-    await themes.dispatch('checkTheme', { selector });
+    await themes.dispatch('checkTheme', '.panel-left');
 
     if (isLogged){
       isCustomer = userRoles.includes(4); //Customer,

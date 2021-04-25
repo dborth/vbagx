@@ -13,8 +13,7 @@ import themes from './js/stores/theme.js';
 export default (props, { $f7, $, $update, $onMounted }) => {
 
   $onMounted(async () => {
-    const selector = '#app';
-    await themes.dispatch('initTheme', { selector });
+    await themes.dispatch('initTheme', '#app');
   });
 
   return $render;

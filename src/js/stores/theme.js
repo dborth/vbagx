@@ -7,18 +7,20 @@ const theme = createStore({
     name: 'theme-dark',
   },
   actions: {
+//Mutations
     changeTheme({ state }, name) {
       state.name = name;
     },
-    async checkTheme({ state, dispatch }, { selector }){
+//End mutations
+    async checkTheme({ state, dispatch }, selector){
       let theme = await localForage.getItem('theme');
       if (theme != 'theme-dark'){ $(selector).removeClass('theme-dark'); }
       dispatch('changeTheme', theme);
     },
-    async initTheme({state, dispatch}, { selector }){
+    async initTheme({state, dispatch}, selector){
       let items = await localForage.length();
       if (items > 0){
-        await dispatch('checkTheme', { selector });
+        await dispatch('checkTheme', selector);
       }
     },
     async setTheme({ state, dispatch }, name){
