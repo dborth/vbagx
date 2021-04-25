@@ -1,6 +1,6 @@
 <template>
 <!-- Right panel with reveal effect-->
-<div class="panel panel-right panel-reveal ${theme == 'theme-dark' && $h`theme-dark`}" @panel:open=${onPanelOpen}>
+<div class="panel panel-right panel-reveal theme-dark" @panel:open=${onPanelOpen}>
   <div class="view">
     <div class="page">
       <div class="navbar">
@@ -61,7 +61,6 @@
 </div>
 </template>
 <script>
-import * as localForage from "localforage";
 import themes from '../../js/stores/theme.js';
 import user from '../../js/stores/user.js';
 
@@ -73,11 +72,10 @@ export default (props, { $f7, $, $on, $onMounted, $update, $f7router }) => {
   const onPanelOpen = () => {
   };
 
-  $onMounted(() => {
+  $onMounted(async () => {
     $('#light-theme').prop('checked', (theme != 'theme-dark') ? true : false );
-    localForage.getItem('theme').then( (value) => {
-      if (value != 'theme-dark'){ $(".panel-right").removeClass("theme-dark"); }
-    });
+    const selector = '.panel-right'
+    await themes.dispatch('checkTheme', { selector });
   });
 
   const logout = () => {
@@ -87,17 +85,15 @@ export default (props, { $f7, $, $on, $onMounted, $update, $f7router }) => {
     });
   };
 
-  const setTheme = () => {
+  const setTheme = async () => {
     if ($("#light-theme").prop('checked')){
       $("#app, .panel-right").removeClass("theme-dark");
     }
     else{
       $("#app, .panel-right").addClass("theme-dark");
     }
-    theme = !$("#light-theme").prop('checked') ? 'theme-dark' : '';
-    localForage.setItem('theme', theme).then( (val) => {
-      themes.dispatch('changeTheme', theme);
-    });
+    let name = !$("#light-theme").prop('checked') ? 'theme-dark' : '';
+    await themes.dispatch('setTheme', name);
   };
 
   return $render;

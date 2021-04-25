@@ -1,6 +1,6 @@
 <template>
 <!-- Left panel with cover effect-->
-<div class="panel panel-left panel-reveal ${theme == 'theme-dark' && $h`theme-dark`}" @panel:open=${onPanelOpen}>
+<div class="panel panel-left panel-reveal theme-dark" @panel:open=${onPanelOpen}>
   <div class="view">
     <div class="page">
       <div class="navbar">
@@ -126,7 +126,6 @@
 </div>
 </template>
 <script>
-import * as localForage from "localforage";
 import themes from '../../js/stores/theme.js';
 import user from '../../js/stores/user.js';
 
@@ -135,16 +134,14 @@ export default (props, { $f7, $, $onMounted, $update, }) => {
   let isSeller = false;
   let isCustomer = false;
   let isDeliverer = false;
-  let theme = themes.getters.Name.value;
   const userRoles = user.getters.roles.value;
 
   const onPanelOpen = () => {
   };
 
-  $onMounted(() => {
-    localForage.getItem('theme').then( (value) => {
-      if (value != 'theme-dark'){ $(".panel-left").removeClass("theme-dark"); }
-    });
+  $onMounted(async () => {
+    const selector = '.panel-left';
+    await themes.dispatch('checkTheme', { selector });
 
     if (isLogged){
       isCustomer = userRoles.includes(4); //Customer,

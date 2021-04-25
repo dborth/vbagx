@@ -1,6 +1,6 @@
 
 <template>
-  <div id="app" class="${theme == 'theme-dark' && $h`theme-dark`}">
+  <div id="app" class="theme-dark">
 
     <!-- Your main view, should have "view-main" class -->
     <div class="view view-main view-init safe-areas" data-url="/"></div>
@@ -9,19 +9,12 @@
 </template>
 <script>
 import themes from './js/stores/theme.js';
-import * as localForage from "localforage";
 
 export default (props, { $f7, $, $update, $onMounted }) => {
 
-  let theme = themes.getters.Name.value;
-
   $onMounted(async () => {
-    const items = await localForage.length();
-    if (items > 0){
-      theme = await localForage.getItem('theme');
-      if (theme != 'theme-dark'){ $("#app").removeClass("theme-dark"); }
-      themes.dispatch('changeTheme', theme);
-    }
+    const selector = '#app';
+    await themes.dispatch('initTheme', { selector });
   });
 
   return $render;
