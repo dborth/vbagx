@@ -1,6 +1,6 @@
 import { createStore } from 'framework7';
 import $ from 'dom7';
-import * as localForage from "localforage";
+import { localForage } from "./../api/config.js";
 
 const theme = createStore({
   state: {
@@ -18,8 +18,8 @@ const theme = createStore({
       dispatch('changeTheme', theme);
     },
     async initTheme({state, dispatch}, selector){
-      let items = await localForage.length();
-      if (items > 0){
+      let item = await localForage.getItem('theme');
+      if (item != null){
         await dispatch('checkTheme', selector);
       }
     },

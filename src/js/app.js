@@ -14,7 +14,7 @@ import cordovaApp from './cordova-app.js';
 import routes from './routes.js';
 
 // Import htpp (axios) instance 
-import http from './api/config.js';
+import { http } from './api/config.js';
 
 // Import main app component
 import App from '../app.f7.html';
@@ -67,6 +67,9 @@ var app = new Framework7({
         // Init cordova APIs (see cordova-app.js)
         cordovaApp.init(f7);
       }
+
+      // Retrieve data for user on app start
+      user.dispatch('checkData').then(() =>{ });
 
       //Intercept axios call to determine if it gets (401 Unauthorized) response
       http.interceptors.response.use(undefined, function (err) {
