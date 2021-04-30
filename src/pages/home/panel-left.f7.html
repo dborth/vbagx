@@ -105,15 +105,19 @@
             <li class="accordion-item">
               <a href="#" class="item-content item-link">
                 <div class="item-inner">
-                  <div class="item-title">Usuarios</div>
+                  <div class="item-title">Usuario</div>
                 </div>
               </a>
               <div class="accordion-item-content">
                 <div class="block">
                   <p>
+                    ${!isLogged && $h`
+                   <a class="link panel-close" href="/user-new/">Registrarse</a><br />
+                   <a class="link panel-close" href="/user-reset/">Restablecer Contraseña</a><br />
+                    `}
+                    ${isLogged && $h`
                     <a class="link panel-close" href="/user-edit/">Editar</a><br />
-                    <a class="link panel-close" href="/user-new/">Nuevo</a><br />
-                    <a class="link panel-close" href="/user-reset/">Restablecer Contraseña</a><br />
+                    `}
                   </p>
                 </div>
               </div>
