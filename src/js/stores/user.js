@@ -41,7 +41,7 @@ const user = createStore({
         const token = response.data.token;
         delete response.data.token;
         const user = response.data.user;
-        const roles = [1, 4, 14]; //Owner, Customer, Seller, Deliverer//response.data.roles;
+        const roles = response.data.roles; //[1, 4, 14]; //Owner, Customer, Seller, Deliverer
         http.defaults.headers.common['Authorization'] = token;
         await dispatch('setBasicData', { token, user, roles });
         return response;
