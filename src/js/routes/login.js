@@ -5,7 +5,7 @@ import user from '../stores/user.js';
 function checkAuth( { resolve } ) {
   const router = this;
   if (user.getters.isLogged.value){
-    router.navigate('/', { reloadCurrent: true });
+    router.navigate('/', { clearPreviousHistory : true });
   }
   else {
     if (router.currentRoute.name !== "login"){

@@ -75,6 +75,7 @@ var app = new Framework7({
       http.interceptors.response.use(undefined, function (err) {
         return new Promise(function (resolve, reject) {
           if (err.status === 401 && err.config && !err.config.__isRetryRequest) {
+            console.log("Auto saliendo...");
             user.dispatch('logOut').then( () => { } ); //Untested
           }
           throw err;
