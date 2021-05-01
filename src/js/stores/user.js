@@ -38,12 +38,13 @@ const user = createStore({
       dispatch('auth_request');
       try {
         const response = await http.post('/user/login', data);
-        const token = response.data.token;
+
+        http.defaults.headers.common['Authorization'] = response.data.token;
+        await dispatch('setBasicData', response.data );
+
         delete response.data.token;
-        const user = response.data.user;
-        const roles = response.data.roles; //[1, 4, 14]; //Owner, Customer, Seller, Deliverer
-        http.defaults.headers.common['Authorization'] = token;
-        await dispatch('setBasicData', { token, user, roles });
+        delete response.data.roles;
+
         return response;
       } catch (error) {
         dispatch('auth_error');
