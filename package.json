@@ -28,6 +28,7 @@
   ],
   "dependencies": {
     "axios": "^0.21.1",
+    "crypto-js": "^4.0.0",
     "dom7": "^3.0.0",
     "framework7": "^6.0.16",
     "framework7-icons": "^4.0.2",

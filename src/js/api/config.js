@@ -1,12 +1,10 @@
-import { url, dbConfig } from './key';
+import { url } from './key';
+import { localForage } from './encrypt';
 import axios from 'axios';
-import * as localForage from "localforage";
 
 const http = axios.create({
   baseURL: `${url}`,
 });
-
-localForage.config(dbConfig);
 
 async function checkToken (){
   let token = await localForage.getItem('token');

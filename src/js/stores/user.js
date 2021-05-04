@@ -34,7 +34,7 @@ const user = createStore({
         await dispatch('getBasicData');
       }
     },
-    async logIn({ state, dispatch }, data){
+    async logIn({ dispatch }, data){
       dispatch('auth_request');
       try {
         const response = await http.post('/user/login', data);
@@ -52,7 +52,7 @@ const user = createStore({
         throw new error;
       }
     },
-    async logOut({ state, dispatch }){
+    async logOut({ dispatch }){
       dispatch('logout');
       await dispatch('clearBasicData');
       delete http.defaults.headers.common['Authorization'];

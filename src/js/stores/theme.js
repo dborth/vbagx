@@ -12,18 +12,18 @@ const theme = createStore({
       state.name = name;
     },
 //End mutations
-    async checkTheme({ state, dispatch }, selector){
+    async checkTheme({ dispatch }, selector){
       let theme = await localForage.getItem('theme');
       if (theme != 'theme-dark'){ $(selector).removeClass('theme-dark'); }
       dispatch('changeTheme', theme);
     },
-    async initTheme({state, dispatch}, selector){
+    async initTheme({ dispatch }, selector){
       let item = await localForage.getItem('theme');
       if (item != null){
         await dispatch('checkTheme', selector);
       }
     },
-    async setTheme({ state, dispatch }, name){
+    async setTheme({ dispatch }, name){
       await localForage.setItem('theme', name);
       dispatch('changeTheme', name);
     },
