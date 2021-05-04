@@ -45,3 +45,4 @@ www/
 #Hide connection file
 /src/js/api/ConnectionMode.js
 /src/js/api/key.js
+/src/_to-ignore/
