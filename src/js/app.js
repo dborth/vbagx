@@ -68,9 +68,6 @@ var app = new Framework7({
         cordovaApp.init(f7);
       }
 
-      // Retrieve data for user on app start
-      user.dispatch('checkData').then(() =>{ });
-
       //Intercept axios call to determine if it gets (401 Unauthorized) response
       http.interceptors.response.use(undefined, function (err) {
         return new Promise(function (resolve, reject) {

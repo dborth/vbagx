@@ -12,8 +12,6 @@ let routes = [
     name: 'about',
     path: '/about/',
     component: AboutPage,
-    allowedRoles: [15],
-    beforeEnter: [Check.authorization, Check.permission],
   },
   ...home,
   ...login,

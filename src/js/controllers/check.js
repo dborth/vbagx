@@ -1,8 +1,9 @@
 import user from './../stores/user.js';
 
 let Check = {
-  authorization( { to, resolve } ) {
+  async authorization( { to, resolve } ) {
     const router = this;
+    await user.dispatch('checkData');
     if (!user.getters.isLogged.value){
       router.navigate('/login/', { reloadCurrent: true });
     }
