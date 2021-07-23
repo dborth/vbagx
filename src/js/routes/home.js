@@ -2,7 +2,7 @@ import HomePage from '../../pages/home.f7.html';
 import LeftPanelPage from '../../pages/home/panel-left.f7.html';
 import RightPanelPage from '../../pages/home/panel-right.f7.html';
 
-import Check from './../controllers/check';
+import Check from './../controllers/check.js';
 
 const home = [
   {

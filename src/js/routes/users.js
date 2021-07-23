@@ -2,7 +2,7 @@ import UserEditPage from '../../pages/user/edit-data.f7.html';
 import UserNewPage from '../../pages/user/new-data.f7.html';
 import UserResetPage from '../../pages/user/reset-data.f7.html';
 
-import Check from '../controllers/check';
+import Check from '../controllers/check.js';
 
 const users = [
   {
