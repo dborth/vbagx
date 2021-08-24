@@ -50,6 +50,12 @@ var app = new Framework7({
     closeButtonText: "[X]"
   },
 
+  smartSelect:{
+    openIn:"popup", 
+    searchbar:"true",
+    popupCloseLinkText:"Cerrar",
+  },
+
   // Input settings
   input: {
     scrollIntoViewOnFocus: device.cordova && !device.electron,

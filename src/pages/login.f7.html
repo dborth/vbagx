@@ -18,7 +18,7 @@
               <div class="item-inner">
                 <div class="item-title item-label">Contraseña</div>
                 <div class="item-input-wrap">
-                  <input id="password" type="password" name="password" alue="${password}" @input="${updatePassword}" placeholder="Ingresa tu contraseña" autocomplete="off" @keypress="${pressEnter}" />
+                  <input id="password" type="password" name="password" value="${password}" @input="${updatePassword}" placeholder="Ingresa tu contraseña" autocomplete="off" @keypress="${pressEnter}" />
                 </div>
               </div>
             </li>
@@ -53,16 +53,20 @@ export default (props, { $f7, $on, $update, $f7router }) => {
   const updatePassword = (e) => {
     password = e.target.value;
     $update();
-  }
+  };
 
-  const checkLogin = () => {
+  const checkLogin = async () => {
     $f7.preloader.show();
-    const data = {
-      UserData : username,
-      UserPassword : password,
-    };
-    user.dispatch('logIn', data).then(function(result){
+
+    try {
+      const data = {
+        UserData : username,
+        UserPassword : password,
+      };
+
+      const result = await user.dispatch('logIn', data);
       $f7.preloader.hide();
+
       if (result.status === 200){
         $f7router.navigate('/');
         $f7.toast.show( { text: "Ha iniciado sesión." });
@@ -70,10 +74,11 @@ export default (props, { $f7, $on, $update, $f7router }) => {
       else{
         $f7.toast.show( { text: result.message });
       }
-    }).catch(function(error){
+    }
+    catch (error) {
       $f7.preloader.hide();
       $f7.toast.show( { text: error.message });
-    });
+    }
   };
 
   const pressEnter = (e) => {

@@ -8,12 +8,14 @@
   </div>
 </template>
 <script>
-import themes from './js/stores/theme.js';
+import theme from './js/stores/theme.js';
+import user from './js/stores/user.js';
 
 export default (props, { $f7, $, $update, $onMounted }) => {
 
   $onMounted(async () => {
-    await themes.dispatch('initTheme', '#app');
+    await theme.dispatch('initTheme', '#app');
+    await user.dispatch('checkData');
   });
 
   return $render;

@@ -77,11 +77,11 @@ export default (props, { $f7, $, $on, $onMounted, $update, $f7router }) => {
     await themes.dispatch('checkTheme', '.panel-right');
   });
 
-  const logout = () => {
-    user.dispatch('logOut').then( () => {
-      $f7router.navigate('/');
-      $f7.toast.show( { text: "Ha cerrado sesión." });
-    });
+  const logout = async () => {
+    await user.dispatch('logOut');
+
+    $f7router.navigate('/');
+    $f7.toast.show( { text: "Ha cerrado sesión." });
   };
 
   const setTheme = async () => {

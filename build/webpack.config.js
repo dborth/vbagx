@@ -2,7 +2,6 @@ const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
@@ -24,6 +23,10 @@ module.exports = {
   entry: {
     app: './src/js/app.js',
   },
+  performance: {
+    hints: false,
+    maxEntrypointSize: 400000,
+  },
   output: {
     path: resolvePath(isCordova ? (isElectronWatch ? 'cordova/platforms/electron/www' : 'cordova/www') : 'www'),
     filename: 'js/[name].js',
@@ -37,16 +40,18 @@ module.exports = {
     alias: {
       '@': resolvePath('src'),
     },
-
+    fallback: { crypto: false },
   },
   devtool: env === 'production' ? 'source-map' : 'eval',
   devServer: {
     hot: true,
     open: true,
     compress: true,
-    contentBase: '/www/',
-    disableHostCheck: true,
+    //contentBase: '/www/',
+    static: '/www/',
+    allowedHosts: "all",
     historyApiFallback: true,
+    port: 8082,
   },
   optimization: {
     concatenateModules: true,
@@ -58,12 +63,10 @@ module.exports = {
         test: /\.(mjs|js|jsx)$/,
         include: [
           resolvePath('src'),
-
         ],
         use: [
           {
             loader: require.resolve('babel-loader'),
-
           },
         ]
       },
@@ -74,8 +77,6 @@ module.exports = {
           'framework7-loader',
         ],
       },
-
-
       {
         test: /\.css$/,
         use: [
@@ -133,33 +134,24 @@ module.exports = {
       },
       {
         test: /\.(png|jpe?g|gif|svg)(\?.*)?$/,
-        loader: 'url-loader',
-        options: {
-          limit: 10000,
-          name: 'images/[name].[ext]',
-
-        },
-        type: 'javascript/auto'
+        type: "asset/resource",
+        generator: {
+          filename: "images/[name][ext]",
+        }
       },
       {
         test: /\.(mp4|webm|ogg|mp3|wav|flac|aac|m4a)(\?.*)?$/,
-        loader: 'url-loader',
-        options: {
-          limit: 10000,
-          name: 'media/[name].[ext]',
-
-        },
-        type: 'javascript/auto'
+        type: "asset/resource",
+        generator: {
+          filename: "media/[name][ext]",
+        }
       },
       {
         test: /\.(woff2?|eot|ttf|otf)(\?.*)?$/,
-        loader: 'url-loader',
-        options: {
-          limit: 10000,
-          name: 'fonts/[name].[ext]',
-
-        },
-        type: 'javascript/auto'
+        type: "asset/resource",
+        generator: {
+          filename: "fonts/[name][ext]",
+        }
       },
     ],
   },
@@ -211,6 +203,5 @@ module.exports = {
         swSrc: resolvePath('src/service-worker.js'),
       })
     ] : []),
-
   ],
 };

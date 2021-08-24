@@ -4,6 +4,7 @@ import axios from 'axios';
 
 const http = axios.create({
   baseURL: `${url}`,
+  validateStatus: status => (status => 200 && status < 300) || (status => 400 && status < 500),
 });
 
 async function checkToken (){

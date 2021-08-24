@@ -18,14 +18,18 @@
     "cordova-ios": "^6.2.0",
     "cordova-plugin-keyboard": "^1.2.0",
     "cordova-plugin-splashscreen": "^6.0.0",
-    "cordova-plugin-statusbar": "^2.4.3"
+    "cordova-plugin-statusbar": "^2.4.3",
+    "cordova-sms-plugin": "^1.0.1",
+    "onesignal-cordova-plugin": "^2.11.4"
   },
   "cordova": {
     "plugins": {
       "cordova-plugin-statusbar": {},
       "cordova-plugin-keyboard": {},
       "cordova-plugin-splashscreen": {},
-      "cordova-plugin-whitelist": {}
+      "cordova-plugin-whitelist": {},
+      "cordova-sms-plugin": {},
+      "onesignal-cordova-plugin": {}
     },
     "platforms": [
       "ios",

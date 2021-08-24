@@ -7,22 +7,19 @@ const user = createStore({
     token: '',
     user: {},
     roles: [],
-    //location: {},
   },
   actions: {
-    async setBasicData({ dispatch }, { token, user, roles/*, location*/ }){
+    async setBasicData({ dispatch }, { token, user, roles }){
       await localForage.setItem('user', user);
       await localForage.setItem('token', token);
       await localForage.setItem('roles', roles);
-      //await localForage.setItem('location', location);
-      dispatch('auth_success', { token, user, roles/*, location*/ });
+      dispatch('auth_success', { token, user, roles});
     },
     async getBasicData({ dispatch }){
       const result = {
         user: await localForage.getItem('user'),
         token: await localForage.getItem('token'),
         roles: await localForage.getItem('roles'),
-        //location: await localForage.getItem('location'),
       }
       dispatch('auth_success', result);
     },
@@ -30,12 +27,20 @@ const user = createStore({
       await localForage.deleteItem('user');
       await localForage.deleteItem('token');
       await localForage.deleteItem('roles');
-      //await localForage.deleteItem('location');
     },
     async checkData({ dispatch }){
       let token = await localForage.getItem('token');
       if (token != null){
-        await dispatch('getBasicData');
+        let data = this.decodeJWT(token);
+        let today = new Date(); //Current date
+        let expirationDate = new Date(data.expiration);
+
+        if (today.getTime() < expirationDate.getTime()){
+          await dispatch('getBasicData');
+        }
+        else{
+          await dispatch('logOut');
+        }
       }
     },
     async logIn({ dispatch }, data){
@@ -48,7 +53,6 @@ const user = createStore({
 
         delete response.data.token;
         delete response.data.roles;
-        //delete response.data.location;
 
         return response;
       }
@@ -64,22 +68,29 @@ const user = createStore({
       delete http.defaults.headers.common['Authorization'];
     },
 //Mutations
+    decodeJWT (token) {
+      let base64Url = token.split('.')[1];
+      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      let jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      return JSON.parse(jsonPayload);
+    },
     logout({ state }){
       state.status = '';
       state.token = '';
       state.user = {};
       state.roles = [];
-      //state.location = {};
     },
     auth_request({ state }){
       state.status = 'loading';
     },
-    auth_success({ state }, { token, user, roles/*, location*/ }){
+    auth_success({ state }, { token, user, roles }){
       state.status = 'success';
       state.token = token;
       state.user = user;
       state.roles = roles;
-      //state.location = location;
     },
     auth_error({ state }){
       state.status = 'error'
@@ -99,9 +110,6 @@ const user = createStore({
     roles({ state }){
       return state.roles;
     },
-    // location({ state }){
-    //   return state.location
-    // },
     displayName({ state }){
       return state.user;
     }

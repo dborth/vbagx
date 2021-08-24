@@ -14,6 +14,7 @@ const theme = createStore({
 //End mutations
     async checkTheme({ dispatch }, selector){
       let theme = await localForage.getItem('theme');
+      if (theme == null) theme = 'theme-dark';
       if (theme != 'theme-dark'){ $(selector).removeClass('theme-dark'); }
       dispatch('changeTheme', theme);
     },
@@ -31,7 +32,7 @@ const theme = createStore({
   getters: {
     Name({ state }) {
       return state.name;
-    }
+    },
   },
 })
 

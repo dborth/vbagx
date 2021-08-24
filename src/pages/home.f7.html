@@ -12,9 +12,18 @@
         </div>
         <div class="title sliding">Administración de app</div>
         <div class="right">
+          <a class="link icon-only">
+            <i class="icon material-icons color-teal">notifications
+              <span class="badge color-red">5</span>
+            </i>
+          </a>
+          <a class="link icon-only">
+            <i class="icon material-icons color-orange">task
+              <span class="badge color-red">3</span>
+            </i>
+          </a>
           <a href="/panel-right/" class="link icon-only">
-            <i class="icon f7-icons if-not-md">menu</i>
-            <i class="icon material-icons if-md">more_vert</i>
+            <i class="icon material-icons">more_vert</i>
           </a>
         </div>
         <div class="title-large">
@@ -33,7 +42,7 @@
           <li>
             <a href="/about/" class="item-content item-link">
               <div class="item-inner">
-                <div class="item-title"><i class="icon f7-icons color-lime">info_circle</i> Acerca de</div>
+                <div class="item-title"><i class="icon f7-icons color-lime">info_circle</i> Acerca de ...</div>
               </div>
             </a>
           </li>
@@ -43,7 +52,10 @@
   </div>
 </template>
 <script>
-export default () => {
+export default (props, { $, $f7, $on }) => {
+  $on('pageInit', () => {
+
+  })
   return $render;
 };
 </script>

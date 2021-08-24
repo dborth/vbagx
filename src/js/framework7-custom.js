@@ -13,6 +13,7 @@ import Progressbar from 'framework7/components/progressbar';
 import Sortable from 'framework7/components/sortable';
 import Swipeout from 'framework7/components/swipeout';
 import Accordion from 'framework7/components/accordion';
+import Gauge from 'framework7/components/gauge';
 import ContactsList from 'framework7/components/contacts-list';
 import VirtualList from 'framework7/components/virtual-list';
 import ListIndex from 'framework7/components/list-index';
@@ -67,6 +68,7 @@ Framework7.use([
   Sortable,
   Swipeout,
   Accordion,
+  Gauge,
   ContactsList,
   VirtualList,
   ListIndex,
