@@ -65,9 +65,6 @@ const file = createStore({
       result = await http.post(`file/upload/requestorder/single`, item);
       if (result.status === 201){
         response = result.data;
-        //item.RequestOrderId = response;
-        //dispatch('add_request_order_to_list', item);
-        //return item;
         return response;
       }
       else{
