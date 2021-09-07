@@ -65,15 +65,17 @@ export default (props, { $f7, $on, $update, $f7router }) => {
       };
 
       const result = await user.dispatch('logIn', data);
-      $f7.preloader.hide();
 
-      if (result.status === 200){
-        $f7router.navigate('/');
-        $f7.toast.show( { text: "Ha iniciado sesión." });
+      if (result.status !== undefined && result.status !== 200){
+        $f7.toast.show( { text: result.data.messages.error } );
+        $f7.preloader.hide();
+        return;
       }
-      else{
-        $f7.toast.show( { text: result.message });
-      }
+
+      $f7.preloader.hide();
+      $f7router.navigate('/');
+      $f7.toast.show( { text: "Ha iniciado sesión." });
+
     }
     catch (error) {
       $f7.preloader.hide();

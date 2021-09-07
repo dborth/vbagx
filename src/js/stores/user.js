@@ -48,11 +48,13 @@ const user = createStore({
       try {
         const response = await http.post('/user/login', data);
 
-        http.defaults.headers.common['Authorization'] = response.data.token;
-        await dispatch('setBasicData', response.data );
+        if (response.status === 200){
+          http.defaults.headers.common['Authorization'] = response.data.token;
+          await dispatch('setBasicData', response.data );
 
-        delete response.data.token;
-        delete response.data.roles;
+          delete response.data.token;
+          delete response.data.roles;
+        }
 
         return response;
       }
