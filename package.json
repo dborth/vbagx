@@ -30,12 +30,12 @@
     "axios": "^0.21.4",
     "crypto-js": "^4.1.1",
     "dom7": "^4.0.0",
-    "framework7": "^6.3.2",
+    "framework7": "^6.3.3",
     "framework7-icons": "^5.0.3",
     "html2pdf.js": "^0.10.1",
     "localforage": "^1.10.0",
     "skeleton-elements": "^3.5.0",
-    "swiper": "^7.0.3"
+    "swiper": "^7.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.15.5",
@@ -68,7 +68,7 @@
     "url-loader": "^4.1.1",
     "webpack": "^5.52.0",
     "webpack-cli": "^4.8.0",
-    "webpack-dev-server": "^4.1.0",
+    "webpack-dev-server": "^4.1.1",
     "workbox-webpack-plugin": "^6.2.4"
   }
 }

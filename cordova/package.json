@@ -2,7 +2,7 @@
   "name": "com.comidacab.app",
   "displayName": "Comida Cab",
   "version": "1.0.0",
-  "description": "Aplicación de entrega de comida local.",
+  "description": "Aplicaciï¿½n de entrega de comida local.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
