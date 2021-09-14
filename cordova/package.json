@@ -13,9 +13,8 @@
   "author": "Juan Carlos Ruvalcaba",
   "license": "Closed source",
   "dependencies": {
-    "cordova-android": "^8.1.0",
+    "cordova-android": "^9.1.0",
     "cordova-electron": "^1.1.1",
-    "cordova-ios": "^6.2.0",
     "cordova-plugin-keyboard": "^1.2.0",
     "cordova-plugin-splashscreen": "^6.0.0",
     "cordova-plugin-statusbar": "^2.4.3",
@@ -32,7 +31,6 @@
       "onesignal-cordova-plugin": {}
     },
     "platforms": [
-      "ios",
       "android",
       "electron"
     ]

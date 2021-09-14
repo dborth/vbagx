@@ -30,24 +30,6 @@
       <preference name="StatusBarOverlaysWebView" value="false" />
       <preference name="android-minSdkVersion" value="22" />
       <preference name="SplashMaintainAspectRatio" value="true" />
-      <!--
-      <splash density="land-hdpi" src="res/screen/android/drawable-hdpi/screen.png" />
-      <splash density="land-mdpi" src="res/screen/android/drawable-mdpi/screen.png" />
-      <splash density="land-xhdpi" src="res/screen/android/drawable-xhdpi/screen.png" />
-      <splash density="land-xxhdpi" src="res/screen/android/drawable-xxhdpi/screen.png" />
-      <splash density="land-xxxhdpi" src="res/screen/android/drawable-xxxhdpi/screen.png" />
-      <splash density="port-hdpi" src="res/screen/android/drawable-hdpi/screen.png" />
-      <splash density="port-mdpi" src="res/screen/android/drawable-mdpi/screen.png" />
-      <splash density="port-xhdpi" src="res/screen/android/drawable-xhdpi/screen.png" />
-      <splash density="port-xxhdpi" src="res/screen/android/drawable-xxhdpi/screen.png" />
-      <splash density="port-xxxhdpi" src="res/screen/android/drawable-xxxhdpi/screen.png" />
-      <icon density="ldpi" src="res/icon/android/mipmap-ldpi/ic_launcher.png" />
-      <icon density="mdpi" src="res/icon/android/mipmap-mdpi/ic_launcher.png" />
-      <icon density="hdpi" src="res/icon/android/mipmap-hdpi/ic_launcher.png" />
-      <icon density="xhdpi" src="res/icon/android/mipmap-xhdpi/ic_launcher.png" />
-      <icon density="xxhdpi" src="res/icon/android/mipmap-xxhdpi/ic_launcher.png" />
-      <icon density="xxxhdpi" src="res/icon/android/mipmap-xxxhdpi/ic_launcher.png" />
-      -->
         <splash density="land-mdpi" src="res/screen/android/land/splash-land-mdpi.png" />
         <splash density="land-hdpi" src="res/screen/android/land/splash-land-hdpi.png" />
         <splash density="land-xhdpi" src="res/screen/android/land/splash-land-xhdpi.png" />
