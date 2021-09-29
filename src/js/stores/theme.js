@@ -1,5 +1,4 @@
 import { createStore } from 'framework7';
-import $ from 'dom7';
 import { localForage } from "./../api/config.js";
 
 const theme = createStore({
@@ -15,7 +14,7 @@ const theme = createStore({
     async checkTheme({ dispatch }, selector){
       let theme = await localForage.getItem('theme');
       if (theme == null) theme = 'theme-dark';
-      if (theme != 'theme-dark'){ $(selector).removeClass('theme-dark'); }
+      if (theme != 'theme-dark'){ document.querySelector(selector).classList.remove('theme-dark'); }
       dispatch('changeTheme', theme);
     },
     async initTheme({ dispatch }, selector){
