@@ -155,7 +155,7 @@ msgid "Delete Saves"
 msgstr "Eliminar partidas"
 
 msgid "Delete this save file? Deleted files can not be restored."
-msgstr "¿Eliminar este archivo guardado?"
+msgstr "¿Eliminar este archivo guardado? Esto no se puede deshacer."
 
 msgid "Directory name is too long!"
 msgstr "¡El nombre del directorio es demasiado largo!"
@@ -761,10 +761,10 @@ msgid "Main developer"
 msgstr "Desarrollador principal"
 
 msgid "Match Wii Controls"
-msgstr "Wiimote con Nunchuk"
+msgstr "Coincidir controles Wii"
 
 msgid "Monochrome Screen"
-msgstr "Pantalla monocroma"
+msgstr "Pantalla monocromática"
 
 msgid "NTSC (240p)"
 msgstr "NTSC (240p)"
@@ -794,7 +794,7 @@ msgid "Stretch to Fit"
 msgstr "Rellenar"
 
 msgid "Super Game Boy border"
-msgstr "Super Game Boy bordes"
+msgstr "Bordes Super Game Boy"
 
 msgid "This software is open source and may be copied,"
 msgstr "Este software es de código abierto y puede ser copiado,"
