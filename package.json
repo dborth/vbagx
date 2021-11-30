@@ -44,7 +44,7 @@
     "@babel/preset-react": "^7.16.0",
     "@babel/runtime": "^7.16.3",
     "babel-loader": "^8.2.3",
-    "chalk": "^4.1.2",
+    "chalk": "^5.0.0",
     "concurrently": "^6.4.0",
     "copy-webpack-plugin": "^10.0.0",
     "cpy-cli": "^3.1.1",
@@ -60,15 +60,15 @@
     "less-loader": "^10.2.0",
     "mini-css-extract-plugin": "^2.4.5",
     "ora": "^6.0.1",
-    "postcss-loader": "^6.2.0",
+    "postcss-loader": "^6.2.1",
     "postcss-preset-env": "^7.0.1",
     "rimraf": "^3.0.2",
     "style-loader": "^3.3.1",
     "terser-webpack-plugin": "^5.2.5",
     "url-loader": "^4.1.1",
-    "webpack": "^5.64.3",
+    "webpack": "^5.64.4",
     "webpack-cli": "^4.9.1",
-    "webpack-dev-server": "^4.5.0",
+    "webpack-dev-server": "^4.6.0",
     "workbox-webpack-plugin": "^6.4.1"
   }
 }
