@@ -6,6 +6,9 @@ jobs:
   build:
     name: Build VBA GX
     runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        image: ["Wii", "GameCube"]
     container: devkitpro/devkitppc:latest
  
     steps:
@@ -13,31 +16,44 @@ jobs:
       with:
         submodules: true
 
-    - name: Build
+    - name: Build Wii
+      if: ${{ matrix.image == 'Wii' }}
       run: |
-        make -j2
+        make -f Makefile.wii -j2
     
-    - name: Copy files
+    - name: Copy Wii artifact
+      if: ${{ matrix.image == 'Wii' }}
       run: | 
         mkdir -p dist/VisualBoyAdvanceGX/apps/vbagx
         mkdir -p dist/VisualBoyAdvanceGX/vbagx/roms
         mkdir dist/VisualBoyAdvanceGX/vbagx/saves
-        mkdir dist/VisualBoyAdvanceGX-GameCube/
         touch dist/VisualBoyAdvanceGX/vbagx/roms/romsdir
         touch dist/VisualBoyAdvanceGX/vbagx/saves/savesdir
         cp hbc/* dist/VisualBoyAdvanceGX/apps/vbagx/
         cp executables/vbagx-wii.dol dist/VisualBoyAdvanceGX/apps/vbagx/boot.dol
-        cp executables/vbagx-gc.dol dist/VisualBoyAdvanceGX-GameCube/
 
-    - name: Upload Wii Build Artifacts
+    - name: Upload Wii artifacts
       uses: actions/upload-artifact@v2
+      if: ${{ matrix.image == 'Wii' }}
       with: 
         name: VisualBoyAdvanceGX
         path: |
          dist/VisualBoyAdvanceGX/
+         
+    - name: Build GameCube
+      if: ${{ matrix.image == 'GameCube' }}
+      run: |
+        make -f Makefile.gc -j2
+        
+    - name: Copy GameCube artifact
+      if: ${{ matrix.image == 'GameCube' }}
+      run: | 
+        mkdir -p dist/VisualBoyAdvanceGX-GameCube
+        cp executables/vbagx-gc.dol dist/VisualBoyAdvanceGX-GameCube/
     
-    - name: Upload GameCube Build Artifacts
+    - name: Upload GameCube artifact
       uses: actions/upload-artifact@v2
+      if: ${{ matrix.image == 'GameCube' }}
       with: 
         name: VisualBoyAdvanceGX-GameCube
         path: |
