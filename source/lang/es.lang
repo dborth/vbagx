@@ -164,7 +164,7 @@ msgid "Disabled"
 msgstr "Desactivado"
 
 msgid "Don't Save"
-msgstr "No"
+msgstr "No guardar"
 
 msgid "Down"
 msgstr "Abajo"
@@ -185,7 +185,7 @@ msgid "Error"
 msgstr "Error"
 
 msgid "Error - Invalid ZIP file!"
-msgstr "Error archivo ZIP inválido!"
+msgstr "Error - ¡Archivo ZIP inválido!"
 
 msgid "Error creating file!"
 msgstr "¡Error al crear el archivo!"
@@ -395,7 +395,7 @@ msgid "Nunchuk + Wiimote"
 msgstr "Wiimote y Nunchuk"
 
 msgid "Oct"
-msgstr "Obtubre"
+msgstr "Octubre"
 
 msgid "Off"
 msgstr "Desactivado"
@@ -455,7 +455,7 @@ msgid "Press any button on the Wiimote now. Press Home to clear the existing map
 msgstr "Presione cualquier botón en el Wiimote. Presione HOME para borrar la asignación existente."
 
 msgid "Press any button on the Wiimote or Nunchuk now. Press Home to clear the existing mapping."
-msgstr "Presione cualquier botón en el Wiimote o Nunchuck. Presione HOME para borrar la asignación existente."
+msgstr "Presione cualquier botón en el Wiimote o Nunchuk. Presione HOME para borrar la asignación existente."
 
 msgid "Preview Image"
 msgstr "Imagen de Previsualización"
@@ -557,7 +557,7 @@ msgid "Screenshots Folder"
 msgstr "Carpeta de Capturas"
 
 msgid "SD Card"
-msgstr "SD"
+msgstr "Tarjeta SD"
 
 msgid "SD card not found!"
 msgstr "¡Tarjeta SD no encontrada!"
@@ -665,7 +665,7 @@ msgid "USB drive not found!"
 msgstr "¡Unidad USB no encontrada!"
 
 msgid "USB Mass Storage"
-msgstr "USB"
+msgstr "Unidad USB"
 
 msgid "Vertical"
 msgstr "Vertical"
@@ -704,10 +704,10 @@ msgid "Emulation"
 msgstr "Emulación"
 
 msgid "European RGB (240i)"
-msgstr "Europa RGB (240i)"
+msgstr "RGB Europa (240i)"
 
 msgid "European RGB (240p)"
-msgstr "Europa RGB (240p)"
+msgstr "RGB Europa (240p)"
 
 msgid "Filtered (Auto)"
 msgstr "Filtrado (Automático)"
