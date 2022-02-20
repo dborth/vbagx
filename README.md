@@ -5,7 +5,17 @@ Visual Boy Advance GX is a modified port of VBA-M.
 With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 
-## Nightly builds
+## TABLE OF CONTENTS
+ - [Nightly Builds](#nightly-builds)
+ - [Features](#features)
+ - [Update History](#update-history)
+ - [Setup & Installation](#setup--installation)
+ - [Instructions](#instructions)
+ - [Credits](#credits)
+ - [Links](#links)
+
+
+## NIGHTLY BUILDS
 
 |Download nightly builds from continuous integration: 	| [![Build Status][Build]][Actions]
 |-------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
