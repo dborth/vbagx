@@ -12,7 +12,8 @@ jobs:
     container: devkitpro/devkitppc:latest
  
     steps:
-    - uses: actions/checkout@v1
+    - name: Checkout vbagx repo
+      uses: actions/checkout@v1
       with:
         submodules: true
 
