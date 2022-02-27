@@ -20,8 +20,8 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 |Download nightly builds from continuous integration: 	| [![Build Status][Build]][Actions]
 |-------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
 
-[Actions]: https://github.com/dborth/vbagx/actions
-[Build]: https://github.com/dborth/vbagx/workflows/VBA%20GX%20Build/badge.svg
+[Actions]: https://github.com/dborth/vbagx/actions/workflows/continuous-integration-workflow.yml
+[Build]: https://github.com/dborth/vbagx/actions/workflows/continuous-integration-workflow.yml/badge.svg
 
 
 ## FEATURES
