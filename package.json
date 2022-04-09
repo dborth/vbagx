@@ -56,7 +56,6 @@
     "framework7-loader": "^3.0.2",
     "html-webpack-plugin": "^5.5.0",
     "html2canvas": "^1.4.1",
-    "is-extglob": "^2.1.1",
     "jspdf": "^2.5.1",
     "less": "^4.1.2",
     "less-loader": "^10.2.0",
