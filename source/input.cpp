@@ -880,11 +880,13 @@ static u32 DecodeJoy(unsigned short pad)
 	u32 J = StandardMovement(pad);
 
 	// Turbo feature
-	if(userInput[0].pad.substickX > 70 || 
-		userInput[0].WPAD_Stick(1,0) > 70 ||
-		userInput[0].wiidrcdata.substickX > 45)
-		J |= VBA_SPEED;
-
+	if (GCSettings.TurboModeEnabled == 1)
+	{
+		if(userInput[0].pad.substickX > 70 || 
+			userInput[0].WPAD_Stick(1,0) > 70 ||
+			userInput[0].wiidrcdata.substickX > 45)
+			J |= VBA_SPEED;
+	}
 	// Report pressed buttons (gamepads)
 	u32 pad_btns_h   = userInput[pad].pad.btns_h; // GCN
 	u32 wiidrcp_btns_h  = userInput[pad].wiidrcdata.btns_h;
