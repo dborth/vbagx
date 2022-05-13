@@ -3098,6 +3098,7 @@ static int MenuSettingsVideo()
 	sprintf(options.name[i++], "GB Mono Colorization");
 	sprintf(options.name[i++], "GB Palette");
 	sprintf(options.name[i++], "GBA Frameskip");
+	sprintf(options.name[i++], "Enable Turbo Mode");
 	options.length = i;
 
 	for(i=0; i < options.length; i++)
@@ -3208,6 +3209,11 @@ static int MenuSettingsVideo()
 			case 8:
 				GCSettings.gbaFrameskip ^= 1;
 				break;
+			case 9:
+				GCSettings.TurboModeEnabled++;
+				if (GCSettings.TurboModeEnabled > 1)
+					GCSettings.TurboModeEnabled = 0;
+				break;
 		}
 
 		if(ret >= 0 || firstRun)
@@ -3289,7 +3295,7 @@ static int MenuSettingsVideo()
 				sprintf (options.value[8], "On");
 			else
 				sprintf (options.value[8], "Off");
-
+			sprintf (options.value[10], "%s", GCSettings.TurboModeEnabled == 1 ? "On" : "Off");
 			optionBrowser.TriggerUpdate();
 		}
 
