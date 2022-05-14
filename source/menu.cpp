@@ -3295,7 +3295,7 @@ static int MenuSettingsVideo()
 				sprintf (options.value[8], "On");
 			else
 				sprintf (options.value[8], "Off");
-			sprintf (options.value[10], "%s", GCSettings.TurboModeEnabled == 1 ? "On" : "Off");
+			sprintf (options.value[9], "%s", GCSettings.TurboModeEnabled == 1 ? "On" : "Off");
 			optionBrowser.TriggerUpdate();
 		}
 
