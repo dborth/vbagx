@@ -197,6 +197,7 @@ preparePrefsData ()
 	createXMLSetting("yshift", "Vertical Video Shift", toStr(GCSettings.yshift));
 	createXMLSetting("colorize", "Colorize Mono Gameboy", toStr(GCSettings.colorize));
 	createXMLSetting("gbaFrameskip", "GBA Frameskip", toStr(GCSettings.gbaFrameskip));
+	createXMLSetting("TurboModeEnabled", "Turbo Mode Enabled", toStr(GCSettings.TurboModeEnabled));
 
 	createXMLSection("Menu", "Menu Settings");
 
@@ -512,6 +513,7 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.yshift, "yshift");
 			loadXMLSetting(&GCSettings.colorize, "colorize");
 			loadXMLSetting(&GCSettings.gbaFrameskip, "gbaFrameskip");
+			loadXMLSetting(&GCSettings.TurboModeEnabled, "TurboModeEnabled");
 
 			// Menu Settings
 
@@ -658,6 +660,7 @@ DefaultSettings ()
 	GCSettings.yshift = 0; // vertical video shift
 	GCSettings.colorize = 0; // Colorize mono gameboy games
 	GCSettings.gbaFrameskip = 1; // Turn auto-frameskip on for GBA games
+	GCSettings.TurboModeEnabled = 1; // Enabled by default
 
 	GCSettings.WiimoteOrientation = 0;
 	GCSettings.ExitAction = 0;

@@ -95,6 +95,7 @@ struct SGCSettings
 	int		Rumble;
 	int 	language;
 	int		PreviewImage;
+	int		TurboModeEnabled; // 0 - disabled, 1 - enabled
 	int		AutoloadGame;
 	
 	int		OffsetMinutesUTC; // Used for clock on MBC3 and TAMA5
