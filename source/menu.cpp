@@ -3210,9 +3210,7 @@ static int MenuSettingsVideo()
 				GCSettings.gbaFrameskip ^= 1;
 				break;
 			case 9:
-				GCSettings.TurboModeEnabled++;
-				if (GCSettings.TurboModeEnabled > 1)
-					GCSettings.TurboModeEnabled = 0;
+				GCSettings.TurboModeEnabled ^= 1;
 				break;
 		}
 
