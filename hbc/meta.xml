@@ -2,8 +2,8 @@
 <app version="1">
   <name>Visual Boy Advance GX</name>
   <coder>Tantric</coder>
-  <version>2.4.5</version>
-  <release_date>20210323</release_date>
+  <version>2.4.6</version>
+  <release_date>20220615</release_date>
   <short_description>GBA/GBC/GB Emulator</short_description>
   <long_description>A port of Visual Boy Advance - M to the Wii.</long_description>
   <ahb_access />

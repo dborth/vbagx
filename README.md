@@ -48,6 +48,13 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
+[2.4.6 - June 15, 2022]
+
+* Compiled with latest devkitPPC/libogc
+* Added "Enable Turbo Mode" toggle to the Video Settings menu (based on InfiniteBlueGX's code)
+* Updated translations
+* Improved forwarder support
+
 [2.4.5 - March 23, 2021]
 
 * Added L+R+START for back to menu for Wii Classic Controller
