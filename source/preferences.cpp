@@ -19,6 +19,7 @@
 #include "vbagx.h"
 #include "menu.h"
 #include "fileop.h"
+#include "video.h"
 #include "filebrowser.h"
 #include "input.h"
 #include "button_mapping.h"
@@ -855,6 +856,10 @@ bool LoadPrefs()
 		CreateDirectory(dirPath);
 		sprintf(dirPath, "%s%s", pathPrefix[GCSettings.LoadMethod], GCSettings.ArtworkFolder);
 		CreateDirectory(dirPath);
+	}
+
+	if(GCSettings.videomode > 0) {
+		ResetVideo_Menu();
 	}
 
 #ifdef HW_RVL
