@@ -3,7 +3,7 @@ import { localForage } from "./../api/config.js";
 
 const theme = createStore({
   state: {
-    name: 'theme-dark',
+    name: 'dark',
   },
   actions: {
 //Mutations
@@ -13,8 +13,8 @@ const theme = createStore({
 //End mutations
     async checkTheme({ dispatch }, selector){
       let theme = await localForage.getItem('theme');
-      if (theme == null) theme = 'theme-dark';
-      if (theme != 'theme-dark'){ document.querySelector(selector).classList.remove('theme-dark'); }
+      if (theme == null) theme = 'dark';
+      if (theme != 'dark'){ document.querySelector(selector).classList.remove('dark'); }
       dispatch('changeTheme', theme);
     },
     async initTheme({ dispatch }, selector){

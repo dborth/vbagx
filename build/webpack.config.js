@@ -201,6 +201,7 @@ module.exports = {
     ...(!isCordova ? [
       new WorkboxPlugin.InjectManifest({
         swSrc: resolvePath('src/service-worker.js'),
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // or however much you need. This is 6MB.
       })
     ] : []),
   ],

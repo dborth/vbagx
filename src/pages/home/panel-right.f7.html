@@ -1,6 +1,6 @@
 <template>
 <!-- Right panel with reveal effect-->
-<div class="panel panel-right panel-reveal theme-dark" @panel:open=${onPanelOpen}>
+<div class="panel panel-right panel-reveal dark" @panel:open=${onPanelOpen}>
   <div class="view">
     <div class="page">
       <div class="navbar">
@@ -73,7 +73,7 @@ export default (props, { $f7, $, $on, $onMounted, $update, $f7router }) => {
   };
 
   $onMounted(async () => {
-    $('#light-theme').prop('checked', (theme != 'theme-dark') ? true : false );
+    $('#light-theme').prop('checked', (theme != 'dark') ? true : false );
     await themes.dispatch('checkTheme', '.panel-right');
   });
 
@@ -86,12 +86,12 @@ export default (props, { $f7, $, $on, $onMounted, $update, $f7router }) => {
 
   const setTheme = async () => {
     if ($("#light-theme").prop('checked')){
-      $("#app, .panel-right").removeClass("theme-dark");
+      $("#app, .panel-right").removeClass("dark");
     }
     else{
-      $("#app, .panel-right").addClass("theme-dark");
+      $("#app, .panel-right").addClass("dark");
     }
-    let name = !$("#light-theme").prop('checked') ? 'theme-dark' : '';
+    let name = !$("#light-theme").prop('checked') ? 'dark' : '';
     await themes.dispatch('setTheme', name);
   };
 
