@@ -5,22 +5,22 @@ msgid "16:9 Correction"
 msgstr "Correção 16:9"
 
 msgid "7z decompression failed: Archive contains too many files"
-msgstr "Falha na descompressão 7z: Arquivo contém arquivos demais"
+msgstr "Falha na extração 7z: Arquivo contém arquivos demais"
 
 msgid "7z decompression failed: Failed to read file data"
-msgstr "Falha na descompressão 7z: Erro na leitura de dados do arquivo"
+msgstr "Falha na extração 7z: Erro na leitura de dados do arquivo"
 
 msgid "7z decompression failed: File is corrupt"
-msgstr "Falha na descompressão 7z: Arquivo está corrompido"
+msgstr "Falha na extração 7z: Arquivo está corrompido"
 
 msgid "7z decompression failed: File is corrupt (CRC mismatch)"
-msgstr "Falha na descompressão 7z: Arquivo está corrompido (erro de CRC)"
+msgstr "Falha na extração 7z: Arquivo está corrompido (erro de CRC)"
 
 msgid "7z decompression failed: File uses too high of compression settings (dictionary size is too large)"
-msgstr "Falha na descompressão 7z: Arquivo usa parâmetros de compressão muito altos (o tamanho de dicionário é muito grande)"
+msgstr "Falha na extração 7z: Arquivo usa parâmetros de compressão muito altos (o tamanho de dicionário é muito grande)"
 
 msgid "7z decompression failed: File uses unsupported compression settings"
-msgstr "Falha na descompressão 7z: Arquivo usa parâmetros não-suportados"
+msgstr "Falha na extração 7z: Arquivo usa parâmetros não-suportados"
 
 msgid "A (Rapid)"
 msgstr "A (Rápido)"
@@ -364,8 +364,8 @@ msgstr "Configurações de rede inválidas - Nome de compartilhamento está em b
 msgid "Invalid save file"
 msgstr "Arquivo de jogo salvo é inválido"
 
-msgid "Invalid state file"
-msgstr "Arquivo de state é inválido."
+msgid "Invalid Estado file"
+msgstr "Arquivo de Estado é inválido."
 
 msgid "Italian"
 msgstr "Italiano"
@@ -410,10 +410,10 @@ msgid "Load"
 msgstr "Carregar"
 
 msgid "Load Device"
-msgstr "Dispositivo de Carregamento"
+msgstr "Carregar do Dispositivo"
 
 msgid "Load Folder"
-msgstr "Pasta de Carregamento"
+msgstr "Pasta de Jogos"
 
 msgid "Load Game"
 msgstr "Carregar Jogo"
@@ -434,10 +434,10 @@ msgid "Main Menu"
 msgstr "Menu Principal"
 
 msgid "Match GC Controls"
-msgstr "Igualar aos Controles do GameCube"
+msgstr "Igualar Controles GC"
 
 msgid "Match Wii Controls"
-msgstr "Igualar aos Controles do Wii"
+msgstr "Igualar Controles Wii"
 
 msgid "Maximum filepath length reached!"
 msgstr "Tamanho máximo do caminho de arquivo alcançado!"
@@ -602,10 +602,10 @@ msgid "Reset this game? Any unsaved progress will be lost."
 msgstr "Quer mesmo reiniciar esse jogo? Qualquer progresso não-salvo será perdido."
 
 msgid "Reset Mappings"
-msgstr "Resetar o Mapeamento"
+msgstr "Resetar"
 
 msgid "Reset Settings"
-msgstr "Resetar as Configurações"
+msgstr "Resetar Configurações"
 
 msgid "Retry"
 msgstr "Tentar Novamente"
@@ -638,7 +638,7 @@ msgid "Save a new Preview Screenshot? Current Screenshot image will be overwritt
 msgstr "Quer salvar uma nova captura de tela? A captura atual será sobrescrita. "
 
 msgid "Save Device"
-msgstr "Dispositivo de Jogo salvo"
+msgstr "Dispositivo de Salvamento"
 
 msgid "Save failed!"
 msgstr "Falha ao salvar!"
@@ -647,13 +647,13 @@ msgid "Save file not found"
 msgstr "Arquivo de Jogo salvo não foi encontrado"
 
 msgid "Save Folder"
-msgstr "Pasta de Jogo salvo"
+msgstr "Pasta de Salvamento"
 
 msgid "Save Game"
 msgstr "Salvar o Jogo"
 
-msgid "Save RAM and State?"
-msgstr "Salvar em RAM e State? "
+msgid "Save RAM and Estado?"
+msgstr "Salvar em RAM e Estado? "
 
 msgid "Save Snapshot?"
 msgstr "Salvar Snapshot?"
@@ -661,8 +661,8 @@ msgstr "Salvar Snapshot?"
 msgid "Save SRAM and Snapshot?"
 msgstr "Salvar em SRAM e Snapshot?"
 
-msgid "Save State?"
-msgstr "Salvar State?"
+msgid "Save Estado?"
+msgstr "Salvar Estado?"
 
 msgid "Save successful"
 msgstr "Salvo com sucesso."
@@ -793,14 +793,14 @@ msgstr "Limite de sprites"
 msgid "SRAM file not found"
 msgstr "Arquivo SRAM não foi encontrado"
 
-msgid "State"
-msgstr "State"
+msgid "Estado"
+msgstr "Estado"
 
-msgid "State (Auto)"
-msgstr "State (Auto)"
+msgid "Estado (Auto)"
+msgstr "Estado (Auto)"
 
-msgid "State file not found"
-msgstr "Arquivo de State não foi encontrado"
+msgid "Estado file not found"
+msgstr "Arquivo de Estado não foi encontrado"
 
 msgid "Stretch to Fit"
 msgstr "Esticar para Encaixar"
@@ -930,3 +930,42 @@ msgstr "Zapper"
 
 msgid "Zapper Crosshair"
 msgstr "Mira da Zapper"
+
+msgid "Emulation"
+msgstr "Emulação"
+
+msgid "Super Game Boy border"
+msgstr "Bordas de Super Game Boy"
+
+msgid "From game (SGB only)"
+msgstr "Do jogo (apenas SGB)"
+
+msgid "From .png file"
+msgstr "Do arquivo .png"
+
+msgid "Off"
+msgstr "Desativado"
+
+msgid "On"
+msgstr "Ativado"
+
+msgid "Offset from UTC (hours)"
+msgstr "Compensação do UTC (horas)"
+
+msgid "GB Screen Palette"
+msgstr "Paleta de tela GB"
+
+msgid "Monochrome Screen"
+msgstr "Tela Monocromática"
+
+msgid "Green Screen"
+msgstr "Tela Verde"
+
+msgid "GBA Frameskip"
+msgstr "Pulo de Quadros GBA"
+
+msgid "Enable Turbo Mode"
+msgstr "Ativar Modo Turbo"
+
+msgid "GBA Fixed Pixel Ratio"
+msgstr "GBA Proporção de Pixel Fixa"
