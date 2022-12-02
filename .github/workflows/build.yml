@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Build VBA GX
+    name: Build
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -59,3 +59,40 @@ jobs:
         name: VisualBoyAdvanceGX-GameCube
         path: |
          dist/VisualBoyAdvanceGX-GameCube/
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/master'
+    
+    steps:
+    - uses: actions/checkout@v3
+      name: Download Artifacts
+        
+    - uses: actions/download-artifact@v3
+      with:
+        path: dist
+
+    - name: Re-zip artifacts
+      run: |
+        cd dist
+        rm -r VisualBoyAdvanceGX/vbagx/roms/*
+        rm -r VisualBoyAdvanceGX/vbagx/saves/*
+        zip -r VisualBoyAdvanceGX.zip VisualBoyAdvanceGX
+        zip -r VisualBoyAdvanceGX-GameCube.zip VisualBoyAdvanceGX-GameCube
+
+    - name: Update Git Tag
+      run: |
+        git tag -f Pre-release
+        git push -f origin Pre-release
+
+    - name: Create Release
+      uses: ncipollo/release-action@v1
+      with:
+        prerelease: true
+        allowUpdates: true
+        removeArtifacts: true
+        replacesArtifacts: false
+        tag: Pre-release
+        artifacts: "dist/*.zip"
