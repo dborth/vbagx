@@ -67,10 +67,13 @@ jobs:
     if: github.ref == 'refs/heads/master'
     
     steps:
-    - uses: actions/checkout@v3
-      name: Download Artifacts
-        
-    - uses: actions/download-artifact@v3
+    - name: Checkout vbagx repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Download Artifacts    
+      uses: actions/download-artifact@v3
       with:
         path: dist
 
