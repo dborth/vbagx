@@ -1,4 +1,4 @@
-import { url } from './key';
+import { url } from './endpoint';
 import { localForage } from './encrypt';
 import axios from 'axios';
 
