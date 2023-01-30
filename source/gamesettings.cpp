@@ -1,7 +1,7 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric 2008-2022
+ * Tantric 2008-2023
  * Carl Kenner April 2009
  *
  * gamesettings.cpp
