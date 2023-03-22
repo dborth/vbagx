@@ -24,7 +24,7 @@ int gbDis(char *, u16);
 bool gbLoadRom(const char *);
 bool gbUpdateSizes();
 void gbEmulate(int);
-void gbWriteMemory(register u16, register u8);
+void gbWriteMemory(u16, u8);
 void gbDrawLine();
 bool gbIsGameboyRom(const char *);
 void gbGetHardwareType();

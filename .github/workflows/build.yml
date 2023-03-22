@@ -20,7 +20,7 @@ jobs:
     - name: Build Wii
       if: ${{ matrix.image == 'Wii' }}
       run: |
-        make -f Makefile.wii -j2
+        make -f Makefile.wii -j1
     
     - name: Copy Wii artifacts
       if: ${{ matrix.image == 'Wii' }}
@@ -44,7 +44,7 @@ jobs:
     - name: Build GameCube
       if: ${{ matrix.image == 'GameCube' }}
       run: |
-        make -f Makefile.gc -j2
+        make -f Makefile.gc -j1
         
     - name: Copy GameCube artifact
       if: ${{ matrix.image == 'GameCube' }}

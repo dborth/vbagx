@@ -139,8 +139,8 @@ static void count(u32 opcode, int cond_res)
 //#ifdef __POWERPC__
             #define OP_SUBS \
             {\
-                register int Flags;                             \
-                register int Result;                            \
+                int Flags;                             			\
+                int Result;                            			\
                 asm volatile("subco. %0, %2, %3\n"              \
                             "mcrxr cr1\n"                       \
                             "mfcr %1\n"                         \
@@ -157,8 +157,8 @@ static void count(u32 opcode, int cond_res)
             }
             #define OP_RSBS \
             {\
-                register int Flags;                             \
-                register int Result;                            \
+                int Flags;                             			\
+                int Result;                            			\
                 asm volatile("subfco. %0, %2, %3\n"             \
                             "mcrxr cr1\n"                       \
                             "mfcr %1\n"                         \
@@ -175,8 +175,8 @@ static void count(u32 opcode, int cond_res)
             }
             #define OP_ADDS \
             {\
-                register int Flags;                             \
-                register int Result;                            \
+                int Flags;                             			\
+                int Result;                            			\
                 asm volatile("addco. %0, %2, %3\n"              \
                             "mcrxr cr1\n"                       \
                             "mfcr %1\n"                         \
@@ -193,8 +193,8 @@ static void count(u32 opcode, int cond_res)
             }
             #define OP_ADCS \
             {\
-                register int Flags;                             \
-                register int Result;                            \
+                int Flags;                             			\
+                int Result;                            			\
                 asm volatile("mtspr xer, %4\n"                  \
                              "addeo. %0, %2, %3\n"              \
                              "mcrxr cr1\n"                      \
@@ -213,8 +213,8 @@ static void count(u32 opcode, int cond_res)
             }
             #define OP_SBCS \
             {\
-                register int Flags;                             \
-                register int Result;                            \
+                int Flags;                             			\
+                int Result;                            			\
                 asm volatile("mtspr xer, %4\n"                  \
                              "subfeo. %0, %3, %2\n"             \
                              "mcrxr cr1\n"                      \
@@ -233,8 +233,8 @@ static void count(u32 opcode, int cond_res)
             }
             #define OP_RSCS \
             {\
-                register int Flags;                             \
-                register int Result;                            \
+                int Flags;                             			\
+                int Result;                            			\
                 asm volatile("mtspr xer, %4\n"                  \
                              "subfeo. %0, %2, %3\n"             \
                              "mcrxr cr1\n"                      \
@@ -253,8 +253,8 @@ static void count(u32 opcode, int cond_res)
             }
             #define OP_CMP \
             {\
-                register int Flags;                             \
-                register int Result;                            \
+                int Flags;                             			\
+                int Result;                            			\
                 asm volatile("subco. %0, %2, %3\n"              \
                             "mcrxr cr1\n"                       \
                             "mfcr %1\n"                         \
@@ -270,8 +270,8 @@ static void count(u32 opcode, int cond_res)
             }
             #define OP_CMN \
             {\
-                register int Flags;                             \
-                register int Result;                            \
+                int Flags;                             			\
+                int Result;                            			\
                 asm volatile("addco. %0, %2, %3\n"              \
                             "mcrxr cr1\n"                       \
                             "mfcr %1\n"                         \
