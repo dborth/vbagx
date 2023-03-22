@@ -704,7 +704,7 @@ void gbCompareLYToLYC()
   }
 }
 
-void  gbWriteMemory(register u16 address, register u8 value)
+void  gbWriteMemory(u16 address, u8 value)
 {
 
   if(address < 0x8000) {
@@ -1563,7 +1563,7 @@ void  gbWriteMemory(register u16 address, register u8 value)
   gbMemory[address] = value;
 }
 
-u8 gbReadOpcode(register u16 address)
+u8 gbReadOpcode(u16 address)
 {
   if(gbCheatMap[address])
     return gbCheatRead(address);
@@ -1728,7 +1728,7 @@ u8 gbReadOpcode(register u16 address)
   return gbMemoryMap[address>>12][address & 0x0fff];
 }
 
-u8 gbReadMemory(register u16 address)
+u8 gbReadMemory(u16 address)
 {
   if(gbCheatMap[address])
     return gbCheatRead(address);
@@ -4500,7 +4500,7 @@ void gbEmulate(int ticksToStop)
   clockTicks = 0;
   gbDmaTicks = 0;
 
-  register int opcode = 0;
+  int opcode = 0;
 
   int opcode1 = 0;
   int opcode2 = 0;

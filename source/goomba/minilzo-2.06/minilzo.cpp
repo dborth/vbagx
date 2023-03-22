@@ -3168,7 +3168,7 @@ do_compress ( const lzo_bytep in , lzo_uint  in_len,
                     lzo_bytep out, lzo_uintp out_len,
                     lzo_uint  ti,  lzo_voidp wrkmem)
 {
-    register const lzo_bytep ip;
+    const lzo_bytep ip;
     lzo_bytep op;
     const lzo_bytep const in_end = in + in_len;
     const lzo_bytep const ip_end = in + in_len - 20;
@@ -3241,7 +3241,7 @@ next:
 
         ii -= ti; ti = 0;
         {
-        register lzo_uint t = pd(ip,ii);
+        lzo_uint t = pd(ip,ii);
         if (t != 0)
         {
             if (t <= 3)
@@ -3276,7 +3276,7 @@ next:
                     *op++ = LZO_BYTE(t - 3);
                 else
                 {
-                    register lzo_uint tt = t - 18;
+                    lzo_uint tt = t - 18;
                     *op++ = 0;
                     while __lzo_unlikely(tt > 255)
                     {
@@ -3623,14 +3623,14 @@ DO_DECOMPRESS  ( const lzo_bytep in , lzo_uint  in_len,
                        lzo_voidp wrkmem )
 #endif
 {
-    register lzo_bytep op;
-    register const lzo_bytep ip;
-    register lzo_uint t;
+    lzo_bytep op;
+    const lzo_bytep ip;
+    lzo_uint t;
 #if defined(COPY_DICT)
     lzo_uint m_off;
     const lzo_bytep dict_end;
 #else
-    register const lzo_bytep m_pos;
+    const lzo_bytep m_pos;
 #endif
 
     const lzo_bytep const ip_end = in + in_len;
@@ -4149,14 +4149,14 @@ DO_DECOMPRESS  ( const lzo_bytep in , lzo_uint  in_len,
                        lzo_voidp wrkmem )
 #endif
 {
-    register lzo_bytep op;
-    register const lzo_bytep ip;
-    register lzo_uint t;
+    lzo_bytep op;
+    const lzo_bytep ip;
+    lzo_uint t;
 #if defined(COPY_DICT)
     lzo_uint m_off;
     const lzo_bytep dict_end;
 #else
-    register const lzo_bytep m_pos;
+    const lzo_bytep m_pos;
 #endif
 
     const lzo_bytep const ip_end = in + in_len;

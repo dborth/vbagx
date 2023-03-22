@@ -80,8 +80,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
 #ifdef __POWERPC__
   #define ADD_RD_RS_RN(N) \
             {										\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("addco. %0, %2, %3\n"	\
                             "mcrxr cr1\n"			\
                             "mfcr %1\n"				\
@@ -98,8 +98,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             }
   #define ADD_RD_RS_O3(N) \
             {										\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("addco. %0, %2, %3\n"	\
                             "mcrxr cr1\n"			\
                             "mfcr %1\n"				\
@@ -117,8 +117,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
   #define ADD_RD_RS_O3_0 ADD_RD_RS_O3
   #define ADD_RN_O8(d) \
             {\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("addco. %0, %2, %3\n"	\
                             "mcrxr cr1\n"			\
                             "mfcr %1\n"				\
@@ -135,8 +135,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             }
   #define CMN_RD_RS \
             {\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("addco. %0, %2, %3\n"	\
                             "mcrxr cr1\n"			\
                             "mfcr %1\n"				\
@@ -152,8 +152,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             }
   #define ADC_RD_RS \
             {\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("mtspr 1, %4\n"		\ /* reg 1 is xer */
                              "addeo. %0, %2, %3\n"	\
                              "mcrxr cr1\n"			\
@@ -172,8 +172,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             }
   #define SUB_RD_RS_RN(N) \
             {\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("subco. %0, %2, %3\n"	\
                             "mcrxr cr1\n"			\
                             "mfcr %1\n"				\
@@ -190,8 +190,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             }
   #define SUB_RD_RS_O3(N) \
             {\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("subco. %0, %2, %3\n"	\
                             "mcrxr cr1\n"			\
                             "mfcr %1\n"				\
@@ -209,8 +209,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
   #define SUB_RD_RS_O3_0 SUB_RD_RS_O3
   #define SUB_RN_O8(d) \
             {\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("subco. %0, %2, %3\n"	\
                             "mcrxr cr1\n"			\
                             "mfcr %1\n"				\
@@ -227,8 +227,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             }
   #define CMP_RN_O8(d) \
             {\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("subco. %0, %2, %3\n"	\
                             "mcrxr cr1\n"			\
                             "mfcr %1\n"				\
@@ -244,8 +244,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             }
   #define SBC_RD_RS \
             {\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("mtspr 1, %4\n"		\ /* reg 1 is xer */
                              "subfeo. %0, %3, %2\n"	\
                              "mcrxr cr1\n"			\
@@ -264,8 +264,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             }
   #define NEG_RD_RS \
             {\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("subfco. %0, %2, %3\n"	\
                             "mcrxr cr1\n"			\
                             "mfcr %1\n"				\
@@ -282,8 +282,8 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
             }
   #define CMP_RD_RS \
             {\
-                register int Flags;					\
-                register int Result;				\
+                int Flags;							\
+                int Result;							\
                 asm volatile("subco. %0, %2, %3\n"	\
                             "mcrxr cr1\n"			\
                             "mfcr %1\n"				\
