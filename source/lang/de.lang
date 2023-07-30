@@ -665,10 +665,10 @@ msgid "Settings - Saving & Loading"
 msgstr "Einstellungen - Speichern & Laden"
 
 msgid "SD Card"
-msgstr ""
+msgstr "SD-Karte"
 
 msgid "SD card not found!"
-msgstr "SD Card nicht gefunden!"
+msgstr "SD-Karte nicht gefunden!"
 
 msgid "Shift"
 msgstr ""
@@ -749,7 +749,7 @@ msgid "State file not found"
 msgstr "Statusdatei nicht gefunden"
 
 msgid "Stretch to Fit"
-msgstr "Strecken zum Einpassen"
+msgstr "Strecken"
 
 msgid "Superscope"
 msgstr ""
