@@ -2,7 +2,7 @@ msgid "&"
 msgstr ""
 
 msgid "16:9 Correction"
-msgstr "16:9"
+msgstr "16:9 Korrektur"
 
 msgid "7z decompression failed: Archive contains too many files"
 msgstr "7z Dekomprimierung fehlgeschlagen: Archiv enthält zu viele Dateien"
@@ -26,7 +26,7 @@ msgid "A (Rapid)"
 msgstr "A (Turbo)"
 
 msgid "Additional coding"
-msgstr "Uusätzliche Programmierung"
+msgstr "Zusätzliche Programmierung"
 
 msgid "Aim Offscreen"
 msgstr "Neben Bildsch. zielen"
@@ -665,10 +665,10 @@ msgid "Settings - Saving & Loading"
 msgstr "Einstellungen - Speichern & Laden"
 
 msgid "SD Card"
-msgstr ""
+msgstr "SD-Karte"
 
 msgid "SD card not found!"
-msgstr "SD Card nicht gefunden!"
+msgstr "SD-Karte nicht gefunden!"
 
 msgid "Shift"
 msgstr ""
@@ -749,7 +749,7 @@ msgid "State file not found"
 msgstr "Statusdatei nicht gefunden"
 
 msgid "Stretch to Fit"
-msgstr "Strecken zum Einpassen"
+msgstr "Strecken"
 
 msgid "Superscope"
 msgstr ""
@@ -851,4 +851,4 @@ msgid "Zapper"
 msgstr ""
 
 msgid "Zapper Crosshair"
-msgstr "Zapper Fadenkreuz"
+msgstr "Zapper-Fadenkreuz"
