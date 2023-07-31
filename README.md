@@ -48,6 +48,12 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
+[2.4.7 - July 31, 2023]
+
+* Compiled with latest devkitPPC/libogc
+* Switch to chosen video mode on first load if not automatic
+* Fixed a crash upon relaunching after removing a SD/USB device (InfiniteBlueGX)
+
 [2.4.6 - June 15, 2022]
 
 * Compiled with latest devkitPPC/libogc
