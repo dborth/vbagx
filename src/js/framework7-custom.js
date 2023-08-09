@@ -1,6 +1,6 @@
 
-import Framework7, { request, utils, getDevice, createStore } from 'framework7';
-import Appbar from 'framework7/components/appbar';
+import Framework7, { utils, getDevice, createStore } from 'framework7';
+//import Appbar from 'framework7/components/appbar';
 import Dialog from 'framework7/components/dialog';
 import Popup from 'framework7/components/popup';
 import LoginScreen from 'framework7/components/login-screen';
@@ -35,7 +35,7 @@ import Calendar from 'framework7/components/calendar';
 import Picker from 'framework7/components/picker';
 import InfiniteScroll from 'framework7/components/infinite-scroll';
 import PullToRefresh from 'framework7/components/pull-to-refresh';
-import Lazy from 'framework7/components/lazy';
+//import Lazy from 'framework7/components/lazy';
 import DataTable from 'framework7/components/data-table';
 import Fab from 'framework7/components/fab';
 import Searchbar from 'framework7/components/searchbar';
@@ -47,15 +47,15 @@ import Notification from 'framework7/components/notification';
 import Autocomplete from 'framework7/components/autocomplete';
 import Tooltip from 'framework7/components/tooltip';
 import Skeleton from 'framework7/components/skeleton';
-import Menu from 'framework7/components/menu';
+//import Menu from 'framework7/components/menu';
 import ColorPicker from 'framework7/components/color-picker';
 import Treeview from 'framework7/components/treeview';
 import TextEditor from 'framework7/components/text-editor';
-import Elevation from 'framework7/components/elevation';
+//import Elevation from 'framework7/components/elevation';
 import Typography from 'framework7/components/typography';
 
 Framework7.use([
-  Appbar,
+  //Appbar,
   Dialog,
   Popup,
   LoginScreen,
@@ -90,7 +90,7 @@ Framework7.use([
   Picker,
   InfiniteScroll,
   PullToRefresh,
-  Lazy,
+  //Lazy,
   DataTable,
   Fab,
   Searchbar,
@@ -102,13 +102,13 @@ Framework7.use([
   Autocomplete,
   Tooltip,
   Skeleton,
-  Menu,
+  //Menu,
   ColorPicker,
   Treeview,
   TextEditor,
-  Elevation,
+  //Elevation,
   Typography
 ]);
 
 export default Framework7;
-export { request, utils, getDevice, createStore };
+export { utils, getDevice, createStore };
