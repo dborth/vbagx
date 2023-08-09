@@ -44,5 +44,5 @@ www/
 
 #Hide connection file
 /src/js/api/endpoint.js
-/src/js/api/key.js
+/src/js/api/key*
 /src/_to-ignore/
