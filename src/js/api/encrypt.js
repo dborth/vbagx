@@ -1,4 +1,4 @@
-import { dbConfig } from './key';
+import { dbConfig } from './key-base';
 import * as localforage from "localforage";
 import CryptoJS from 'crypto-js';
 
