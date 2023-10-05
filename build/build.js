@@ -1,7 +1,7 @@
 const webpack = require('webpack');
 //const ora = require('ora');
-const rm = require('rimraf');
-const chalk = require('chalk');
+const {rimraf} = require('rimraf');
+//const chalk = require('chalk');
 const config = require('./webpack.config.js');
 
 const env = process.env.NODE_ENV || 'development';
@@ -11,8 +11,8 @@ const isCordova = target === 'cordova'
 //const spinner = ora(env === 'production' ? 'building for production...' : 'building development version...');
 //spinner.start();
 
-rm(isCordova ? './cordova/www' : './www/', (removeErr) => {
-  if (removeErr) throw removeErr;
+rimraf(isCordova ? './cordova/www' : './www/').then(() => {
+  //if (removeErr) throw removeErr;
 
   webpack(config, (err, stats) => {
     if (err) throw err;
@@ -27,10 +27,10 @@ rm(isCordova ? './cordova/www' : './www/', (removeErr) => {
     })}\n\n`);
 
     if (stats.hasErrors()) {
-      console.log(chalk.red('Build failed with errors.\n'));
+      console.log('Build failed with errors.\n');
       process.exit(1);
     }
 
-    console.log(chalk.cyan('Build complete.\n'));
+    console.log('Build complete.\n');
   });
 });

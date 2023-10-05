@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.comidacab.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="com.devmainbase.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Comida Cab</name>
     <description>
         Aplicación de entrega de comida local.
@@ -8,7 +8,6 @@
         Aplicaciones Digitales Cab
     </author>
     <content src="index.html" />
-    <plugin name="cordova-plugin-whitelist" spec="1" />
     <access origin="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
@@ -23,35 +22,31 @@
         <allow-intent href="itms:*" />
         <allow-intent href="itms-apps:*" />
     </platform>
-
     <allow-navigation href="*" />
-
     <platform name="android">
       <preference name="StatusBarOverlaysWebView" value="false" />
       <preference name="android-minSdkVersion" value="22" />
       <preference name="SplashMaintainAspectRatio" value="true" />
-        <splash density="land-mdpi" src="res/screen/android/land/splash-land-mdpi.png" />
-        <splash density="land-hdpi" src="res/screen/android/land/splash-land-hdpi.png" />
-        <splash density="land-xhdpi" src="res/screen/android/land/splash-land-xhdpi.png" />
-        <splash density="land-xxhdpi" src="res/screen/android/land/splash-land-xxhdpi.png" />
-        <splash density="land-xxxhdpi" src="res/screen/android/land/splash-land-xxxhdpi.png" />
-        <splash density="port-mdpi" src="res/screen/android/port/splash-port-mdpi.png" />
-        <splash density="port-hdpi" src="res/screen/android/port/splash-port-hdpi.png" />
-        <splash density="port-xhdpi" src="res/screen/android/port/splash-port-xhdpi.png" />
-        <splash density="port-xxhdpi" src="res/screen/android/port/splash-port-xxhdpi.png" />
-        <splash density="port-xxxhdpi" src="res/screen/android/port/splash-port-xxxhdpi.png" />
-        <icon density="ldpi" src="res/icon/android/ldpi.png" />
-        <icon density="mdpi" src="res/icon/android/mdpi.png" />
-        <icon density="hdpi" src="res/icon/android/hdpi.png" />
-        <icon density="xhdpi" src="res/icon/android/xhdpi.png" />
-        <icon density="xxhdpi" src="res/icon/android/xxhdpi.png" />
-        <icon density="xxxhdpi" src="res/icon/android/xxxhdpi.png" />
+      <splash density="land-mdpi" src="res/screen/android/land/splash-land-mdpi.png" />
+      <splash density="land-hdpi" src="res/screen/android/land/splash-land-hdpi.png" />
+      <splash density="land-xhdpi" src="res/screen/android/land/splash-land-xhdpi.png" />
+      <splash density="land-xxhdpi" src="res/screen/android/land/splash-land-xxhdpi.png" />
+      <splash density="land-xxxhdpi" src="res/screen/android/land/splash-land-xxxhdpi.png" />
+      <splash density="port-mdpi" src="res/screen/android/port/splash-port-mdpi.png" />
+      <splash density="port-hdpi" src="res/screen/android/port/splash-port-hdpi.png" />
+      <splash density="port-xhdpi" src="res/screen/android/port/splash-port-xhdpi.png" />
+      <splash density="port-xxhdpi" src="res/screen/android/port/splash-port-xxhdpi.png" />
+      <splash density="port-xxxhdpi" src="res/screen/android/port/splash-port-xxxhdpi.png" />
+      <icon density="ldpi" src="res/icon/android/ldpi.png" />
+      <icon density="mdpi" src="res/icon/android/mdpi.png" />
+      <icon density="hdpi" src="res/icon/android/hdpi.png" />
+      <icon density="xhdpi" src="res/icon/android/xhdpi.png" />
+      <icon density="xxhdpi" src="res/icon/android/xxhdpi.png" />
+      <icon density="xxxhdpi" src="res/icon/android/xxxhdpi.png" />
     </platform>
-
-
     <platform name="ios">
       <config-file parent="CFBundleAllowMixedLocalizations" platform="ios" target="*-Info.plist">
-        <true />
+          <true />
       </config-file>
       <preference name="scheme" value="app" />
       <preference name="hostname" value="localhost" />
@@ -78,8 +73,6 @@
       <icon height="167" src="res/icon/ios/icon-83.5x83.5@2x.png" width="167" />
       <icon height="1024" src="res/icon/ios/icon-512x512@2x.png" width="1024" />
     </platform>
-
-
     <platform name="electron">
       <preference name="ElectronSettingsFilePath" value="electron-settings.json" />
       <icon src="res/icon/electron/app.png" target="app" />
@@ -87,8 +80,6 @@
       <preference name="ShowSplashScreen" value="false" />
       <preference name="AutoHideSplashScreen" value="true" />
     </platform>
-
-
     <preference name="DisallowOverscroll" value="true" />
     <preference name="BackupWebStorage" value="local" />
     <preference name="AutoHideSplashScreen" value="false" />

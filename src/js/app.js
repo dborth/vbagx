@@ -24,11 +24,11 @@ import user from './stores/user.js';
 
 var device = getDevice();
 var app = new Framework7({
-  name: 'Main App',      // App name
+  name: 'Main Base App',      // App name
   theme: 'auto',           // Automatic theme detection
   el: '#app',              // App root element
   component: App,          // App main component
-  id: 'com.devmain.app', // App bundle ID
+  id: 'com.devmainbase.app', // App bundle ID
   routes: routes,          // App routes
   // serviceWorker: {         // Register service worker
   //   path: '/service-worker.js',
