@@ -27,16 +27,7 @@
       <preference name="StatusBarOverlaysWebView" value="false" />
       <preference name="android-minSdkVersion" value="22" />
       <preference name="SplashMaintainAspectRatio" value="true" />
-      <splash density="land-mdpi" src="res/screen/android/land/splash-land-mdpi.png" />
-      <splash density="land-hdpi" src="res/screen/android/land/splash-land-hdpi.png" />
-      <splash density="land-xhdpi" src="res/screen/android/land/splash-land-xhdpi.png" />
-      <splash density="land-xxhdpi" src="res/screen/android/land/splash-land-xxhdpi.png" />
-      <splash density="land-xxxhdpi" src="res/screen/android/land/splash-land-xxxhdpi.png" />
-      <splash density="port-mdpi" src="res/screen/android/port/splash-port-mdpi.png" />
-      <splash density="port-hdpi" src="res/screen/android/port/splash-port-hdpi.png" />
-      <splash density="port-xhdpi" src="res/screen/android/port/splash-port-xhdpi.png" />
-      <splash density="port-xxhdpi" src="res/screen/android/port/splash-port-xxhdpi.png" />
-      <splash density="port-xxxhdpi" src="res/screen/android/port/splash-port-xxxhdpi.png" />
+      <preference name="AndroidWindowSplashScreenAnimatedIcon" value="res/screen/android/land/splash-land-mdpi.png" />
       <icon density="ldpi" src="res/icon/android/ldpi.png" />
       <icon density="mdpi" src="res/icon/android/mdpi.png" />
       <icon density="hdpi" src="res/icon/android/hdpi.png" />
