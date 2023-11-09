@@ -800,7 +800,7 @@ static void WindowCredits(void * ptr)
 	GuiText * txt[numEntries];
 
 	txt[i] = new GuiText("Credits", 20, (GXColor){0, 0, 0, 255});
-	txt[i]->SetAlignment(ALIGN_CENTRE, ALIGN_TOP); txt[i]->SetPosition(0,y); i++; y+=24;
+	txt[i]->SetAlignment(ALIGN_CENTRE, ALIGN_TOP); txt[i]->SetPosition(0,y); i++; y+=32;
 
 	txt[i] = new GuiText("Official Site: https://github.com/dborth/vbagx", 20, (GXColor){0, 0, 0, 255});
 	txt[i]->SetAlignment(ALIGN_CENTRE, ALIGN_TOP); txt[i]->SetPosition(0,y); i++; y+=32;
