@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.devmainbase.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="com.deleenauto.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Comida Cab</name>
     <description>
-        Aplicación de entrega de comida local.
+        Aplicación de servicio de renta-prestamo de autos.
     </description>
     <author email="askot.altair@gmail.com" href="https://www.linkedin.com/in/juan-carlos-r-2a3333184">
         Aplicaciones Digitales Cab
