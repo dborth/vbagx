@@ -10,39 +10,78 @@
             <i class="icon material-icons if-md">more</i>
           </a>
         </div>
-        <div class="title sliding">Administración de app</div>
+        <div class="title sliding">
+          De LeenAuto
+        </div>
         <div class="right">
-          <a class="link icon-only">
-            <i class="icon material-icons color-teal">notifications
-              <span class="badge color-red">5</span>
-            </i>
+          <a class="link">
+            <i class="icon material-icons color-teal">car_rental</i>
+            <!-- Aanbod -->
           </a>
           <a class="link icon-only">
-            <i class="icon material-icons color-orange">task
-              <span class="badge color-red">3</span>
-            </i>
+            <i class="icon material-symbols-outlined color-orange">swap_driving_apps</i>
+            <!-- Uitlenen -->
+          </a>
+          <a class="link icon-only">
+            <i class="icon material-symbols-outlined color-blue">person_raised_hand</i>
+            <!-- Hoe het werkt -->
+          </a>
+          <a class="link icon-only">
+            <i class="icon material-symbols-outlined color-red">contact_mail</i>
+            <!-- Hoe het werkt -->
           </a>
           <a href="/panel-right/" class="link icon-only">
             <i class="icon material-icons">more_vert</i>
           </a>
         </div>
         <div class="title-large">
-          <div class="title-large-text">Administración de App</div>
+          <div class="title-large-text">De LeenAuto</div>
         </div>
       </div>
     </div>
     <!-- Scrollable page content-->
     <div class="page-content">
       <div class="block block-strong">
-        <p>Elija una opción</p>
+        <img src="./static/brand-logo.jpg" height="67" width="267"/>
+        <div class="text-align-center">
+          <p>
+            <h1>Leen een auto</h1>
+            Samen maken we de wereld duurzamer.
+          </p>  
+        </div>
       </div>
-      <div class="block-title">Navegación</div>
+      <div class="block-title">Welke auto's zijn er beschikbaar?</div>
+      <div class="list block block-outline inset color-yellow" style="background-color: #fcb900;">
+        <ul>
+          <li class="item-content item-input">
+            <div class="item-inner">
+              <div class="item-input-wrap">
+                <input type="text" placeholder="Locatie" />
+                <span class="input-clear-button"></span>
+              </div>
+            </div>
+          </li>
+          <li class="item-content item-input">
+            <div class="item-inner">
+              <div class="item-input-wrap">
+                <input type="text" placeholder="Datum" />
+                <span class="input-clear-button"></span>
+              </div>
+            </div>
+          </li>
+        </ul>
+        <div class="block">
+          <p class="grid grid-cols-1 grid-gap">
+            <a href="#" class="button button-small button-fill color-yellow">Bekijk Beschikbaarheid</a>
+          </p>
+        </div>
+      </div>
       <div class="block block-outline inset list">
         <ul>
           <li>
             <a href="/about/" class="item-content item-link">
               <div class="item-inner">
-                <div class="item-title"><i class="icon f7-icons color-lime">info_circle</i> Acerca de ...</div>
+                <div class="item-title"><i class="icon f7-icons color-lime">info_circle</i> About ...</div>
               </div>
             </a>
           </li>
@@ -59,3 +98,9 @@ export default (props, { $, $f7, $on }) => {
   return $render;
 };
 </script>
+<style>
+.cont{
+  display: flex;
+  flex-wrap: wrap;
+}
+</style>
