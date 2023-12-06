@@ -5,7 +5,7 @@
       <div class="navbar-bg"></div>
       <div class="navbar-inner">
         <div class="left">
-          <a href="/panel-left/" class="link icon-only">
+          <a class="link icon-only" href="/panel-left/">
             <i class="icon f7-icons if-not-md">menu</i>
             <i class="icon material-icons if-md">more</i>
           </a>
@@ -16,21 +16,21 @@
         <div class="right">
           <a class="link">
             <i class="icon material-icons color-teal">car_rental</i>
-            <!-- Aanbod -->
+            <span class="hidden-xs-down">Aanbod</span>
           </a>
-          <a class="link icon-only">
+          <a class="link ">
             <i class="icon material-symbols-outlined color-orange">swap_driving_apps</i>
-            <!-- Uitlenen -->
+            <span class="hidden-xs-down">Uitlenen</span>
           </a>
-          <a class="link icon-only">
+          <a class="link ">
             <i class="icon material-symbols-outlined color-blue">person_raised_hand</i>
-            <!-- Hoe het werkt -->
+            <span class="hidden-xs-down">Hoe het werkt</span>
           </a>
-          <a class="link icon-only">
+          <a class="link ">
             <i class="icon material-symbols-outlined color-red">contact_mail</i>
-            <!-- Hoe het werkt -->
+            <span class="hidden-xs-down">Contact</span>
           </a>
-          <a href="/panel-right/" class="link icon-only">
+          <a class="link icon-only" href="/panel-right/">
             <i class="icon material-icons">more_vert</i>
           </a>
         </div>
@@ -71,9 +71,35 @@
           </li>
         </ul>
         <div class="block">
-          <p class="grid grid-cols-1 grid-gap">
+          <p class="grid grid-cols-1">
             <a href="#" class="button button-small button-fill color-yellow">Bekijk Beschikbaarheid</a>
           </p>
+        </div>
+      </div>
+      <div class="block cont text-align-center">
+        <div class="card sub-item">
+          <div class="sub-header text-align-center">Goede overdracht</div>
+          <div class="card-content card-content-padding">
+            <div class="item-media">
+              <img src="./static/car-wash.svg" width="44"/>
+            </div>
+          </div>
+        </div>
+        <div class="card sub-item">
+          <div class="sub-header text-align-center">Eenvoudig lenen</div>
+          <div class="card-content card-content-padding">
+            <div class="item-media">
+              <img src="./static/like.svg" width="44"/>
+            </div>
+          </div>
+        </div>
+        <div class="card sub-item">
+          <div class="sub-header text-align-center">Groot aanbod</div>
+          <div class="card-content card-content-padding">
+            <div class="item-media">
+              <img src="./static/hand-key.svg" width="44"/>
+            </div>
+          </div>
         </div>
       </div>
       <div class="block block-outline inset list">
@@ -98,9 +124,22 @@ export default (props, { $, $f7, $on }) => {
   return $render;
 };
 </script>
+
 <style>
 .cont{
   display: flex;
   flex-wrap: wrap;
+}
+.sub-item{
+  flex-grow: 1;
+}
+.sub-header{
+  font-size: 22px;
+  font-weight: bold;
+}
+@media (max-width: 575px) {
+  .hidden-xs-down {
+    display: none !important;
+  }
 }
 </style>
