@@ -1,0 +1,32 @@
+[
+  {
+    "carOwnerId": 32,
+    "carId": 1,
+    "brand": "Volkswagen",
+    "model": "Jetta",
+    "year": 2021,
+    "location": "Zwammerdam",
+    "locationCoords":"0.00",
+    "pricePerDay":29.00,
+    "picture": "static/test/Volkwagen1.jpg",
+    "features": {
+      "fuelType": 1,
+      "fuelName": "Gasoline",
+      "fuelConsumptionByKM": 20,
+      "transmissionType": 1,
+      "transmissionTypeName": "Manual",
+      "carDoors": 3,
+      "carSeats": 4,
+      "carHasAirConditioned": 0,
+      "carHasGPS": 1,
+      "carHasSafetyBelts": 1,
+      "carSeatMaterial": "Leater",
+      "carHasSeatWarmer": 1,
+      "carHasElectricalWindows": 1
+    }
+  },
+  {},
+  {},
+  {},
+  {}
+]
