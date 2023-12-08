@@ -76,7 +76,7 @@
           </p>
         </div>
       </div>
-      <div class="block cont text-align-center">
+      <div class="block stack-content text-align-center">
         <div class="card sub-item">
           <div class="sub-header text-align-center">Goede overdracht</div>
           <div class="card-content card-content-padding">
@@ -102,6 +102,27 @@
           </div>
         </div>
       </div>
+      <div class="block-title">Leen aanbod</div>
+      <div class="block">
+        <div class="stack-content">
+        ${CarList.length > 0 && $h`
+        ${CarList.map((item) => $h`
+          <div class="card sub-item">
+            <div class="card-header">
+              ${item.manufacturerName} ${item.model} ${item.year} <br />
+            </div>
+            <div class="card-content card-content-padding">
+              <img width="284" height="160" class="" src="${item.imagePath}" />
+            </div>
+            <div class="card-footer">
+              <span><i class="icon material-symbols-outlined color-yellow">location_on</i> ${item.locationName}</span>
+              <span><i class="icon material-symbols-outlined color-yellow">euro</i> vanaf  € ${item.price} per dag</span>
+            </div>
+          </div>
+        `)}
+        `}
+        </div>
+      </div>
       <div class="block block-outline inset list">
         <ul>
           <li>
@@ -117,16 +138,23 @@
   </div>
 </template>
 <script>
-export default (props, { $, $f7, $on }) => {
-  $on('pageInit', () => {
+import axios from 'axios';
 
-  })
+export default (props, { $, $f7, $on, $update, $onMounted, $f7route, $f7router }) => {
+  let CarList = [];
+
+  $onMounted(async () => {
+    let result = await axios.get('/static/api/car-list.json');
+    CarList = result.data;
+    $update();
+  });
+
   return $render;
 };
 </script>
-
 <style>
-.cont{
+
+.stack-content{
   display: flex;
   flex-wrap: wrap;
 }

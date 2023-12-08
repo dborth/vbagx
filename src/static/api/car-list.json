@@ -1,0 +1,57 @@
+[
+  {
+    "carId":1,
+    "ownerId": 39,
+    "manufacturerId": 1,
+    "manufacturerName": "Volkswagen",
+    "model": "GTI",
+    "year": 2021,
+    "imagePath": "./static/images/volksw-gti.jpg", 
+    "price": 29.00,
+    "locationName":"Not here"
+  },
+  {
+    "carId":2,
+    "ownerId": 40,
+    "manufacturerId": 2,
+    "manufacturerName": "Mercedes",
+    "model": "MacLaren",
+    "year": 2022,
+    "imagePath": "./static/images/mercedes-mclaren.jpg",
+    "price": 59.00,
+    "locationName":"Not here either"
+  },
+  {
+    "carId":3,
+    "ownerId": 41,
+    "manufacturerId": 3,
+    "manufacturerName": "Nissan",
+    "model": "GT-R Nissmo",
+    "year": 2023,
+    "imagePath": "./static/images/nissan-gt-r-nismo.jpg",
+    "price": 69.00,
+    "locationName":"Not here either"
+  },
+  {
+    "carId":4,
+    "ownerId": 42,
+    "manufacturerId": 4,
+    "manufacturerName": "Ford",
+    "model": "Mustang Shellby",
+    "year": 2019,
+    "imagePath": "./static/images/ford-mustang-shelby-t500.jpg",
+    "price": 65.00,
+    "locationName":"Not here either"
+  },
+  {
+    "carId":5,
+    "ownerId": 43,
+    "manufacturerId": 5,
+    "manufacturerName": "Audi",
+    "model": "RS3 Daytona",
+    "year": 2018,
+    "imagePath": "./static/images/audi-rs3-daytona.jpg",
+    "price": 49.00,
+    "locationName":"Not here either"
+  }
+]
