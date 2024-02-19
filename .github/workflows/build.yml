@@ -10,10 +10,10 @@ jobs:
       matrix:
         image: ["Wii", "GameCube"]
     container: devkitpro/devkitppc:latest
- 
+
     steps:
     - name: Checkout vbagx repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -21,10 +21,10 @@ jobs:
       if: ${{ matrix.image == 'Wii' }}
       run: |
         make -f Makefile.wii -j1
-    
+
     - name: Copy Wii artifacts
       if: ${{ matrix.image == 'Wii' }}
-      run: | 
+      run: |
         mkdir -p dist/VisualBoyAdvanceGX/apps/vbagx
         mkdir -p dist/VisualBoyAdvanceGX/vbagx/roms
         mkdir dist/VisualBoyAdvanceGX/vbagx/saves
@@ -34,46 +34,46 @@ jobs:
         cp executables/vbagx-wii.dol dist/VisualBoyAdvanceGX/apps/vbagx/boot.dol
 
     - name: Upload Wii artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: ${{ matrix.image == 'Wii' }}
-      with: 
+      with:
         name: VisualBoyAdvanceGX
         path: |
-         dist/VisualBoyAdvanceGX/
-         
+          dist/VisualBoyAdvanceGX/
+
     - name: Build GameCube
       if: ${{ matrix.image == 'GameCube' }}
       run: |
         make -f Makefile.gc -j1
-        
+
     - name: Copy GameCube artifact
       if: ${{ matrix.image == 'GameCube' }}
-      run: | 
+      run: |
         mkdir -p dist/VisualBoyAdvanceGX-GameCube
         cp executables/vbagx-gc.dol dist/VisualBoyAdvanceGX-GameCube/
-    
+
     - name: Upload GameCube artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: ${{ matrix.image == 'GameCube' }}
-      with: 
+      with:
         name: VisualBoyAdvanceGX-GameCube
         path: |
-         dist/VisualBoyAdvanceGX-GameCube/
+          dist/VisualBoyAdvanceGX-GameCube/
 
   release:
     name: Release
     runs-on: ubuntu-latest
     needs: [build]
     if: github.ref == 'refs/heads/master'
-    
+
     steps:
     - name: Checkout vbagx repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: Download Artifacts    
-      uses: actions/download-artifact@v3
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
       with:
         path: dist
 
