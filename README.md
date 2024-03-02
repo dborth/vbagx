@@ -1,6 +1,6 @@
 # Visual Boy Advance GX
 https://github.com/dborth/vbagx (Under GPL License)
- 
+
 Visual Boy Advance GX is a modified port of VBA-M.
 With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
@@ -17,11 +17,18 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## NIGHTLY BUILDS
 
-|Download nightly builds from continuous integration: 	| [![Build Status][Build]][Actions]
-|-------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+### Download the latest builds from continuous integration:
+
+| Name                             | Status                            | File                                     |
+|----------------------------------|-----------------------------------|------------------------------------------|
+| Visual Boy Advance GX Wii/Wii U  | [![Build Status][Build]][Actions] | [![Emulator][Download]][vbagx-wiiu]      |
+| Visual Boy Advance GX GameCube   | [![Build Status][Build]][Actions] | [![Emulator][Download]][vbagx-gamecube]  |
 
 [Actions]: https://github.com/dborth/vbagx/actions/workflows/build.yml
 [Build]: https://github.com/dborth/vbagx/actions/workflows/build.yml/badge.svg
+[Download]: https://img.shields.io/badge/Download-blue
+[vbagx-wiiu]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX.zip
+[vbagx-gamecube]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX-GameCube.zip
 
 
 ## FEATURES
@@ -103,7 +110,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 [2.3.9 - January 25, 2019]
 
-* Added ability to load external fonts and activated Japanese/Korean 
+* Added ability to load external fonts and activated Japanese/Korean
   translations. Simply put the ko.ttf or jp.ttf in the app directory
 * Added ability to customize background music. Simply put a bg_music.ogg
   in the app directory
@@ -113,9 +120,9 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 [2.3.8 - January 4, 2019]
 
-* Restored changes lost from 2.3.0 core upgrade (GameCube virtual memory, 
-  optimizations from dancinninjac, GB color palettes, rotation/tilt for 
-  WarioWare Twisted, in-game rumble) 
+* Restored changes lost from 2.3.0 core upgrade (GameCube virtual memory,
+  optimizations from dancinninjac, GB color palettes, rotation/tilt for
+  WarioWare Twisted, in-game rumble)
 * Improved WiiFlow integration
 * Fixed controllers with no analog sticks
 * Added Wii U GamePad support (thanks Fix94!)
@@ -142,17 +149,17 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 [2.3.4 - September 15, 2016]
 
 * Added the delete save file (SRAM / Snapshot) option
-* Changed the box colors for the SRAM and Snapshots files to match the color 
+* Changed the box colors for the SRAM and Snapshots files to match the color
   scheme of the emu GUI
-* Change the "Power off Wii" exit option to completely turn off the wii, 
+* Change the "Power off Wii" exit option to completely turn off the wii,
   ignoring the WC24 settings
 * Updated settings file name in order to have it's own settings file name
-* Added an option to switch between screenshots, covers, or artwork images, 
+* Added an option to switch between screenshots, covers, or artwork images,
   with their respective named folders at the device's root. You can set which
   one to show, by going to Settings > Menu > Preview Image. The .PNG image file
   needs to have the same name as the ROM (e.g.: Mother 3.png)
-* Removed sound from GUI (thanks to Askot) 
-* Added option to switch between the Green or Monochrome GB color screen. You 
+* Removed sound from GUI (thanks to Askot)
+* Added option to switch between the Green or Monochrome GB color screen. You
   can set which one to show by going to Settings > Emulation > GB Screen Palette
 
 [2.3.3 - June 25, 2016]
@@ -274,7 +281,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 [2.1.8 - July 14, 2010]
 
-* Ability to use both USB ports (requires updated IOS 202 - WARNING: older 
+* Ability to use both USB ports (requires updated IOS 202 - WARNING: older
   versions of IOS 202 are NO LONGER supported)
 * Hide non-ROM files
 * Other minor improvements
@@ -426,10 +433,10 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 [2.0.0 - April 27, 2009]
 
-* New GX-based menu, with a completely redesigned layout. Has Wiimote IR 
+* New GX-based menu, with a completely redesigned layout. Has Wiimote IR
   support, sounds, graphics, animation effects, and more
-* Thanks to the3seashells for designing some top-notch artwork, to 
-  Peter de Man for composing the music, and a special thanks to shagkur for 
+* Thanks to the3seashells for designing some top-notch artwork, to
+  Peter de Man for composing the music, and a special thanks to shagkur for
   fixing libogc bugs that would have otherwise prevented the release
 * Onscreen keyboard for changing save/load folders and network settings
 * Menu configuration options (configurable exit button, wiimote orientation,
@@ -442,7 +449,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Keyboard shift key bug fixed
 * Built-in 14 colour palettes for some monochrome gameboy games (Magnetic
   Soccer, Malibu Beach Volleyball, Marble Madness, Metroid 2, Mortal Kombat,
-  Mortal Kombat II, Mortal Kombat 3, Mr. Do!)  
+  Mortal Kombat II, Mortal Kombat 3, Mr. Do!)
 * Rumble works in GBC games designed for rumble cartridges but shipped
   without rumble cartridges, such as Disney's Tarzan for GBC
 * Improved Mortal Kombat Wii Controls
@@ -544,7 +551,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * 128K save support added
 * Better emulation speeds. Should now be nearly full speed all the time
   for most games.
-* Turbo speed feature. Mapped to right C-stick (classic controller & 
+* Turbo speed feature. Mapped to right C-stick (classic controller &
   Gamecube controller), and A+B for wiimote
 * Controller mapping preferences bug fixed. Your preferences will reset
   automatically to correct any problems in your preferences file
@@ -565,7 +572,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Wiimote, Nunchuk, and Classic controller support
 * Button mapping for all controller types
 * Full support for SD and USB
-* Load/save preference selector. ROMs, saves, and preferences are 
+* Load/save preference selector. ROMs, saves, and preferences are
   saved/loaded according to these
 * 'Auto' settings for save/load - attempts to automatically determine
   your load/save device(s) - SD, USB
@@ -582,11 +589,11 @@ apps			Contains Homebrew Channel ready files
 				(see Homebrew Channel instructions below)
 
 vbagx			Contains the directory structure required for storing
-				roms and saves. By default, roms are loaded from 
-				"vbagx/roms/" and saves / preferences are stored in 
+				roms and saves. By default, roms are loaded from
+				"vbagx/roms/" and saves / preferences are stored in
 				"vbagx/saves/".
-		
-		
+
+
 ### Loading / Running the Emulator:
 
 #### Wii - Via Homebrew Channel:
@@ -600,23 +607,23 @@ If you haven't installed the Homebrew Channel yet, read about how to here:
 http://hbc.hackmii.com/
 
 #### Gamecube:
-You can load VBAGX via sdload and an SD card in slot A, or by streaming 
-it to your Gamecube, or by booting a bootable DVD with VBAGX on it. 
+You can load VBAGX via sdload and an SD card in slot A, or by streaming
+it to your Gamecube, or by booting a bootable DVD with VBAGX on it.
 This document doesn't cover how to do any of that.
- 
+
 
 ## INSTRUCTIONS
 
 If you have upgraded from a previous version, the emulator may start with a
-message that your preferences have been reset. You will need to set your 
+message that your preferences have been reset. You will need to set your
 preferences how you want them.
 
 Otherwise the emulator will start at the main menu, which is a list of game
 ROMs. There is also a settings button to choose how and where to load or
 save files, and to change menu settings.
 
-Navigate the menu with the D-Pad, or the Wiimote pointer, and select options 
-with the A button. Press the B button to swap between controlling a list box 
+Navigate the menu with the D-Pad, or the Wiimote pointer, and select options
+with the A button. Press the B button to swap between controlling a list box
 and controlling the buttons. Pressing the Home button will exit from the
 main menu. You can choose what exiting will do by using the settings menu.
 
@@ -643,7 +650,7 @@ From the game menu you can return to the game by pressing Home again, or by
 clicking on the "Close" button in the top right. Or to quit that game and
 choose a different game, click on the "Main Menu" button.
 
-If you don't want to load ROMs from the SD card, you can go to the 
+If you don't want to load ROMs from the SD card, you can go to the
 settings menu and choose where to load from. You can load from SD cards,
 USB memory sticks/hard drives, DVD (if you installed DVDX), gamecube memory
 cards, or from shared folders over the network (this is called SMB).
@@ -655,15 +662,15 @@ files.
 Patches can be used to colourise a monochrome gameboy game, or to translate
 a game into your language, or to stop the game from needing special hardware.
 Search the internet for patches. Many games have been translated by fans.
-They can be in IPS or UPS format. You don't need to patch anything yourself. 
-Just put the IPS or UPS file in the vbagx/roms folder along with the rom 
+They can be in IPS or UPS format. You don't need to patch anything yourself.
+Just put the IPS or UPS file in the vbagx/roms folder along with the rom
 itself. The patch must have the same name as the rom. Patches can not be put
-inside the ZIP file. If a rom is zipped, you might need to check inside the 
+inside the ZIP file. If a rom is zipped, you might need to check inside the
 zip for the actual rom filename.
 
 Colourised games still have some distortion in this version, but it is
 improved from the previous version, and better than VBA-M. Some unpatched
-monochrome gameboy games have built-in palettes in this emulator and will 
+monochrome gameboy games have built-in palettes in this emulator and will
 appear in colour.
 
 You must not use patched versions of Boktai roms! (Except for the translation
@@ -710,7 +717,7 @@ Nunchuk means Nunchuk + Wii Remote. Gamecube controllers can
 be used at the same time as Wii Remotes and all control the same player.
 When configuring controls, press HOME to cancel.
 
-But the controls you choose will be overridden for certain games if you 
+But the controls you choose will be overridden for certain games if you
 choose "Match Wii Game" (or "Match Gamecube Game" on a Gamecube) and you have
 the appropriate expansion plugged in. If the game does not have special Wii
 controls, then the controls you chose will be used.
@@ -720,7 +727,7 @@ only work in Gameboy Advance games.
 
 In addition to the controls you can configure, these other controls apply:
 
-HOME, Escape: returns you to the emulator's game menu. Then press B to go 
+HOME, Escape: returns you to the emulator's game menu. Then press B to go
 to the main menu and B again to return to the game.
 A+B, Spacebar, or right analog stick: fast forward
 Right analog stick: zoom (if enabled)
@@ -767,12 +774,12 @@ the resolution of the border PNG image.
 Special Wii controls exist for the following games:
 
 These Zelda games can be played with Twilight Princess controls:
-The Legend Of Zelda, Zelda 2, A Link To The Past, Link's Awakening (DX), 
+The Legend Of Zelda, Zelda 2, A Link To The Past, Link's Awakening (DX),
 Oracle of Ages, Oracle of Seasons, Minish Cap
 
 These Mario games can be played with Mario Galaxy controls:
-Super Mario Bros., Super Mario Bros. DX, Super Mario 2, Super Mario (2) 
-Advance, Super Mario 3, Super Mario World, Yoshi's Island, 
+Super Mario Bros., Super Mario Bros. DX, Super Mario 2, Super Mario (2)
+Advance, Super Mario 3, Super Mario World, Yoshi's Island,
 Yoshi's Universal Gravitation (Topsy Turvy)
 
 Mario Kart can be (sort of) played with Mario Kart wii controls, but it
@@ -782,11 +789,11 @@ These Metroid games can be played with Metroid Prime 3 controls:
 Metroid Zero Mission, Metroid 1, Metroid 2, Metroid Fusion
 
 These Mortal Kombat games can be played with Mortal Kombat Armageddon controls:
-Mortal Kombat, Mortal Kombat II, Mortal Kombat 3, Mortal Kombat 4, Mortal 
-Kombat Advance, Mortal Kombat Deadly Alliance, Mortal Kombat Tournament 
+Mortal Kombat, Mortal Kombat II, Mortal Kombat 3, Mortal Kombat 4, Mortal
+Kombat Advance, Mortal Kombat Deadly Alliance, Mortal Kombat Tournament
 Edition
 
-These Lego games can be played with Lego Star Wars the Complete Saga 
+These Lego games can be played with Lego Star Wars the Complete Saga
 controls:
 Lego Star Wars The Video Game, Lego Star Wars The Original Trilogy
 
@@ -794,9 +801,9 @@ These Teenage Mutant Ninja Turtles games can be played with TMNT Wii controls:
 TMNT, Teenage Mutant Ninja Turtles, Fall of the Foot Clan, Back from the Sewers,
 Radical Rescue
 
-These Harry Potter games can be played with Harry Potter and the Order of 
+These Harry Potter games can be played with Harry Potter and the Order of
 the Phoenix Wii controls:
-Harry Potter 1, Harry Potter 1 GBC, Harry Potter 2, Harry Potter 2 GBC, 
+Harry Potter 1, Harry Potter 1 GBC, Harry Potter 2, Harry Potter 2 GBC,
 Harry Potter 3, Harry Potter 4, Harry Potter 5
 
 These Medal Of Honour games can be played with Medal Of Honour Wii controls:
@@ -811,7 +818,7 @@ can be played with controls designed for them.
 
 Turn "Match Wii Controls" ON to use these controls.
 
-All Zelda games use the same controls as Twilight Princess on the Wii or 
+All Zelda games use the same controls as Twilight Princess on the Wii or
 Gamecube. You can also connect a Classic Controller to use similar controls
 to the Ocarina Of Time for the Virtual Console, but with the R trigger
 acting as the B button and an inventory like Twilight Princess. With nothing
@@ -825,13 +832,13 @@ manually from the items menu, but you can swing it like normal.
 
 Shake your Nunchuk to do a spin attack.
 
-Use the Z Button to Z-Target and to draw and use your shield. While 
-Z-Targetting you will sidestep in some games. If you have a Gust Jar 
+Use the Z Button to Z-Target and to draw and use your shield. While
+Z-Targetting you will sidestep in some games. If you have a Gust Jar
 equipped instead of a shield, it will be used for Z-Targetting.
 
-Use the A Button to perform an action, such as rolling, talking to people, 
-reading signs, picking things up, throwing things, shrinking or growing, 
-pulling things, etc. It will also put away your sword or shield. In Zelda 2, 
+Use the A Button to perform an action, such as rolling, talking to people,
+reading signs, picking things up, throwing things, shrinking or growing,
+pulling things, etc. It will also put away your sword or shield. In Zelda 2,
 it will jump.
 
 Use the C Button to fast forward. It was originally the camera button in
@@ -856,7 +863,7 @@ The + Button goes to the Quest Status screen
 
 On the Items screen, choose an item and then press either the B Button or the
 D-Pad button to move it to that slot. The change may not be visible until you
-go to another screen and back. In Link's Awakening you can toggle Bomb 
+go to another screen and back. In Link's Awakening you can toggle Bomb
 Arrows by choosing the bombs and pressing Z. It will rumble for a short time
 when bomb arrows are deactivated, and for a long time when bomb arrows are
 activated. You still need to equip the bow to use bomb arrows. In Minish Cap
@@ -869,19 +876,19 @@ attack. Press A to put the sword away again. The 2 handed sword can't be
 drawn this way, and must be selected manually from the items screen, but can
 be swung with this (or any other) button.
 
-Use the L Trigger to L-Target and to draw and use your shield. While 
-L-Targetting you will sidestep in some games. If you have a Gust Jar 
+Use the L Trigger to L-Target and to draw and use your shield. While
+L-Targetting you will sidestep in some games. If you have a Gust Jar
 equipped instead of a shield, it will be used for L-Targetting.
 
-Use the A Button to perform an action, such as rolling, talking to people, 
-reading signs, picking things up, throwing things, shrinking or growing, 
+Use the A Button to perform an action, such as rolling, talking to people,
+reading signs, picking things up, throwing things, shrinking or growing,
 etc. It will also put away your sword or shield. In Zelda 2, it will jump.
 
 Use the R Trigger to pull on blocks or walls, or to lift things. You must
 have a bracelet or gloves to lift some objects. The bracelet or gloves will
 be equipped automatically. This feature is unique to the Gamecube controller.
 
-Use the right analog stick to fast forward. It was originally the camera 
+Use the right analog stick to fast forward. It was originally the camera
 control in Twilight Princess.
 
 Press the X or Y buttons to use the two equipped items. These two items both
@@ -903,24 +910,24 @@ attack. Press A to put the sword away again. The 2 handed sword can't be
 drawn this way, and must be selected manually from the items screen, but can
 be swung with this (or any other) button.
 
-Use the L Trigger to L-Target and to draw and use your shield. While 
-L-Targetting you will sidestep in some games. If you have a Gust Jar 
+Use the L Trigger to L-Target and to draw and use your shield. While
+L-Targetting you will sidestep in some games. If you have a Gust Jar
 equipped instead of a shield, it will be used for L-Targetting.
 
-Use the A Button to perform an action, such as rolling, talking to people, 
-reading signs, picking things up, throwing things, shrinking or growing, 
-pulling, etc. It will also put away your sword or shield. In Zelda 2, it 
+Use the A Button to perform an action, such as rolling, talking to people,
+reading signs, picking things up, throwing things, shrinking or growing,
+pulling, etc. It will also put away your sword or shield. In Zelda 2, it
 will jump.
 
-Use the ZL Button to fast forward. 
+Use the ZL Button to fast forward.
 
 Press the R Button to use the currently selected item. 3 other items will be
 mapped to Left, Down, and Right on the right analog stick. They are also
-mapped to ZR, Y, and X. Swap the currently selected item with one of those 
-items by pressing that button or direction. The three slots correspond to 
+mapped to ZR, Y, and X. Swap the currently selected item with one of those
+items by pressing that button or direction. The three slots correspond to
 the first 3 slots in your inventory. In Minish Cap, the D-Pad buttons use the
-item directly instead of swapping it with the B Button, and the B Button is 
-the same as the down button. In Minish Cap the left item is always the 
+item directly instead of swapping it with the B Button, and the B Button is
+the same as the down button. In Minish Cap the left item is always the
 Kinstones and the down and right items correspond to the B and A slots.
 
 + (Start) takes you to the subscreens.
@@ -933,8 +940,8 @@ Up on the analog stick talks to Midna, or to your hat.
 
 Turn "Match Wii Controls" ON to use these controls.
 
-All Mario or Yoshi games use the same controls as Super Mario Galaxy on the 
-Wii. You can also connect a Classic Controller to use similar controls to 
+All Mario or Yoshi games use the same controls as Super Mario Galaxy on the
+Wii. You can also connect a Classic Controller to use similar controls to
 Super Mario World on the SNES.
 
 #### The Wii Mario controls are:
@@ -980,7 +987,7 @@ everything in the world and also how you move.
 
 Turn "Match Wii Controls" ON to use these controls.
 
-All Metroid games use the same controls as Metroid Prime 3: Corruption on 
+All Metroid games use the same controls as Metroid Prime 3: Corruption on
 the Wii. You aim up and down by pointing the Wii Remote up and down.
 
 #### The Wii Metroid controls are:
@@ -1008,7 +1015,7 @@ the Playstation version.
 
 #### The Wii TMNT controls are:
 
-Shake the Wii Remote to attack or to throw away a weapon if 
+Shake the Wii Remote to attack or to throw away a weapon if
 in the air. Also shake to pick up a weapon.
 
 Shake the Nunchuk to do a spin kick.
@@ -1108,7 +1115,7 @@ C = change style, run, change costume or character
 
 Turn "Match Wii Controls" ON to use these controls.
 
-Both Lego Star Wars games use the same controls as Lego Star Wars: The 
+Both Lego Star Wars games use the same controls as Lego Star Wars: The
 Complete Saga for the Wii.
 
 #### The Lego Star Wars Wii controls are:
@@ -1134,7 +1141,7 @@ Of The Phoenix on the Wii. Spell gestures are not supported yet.
 #### The Harry Potter Wii controls are:
 
 Wave the Wii Remote to cast a spell.
-Nunchuk joystick walks. 
+Nunchuk joystick walks.
 D-Pad changes subscreen in the map and navigates menu.
 In Harry Potter and the Order of the Phoenix you must use the IR Pointer
 to select where to cast a spell.
@@ -1151,7 +1158,7 @@ C = show location name / flute / jump
 
 Turn "Match Wii Controls" ON to use these controls.
 
-All the Medal of Honour games use the same controls as various 
+All the Medal of Honour games use the same controls as various
 Medal of Honour games and modes on the Wii.
 
 #### The Medal of Honour Wii controls are:
@@ -1248,7 +1255,7 @@ switched items since then.
 			Additional coding			Carl Kenner, dancinninjac
 			Menu artwork				the3seashells
 			Menu sound					Peter de Man
-                      
+
 			VBA GameCube/Wii			SoftDev, emukidid
 
 			Visual Boy Advance - M		VBA-M Team
@@ -1257,10 +1264,10 @@ switched items since then.
 			FreeTypeGX					Armin Tamzarian
 
 			And many others who have contributed over the years!
- 
- 
+
+
 ## LINKS
- 
+
                                   VBAGX Web Site
                           https://github.com/dborth/vbagx
- 
+
