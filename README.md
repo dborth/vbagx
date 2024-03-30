@@ -55,6 +55,15 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
+[2.4.8 - March 30, 2024]
+
+* Added L+R+START for return to the menu for GCN controller (saulfabreg)
+* Fixed MBC2 data saving for F-1 Race, Kirby's Pinball Land, etc. (saulfabreg, based on fix from Steelskin)
+* Fixed MBC7 data saving for Kirby Tilt 'n' Tumble (saulfabreg, based on fix from Steelskin)
+* Compiled with latest devkitPPC/libogc
+* Added Swedish translation (IsakTheHacker)
+* Updated translations
+
 [2.4.7 - July 31, 2023]
 
 * Compiled with latest devkitPPC/libogc
