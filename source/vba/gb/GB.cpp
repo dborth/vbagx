@@ -2756,7 +2756,7 @@ void gbWriteSaveMBC2(const char * name)
       return;
     }
 
-    fwrite(gbRam,
+    fwrite(gbMemoryMap[0x0a],
            1,
            512,
            file);
@@ -2938,7 +2938,7 @@ bool gbReadSaveMBC2(const char * name)
       return false;
     }
 
-    size_t read = fread(gbRam,
+    size_t read = fread(gbMemoryMap[0x0a],
                      1,
                      512,
                      file);
@@ -5516,7 +5516,7 @@ int MemgbWriteSaveMBC1(char * membuffer) {
 
 int MemgbWriteSaveMBC2(char * membuffer) {
 	if (gbRam) {
-		memcpy(membuffer, gbRam, 512);
+		memcpy(membuffer, gbMemoryMap[0x0a], 512);
 		return 512;
 	}
 	return 0;
@@ -5604,7 +5604,7 @@ bool MemgbReadSaveMBC2(char * membuffer, int read) {
 		if (read != 512)
 			return false;
 		else
-			memcpy(gbRam, membuffer, read);
+			memcpy(gbMemoryMap[0x0a], membuffer, read);
 		return true;
 	}
 	return false;
