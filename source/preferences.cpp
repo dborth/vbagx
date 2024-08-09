@@ -596,13 +596,13 @@ void FixInvalidSettings()
 		GCSettings.LoadMethod = DEVICE_AUTO;
 	if(GCSettings.SaveMethod > 7)
 		GCSettings.SaveMethod = DEVICE_AUTO;
-	if(!(GCSettings.gbaZoomHor > 0.5 && GCSettings.gbaZoomHor < 1.5))
+	if(!(GCSettings.gbaZoomHor >= 0.5 && GCSettings.gbaZoomHor <= 1.6))
 		GCSettings.gbaZoomHor = 1.0;
-	if(!(GCSettings.gbaZoomVert > 0.5 && GCSettings.gbaZoomVert < 1.5))
+	if(!(GCSettings.gbaZoomVert >= 0.5 && GCSettings.gbaZoomVert <= 1.6))
 		GCSettings.gbaZoomVert = 1.0;
-	if(!(GCSettings.gbZoomHor > 0.5 && GCSettings.gbZoomHor < 1.5))
+	if(!(GCSettings.gbZoomHor >= 0.5 && GCSettings.gbZoomHor <= 1.6))
 		GCSettings.gbZoomHor = 1.0;
-	if(!(GCSettings.gbZoomVert > 0.5 && GCSettings.gbZoomVert < 1.5))
+	if(!(GCSettings.gbZoomVert >= 0.5 && GCSettings.gbZoomVert <= 1.6))
 		GCSettings.gbZoomVert = 1.0;
 	if(!(GCSettings.xshift > -50 && GCSettings.xshift < 50))
 		GCSettings.xshift = 0;
