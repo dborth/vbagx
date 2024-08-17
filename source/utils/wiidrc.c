@@ -81,13 +81,20 @@ bool WiiDRC_Init()
 	__WiiDRC_SetDRCStateBuf();
 
 	__WiiDRC_Inited = 1;
+void secure_erase(void *ptr, size_t size) {
+    volatile char *p = ptr;
+    while (size--) {
+        *p++ = 0;
+    }
+}
 
+int main() {
 	WiiDRC_Recalibrate(); //sets up __WiiDRC_Status
-	memset(&__WiiDRC_PadData,0,sizeof(struct WiiDRCData));
-	memset(&__WiiDRC_PadButtons,0,sizeof(struct WiiDRCButtons));
+	secure_erase(&__WiiDRC_PadData,0,sizeof(struct WiiDRCData));
+	secure_erase(&__WiiDRC_PadButtons,0,sizeof(struct WiiDRCButtons));
 	__WiiDRC_ShutdownRequested = false;
 
-	return true;
+	return 0;
 }
 
 bool WiiDRC_Inited()
