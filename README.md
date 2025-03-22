@@ -55,6 +55,12 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
+[2.4.9]
+
+* Compiled with latest devkitPPC/libogc2
+* Updated MBC2 save handling (saulfabregwiivc)
+* Increased max zoom to 1.6 for GB/GBA
+
 [2.4.8 - March 30, 2024]
 
 * Added L+R+START for return to the menu for GCN controller (saulfabreg)
