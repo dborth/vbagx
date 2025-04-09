@@ -314,15 +314,12 @@ bool MountDVD(bool silent)
 		ISO9660_Unmount("dvd:");
 	}
 
-#ifdef HW_DOL
-	DVD_Mount();
-#endif
-
 	while(retry)
 	{
 		ShowAction("Loading DVD...");
 
 #ifdef HW_DOL
+		DVD_Mount();
 		s32 dvdstatus = DVD_GetDriveStatus();
 
 		if (dvdstatus == DVD_STATE_NO_DISK)
