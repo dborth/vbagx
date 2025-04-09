@@ -930,7 +930,7 @@ gameSetting gameSettings[106] = {
 	{
 	"Pokemon - Edicion Rojo Fuego (Spain)",
 	"BPRS",
-	1,
+	-1,
 	-1,
 	131072,
 	-1
