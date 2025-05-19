@@ -55,7 +55,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
-[2.4.9]
+[2.4.9 - May 18, 2025]
 
 * Compiled with latest devkitPPC/libogc2
 * Updated MBC2 save handling (saulfabregwiivc)
