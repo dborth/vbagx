@@ -10,6 +10,8 @@ endif
 include $(DEVKITPPC)/gamecube_rules
 export	LIBOGC_INC	:=	$(DEVKITPRO)/libogc2/include
 export	LIBOGC_LIB	:=	$(DEVKITPRO)/libogc2/lib/cube
+export	FREETYPE_CFLAGS 	:=	`$(DEVKITPRO)/portlibs/ppc/bin/powerpc-eabi-pkg-config --cflags freetype2`
+export	FREETYPE_LIBS	:=	`$(DEVKITPRO)/portlibs/ppc/bin/powerpc-eabi-pkg-config --libs freetype2`
 
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
@@ -30,7 +32,7 @@ INCLUDES 	:=  source source/vba
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) `freetype-config --cflags` \
+CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 				-DNO_SOUND -DUSE_VM -DWORDS_BIGENDIAN -DNO_LINK -DNO_FEX \
 				-DTILED_RENDERING \
 				-DC_CORE -D__ppc__ -D__POWERPC__ -DFINAL_VERSION \
@@ -48,7 +50,7 @@ LDFLAGS		+=	-L../buildtools
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with
 #---------------------------------------------------------------------------------
-LIBS	:=	-lpng -lmxml -ltinysmb -lbba -lfat -liso9660 -lz -logc `freetype-config --libs`
+LIBS	:=	-lpng -lmxml -ltinysmb -lbba -lfat -liso9660 -lz -logc $(FREETYPE_LIBS)
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
