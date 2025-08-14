@@ -416,10 +416,10 @@ msgid "Out of memory: too many files!"
 msgstr "메모리 부족: 너무 많은 파일!"
 
 msgid "PAL (50Hz)"
-msgstr "팔(50Hz)"
+msgstr "PAL (50Hz)"
 
 msgid "PAL (60Hz)"
-msgstr "팔(60Hz)"
+msgstr "PAL (60Hz)"
 
 msgid "Please Wait"
 msgstr "잠시만 기다려주세요"
@@ -695,7 +695,7 @@ msgid "Additional coding"
 msgstr "추가 코딩"
 
 msgid "Custom"
-msgstr "관습"
+msgstr "커스텀"
 
 msgid "distributed, or modified under the terms of the"
 msgstr "다음 조건 하에서 배포 또는 변경되었습니다."
@@ -773,7 +773,7 @@ msgid "NTSC (480p)"
 msgstr "NTSC(480p)"
 
 msgid "PAL (576i)"
-msgstr "팔(576i)"
+msgstr "PAL (576i)"
 
 msgid "OFF"
 msgstr "끔"
@@ -798,3 +798,9 @@ msgstr "슈퍼 게임 보이 테두리"
 
 msgid "This software is open source and may be copied,"
 msgstr "이 소프트웨어는 오픈 소스고 복사할 수 있습니다."
+
+msgid "Enable Turbo Mode"
+msgstr "터보 모드 활성화"
+
+msgid "Swedish"
+msgstr "스웨덴어"
