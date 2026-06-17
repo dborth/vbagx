@@ -131,6 +131,7 @@ devicecallback (void *arg)
 			{
 				unmountRequired[DEVICE_SD] = true;
 				isMounted[DEVICE_SD] = false;
+                parseHalt = true; // abort in-progress dir parsing on this device
 			}
 		}
 
@@ -140,6 +141,7 @@ devicecallback (void *arg)
 			{
 				unmountRequired[DEVICE_USB] = true;
 				isMounted[DEVICE_USB] = false;
+                parseHalt = true; // abort in-progress dir parsing on this device
 			}
 		}
 
@@ -149,6 +151,7 @@ devicecallback (void *arg)
 			{
 				unmountRequired[DEVICE_DVD] = true;
 				isMounted[DEVICE_DVD] = false;
+                parseHalt = true; // abort in-progress dir parsing on this device
 			}
 		}
 
