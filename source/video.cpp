@@ -455,7 +455,7 @@ static inline void UpdateScaling()
 	// change zoom
 	float zoomHor, zoomVert;
 	int fixed;
-	if (cartridgeType == 2) // GBA
+	if (cartridgeType == CARTRIDGE_GBA)
 	{
 		zoomHor = GCSettings.gbaZoomHor;
 		zoomVert = GCSettings.gbaZoomVert;

@@ -13,6 +13,12 @@
 
 #include "vba/System.h"
 
+enum {
+	CARTRIDGE_NONE = 0,
+	CARTRIDGE_GB,
+	CARTRIDGE_GBA
+};
+
 extern struct EmulatedSystem emulator;
 extern int cartridgeType;
 extern int SunBars;

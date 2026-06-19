@@ -470,7 +470,7 @@ u32 StandardSideways(unsigned short pad)
 		J |= VBA_BUTTON_B;
 	if (wp & WPAD_BUTTON_2)
 		J |= VBA_BUTTON_A;
-	if (cartridgeType == 2)
+	if (cartridgeType == CARTRIDGE_GBA)
 	{
 		if (wp & WPAD_BUTTON_A)
 			J |= VBA_BUTTON_R;
