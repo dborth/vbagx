@@ -51,7 +51,7 @@ bool SGBBorderLoadedFromGame = false;
 /*** 3D GX ***/
 #define DEFAULT_FIFO_SIZE ( 256 * 1024 )
 static u8 gp_fifo[DEFAULT_FIFO_SIZE] ATTRIBUTE_ALIGN(32);
-static unsigned int copynow = GX_FALSE;
+static volatile unsigned int copynow = GX_FALSE;
 
 /*** Texture memory ***/
 static u8 *texturemem = NULL;
@@ -94,23 +94,26 @@ static camera cam = { {0.0F, 0.0F, 0.0F},
 /****************************************************************************
  * VideoThreading
  ***************************************************************************/
-static lwp_t vbthread;
+static lwp_t vbthread = LWP_THREAD_NULL;
+static lwpq_t render_queue;          // Queue for the main thread to sleep on
+static lwpq_t vb_queue;              // Queue for the VSync thread to sleep on
+static volatile bool vb_done = true; // Tracks if the VSync thread has completed its wait
 
 /****************************************************************************
  * vbgetback
  *
  * This callback enables the emulator to keep running while waiting for a
  * vertical blank.
- *
- * Putting LWP to good use :)
  ***************************************************************************/
 static void *
 vbgetback (void *arg)
 {
 	while (1)
 	{
-		VIDEO_WaitVSync ();	 /**< Wait for video vertical blank */
-		LWP_SuspendThread (vbthread);
+		LWP_ThreadSleep(vb_queue);     // Sleep until kicked off at the end of GX_Render
+		VIDEO_WaitVSync ();	         /**< Wait for video vertical blank */
+		vb_done = true;
+		LWP_ThreadSignal(render_queue); // Instantly alert the main thread if it is waiting
 	}
 	return NULL;
 }
@@ -129,6 +132,7 @@ copy_to_xfb (u32 arg)
 		GX_CopyDisp (xfb[whichfb], GX_TRUE);
 		GX_Flush ();
 		copynow = GX_FALSE;
+		LWP_ThreadSignal(render_queue); // Wake up the main thread if it is waiting for the copy
 	}
 	++FrameTimer;
 }
@@ -318,7 +322,7 @@ static GXRModeObj * FindVideoMode()
 	else
 		mode->viWidth = 672;
 
-	if (mode->viTVMode >> 2 == VI_PAL)
+    if ((mode->viTVMode >> 2) == VI_PAL)
 	{
 		mode->viXOrigin = (VI_MAX_WIDTH_PAL - mode->viWidth) / 2;
 		mode->viYOrigin = (VI_MAX_HEIGHT_PAL - mode->viHeight) / 2;
@@ -372,16 +376,23 @@ InitializeVideo ()
 {
 	VIDEO_Init();
 
-	// Allocate the video buffers
-	xfb[0] = (u32 *) memalign(32, 640*576*2);
-	xfb[1] = (u32 *) memalign(32, 640*576*2);
-	DCInvalidateRange(xfb[0], 640*576*2);
-	DCInvalidateRange(xfb[1], 640*576*2);
+	// Allocate the video buffers. Sized for the largest supported mode
+	// (640x576, 2 bytes per pixel) so the same buffers serve every mode.
+	const u32 xfbSize = 640 * 576 * 2;
+	xfb[0] = (u32 *) memalign(32, xfbSize);
+	xfb[1] = (u32 *) memalign(32, xfbSize);
+	DCInvalidateRange(xfb[0], xfbSize);
+	DCInvalidateRange(xfb[1], xfbSize);
 	xfb[0] = (u32 *) MEM_K0_TO_K1 (xfb[0]);
 	xfb[1] = (u32 *) MEM_K0_TO_K1 (xfb[1]);
 
 	GXRModeObj *rmode = FindVideoMode();
 	SetupVideoMode(rmode);
+
+	// Setup synchronization queues
+	LWP_InitQueue(&render_queue);
+	LWP_InitQueue(&vb_queue);
+	vb_done = true;
 
 	LWP_CreateThread (&vbthread, vbgetback, NULL, NULL, 0, 68);
 
@@ -393,7 +404,6 @@ InitializeVideo ()
 	GX_SetDispCopyGamma (GX_GM_1_0);
 	GX_SetCullMode (GX_CULL_NONE);
 }
-
 
 static inline void UpdateScaling()
 {
@@ -561,17 +571,19 @@ ResetVideo_Emu ()
 	updateScaling = 1;
 }
 
-void GX_Render_Init(int width, int height)
-{
-	if (texturemem)
+void GX_Render_Init(int width, int height) {
+	if (texturemem) {
 		free(texturemem);
+		texturemem = NULL; // avoid a dangling pointer if the alloc below fails
+	}
 
 	/*** Allocate 32byte aligned texture memory ***/
 	texturesize = (width * height) * 2;
 
 	texturemem = (u8 *) memalign(32, texturesize);
 
-	memset(texturemem, 0, texturesize);
+	if (texturemem != NULL)
+		memset(texturemem, 0, texturesize);
 
 	/*** Setup for first call to scaler ***/
 	vwidth = width;
@@ -580,33 +592,37 @@ void GX_Render_Init(int width, int height)
 
 bool borderAreaEmpty(const u16* buffer) {
 	u16 reference = buffer[0];
-	for (int y=0; y<40; y++) {
-		for (int x=0; x<256; x++) {
-			if (buffer[258*y + x] != reference) return false;
+	for (int y = 0; y < 40; y++) {
+		for (int x = 0; x < 256; x++) {
+			if (buffer[256 * y + x] != reference)
+				return false;
 		}
 	}
-	for (int y=40; y<184; y++) {
-		for (int x=0; x<48; x++) {
-			if (buffer[258*y + x] != reference) return false;
+	for (int y = 40; y < 184; y++) {
+		for (int x = 0; x < 48; x++) {
+			if (buffer[256 * y + x] != reference)
+				return false;
 		}
-		for (int x=208; x<224; x++) {
-			if (buffer[258*y + x] != reference) return false;
+		for (int x = 208; x < 224; x++) {
+			if (buffer[256 * y + x] != reference)
+				return false;
 		}
 	}
-	for (int y=184; y<224; y++) {
-		for (int x=0; x<256; x++) {
-			if (buffer[258*y + x] != reference) return false;
+	for (int y = 184; y < 224; y++) {
+		for (int x = 0; x < 256; x++) {
+			if (buffer[256 * y + x] != reference)
+				return false;
 		}
 	}
 	return true;
 }
 
 /****************************************************************************
-* GX_Render
-*
-* Pass in a buffer, width and height to update as a tiled RGB565 texture
-* (2 bytes per pixel)
-****************************************************************************/
+ * GX_Render
+ *
+ * Pass in a buffer, width and height to update as a tiled RGB565 texture
+ * (2 bytes per pixel)
+ ****************************************************************************/
 void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 {
 	int borderWidth = InitialBorder ? InitialBorderWidth : gbWidth;
@@ -614,24 +630,31 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 
 	int h, w;
 	int gbPitch = gbWidth * 2 + 4;
-	long long int *dst = (long long int *) texturemem; // Pointer in 8-byte units / 4-pixel units
-	long long int *src1 = (long long int *) buffer;
-	long long int *src2 = (long long int *) (buffer + gbPitch);
-	long long int *src3 = (long long int *) (buffer + (gbPitch << 1));
-	long long int *src4 = (long long int *) (buffer + (gbPitch * 3));
+	long long int *dst = (long long int*) texturemem; // Pointer in 8-byte units / 4-pixel units
+	long long int *src1 = (long long int*) buffer;
+	long long int *src2 = (long long int*) (buffer + gbPitch);
+	long long int *src3 = (long long int*) (buffer + (gbPitch << 1));
+	long long int *src4 = (long long int*) (buffer + (gbPitch * 3));
 	int srcrowpitch = (gbPitch >> 3) * 3;
-	int srcrowadjust = ( gbPitch % 8 ) << 2;
-	int dstrowpitch = borderWidth - gbWidth;
+	int srcrowadjust = (gbPitch % 8) << 2;
+	// dst is a long long* (one unit = 4 pixels of the tiled texture). The
+	// gap to skip at the end of each tile-row is (borderWidth - gbWidth)
+	// pixels, which must be converted to 4-pixel units to match the unit of
+	// dst (the surrounding border math divides pixel offsets by 4 the same
+	// way). In the common no-border case borderWidth == gbWidth so this is 0.
+	int dstrowpitch = (borderWidth - gbWidth) / 4;
 
 	vwidth = borderWidth;
 	vheight = borderHeight;
 
 	int vwid2 = (gbWidth >> 2);
 	char *ra = NULL;
-	
-	// Ensure previous vb has complete
-	while ((LWP_ThreadIsSuspended (vbthread) == 0) || (copynow == GX_TRUE))
-		usleep (50);
+
+	// Ensure previous frame copy and background VSync block have finished cleanly
+	while (!vb_done || (copynow == GX_TRUE))
+	{
+		LWP_ThreadSleep(render_queue); // Halts main thread with 0 CPU load until signals occur
+	}
 
 	whichfb ^= 1;
 
@@ -641,9 +664,9 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 	// clear texture objects
 	GX_InvVtxCache();
 	GX_InvalidateTexAll();
-	GX_SetTevOp(GX_TEVSTAGE0, GX_DECAL);
-	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
-	
+	GX_SetTevOp(GX_TEVSTAGE0, GX_REPLACE);
+	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
+
 	if (gbWidth == 256 && gbHeight == 224 && !SGBBorderLoadedFromGame) {
 		if (borderAreaEmpty((u16*)buffer)) {
 			// TODO: don't paint empty SGB border
@@ -653,16 +676,17 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 			SaveSGBBorderIfNoneExists(buffer);
 		}
 	}
-	
+
 	// The InitialBorder, if any, should already be properly tiled
 	if (InitialBorder) {
 		memcpy(dst, InitialBorder, borderWidth * borderHeight * 2);
-		
+
 		int rows_to_skip = (borderHeight - gbHeight) / 2;
-		if (rows_to_skip > 0) dst += rows_to_skip * borderWidth / 4;
+		if (rows_to_skip > 0)
+			dst += rows_to_skip * borderWidth / 4;
 		dst += (borderWidth - gbWidth) / 2;
 	}
-	
+
 	for (h = 0; h < gbHeight; h += 4)
 	{
 		for (w = 0; w < vwid2; ++w)
@@ -679,16 +703,15 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 		src4 += srcrowpitch;
 		dst += dstrowpitch;
 
-		if ( srcrowadjust )
-		{
-			ra = (char *)src1;
-			src1 = (long long int *)(ra + srcrowadjust);
-			ra = (char *)src2;
-			src2 = (long long int *)(ra + srcrowadjust);
-			ra = (char *)src3;
-			src3 = (long long int *)(ra + srcrowadjust);
-			ra = (char *)src4;
-			src4 = (long long int *)(ra + srcrowadjust);
+		if (srcrowadjust) {
+			ra = (char*) src1;
+			src1 = (long long int*) (ra + srcrowadjust);
+			ra = (char*) src2;
+			src2 = (long long int*) (ra + srcrowadjust);
+			ra = (char*) src3;
+			src3 = (long long int*) (ra + srcrowadjust);
+			ra = (char*) src4;
+			src4 = (long long int*) (ra + srcrowadjust);
 		}
 	}
 	
@@ -718,8 +741,9 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 	VIDEO_Flush();
 	copynow = GX_TRUE;
 
-	// Return to caller, don't waste time waiting for vb
-	LWP_ResumeThread (vbthread);
+	// Reset state and signal background VSync thread to begin waiting for next blanking interval
+	vb_done = false;
+	LWP_ThreadSignal(vb_queue);
 }
 
 /****************************************************************************
@@ -735,7 +759,17 @@ void TakeScreenshot()
 	{
 		gameScreenPngSize = PNGU_EncodeFromEFB(pngContext, vmode->fbWidth, vmode->efbHeight);
 		PNGU_ReleaseImageContext(pngContext);
-		gameScreenPng = (u8 *)malloc(gameScreenPngSize);
+
+		if (gameScreenPngSize <= 0) {
+			gameScreenPngSize = 0;
+			return;
+		}
+
+		gameScreenPng = (u8 *) malloc(gameScreenPngSize);
+		if (gameScreenPng == NULL) {
+			gameScreenPngSize = 0;
+			return;
+		}
 		memcpy(gameScreenPng, savebuffer, gameScreenPngSize);
 	}
 }
