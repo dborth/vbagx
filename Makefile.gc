@@ -36,7 +36,10 @@ CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 				-DC_CORE -D__ppc__ -D__POWERPC__ -DFINAL_VERSION \
 				-DSDL -DNO_PNG -DHAVE_ZUTIL_H \
 				-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
+				-flto=auto \
 				-fomit-frame-pointer \
+				-falign-loops=32 \
+				-falign-functions=32 \
 				-Wno-unused-parameter -Wno-strict-aliasing -Wno-parentheses -Wno-format -Wno-stringop-truncation \
 				-Wno-maybe-uninitialized -Wno-unused-but-set-variable -Wno-stringop-overflow -Wno-narrowing \
 				-Wno-misleading-indentation -Wno-unused-function -Wno-sign-compare -Wno-unused-variable \
