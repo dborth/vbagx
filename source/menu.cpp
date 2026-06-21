@@ -1178,11 +1178,6 @@ static int MenuGameSelection()
 			menu = MENU_SETTINGS;
 		else if(exitBtn.GetState() == STATE_CLICKED)
 			ExitRequested = 1;
-		else if(bgPreviewBtn.GetState() == STATE_CLICKED)
-		{
-			GCSettings.PreviewImage = (GCSettings.PreviewImage + 1) % 3;
-			bgPreviewBtn.ResetState();
-		}
 	}
 
 	HaltParseThread(); // halt parsing
@@ -1191,7 +1186,7 @@ static int MenuGameSelection()
 	mainWindow->Remove(&titleTxt);
 	mainWindow->Remove(&buttonWindow);
 	mainWindow->Remove(&gameBrowser);
-	mainWindow->Remove(&bgPreviewBtn);
+	mainWindow->Remove(&bgPreview);
 	mainWindow->Remove(&preview);
 	MEM_DEALLOC(imgBuffer);
 	return menu;
