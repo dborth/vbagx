@@ -644,8 +644,6 @@ DefaultSettings ()
 	GCSettings.AutoSave = 1;
 	GCSettings.AppendAuto = 1;
 
-	GCSettings.WiimoteOrientation = 0;
-
 	GCSettings.gbaZoomHor = 1.0; // GBA horizontal zoom level
 	GCSettings.gbaZoomVert = 1.0; // GBA vertical zoom level
 	GCSettings.gbZoomHor = 1.0; // GBA horizontal zoom level
@@ -669,7 +667,7 @@ DefaultSettings ()
 	GCSettings.MusicVolume = 20;
 	GCSettings.SFXVolume = 40;
 	GCSettings.Rumble = 1;
-	GCSettings.PreviewImage = 0;
+	GCSettings.PreviewImage = PREVIEWIMAGE_COVER;
 	
 	GCSettings.BasicPalette = 0;
 	
