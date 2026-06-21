@@ -3198,18 +3198,18 @@ static int MenuSettingsVideo()
 		{
 			case 0:
 				GCSettings.render++;
-				if (GCSettings.render > 4)
-					GCSettings.render = 1;
+				if (GCSettings.render >= RENDER_LENGTH)
+					GCSettings.render = RENDER_FILTERED;
 				break;
 
 			case 1:
 				GCSettings.scaling++;
-				if (GCSettings.scaling > 3)
-					GCSettings.scaling = 0;
+				if (GCSettings.scaling >= SCALING_LENGTH)
+					GCSettings.scaling = SCALING_MAINTAIN_ASPECT;
 				// disable Widescreen correction in Wii mode - determined automatically
 				#ifdef HW_RVL
-				if(GCSettings.scaling == 3)
-					GCSettings.scaling = 0;
+				if(GCSettings.scaling == SCALING_WIDESCREEN_CORRECTION)
+					GCSettings.scaling = SCALING_MAINTAIN_ASPECT;
 				#endif
 				break;
 
@@ -3235,8 +3235,8 @@ static int MenuSettingsVideo()
 
 			case 5:
 				GCSettings.videomode++;
-				if(GCSettings.videomode > 6)
-					GCSettings.videomode = 0;
+				if(GCSettings.videomode >= VIDEOMODE_LENGTH)
+					GCSettings.videomode = VIDEOMODE_AUTO;
 				break;
 
 			case 6:
@@ -3259,24 +3259,22 @@ static int MenuSettingsVideo()
 		{
 			firstRun = false;
 
-			if (GCSettings.render == 0)
-				sprintf (options.value[0], "Original");
-			else if (GCSettings.render == 1)
+			if (GCSettings.render == RENDER_FILTERED)
 				sprintf (options.value[0], "Filtered (Auto)");
-			else if (GCSettings.render == 2)
+			else if (GCSettings.render == RENDER_UNFILTERED)
 				sprintf (options.value[0], "Unfiltered");
-			else if (GCSettings.render == 3)
+			else if (GCSettings.render == RENDER_FILTERED_SHARP)
 				sprintf (options.value[0], "Filtered (Sharp)");
-			else if (GCSettings.render == 4)
+			else if (GCSettings.render == RENDER_FILTERED_SOFT)
 				sprintf (options.value[0], "Filtered (Soft)");
 
-			if (GCSettings.scaling == 0)
+			if (GCSettings.scaling == SCALING_MAINTAIN_ASPECT)
 				sprintf (options.value[1], "Maintain Aspect Ratio");
-			else if (GCSettings.scaling == 1)
+			else if (GCSettings.scaling == SCALING_PARTIAL_STRETCH)
 				sprintf (options.value[1], "Partial Stretch");
-			else if (GCSettings.scaling == 2)
+			else if (GCSettings.scaling == SCALING_STRETCH)
 				sprintf (options.value[1], "Stretch to Fit");
-			else if (GCSettings.scaling == 3)
+			else if (GCSettings.scaling == SCALING_WIDESCREEN_CORRECTION)
 				sprintf (options.value[1], "16:9 Correction");
 
 			int fixed;
@@ -3304,19 +3302,19 @@ static int MenuSettingsVideo()
 
 			switch(GCSettings.videomode)
 			{
-				case 0:
+				case VIDEOMODE_AUTO:
 					sprintf (options.value[5], "Automatic (Recommended)"); break;
-				case 1:
+				case VIDEOMODE_NTSC:
 					sprintf (options.value[5], "NTSC (480i)"); break;
-				case 2:
+				case VIDEOMODE_PROGRESSIVE:
 					sprintf (options.value[5], "NTSC (480p)"); break;
-				case 3:
+				case VIDEOMODE_PAL:
 					sprintf (options.value[5], "PAL (576i)"); break;
-				case 4:
+				case VIDEOMODE_EURGB:
 					sprintf (options.value[5], "European RGB (240i)"); break;
-				case 5:
+				case VIDEOMODE_240P:
 					sprintf (options.value[5], "NTSC (240p)"); break;
-				case 6:
+				case VIDEOMODE_EURGB_240P:
 					sprintf (options.value[5], "European RGB (240p)"); break;
 			}
 
@@ -3834,10 +3832,10 @@ static int MenuSettingsFile()
 			#endif
 
 			// correct load/save methods out of bounds
-			if(GCSettings.LoadMethod > 8)
-				GCSettings.LoadMethod = 0;
-			if(GCSettings.SaveMethod > 8)
-				GCSettings.SaveMethod = 0;
+			if(GCSettings.LoadMethod >= DEVICE_LENGTH)
+				GCSettings.LoadMethod = DEVICE_AUTO;
+			if(GCSettings.SaveMethod >= DEVICE_LENGTH)
+				GCSettings.SaveMethod = DEVICE_AUTO;
 
 			if (GCSettings.LoadMethod == DEVICE_AUTO) sprintf (options.value[0],"Auto Detect");
 			else if (GCSettings.LoadMethod == DEVICE_SD) sprintf (options.value[0],"SD");
@@ -3964,8 +3962,13 @@ static int MenuSettingsMenu()
 		{
 			case 0:
 				GCSettings.ExitAction++;
-				if(GCSettings.ExitAction > 3)
-					GCSettings.ExitAction = 0;
+				#ifdef HW_RVL
+				if(GCSettings.ExitAction >= EXITACTION_WII_LENGTH)
+					GCSettings.ExitAction = EXITACTION_WII_AUTO;
+				#else
+				if(GCSettings.ExitAction >= EXITACTION_GC_LENGTH)
+					GCSettings.ExitAction = EXITACTION_GC_RETURN_TO_LOADER;
+				#endif
 				break;
 			case 1:
 				GCSettings.WiimoteOrientation ^= 1;
@@ -4004,18 +4007,16 @@ static int MenuSettingsMenu()
 			firstRun = false;
 
 			#ifdef HW_RVL
-			if (GCSettings.ExitAction == 1)
+			if (GCSettings.ExitAction == EXITACTION_RETURN_TO_MENU)
 				sprintf (options.value[0], "Return to Wii Menu");
-			else if (GCSettings.ExitAction == 2)
+			else if (GCSettings.ExitAction == EXITACTION_POWER_OFF)
 				sprintf (options.value[0], "Power off Wii");
-			else if (GCSettings.ExitAction == 3)
+			else if (GCSettings.ExitAction == EXITACTION_RETURN_TO_LOADER)
 				sprintf (options.value[0], "Return to Loader");
 			else
 				sprintf (options.value[0], "Auto");
 			#else // GameCube
-			if(GCSettings.ExitAction > 1)
-				GCSettings.ExitAction = 0;
-			if (GCSettings.ExitAction == 0)
+			if (GCSettings.ExitAction == EXITACTION_RETURN_TO_GCLOADER)
 				sprintf (options.value[0], "Return to Loader");
 			else
 				sprintf (options.value[0], "Reboot");
@@ -4026,9 +4027,9 @@ static int MenuSettingsMenu()
 			options.name[4][0] = 0; // Rumble
 			#endif
 
-			if (GCSettings.WiimoteOrientation == 0)
+			if (GCSettings.WiimoteOrientation == WIIMOTEORIENTATION_VERTICAL)
 				sprintf (options.value[1], "Vertical");
-			else if (GCSettings.WiimoteOrientation == 1)
+			else if (GCSettings.WiimoteOrientation == WIIMOTEORIENTATION_HORIZONTAL)
 				sprintf (options.value[1], "Horizontal");
 
 			if(GCSettings.MusicVolume > 0)

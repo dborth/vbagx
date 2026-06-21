@@ -167,9 +167,9 @@ static inline void draw_init(void)
 
 	GX_InvVtxCache ();	// update vertex cache
 
-	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565,
-		GX_CLAMP, GX_CLAMP, GX_FALSE);
-	if (GCSettings.render == 2)
+	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);
+
+	if (GCSettings.render == RENDER_UNFILTERED)
 		GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF
 }
 
@@ -253,9 +253,9 @@ static inline void draw_cursor(Mtx v)
 
 	GX_InvVtxCache ();	// update vertex cache
 
-	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565,
-		GX_CLAMP, GX_CLAMP, GX_FALSE);
-	if (GCSettings.render == 2)
+	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);
+
+	if (GCSettings.render == RENDER_UNFILTERED)
 		GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF
 }
 #endif
@@ -287,22 +287,22 @@ static GXRModeObj * FindVideoMode()
 	// choose the desired video mode
 	switch(GCSettings.videomode)
 	{
-		case 1: // NTSC (480i)
+		case VIDEOMODE_NTSC: // NTSC (480i)
 			mode = &TVNtsc480IntDf;
 			break;
-		case 2: // Progressive (480p)
+		case VIDEOMODE_PROGRESSIVE: // Progressive (480p)
 			mode = &TVNtsc480Prog;
 			break;
-		case 3: // PAL (50Hz)
+		case VIDEOMODE_PAL: // PAL (50Hz)
 			mode = &TVPal576IntDfScale;
 			break;
-		case 4: // PAL (60Hz)
+		case VIDEOMODE_EURGB: // PAL (60Hz)
 			mode = &TVEurgb60Hz480IntDf;
 			break;
-		case 5: // NTSC (240p)
+		case VIDEOMODE_240P: // NTSC (240p)
 			mode = &TVNtsc240Ds;
 			break;
-		case 6: // PAL (60Hz 240p)
+		case VIDEOMODE_EURGB_240P: // PAL (60Hz 240p)
 			mode = &TVEurgb60Hz240Ds;
 			break;
 		default:
@@ -414,9 +414,9 @@ static inline void UpdateScaling()
 	float GameboyAspectRatio;
 	float MaxStretchRatio = 1.6f;
 
-	if (GCSettings.scaling == 1)
+	if (GCSettings.scaling == SCALING_PARTIAL_STRETCH)
 		MaxStretchRatio = 1.3f;
-	else if (GCSettings.scaling == 2)
+	else if (GCSettings.scaling == SCALING_STRETCH_TO_FIT)
 		MaxStretchRatio = 1.6f;
 	else
 		MaxStretchRatio = 1.0f;
@@ -427,7 +427,7 @@ static inline void UpdateScaling()
 	else
 		TvAspectRatio = 4.0f/3.0f;
 	#else
-	if (GCSettings.scaling == 3)
+	if (GCSettings.scaling == SCALING_WIDESCREEN_CORRECTION)
 		TvAspectRatio = 16.0f/9.0f;
 	else
 		TvAspectRatio = 4.0f/3.0f;
@@ -504,7 +504,7 @@ static inline void UpdateScaling()
 		float vh = vheight * ratio;
 		
 		// 240p adjustment
-		if (GCSettings.videomode == 5 || GCSettings.videomode == 6) vw *= 2;
+		if (GCSettings.videomode == VIDEOMODE_240P || GCSettings.videomode == VIDEOMODE_EURGB_240P) vw *= 2;
 		
 		float vx = (vmode->fbWidth - vw) / 2;
 		float vy = (vmode->efbHeight - vh) / 2;
@@ -539,10 +539,10 @@ ResetVideo_Emu ()
 	u8 sharp[7] = {0,0,21,22,21,0,0};
 	u8 soft[7] = {8,8,10,12,10,8,8};
 	u8* vfilter =
-		GCSettings.render == 3 ? sharp
-		: GCSettings.render == 4 ? soft
+		GCSettings.render == RENDER_FILTERED_SHARP ? sharp
+		: GCSettings.render == RENDER_FILTERED_SOFT ? soft
 		: rmode->vfilter;
-	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render != 2) ? GX_TRUE : GX_FALSE, vfilter);	// deflickering filter only for filtered mode
+	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render != RENDER_UNFILTERED) ? GX_TRUE : GX_FALSE, vfilter);	// deflickering filter only for filtered mode
 
 	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 	
@@ -561,7 +561,7 @@ ResetVideo_Emu ()
 	// reinitialize texture
 	GX_InvalidateTexAll ();
 	GX_InitTexObj (&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);	// initialize the texture obj we are going to use
-	if (GCSettings.render == 2)
+	if (GCSettings.render == RENDER_UNFILTERED)
 		GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF
 
 	GX_Flush();

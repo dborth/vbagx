@@ -592,9 +592,9 @@ decodePalsData ()
  ***************************************************************************/
 void FixInvalidSettings()
 {
-	if(GCSettings.LoadMethod > 8)
+	if(GCSettings.LoadMethod >= DEVICE_LENGTH)
 		GCSettings.LoadMethod = DEVICE_AUTO;
-	if(GCSettings.SaveMethod > 8)
+	if(GCSettings.SaveMethod >= DEVICE_LENGTH)
 		GCSettings.SaveMethod = DEVICE_AUTO;
 	if(!(GCSettings.gbaZoomHor >= 0.5 && GCSettings.gbaZoomHor <= 1.6))
 		GCSettings.gbaZoomHor = 1.0;
@@ -612,12 +612,12 @@ void FixInvalidSettings()
 		GCSettings.MusicVolume = 20;
 	if(!(GCSettings.SFXVolume >= 0 && GCSettings.SFXVolume <= 100))
 		GCSettings.SFXVolume = 40;
-	if(GCSettings.language < 0 || GCSettings.language >= LANG_LENGTH)
+	if(GCSettings.language < LANG_JAPANESE || GCSettings.language >= LANG_LENGTH)
 		GCSettings.language = LANG_ENGLISH;
-	if(!(GCSettings.render >= 0 && GCSettings.render < 5))
-		GCSettings.render = 1;
-	if(!(GCSettings.videomode >= 0 && GCSettings.videomode < 7))
-		GCSettings.videomode = 0;
+	if(!(GCSettings.render >= RENDER_FILTERED && GCSettings.render < RENDER_LENGTH))
+		GCSettings.render = RENDER_FILTERED_SHARP;
+	if(!(GCSettings.videomode >= VIDEOMODE_AUTO && GCSettings.videomode < VIDEOMODE_LENGTH))
+		GCSettings.videomode = VIDEOMODE_AUTO;
 }
 
 /****************************************************************************
@@ -650,9 +650,9 @@ DefaultSettings ()
 	GCSettings.gbZoomVert = 1.0; // GBA vertical zoom level
 	GCSettings.gbFixed = 0; // not fixed - use zoom level
 	GCSettings.gbaFixed = 0; // not fixed - use zoom level
-	GCSettings.videomode = 0; // automatic video mode detection
-	GCSettings.render = 1; // Filtered
-	GCSettings.scaling = 1; // partial stretch
+	GCSettings.videomode = VIDEOMODE_AUTO;
+	GCSettings.render = RENDER_FILTERED_SHARP;
+	GCSettings.scaling = SCALING_PARTIAL_STRETCH;
 	GCSettings.WiiControls = false; // Match Wii Game
 
 	GCSettings.xshift = 0; // horizontal video shift
@@ -661,8 +661,12 @@ DefaultSettings ()
 	GCSettings.gbaFrameskip = 1; // Turn auto-frameskip on for GBA games
 	GCSettings.TurboModeEnabled = 1; // Enabled by default
 
-	GCSettings.WiimoteOrientation = 0;
-	GCSettings.ExitAction = 0;
+	GCSettings.WiimoteOrientation = WIIMOTEORIENTATION_VERTICAL;
+#ifdef HW_RVL
+	GCSettings.ExitAction = EXITACTION_WII_AUTO;
+#else
+	GCSettings.ExitAction = EXITACTION_GC_RETURN_TO_LOADER;
+#endif
 	GCSettings.AutoloadGame = 0;
 	GCSettings.MusicVolume = 20;
 	GCSettings.SFXVolume = 40;
@@ -832,7 +836,7 @@ bool LoadPrefs()
 
 	FixInvalidSettings();
 
-	if(GCSettings.videomode > 0) {
+	if(GCSettings.videomode > VIDEOMODE_AUTO) {
 		ResetVideo_Menu();
 	}
 
