@@ -3272,7 +3272,7 @@ static int MenuSettingsVideo()
 				sprintf (options.value[1], "Maintain Aspect Ratio");
 			else if (GCSettings.scaling == SCALING_PARTIAL_STRETCH)
 				sprintf (options.value[1], "Partial Stretch");
-			else if (GCSettings.scaling == SCALING_STRETCH)
+			else if (GCSettings.scaling == SCALING_STRETCH_TO_FIT)
 				sprintf (options.value[1], "Stretch to Fit");
 			else if (GCSettings.scaling == SCALING_WIDESCREEN_CORRECTION)
 				sprintf (options.value[1], "16:9 Correction");
@@ -4007,16 +4007,16 @@ static int MenuSettingsMenu()
 			firstRun = false;
 
 			#ifdef HW_RVL
-			if (GCSettings.ExitAction == EXITACTION_RETURN_TO_MENU)
+			if (GCSettings.ExitAction == EXITACTION_WII_RETURN_TO_MENU)
 				sprintf (options.value[0], "Return to Wii Menu");
-			else if (GCSettings.ExitAction == EXITACTION_POWER_OFF)
+			else if (GCSettings.ExitAction == EXITACTION_WII_POWER_OFF)
 				sprintf (options.value[0], "Power off Wii");
-			else if (GCSettings.ExitAction == EXITACTION_RETURN_TO_LOADER)
+			else if (GCSettings.ExitAction == EXITACTION_WII_RETURN_TO_LOADER)
 				sprintf (options.value[0], "Return to Loader");
 			else
 				sprintf (options.value[0], "Auto");
 			#else // GameCube
-			if (GCSettings.ExitAction == EXITACTION_RETURN_TO_GCLOADER)
+			if (GCSettings.ExitAction == EXITACTION_GC_RETURN_TO_LOADER)
 				sprintf (options.value[0], "Return to Loader");
 			else
 				sprintf (options.value[0], "Reboot");
