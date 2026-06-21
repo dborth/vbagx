@@ -561,6 +561,7 @@ ResetVideo_Emu ()
 	// reinitialize texture
 	GX_InvalidateTexAll ();
 	GX_InitTexObj (&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);	// initialize the texture obj we are going to use
+
 	if (GCSettings.render == RENDER_UNFILTERED)
 		GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF
 
@@ -617,6 +618,93 @@ bool borderAreaEmpty(const u16* buffer) {
 	return true;
 }
 
+void ProcessSGBBorder(u8* buffer, int gbWidth, int gbHeight) {
+	if (gbWidth == 256 && gbHeight == 224 && !SGBBorderLoadedFromGame) {
+		if (borderAreaEmpty((u16*)buffer)) {
+			// TODO: don't paint empty SGB border
+		} else {
+			// don't try to load the default border anymore
+			SGBBorderLoadedFromGame = true;
+			SaveSGBBorderIfNoneExists(buffer);
+		}
+	}
+}
+
+long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int gbHeight, int borderWidth, int borderHeight) {
+	long long int* dst = (long long int*) textureBase;
+
+	// The InitialBorder, if any, should already be properly tiled
+	if (InitialBorder) {
+		memcpy(dst, InitialBorder, borderWidth * borderHeight * 2);
+
+		int rows_to_skip = (borderHeight - gbHeight) / 2;
+		if (rows_to_skip > 0)
+			dst += rows_to_skip * borderWidth / 4;
+		dst += (borderWidth - gbWidth) / 2;
+	}
+
+	return dst;
+}
+
+void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height) {
+	int borderWidth = InitialBorder ? InitialBorderWidth : width;
+	int borderHeight = InitialBorder ? InitialBorderHeight : height;
+
+	// 1. Process SGB Border checks/saving
+	ProcessSGBBorder(srcBuffer, width, height);
+
+	// 2. Draw the outer border and get the inner pointer where the game frame starts
+	long long int* dst_ptr = DrawBorderAndGetDest(textureBase, width, height, borderWidth, borderHeight);
+
+	// 3. Write the actual game frame to the destination pointer
+	int gbPitch = width * 2 + 4;
+
+	const long long int *src1 = (const long long int*) srcBuffer;
+	const long long int *src2 = (const long long int*) (srcBuffer + gbPitch);
+	const long long int *src3 = (const long long int*) (srcBuffer + (gbPitch << 1));
+	const long long int *src4 = (const long long int*) (srcBuffer + (gbPitch * 3));
+
+	int srcrowpitch = (gbPitch >> 3) * 3;
+	int srcrowadjust = (gbPitch % 8) << 2;
+
+	// dst_ptr is a long long* (one unit = 4 pixels of the tiled texture). The
+	// gap to skip at the end of each tile-row is (borderWidth - width)
+	// pixels, which must be converted to 4-pixel units to match the unit of
+	// dst_ptr (the surrounding border math divides pixel offsets by 4 the same
+	// way). In the common no-border case borderWidth == width so this is 0.
+	int dstrowpitch = (borderWidth - width) / 4;
+
+	int vwid2 = (width >> 2);
+
+	for (int h = 0; h < height; h += 4)
+	{
+		for (int w = 0; w < vwid2; ++w)
+		{
+			*dst_ptr++ = *src1++;
+			*dst_ptr++ = *src2++;
+			*dst_ptr++ = *src3++;
+			*dst_ptr++ = *src4++;
+		}
+
+		src1 += srcrowpitch;
+		src2 += srcrowpitch;
+		src3 += srcrowpitch;
+		src4 += srcrowpitch;
+		dst_ptr += dstrowpitch;
+
+		if (srcrowadjust) {
+			const char *ra = (const char*) src1;
+			src1 = (const long long int*) (ra + srcrowadjust);
+			ra = (const char*) src2;
+			src2 = (const long long int*) (ra + srcrowadjust);
+			ra = (const char*) src3;
+			src3 = (const long long int*) (ra + srcrowadjust);
+			ra = (const char*) src4;
+			src4 = (const long long int*) (ra + srcrowadjust);
+		}
+	}
+}
+
 /****************************************************************************
  * GX_Render
  *
@@ -628,27 +716,8 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 	int borderWidth = InitialBorder ? InitialBorderWidth : gbWidth;
 	int borderHeight = InitialBorder ? InitialBorderHeight : gbHeight;
 
-	int h, w;
-	int gbPitch = gbWidth * 2 + 4;
-	long long int *dst = (long long int*) texturemem; // Pointer in 8-byte units / 4-pixel units
-	long long int *src1 = (long long int*) buffer;
-	long long int *src2 = (long long int*) (buffer + gbPitch);
-	long long int *src3 = (long long int*) (buffer + (gbPitch << 1));
-	long long int *src4 = (long long int*) (buffer + (gbPitch * 3));
-	int srcrowpitch = (gbPitch >> 3) * 3;
-	int srcrowadjust = (gbPitch % 8) << 2;
-	// dst is a long long* (one unit = 4 pixels of the tiled texture). The
-	// gap to skip at the end of each tile-row is (borderWidth - gbWidth)
-	// pixels, which must be converted to 4-pixel units to match the unit of
-	// dst (the surrounding border math divides pixel offsets by 4 the same
-	// way). In the common no-border case borderWidth == gbWidth so this is 0.
-	int dstrowpitch = (borderWidth - gbWidth) / 4;
-
 	vwidth = borderWidth;
 	vheight = borderHeight;
-
-	int vwid2 = (gbWidth >> 2);
-	char *ra = NULL;
 
 	// Ensure previous frame copy and background VSync block have finished cleanly
 	while (!vb_done || (copynow == GX_TRUE))
@@ -667,55 +736,8 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 	GX_SetTevOp(GX_TEVSTAGE0, GX_REPLACE);
 	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
 
-	if (gbWidth == 256 && gbHeight == 224 && !SGBBorderLoadedFromGame) {
-		if (borderAreaEmpty((u16*)buffer)) {
-			// TODO: don't paint empty SGB border
-		} else {
-			// don't try to load the default border anymore
-			SGBBorderLoadedFromGame = true;
-			SaveSGBBorderIfNoneExists(buffer);
-		}
-	}
-
-	// The InitialBorder, if any, should already be properly tiled
-	if (InitialBorder) {
-		memcpy(dst, InitialBorder, borderWidth * borderHeight * 2);
-
-		int rows_to_skip = (borderHeight - gbHeight) / 2;
-		if (rows_to_skip > 0)
-			dst += rows_to_skip * borderWidth / 4;
-		dst += (borderWidth - gbWidth) / 2;
-	}
-
-	for (h = 0; h < gbHeight; h += 4)
-	{
-		for (w = 0; w < vwid2; ++w)
-		{
-			*dst++ = *src1++;
-			*dst++ = *src2++;
-			*dst++ = *src3++;
-			*dst++ = *src4++;
-		}
-
-		src1 += srcrowpitch;
-		src2 += srcrowpitch;
-		src3 += srcrowpitch;
-		src4 += srcrowpitch;
-		dst += dstrowpitch;
-
-		if (srcrowadjust) {
-			ra = (char*) src1;
-			src1 = (long long int*) (ra + srcrowadjust);
-			ra = (char*) src2;
-			src2 = (long long int*) (ra + srcrowadjust);
-			ra = (char*) src3;
-			src3 = (long long int*) (ra + srcrowadjust);
-			ra = (char*) src4;
-			src4 = (long long int*) (ra + srcrowadjust);
-		}
-	}
-	
 	// load texture into GX
+	WriteFrameToTextureMemory(buffer, texturemem, gbWidth, gbHeight);
 	DCFlushRange(texturemem, texturesize);
 
 	GX_SetNumChans(1);
