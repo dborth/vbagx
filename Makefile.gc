@@ -30,6 +30,8 @@ INCLUDES 	:=  source source/vba
 # options for code generation
 #---------------------------------------------------------------------------------
 
+# -fno-strict-aliasing: critical for GCC 16 pointer casting inside Memory.cpp
+# -ffast-math: legacy speed boost for APU processing blocks
 CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 				-DNO_SOUND -DUSE_VM -DWORDS_BIGENDIAN -DNO_LINK -DNO_FEX \
 				-DTILED_RENDERING \
@@ -37,13 +39,17 @@ CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 				-DSDL -DNO_PNG -DHAVE_ZUTIL_H \
 				-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
 				-flto=auto \
-				-fomit-frame-pointer \
-				-Wno-unused-parameter -Wno-strict-aliasing -Wno-parentheses -Wno-format -Wno-stringop-truncation \
+				-fomit-frame-pointer -fno-strict-aliasing -fno-threadsafe-statics -ffast-math \
+				-Wno-unused-parameter -Wno-parentheses -Wno-format -Wno-stringop-truncation \
 				-Wno-maybe-uninitialized -Wno-unused-but-set-variable -Wno-stringop-overflow -Wno-narrowing \
 				-Wno-misleading-indentation -Wno-unused-function -Wno-sign-compare -Wno-unused-variable \
 				-Wno-memset-elt-size -Wno-attributes -Wno-tautological-compare -Wno-infinite-recursion -Wno-array-bounds
-CXXFLAGS	=	$(CFLAGS) -Wno-reorder
-LDFLAGS		=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
+
+# Strip C++ runtime bloating to conserve L1 I-Cache lines
+CXXFLAGS	=	$(CFLAGS) -fno-exceptions -fno-rtti -Wno-reorder
+
+# Added -O3 and LTO directly to linker pipeline for global scope analysis optimization
+LDFLAGS		=	-g -O3 -flto=auto $(MACHDEP) -Wl,-Map,$(notdir $@).map
 LDFLAGS		+=	-L../buildtools
 
 #---------------------------------------------------------------------------------
@@ -92,15 +98,17 @@ else
 endif
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
-export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES)
+
+# ISOLATION: Filter out GBA-arm.o and GBA-thumb.o from the automatic optimization rule
+export OFILES_SOURCES := $(filter-out GBA-arm.o GBA-thumb.o, $(CPPFILES:.cpp=.o)) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) $(BUILD)/GBA-arm.o $(BUILD)/GBA-thumb.o
 
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
 
 #---------------------------------------------------------------------------------
-# build a list of include paths
+# build a list of include paths (-iquote helps speed up header namespaces maps)
 #---------------------------------------------------------------------------------
-export INCLUDE	:=	$(foreach dir,$(INCLUDES), -iquote $(CURDIR)/$(dir)) \
+export INCLUDE	:=	$(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD) \
 					-I$(LIBOGC_INC)
@@ -132,7 +140,6 @@ run:
 reload:
 	psoload -r $(OUTPUT).dol
 
-
 #---------------------------------------------------------------------------------
 else
 
@@ -160,12 +167,26 @@ $(OFILES_SOURCES) : $(HFILES)
 %.png.o %_png.h : %.png
 	@echo $(notdir $<)
 	$(bin2o)
-	
+
 %.pcm.o %_pcm.h : %.pcm
 	@echo $(notdir $<)
 	$(bin2o)
 
 -include $(DEPENDS)
+
+#---------------------------------------------------------------------------------
+# Optimized rules for GBA-arm.cpp and GBA-thumb.cpp to prevent I-Cache thrashing
+# Forces -O2 and restricts code-bloating unrolls inside large switch blocks
+#---------------------------------------------------------------------------------
+$(BUILD)/GBA-arm.o: GBA-arm.cpp
+	@mkdir -p $(dir $@)
+	@echo "Compiling GBA-arm.o with I-Cache optimized flags..."
+	$(CXX) -c -O2 -fno-unroll-loops $(CXXFLAGS) $< -o $@
+
+$(BUILD)/GBA-thumb.o: GBA-thumb.cpp
+	@mkdir -p $(dir $@)
+	@echo "Compiling GBA-thumb.o with I-Cache optimized flags..."
+	$(CXX) -c -O2 -fno-unroll-loops $(CXXFLAGS) $< -o $@
 
 #---------------------------------------------------------------------------------
 endif
