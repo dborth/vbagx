@@ -788,7 +788,10 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 
 	// load texture into GX
 	WriteFrameToTextureMemory(buffer, texturemem, gbWidth, gbHeight);
-	DCFlushRange(texturemem, texturesize);
+	
+	// ONLY flush the active boundary of the texture (saves up to 87% bandwidth)
+	// and use DCStoreRange to prevent pointless CPU L1 cache evictions.
+	DCStoreRange(texturemem, vwidth * vheight * 2);
 
 	GX_SetNumChans(1);
 	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
