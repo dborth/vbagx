@@ -146,11 +146,9 @@ static inline void draw_init(void)
 {
 	GX_ClearVtxDesc ();
 	GX_SetVtxDesc (GX_VA_POS, GX_INDEX8);
-	GX_SetVtxDesc (GX_VA_CLR0, GX_INDEX8);
 	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
 
 	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
-	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
 	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
 
 	GX_SetArray (GX_VA_POS, square, 3 * sizeof (s16));
@@ -175,10 +173,9 @@ static inline void draw_init(void)
 		GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF
 }
 
-static inline void draw_vert(u8 pos, u8 c, f32 s, f32 t)
+static inline void draw_vert(u8 pos, f32 s, f32 t)
 {
 	GX_Position1x8(pos);
-	GX_Color1x8(c);
 	GX_TexCoord2f32(s, t);
 }
 
@@ -202,10 +199,10 @@ static inline void draw_square(Mtx v)
 
 	GX_LoadPosMtxImm(mv, GX_PNMTX0);
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-	draw_vert(0, 0, 0.0, 0.0);
-	draw_vert(1, 0, 1.0, 0.0);
-	draw_vert(2, 0, 1.0, 1.0);
-	draw_vert(3, 0, 0.0, 1.0);
+	draw_vert(0, 0.0, 0.0);
+	draw_vert(1, 1.0, 0.0);
+	draw_vert(2, 1.0, 1.0);
+	draw_vert(3, 0.0, 1.0);
 	GX_End();
 }
 
@@ -232,20 +229,18 @@ static inline void draw_cursor(Mtx v)
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
 
 	// I needed to hack the texture coords to cut out the opaque bit around the outside
-	draw_vert(0, 0, 0.4, 0.45);
-	draw_vert(1, 0, 0.76, 0.45);
-	draw_vert(2, 0, 0.76, 0.97);
-	draw_vert(3, 0, 0.4, 0.97);
+	draw_vert(0, 0.4, 0.45);
+	draw_vert(1, 0.76, 0.45);
+	draw_vert(2, 0.76, 0.97);
+	draw_vert(3, 0.4, 0.97);
 
 	GX_End();
 
 	GX_ClearVtxDesc ();
 	GX_SetVtxDesc (GX_VA_POS, GX_INDEX8);
-	GX_SetVtxDesc (GX_VA_CLR0, GX_INDEX8);
 	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
 
 	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
-	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
 	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
 
 	GX_SetArray (GX_VA_POS, square, 3 * sizeof (s16));
