@@ -572,15 +572,20 @@ ResetVideo_Emu ()
 	updateScaling = 1;
 }
 
+static const u16* lastCopiedBorder = NULL;
+static int sgbBorderCheckCounter = 0;
+
+/****************************************************************************
+ * GX_Render_Init
+ ***************************************************************************/
 void GX_Render_Init(int width, int height) {
 	if (texturemem) {
 		free(texturemem);
-		texturemem = NULL; // avoid a dangling pointer if the alloc below fails
+		texturemem = NULL;
 	}
 
 	/*** Allocate 32byte aligned texture memory ***/
 	texturesize = (width * height) * 2;
-
 	texturemem = (u8 *) memalign(32, texturesize);
 
 	if (texturemem != NULL)
@@ -589,6 +594,10 @@ void GX_Render_Init(int width, int height) {
 	/*** Setup for first call to scaler ***/
 	vwidth = width;
 	vheight = height;
+
+	// Reset state trackers upon texture recreation
+	lastCopiedBorder = NULL;
+	sgbBorderCheckCounter = 0;
 }
 
 static bool borderAreaEmpty(const u16* buffer) {
@@ -618,29 +627,43 @@ static bool borderAreaEmpty(const u16* buffer) {
 	return true;
 }
 
+/****************************************************************************
+ * ProcessSGBBorder
+ ***************************************************************************/
 static void ProcessSGBBorder(u8* buffer, int gbWidth, int gbHeight) {
 	if (gbWidth == 256 && gbHeight == 224 && !SGBBorderLoadedFromGame) {
-		if (borderAreaEmpty((u16*)buffer)) {
-			// TODO: don't paint empty SGB border
-		} else {
-			// don't try to load the default border anymore
-			SGBBorderLoadedFromGame = true;
-			SaveSGBBorderIfNoneExists(buffer);
+		// Throttle heavy pixel scanning path to once per second
+		sgbBorderCheckCounter++;
+		if (sgbBorderCheckCounter >= 60) {
+			sgbBorderCheckCounter = 0;
+			if (!borderAreaEmpty((u16*)buffer)) {
+				// don't try to load the default border anymore
+				SGBBorderLoadedFromGame = true;
+				SaveSGBBorderIfNoneExists(buffer);
+			}
 		}
 	}
 }
 
+/****************************************************************************
+ * DrawBorderAndGetDest
+ ***************************************************************************/
 static long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int gbHeight, int borderWidth, int borderHeight) {
 	long long int* dst = (long long int*) textureBase;
 
-	// The InitialBorder, if any, should already be properly tiled
 	if (InitialBorder) {
-		memcpy(dst, InitialBorder, borderWidth * borderHeight * 2);
+		// Only copy the 600 KB border once when it changes!
+		if (InitialBorder != lastCopiedBorder) {
+			memcpy(dst, InitialBorder, borderWidth * borderHeight * 2);
+			lastCopiedBorder = InitialBorder;
+		}
 
 		int rows_to_skip = (borderHeight - gbHeight) / 2;
 		if (rows_to_skip > 0)
 			dst += rows_to_skip * borderWidth / 4;
 		dst += (borderWidth - gbWidth) / 2;
+	} else {
+		lastCopiedBorder = NULL; // Reset tracking if running borderless
 	}
 
 	return dst;
@@ -841,6 +864,20 @@ void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int 
             MakeTextureVBA_Dynamic(srcBuffer, dst_ptr, width, height, gbPitch, dst_gap_bytes);
             break;
     }
+
+    // High-efficiency targeted data cache flushing
+    if (InitialBorder) {
+        u8* flush_ptr = (u8*)dst_ptr;
+        u32 row_bytes = width * 8;         // bytes per tile row for game screen
+        u32 stride_bytes = borderWidth * 8; // full texture pitch stride bytes
+        int tile_rows = height / 4;
+        for (int i = 0; i < tile_rows; i++) {
+            DCStoreRange(flush_ptr, row_bytes);
+            flush_ptr += stride_bytes;
+        }
+    } else {
+        DCStoreRange(textureBase, width * height * 2);
+    }
 }
 
 /****************************************************************************
@@ -868,8 +905,6 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 	if(updateScaling)
 		UpdateScaling();
 
-	// clear texture objects
-	GX_InvVtxCache();
 	GX_InvalidateTexAll();
 	GX_SetTevOp(GX_TEVSTAGE0, GX_REPLACE);
 	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
@@ -877,10 +912,6 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 	// load texture into GX
 	WriteFrameToTextureMemory(buffer, texturemem, gbWidth, gbHeight);
 	
-	// ONLY flush the active boundary of the texture (saves up to 87% bandwidth)
-	// and use DCStoreRange to prevent pointless CPU L1 cache evictions.
-	DCStoreRange(texturemem, vwidth * vheight * 2);
-
 	GX_SetNumChans(1);
 	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
 	GX_SetColorUpdate(GX_TRUE);
