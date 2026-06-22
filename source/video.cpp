@@ -654,7 +654,90 @@ static long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int g
  * Uses a pipelined 32-bit integer strategy to strictly enforce 4-byte
  * alignment.
  ***************************************************************************/
-static void MakeTextureVBA(const void *src, void *dst, s32 width, s32 height, s32 pitch, s32 dst_gap_bytes)
+/****************************************************************************
+ * MakeTextureVBA_Impl (Static Template)
+ *
+ * Employs compile-time constants to embed memory offsets directly into
+ * the PowerPC load instructions. Completely eliminates pointer arithmetic
+ * from the inner loop.
+ ***************************************************************************/
+template <int PITCH>
+static inline void MakeTextureVBA_Impl(const void *src, void *dst, s32 width, s32 height, s32 dst_gap_bytes)
+{
+    u32 src_row_stride = PITCH * 4;
+    u32 r_src_row;
+    u32 tmpA, tmpB, tmpC, tmpD;
+
+    __asm__ __volatile__ (
+        "srwi   %[width], %[width], 2\n"
+        "srwi   %[height], %[height], 2\n"
+
+    "2: mtctr   %[width]\n"
+        "mr     %[r_src_row], %[src]\n"
+
+    "1: dcbz    0, %[dst]\n"
+
+        // Load Row 0
+        "lwz    %[tmpA], 0(%[src])\n"
+        "lwz    %[tmpB], 4(%[src])\n"
+
+        // Load Row 1, Store Row 0
+        "lwz    %[tmpC], %c[p1](%[src])\n"
+        "stw    %[tmpA], 0(%[dst])\n"
+        "lwz    %[tmpD], %c[p1_4](%[src])\n"
+        "stw    %[tmpB], 4(%[dst])\n"
+
+        // Load Row 2, Store Row 1
+        "lwz    %[tmpA], %c[p2](%[src])\n"
+        "stw    %[tmpC], 8(%[dst])\n"
+        "lwz    %[tmpB], %c[p2_4](%[src])\n"
+        "stw    %[tmpD], 12(%[dst])\n"
+
+        // Load Row 3, Store Row 2
+        "lwz    %[tmpC], %c[p3](%[src])\n"
+        "stw    %[tmpA], 16(%[dst])\n"
+        "lwz    %[tmpD], %c[p3_4](%[src])\n"
+        "stw    %[tmpB], 20(%[dst])\n"
+
+        // Store Row 3
+        "stw    %[tmpC], 24(%[dst])\n"
+        "stw    %[tmpD], 28(%[dst])\n"
+
+        // Advance inner loop (X)
+        "addi   %[src], %[src], 8\n"
+        "addi   %[dst], %[dst], 32\n"
+        "bdnz   1b\n"
+
+        // Advance outer loop (Y)
+        "add    %[src], %[r_src_row], %[src_row_stride]\n"
+        "add    %[dst], %[dst], %[dst_gap_bytes]\n"
+
+        "subic. %[height], %[height], 1\n"
+        "bne    2b\n"
+
+        : [r_src_row] "=&b" (r_src_row),
+          [tmpA] "=&r" (tmpA),
+          [tmpB] "=&r" (tmpB),
+          [tmpC] "=&r" (tmpC),
+          [tmpD] "=&r" (tmpD),
+          [src] "+b" (src),
+          [dst] "+b" (dst),
+          [width] "+r" (width),
+          [height] "+r" (height)
+        : [p1] "n" (PITCH),
+          [p1_4] "n" (PITCH + 4),
+          [p2] "n" (PITCH * 2),
+          [p2_4] "n" (PITCH * 2 + 4),
+          [p3] "n" (PITCH * 3),
+          [p3_4] "n" (PITCH * 3 + 4),
+          [src_row_stride] "r" (src_row_stride),
+          [dst_gap_bytes] "r" (dst_gap_bytes)
+        : "memory", "cc"
+    );
+}
+
+// Fallback for custom/bizarre resolutions (Uses dynamic row_ptr)
+static void MakeTextureVBA_Dynamic(const void *src, void *dst, s32 width, s32 height, s32 pitch, s32 dst_gap_bytes)
 {
     u32 src_row_stride = pitch * 4;
     u32 r_src_row, row_ptr;
@@ -737,22 +820,27 @@ void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int 
     int borderWidth = InitialBorder ? InitialBorderWidth : width;
     int borderHeight = InitialBorder ? InitialBorderHeight : height;
 
-    // 1. Process SGB Border checks/saving
     ProcessSGBBorder(srcBuffer, width, height);
-
-    // 2. Draw the outer border and get the inner pointer where the game frame starts
     long long int* dst_ptr = DrawBorderAndGetDest(textureBase, width, height, borderWidth, borderHeight);
 
-    // 3. Compute optimal strides for ASM mapping
     int gbPitch = width * 2 + 4;
-
-    // Calculate the gap to skip at the end of each tile-row in bytes.
-    // (borderWidth - width) / 4 gives the number of tiles to skip.
-    // Multiply by 32 bytes per tile to get the exact memory stride.
     int dst_gap_bytes = ((borderWidth - width) / 4) * 32;
 
-    // 4. Highly optimized ASM texture swizzler
-    MakeTextureVBA(srcBuffer, (u8*)dst_ptr, width, height, gbPitch, dst_gap_bytes);
+    // Route to the statically optimized ASM based on console resolution width
+    switch (width) {
+        case 160: // GB / GBC (Pitch = 324)
+            MakeTextureVBA_Impl<324>(srcBuffer, dst_ptr, width, height, dst_gap_bytes);
+            break;
+        case 240: // GBA (Pitch = 484)
+            MakeTextureVBA_Impl<484>(srcBuffer, dst_ptr, width, height, dst_gap_bytes);
+            break;
+        case 256: // SGB (Pitch = 516)
+            MakeTextureVBA_Impl<516>(srcBuffer, dst_ptr, width, height, dst_gap_bytes);
+            break;
+        default:  // Fallback for custom borders/resolutions
+            MakeTextureVBA_Dynamic(srcBuffer, dst_ptr, width, height, gbPitch, dst_gap_bytes);
+            break;
+    }
 }
 
 /****************************************************************************
