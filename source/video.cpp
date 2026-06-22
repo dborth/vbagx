@@ -54,8 +54,10 @@ static u8 gp_fifo[DEFAULT_FIFO_SIZE] ATTRIBUTE_ALIGN(32);
 static volatile unsigned int copynow = GX_FALSE;
 
 /*** Texture memory ***/
-static u8 *texturemem = NULL;
-static int texturesize;
+#define TEX_WIDTH 640
+#define TEX_HEIGHT 480
+#define TEXTUREMEM_SIZE 	TEX_WIDTH*TEX_HEIGHT*2
+static u8 texturemem[TEXTUREMEM_SIZE] ATTRIBUTE_ALIGN (32);
 
 static GXTexObj texobj;
 static Mtx view;
@@ -574,22 +576,13 @@ ResetVideo_Emu ()
 
 static const u16* lastCopiedBorder = NULL;
 static int sgbBorderCheckCounter = 0;
+static bool borderJustChanged = false;
 
 /****************************************************************************
  * GX_Render_Init
  ***************************************************************************/
 void GX_Render_Init(int width, int height) {
-	if (texturemem) {
-		free(texturemem);
-		texturemem = NULL;
-	}
-
-	/*** Allocate 32byte aligned texture memory ***/
-	texturesize = (width * height) * 2;
-	texturemem = (u8 *) memalign(32, texturesize);
-
-	if (texturemem != NULL)
-		memset(texturemem, 0, texturesize);
+	memset(texturemem, 0, TEXTUREMEM_SIZE);
 
 	/*** Setup for first call to scaler ***/
 	vwidth = width;
@@ -598,6 +591,7 @@ void GX_Render_Init(int width, int height) {
 	// Reset state trackers upon texture recreation
 	lastCopiedBorder = NULL;
 	sgbBorderCheckCounter = 0;
+	borderJustChanged = false;
 }
 
 static bool borderAreaEmpty(const u16* buffer) {
@@ -650,12 +644,14 @@ static void ProcessSGBBorder(u8* buffer, int gbWidth, int gbHeight) {
  ***************************************************************************/
 static long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int gbHeight, int borderWidth, int borderHeight) {
 	long long int* dst = (long long int*) textureBase;
+	borderJustChanged = false;
 
 	if (InitialBorder) {
 		// Only copy the 600 KB border once when it changes!
 		if (InitialBorder != lastCopiedBorder) {
 			memcpy(dst, InitialBorder, borderWidth * borderHeight * 2);
 			lastCopiedBorder = InitialBorder;
+			borderJustChanged = true; // Signal that the GPU needs a full RAM sync
 		}
 
 		int rows_to_skip = (borderHeight - gbHeight) / 2;
@@ -866,7 +862,8 @@ void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int 
     }
 
     // High-efficiency targeted data cache flushing
-    if (InitialBorder) {
+    if (InitialBorder && !borderJustChanged) {
+        // Normal Frame: Flush ONLY the game screen cache lines (Saves ~87% bus bandwidth)
         u8* flush_ptr = (u8*)dst_ptr;
         u32 row_bytes = width * 8;         // bytes per tile row for game screen
         u32 stride_bytes = borderWidth * 8; // full texture pitch stride bytes
@@ -876,7 +873,8 @@ void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int 
             flush_ptr += stride_bytes;
         }
     } else {
-        DCStoreRange(textureBase, width * height * 2);
+        // Flush everything if borderless, OR if the border was just copied this frame
+        DCStoreRange(textureBase, borderWidth * borderHeight * 2);
     }
 }
 
