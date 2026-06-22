@@ -591,7 +591,7 @@ void GX_Render_Init(int width, int height) {
 	vheight = height;
 }
 
-bool borderAreaEmpty(const u16* buffer) {
+static bool borderAreaEmpty(const u16* buffer) {
 	u16 reference = buffer[0];
 	for (int y = 0; y < 40; y++) {
 		for (int x = 0; x < 256; x++) {
@@ -618,7 +618,7 @@ bool borderAreaEmpty(const u16* buffer) {
 	return true;
 }
 
-void ProcessSGBBorder(u8* buffer, int gbWidth, int gbHeight) {
+static void ProcessSGBBorder(u8* buffer, int gbWidth, int gbHeight) {
 	if (gbWidth == 256 && gbHeight == 224 && !SGBBorderLoadedFromGame) {
 		if (borderAreaEmpty((u16*)buffer)) {
 			// TODO: don't paint empty SGB border
@@ -630,7 +630,7 @@ void ProcessSGBBorder(u8* buffer, int gbWidth, int gbHeight) {
 	}
 }
 
-long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int gbHeight, int borderWidth, int borderHeight) {
+static long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int gbHeight, int borderWidth, int borderHeight) {
 	long long int* dst = (long long int*) textureBase;
 
 	// The InitialBorder, if any, should already be properly tiled
@@ -646,63 +646,113 @@ long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int gbHeight
 	return dst;
 }
 
-void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height) {
-	int borderWidth = InitialBorder ? InitialBorderWidth : width;
-	int borderHeight = InitialBorder ? InitialBorderHeight : height;
+/****************************************************************************
+ * MakeTextureVBA
+ *
+ * High-performance texture swizzling (Linear to 4x4 Tiled)
+ * specifically optimized for VBA GX's dynamic widths and border gaps.
+ * Uses a pipelined 32-bit integer strategy to strictly enforce 4-byte
+ * alignment.
+ ***************************************************************************/
+static void MakeTextureVBA(const void *src, void *dst, s32 width, s32 height, s32 pitch, s32 dst_gap_bytes)
+{
+    u32 src_row_stride = pitch * 4;
+    u32 r_src_row, row_ptr;
+    u32 tmpA, tmpB, tmpC, tmpD;
 
-	// 1. Process SGB Border checks/saving
-	ProcessSGBBorder(srcBuffer, width, height);
+    __asm__ __volatile__ (
+        "srwi   %[width], %[width], 2\n"       // num_tiles_x = width / 4
+        "srwi   %[height], %[height], 2\n"     // num_tiles_y = height / 4
 
-	// 2. Draw the outer border and get the inner pointer where the game frame starts
-	long long int* dst_ptr = DrawBorderAndGetDest(textureBase, width, height, borderWidth, borderHeight);
+    "2: mtctr   %[width]\n"                    // Set inner loop counter (X)
+        "mr     %[r_src_row], %[src]\n"        // Save the start of the current source 4-row block
 
-	// 3. Write the actual game frame to the destination pointer
-	int gbPitch = width * 2 + 4;
+    "1: dcbz    0, %[dst]\n"                   // ZERO L1 CACHE: Dest is perfectly 32-byte aligned
+        "mr     %[row_ptr], %[src]\n"
 
-	const long long int *src1 = (const long long int*) srcBuffer;
-	const long long int *src2 = (const long long int*) (srcBuffer + gbPitch);
-	const long long int *src3 = (const long long int*) (srcBuffer + (gbPitch << 1));
-	const long long int *src4 = (const long long int*) (srcBuffer + (gbPitch * 3));
+        // Load Row 0
+        "lwz    %[tmpA], 0(%[row_ptr])\n"
+        "lwz    %[tmpB], 4(%[row_ptr])\n"
+        "add    %[row_ptr], %[row_ptr], %[pitch]\n"
 
-	int srcrowpitch = (gbPitch >> 3) * 3;
-	int srcrowadjust = (gbPitch % 8) << 2;
+        // Load Row 1, Store Row 0
+        // Interleaving hides the 3-cycle load latency
+        "lwz    %[tmpC], 0(%[row_ptr])\n"
+        "stw    %[tmpA], 0(%[dst])\n"
+        "lwz    %[tmpD], 4(%[row_ptr])\n"
+        "stw    %[tmpB], 4(%[dst])\n"
+        "add    %[row_ptr], %[row_ptr], %[pitch]\n"
 
-	// dst_ptr is a long long* (one unit = 4 pixels of the tiled texture). The
-	// gap to skip at the end of each tile-row is (borderWidth - width)
-	// pixels, which must be converted to 4-pixel units to match the unit of
-	// dst_ptr (the surrounding border math divides pixel offsets by 4 the same
-	// way). In the common no-border case borderWidth == width so this is 0.
-	int dstrowpitch = (borderWidth - width) / 4;
+        // Load Row 2, Store Row 1
+        "lwz    %[tmpA], 0(%[row_ptr])\n"      // Recycle tmpA and tmpB
+        "stw    %[tmpC], 8(%[dst])\n"
+        "lwz    %[tmpB], 4(%[row_ptr])\n"
+        "stw    %[tmpD], 12(%[dst])\n"
+        "add    %[row_ptr], %[row_ptr], %[pitch]\n"
 
-	int vwid2 = (width >> 2);
+        // Load Row 3, Store Row 2
+        "lwz    %[tmpC], 0(%[row_ptr])\n"
+        "stw    %[tmpA], 16(%[dst])\n"
+        "lwz    %[tmpD], 4(%[row_ptr])\n"
+        "stw    %[tmpB], 20(%[dst])\n"
 
-	for (int h = 0; h < height; h += 4)
-	{
-		for (int w = 0; w < vwid2; ++w)
-		{
-			*dst_ptr++ = *src1++;
-			*dst_ptr++ = *src2++;
-			*dst_ptr++ = *src3++;
-			*dst_ptr++ = *src4++;
-		}
+        // Store Row 3
+        "stw    %[tmpC], 24(%[dst])\n"
+        "stw    %[tmpD], 28(%[dst])\n"
 
-		src1 += srcrowpitch;
-		src2 += srcrowpitch;
-		src3 += srcrowpitch;
-		src4 += srcrowpitch;
-		dst_ptr += dstrowpitch;
+        // Advance pointers for the next tile in the row
+        "addi   %[src], %[src], 8\n"           // Advance src X by 4 pixels (8 bytes)
+        "addi   %[dst], %[dst], 32\n"          // Advance dst by 1 full tile (32 bytes)
+        "bdnz   1b\n"                          // Decrement CTR, loop inner if > 0
 
-		if (srcrowadjust) {
-			const char *ra = (const char*) src1;
-			src1 = (const long long int*) (ra + srcrowadjust);
-			ra = (const char*) src2;
-			src2 = (const long long int*) (ra + srcrowadjust);
-			ra = (const char*) src3;
-			src3 = (const long long int*) (ra + srcrowadjust);
-			ra = (const char*) src4;
-			src4 = (const long long int*) (ra + srcrowadjust);
-		}
-	}
+        // Advance pointers to the next row of tiles
+        "add    %[src], %[r_src_row], %[src_row_stride]\n" // Jump down 4 source rows
+        "add    %[dst], %[dst], %[dst_gap_bytes]\n"        // Skip right/left borders in dest
+
+        "subic. %[height], %[height], 1\n"     // Decrement height counter (Y)
+        "bne    2b\n"                          // Loop outer if > 0
+
+        : [r_src_row] "=&b" (r_src_row),
+          [row_ptr] "=&b" (row_ptr),
+          [tmpA] "=&r" (tmpA),
+          [tmpB] "=&r" (tmpB),
+          [tmpC] "=&r" (tmpC),
+          [tmpD] "=&r" (tmpD),
+          [src] "+b" (src),
+          [dst] "+b" (dst),
+          [width] "+r" (width),
+          [height] "+r" (height)
+        : [pitch] "r" (pitch),
+          [src_row_stride] "r" (src_row_stride),
+          [dst_gap_bytes] "r" (dst_gap_bytes)
+        : "memory", "cc"
+    );
+}
+
+/****************************************************************************
+ * WriteFrameToTextureMemory
+ ****************************************************************************/
+void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height)
+{
+    int borderWidth = InitialBorder ? InitialBorderWidth : width;
+    int borderHeight = InitialBorder ? InitialBorderHeight : height;
+
+    // 1. Process SGB Border checks/saving
+    ProcessSGBBorder(srcBuffer, width, height);
+
+    // 2. Draw the outer border and get the inner pointer where the game frame starts
+    long long int* dst_ptr = DrawBorderAndGetDest(textureBase, width, height, borderWidth, borderHeight);
+
+    // 3. Compute optimal strides for ASM mapping
+    int gbPitch = width * 2 + 4;
+
+    // Calculate the gap to skip at the end of each tile-row in bytes.
+    // (borderWidth - width) / 4 gives the number of tiles to skip.
+    // Multiply by 32 bytes per tile to get the exact memory stride.
+    int dst_gap_bytes = ((borderWidth - width) / 4) * 32;
+
+    // 4. Highly optimized ASM texture swizzler
+    MakeTextureVBA(srcBuffer, (u8*)dst_ptr, width, height, gbPitch, dst_gap_bytes);
 }
 
 /****************************************************************************
