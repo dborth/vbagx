@@ -1,4 +1,6 @@
-executables
 build_wii
 build_gc
-dist
+executables
+.project
+.settings/
+.cproject
