@@ -147,5 +147,5 @@ void ExitApp()
 	if (ROMLoaded && !ConfigRequested && GCSettings.AutoSave == 1)
 		SaveBatteryOrStateAuto(FILE_SRAM, SILENT);
 
-	SystemExit(GCSettings.ExitAction, GCSettings.AutoloadGame > 0);
+	SystemExit(GCSettings.ExitAction, autoboot);
 }
