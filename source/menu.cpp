@@ -22,6 +22,7 @@
 #endif
 
 #include "vbagx.h"
+#include "system.h"
 #include "vbasupport.h"
 #include "video.h"
 #include "filebrowser.h"

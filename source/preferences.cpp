@@ -17,6 +17,7 @@
 #include <mxml.h>
 
 #include "vbagx.h"
+#include "system.h"
 #include "menu.h"
 #include "fileop.h"
 #include "video.h"
