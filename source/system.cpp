@@ -332,9 +332,6 @@ static const char* GetCPUSpeed(ConsoleType type) {
 	return "486 MHz"; // GameCube "Gekko" CPU
 #else
 	switch(type) {
-		case CONSOLE_GAMECUBE:
-
-
 		case CONSOLE_WII:
 		case CONSOLE_WIIU_VWII:
 			return "729 MHz"; // Wii "Broadway" CPU (vWii mode is throttled to this by default)
@@ -356,24 +353,23 @@ char * getConsoleDetails() {
     ConsoleType type = GetConsoleType();
     const char *cpu_speed = GetCPUSpeed(type);
 
-    switch(type) {
-        case CONSOLE_GAMECUBE:
-            snprintf(description, sizeof(description), "GameCube (%s)", cpu_speed);
-            break;
-#ifdef HW_RVL
-        case CONSOLE_WII:
-            snprintf(description, sizeof(description), "Wii (%s), IOS: %d", cpu_speed, IOS_GetVersion());
-            break;
+#ifdef HW_DOL
+    snprintf(description, sizeof(description), "GameCube (%s)", cpu_speed);
+#else
+	switch(type) {
+		case CONSOLE_WII:
+			snprintf(description, sizeof(description), "Wii (%s), IOS: %d", cpu_speed, IOS_GetVersion());
+			break;
 
-        case CONSOLE_WIIU_VWII:
-            snprintf(description, sizeof(description), "vWii (%s), IOS: %d", cpu_speed, IOS_GetVersion());
-            break;
+		case CONSOLE_WIIU_VWII:
+			snprintf(description, sizeof(description), "vWii (%s), IOS: %d", cpu_speed, IOS_GetVersion());
+			break;
 
-        case CONSOLE_WIIU_WIIVC:
-            snprintf(description, sizeof(description), "Wii U VC (%s), IOS: %d", cpu_speed, IOS_GetVersion());
-            break;
+		case CONSOLE_WIIU_WIIVC:
+			snprintf(description, sizeof(description), "Wii U VC (%s), IOS: %d", cpu_speed, IOS_GetVersion());
+			break;
 
-        case CONSOLE_DOLPHIN:
+		case CONSOLE_DOLPHIN:
 			snprintf(description, sizeof(description), "Dolphin Emulator");
 			break;
 #endif
