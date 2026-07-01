@@ -1,7 +1,7 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric 2008-2023
+ * Tantric 2008-2026
  * softdev 2007
  *
  * video.cpp
@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include "vbagx.h"
+#include "videofilters.h"
 #include "menu.h"
 #include "input.h"
 #include "vbasupport.h"
@@ -58,10 +59,14 @@ static volatile unsigned int copynow = GX_FALSE;
 #define TEX_HEIGHT 480
 #define TEXTUREMEM_SIZE 	TEX_WIDTH*TEX_HEIGHT*2
 static u8 texturemem[TEXTUREMEM_SIZE] ATTRIBUTE_ALIGN (32);
+static unsigned char scanline_tex_data[32] ATTRIBUTE_ALIGN (32);
 
 static GXTexObj texobj;
+static GXTexObj cursorObj;
+static GXTexObj scanlineTexObj;
 static Mtx view;
 static int vwidth, vheight;
+static int fscale = 1;
 static int updateScaling;
 bool progressive = false;
 
@@ -87,6 +92,14 @@ static s16 square[] ATTRIBUTE_ALIGN(32) = {
 	 200, -200, 0,	// 2
 	-200, -200, 0	// 3
     };
+
+// 96x96 static quad for the cursor (Centered at 0,0)
+static s16 cursor_square[] ATTRIBUTE_ALIGN(32) = {
+	-48,  48, 0,	// 0: Top Left
+	 48,  48, 0,	// 1: Top Right
+	 48, -48, 0,	// 2: Bottom Right
+	-48, -48, 0 	// 3: Bottom Left
+};
 
 static camera cam = { {0.0F, 0.0F, 0.0F},
                       {0.0F, 0.5F, 0.0F},
@@ -140,9 +153,89 @@ copy_to_xfb (u32 arg)
 }
 
 /****************************************************************************
+ * Scanline Support Functions
+ ***************************************************************************/
+
+static void InitScanlineTexture() {
+	// GX_TF_I8 represents one byte per pixel.
+	// We create an 8x4 tile: Rows 0 and 2 are white (0xFF), Rows 1 and 3 are dark (0xA0).
+	for (int y = 0; y < 4; y++) {
+		u8 intensity = (y % 2 == 0) ? 0xFF : 0xA0; // 0xA0 controls the scanline darkness
+		for (int x = 0; x < 8; x++) {
+			scanline_tex_data[y * 8 + x] = intensity;
+		}
+	}
+
+	// CRITICAL: Flush the CPU data cache. GX reads directly from main memory.
+	DCStoreRange(scanline_tex_data, 32);
+
+	// Initialize the texture object. Wrap modes MUST be GX_REPEAT to tile across the screen.
+	GX_InitTexObj(&scanlineTexObj, scanline_tex_data, 8, 4, GX_TF_I8, GX_REPEAT, GX_REPEAT, GX_FALSE);
+
+	// CRITICAL: Filter mode MUST be GX_NEAR. GX_LINEAR will blur the lines into a muddy gray.
+	GX_InitTexObjFilterMode(&scanlineTexObj, GX_NEAR, GX_NEAR);
+
+	// Load the scanline texture into MAP1
+	GX_LoadTexObj(&scanlineTexObj, GX_TEXMAP1);
+}
+
+static void SetupScanlineFilterTEV() {
+	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_TEX1, GX_TEX_ST, GX_F32, 0);
+
+	// Allow a second texture coordinate to be passed to the vertex stream
+	GX_SetVtxDesc(GX_VA_TEX1, GX_DIRECT);
+
+	// Enable two textures and two TEV stages
+	GX_SetNumTexGens(2);
+	GX_SetNumTevStages(2);
+	GX_SetNumChans(0);
+
+	// Configure Texture Coordinate Generation for both textures
+	GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+	GX_SetTexCoordGen(GX_TEXCOORD1, GX_TG_MTX2x4, GX_TG_TEX1, GX_IDENTITY);
+
+	// --- STAGE 0: Sample the Game Screen ---
+	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
+	GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_TEXC);
+	GX_SetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+
+	// Configure Stage 0 Alpha path
+	GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_TEXA);
+	GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+
+	// --- STAGE 1: Multiply by Scanlines ---
+	GX_SetTevOrder(GX_TEVSTAGE1, GX_TEXCOORD1, GX_TEXMAP1, GX_COLORNULL);
+	// Formula: d + ((1.0 - c) * a + c * b)
+	// By setting: a=ZERO, b=CPREV, c=TEXC, d=ZERO -> (TEXC * CPREV)
+	GX_SetTevColorIn(GX_TEVSTAGE1, GX_CC_ZERO, GX_CC_CPREV, GX_CC_TEXC, GX_CC_ZERO);
+	GX_SetTevColorOp(GX_TEVSTAGE1, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+
+	// Configure Stage 1 Alpha path (Pass-through blend)
+	GX_SetTevAlphaIn(GX_TEVSTAGE1, GX_CA_ZERO, GX_CA_APREV, GX_CA_TEXA, GX_CA_ZERO);
+	GX_SetTevAlphaOp(GX_TEVSTAGE1, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+}
+
+/****************************************************************************
  * Scaler Support Functions
  ****************************************************************************/
-static inline void draw_init(void)
+static inline void configure_tev_pipeline()
+{
+	if(GCSettings.FilterMethod == FILTER_SCANLINES) {
+		SetupScanlineFilterTEV();
+	}
+	else {
+		GX_SetNumTexGens (1);
+		GX_SetNumTevStages (1);
+		GX_SetNumChans (0);
+
+		GX_SetTexCoordGen (GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+
+		GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
+		GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
+	}
+}
+
+static inline void draw_init()
 {
 	GX_ClearVtxDesc ();
 	GX_SetVtxDesc (GX_VA_POS, GX_INDEX8);
@@ -151,26 +244,15 @@ static inline void draw_init(void)
 	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
 	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
 
+	configure_tev_pipeline();
+
 	GX_SetArray (GX_VA_POS, square, 3 * sizeof (s16));
-
-	GX_SetNumTexGens (1);
-	GX_SetNumChans (0);
-
-	GX_SetTexCoordGen (GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
-
-	GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
-	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
 
 	memset (&view, 0, sizeof (Mtx));
 	guLookAt(view, &cam.pos, &cam.up, &cam.view);
 	GX_LoadPosMtxImm (view, GX_PNMTX0);
 
 	GX_InvVtxCache ();	// update vertex cache
-
-	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);
-
-	if (GCSettings.render == RENDER_UNFILTERED)
-		GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF
 }
 
 static inline void draw_vert(u8 pos, f32 s, f32 t)
@@ -199,61 +281,121 @@ static inline void draw_square(Mtx v)
 
 	GX_LoadPosMtxImm(mv, GX_PNMTX0);
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-	draw_vert(0, 0.0, 0.0);
-	draw_vert(1, 1.0, 0.0);
-	draw_vert(2, 1.0, 1.0);
-	draw_vert(3, 0.0, 1.0);
+
+	if(GCSettings.FilterMethod == FILTER_SCANLINES) {
+		// Calculate physical dimensions of the rendering quad in EFB pixels
+		// We use the static 'square' array which holds the final scaled/zoomed screen footprint
+		// square[3] and square[0] are the Right and Left X bounds
+		// square[1] and square[7] are the Top and Bottom Y bounds
+		f32 quad_width = (f32)(square[3] - square[0]);
+		f32 quad_height = (f32)(square[1] - square[7]);
+
+		// Map exactly 1 texel to 1 EFB physical TV pixel
+		// Our scanline texture is 8 pixels wide and 4 pixels high
+		f32 u_repeat = quad_width / 8.0f;
+		f32 v_repeat = quad_height / 4.0f;
+
+		// The "Half-Texel Offset" Epsilon.
+		// By shifting the UV start coordinates by exactly half a texel, we force the
+		// GPU sampler to hit the 'dead center' of the texture pixels (e.g. 0.5, 1.5, 2.5),
+		// preventing the moiré effect caused by floating-point edge-rounding.
+		// U: 1/8 texel = 0.125. Half of that = 0.0625f
+		// V: 1/4 texel = 0.25. Half of that = 0.125f
+		f32 u_off = 0.0625f;
+		f32 v_off = 0.125f;
+
+		draw_vert (0, 0.0f, 0.0f); // TEX0
+		GX_TexCoord2f32 (u_off, v_off); // TEX1
+
+		draw_vert (1, 1.0f, 0.0f); // TEX0
+		GX_TexCoord2f32 (u_repeat + u_off, v_off); // TEX1
+
+		draw_vert (2, 1.0f, 1.0f); // TEX0
+		GX_TexCoord2f32 (u_repeat + u_off, v_repeat + v_off); // TEX1
+
+		draw_vert (3, 0.0f, 1.0f); // TEX0
+		GX_TexCoord2f32 (u_off, v_repeat + v_off); // TEX1
+	}
+	else {
+		draw_vert(0, 0.0, 0.0);
+		draw_vert(1, 1.0, 0.0);
+		draw_vert(2, 1.0, 1.0);
+		draw_vert(3, 0.0, 1.0);
+	}
 	GX_End();
+
+	if(GCSettings.FilterMethod == FILTER_SCANLINES) {
+		// force identity matrix to ensure texture mapping is pristine and devoid of stray scaling
+		Mtx texMtx;
+		guMtxIdentity(texMtx);
+		GX_LoadTexMtxImm(texMtx, GX_TEXMTX1, GX_MTX2x4);
+	}
 }
 
 #ifdef HW_RVL
-static inline void draw_cursor(Mtx v)
+static inline void draw_cursor()
 {
 	if (!CursorVisible || !CursorValid)
 		return;
 
-	GX_InitTexObj(&texobj, pointer[0]->GetImage(), 96, 96, GX_TF_RGBA8,GX_CLAMP, GX_CLAMP,GX_FALSE);
-	GX_LoadTexObj(&texobj, GX_TEXMAP0);
-	GX_SetBlendMode(GX_BM_BLEND,GX_BL_DSTALPHA,GX_BL_INVSRCALPHA,GX_LO_CLEAR);
-	GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
-	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
+	// --- 1. ISOLATE AND BIND THE CURSOR ARRAY ---
+	// We reuse GX_VTXFMT0 to avoid crashing the menu, but we swap the positional array.
+	// Flush the static array to main memory to guarantee the GPU reads it correctly.
+	DCFlushRange(cursor_square, 32);
+	GX_SetArray(GX_VA_POS, cursor_square, 3 * sizeof(s16));
 
-	Mtx m;			// model matrix.
+	// --- 2. DISABLE TEX1 ---
+	// If scanlines were drawn just before this, TEX1 is required.
+	// We must turn it off for the UI pass to prevent a FIFO stall.
+	GX_SetVtxDesc(GX_VA_TEX1, GX_NONE);
 
+	// --- 3. CONFIGURE TEV FOR UI ---
+	// 1-stage replacement perfectly bypasses any scanline multiplication
+	GX_SetNumTexGens(1);
+	GX_SetNumTevStages(1);
+	GX_SetNumChans(0);
+
+	GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+	GX_SetTevOp(GX_TEVSTAGE0, GX_REPLACE);
+	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
+
+	// --- 4. CONFIGURE ALPHA BLENDING ---
+	GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
+	GX_LoadTexObj(&cursorObj, GX_TEXMAP0);
+
+	// --- 5. MATH & POSITIONING ---
+	// Map the 0-640 / 0-480 IR coordinates into the -320 to 320 ortho space
+	f32 cX = (f32)CursorX - 320.0f;
+	f32 cY = 240.0f - (f32)CursorY;
+
+	Mtx m, mv;
 	guMtxIdentity(m);
-	guMtxScaleApply(m, m, 0.070f, 0.10f, 0.06f);
-	// I needed to hack this position
-	guMtxTransApply(m, m, CursorX-315, 220-CursorY, -100);
+	// Z MUST BE -100.0f
+	guMtxTransApply(m, m, cX, cY, -100.0f);
+	guMtxConcat(view, m, mv);
+	GX_LoadPosMtxImm(mv, GX_PNMTX0);
 
-	GX_LoadPosMtxImm(m, GX_PNMTX0);
+	// --- 6. DRAW THE CURSOR ---
+	// Using the exact same draw_vert logic the game loop uses
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-
-	// I needed to hack the texture coords to cut out the opaque bit around the outside
-	draw_vert(0, 0.4, 0.45);
-	draw_vert(1, 0.76, 0.45);
-	draw_vert(2, 0.76, 0.97);
-	draw_vert(3, 0.4, 0.97);
-
+		draw_vert(0, 0.0f, 0.0f);
+		draw_vert(1, 1.0f, 0.0f);
+		draw_vert(2, 1.0f, 1.0f);
+		draw_vert(3, 0.0f, 1.0f);
 	GX_End();
 
-	GX_ClearVtxDesc ();
-	GX_SetVtxDesc (GX_VA_POS, GX_INDEX8);
-	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
+	// --- 7. CRITICAL STATE RESTORATION ---
+	// Restore array pointer to the game's dynamic scaling square
+	GX_SetArray(GX_VA_POS, square, 3 * sizeof(s16));
 
-	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
-	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+	// Rebind the game texture to MAP0
+	GX_LoadTexObj(&texobj, GX_TEXMAP0);
 
-	GX_SetArray (GX_VA_POS, square, 3 * sizeof (s16));
+	// Restore Blending
+	GX_SetBlendMode(GX_BM_NONE, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
 
-	GX_SetNumTexGens (1);
-	GX_SetTexCoordGen (GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
-
-	GX_InvVtxCache ();	// update vertex cache
-
-	GX_InitTexObj(&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);
-
-	if (GCSettings.render == RENDER_UNFILTERED)
-		GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF
+	// Restore TEV pipeline exactly how the next frame's draw_square expects it
+	configure_tev_pipeline();
 }
 #endif
 
@@ -384,6 +526,15 @@ InitializeVideo ()
 	xfb[1] = (u32 *) MEM_K0_TO_K1 (xfb[1]);
 
 	GXRModeObj *rmode = FindVideoMode();
+
+#ifdef HW_RVL
+if (CONF_GetAspectRatio() == CONF_ASPECT_16_9 && (*(u32*)(0xCD8005A0) >> 16) == 0xCAFE) // Wii U
+{
+	/* vWii widescreen patch by tueidj */
+	write32(0xd8006a0, 0x30000004), mask32(0xd8006a8, 0, 2);
+}
+#endif
+
 	SetupVideoMode(rmode);
 
 	// Setup synchronization queues
@@ -472,14 +623,6 @@ static inline void UpdateScaling()
 		xscale *= zoomHor;
 		yscale *= zoomVert;
 	}
-	
-	#ifdef HW_RVL
-	if (fixed && CONF_GetAspectRatio() == CONF_ASPECT_16_9 && (*(u32*)(0xCD8005A0) >> 16) == 0xCAFE) // Wii U
-	{
-		/* vWii widescreen patch by tueidj */
-		write32(0xd8006a0, fixed ? 0x30000002 : 0x30000004), mask32(0xd8006a8, 0, 2);
-	}
-	#endif
 
 	// Set new aspect
 	square[0] = square[9]  = -xscale + GCSettings.xshift;
@@ -550,21 +693,16 @@ ResetVideo_Emu ()
 	
 	GX_SetCullMode (GX_CULL_NONE);
 	GX_SetDispCopyGamma (GX_GM_1_0);
-	GX_SetBlendMode(GX_BM_BLEND,GX_BL_DSTALPHA,GX_BL_INVSRCALPHA,GX_LO_CLEAR);
+
+	GX_SetZMode (GX_TRUE, GX_LEQUAL, GX_TRUE);
+	GX_SetColorUpdate (GX_TRUE);
+	GX_SetBlendMode (GX_BM_NONE, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
 
 	guOrtho(p, 480/2, -(480/2), -(640/2), 640/2, 100, 1000);	// matrix, t, b, l, r, n, f
 	GX_LoadProjectionMtx (p, GX_ORTHOGRAPHIC);
 
-	// reinitialize texture
-	GX_InvalidateTexAll ();
-	GX_InitTexObj (&texobj, texturemem, vwidth, vheight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);	// initialize the texture obj we are going to use
-
-	if (GCSettings.render == RENDER_UNFILTERED)
-		GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF
-
-	GX_Flush();
+	fscale = GetFilterScale();
 	draw_init();
-
 	// set aspect ratio
 	updateScaling = 1;
 }
@@ -879,13 +1017,19 @@ void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int 
  * Pass in a buffer, width and height to update as a tiled RGB565 texture
  * (2 bytes per pixel)
  ****************************************************************************/
-void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
+void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 {
-	int borderWidth = InitialBorder ? InitialBorderWidth : gbWidth;
-	int borderHeight = InitialBorder ? InitialBorderHeight : gbHeight;
+	// Disable custom exterior borders if CPU filtering to prevent scaling overlap
+	bool useBorder = (InitialBorder != NULL) && (fscale == 1);
+	int borderWidth = useBorder ? InitialBorderWidth : consoleWidth;
+	int borderHeight = useBorder ? InitialBorderHeight : consoleHeight;
 
-	vwidth = borderWidth;
-	vheight = borderHeight;
+	// Only trigger a scaling/texture re-init if the dimensions or scale actually changed
+	if (vwidth != borderWidth || vheight != borderHeight || updateScaling) {
+		vwidth = borderWidth;
+		vheight = borderHeight;
+		updateScaling = 1;
+	}
 
 	// Ensure previous frame copy and background VSync block have finished cleanly
 	while (!vb_done || (copynow == GX_TRUE))
@@ -895,24 +1039,45 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer)
 
 	whichfb ^= 1;
 
-	if(updateScaling)
+	if (updateScaling) {
 		UpdateScaling();
 
-	GX_InvalidateTexAll();
-	GX_SetTevOp(GX_TEVSTAGE0, GX_REPLACE);
-	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
+		GX_InitTexObj(&texobj, texturemem, vwidth * fscale, vheight * fscale, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);
 
-	// load texture into GX
-	WriteFrameToTextureMemory(buffer, texturemem, gbWidth, gbHeight);
-	
-	GX_SetNumChans(1);
-	GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
-	GX_SetColorUpdate(GX_TRUE);
-	GX_LoadTexObj(&texobj, GX_TEXMAP0);
+		if (GCSettings.render == RENDER_UNFILTERED)
+			GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF
+
+		GX_LoadTexObj(&texobj, GX_TEXMAP0);
+
+		if(GCSettings.FilterMethod == FILTER_SCANLINES)
+			InitScanlineTexture();
+
+		#ifdef HW_RVL
+		GX_InitTexObj(&cursorObj, pointer[0]->GetImage(), 96, 96, GX_TF_RGBA8,GX_CLAMP, GX_CLAMP,GX_FALSE);
+		#endif
+	}
+
+	if (fscale > 1) {
+		// Calculate the VBA-M core pitch ((width * 2) + 4)
+		int gbPitch = (consoleWidth * 2) + 4;
+
+		FilterMethod(buffer, gbPitch, texturemem, consoleWidth * fscale * 2, consoleWidth, consoleHeight);
+
+		// Pad flush size cleanly to 32-byte cache line boundaries
+		u32 padded_width = (consoleWidth * fscale + 3) & ~3;
+		u32 padded_height = (consoleHeight * fscale + 3) & ~3;
+		DCStoreRange(texturemem, padded_width * padded_height * 2);
+	}
+	else {
+		WriteFrameToTextureMemory(buffer, texturemem, consoleWidth, consoleHeight);
+	}
+
+	GX_InvalidateTexAll();
 
 	draw_square(view); // render textured quad
+
 	#ifdef HW_RVL
-	draw_cursor(view); // render cursor
+	draw_cursor(); // render cursor
 	#endif
 	GX_DrawDone();
 
@@ -979,14 +1144,6 @@ void ClearScreenshot()
 void
 ResetVideo_Menu ()
 {
-	#ifdef HW_RVL
-	if (CONF_GetAspectRatio() == CONF_ASPECT_16_9 && (*(u32*)(0xCD8005A0) >> 16) == 0xCAFE) // Wii U
-	{
-		/* vWii widescreen patch by tueidj */
-		write32(0xd8006a0, 0x30000004), mask32(0xd8006a8, 0, 2);
-	}
-	#endif
-	
 	Mtx44 p;
 	f32 yscale;
 	u32 xfbHeight;
@@ -1028,6 +1185,8 @@ ResetVideo_Menu ()
 
 	GX_SetNumChans(1);
 	GX_SetNumTexGens(1);
+	GX_SetNumTevStages(1);
+
 	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
 	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
 	GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);

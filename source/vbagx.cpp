@@ -20,6 +20,7 @@
 #include "video.h"
 #include "gamesettings.h"
 #include "mem2.h"
+#include "videofilters.h"
 
 #include "vba/gba/Globals.h"
 #include "vba/gba/Sound.h"
@@ -101,6 +102,8 @@ int main(int argc, char *argv[])
 		ScreenshotRequested = 0;
 
 		SwitchAudioMode(0);
+
+		SelectFilterMethod(GCSettings.FilterMethod); // Initialize / Re-evaluate active filter
 
 		// stop checking if devices were removed/inserted
 		// since we're starting emulation again

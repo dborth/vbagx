@@ -25,6 +25,7 @@
 #include "input.h"
 #include "button_mapping.h"
 #include "gamesettings.h"
+#include "videofilters.h"
 
 struct SGCSettings GCSettings;
 static gamePalette *palettes = NULL;
@@ -194,6 +195,7 @@ preparePrefsData ()
 	createXMLSetting("gbFixed", "GB Fixed Pixel Ratio", toStr(GCSettings.gbFixed));
 	createXMLSetting("gbaFixed", "GBA Fixed Pixel Ratio", toStr(GCSettings.gbaFixed));
 	createXMLSetting("render", "Video Filtering", toStr(GCSettings.render));
+	createXMLSetting("FilterMethod", "Filter Method", toStr(GCSettings.FilterMethod));
 	createXMLSetting("scaling", "Aspect Ratio Correction", toStr(GCSettings.scaling));
 	createXMLSetting("xshift", "Horizontal Video Shift", toStr(GCSettings.xshift));
 	createXMLSetting("yshift", "Vertical Video Shift", toStr(GCSettings.yshift));
@@ -510,6 +512,7 @@ decodePrefsData ()
 			loadXMLSetting(&GCSettings.gbaFixed, "gbaFixed");
 			loadXMLSetting(&GCSettings.gbFixed, "gbFixed");
 			loadXMLSetting(&GCSettings.render, "render");
+			loadXMLSetting(&GCSettings.FilterMethod, "FilterMethod");
 			loadXMLSetting(&GCSettings.scaling, "scaling");
 			loadXMLSetting(&GCSettings.xshift, "xshift");
 			loadXMLSetting(&GCSettings.yshift, "yshift");
@@ -617,6 +620,8 @@ void FixInvalidSettings()
 		GCSettings.language = LANG_ENGLISH;
 	if(!(GCSettings.render >= RENDER_FILTERED && GCSettings.render < RENDER_LENGTH))
 		GCSettings.render = RENDER_FILTERED_SHARP;
+	if(!(GCSettings.FilterMethod >= FILTER_NONE && GCSettings.FilterMethod <= NUM_FILTERS))
+		GCSettings.FilterMethod = FILTER_NONE;
 	if(!(GCSettings.videomode >= VIDEOMODE_AUTO && GCSettings.videomode < VIDEOMODE_LENGTH))
 		GCSettings.videomode = VIDEOMODE_AUTO;
 }
@@ -653,6 +658,7 @@ DefaultSettings ()
 	GCSettings.gbaFixed = 0; // not fixed - use zoom level
 	GCSettings.videomode = VIDEOMODE_AUTO;
 	GCSettings.render = RENDER_FILTERED_SHARP;
+	GCSettings.FilterMethod = FILTER_NONE;
 	GCSettings.scaling = SCALING_PARTIAL_STRETCH;
 	GCSettings.WiiControls = false; // Match Wii Game
 
