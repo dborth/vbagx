@@ -34,10 +34,21 @@ extern bool CursorVisible;
 extern bool CursorValid;
 extern bool TiltScreen;
 extern float TiltAngle;
-extern u8 * gameScreenTex;
-extern u8 * gameScreenPng;
-extern int gameScreenPngSize;
 extern u32 FrameTimer;
+
+typedef struct
+{
+	u8 * buffer;
+	int size;
+	int width;
+	int height;
+	float scaleX;
+	float scaleY;
+	int xoffset;
+	int yoffset;
+} GameScreenPng;
+
+extern GameScreenPng gameScreenPng;
 
 char *AllocAndGetPNGBorderPath(const char* title);
 void SaveSGBBorderIfNoneExists(const void* buffer);

@@ -80,13 +80,7 @@ u16 systemGbPalette[24];
 u16 systemColorMap16[0x10000];
 u32 *systemColorMap32 = NULL;
 
-void gbSetPalette(u32 RRGGBB[]);
-bool StartColorizing();
 void StopColorizing();
-extern bool ColorizeGameboy;
-extern u16 systemMonoPalette[14];
-void gbSetBgPal(u8 WhichPal, u32 bright, u32 medium, u32 dark, u32 black=0x000000);
-void gbSetSpritePal(u8 WhichPal, u32 bright, u32 medium, u32 dark);
 
 struct EmulatedSystem emulator =
 {
@@ -438,13 +432,13 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 	if(!FindDevice(filepath, &device))
 		return 0;
 
-	if(action == FILE_SNAPSHOT && gameScreenPngSize > 0)
+	if(action == FILE_SNAPSHOT && gameScreenPng.size > 0)
 	{
 		char screenpath[1024];
 		strncpy(screenpath, filepath, 1024);
 		screenpath[strlen(screenpath)-4] = 0;
 		strcat(screenpath, ".png");
-		SaveFile((char *)gameScreenPng, screenpath, gameScreenPngSize, silent);
+		SaveFile((char *)gameScreenPng.buffer, screenpath, gameScreenPng.size, silent);
 	}
 
 	AllocSaveBuffer();
@@ -541,13 +535,13 @@ bool SavePreviewImg(char * filepath, bool silent)
 	if(!FindDevice(filepath, &device))
 		return false;
 
-	if(gameScreenPngSize > 0)
+	if(gameScreenPng.size > 0)
 	{
 		char screenpath[1024];
 		strcpy(screenpath, filepath);
 		screenpath[strlen(screenpath)] = 0;
 		strcat(screenpath, ".png");
-		SaveFile((char *)gameScreenPng, screenpath, gameScreenPngSize, silent);
+		SaveFile((char *)gameScreenPng.buffer, screenpath, gameScreenPng.size, silent);
 	}
 
 	if(!silent)

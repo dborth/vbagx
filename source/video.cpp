@@ -38,8 +38,7 @@ int whichfb = 0; // Frame buffer toggle
 
 static Mtx GXmodelView2D;
 
-u8 * gameScreenPng = NULL;
-int gameScreenPngSize = 0;
+GameScreenPng gameScreenPng;
 
 int screenheight = 480;
 int screenwidth = 640;
@@ -631,6 +630,15 @@ static inline void UpdateScaling()
 	square[7] = square[10] = -yscale - GCSettings.yshift;
 	DCFlushRange (square, 32); // update memory BEFORE the GPU accesses it!
 
+	float targetWidth = screenwidth * (2.0f * xscale) / (float)vmode->fbWidth;
+	float targetHeight = screenheight * (2.0f * yscale) / (float)vmode->efbHeight;
+	gameScreenPng.width = vwidth * fscale;
+	gameScreenPng.height = vheight * fscale;
+	gameScreenPng.scaleX = targetWidth / (float)gameScreenPng.width;
+	gameScreenPng.scaleY = targetHeight / (float)gameScreenPng.height;
+	gameScreenPng.xoffset = (GCSettings.xshift * screenwidth) / vmode->fbWidth;
+	gameScreenPng.yoffset = (GCSettings.yshift * screenheight) / vmode->efbHeight;
+
 	draw_init ();
 
 	memset(&view, 0, sizeof(Mtx));
@@ -967,7 +975,7 @@ static void MakeTextureVBA_Dynamic(const void *src, void *dst, s32 width, s32 he
 /****************************************************************************
  * WriteFrameToTextureMemory
  ****************************************************************************/
-void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height)
+static void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height)
 {
     int borderWidth = InitialBorder ? InitialBorderWidth : width;
     int borderHeight = InitialBorder ? InitialBorderHeight : height;
@@ -1098,42 +1106,43 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 	LWP_ThreadSignal(vb_queue);
 }
 
+void ClearScreenshot()
+{
+	if(gameScreenPng.buffer) {
+		free(gameScreenPng.buffer);
+		gameScreenPng.buffer = NULL;
+	}
+
+	gameScreenPng.size = 0;
+}
+
 /****************************************************************************
  * TakeScreenshot
  *
- * Copies the current screen into a GX texture
+ * Copies the current texturemem screen into a PNG buffer
  ***************************************************************************/
 void TakeScreenshot()
 {
 	IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
 
-	if (pngContext != NULL)
-	{
-		gameScreenPngSize = PNGU_EncodeFromEFB(pngContext, vmode->fbWidth, vmode->efbHeight);
-		PNGU_ReleaseImageContext(pngContext);
-
-		if (gameScreenPngSize <= 0) {
-			gameScreenPngSize = 0;
-			return;
-		}
-
-		gameScreenPng = (u8 *) malloc(gameScreenPngSize);
-		if (gameScreenPng == NULL) {
-			gameScreenPngSize = 0;
-			return;
-		}
-		memcpy(gameScreenPng, savebuffer, gameScreenPngSize);
+	if (pngContext == NULL) {
+		return;
 	}
-}
 
-void ClearScreenshot()
-{
-	if(gameScreenPng)
-	{
-		gameScreenPngSize = 0;
-		free(gameScreenPng);
-		gameScreenPng = NULL;
+	gameScreenPng.size = PNGU_EncodeFromGXTexture(pngContext, gameScreenPng.width, gameScreenPng.height, texturemem, gameScreenPng.width * 3);
+	PNGU_ReleaseImageContext(pngContext);
+
+	if (gameScreenPng.size <= 0) {
+		ClearScreenshot();
+		return;
 	}
+
+	gameScreenPng.buffer = (u8 *) malloc(gameScreenPng.size);
+	if (gameScreenPng.buffer == NULL) {
+		ClearScreenshot();
+		return;
+	}
+	memcpy(gameScreenPng.buffer, savebuffer, gameScreenPng.size);
 }
 
 /****************************************************************************
