@@ -640,19 +640,14 @@ static inline void UpdateScaling()
 	square[7] = square[10] = -yscale - GCSettings.yshift;
 	DCFlushRange (square, 32); // update memory BEFORE the GPU accesses it!
 
-	float targetWidth = screenwidth * (2.0f * xscale) / (float)vmode->fbWidth;
-	float targetHeight = screenheight * (2.0f * yscale) / (float)vmode->efbHeight;
-	gameScreenPng.width = vwidth * fscale;
-	gameScreenPng.height = vheight * fscale;
-	gameScreenPng.scaleX = targetWidth / (float)gameScreenPng.width;
-	gameScreenPng.scaleY = targetHeight / (float)gameScreenPng.height;
-	gameScreenPng.xoffset = (GCSettings.xshift * screenwidth) / vmode->fbWidth;
-	gameScreenPng.yoffset = (GCSettings.yshift * screenheight) / vmode->efbHeight;
-
 	draw_init ();
 
 	memset(&view, 0, sizeof(Mtx));
 	guLookAt(view, &cam.pos, &cam.up, &cam.view);
+
+	// Track the active EFB Viewport bounds
+	float vpX, vpY, vpW, vpH;
+
 	if (fixed) {
 		int ratio = fixed % 10;
 		bool widescreen = fixed / 10;
@@ -667,9 +662,66 @@ static inline void UpdateScaling()
 		float vx = (vmode->fbWidth - vw) / 2;
 		float vy = (vmode->efbHeight - vh) / 2;
 		GX_SetViewport(vx, vy, vw, vh, 0, 1);
+
+		// Save custom viewport coordinates
+		vpX = vx;
+		vpY = vy;
+		vpW = vw;
+		vpH = vh;
 	} else {
 		GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0, 1);
+
+		// Save fullscreen viewport coordinates
+		vpX = 0;
+		vpY = 0;
+		vpW = (float)vmode->fbWidth;
+		vpH = (float)vmode->efbHeight;
 	}
+
+	GXRModeObj *menu_vmode = FindVideoMode();
+
+	// 1. Projection bounds (The geometry quad drawn by the emulator)
+	// Base Ortho matrix is [-320, 320] width and [-240, 240] height.
+	float projW = 2.0f * xscale;
+	float projH = 2.0f * yscale;
+
+	// 2. Map the Projection bounds strictly to the active EFB Viewport pixels
+	float efbGameWidth  = vpW * (projW / 640.0f);
+	float efbGameHeight = vpH * (projH / 480.0f);
+
+	// Calculate the EFB center coordinates, accounting for user X/Y shifting.
+	// Base center X is +xshift, Y is -yshift mapped against 640x480
+	float efbCenterX = vpX + vpW * ((320.0f + GCSettings.xshift) / 640.0f);
+	float efbCenterY = vpY + vpH * ((240.0f + GCSettings.yshift) / 480.0f);
+
+	// 3. Map EFB pixels to Physical TV (VI) pixels
+	// The copy stretches the full EFB to the physical VI dimensions
+	float efb_to_vi_x = (float)vmode->viWidth / (float)vmode->fbWidth;
+	float efb_to_vi_y = (float)vmode->viHeight / (float)vmode->efbHeight;
+
+	float physGameWidth  = efbGameWidth * efb_to_vi_x;
+	float physGameHeight = efbGameHeight * efb_to_vi_y;
+	float physCenterX    = efbCenterX * efb_to_vi_x;
+	float physCenterY    = efbCenterY * efb_to_vi_y;
+
+	// 4. Map Physical TV pixels back to the Menu's logical 640x480 rendering space
+	float vi_to_menu_x = (float)screenwidth / (float)menu_vmode->viWidth;
+	float vi_to_menu_y = (float)screenheight / (float)menu_vmode->viHeight;
+
+	float targetWidth   = physGameWidth * vi_to_menu_x;
+	float targetHeight  = physGameHeight * vi_to_menu_y;
+	float targetCenterX = physCenterX * vi_to_menu_x;
+	float targetCenterY = physCenterY * vi_to_menu_y;
+
+	gameScreenPng.width  = vwidth * fscale;
+	gameScreenPng.height = vheight * fscale;
+
+	gameScreenPng.scaleX = targetWidth / (float)gameScreenPng.width;
+	gameScreenPng.scaleY = targetHeight / (float)gameScreenPng.height;
+
+	// X/Y offsets are calculated dynamically from the 320/240 true center point
+	gameScreenPng.xoffset = targetCenterX - (screenwidth / 2.0f);
+	gameScreenPng.yoffset = targetCenterY - (screenheight / 2.0f);
 
 	updateScaling = 0;
 }
