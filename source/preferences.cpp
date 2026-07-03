@@ -802,7 +802,6 @@ LoadPrefsFromMethod (char * path)
  * Checks sources consecutively until we find a preference file
  ***************************************************************************/
 static bool prefLoadAttempted = false;
-static bool prefFound = false;
 
 bool LoadPrefs()
 {
