@@ -40,7 +40,7 @@ CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 				-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
 				-flto=auto \
 				-fomit-frame-pointer -fno-strict-aliasing \
-				-Wregister -Wno-unused-parameter -Wno-parentheses -Wno-format -Wno-stringop-truncation \
+				-Wno-register -Wno-unused-parameter -Wno-parentheses -Wno-format -Wno-stringop-truncation \
 				-Wno-maybe-uninitialized -Wno-unused-but-set-variable -Wno-stringop-overflow -Wno-narrowing \
 				-Wno-misleading-indentation -Wno-unused-function -Wno-sign-compare -Wno-unused-variable \
 				-Wno-memset-elt-size -Wno-attributes -Wno-tautological-compare -Wno-infinite-recursion -Wno-array-bounds
