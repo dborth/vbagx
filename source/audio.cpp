@@ -58,19 +58,26 @@ static int MIXER_GetSamples(u8 *dstbuffer, int maxlen)
 	u32 *dst = (u32 *)dstbuffer;
 	u32 intlen = maxlen >> 2;
 
+	// Pre-pack the block with silence (handles all underrun scenarios natively)
 	memset(dstbuffer, 0, maxlen);
 
-	// Snapshot the producer index once. head is volatile and updated from
-	// the emulator thread; re-reading it in the loop condition could let the
-	// consumer chase a moving target and over-read.
+	// Snapshot indices once to keep the volatile hardware bus quiet
+	int localTail = tail;
 	int producer = head;
 
-	while ( ( producer != tail ) && intlen )
+	for(u32 i = 0; i < intlen; i++)
 	{
-		*dst++ = src[tail++];
-		tail &= MIXERMASK;
-		intlen--;
+		// If consumer catches producer, ring buffer is dry.
+		// Break instantly; the memset above already padded the remainder with silence.
+		if(localTail == producer)
+			break;
+
+		*dst++ = src[localTail];
+		localTail = (localTail + 1) & MIXERMASK;
 	}
+
+	// Atomically publish the final index back to the emulator core
+	tail = localTail;
 
 	return maxlen;
 }
@@ -208,10 +215,9 @@ void SoundWii::write(u16 * finalWave, int length)
 	if (gameType == 2) // length = 1468 - GBA
 		fixinc = 30065;
 
-	// length is given in u16 samples; the source is read as u32 (one packed
-	// stereo frame), so clamp the highest index we may read. Previously the
-	// length argument was ignored, allowing reads past finalWave.
-	u32 maxSrcIndex = (length > 1) ? (u32)((length >> 1) - 1) : 0;
+	// length is given in bytes; the source is read as u32 (one 4-byte packed
+	// stereo frame), so clamp the highest index we may read.
+	u32 maxSrcIndex = (length > 3) ? (u32)((length >> 2) - 1) : 0;
 
 	// Work on a local copy of the volatile producer index and publish it once
 	// at the end. This avoids a memory round-trip on every loop iteration and

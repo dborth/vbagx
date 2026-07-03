@@ -52,7 +52,7 @@
 #include "goomba/goombarom.h"
 #include "goomba/goombasav.h"
 
-static u32 start;
+static u64 start;
 int cartridgeType = CARTRIDGE_NONE;
 u32 RomIdCode;
 char RomTitle[17];
@@ -110,7 +110,7 @@ static u64 lastTime = 0;
 u32 systemGetClock(void)
 {
     const u64 now = gettime();
-    return diff_usec(start, now) / 1000;
+    return (u32)(ticks_to_microsecs(now - start) / 1000);
 }
 
 void systemFrame() {}
@@ -164,13 +164,13 @@ static int frameSkipDelta(int speed)
 
 void system10Frames(int rate)
 {
-	const u64 now = gettime();
+	const u64 nowUs = ticks_to_microsecs(gettime());
 
 	// Prime the reference on the first call (lastTime == 0) so we never sync
 	// against zero. The now <= lastTime case is a defensive re-anchor.
-	if (lastTime == 0 || now <= lastTime)
+	if (lastTime == 0 || nowUs <= lastTime)
 	{
-		lastTime = now;
+		lastTime = nowUs;
 		return;
 	}
 
@@ -179,8 +179,8 @@ void system10Frames(int rate)
 	const int safeRate = (rate > 0) ? rate : 60;
 	const s64 targetPeriod = (s64)FRAMES_PER_BATCH * USEC_PER_SEC / safeRate;
 
-	const s64 elapsed = (s64)diff_usec(lastTime, now); // core time for 10 frames
-	const s64 timeOff = targetPeriod - elapsed;        // signed: > 0 => ahead
+	const s64 elapsed = (s64)(nowUs - lastTime); // core time for 10 frames
+	const s64 timeOff = targetPeriod - elapsed; // signed: > 0 => ahead
 
 	// Sleep when ahead, but never longer than one whole period (caps, rather
 	// than discards, a large lead - prevents light cores from running too fast).
@@ -211,8 +211,8 @@ void system10Frames(int rate)
 	// ahead -> next reference is the intended wake time (now + timeOff), so
 	//          usleep() rounding error can't accumulate across batches.
 	// behind -> re-anchor to now (timeOff <= 0), so we never fast-forward to
-	//           "catch up" after a stall (menu, save state, disc I/O).
-	lastTime = now + (timeOff > 0 ? timeOff : 0);
+	//           "catch up" after a stall
+	lastTime = nowUs + (timeOff > 0 ? timeOff : 0);
 }
 
 /****************************************************************************
