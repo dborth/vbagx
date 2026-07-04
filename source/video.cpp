@@ -874,7 +874,6 @@ void ClearScreenshot()
 		free(gameScreenPng.buffer);
 		gameScreenPng.buffer = NULL;
 	}
-
 	gameScreenPng.size = 0;
 }
 
@@ -901,14 +900,13 @@ static void TakeScreenshot()
 
 	PNGU_ReleaseImageContext(pngContext);
 
-	if (gameScreenPng.size <= 0) {
-		ClearScreenshot();
+	if (gameScreenPng.size == 0) {
 		return;
 	}
 
 	gameScreenPng.buffer = (u8 *) malloc(gameScreenPng.size);
 	if (gameScreenPng.buffer == NULL) {
-		ClearScreenshot();
+		gameScreenPng.size = 0;
 		return;
 	}
 	memcpy(gameScreenPng.buffer, savebuffer, gameScreenPng.size);
