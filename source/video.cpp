@@ -868,6 +868,52 @@ static long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int g
 	return dst;
 }
 
+void ClearScreenshot()
+{
+	if(gameScreenPng.buffer) {
+		free(gameScreenPng.buffer);
+		gameScreenPng.buffer = NULL;
+	}
+
+	gameScreenPng.size = 0;
+}
+
+/****************************************************************************
+ * TakeScreenshot
+ *
+ * Copies the current texturemem screen into a PNG buffer
+ ***************************************************************************/
+static void TakeScreenshot()
+{
+	IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
+
+	if (pngContext == NULL) {
+		return;
+	}
+
+	int res = PNGU_EncodeFromGXTexture(pngContext, gameScreenPng.width, gameScreenPng.height, texturemem, gameScreenPng.width * 3);
+
+	if(res == PNGU_OK) {
+		gameScreenPng.size = pngContext->cursor;
+	} else {
+		gameScreenPng.size = 0;
+	}
+
+	PNGU_ReleaseImageContext(pngContext);
+
+	if (gameScreenPng.size <= 0) {
+		ClearScreenshot();
+		return;
+	}
+
+	gameScreenPng.buffer = (u8 *) malloc(gameScreenPng.size);
+	if (gameScreenPng.buffer == NULL) {
+		ClearScreenshot();
+		return;
+	}
+	memcpy(gameScreenPng.buffer, savebuffer, gameScreenPng.size);
+}
+
 /****************************************************************************
  * MakeTextureVBA
  *
@@ -1173,45 +1219,6 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 	vb_wait = true;
 	LWP_ThreadSignal(vb_queue);
 	_CPU_ISR_Restore(level);
-}
-
-void ClearScreenshot()
-{
-	if(gameScreenPng.buffer) {
-		free(gameScreenPng.buffer);
-		gameScreenPng.buffer = NULL;
-	}
-
-	gameScreenPng.size = 0;
-}
-
-/****************************************************************************
- * TakeScreenshot
- *
- * Copies the current texturemem screen into a PNG buffer
- ***************************************************************************/
-void TakeScreenshot()
-{
-	IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
-
-	if (pngContext == NULL) {
-		return;
-	}
-
-	gameScreenPng.size = PNGU_EncodeFromGXTexture(pngContext, gameScreenPng.width, gameScreenPng.height, texturemem, gameScreenPng.width * 3);
-	PNGU_ReleaseImageContext(pngContext);
-
-	if (gameScreenPng.size <= 0) {
-		ClearScreenshot();
-		return;
-	}
-
-	gameScreenPng.buffer = (u8 *) malloc(gameScreenPng.size);
-	if (gameScreenPng.buffer == NULL) {
-		ClearScreenshot();
-		return;
-	}
-	memcpy(gameScreenPng.buffer, savebuffer, gameScreenPng.size);
 }
 
 /****************************************************************************

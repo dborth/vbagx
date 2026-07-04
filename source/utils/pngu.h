@@ -11,6 +11,7 @@
 #define __PNGU__
 
 #include <gccore.h>
+#include <png.h>
 
 #ifdef __cplusplus
 	extern "C" {
@@ -47,8 +48,27 @@ typedef struct
 	PNGUCOLOR *trans; // Transparent colors
 } PNGUPROP;
 
+// PNGU Image context struct
+struct _IMGCTX
+{
+	int source;
+	void *buffer;
+	char *filename;
+	u32 cursor;
+
+	u32 propRead;
+	PNGUPROP prop;
+
+	u32 infoRead;
+	png_structp png_ptr;
+	png_infop info_ptr;
+	FILE *fd;
+
+	png_bytep *row_pointers;
+	png_bytep img_data;
+};
+
 // Image context, always initialize with SelectImageFrom* and free with ReleaseImageContext
-struct _IMGCTX;
 typedef struct _IMGCTX *IMGCTX; 
 
 /****************************************************************************

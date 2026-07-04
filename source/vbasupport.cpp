@@ -1004,7 +1004,7 @@ void SaveSGBBorderIfNoneExists(const void* buffer) {
 	pngContext = PNGU_SelectImageFromBuffer(rgba8);
 	if (pngContext == NULL) goto cleanup;
 	
-	PNGU_EncodeFromLinearRGB565(pngContext, 256, 224, buffer, 258);
+	if(PNGU_EncodeFromLinearRGB565(pngContext, 256, 224, buffer, 258) != PNGU_OK) goto cleanup;
 	fwrite(rgba8, 1, 256*224*3, f);
 	
 cleanup:
