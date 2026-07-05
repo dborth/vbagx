@@ -42,15 +42,4 @@ void utilGBAFindSave(const u8 *, const int);
 void utilUpdateSystemColorMaps(bool lcd = false);
 bool utilFileExists( const char *filename );
 
-
-#ifdef __LIBRETRO__
-void utilWriteIntMem(uint8_t *& data, int);
-void utilWriteMem(uint8_t *& data, const void *in_data, unsigned size);
-void utilWriteDataMem(uint8_t *& data, variable_desc *);
-
-int utilReadIntMem(const uint8_t *& data);
-void utilReadMem(void *buf, const uint8_t *& data, unsigned size);
-void utilReadDataMem(const uint8_t *& data, variable_desc *);
-#endif
-
 #endif // UTIL_H

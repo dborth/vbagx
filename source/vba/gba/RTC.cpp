@@ -276,17 +276,6 @@ void rtcReset()
   rtcClockData.reserved[11] = 0;
 }
 
-#ifdef __LIBRETRO__
-void rtcSaveGame(u8 *&data)
-{
-  utilWriteMem(data, &rtcClockData, sizeof(rtcClockData));
-}
-
-void rtcReadGame(const u8 *&data)
-{
-  utilReadMem(&rtcClockData, data, sizeof(rtcClockData));
-}
-#else
 void rtcSaveGame(gzFile gzFile)
 {
   utilGzWrite(gzFile, &rtcClockData, sizeof(rtcClockData));
@@ -296,4 +285,3 @@ void rtcReadGame(gzFile gzFile)
 {
   utilGzRead(gzFile, &rtcClockData, sizeof(rtcClockData));
 }
-#endif

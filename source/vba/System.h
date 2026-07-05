@@ -18,17 +18,10 @@ struct EmulatedSystem {
   bool (*emuReadBattery)(const char *);
   // write battery file
   bool (*emuWriteBattery)(const char *);
-#ifdef __LIBRETRO__
-   // load state
-   bool (*emuReadState)(const u8*, unsigned);
-   // load state
-   unsigned (*emuWriteState)(u8*, unsigned);
-#else
    // load state
    bool (*emuReadState)(const char *);
    // save state
    bool (*emuWriteState)(const char *);
-#endif
   // load memory state (rewind)
   bool (*emuReadMemState)(char *, int);
   // write memory state (rewind)
@@ -80,11 +73,7 @@ extern void Sm60FPS_Init();
 extern bool Sm60FPS_CanSkipFrame();
 extern void Sm60FPS_Sleep();
 extern void DbgMsg(const char *msg, ...);
-#ifdef SDL
 #define winlog log
-#else
-extern void winlog(const char *,...);
-#endif
 extern void (*dbgOutput)(const char *s, u32 addr);
 extern void (*dbgSignal)(int sig,int number);
 

@@ -17,12 +17,7 @@
 #define FLASH_PROGRAM            8
 #define FLASH_SETBANK            9
 
-#ifdef __LIBRETRO__
-extern uint8_t libretro_save_buf[0x20000 + 0x2000];
-uint8_t *flashSaveMemory = libretro_save_buf;
-#else
 uint8_t flashSaveMemory[FLASH_128K_SZ];
-#endif
 
 int flashState = FLASH_READ_ARRAY;
 int flashReadState = FLASH_READ_ARRAY;
@@ -57,11 +52,7 @@ static variable_desc flashSaveData3[] = {
 
 void flashInit()
 {
-#ifdef __LIBRETRO__
-	memset(flashSaveMemory, 0xff, 0x20000);
-#else
 	memset(flashSaveMemory, 0xff, sizeof(flashSaveMemory));
-#endif
 }
 
 void flashReset()
@@ -71,17 +62,6 @@ void flashReset()
   flashBank = 0;
 }
 
-#ifdef __LIBRETRO__
-void flashSaveGame(uint8_t *& data)
-{
-   utilWriteDataMem(data, flashSaveData3);
-}
-
-void flashReadGame(const uint8_t *& data, int)
-{
-   utilReadDataMem(data, flashSaveData3);
-}
-#else
 void flashSaveGame(gzFile gzFile)
 {
   utilWriteData(gzFile, flashSaveData3);
@@ -111,8 +91,6 @@ void flashReadGameSkip(gzFile gzFile, int version)
     utilReadDataSkip(gzFile, flashSaveData3);
   }
 }
-#endif
-
 
 void flashSetSize(int size)
 {
