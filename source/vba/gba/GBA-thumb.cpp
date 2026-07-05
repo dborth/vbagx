@@ -22,10 +22,6 @@
 #include "prof/prof.h"
 #endif
 
-#ifdef _MSC_VER
-#define snprintf _snprintf
-#endif
-
 ///////////////////////////////////////////////////////////////////////////
 
 static int clockTicks;
@@ -75,694 +71,38 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
 
-#ifndef C_CORE
-#ifdef __GNUC__
-#ifdef __POWERPC__
-  #define ADD_RD_RS_RN(N) \
-            {										\
-                int Flags;							\
-                int Result;							\
-                asm volatile("addco. %0, %2, %3\n"	\
-                            "mcrxr cr1\n"			\
-                            "mfcr %1\n"				\
-                            : "=r" (Result), 		\
-                              "=r" (Flags)			\
-                            : "r" (reg[source].I), 	\
-                              "r" (reg[N].I)		\
-                            );						\
-                reg[dest].I = Result;				\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define ADD_RD_RS_O3(N) \
-            {										\
-                int Flags;							\
-                int Result;							\
-                asm volatile("addco. %0, %2, %3\n"	\
-                            "mcrxr cr1\n"			\
-                            "mfcr %1\n"				\
-                            : "=r" (Result), 		\
-                              "=r" (Flags)			\
-                            : "r" (reg[source].I), 	\
-                              "r" (N)				\
-                            );						\
-                reg[dest].I = Result;				\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define ADD_RD_RS_O3_0 ADD_RD_RS_O3
-  #define ADD_RN_O8(d) \
-            {\
-                int Flags;							\
-                int Result;							\
-                asm volatile("addco. %0, %2, %3\n"	\
-                            "mcrxr cr1\n"			\
-                            "mfcr %1\n"				\
-                            : "=r" (Result), 		\
-                              "=r" (Flags)			\
-                            : "r" (reg[(d)].I), 	\
-                              "r" (opcode & 255)	\
-                            );						\
-                reg[(d)].I = Result;				\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define CMN_RD_RS \
-            {\
-                int Flags;							\
-                int Result;							\
-                asm volatile("addco. %0, %2, %3\n"	\
-                            "mcrxr cr1\n"			\
-                            "mfcr %1\n"				\
-                            : "=r" (Result), 		\
-                              "=r" (Flags)			\
-                            : "r" (reg[dest].I), 	\
-                              "r" (value)			\
-                            );						\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define ADC_RD_RS \
-            {\
-                int Flags;							\
-                int Result;							\
-                asm volatile("mtspr 1, %4\n"		\ /* reg 1 is xer */
-                             "addeo. %0, %2, %3\n"	\
-                             "mcrxr cr1\n"			\
-                             "mfcr	%1\n"			\
-                             : "=r" (Result),		\
-                               "=r" (Flags)			\
-                             : "r" (reg[dest].I),	\
-                               "r" (value),			\
-                               "r" (C_FLAG << 29)	\
-                             );						\
-                reg[dest].I = Result;				\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define SUB_RD_RS_RN(N) \
-            {\
-                int Flags;							\
-                int Result;							\
-                asm volatile("subco. %0, %2, %3\n"	\
-                            "mcrxr cr1\n"			\
-                            "mfcr %1\n"				\
-                            : "=r" (Result), 		\
-                              "=r" (Flags)			\
-                            : "r" (reg[source].I), 	\
-                              "r" (reg[N].I)		\
-                            );						\
-                reg[dest].I = Result;				\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define SUB_RD_RS_O3(N) \
-            {\
-                int Flags;							\
-                int Result;							\
-                asm volatile("subco. %0, %2, %3\n"	\
-                            "mcrxr cr1\n"			\
-                            "mfcr %1\n"				\
-                            : "=r" (Result), 		\
-                              "=r" (Flags)			\
-                            : "r" (reg[source].I), 	\
-                              "r" (N)				\
-                            );						\
-                reg[dest].I = Result;				\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define SUB_RD_RS_O3_0 SUB_RD_RS_O3
-  #define SUB_RN_O8(d) \
-            {\
-                int Flags;							\
-                int Result;							\
-                asm volatile("subco. %0, %2, %3\n"	\
-                            "mcrxr cr1\n"			\
-                            "mfcr %1\n"				\
-                            : "=r" (Result), 		\
-                              "=r" (Flags)			\
-                            : "r" (reg[(d)].I), 	\
-                              "r" (opcode & 255)	\
-                            );						\
-                reg[(d)].I = Result;				\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define CMP_RN_O8(d) \
-            {\
-                int Flags;							\
-                int Result;							\
-                asm volatile("subco. %0, %2, %3\n"	\
-                            "mcrxr cr1\n"			\
-                            "mfcr %1\n"				\
-                            : "=r" (Result), 		\
-                              "=r" (Flags)			\
-                            : "r" (reg[(d)].I), 	\
-                              "r" (opcode & 255)	\
-                            );						\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define SBC_RD_RS \
-            {\
-                int Flags;							\
-                int Result;							\
-                asm volatile("mtspr 1, %4\n"		\ /* reg 1 is xer */
-                             "subfeo. %0, %3, %2\n"	\
-                             "mcrxr cr1\n"			\
-                             "mfcr	%1\n"			\
-                             : "=r" (Result),		\
-                               "=r" (Flags)			\
-                             : "r" (reg[dest].I),	\
-                               "r" (value),			\
-                               "r" (C_FLAG << 29) 	\
-                             );						\
-                reg[dest].I = Result;				\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define NEG_RD_RS \
-            {\
-                int Flags;							\
-                int Result;							\
-                asm volatile("subfco. %0, %2, %3\n"	\
-                            "mcrxr cr1\n"			\
-                            "mfcr %1\n"				\
-                            : "=r" (Result), 		\
-                              "=r" (Flags)			\
-                            : "r" (reg[source].I), 	\
-                              "r" (0)				\
-                            );						\
-                reg[dest].I = Result;				\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-  #define CMP_RD_RS \
-            {\
-                int Flags;							\
-                int Result;							\
-                asm volatile("subco. %0, %2, %3\n"	\
-                            "mcrxr cr1\n"			\
-                            "mfcr %1\n"				\
-                            : "=r" (Result), 		\
-                              "=r" (Flags)			\
-                            : "r" (reg[dest].I), 	\
-                              "r" (value)			\
-                            );						\
-                Z_FLAG = (Flags >> 29) & 1;			\
-                N_FLAG = (Flags >> 31) & 1;			\
-                C_FLAG = (Flags >> 25) & 1;			\
-                V_FLAG = (Flags >> 26) & 1;			\
-            }
-#else
-  #define EMIT1(op,arg)        #op" "arg"; "
-  #define EMIT2(op,src,dest)   #op" "src", "dest"; "
-  #define KONST(val)           "$"#val
-  #define ASMVAR(cvar)         ASMVAR2 (__USER_LABEL_PREFIX__, cvar)
-  #define ASMVAR2(prefix,cvar) STRING (prefix) cvar
-  #define STRING(x)            #x
-  #define VAR(var)             ASMVAR(#var)
-  #define REGREF1(index)       ASMVAR("reg("index")")
-  #define REGREF2(index,scale) ASMVAR("reg(,"index","#scale")")
-  #define eax "%%eax"
-  #define ecx "%%ecx"
-  #define edx "%%edx"
-  #define ADD_RN_O8(d) \
-     asm ("andl $0xFF, %%eax;"\
-          "addl %%eax, %0;"\
-          EMIT1(setsb, VAR(N_FLAG)) \
-          EMIT1(setzb, VAR(Z_FLAG)) \
-          EMIT1(setcb, VAR(C_FLAG)) \
-          EMIT1(setob, VAR(V_FLAG)) \
-          : "=m" (reg[(d)].I));
-  #define CMN_RD_RS \
-     asm ("add %0, %1;"\
-          EMIT1(setsb, VAR(N_FLAG)) \
-          EMIT1(setzb, VAR(Z_FLAG)) \
-          EMIT1(setcb, VAR(C_FLAG)) \
-          EMIT1(setob, VAR(V_FLAG)) \
-          : \
-          : "r" (value), "r" (reg[dest].I):"1");
-  #define ADC_RD_RS \
-     asm (EMIT2(bt,KONST(0),VAR(C_FLAG)) \
-          "adc %1, %%ebx;"\
-          EMIT1(setsb, VAR(N_FLAG)) \
-          EMIT1(setzb, VAR(Z_FLAG)) \
-          EMIT1(setcb, VAR(C_FLAG)) \
-          EMIT1(setob, VAR(V_FLAG)) \
-          : "=b" (reg[dest].I)\
-          : "r" (value), "b" (reg[dest].I));
-  #define SUB_RN_O8(d) \
-     asm ("andl $0xFF, %%eax;"\
-          "subl %%eax, %0;"\
-          EMIT1(setsb, VAR(N_FLAG)) \
-          EMIT1(setzb, VAR(Z_FLAG)) \
-          EMIT1(setncb, VAR(C_FLAG)) \
-          EMIT1(setob, VAR(V_FLAG)) \
-          : "=m" (reg[(d)].I));
-  #define MOV_RN_O8(d) \
-     asm ("andl $0xFF, %%eax;"\
-          EMIT2(movb,KONST(0),VAR(N_FLAG)) \
-          "movl %%eax, %0;"\
-          EMIT1(setzb, VAR(Z_FLAG)) \
-          : "=m" (reg[(d)].I));
-  #define CMP_RN_O8(d) \
-     asm ("andl $0xFF, %%eax;"\
-          "cmpl %%eax, %0;"\
-          EMIT1(setsb, VAR(N_FLAG)) \
-          EMIT1(setzb, VAR(Z_FLAG)) \
-          EMIT1(setncb, VAR(C_FLAG)) \
-          EMIT1(setob, VAR(V_FLAG)) \
-          : \
-          : "m" (reg[(d)].I));
-  #define SBC_RD_RS \
-     asm volatile (EMIT2(bt,KONST(0),VAR(C_FLAG)) \
-                   "cmc;"\
-                   "sbb %1, %%ebx;"\
-                   EMIT1(setsb, VAR(N_FLAG)) \
-                   EMIT1(setzb, VAR(Z_FLAG)) \
-                   EMIT1(setncb, VAR(C_FLAG)) \
-                   EMIT1(setob, VAR(V_FLAG)) \
-                   : "=b" (reg[dest].I)\
-                   : "r" (value), "b" (reg[dest].I) : "cc", "memory");
-  #define LSL_RD_RS \
-         asm ("shl %%cl, %%eax;"\
-              EMIT1(setcb, VAR(C_FLAG)) \
-              : "=a" (value)\
-              : "a" (reg[dest].I), "c" (value));
-  #define LSR_RD_RS \
-         asm ("shr %%cl, %%eax;"\
-              EMIT1(setcb, VAR(C_FLAG)) \
-              : "=a" (value)\
-              : "a" (reg[dest].I), "c" (value));
-  #define ASR_RD_RS \
-         asm ("sar %%cl, %%eax;"\
-              EMIT1(setcb, VAR(C_FLAG)) \
-              : "=a" (value)\
-              : "a" (reg[dest].I), "c" (value));
-  #define ROR_RD_RS \
-         asm ("ror %%cl, %%eax;"\
-              EMIT1(setcb, VAR(C_FLAG)) \
-              : "=a" (value)\
-              : "a" (reg[dest].I), "c" (value));
-  #define NEG_RD_RS \
-     asm ("neg %%ebx;"\
-          EMIT1(setsb, VAR(N_FLAG)) \
-          EMIT1(setzb, VAR(Z_FLAG)) \
-          EMIT1(setncb, VAR(C_FLAG)) \
-          EMIT1(setob, VAR(V_FLAG)) \
-          : "=b" (reg[dest].I)\
-          : "b" (reg[source].I));
-  #define CMP_RD_RS \
-     asm ("sub %0, %1;"\
-          EMIT1(setsb, VAR(N_FLAG)) \
-          EMIT1(setzb, VAR(Z_FLAG)) \
-          EMIT1(setncb, VAR(C_FLAG)) \
-          EMIT1(setob, VAR(V_FLAG)) \
-          : \
-          : "r" (value), "r" (reg[dest].I):"1");
-  #define IMM5_INSN(OP,N) \
-     asm("movl %%eax,%%ecx;"         \
-         "shrl $1,%%eax;"            \
-         "andl $7,%%ecx;"            \
-         "andl $0x1C,%%eax;"         \
-         EMIT2(movl, REGREF1(eax), edx) \
-         OP                          \
-         EMIT1(setsb, VAR(N_FLAG)) \
-         EMIT1(setzb, VAR(Z_FLAG)) \
-         EMIT2(movl, edx, REGREF2(ecx,4)) \
-         : : "i" (N))
-  #define IMM5_INSN_0(OP)            \
-     asm("movl %%eax,%%ecx;"         \
-         "shrl $1,%%eax;"            \
-         "andl $7,%%ecx;"            \
-         "andl $0x1C,%%eax;"         \
-         EMIT2(movl, REGREF1(eax), edx) \
-         OP                          \
-         EMIT1(setsb, VAR(N_FLAG)) \
-         EMIT1(setzb, VAR(Z_FLAG)) \
-         EMIT2(movl, edx, REGREF2(ecx,4)) \
-         : : )
-  #define IMM5_LSL \
-         "shll %0,%%edx;"\
-         EMIT1(setcb, VAR(C_FLAG))
-  #define IMM5_LSL_0 \
-         "testl %%edx,%%edx;"
-  #define IMM5_LSR \
-         "shrl %0,%%edx;"\
-         EMIT1(setcb, VAR(C_FLAG))
-  #define IMM5_LSR_0 \
-         "testl %%edx,%%edx;"\
-         EMIT1(setsb, VAR(C_FLAG)) \
-         "xorl %%edx,%%edx;"
-  #define IMM5_ASR \
-         "sarl %0,%%edx;"\
-         EMIT1(setcb, VAR(C_FLAG))
-  #define IMM5_ASR_0 \
-         "sarl $31,%%edx;"\
-         EMIT1(setsb, VAR(C_FLAG))
-  #define THREEARG_INSN(OP,N) \
-     asm("movl %%eax,%%edx;"       \
-         "shrl $1,%%edx;"          \
-         "andl $0x1C,%%edx;"       \
-         "andl $7,%%eax;"          \
-         EMIT2(movl, REGREF1(edx), ecx) \
-         OP(N)                     \
-         EMIT1(setsb, VAR(N_FLAG)) \
-         EMIT1(setzb, VAR(Z_FLAG)) \
-         EMIT2(movl, ecx, REGREF2(eax,4)) \
-         : : )
-  #define ADD_RD_RS_RN(N)          \
-         EMIT2(add,VAR(reg)"+"#N"*4",ecx) \
-         EMIT1(setcb, VAR(C_FLAG)) \
-         EMIT1(setob, VAR(V_FLAG))
-  #define ADD_RD_RS_O3(N)          \
-         "add $"#N",%%ecx;"        \
-         EMIT1(setcb, VAR(C_FLAG)) \
-         EMIT1(setob, VAR(V_FLAG))
-  #define ADD_RD_RS_O3_0(N)        \
-         EMIT2(movb,KONST(0),VAR(C_FLAG)) \
-         "add $0,%%ecx;"           \
-         EMIT2(movb,KONST(0),VAR(V_FLAG))
-  #define SUB_RD_RS_RN(N) \
-         EMIT2(sub,VAR(reg)"+"#N"*4",ecx) \
-         EMIT1(setncb, VAR(C_FLAG)) \
-         EMIT1(setob, VAR(V_FLAG))
-  #define SUB_RD_RS_O3(N) \
-         "sub $"#N",%%ecx;"        \
-         EMIT1(setncb, VAR(C_FLAG)) \
-         EMIT1(setob, VAR(V_FLAG))
-  #define SUB_RD_RS_O3_0(N)        \
-         EMIT2(movb,KONST(1),VAR(C_FLAG)) \
-         "sub $0,%%ecx;"           \
-         EMIT2(movb,KONST(0),VAR(V_FLAG))
-#endif
-#else // !__GNUC__
-  #define ADD_RD_RS_RN(N) \
-   {\
-     __asm mov eax, source\
-     __asm mov ebx, dword ptr [OFFSET reg+4*eax]\
-     __asm add ebx, dword ptr [OFFSET reg+4*N]\
-     __asm mov eax, dest\
-     __asm mov dword ptr [OFFSET reg+4*eax], ebx\
-     __asm sets byte ptr N_FLAG\
-     __asm setz byte ptr Z_FLAG\
-     __asm setc byte ptr C_FLAG\
-     __asm seto byte ptr V_FLAG\
-   }
-  #define ADD_RD_RS_O3(N) \
-   {\
-     __asm mov eax, source\
-     __asm mov ebx, dword ptr [OFFSET reg+4*eax]\
-     __asm add ebx, N\
-     __asm mov eax, dest\
-     __asm mov dword ptr [OFFSET reg+4*eax], ebx\
-     __asm sets byte ptr N_FLAG\
-     __asm setz byte ptr Z_FLAG\
-     __asm setc byte ptr C_FLAG\
-     __asm seto byte ptr V_FLAG\
-   }
-  #define ADD_RD_RS_O3_0 \
-   {\
-     __asm mov eax, source\
-     __asm mov ebx, dword ptr [OFFSET reg+4*eax]\
-     __asm add ebx, 0\
-     __asm mov eax, dest\
-     __asm mov dword ptr [OFFSET reg+4*eax], ebx\
-     __asm sets byte ptr N_FLAG\
-     __asm setz byte ptr Z_FLAG\
-     __asm mov byte ptr C_FLAG, 0\
-     __asm mov byte ptr V_FLAG, 0\
-   }
-  #define ADD_RN_O8(d) \
-   {\
-     __asm mov ebx, opcode\
-     __asm and ebx, 255\
-     __asm add dword ptr [OFFSET reg+4*(d)], ebx\
-     __asm sets byte ptr N_FLAG\
-     __asm setz byte ptr Z_FLAG\
-     __asm setc byte ptr C_FLAG\
-     __asm seto byte ptr V_FLAG\
-   }
-  #define CMN_RD_RS \
-     {\
-       __asm mov eax, dest\
-       __asm mov ebx, dword ptr [OFFSET reg+4*eax]\
-       __asm add ebx, value\
-       __asm sets byte ptr N_FLAG\
-       __asm setz byte ptr Z_FLAG\
-       __asm setc byte ptr C_FLAG\
-       __asm seto byte ptr V_FLAG\
-     }
-  #define ADC_RD_RS \
-     {\
-       __asm mov ebx, dest\
-       __asm mov ebx, dword ptr [OFFSET reg+4*ebx]\
-       __asm bt word ptr C_FLAG, 0\
-       __asm adc ebx, value\
-       __asm mov eax, dest\
-       __asm mov dword ptr [OFFSET reg+4*eax], ebx\
-       __asm sets byte ptr N_FLAG\
-       __asm setz byte ptr Z_FLAG\
-       __asm setc byte ptr C_FLAG\
-       __asm seto byte ptr V_FLAG\
-     }
-  #define SUB_RD_RS_RN(N) \
-   {\
-     __asm mov eax, source\
-     __asm mov ebx, dword ptr [OFFSET reg+4*eax]\
-     __asm sub ebx, dword ptr [OFFSET reg+4*N]\
-     __asm mov eax, dest\
-     __asm mov dword ptr [OFFSET reg+4*eax], ebx\
-     __asm sets byte ptr N_FLAG\
-     __asm setz byte ptr Z_FLAG\
-     __asm setnc byte ptr C_FLAG\
-     __asm seto byte ptr V_FLAG\
-   }
-  #define SUB_RD_RS_O3(N) \
-   {\
-     __asm mov eax, source\
-     __asm mov ebx, dword ptr [OFFSET reg+4*eax]\
-     __asm sub ebx, N\
-     __asm mov eax, dest\
-     __asm mov dword ptr [OFFSET reg+4*eax], ebx\
-     __asm sets byte ptr N_FLAG\
-     __asm setz byte ptr Z_FLAG\
-     __asm setnc byte ptr C_FLAG\
-     __asm seto byte ptr V_FLAG\
-   }
-  #define SUB_RD_RS_O3_0 \
-   {\
-     __asm mov eax, source\
-     __asm mov ebx, dword ptr [OFFSET reg+4*eax]\
-     __asm sub ebx, 0\
-     __asm mov eax, dest\
-     __asm mov dword ptr [OFFSET reg+4*eax], ebx\
-     __asm sets byte ptr N_FLAG\
-     __asm setz byte ptr Z_FLAG\
-     __asm mov byte ptr C_FLAG, 1\
-     __asm mov byte ptr V_FLAG, 0\
-   }
-  #define SUB_RN_O8(d) \
-   {\
-     __asm mov ebx, opcode\
-     __asm and ebx, 255\
-     __asm sub dword ptr [OFFSET reg + 4*(d)], ebx\
-     __asm sets byte ptr N_FLAG\
-     __asm setz byte ptr Z_FLAG\
-     __asm setnc byte ptr C_FLAG\
-     __asm seto byte ptr V_FLAG\
-   }
-  #define MOV_RN_O8(d) \
-   {\
-     __asm mov eax, opcode\
-     __asm and eax, 255\
-     __asm mov dword ptr [OFFSET reg+4*(d)], eax\
-     __asm sets byte ptr N_FLAG\
-     __asm setz byte ptr Z_FLAG\
-   }
-  #define CMP_RN_O8(d) \
-   {\
-     __asm mov eax, dword ptr [OFFSET reg+4*(d)]\
-     __asm mov ebx, opcode\
-     __asm and ebx, 255\
-     __asm sub eax, ebx\
-     __asm sets byte ptr N_FLAG\
-     __asm setz byte ptr Z_FLAG\
-     __asm setnc byte ptr C_FLAG\
-     __asm seto byte ptr V_FLAG\
-   }
-  #define SBC_RD_RS \
-     {\
-       __asm mov ebx, dest\
-       __asm mov ebx, dword ptr [OFFSET reg + 4*ebx]\
-       __asm mov eax, value\
-       __asm bt word ptr C_FLAG, 0\
-       __asm cmc\
-       __asm sbb ebx, eax\
-       __asm mov eax, dest\
-       __asm mov dword ptr [OFFSET reg + 4*eax], ebx\
-       __asm sets byte ptr N_FLAG\
-       __asm setz byte ptr Z_FLAG\
-       __asm setnc byte ptr C_FLAG\
-       __asm seto byte ptr V_FLAG\
-     }
-  #define LSL_RD_RM_I5 \
-     {\
-       __asm mov eax, source\
-       __asm mov eax, dword ptr [OFFSET reg + 4 * eax]\
-       __asm mov cl, byte ptr shift\
-       __asm shl eax, cl\
-       __asm mov value, eax\
-       __asm setc byte ptr C_FLAG\
-     }
-  #define LSL_RD_RS \
-         {\
-           __asm mov eax, dest\
-           __asm mov eax, dword ptr [OFFSET reg + 4 * eax]\
-           __asm mov cl, byte ptr value\
-           __asm shl eax, cl\
-           __asm mov value, eax\
-           __asm setc byte ptr C_FLAG\
-         }
-  #define LSR_RD_RM_I5 \
-     {\
-       __asm mov eax, source\
-       __asm mov eax, dword ptr [OFFSET reg + 4 * eax]\
-       __asm mov cl, byte ptr shift\
-       __asm shr eax, cl\
-       __asm mov value, eax\
-       __asm setc byte ptr C_FLAG\
-     }
-  #define LSR_RD_RS \
-         {\
-           __asm mov eax, dest\
-           __asm mov eax, dword ptr [OFFSET reg + 4 * eax]\
-           __asm mov cl, byte ptr value\
-           __asm shr eax, cl\
-           __asm mov value, eax\
-           __asm setc byte ptr C_FLAG\
-         }
-  #define ASR_RD_RM_I5 \
-     {\
-       __asm mov eax, source\
-       __asm mov eax, dword ptr [OFFSET reg + 4*eax]\
-       __asm mov cl, byte ptr shift\
-       __asm sar eax, cl\
-       __asm mov value, eax\
-       __asm setc byte ptr C_FLAG\
-     }
-  #define ASR_RD_RS \
-         {\
-           __asm mov eax, dest\
-           __asm mov eax, dword ptr [OFFSET reg + 4*eax]\
-           __asm mov cl, byte ptr value\
-           __asm sar eax, cl\
-           __asm mov value, eax\
-           __asm setc byte ptr C_FLAG\
-         }
-  #define ROR_RD_RS \
-         {\
-           __asm mov eax, dest\
-           __asm mov eax, dword ptr [OFFSET reg + 4*eax]\
-           __asm mov cl, byte ptr value\
-           __asm ror eax, cl\
-           __asm mov value, eax\
-           __asm setc byte ptr C_FLAG\
-         }
-  #define NEG_RD_RS \
-     {\
-       __asm mov ebx, source\
-       __asm mov ebx, dword ptr [OFFSET reg+4*ebx]\
-       __asm neg ebx\
-       __asm mov eax, dest\
-       __asm mov dword ptr [OFFSET reg+4*eax],ebx\
-       __asm sets byte ptr N_FLAG\
-       __asm setz byte ptr Z_FLAG\
-       __asm setnc byte ptr C_FLAG\
-       __asm seto byte ptr V_FLAG\
-     }
-  #define CMP_RD_RS \
-     {\
-       __asm mov eax, dest\
-       __asm mov ebx, dword ptr [OFFSET reg+4*eax]\
-       __asm sub ebx, value\
-       __asm sets byte ptr N_FLAG\
-       __asm setz byte ptr Z_FLAG\
-       __asm setnc byte ptr C_FLAG\
-       __asm seto byte ptr V_FLAG\
-     }
-#endif
-#endif
+#define ADDCARRY(a, b, c) \
+  C_FLAG = (((a) & (b)) | ((a) & ~(c)) | ((b) & ~(c))) >> 31;
 
-// C core
-#ifndef ADDCARRY
- #define ADDCARRY(a, b, c) \
-  C_FLAG = ((NEG(a) & NEG(b)) |\
-            (NEG(a) & POS(c)) |\
-            (NEG(b) & POS(c))) ? true : false;
-#endif
-#ifndef ADDOVERFLOW
- #define ADDOVERFLOW(a, b, c) \
-  V_FLAG = ((NEG(a) & NEG(b) & POS(c)) |\
-            (POS(a) & POS(b) & NEG(c))) ? true : false;
-#endif
-#ifndef SUBCARRY
- #define SUBCARRY(a, b, c) \
-  C_FLAG = ((NEG(a) & POS(b)) |\
-            (NEG(a) & POS(c)) |\
-            (POS(b) & POS(c))) ? true : false;
-#endif
-#ifndef SUBOVERFLOW
- #define SUBOVERFLOW(a, b, c)\
-  V_FLAG = ((NEG(a) & POS(b) & POS(c)) |\
-            (POS(a) & NEG(b) & NEG(c))) ? true : false;
-#endif
-#ifndef ADD_RD_RS_RN
- #define ADD_RD_RS_RN(N) \
+#define ADDOVERFLOW(a, b, c) \
+  V_FLAG = (((a) & (b) & ~(c)) | (~(a) & ~(b) & (c))) >> 31;
+
+#define SUBCARRY(a, b, c) \
+  C_FLAG = (((a) & ~(b)) | ((a) & ~(c)) | (~(b) & ~(c))) >> 31;
+
+#define SUBOVERFLOW(a, b, c)\
+  V_FLAG = (((a) & ~(b) & ~(c)) | (~(a) & (b) & (c))) >> 31;
+
+#define ADD_RD_RS_RN(N) \
    {\
      u32 lhs = reg[source].I;\
      u32 rhs = reg[N].I;\
      u32 res = lhs + rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
-#endif
 #ifndef ADD_RD_RS_O3
- #define ADD_RD_RS_O3(N) \
+#define ADD_RD_RS_O3(N) \
    {\
      u32 lhs = reg[source].I;\
      u32 rhs = N;\
      u32 res = lhs + rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
@@ -783,57 +123,49 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
      ADDOVERFLOW(lhs, rhs, res);\
    }
 #endif
-#ifndef CMN_RD_RS
- #define CMN_RD_RS \
+#define CMN_RD_RS \
    {\
      u32 lhs = reg[dest].I;\
      u32 rhs = value;\
      u32 res = lhs + rhs;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
-#endif
-#ifndef ADC_RD_RS
- #define ADC_RD_RS \
+#define ADC_RD_RS \
    {\
      u32 lhs = reg[dest].I;\
      u32 rhs = value;\
      u32 res = lhs + rhs + (u32)C_FLAG;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
-#endif
-#ifndef SUB_RD_RS_RN
- #define SUB_RD_RS_RN(N) \
+#define SUB_RD_RS_RN(N) \
    {\
      u32 lhs = reg[source].I;\
      u32 rhs = reg[N].I;\
      u32 res = lhs - rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
-#endif
-#ifndef SUB_RD_RS_O3
- #define SUB_RD_RS_O3(N) \
+#define SUB_RD_RS_O3(N) \
    {\
      u32 lhs = reg[source].I;\
      u32 rhs = N;\
      u32 res = lhs - rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
-#endif
 #ifndef SUB_RD_RS_O3_0
 # define SUB_RD_RS_O3_0 SUB_RD_RS_O3
 #endif
@@ -850,154 +182,124 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
      SUBOVERFLOW(lhs, rhs, res);\
    }
 #endif
-#ifndef MOV_RN_O8
- #define MOV_RN_O8(d) \
+#define MOV_RN_O8(d) \
    {\
-     reg[d].I = opcode & 255;\
-     N_FLAG = false;\
-     Z_FLAG = (reg[d].I ? false : true);\
+     reg[(d)].I = opcode & 255;\
+     N_FLAG = 0;\
+     Z_FLAG = (reg[(d)].I == 0);\
    }
-#endif
-#ifndef CMP_RN_O8
- #define CMP_RN_O8(d) \
+#define CMP_RN_O8(d) \
    {\
      u32 lhs = reg[(d)].I;\
      u32 rhs = (opcode & 255);\
      u32 res = lhs - rhs;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
-#endif
-#ifndef SBC_RD_RS
- #define SBC_RD_RS \
+#define SBC_RD_RS \
    {\
      u32 lhs = reg[dest].I;\
      u32 rhs = value;\
-     u32 res = lhs - rhs - !((u32)C_FLAG);\
+     /* Branchless NOT for C_FLAG since it is strictly 0 or 1 */ \
+     u32 res = lhs - rhs - (C_FLAG ^ 1);\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
-#endif
-#ifndef LSL_RD_RM_I5
- #define LSL_RD_RM_I5 \
+#define LSL_RD_RM_I5 \
    {\
-     C_FLAG = (reg[source].I >> (32 - shift)) & 1 ? true : false;\
+     C_FLAG = (reg[source].I >> (32 - shift)) & 1;\
      value = reg[source].I << shift;\
    }
-#endif
-#ifndef LSL_RD_RS
- #define LSL_RD_RS \
+#define LSL_RD_RS \
    {\
-     C_FLAG = (reg[dest].I >> (32 - value)) & 1 ? true : false;\
+     C_FLAG = (reg[dest].I >> (32 - value)) & 1;\
      value = reg[dest].I << value;\
    }
-#endif
-#ifndef LSR_RD_RM_I5
- #define LSR_RD_RM_I5 \
+#define LSR_RD_RM_I5 \
    {\
-     C_FLAG = (reg[source].I >> (shift - 1)) & 1 ? true : false;\
+     C_FLAG = (reg[source].I >> (shift - 1)) & 1;\
      value = reg[source].I >> shift;\
    }
-#endif
-#ifndef LSR_RD_RS
- #define LSR_RD_RS \
+#define LSR_RD_RS \
    {\
-     C_FLAG = (reg[dest].I >> (value - 1)) & 1 ? true : false;\
+     C_FLAG = (reg[dest].I >> (value - 1)) & 1;\
      value = reg[dest].I >> value;\
    }
-#endif
-#ifndef ASR_RD_RM_I5
- #define ASR_RD_RM_I5 \
+#define ASR_RD_RM_I5 \
    {\
-     C_FLAG = ((s32)reg[source].I >> (int)(shift - 1)) & 1 ? true : false;\
-     value = (s32)reg[source].I >> (int)shift;\
+     C_FLAG = ((u32)((s32)reg[source].I >> (int)(shift - 1))) & 1;\
+     value = (u32)((s32)reg[source].I >> (int)shift);\
    }
-#endif
-#ifndef ASR_RD_RS
- #define ASR_RD_RS \
+#define ASR_RD_RS \
    {\
-     C_FLAG = ((s32)reg[dest].I >> (int)(value - 1)) & 1 ? true : false;\
-     value = (s32)reg[dest].I >> (int)value;\
+     C_FLAG = ((u32)((s32)reg[dest].I >> (int)(value - 1))) & 1;\
+     value = (u32)((s32)reg[dest].I >> (int)value);\
    }
-#endif
-#ifndef ROR_RD_RS
- #define ROR_RD_RS \
+#define ROR_RD_RS \
    {\
-     C_FLAG = (reg[dest].I >> (value - 1)) & 1 ? true : false;\
+     C_FLAG = (reg[dest].I >> (value - 1)) & 1;\
      value = ((reg[dest].I << (32 - value)) |\
               (reg[dest].I >> value));\
    }
-#endif
-#ifndef NEG_RD_RS
- #define NEG_RD_RS \
+#define NEG_RD_RS \
    {\
      u32 lhs = reg[source].I;\
      u32 rhs = 0;\
      u32 res = rhs - lhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      SUBCARRY(rhs, lhs, res);\
      SUBOVERFLOW(rhs, lhs, res);\
    }
-#endif
-#ifndef CMP_RD_RS
- #define CMP_RD_RS \
+#define CMP_RD_RS \
    {\
      u32 lhs = reg[dest].I;\
      u32 rhs = value;\
      u32 res = lhs - rhs;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
-#endif
-#ifndef IMM5_INSN
- #define IMM5_INSN(OP,N) \
+#define IMM5_INSN(OP,N) \
   int dest = opcode & 0x07;\
   int source = (opcode >> 3) & 0x07;\
   u32 value;\
   OP(N);\
   reg[dest].I = value;\
-  N_FLAG = (value & 0x80000000 ? true : false);\
-  Z_FLAG = (value ? false : true);
- #define IMM5_INSN_0(OP) \
+  N_FLAG = (value >> 31);\
+  Z_FLAG = (value == 0);
+#define IMM5_INSN_0(OP) \
   int dest = opcode & 0x07;\
   int source = (opcode >> 3) & 0x07;\
   u32 value;\
   OP;\
   reg[dest].I = value;\
-  N_FLAG = (value & 0x80000000 ? true : false);\
-  Z_FLAG = (value ? false : true);
- #define IMM5_LSL(N) \
+  N_FLAG = (value >> 31);\
+  Z_FLAG = (value == 0);
+#define IMM5_LSL(N) \
   int shift = N;\
   LSL_RD_RM_I5;
- #define IMM5_LSL_0 \
+#define IMM5_LSL_0 \
   value = reg[source].I;
- #define IMM5_LSR(N) \
+#define IMM5_LSR(N) \
   int shift = N;\
   LSR_RD_RM_I5;
- #define IMM5_LSR_0 \
-  C_FLAG = reg[source].I & 0x80000000 ? true : false;\
+#define IMM5_LSR_0 \
+  C_FLAG = (reg[source].I >> 31);\
   value = 0;
- #define IMM5_ASR(N) \
+#define IMM5_ASR(N) \
   int shift = N;\
   ASR_RD_RM_I5;
- #define IMM5_ASR_0 \
-  if(reg[source].I & 0x80000000) {\
-    value = 0xFFFFFFFF;\
-    C_FLAG = true;\
-  } else {\
-    value = 0;\
-    C_FLAG = false;\
-  }
-#endif
+#define IMM5_ASR_0 \
+  C_FLAG = (reg[source].I >> 31);\
+  value = (u32)((s32)reg[source].I >> 31);
 #ifndef THREEARG_INSN
  #define THREEARG_INSN(OP,N) \
   int dest = opcode & 0x07;          \
@@ -1156,8 +458,8 @@ static INSN_REGPARM void thumb40_0(u32 opcode)
 {
   int dest = opcode & 7;
   reg[dest].I &= reg[(opcode >> 3)&7].I;
-  N_FLAG = reg[dest].I & 0x80000000 ? true : false;
-  Z_FLAG = reg[dest].I ? false : true;
+  N_FLAG = (reg[dest].I >> 31);
+  Z_FLAG = (reg[dest].I == 0);
   THUMB_CONSOLE_OUTPUT(NULL, reg[2].I);
 }
 
@@ -1166,8 +468,8 @@ static INSN_REGPARM void thumb40_1(u32 opcode)
 {
   int dest = opcode & 7;
   reg[dest].I ^= reg[(opcode >> 3)&7].I;
-  N_FLAG = reg[dest].I & 0x80000000 ? true : false;
-  Z_FLAG = reg[dest].I ? false : true;
+  N_FLAG = (reg[dest].I >> 31);
+  Z_FLAG = (reg[dest].I == 0);
 }
 
 // LSL Rd, Rs
@@ -1177,18 +479,18 @@ static INSN_REGPARM void thumb40_2(u32 opcode)
   u32 value = reg[(opcode >> 3)&7].B.B0;
   if(value) {
     if(value == 32) {
+      C_FLAG = (reg[dest].I & 1);
       value = 0;
-      C_FLAG = (reg[dest].I & 1 ? true : false);
     } else if(value < 32) {
       LSL_RD_RS;
     } else {
+      C_FLAG = 0;
       value = 0;
-      C_FLAG = false;
     }
     reg[dest].I = value;
   }
-  N_FLAG = reg[dest].I & 0x80000000 ? true : false;
-  Z_FLAG = reg[dest].I ? false : true;
+  N_FLAG = (reg[dest].I >> 31);
+  Z_FLAG = (reg[dest].I == 0);
   clockTicks = codeTicksAccess16(armNextPC)+2;
 }
 
@@ -1199,18 +501,18 @@ static INSN_REGPARM void thumb40_3(u32 opcode)
   u32 value = reg[(opcode >> 3)&7].B.B0;
   if(value) {
     if(value == 32) {
+      C_FLAG = (reg[dest].I >> 31);
       value = 0;
-      C_FLAG = (reg[dest].I & 0x80000000 ? true : false);
     } else if(value < 32) {
       LSR_RD_RS;
     } else {
+      C_FLAG = 0;
       value = 0;
-      C_FLAG = false;
     }
     reg[dest].I = value;
   }
-  N_FLAG = reg[dest].I & 0x80000000 ? true : false;
-  Z_FLAG = reg[dest].I ? false : true;
+  N_FLAG = (reg[dest].I >> 31);
+  Z_FLAG = (reg[dest].I == 0);
   clockTicks = codeTicksAccess16(armNextPC)+2;
 }
 
@@ -1224,17 +526,12 @@ static INSN_REGPARM void thumb41_0(u32 opcode)
       ASR_RD_RS;
       reg[dest].I = value;
     } else {
-      if(reg[dest].I & 0x80000000){
-        reg[dest].I = 0xFFFFFFFF;
-        C_FLAG = true;
-      } else {
-        reg[dest].I = 0x00000000;
-        C_FLAG = false;
-      }
+      C_FLAG = (reg[dest].I >> 31);
+      reg[dest].I = (u32)((s32)reg[dest].I >> 31);
     }
   }
-  N_FLAG = reg[dest].I & 0x80000000 ? true : false;
-  Z_FLAG = reg[dest].I ? false : true;
+  N_FLAG = (reg[dest].I >> 31);
+  Z_FLAG = (reg[dest].I == 0);
   clockTicks = codeTicksAccess16(armNextPC)+2;
 }
 
@@ -1263,23 +560,23 @@ static INSN_REGPARM void thumb41_3(u32 opcode)
   if(value) {
     value = value & 0x1f;
     if(value == 0) {
-      C_FLAG = (reg[dest].I & 0x80000000 ? true : false);
+      C_FLAG = (reg[dest].I >> 31);
     } else {
       ROR_RD_RS;
       reg[dest].I = value;
     }
   }
   clockTicks = codeTicksAccess16(armNextPC)+2;
-  N_FLAG = reg[dest].I & 0x80000000 ? true : false;
-  Z_FLAG = reg[dest].I ? false : true;
+  N_FLAG = (reg[dest].I >> 31);
+  Z_FLAG = (reg[dest].I == 0);
 }
 
 // TST Rd, Rs
 static INSN_REGPARM void thumb42_0(u32 opcode)
 {
   u32 value = reg[opcode & 7].I & reg[(opcode >> 3) & 7].I;
-  N_FLAG = value & 0x80000000 ? true : false;
-  Z_FLAG = value ? false : true;
+  N_FLAG = (value >> 31);
+  Z_FLAG = (value == 0);
 }
 
 // NEG Rd, Rs
@@ -1321,21 +618,24 @@ static INSN_REGPARM void thumb43_1(u32 opcode)
   clockTicks = 1;
   int dest = opcode & 7;
   u32 rm = reg[dest].I;
+
+  // Calculate result
   reg[dest].I = reg[(opcode >> 3) & 7].I * rm;
-  if (((s32)rm) < 0)
+
+  // Convert negative rm for bit-length evaluation
+  if (((s32)rm) < 0) {
     rm = ~rm;
-  if ((rm & 0xFFFFFF00) == 0)
-    clockTicks += 0;
-  else if ((rm & 0xFFFF0000) == 0)
-    clockTicks += 1;
-  else if ((rm & 0xFF000000) == 0)
-    clockTicks += 2;
-  else
-    clockTicks += 3;
+  }
+
+  // Broadway Optimization: Branchless magnitude check via hardware cntlzw
+  // "rm | 1" ensures we don't pass 0 to clz (which is undefined behavior).
+  u32 active_bits = 31 - __builtin_clz(rm | 1);
+  clockTicks += (active_bits >> 3); // Maps 0-8 to 0, 9-16 to 1, 17-24 to 2, 25-32 to 3.
+
   busPrefetchCount = (busPrefetchCount<<clockTicks) | (0xFF>>(8-clockTicks));
   clockTicks += codeTicksAccess16(armNextPC) + 1;
-  Z_FLAG = reg[dest].I ? false : true;
-  N_FLAG = reg[dest].I & 0x80000000 ? true : false;
+  Z_FLAG = (reg[dest].I == 0);
+  N_FLAG = (reg[dest].I >> 31);
 }
 
 // BIC Rd, Rs
@@ -1880,234 +1180,66 @@ static INSN_REGPARM void thumbC8(u32 opcode)
 
 // Conditional branches ///////////////////////////////////////////////////
 
+// Broadway Optimization: Shared macro prevents I-Cache bloat from duplicated branch logic.
+// It strictly restores the original clockTicks timing model which is critical for GBA sync.
+#define THUMB_BRANCH_EXEC(cond) \
+  UPDATE_OLDREG; \
+  clockTicks = codeTicksAccessSeq16(armNextPC) + 1; \
+  if (cond) { \
+    reg[15].I += ((s8)(opcode & 0xFF)) << 1; \
+    armNextPC = reg[15].I; \
+    reg[15].I += 2; \
+    THUMB_PREFETCH; \
+    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2; \
+    busPrefetchCount = 0; \
+  }
+
 // BEQ offset
-static INSN_REGPARM void thumbD0(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(Z_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbD0(u32 opcode) { THUMB_BRANCH_EXEC(Z_FLAG); }
 // BNE offset
-static INSN_REGPARM void thumbD1(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(!Z_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbD1(u32 opcode) { THUMB_BRANCH_EXEC(!Z_FLAG); }
 // BCS offset
-static INSN_REGPARM void thumbD2(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(C_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbD2(u32 opcode) { THUMB_BRANCH_EXEC(C_FLAG); }
 // BCC offset
-static INSN_REGPARM void thumbD3(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(!C_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbD3(u32 opcode) { THUMB_BRANCH_EXEC(!C_FLAG); }
 // BMI offset
-static INSN_REGPARM void thumbD4(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(N_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbD4(u32 opcode) { THUMB_BRANCH_EXEC(N_FLAG); }
 // BPL offset
-static INSN_REGPARM void thumbD5(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(!N_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbD5(u32 opcode) { THUMB_BRANCH_EXEC(!N_FLAG); }
 // BVS offset
-static INSN_REGPARM void thumbD6(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(V_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbD6(u32 opcode) { THUMB_BRANCH_EXEC(V_FLAG); }
 // BVC offset
-static INSN_REGPARM void thumbD7(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(!V_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbD7(u32 opcode) { THUMB_BRANCH_EXEC(!V_FLAG); }
 // BHI offset
-static INSN_REGPARM void thumbD8(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(C_FLAG && !Z_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbD8(u32 opcode) { THUMB_BRANCH_EXEC(C_FLAG && !Z_FLAG); }
 // BLS offset
-static INSN_REGPARM void thumbD9(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(!C_FLAG || Z_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbD9(u32 opcode) { THUMB_BRANCH_EXEC(!C_FLAG || Z_FLAG); }
 // BGE offset
-static INSN_REGPARM void thumbDA(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(N_FLAG == V_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbDA(u32 opcode) { THUMB_BRANCH_EXEC(N_FLAG == V_FLAG); }
 // BLT offset
-static INSN_REGPARM void thumbDB(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(N_FLAG != V_FLAG) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbDB(u32 opcode) { THUMB_BRANCH_EXEC(N_FLAG != V_FLAG); }
 // BGT offset
-static INSN_REGPARM void thumbDC(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-  if(!Z_FLAG && (N_FLAG == V_FLAG)) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
+static INSN_REGPARM void thumbDC(u32 opcode) { THUMB_BRANCH_EXEC(!Z_FLAG && (N_FLAG == V_FLAG)); }
 // BLE offset
-static INSN_REGPARM void thumbDD(u32 opcode)
-{
-  UPDATE_OLDREG;
-  clockTicks = codeTicksAccessSeq16(armNextPC);
-  if(Z_FLAG || (N_FLAG != V_FLAG)) {
-    reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-    armNextPC = reg[15].I;
-    reg[15].I += 2;
-    THUMB_PREFETCH;
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-    busPrefetchCount=0;
-  }
-}
-
-// SWI, B, BL /////////////////////////////////////////////////////////////
+static INSN_REGPARM void thumbDD(u32 opcode) { THUMB_BRANCH_EXEC(Z_FLAG || (N_FLAG != V_FLAG)); }
 
 // SWI #comment
 static INSN_REGPARM void thumbDF(u32 opcode)
 {
   u32 address = 0;
-  //clockTicks = codeTicksAccessSeq16(address)*2 + codeTicksAccess16(address)+3;
   clockTicks = 3;
-  busPrefetchCount=0;
+  busPrefetchCount = 0;
   CPUSoftwareInterrupt(opcode & 0xFF);
 }
 
 // B offset
 static INSN_REGPARM void thumbE0(u32 opcode)
 {
-  int offset = (opcode & 0x3FF) << 1;
-  if(opcode & 0x0400)
-    offset |= 0xFFFFF800;
+  // Broadway Optimization: Branchless sign extension via arithmetic shift.
+  // opcode bits 0-10 contain the 11-bit immediate.
+  // Shifting left by 21 puts the 11th bit at the sign position (bit 31).
+  // Shifting right (arithmetic) by 20 sign-extends it and multiplies it by 2 natively.
+  s32 offset = ((s32)(opcode << 21)) >> 20;
   reg[15].I += offset;
   armNextPC = reg[15].I;
   reg[15].I += 2;
@@ -2136,11 +1268,11 @@ static INSN_REGPARM void thumbF4(u32 opcode)
 static INSN_REGPARM void thumbF8(u32 opcode)
 {
   int offset = (opcode & 0x7FF);
-  u32 temp = reg[15].I-2;
-  reg[15].I = (reg[14].I + (offset<<1))&0xFFFFFFFE;
+  u32 temp = reg[15].I - 2;
+  reg[15].I = (reg[14].I + (offset << 1)) & 0xFFFFFFFE;
   armNextPC = reg[15].I;
   reg[15].I += 2;
-  reg[14].I = temp|1;
+  reg[14].I = temp | 1;
   THUMB_PREFETCH;
   clockTicks = codeTicksAccessSeq16(armNextPC)*2 + codeTicksAccess16(armNextPC) + 3;
   busPrefetchCount = 0;
@@ -2306,11 +1438,6 @@ int thumbExecute()
       busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
     clockTicks = 0;
     u32 oldArmNextPC = armNextPC;
-#ifndef FINAL_VERSION
-    if(armNextPC == stop) {
-      armNextPC++;
-    }
-#endif
 
     armNextPC = reg[15].I;
     reg[15].I += 2;

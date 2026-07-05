@@ -4,15 +4,9 @@
 extern int armExecute();
 extern int thumbExecute();
 
-#ifdef __GNUC__
 # define INSN_REGPARM /*nothing*/
 # define LIKELY(x) __builtin_expect(!!(x),1)
 # define UNLIKELY(x) __builtin_expect(!!(x),0)
-#else
-# define INSN_REGPARM /*nothing*/
-# define LIKELY(x) (x)
-# define UNLIKELY(x) (x)
-#endif
 
 #define UPDATE_REG(address, value)\
   {\
@@ -66,20 +60,22 @@ extern void CPUSoftwareInterrupt(int comment);
 // Waitstates when accessing data
 inline int dataTicksAccess16(u32 address) // DATA 8/16bits NON SEQ
 {
-  int addr = (address>>24)&15;
-  int value =  memoryWait[addr];
+  u32 addr = (address >> 24) & 15;
+  int value = memoryWait[addr];
 
-  if ((addr>=0x08) || (addr < 0x02))
+  // OPTIMIZATION: Unsigned underflow replaces two comparisons and an OR.
+  if (UNLIKELY((u32)(addr - 2) >= 6))
   {
-    busPrefetchCount=0;
-    busPrefetch=false;
+    busPrefetchCount = 0;
+    busPrefetch = false;
   }
   else if (busPrefetch)
   {
-    int waitState = value;
-    if (!waitState)
-      waitState = 1;
-    busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1;
+    // OPTIMIZATION: Branchless ternary replacement (avoids isel/branch stalls).
+    // If value == 0, (0 - 1) >> 31 is 1. (0 | 1) = 1.
+    // If value > 0, (value - 1) >> 31 is 0. (value | 0) = value.
+    u32 waitState = value | ((u32)(value - 1) >> 31);
+    busPrefetchCount = ((busPrefetchCount + 1) << waitState) - 1;
   }
 
   return value;
@@ -87,20 +83,18 @@ inline int dataTicksAccess16(u32 address) // DATA 8/16bits NON SEQ
 
 inline int dataTicksAccess32(u32 address) // DATA 32bits NON SEQ
 {
-  int addr = (address>>24)&15;
+  u32 addr = (address >> 24) & 15;
   int value = memoryWait32[addr];
 
-  if ((addr>=0x08) || (addr < 0x02))
+  if (UNLIKELY((u32)(addr - 2) >= 6))
   {
-    busPrefetchCount=0;
-    busPrefetch=false;
+    busPrefetchCount = 0;
+    busPrefetch = false;
   }
   else if (busPrefetch)
   {
-    int waitState = value;
-    if (!waitState)
-      waitState = 1;
-    busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1;
+    u32 waitState = value | ((u32)(value - 1) >> 31);
+    busPrefetchCount = ((busPrefetchCount + 1) << waitState) - 1;
   }
 
   return value;
@@ -108,20 +102,18 @@ inline int dataTicksAccess32(u32 address) // DATA 32bits NON SEQ
 
 inline int dataTicksAccessSeq16(u32 address)// DATA 8/16bits SEQ
 {
-  int addr = (address>>24)&15;
+  u32 addr = (address >> 24) & 15;
   int value = memoryWaitSeq[addr];
 
-  if ((addr>=0x08) || (addr < 0x02))
+  if (UNLIKELY((u32)(addr - 2) >= 6))
   {
-    busPrefetchCount=0;
-    busPrefetch=false;
+    busPrefetchCount = 0;
+    busPrefetch = false;
   }
   else if (busPrefetch)
   {
-    int waitState = value;
-    if (!waitState)
-      waitState = 1;
-    busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1;
+    u32 waitState = value | ((u32)(value - 1) >> 31);
+    busPrefetchCount = ((busPrefetchCount + 1) << waitState) - 1;
   }
 
   return value;
@@ -129,20 +121,18 @@ inline int dataTicksAccessSeq16(u32 address)// DATA 8/16bits SEQ
 
 inline int dataTicksAccessSeq32(u32 address)// DATA 32bits SEQ
 {
-  int addr = (address>>24)&15;
+  u32 addr = (address >> 24) & 15;
   int value =  memoryWaitSeq32[addr];
 
-  if ((addr>=0x08) || (addr < 0x02))
+  if (UNLIKELY((u32)(addr - 2) >= 6))
   {
-    busPrefetchCount=0;
-    busPrefetch=false;
+    busPrefetchCount = 0;
+    busPrefetch = false;
   }
   else if (busPrefetch)
   {
-    int waitState = value;
-    if (!waitState)
-      waitState = 1;
-    busPrefetchCount = ((busPrefetchCount+1)<<waitState) - 1;
+    u32 waitState = value | ((u32)(value - 1) >> 31);
+    busPrefetchCount = ((busPrefetchCount + 1) << waitState) - 1;
   }
 
   return value;
@@ -152,23 +142,24 @@ inline int dataTicksAccessSeq32(u32 address)// DATA 32bits SEQ
 // Waitstates when executing opcode
 inline int codeTicksAccess16(u32 address) // THUMB NON SEQ
 {
-  int addr = (address>>24)&15;
+  u32 addr = (address >> 24) & 15;
 
-  if ((addr>=0x08) && (addr<=0x0D))
+  // OPTIMIZATION: Unsigned bounds check replaces two comparisons and an AND.
+  if (LIKELY((u32)(addr - 0x08) <= 5))
   {
-    if (busPrefetchCount&0x1)
+    if (busPrefetchCount & 0x1)
     {
-      if (busPrefetchCount&0x2)
+      if (busPrefetchCount & 0x2)
       {
-        busPrefetchCount = ((busPrefetchCount&0xFF)>>2) | (busPrefetchCount&0xFFFFFF00);
+        busPrefetchCount = ((busPrefetchCount & 0xFF) >> 2) | (busPrefetchCount & 0xFFFFFF00);
         return 0;
       }
-      busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
-      return memoryWaitSeq[addr]-1;
+      busPrefetchCount = ((busPrefetchCount & 0xFF) >> 1) | (busPrefetchCount & 0xFFFFFF00);
+      return memoryWaitSeq[addr] - 1;
     }
     else
     {
-      busPrefetchCount=0;
+      busPrefetchCount = 0;
       return memoryWait[addr];
     }
   }
@@ -181,18 +172,18 @@ inline int codeTicksAccess16(u32 address) // THUMB NON SEQ
 
 inline int codeTicksAccess32(u32 address) // ARM NON SEQ
 {
-  int addr = (address>>24)&15;
+  u32 addr = (address >> 24) & 15;
 
-  if ((addr>=0x08) && (addr<=0x0D))
+  if (LIKELY((u32)(addr - 0x08) <= 5))
   {
-    if (busPrefetchCount&0x1)
+    if (busPrefetchCount & 0x1)
     {
-      if (busPrefetchCount&0x2)
+      if (busPrefetchCount & 0x2)
       {
-        busPrefetchCount = ((busPrefetchCount&0xFF)>>2) | (busPrefetchCount&0xFFFFFF00);
+        busPrefetchCount = ((busPrefetchCount & 0xFF) >> 2) | (busPrefetchCount & 0xFFFFFF00);
         return 0;
       }
-      busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
+      busPrefetchCount = ((busPrefetchCount & 0xFF) >> 1) | (busPrefetchCount & 0xFFFFFF00);
       return memoryWaitSeq[addr] - 1;
     }
     else
@@ -210,19 +201,18 @@ inline int codeTicksAccess32(u32 address) // ARM NON SEQ
 
 inline int codeTicksAccessSeq16(u32 address) // THUMB SEQ
 {
-  int addr = (address>>24)&15;
+  u32 addr = (address >> 24) & 15;
 
-  if ((addr>=0x08) && (addr<=0x0D))
+  if (LIKELY((u32)(addr - 0x08) <= 5))
   {
-    if (busPrefetchCount&0x1)
+    if (busPrefetchCount & 0x1)
     {
-      busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
+      busPrefetchCount = ((busPrefetchCount & 0xFF) >> 1) | (busPrefetchCount & 0xFFFFFF00);
       return 0;
     }
-    else
-    if (busPrefetchCount>0xFF)
+    else if (busPrefetchCount > 0xFF)
     {
-      busPrefetchCount=0;
+      busPrefetchCount = 0;
       return memoryWait[addr];
     }
     else
@@ -237,24 +227,23 @@ inline int codeTicksAccessSeq16(u32 address) // THUMB SEQ
 
 inline int codeTicksAccessSeq32(u32 address) // ARM SEQ
 {
-  int addr = (address>>24)&15;
+  u32 addr = (address >> 24) & 15;
 
-  if ((addr>=0x08) && (addr<=0x0D))
+  if (LIKELY((u32)(addr - 0x08) <= 5))
   {
-    if (busPrefetchCount&0x1)
+    if (busPrefetchCount & 0x1)
     {
-      if (busPrefetchCount&0x2)
+      if (busPrefetchCount & 0x2)
       {
-        busPrefetchCount = ((busPrefetchCount&0xFF)>>2) | (busPrefetchCount&0xFFFFFF00);
+        busPrefetchCount = ((busPrefetchCount & 0xFF) >> 2) | (busPrefetchCount & 0xFFFFFF00);
         return 0;
       }
-      busPrefetchCount = ((busPrefetchCount&0xFF)>>1) | (busPrefetchCount&0xFFFFFF00);
+      busPrefetchCount = ((busPrefetchCount & 0xFF) >> 1) | (busPrefetchCount & 0xFFFFFF00);
       return memoryWaitSeq[addr];
     }
-    else
-    if (busPrefetchCount>0xFF)
+    else if (busPrefetchCount > 0xFF)
     {
-      busPrefetchCount=0;
+      busPrefetchCount = 0;
       return memoryWait32[addr];
     }
     else
@@ -265,7 +254,6 @@ inline int codeTicksAccessSeq32(u32 address) // ARM SEQ
     return memoryWaitSeq32[addr];
   }
 }
-
 
 // Emulates the Cheat System (m) code
 inline void cpuMasterCodeCheck()

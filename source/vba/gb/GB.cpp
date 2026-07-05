@@ -709,15 +709,6 @@ void  gbWriteMemory(u16 address, u8 value)
 {
 
   if(address < 0x8000) {
-#ifndef FINAL_VERSION
-    if(memorydebug && (address>0x3fff || address < 0x2000)) {
-      log("Memory register write %04x=%02x PC=%04x\n",
-          address,
-          value,
-          PC.W);
-    }
-
-#endif
     if(mapper)
       (*mapper)(address, value);
     return;
@@ -742,15 +733,6 @@ void  gbWriteMemory(u16 address, u8 value)
     address &= ~0x2000;
 
   if(address < 0xc000) {
-#ifndef FINAL_VERSION
-    if(memorydebug) {
-      log("Memory register write %04x=%02x PC=%04x\n",
-          address,
-          value,
-          PC.W);
-    }
-#endif
-
     // Is that a correct fix ??? (it used to be 'if (mapper)')...
     if(mapperRAM)
         (*mapperRAM)(address, value);
@@ -1771,14 +1753,6 @@ u8 gbReadMemory(u16 address)
     address &= ~0x2000;
 
   if(address < 0xc000) {
-#ifndef FINAL_VERSION
-    if(memorydebug) {
-      log("Memory register read %04x PC=%04x\n",
-          address,
-          PC.W);
-    }
-#endif
-
   // for the 2kb ram limit (fixes crash in shawu's story
   // but now its sram test fails, as the it expects 8kb and not 2kb...
   // So use the 'genericflashcard' option to fix it).
@@ -4514,21 +4488,6 @@ void gbEmulate(int ticksToStop)
   bool execute = false;
 
   while(1) {
-#ifndef FINAL_VERSION
-    if(systemDebug) {
-      if(!(IFF & 0x80)) {
-        if(systemDebug > 1) {
-          sprintf(gbBuffer,"PC=%04x AF=%04x BC=%04x DE=%04x HL=%04x SP=%04x I=%04x\n",
-                   PC.W, AF.W, BC.W, DE.W,HL.W,SP.W,IFF);
-        } else {
-          sprintf(gbBuffer,"PC=%04x I=%02x\n", PC.W, IFF);
-        }
-        log(gbBuffer);
-      }
-    }
-#endif
-
-
     u16 oldPCW = PC.W;
 
     if(IFF & 0x80) {
@@ -5475,11 +5434,7 @@ struct EmulatedSystem GBSystem = {
   // emuHasDebugger
   false,
   // emuCount
-#ifdef FINAL_VERSION
   70000/4,
-#else
-  1000,
-#endif
 };
 
 /****************************************************************************

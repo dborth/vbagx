@@ -22,14 +22,6 @@
 #include "prof/prof.h"
 #endif
 
-#ifdef _MSC_VER
- // Disable "empty statement" warnings
- #pragma warning(disable: 4390)
- // Visual C's inline assembler treats "offset" as a reserved word, so we
- // tell it otherwise.  If you want to use it, write "OFFSET" in capitals.
- #define offset offset_
-#endif
-
 ///////////////////////////////////////////////////////////////////////////
 
 static int clockTicks;
@@ -108,9 +100,6 @@ static void count(u32 opcode, int cond_res)
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
 
-// The following macros are used for optimization; any not defined for a
-// particular compiler/CPU combination default to the C core versions.
-//
 //    ALU_INIT_C:   Used at the beginning of ALU instructions (AND/EOR/...).
 //    (ALU_INIT_NC) Can consist of variable declarations, like the C core,
 //                  or the start of a continued assembly block, like the
@@ -133,607 +122,26 @@ static void count(u32 opcode, int cond_res)
 //    RRX_OFFSET: Used to rotate (RRX) the `offset' parameter for LDR and
 //                STR instructions.
 
-#ifndef C_CORE
-
-#if 0  // definitions have changed
-//#ifdef __POWERPC__
-            #define OP_SUBS \
-            {\
-                int Flags;                             			\
-                int Result;                            			\
-                asm volatile("subco. %0, %2, %3\n"              \
-                            "mcrxr cr1\n"                       \
-                            "mfcr %1\n"                         \
-                            : "=r" (Result),                    \
-                              "=r" (Flags)                      \
-                            : "r" (reg[base].I),                \
-                              "r" (value)                       \
-                            );                                  \
-                reg[dest].I = Result;                           \
-                Z_FLAG = (Flags >> 29) & 1;                     \
-                N_FLAG = (Flags >> 31) & 1;                     \
-                C_FLAG = (Flags >> 25) & 1;                     \
-                V_FLAG = (Flags >> 26) & 1;                     \
-            }
-            #define OP_RSBS \
-            {\
-                int Flags;                             			\
-                int Result;                            			\
-                asm volatile("subfco. %0, %2, %3\n"             \
-                            "mcrxr cr1\n"                       \
-                            "mfcr %1\n"                         \
-                            : "=r" (Result),                    \
-                              "=r" (Flags)                      \
-                            : "r" (reg[base].I),                \
-                              "r" (value)                       \
-                            );                                  \
-                reg[dest].I = Result;                           \
-                Z_FLAG = (Flags >> 29) & 1;                     \
-                N_FLAG = (Flags >> 31) & 1;                     \
-                C_FLAG = (Flags >> 25) & 1;                     \
-                V_FLAG = (Flags >> 26) & 1;                     \
-            }
-            #define OP_ADDS \
-            {\
-                int Flags;                             			\
-                int Result;                            			\
-                asm volatile("addco. %0, %2, %3\n"              \
-                            "mcrxr cr1\n"                       \
-                            "mfcr %1\n"                         \
-                            : "=r" (Result),                    \
-                              "=r" (Flags)                      \
-                            : "r" (reg[base].I),                \
-                              "r" (value)                       \
-                            );                                  \
-                reg[dest].I = Result;                           \
-                Z_FLAG = (Flags >> 29) & 1;                     \
-                N_FLAG = (Flags >> 31) & 1;                     \
-                C_FLAG = (Flags >> 25) & 1;                     \
-                V_FLAG = (Flags >> 26) & 1;                     \
-            }
-            #define OP_ADCS \
-            {\
-                int Flags;                             			\
-                int Result;                            			\
-                asm volatile("mtspr xer, %4\n"                  \
-                             "addeo. %0, %2, %3\n"              \
-                             "mcrxr cr1\n"                      \
-                             "mfcr      %1\n"                   \
-                             : "=r" (Result),                   \
-                               "=r" (Flags)                     \
-                             : "r" (reg[base].I),               \
-                               "r" (value),                     \
-                               "r" (C_FLAG << 29)               \
-                             );                                 \
-                reg[dest].I = Result;                           \
-                Z_FLAG = (Flags >> 29) & 1;                     \
-                N_FLAG = (Flags >> 31) & 1;                     \
-                C_FLAG = (Flags >> 25) & 1;                     \
-                V_FLAG = (Flags >> 26) & 1;                     \
-            }
-            #define OP_SBCS \
-            {\
-                int Flags;                             			\
-                int Result;                            			\
-                asm volatile("mtspr xer, %4\n"                  \
-                             "subfeo. %0, %3, %2\n"             \
-                             "mcrxr cr1\n"                      \
-                             "mfcr      %1\n"                   \
-                             : "=r" (Result),                   \
-                               "=r" (Flags)                     \
-                             : "r" (reg[base].I),               \
-                               "r" (value),                     \
-                               "r" (C_FLAG << 29)               \
-                             );                                 \
-                reg[dest].I = Result;                           \
-                Z_FLAG = (Flags >> 29) & 1;                     \
-                N_FLAG = (Flags >> 31) & 1;                     \
-                C_FLAG = (Flags >> 25) & 1;                     \
-                V_FLAG = (Flags >> 26) & 1;                     \
-            }
-            #define OP_RSCS \
-            {\
-                int Flags;                             			\
-                int Result;                            			\
-                asm volatile("mtspr xer, %4\n"                  \
-                             "subfeo. %0, %2, %3\n"             \
-                             "mcrxr cr1\n"                      \
-                             "mfcr      %1\n"                   \
-                             : "=r" (Result),                   \
-                               "=r" (Flags)                     \
-                             : "r" (reg[base].I),               \
-                               "r" (value),                     \
-                               "r" (C_FLAG << 29)               \
-                             );                                 \
-                reg[dest].I = Result;                           \
-                Z_FLAG = (Flags >> 29) & 1;                     \
-                N_FLAG = (Flags >> 31) & 1;                     \
-                C_FLAG = (Flags >> 25) & 1;                     \
-                V_FLAG = (Flags >> 26) & 1;                     \
-            }
-            #define OP_CMP \
-            {\
-                int Flags;                             			\
-                int Result;                            			\
-                asm volatile("subco. %0, %2, %3\n"              \
-                            "mcrxr cr1\n"                       \
-                            "mfcr %1\n"                         \
-                            : "=r" (Result),                    \
-                              "=r" (Flags)                      \
-                            : "r" (reg[base].I),                \
-                              "r" (value)                       \
-                            );                                  \
-                Z_FLAG = (Flags >> 29) & 1;                     \
-                N_FLAG = (Flags >> 31) & 1;                     \
-                C_FLAG = (Flags >> 25) & 1;                     \
-                V_FLAG = (Flags >> 26) & 1;                     \
-            }
-            #define OP_CMN \
-            {\
-                int Flags;                             			\
-                int Result;                            			\
-                asm volatile("addco. %0, %2, %3\n"              \
-                            "mcrxr cr1\n"                       \
-                            "mfcr %1\n"                         \
-                            : "=r" (Result),                    \
-                              "=r" (Flags)                      \
-                            : "r" (reg[base].I),                \
-                              "r" (value)                       \
-                            );                                  \
-                Z_FLAG = (Flags >> 29) & 1;                     \
-                N_FLAG = (Flags >> 31) & 1;                     \
-                C_FLAG = (Flags >> 25) & 1;                     \
-                V_FLAG = (Flags >> 26) & 1;                     \
-            }
-
-#else  // !__POWERPC__
-
-// Macros to emit instructions in the format used by the particular compiler.
-// We use GNU assembler syntax: "op src, dest" rather than "op dest, src"
-
-#ifdef __GNUC__
- #define ALU_HEADER           asm("mov %%ecx, %%edi; "
- #define ALU_TRAILER          : "=D" (opcode) : "c" (opcode) : "eax", "ebx", "edx", "esi")
- #define EMIT0(op)            #op"; "
- #define EMIT1(op,arg)        #op" "arg"; "
- #define EMIT2(op,src,dest)   #op" "src", "dest"; "
- #define KONST(val)           "$"#val
- #define ASMVAR(cvar)         ASMVAR2 (__USER_LABEL_PREFIX__, cvar)
- #define ASMVAR2(prefix,cvar) STRING (prefix) cvar
- #define STRING(x)            #x
- #define VAR(var)             ASMVAR(#var)
- #define VARL(var)            ASMVAR(#var)
- #define REGREF1(index)       ASMVAR("reg("index")")
- #define REGREF2(index,scale) ASMVAR("reg(,"index","#scale")")
- #define LABEL(n)             #n": "
- #define LABELREF(n,dir)      #n#dir
- #define al "%%al"
- #define ah "%%ah"
- #define eax "%%eax"
- #define bl "%%bl"
- #define bh "%%bh"
- #define ebx "%%ebx"
- #define cl "%%cl"
- #define ch "%%ch"
- #define ecx "%%ecx"
- #define dl "%%dl"
- #define dh "%%dh"
- #define edx "%%edx"
- #define esp "%%esp"
- #define ebp "%%ebp"
- #define esi "%%esi"
- #define edi "%%edi"
- #define movzx movzb
-#else
- #define ALU_HEADER           __asm { __asm mov ecx, opcode
- #define ALU_TRAILER          }
- #define EMIT0(op)            __asm op
- #define EMIT1(op,arg)        __asm op arg
- #define EMIT2(op,src,dest)   __asm op dest, src
- #define KONST(val)           val
- #define VAR(var)             var
- #define VARL(var)            dword ptr var
- #define REGREF1(index)       reg[index]
- #define REGREF2(index,scale) reg[index*scale]
- #define LABEL(n)             __asm l##n:
- #define LABELREF(n,dir)      l##n
-#endif
-
-//X//#ifndef _MSC_VER
-// ALU op register usage:
-//    EAX -> 2nd operand value, result (RSB/RSC)
-//    EBX -> C_OUT (carry flag from shift/rotate)
-//    ECX -> opcode (input), shift/rotate count
-//    EDX -> Rn (base) value, result (all except RSB/RSC)
-//    ESI -> Rd (destination) index * 4
-
-// Helper macros for loading value / shift count
-#define VALUE_LOAD_IMM \
-        EMIT2(and, KONST(0x0F), eax)            \
-        EMIT2(mov, REGREF2(eax,4), eax)         \
-        EMIT2(shr, KONST(7), ecx)               \
-        EMIT2(and, KONST(0x1F), ecx)
-#define VALUE_LOAD_REG \
-        EMIT2(and, KONST(0x0F), eax)            \
-		EMIT2(cmp, KONST(0x0F), eax)			\
-		EMIT2(mov, REGREF2(eax,4), eax)         \
-		EMIT1(jne, LABELREF(3,f))				\
-		EMIT2(add, KONST(4), eax)				\
-		LABEL(3)								\
-        EMIT2(movzx, ch, ecx)                   \
-        EMIT2(and, KONST(0x0F), ecx)            \
-        EMIT2(mov, REGREF2(ecx,4), ecx)
-
-// Helper macros for setting flags
-#define SETCOND_LOGICAL \
-    EMIT1(sets, VAR(N_FLAG))            \
-    EMIT1(setz, VAR(Z_FLAG))            \
-    EMIT2(mov, bl, VAR(C_FLAG))
-#define SETCOND_ADD \
-    EMIT1(sets, VAR(N_FLAG))            \
-    EMIT1(setz, VAR(Z_FLAG))            \
-    EMIT1(seto, VAR(V_FLAG))            \
-    EMIT1(setc, VAR(C_FLAG))
-#define SETCOND_SUB \
-    EMIT1(sets, VAR(N_FLAG))            \
-    EMIT1(setz, VAR(Z_FLAG))            \
-    EMIT1(seto, VAR(V_FLAG))            \
-    EMIT1(setnc, VAR(C_FLAG))
-
-// ALU initialization
-#define ALU_INIT(LOAD_C_FLAG) \
-    ALU_HEADER                          \
-    LOAD_C_FLAG                         \
-    EMIT2(mov, ecx, edx)                \
-    EMIT2(shr, KONST(14), edx)          \
-    EMIT2(mov, ecx, eax)                \
-    EMIT2(mov, ecx, esi)                \
-    EMIT2(shr, KONST(10), esi)          \
-    EMIT2(and, KONST(0x3C), edx)        \
-    EMIT2(mov, REGREF1(edx), edx)       \
-    EMIT2(and, KONST(0x3C), esi)
-
-#define LOAD_C_FLAG_YES EMIT2(mov, VAR(C_FLAG), bl)
-#define LOAD_C_FLAG_NO  /*nothing*/
-#define ALU_INIT_C ALU_INIT(LOAD_C_FLAG_YES)
-#define ALU_INIT_NC ALU_INIT(LOAD_C_FLAG_NO)
-
-// Macros to load the value operand for an ALU op; these all set N/Z
-// according to the value
-
-// OP Rd,Rb,Rm LSL #
-#define VALUE_LSL_IMM_C \
-    VALUE_LOAD_IMM                      \
-    EMIT1(jnz, LABELREF(1,f))           \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(shl, cl, eax)                 \
-    EMIT1(setc, bl)                     \
-    LABEL(0)
-#define VALUE_LSL_IMM_NC \
-    VALUE_LOAD_IMM                      \
-    EMIT2(shl, cl, eax)
-
-// OP Rd,Rb,Rm LSL Rs
-#define VALUE_LSL_REG_C \
-    VALUE_LOAD_REG                      \
-    EMIT2(test, cl, cl)                 \
-    EMIT1(jz, LABELREF(0,f))            \
-    EMIT2(cmp, KONST(0x20), cl)         \
-    EMIT1(je, LABELREF(1,f))            \
-    EMIT1(ja, LABELREF(2,f))            \
-    EMIT2(shl, cl, eax)                 \
-    EMIT1(setc, bl)                     \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(test, KONST(1), al)           \
-    EMIT1(setnz, bl)                    \
-    EMIT2(xor, eax, eax)                \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(2)                            \
-    EMIT2(xor, ebx, ebx)                \
-    EMIT2(xor, eax, eax)                \
-    LABEL(0)
-#define VALUE_LSL_REG_NC \
-    VALUE_LOAD_REG                      \
-    EMIT2(cmp, KONST(0x20), cl)         \
-    EMIT1(jae, LABELREF(1,f))           \
-    EMIT2(shl, cl, eax)                 \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(xor, eax, eax)                \
-    LABEL(0)
-
-// OP Rd,Rb,Rm LSR #
-#define VALUE_LSR_IMM_C \
-    VALUE_LOAD_IMM                      \
-    EMIT1(jz, LABELREF(1,f))            \
-    EMIT2(shr, cl, eax)                 \
-    EMIT1(setc, bl)                     \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(test, eax, eax)               \
-    EMIT1(sets, bl)                     \
-    EMIT2(xor, eax, eax)                \
-    LABEL(0)
-#define VALUE_LSR_IMM_NC \
-    VALUE_LOAD_IMM                      \
-    EMIT1(jz, LABELREF(1,f))            \
-    EMIT2(shr, cl, eax)                 \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(xor, eax, eax)                \
-    LABEL(0)
-
-// OP Rd,Rb,Rm LSR Rs
-#define VALUE_LSR_REG_C \
-    VALUE_LOAD_REG                      \
-    EMIT2(test, cl, cl)                 \
-    EMIT1(jz, LABELREF(0,f))            \
-    EMIT2(cmp, KONST(0x20), cl)         \
-    EMIT1(je, LABELREF(1,f))            \
-    EMIT1(ja, LABELREF(2,f))            \
-    EMIT2(shr, cl, eax)                 \
-    EMIT1(setc, bl)                     \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(test, eax, eax)               \
-    EMIT1(sets, bl)                     \
-    EMIT2(xor, eax, eax)                \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(2)                            \
-    EMIT2(xor, ebx, ebx)                \
-    EMIT2(xor, eax, eax)                \
-    LABEL(0)
-#define VALUE_LSR_REG_NC \
-    VALUE_LOAD_REG                      \
-    EMIT2(cmp, KONST(0x20), cl)         \
-    EMIT1(jae, LABELREF(1,f))           \
-    EMIT2(shr, cl, eax)                 \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(xor, eax, eax)                \
-    LABEL(0)
-
-// OP Rd,Rb,Rm ASR #
-#define VALUE_ASR_IMM_C \
-    VALUE_LOAD_IMM                      \
-    EMIT1(jz, LABELREF(1,f))            \
-    EMIT2(sar, cl, eax)                 \
-    EMIT1(setc, bl)                     \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(sar, KONST(31), eax)          \
-    EMIT1(sets, bl)                     \
-    LABEL(0)
-#define VALUE_ASR_IMM_NC \
-    VALUE_LOAD_IMM                      \
-    EMIT1(jz, LABELREF(1,f))            \
-    EMIT2(sar, cl, eax)                 \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(sar, KONST(31), eax)          \
-    LABEL(0)
-
-// OP Rd,Rb,Rm ASR Rs
-#define VALUE_ASR_REG_C \
-    VALUE_LOAD_REG                      \
-    EMIT2(test, cl, cl)                 \
-    EMIT1(jz, LABELREF(0,f))            \
-    EMIT2(cmp, KONST(0x20), cl)         \
-    EMIT1(jae, LABELREF(1,f))           \
-    EMIT2(sar, cl, eax)                 \
-    EMIT1(setc, bl)                     \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(sar, KONST(31), eax)          \
-    EMIT1(sets, bl)                     \
-    LABEL(0)
-#define VALUE_ASR_REG_NC \
-    VALUE_LOAD_REG                      \
-    EMIT2(cmp, KONST(0x20), cl)         \
-    EMIT1(jae, LABELREF(1,f))           \
-    EMIT2(sar, cl, eax)                 \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(sar, KONST(31), eax)          \
-    LABEL(0)
-
-// OP Rd,Rb,Rm ROR #
-#define VALUE_ROR_IMM_C \
-    VALUE_LOAD_IMM                      \
-    EMIT1(jz, LABELREF(1,f))            \
-    EMIT2(ror, cl, eax)                 \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(bt, KONST(0), ebx)            \
-    EMIT2(rcr, KONST(1), eax)           \
-    LABEL(0)                            \
-    EMIT1(setc, bl)
-#define VALUE_ROR_IMM_NC \
-    VALUE_LOAD_IMM                      \
-    EMIT1(jz, LABELREF(1,f))            \
-    EMIT2(ror, cl, eax)                 \
-    EMIT1(jmp, LABELREF(0,f))           \
-    LABEL(1)                            \
-    EMIT2(bt, KONST(0), VARL(C_FLAG))   \
-    EMIT2(rcr, KONST(1), eax)           \
-    LABEL(0)
-
-// OP Rd,Rb,Rm ROR Rs
-#define VALUE_ROR_REG_C \
-    VALUE_LOAD_REG                      \
-    EMIT2(bt, KONST(0), ebx)            \
-    EMIT2(ror, cl, eax)                 \
-    EMIT1(setc, bl)
-#define VALUE_ROR_REG_NC \
-    VALUE_LOAD_REG                      \
-    EMIT2(ror, cl, eax)
-
-// OP Rd,Rb,# ROR #
-#define VALUE_IMM_C \
-    EMIT2(movzx, ch, ecx)               \
-    EMIT2(add, ecx, ecx)                \
-    EMIT2(movzx, al, eax)               \
-    EMIT2(bt, KONST(0), ebx)            \
-    EMIT2(ror, cl, eax)                 \
-    EMIT1(setc, bl)
-#define VALUE_IMM_NC \
-    EMIT2(movzx, ch, ecx)               \
-    EMIT2(add, ecx, ecx)                \
-    EMIT2(movzx, al, eax)               \
-    EMIT2(ror, cl, eax)
-
-// Macros to perform ALU ops
-
-// Set condition codes iff the destination register is not R15 (PC)
-#define CHECK_PC(OP, SETCOND) \
-    EMIT2(cmp, KONST(0x3C), esi)        \
-    EMIT1(je, LABELREF(8,f))            \
-    OP SETCOND                          \
-    EMIT1(jmp, LABELREF(9,f))           \
-    LABEL(8)                            \
-    OP                                  \
-    LABEL(9)
-
-#define OP_AND \
-    EMIT2(and, eax, edx)                \
-    EMIT2(mov, edx, REGREF1(esi))
-#define OP_ANDS   CHECK_PC(OP_AND, SETCOND_LOGICAL)
-#define OP_EOR \
-    EMIT2(xor, eax, edx)                \
-    EMIT2(mov, edx, REGREF1(esi))
-#define OP_EORS   CHECK_PC(OP_EOR, SETCOND_LOGICAL)
-#define OP_SUB \
-    EMIT2(sub, eax, edx)                \
-    EMIT2(mov, edx, REGREF1(esi))
-#define OP_SUBS   CHECK_PC(OP_SUB, SETCOND_SUB)
-#define OP_RSB \
-    EMIT2(sub, edx, eax)                \
-    EMIT2(mov, eax, REGREF1(esi))
-#define OP_RSBS   CHECK_PC(OP_RSB, SETCOND_SUB)
-#define OP_ADD \
-    EMIT2(add, eax, edx)                \
-    EMIT2(mov, edx, REGREF1(esi))
-#define OP_ADDS   CHECK_PC(OP_ADD, SETCOND_ADD)
-#define OP_ADC \
-    EMIT2(bt, KONST(0), VARL(C_FLAG))   \
-    EMIT2(adc, eax, edx)                \
-    EMIT2(mov, edx, REGREF1(esi))
-#define OP_ADCS   CHECK_PC(OP_ADC, SETCOND_ADD)
-#define OP_SBC \
-    EMIT2(bt, KONST(0), VARL(C_FLAG))   \
-    EMIT0(cmc)                          \
-    EMIT2(sbb, eax, edx)                \
-    EMIT2(mov, edx, REGREF1(esi))
-#define OP_SBCS   CHECK_PC(OP_SBC, SETCOND_SUB)
-#define OP_RSC \
-    EMIT2(bt, KONST(0), VARL(C_FLAG))   \
-    EMIT0(cmc)                          \
-    EMIT2(sbb, edx, eax)                \
-    EMIT2(mov, eax, REGREF1(esi))
-#define OP_RSCS   CHECK_PC(OP_RSC, SETCOND_SUB)
-#define OP_TST \
-    EMIT2(and, eax, edx)                \
-    SETCOND_LOGICAL
-#define OP_TEQ \
-    EMIT2(xor, eax, edx)                \
-    SETCOND_LOGICAL
-#define OP_CMP \
-    EMIT2(sub, eax, edx)                \
-    SETCOND_SUB
-#define OP_CMN \
-    EMIT2(add, eax, edx)                \
-    SETCOND_ADD
-#define OP_ORR \
-    EMIT2(or, eax, edx)                 \
-    EMIT2(mov, edx, REGREF1(esi))
-#define OP_ORRS   CHECK_PC(OP_ORR, SETCOND_LOGICAL)
-#define OP_MOV \
-    EMIT2(mov, eax, REGREF1(esi))
-#define OP_MOVS   CHECK_PC(EMIT2(test,eax,eax) EMIT2(mov,eax,REGREF1(esi)), SETCOND_LOGICAL)
-#define OP_BIC \
-    EMIT1(not, eax)                     \
-    EMIT2(and, eax, edx)                \
-    EMIT2(mov, edx, REGREF1(esi))
-#define OP_BICS   CHECK_PC(OP_BIC, SETCOND_LOGICAL)
-#define OP_MVN \
-    EMIT1(not, eax)                     \
-    EMIT2(mov, eax, REGREF1(esi))
-#define OP_MVNS   CHECK_PC(OP_MVN EMIT2(test,eax,eax), SETCOND_LOGICAL)
-
-// ALU cleanup macro
-#define ALU_FINISH  ALU_TRAILER
-
-// End of ALU macros
-//X//#endif //_MSC_VER
-
-#ifdef __GNUC__
-
-#define ROR_IMM_MSR \
-    asm ("ror %%cl, %%eax;"             \
-         : "=a" (value)                 \
-         : "a" (opcode & 0xFF), "c" (shift));
-
-#define ROR_OFFSET \
-    asm("ror %%cl, %0"                  \
-        : "=r" (offset)                 \
-        : "0" (offset), "c" (shift));
-
-#define RRX_OFFSET \
-    asm(EMIT2(btl,KONST(0),VAR(C_FLAG)) \
-        "rcr $1, %0"                    \
-        : "=r" (offset)                 \
-        : "0" (offset));
-
-#else  // !__GNUC__, i.e. Visual C++
-
-#define ROR_IMM_MSR \
-    __asm {                             \
-        __asm mov ecx, shift            \
-        __asm ror value, cl             \
-     }
-
-
-#define ROR_OFFSET \
-    __asm {                             \
-        __asm mov ecx, shift            \
-        __asm ror offset, cl            \
-    }
-
-#define RRX_OFFSET \
-    __asm {                             \
-        __asm bt dword ptr C_FLAG, 0    \
-        __asm rcr offset, 1             \
-    }
-
-#endif  // !__GNUC__
-
-#endif  // !__POWERPC__
-#endif  // !C_CORE
-
-// C core
-
 #define C_SETCOND_LOGICAL \
-    N_FLAG = ((s32)res < 0) ? true : false;             \
-    Z_FLAG = (res == 0) ? true : false;                 \
+    N_FLAG = (res >> 31); \
+    Z_FLAG = (res == 0);  \
     C_FLAG = C_OUT;
 #define C_SETCOND_ADD \
-    N_FLAG = ((s32)res < 0) ? true : false;             \
-    Z_FLAG = (res == 0) ? true : false;                 \
-    V_FLAG = ((NEG(lhs) & NEG(rhs) & POS(res)) |        \
-              (POS(lhs) & POS(rhs) & NEG(res))) ? true : false;\
-    C_FLAG = ((NEG(lhs) & NEG(rhs)) |                   \
-              (NEG(lhs) & POS(res)) |                   \
-              (NEG(rhs) & POS(res))) ? true : false;
+    N_FLAG = (res >> 31); \
+    Z_FLAG = (res == 0);  \
+    V_FLAG = ((NEG(lhs) & NEG(rhs) & POS(res)) | \
+              (POS(lhs) & POS(rhs) & NEG(res))); \
+    C_FLAG = ((NEG(lhs) & NEG(rhs)) | \
+              (NEG(lhs) & POS(res)) | \
+              (NEG(rhs) & POS(res)));
 #define C_SETCOND_SUB \
-    N_FLAG = ((s32)res < 0) ? true : false;             \
-    Z_FLAG = (res == 0) ? true : false;                 \
-    V_FLAG = ((NEG(lhs) & POS(rhs) & POS(res)) |        \
-              (POS(lhs) & NEG(rhs) & NEG(res))) ? true : false;\
-    C_FLAG = ((NEG(lhs) & POS(rhs)) |                   \
-              (NEG(lhs) & POS(res)) |                   \
-              (POS(rhs) & POS(res))) ? true : false;
+    N_FLAG = (res >> 31); \
+    Z_FLAG = (res == 0);  \
+    V_FLAG = ((NEG(lhs) & POS(rhs) & POS(res)) | \
+              (POS(lhs) & NEG(rhs) & NEG(res))); \
+    C_FLAG = ((NEG(lhs) & POS(rhs)) | \
+              (NEG(lhs) & POS(res)) | \
+              (POS(rhs) & POS(res)));
 
 #ifndef ALU_INIT_C
  #define ALU_INIT_C \
@@ -742,19 +150,16 @@ static void count(u32 opcode, int cond_res)
     u32 value;
 #endif
 // OP Rd,Rb,Rm LSL #
-#ifndef VALUE_LSL_IMM_C
- #define VALUE_LSL_IMM_C \
+#define VALUE_LSL_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (LIKELY(!shift)) {  /* LSL #0 most common? */    \
         value = reg[opcode & 0x0F].I;                   \
     } else {                                            \
         u32 v = reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (32 - shift)) & 1 ? true : false; \
+        C_OUT = (v >> (32 - shift)) & 1;                \
         value = v << shift;                             \
     }
-#endif
 // OP Rd,Rb,Rm LSL Rs
-#ifndef VALUE_LSL_REG_C
  #define VALUE_LSL_REG_C \
     u32 shift = reg[(opcode >> 8)&15].B.B0;                  \
 	u32 rm = reg[opcode & 0x0F].I;                           \
@@ -776,22 +181,18 @@ static void count(u32 opcode, int cond_res)
     } else {                                                 \
         value = rm;                                          \
     }
-#endif
 // OP Rd,Rb,Rm LSR #
-#ifndef VALUE_LSR_IMM_C
- #define VALUE_LSR_IMM_C \
+#define VALUE_LSR_IMM_C \
     u32 shift = (opcode >> 7) & 0x1F;                   \
     if (LIKELY(shift)) {                                \
         u32 v = reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
+        C_OUT = (v >> (shift - 1)) & 1;                 \
         value = v >> shift;                             \
     } else {                                            \
         value = 0;                                      \
-        C_OUT = (reg[opcode & 0x0F].I & 0x80000000) ? true : false;\
+        C_OUT = (reg[opcode & 0x0F].I >> 31);           \
     }
-#endif
 // OP Rd,Rb,Rm LSR Rs
-#ifndef VALUE_LSR_REG_C
  #define VALUE_LSR_REG_C \
     unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
 	u32 rm = reg[opcode & 0x0F].I;                      \
@@ -813,100 +214,88 @@ static void count(u32 opcode, int cond_res)
     } else {                                            \
         value = rm;                   \
     }
-#endif
 // OP Rd,Rb,Rm ASR #
-#ifndef VALUE_ASR_IMM_C
- #define VALUE_ASR_IMM_C \
+#define VALUE_ASR_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (LIKELY(shift)) {                                \
-        /* VC++ BUG: u32 v; (s32)v>>n is optimized to shr! */ \
         s32 v = reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (int)(shift - 1)) & 1 ? true : false;\
+        C_OUT = (v >> (int)(shift - 1)) & 1;            \
         value = v >> (int)shift;                        \
     } else {                                            \
         if (reg[opcode & 0x0F].I & 0x80000000) {        \
             value = 0xFFFFFFFF;                         \
-            C_OUT = true;                               \
+            C_OUT = 1;                                  \
         } else {                                        \
             value = 0;                                  \
-            C_OUT = false;                              \
+            C_OUT = 0;                                  \
         }                                               \
     }
-#endif
 // OP Rd,Rb,Rm ASR Rs
-#ifndef VALUE_ASR_REG_C
- #define VALUE_ASR_REG_C \
+#define VALUE_ASR_REG_C \
     unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
-	u32 rm = reg[opcode & 0x0F].I;                      \
-	if((opcode & 0x0F) == 15) {                         \
-	rm += 4;                                            \
-	}                                                   \
+    u32 rm = reg[opcode & 0x0F].I;                      \
+    if((opcode & 0x0F) == 15) {                         \
+        rm += 4;                                        \
+    }                                                   \
     if (LIKELY(shift < 32)) {                           \
         if (LIKELY(shift)) {                            \
-            s32 v = rm;               \
-            C_OUT = (v >> (int)(shift - 1)) & 1 ? true : false;\
+            s32 v = rm;                                 \
+            C_OUT = (v >> (int)(shift - 1)) & 1;        \
             value = v >> (int)shift;                    \
         } else {                                        \
-            value = rm;               \
+            value = rm;                                 \
         }                                               \
     } else {                                            \
         if (reg[opcode & 0x0F].I & 0x80000000) {        \
             value = 0xFFFFFFFF;                         \
-            C_OUT = true;                               \
+            C_OUT = 1;                                  \
         } else {                                        \
             value = 0;                                  \
-            C_OUT = false;                              \
+            C_OUT = 0;                                  \
         }                                               \
     }
-#endif
 // OP Rd,Rb,Rm ROR #
-#ifndef VALUE_ROR_IMM_C
- #define VALUE_ROR_IMM_C \
+#define VALUE_ROR_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (LIKELY(shift)) {                                \
         u32 v = reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
+        C_OUT = (v >> (shift - 1)) & 1;                 \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
         u32 v = reg[opcode & 0x0F].I;                   \
-        C_OUT = (v & 1) ? true : false;                 \
+        C_OUT = v & 1;                                  \
         value = ((v >> 1) |                             \
-                 (C_FLAG << 31));                       \
+                 ((u32)C_FLAG << 31));                  \
     }
-#endif
 // OP Rd,Rb,Rm ROR Rs
-#ifndef VALUE_ROR_REG_C
- #define VALUE_ROR_REG_C \
+#define VALUE_ROR_REG_C \
     unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
-	u32 rm = reg[opcode & 0x0F].I;                      \
-	if((opcode & 0x0F) == 15) {                         \
-	rm += 4;                                            \
-	}                                                   \
+    u32 rm = reg[opcode & 0x0F].I;                      \
+    if((opcode & 0x0F) == 15) {                         \
+        rm += 4;                                        \
+    }                                                   \
     if (LIKELY(shift & 0x1F)) {                         \
-        u32 v = rm;                   \
-        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
+        u32 v = rm;                                     \
+        C_OUT = (v >> (shift - 1)) & 1;                 \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
-        value = rm;                   \
+        value = rm;                                     \
         if (shift)                                      \
-            C_OUT = (value & 0x80000000 ? true : false);\
+            C_OUT = (value >> 31);                      \
     }
-#endif
 // OP Rd,Rb,# ROR #
-#ifndef VALUE_IMM_C
- #define VALUE_IMM_C \
+#define VALUE_IMM_C \
     int shift = (opcode & 0xF00) >> 7;                  \
     if (UNLIKELY(shift)) {                              \
         u32 v = opcode & 0xFF;                          \
-        C_OUT = (v >> (shift - 1)) & 1 ? true : false;  \
+        C_OUT = (v >> (shift - 1)) & 1;                 \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
         value = opcode & 0xFF;                          \
     }
-#endif
 
 // Make the non-carry versions default to the carry versions
 // (this is fine for C--the compiler will optimize the dead code out)
@@ -1078,16 +467,12 @@ static void count(u32 opcode, int cond_res)
 #ifndef SETCOND_NONE
  #define SETCOND_NONE /*nothing*/
 #endif
-#ifndef SETCOND_MUL
- #define SETCOND_MUL \
-     N_FLAG = ((s32)reg[dest].I < 0) ? true : false;    \
-     Z_FLAG = reg[dest].I ? false : true;
-#endif
-#ifndef SETCOND_MULL
- #define SETCOND_MULL \
-     N_FLAG = (reg[dest].I & 0x80000000) ? true : false;\
-     Z_FLAG = reg[dest].I || reg[acc].I ? false : true;
-#endif
+#define SETCOND_MUL \
+     N_FLAG = (reg[dest].I >> 31);                      \
+     Z_FLAG = (reg[dest].I == 0);
+#define SETCOND_MULL \
+     N_FLAG = (reg[dest].I >> 31);                      \
+     Z_FLAG = ((reg[dest].I | reg[acc].I) == 0);
 
 #ifndef ALU_FINISH
  #define ALU_FINISH /*nothing*/
@@ -1102,10 +487,8 @@ static void count(u32 opcode, int cond_res)
  #define ROR_OFFSET \
     offset = ((offset << (32 - shift)) | (offset >> shift));
 #endif
-#ifndef RRX_OFFSET
- #define RRX_OFFSET \
-    offset = ((offset >> 1) | ((int)C_FLAG << 31));
-#endif
+#define RRX_OFFSET \
+    offset = ((offset >> 1) | ((u32)C_FLAG << 31));
 
 // ALU ops (except multiply) //////////////////////////////////////////////
 
@@ -1247,16 +630,10 @@ DEFINE_ALU_INSN_C (1F, 3F, MVNS, YES)
     int dest = (opcode >> 16) & 0x0F;  /* or destHi */  \
     OP;                                                 \
     SETCOND;                                            \
-    if ((s32)rs < 0)                                    \
-        rs = ~rs;                                       \
-    if ((rs & 0xFFFFFF00) == 0)                         \
-        clockTicks += 0;                                \
-    else if ((rs & 0xFFFF0000) == 0)                    \
-        clockTicks += 1;                                \
-    else if ((rs & 0xFF000000) == 0)                    \
-        clockTicks += 2;                                \
-    else                                                \
-        clockTicks += 3;                                \
+    /* Branchless one's complement */                   \
+    rs ^= ((s32)rs >> 31);                              \
+    /* Map leading zeros to GBA multiplier cycles */    \
+    clockTicks += (31 - __builtin_clz(rs | 1)) >> 3;    \
     if (busPrefetchCount == 0)                          \
         busPrefetchCount = ((busPrefetchCount+1)<<clockTicks) - 1; \
     clockTicks += 1 + codeTicksAccess32(armNextPC);
@@ -1950,35 +1327,36 @@ static INSN_REGPARM void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB,
 #define STM_REG(bit,num) \
     if (opcode & (1U<<(bit))) {                         \
         CPUWriteMemory(address, reg[(num)].I);          \
-        if (!count) {                                   \
-            clockTicks += 1 + dataTicksAccess32(address);\
-        } else {                                        \
+        if (count) {                                    \
             clockTicks += 1 + dataTicksAccessSeq32(address);\
+        } else {                                        \
+            clockTicks += 1 + dataTicksAccess32(address);\
+            count = 1;                                  \
         }                                               \
-        count++;                                        \
         address += 4;                                   \
     }
 #define STMW_REG(bit,num) \
     if (opcode & (1U<<(bit))) {                         \
         CPUWriteMemory(address, reg[(num)].I);          \
-        if (!count) {                                   \
-            clockTicks += 1 + dataTicksAccess32(address);\
-        } else {                                        \
+        if (count) {                                    \
             clockTicks += 1 + dataTicksAccessSeq32(address);\
+        } else {                                        \
+            clockTicks += 1 + dataTicksAccess32(address);\
+            count = 1;                                  \
         }                                               \
         reg[base].I = temp;                             \
-        count++;                                        \
         address += 4;                                   \
     }
+
 #define LDM_REG(bit,num) \
     if (opcode & (1U<<(bit))) {                         \
         reg[(num)].I = CPUReadMemory(address);          \
-        if (!count) {                                   \
-            clockTicks += 1 + dataTicksAccess32(address);\
-        } else {                                        \
+        if (count) {                                    \
             clockTicks += 1 + dataTicksAccessSeq32(address);\
+        } else {                                        \
+            clockTicks += 1 + dataTicksAccess32(address);\
+            count = 1;                                  \
         }                                               \
-        count++;                                        \
         address += 4;                                   \
     }
 #define STM_LOW(STORE_REG) \
@@ -2862,12 +2240,19 @@ static void tester(void) {
 }
 #endif
 
+// ========================================================================
+// OPTIMIZED EXECUTION LOOP (FAST-PATH DISPATCHER)
+// Bypasses the 4,096 function table for the hottest ALU opcodes
+// (MOV, ADD, SUB, CMP). Eliminates I-Cache thrashing and localizes
+// the clockTicks state to prevent global register spilling on PPC.
+// ========================================================================
+
 int armExecute()
 {
     do {
-		if( cheatsEnabled ) {
-			cpuMasterCodeCheck();
-		}
+        if( cheatsEnabled ) {
+            cpuMasterCodeCheck();
+        }
 
         if ((armNextPC & 0x0803FFFF) == 0x08020000)
           busPrefetchCount = 0x100;
@@ -2879,88 +2264,256 @@ int armExecute()
         if (busPrefetchCount & 0xFFFFFE00)
             busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
 
-        clockTicks = 0;
         int oldArmNextPC = armNextPC;
-
-#ifndef FINAL_VERSION
-        if (armNextPC == stop) {
-            armNextPC++;
-        }
-#endif
-
         armNextPC = reg[15].I;
         reg[15].I += 4;
         ARM_PREFETCH_NEXT;
 
         int cond = opcode >> 28;
         bool cond_res = true;
-        if (UNLIKELY(cond != 0x0E)) {  // most opcodes are AL (always)
+
+        // Condition Predictor (0x0E "AL" handles 90%+ of cases instantly)
+        if (UNLIKELY(cond != 0x0E)) {
             switch(cond) {
-              case 0x00: // EQ
-                cond_res = Z_FLAG;
-                break;
-              case 0x01: // NE
-                cond_res = !Z_FLAG;
-                break;
-              case 0x02: // CS
-                cond_res = C_FLAG;
-                break;
-              case 0x03: // CC
-                cond_res = !C_FLAG;
-                break;
-              case 0x04: // MI
-                cond_res = N_FLAG;
-                break;
-              case 0x05: // PL
-                cond_res = !N_FLAG;
-                break;
-              case 0x06: // VS
-                cond_res = V_FLAG;
-                break;
-              case 0x07: // VC
-                cond_res = !V_FLAG;
-                break;
-              case 0x08: // HI
-                cond_res = C_FLAG && !Z_FLAG;
-                break;
-              case 0x09: // LS
-                cond_res = !C_FLAG || Z_FLAG;
-                break;
-              case 0x0A: // GE
-                cond_res = N_FLAG == V_FLAG;
-                break;
-              case 0x0B: // LT
-                cond_res = N_FLAG != V_FLAG;
-                break;
-              case 0x0C: // GT
-                cond_res = !Z_FLAG &&(N_FLAG == V_FLAG);
-                break;
-              case 0x0D: // LE
-                cond_res = Z_FLAG || (N_FLAG != V_FLAG);
-                break;
-              case 0x0E: // AL (impossible, checked above)
-                cond_res = true;
-                break;
-              case 0x0F:
-              default:
-                // ???
-                cond_res = false;
-                break;
+              case 0x00: cond_res = Z_FLAG; break;
+              case 0x01: cond_res = !Z_FLAG; break;
+              case 0x02: cond_res = C_FLAG; break;
+              case 0x03: cond_res = !C_FLAG; break;
+              case 0x04: cond_res = N_FLAG; break;
+              case 0x05: cond_res = !N_FLAG; break;
+              case 0x06: cond_res = V_FLAG; break;
+              case 0x07: cond_res = !V_FLAG; break;
+              case 0x08: cond_res = C_FLAG && !Z_FLAG; break;
+              case 0x09: cond_res = !C_FLAG || Z_FLAG; break;
+              case 0x0A: cond_res = N_FLAG == V_FLAG; break;
+              case 0x0B: cond_res = N_FLAG != V_FLAG; break;
+              case 0x0C: cond_res = !Z_FLAG && (N_FLAG == V_FLAG); break;
+              case 0x0D: cond_res = Z_FLAG || (N_FLAG != V_FLAG); break;
+              case 0x0E: cond_res = true; break;
+              default:   cond_res = false; break;
             }
         }
 
-        if (cond_res)
-            (*armInsnTable[((opcode>>16)&0xFF0) | ((opcode>>4)&0x0F)])(opcode);
-#ifdef INSN_COUNTER
-        count(opcode, cond_res);
-#endif
-        if (clockTicks < 0)
-            return 0;
-        if (clockTicks == 0)
-            clockTicks = 1 + codeTicksAccessSeq32(oldArmNextPC);
-        cpuTotalTicks += clockTicks;
+        if (cond_res) {
+            int index = ((opcode >> 16) & 0xFF0) | ((opcode >> 4) & 0x0F);
+            int top8 = index >> 4; // opcode bits 27-20
+            int dest = (opcode >> 12) & 15;
 
-    } while (cpuTotalTicks<cpuNextEvent && armState && !holdState && !SWITicks);
+            bool handledInline = false;
+            int localTicks = 0; // Localized variable to pin to GPR
+
+            // Macro specifically tailored to prevent inline bloat
+            #define INLINE_PC_CHECK(MODECHANGE) \
+                if (LIKELY(dest != 15)) { \
+                    localTicks = 1 + codeTicksAccessSeq32(armNextPC); \
+                } else { \
+                    MODECHANGE; \
+                    if (armState) { \
+                        reg[15].I &= 0xFFFFFFFC; \
+                        armNextPC = reg[15].I; \
+                        reg[15].I += 4; \
+                        ARM_PREFETCH; \
+                    } else { \
+                        reg[15].I &= 0xFFFFFFFE; \
+                        armNextPC = reg[15].I; \
+                        reg[15].I += 2; \
+                        THUMB_PREFETCH; \
+                    } \
+                    localTicks = 3 + codeTicksAccess32(armNextPC) + \
+                                 codeTicksAccessSeq32(armNextPC) + \
+                                 codeTicksAccessSeq32(armNextPC); \
+                }
+
+            // ========================================================
+            // FAST PATH 1: DATA PROCESSING IMMEDIATE (0x20 - 0x3F)
+            // ========================================================
+            if (top8 >= 0x20 && top8 <= 0x3F && (opcode & 0x0F000000) == 0x02000000) {
+                u32 value;
+                bool C_OUT = C_FLAG;
+                int shift = (opcode & 0xF00) >> 7;
+
+                // Decode Immediate
+                if (UNLIKELY(shift)) {
+                    u32 v = opcode & 0xFF;
+                    C_OUT = (v >> (shift - 1)) & 1;
+                    value = ((v << (32 - shift)) | (v >> shift));
+                } else {
+                    value = opcode & 0xFF;
+                }
+
+                switch (top8) {
+                    case 0x28: // ADD imm
+                        reg[dest].I = reg[(opcode>>16)&15].I + value;
+                        INLINE_PC_CHECK(/*nothing*/);
+                        handledInline = true; break;
+
+                    case 0x29: // ADDS imm
+                    {
+                        u32 lhs = reg[(opcode>>16)&15].I;
+                        u32 res = lhs + value;
+                        reg[dest].I = res;
+                        if (LIKELY(dest != 15)) {
+                            N_FLAG = (res >> 31);
+                            Z_FLAG = (res == 0);
+                            V_FLAG = ((NEG(lhs) & NEG(value) & POS(res)) | (POS(lhs) & POS(value) & NEG(res)));
+                            C_FLAG = ((NEG(lhs) & NEG(value)) | (NEG(lhs) & POS(res)) | (NEG(value) & POS(res)));
+                        }
+                        INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
+                        handledInline = true; break;
+                    }
+
+                    case 0x24: // SUB imm
+                        reg[dest].I = reg[(opcode>>16)&15].I - value;
+                        INLINE_PC_CHECK(/*nothing*/);
+                        handledInline = true; break;
+
+                    case 0x25: // SUBS imm
+                    {
+                        u32 lhs = reg[(opcode>>16)&15].I;
+                        u32 res = lhs - value;
+                        reg[dest].I = res;
+                        if (LIKELY(dest != 15)) {
+                            N_FLAG = (res >> 31);
+                            Z_FLAG = (res == 0);
+                            V_FLAG = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
+                            C_FLAG = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
+                        }
+                        INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
+                        handledInline = true; break;
+                    }
+
+                    case 0x35: // CMP imm
+                    {
+                        u32 lhs = reg[(opcode>>16)&15].I;
+                        u32 res = lhs - value;
+                        N_FLAG = (res >> 31);
+                        Z_FLAG = (res == 0);
+                        V_FLAG = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
+                        C_FLAG = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
+                        localTicks = 1 + codeTicksAccessSeq32(armNextPC);
+                        handledInline = true; break;
+                    }
+
+                    case 0x3A: // MOV imm
+                        reg[dest].I = value;
+                        INLINE_PC_CHECK(/*nothing*/);
+                        handledInline = true; break;
+
+                    case 0x3B: // MOVS imm
+                        reg[dest].I = value;
+                        if (LIKELY(dest != 15)) {
+                            N_FLAG = (value >> 31);
+                            Z_FLAG = (value == 0);
+                            C_FLAG = C_OUT;
+                        }
+                        INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
+                        handledInline = true; break;
+                }
+            }
+            // ========================================================
+            // FAST PATH 2: UNSHIFTED REGISTER ALU (LSL #0)
+            // ========================================================
+            else if (top8 < 0x20 && (opcode & 0x00000FF0) == 0) {
+                u32 value = reg[opcode & 0x0F].I;
+                bool C_OUT = C_FLAG; // LSL #0 retains current carry
+
+                switch (top8) {
+                    case 0x08: // ADD reg
+                        reg[dest].I = reg[(opcode>>16)&15].I + value;
+                        INLINE_PC_CHECK(/*nothing*/);
+                        handledInline = true; break;
+
+                    case 0x09: // ADDS reg
+                    {
+                        u32 lhs = reg[(opcode>>16)&15].I;
+                        u32 res = lhs + value;
+                        reg[dest].I = res;
+                        if (LIKELY(dest != 15)) {
+                            N_FLAG = (res >> 31);
+                            Z_FLAG = (res == 0);
+                            V_FLAG = ((NEG(lhs) & NEG(value) & POS(res)) | (POS(lhs) & POS(value) & NEG(res)));
+                            C_FLAG = ((NEG(lhs) & NEG(value)) | (NEG(lhs) & POS(res)) | (NEG(value) & POS(res)));
+                        }
+                        INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
+                        handledInline = true; break;
+                    }
+
+                    case 0x04: // SUB reg
+                        reg[dest].I = reg[(opcode>>16)&15].I - value;
+                        INLINE_PC_CHECK(/*nothing*/);
+                        handledInline = true; break;
+
+                    case 0x05: // SUBS reg
+                    {
+                        u32 lhs = reg[(opcode>>16)&15].I;
+                        u32 res = lhs - value;
+                        reg[dest].I = res;
+                        if (LIKELY(dest != 15)) {
+                            N_FLAG = (res >> 31);
+                            Z_FLAG = (res == 0);
+                            V_FLAG = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
+                            C_FLAG = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
+                        }
+                        INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
+                        handledInline = true; break;
+                    }
+
+                    case 0x15: // CMP reg
+                    {
+                        u32 lhs = reg[(opcode>>16)&15].I;
+                        u32 res = lhs - value;
+                        N_FLAG = (res >> 31);
+                        Z_FLAG = (res == 0);
+                        V_FLAG = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
+                        C_FLAG = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
+                        localTicks = 1 + codeTicksAccessSeq32(armNextPC);
+                        handledInline = true; break;
+                    }
+
+                    case 0x1A: // MOV reg
+                        reg[dest].I = value;
+                        INLINE_PC_CHECK(/*nothing*/);
+                        handledInline = true; break;
+
+                    case 0x1B: // MOVS reg
+                        reg[dest].I = value;
+                        if (LIKELY(dest != 15)) {
+                            N_FLAG = (value >> 31);
+                            Z_FLAG = (value == 0);
+                            C_FLAG = C_OUT;
+                        }
+                        INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
+                        handledInline = true; break;
+                }
+            }
+            #undef INLINE_PC_CHECK
+
+            // ========================================================
+            // FALLBACK: The original 4,096 instruction table
+            // ========================================================
+            if (!handledInline) {
+                clockTicks = 0; // Reset global for legacy macros
+                (*armInsnTable[index])(opcode);
+                localTicks = clockTicks; // Extract resulting global payload
+            }
+
+            #ifdef INSN_COUNTER
+            count(opcode, cond_res);
+            #endif
+
+            if (localTicks < 0)
+                return 0;
+            if (localTicks == 0)
+                localTicks = 1 + codeTicksAccessSeq32(oldArmNextPC);
+
+            cpuTotalTicks += localTicks;
+
+        } else {
+            // Unmet condition fallback
+            cpuTotalTicks += 1 + codeTicksAccessSeq32(oldArmNextPC);
+        }
+
+    } while (cpuTotalTicks < cpuNextEvent && armState && !holdState && !SWITicks);
 
     return 1;
 }
