@@ -6,13 +6,8 @@
 
 #include "../common/Port.h"
 
-//#define SPRITE_DEBUG
-
-#ifdef TILED_RENDERING
 extern void gfxDrawTextScreen(u16, u16, u16, u32 *);
-#else
-static void gfxDrawTextScreen(u16, u16, u16, u32 *);
-#endif
+
 static void gfxDrawRotScreen(u16,
 			     u16, u16,
 			     u16, u16,
@@ -101,149 +96,6 @@ static inline void gfxClearArray(u32 *array)
     *array++ = 0x80000000;
   }
 }
-
-#ifndef TILED_RENDERING
-static inline void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
-				     u32 *line)
-{
-  u16 *palette = (u16 *)paletteRAM;
-  u8 *charBase = &vram[((control >> 2) & 0x03) * 0x4000];
-  u16 *screenBase = (u16 *)&vram[((control >> 8) & 0x1f) * 0x800];
-  u32 prio = ((control & 3)<<25) + 0x1000000;
-  int sizeX = 256;
-  int sizeY = 256;
-  switch((control >> 14) & 3) {
-  case 0:
-    break;
-  case 1:
-    sizeX = 512;
-    break;
-  case 2:
-    sizeY = 512;
-    break;
-  case 3:
-    sizeX = 512;
-    sizeY = 512;
-    break;
-  }
-
-  int maskX = sizeX-1;
-  int maskY = sizeY-1;
-
-  bool mosaicOn = (control & 0x40) ? true : false;
-
-  int xxx = hofs & maskX;
-  int yyy = (vofs + VCOUNT) & maskY;
-  int mosaicX = (MOSAIC & 0x000F)+1;
-  int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
-
-  if(mosaicOn) {
-    if((VCOUNT % mosaicY) != 0) {
-      mosaicY = VCOUNT - (VCOUNT % mosaicY);
-      yyy = (vofs + mosaicY) & maskY;
-    }
-  }
-
-  if(yyy > 255 && sizeY > 256) {
-    yyy &= 255;
-    screenBase += 0x400;
-    if(sizeX > 256)
-      screenBase += 0x400;
-  }
-
-  int yshift = ((yyy>>3)<<5);
-  if((control) & 0x80) {
-    u16 *screenSource = screenBase + 0x400 * (xxx>>8) + ((xxx & 255)>>3) + yshift;
-    for(int x = 0; x < 240; x++) {
-      u16 data = READ16LE(screenSource);
-
-      int tile = data & 0x3FF;
-      int tileX = (xxx & 7);
-      int tileY = yyy & 7;
-
-      if(tileX == 7)
-        screenSource++;
-
-      if(data & 0x0400)
-        tileX = 7 - tileX;
-      if(data & 0x0800)
-        tileY = 7 - tileY;
-
-      u8 color = charBase[tile * 64 + tileY * 8 + tileX];
-
-      line[x] = color ? (READ16LE(&palette[color]) | prio): 0x80000000;
-
-      xxx++;
-      if(xxx == 256) {
-        if(sizeX > 256)
-          screenSource = screenBase + 0x400 + yshift;
-        else {
-          screenSource = screenBase + yshift;
-          xxx = 0;
-        }
-      } else if(xxx >= sizeX) {
-        xxx = 0;
-        screenSource = screenBase + yshift;
-      }
-    }
-  } else {
-    u16 *screenSource = screenBase + 0x400*(xxx>>8)+((xxx&255)>>3) +
-      yshift;
-    for(int x = 0; x < 240; x++) {
-      u16 data = READ16LE(screenSource);
-
-      int tile = data & 0x3FF;
-      int tileX = (xxx & 7);
-      int tileY = yyy & 7;
-
-      if(tileX == 7)
-        screenSource++;
-
-      if(data & 0x0400)
-        tileX = 7 - tileX;
-      if(data & 0x0800)
-        tileY = 7 - tileY;
-
-      u8 color = charBase[(tile<<5) + (tileY<<2) + (tileX>>1)];
-
-      if(tileX & 1) {
-        color = (color >> 4);
-      } else {
-        color &= 0x0F;
-      }
-
-      int pal = (data>>8) & 0xF0;
-      line[x] = color ? (READ16LE(&palette[pal + color])|prio): 0x80000000;
-
-      xxx++;
-      if(xxx == 256) {
-        if(sizeX > 256)
-          screenSource = screenBase + 0x400 + yshift;
-        else {
-          screenSource = screenBase + yshift;
-          xxx = 0;
-        }
-      } else if(xxx >= sizeX) {
-        xxx = 0;
-        screenSource = screenBase + yshift;
-      }
-    }
-  }
-  if(mosaicOn) {
-    if(mosaicX > 1) {
-      int m = 1;
-      for(int i = 0; i < 239; i++) {
-        line[i+1] = line[i];
-        m++;
-        if(m == mosaicX) {
-          m = 1;
-          i++;
-        }
-      }
-    }
-  }
-}
-#endif
 
 static inline void gfxDrawRotScreen(u16 control,
 				    u16 x_l, u16 x_h,
@@ -729,11 +581,6 @@ static inline void gfxDrawSprites(u32 *lineOBJ)
           sizeY<<=1;
       }
 
-#ifdef SPRITE_DEBUG
-      int maskX = sizeX-1;
-      int maskY = sizeY-1;
-#endif
-
       int sy = (a0 & 255);
       int sx = (a1 & 0x1FF);
 
@@ -861,10 +708,6 @@ static inline void gfxDrawSprites(u32 *lineOBJ)
                     if (m==mosaicX)
                       m=0;
                   }
-#ifdef SPRITE_DEBUG
-                  if(t == 0 || t == maskY || x == 0 || x == maskX)
-                    lineOBJ[sx] = 0x001F;
-#endif
                 }
                 sx = (sx+1)&511;
                 realX += dx;
@@ -915,10 +758,6 @@ static inline void gfxDrawSprites(u32 *lineOBJ)
                     m=0;
                 }
 
-#ifdef SPRITE_DEBUG
-                  if(t == 0 || t == maskY || x == 0 || x == maskX)
-                    lineOBJ[sx] = 0x001F;
-#endif
                 sx = (sx+1)&511;
                 realX += dx;
                 realY += dy;
@@ -991,10 +830,6 @@ static inline void gfxDrawSprites(u32 *lineOBJ)
                       m=0;
                   }
 
-#ifdef SPRITE_DEBUG
-                  if(t == 0 || t == maskY || xx == 0 || xx == maskX)
-                    lineOBJ[sx] = 0x001F;
-#endif
                 }
 
                 sx = (sx+1) & 511;
@@ -1071,10 +906,6 @@ static inline void gfxDrawSprites(u32 *lineOBJ)
                     if (m==mosaicX)
                       m=0;
                   }
-#ifdef SPRITE_DEBUG
-                  if(t == 0 || t == maskY || xx == 0 || xx == maskX)
-                    lineOBJ[sx] = 0x001F;
-#endif
                   sx = (sx+1) & 511;
                   xxx--;
                   if(!(xx & 1))
@@ -1116,10 +947,6 @@ static inline void gfxDrawSprites(u32 *lineOBJ)
                     if (m==mosaicX)
                       m=0;
                   }
-#ifdef SPRITE_DEBUG
-                  if(t == 0 || t == maskY || xx == 0 || xx == maskX)
-                    lineOBJ[sx] = 0x001F;
-#endif
                   sx = (sx+1) & 511;
                   xxx++;
                   if(xx & 1)

@@ -158,9 +158,7 @@ u8 memoryWaitSeq32[16] =
 
 u8 biosProtected[4];
 
-#ifdef WORDS_BIGENDIAN
 bool cpuBiosSwapped = false;
-#endif
 
 u32 myROM[] = {
 0xEA000006,
@@ -1715,21 +1713,12 @@ void CPUUpdateFlags()
   CPUUpdateFlags(true);
 }
 
-#ifdef WORDS_BIGENDIAN
 static void CPUSwap(volatile u32 *a, volatile u32 *b)
 {
   volatile u32 c = *b;
   *b = *a;
   *a = c;
 }
-#else
-static void CPUSwap(u32 *a, u32 *b)
-{
-  u32 c = *b;
-  *b = *a;
-  *a = c;
-}
-#endif
 
 void CPUSwitchMode(int mode, bool saveState, bool breakLoop)
 {
@@ -3154,14 +3143,13 @@ u8 cpuLowestBitSet[256];
 
 void CPUInit(const char *biosFileName, bool useBiosFile)
 {
-#ifdef WORDS_BIGENDIAN
   if(!cpuBiosSwapped) {
     for(unsigned int i = 0; i < sizeof(myROM)/4; i++) {
       WRITE32LE(&myROM[i], myROM[i]);
     }
     cpuBiosSwapped = true;
   }
-#endif
+
   gbaSaveType = 0;
   eepromInUse = 0;
   saveType = 0;
@@ -4100,35 +4088,18 @@ void CPULoop(int ticks)
   }
 }
 
-
-#ifdef TILED_RENDERING
 union u8h
 {
    struct
-#ifndef WORDS_BIGENDIAN
-   {
-      /* 0*/	unsigned char lo:4;
-      /* 4*/	unsigned char hi:4;
-#else
    {
       /* 4*/	unsigned char hi:4;
       /* 0*/	unsigned char lo:4;
-#endif
    } __attribute__ ((packed));
    u8 val;
 };
 
 union TileEntry
 {
-#ifndef WORDS_BIGENDIAN
-   struct
-   {
-      /* 0*/	unsigned tileNum:10;
-      /*12*/	unsigned hFlip:1;
-      /*13*/	unsigned vFlip:1;
-      /*14*/	unsigned palette:4;
-   };
-#else
    struct
    {
       /*14*/	unsigned palette:4;
@@ -4136,7 +4107,6 @@ union TileEntry
       /*12*/	unsigned hFlip:1;
       /* 0*/	unsigned tileNum:10;
    };
-#endif
    u16 val;
 };
 
@@ -4366,7 +4336,6 @@ void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
    else // 16 pal / 16 col
       gfxDrawTextScreen<gfxReadTilePal>(control, hofs, vofs, line);
 }
-#endif
 
 struct EmulatedSystem GBASystem = {
   // emuMain

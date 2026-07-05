@@ -33,8 +33,7 @@ INCLUDES 	:=  source source/vba
 # -fno-strict-aliasing: critical for GCC 16 pointer casting inside Memory.cpp
 # -ffast-math: legacy speed boost for APU processing blocks
 CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
-				-DNO_SOUND -DUSE_VM -DWORDS_BIGENDIAN -DNO_LINK -DNO_FEX \
-				-DTILED_RENDERING \
+				-DNO_SOUND -DUSE_VM -DNO_LINK -DNO_FEX \
 				-D__ppc__ -DNO_PNG -DHAVE_ZUTIL_H \
 				-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
 				-flto=auto \

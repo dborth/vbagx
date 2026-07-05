@@ -8,11 +8,7 @@
 
 typedef union {
   struct {
-#ifdef WORDS_BIGENDIAN
     u8 B1, B0;
-#else
-    u8 B0,B1;
-#endif
   } B;
   u16 W;
 } gbRegister;
