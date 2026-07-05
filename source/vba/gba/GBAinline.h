@@ -5,7 +5,6 @@
 #include "../common/Port.h"
 #include "RTC.h"
 #include "Sound.h"
-#include "agbprint.h"
 #include "vmmem.h" // Nintendo GC Virtual Memory
 
 extern const u32 objTilesAddress[3];
@@ -534,7 +533,7 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
     if(UNLIKELY(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)) {
       if(!rtcWrite(address, value))
         goto unwritable;
-    } else if(!agbPrintWrite(address, value)) goto unwritable;
+    }
     break;
   case 13:
     if(LIKELY(cpuEEPROMEnabled)) {

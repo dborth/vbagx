@@ -14,10 +14,8 @@
 #include "bios.h"
 #include "Cheats.h"
 #include "../NLS.h"
-#include "elf.h"
 #include "../Util.h"
 #include "../System.h"
-#include "agbprint.h"
 #ifdef PROFILING
 #include "prof/prof.h"
 #endif

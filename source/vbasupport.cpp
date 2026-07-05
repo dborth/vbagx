@@ -43,7 +43,6 @@
 #include "vba/gba/Sound.h"
 #include "vba/gba/Cheats.h"
 #include "vba/gba/GBA.h"
-#include "vba/gba/agbprint.h"
 #include "vba/gb/gb.h"
 #include "vba/gb/gbGlobals.h"
 #include "vba/gb/gbCheats.h"
@@ -1303,7 +1302,6 @@ bool LoadVBAROM()
 			cpuSaveType = 0; // automatic
 			flashSetSize(0x10000); // 64K saves
 			rtcEnable(false);
-			agbPrintEnable(false);
 			mirroringEnable = false;
 
 			// Apply preferences specific to this game

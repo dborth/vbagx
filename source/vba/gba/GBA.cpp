@@ -14,11 +14,9 @@
 #include "bios.h"
 #include "Cheats.h"
 #include "../NLS.h"
-#include "elf.h"
 #include "../Util.h"
 #include "../common/Port.h"
 #include "../System.h"
-#include "agbprint.h"
 #include "GBALink.h"
 
 #ifdef PROFILING
@@ -1320,10 +1318,6 @@ void CPUCleanUp()
     ioMem = NULL;
   }
 
-#ifndef NO_DEBUGGER
-  elfCleanUp();
-#endif //NO_DEBUGGER
-
   systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
   emulating = 0;
@@ -1353,29 +1347,6 @@ int CPULoadRom(const char *szFile)
 
   //u8 *whereToLoad = cpuIsMultiBoot ? workRAM : rom;
 
-#ifndef NO_DEBUGGER
-  if(CPUIsELF(szFile)) {
-    FILE *f = fopen(szFile, "rb");
-    if(!f) {
-      systemMessage(MSG_ERROR_OPENING_IMAGE, N_("Error opening image %s"),
-                    szFile);
-      free(rom);
-      rom = NULL;
-      free(workRAM);
-      workRAM = NULL;
-      return 0;
-    }
-    bool res = elfRead(szFile, romSize, f);
-    if(!res || romSize == 0) {
-      free(rom);
-      rom = NULL;
-      free(workRAM);
-      workRAM = NULL;
-      elfCleanUp();
-      return 0;
-    }
-  } else
-#endif //NO_DEBUGGER
 /*  if(szFile!=NULL)
   {
 	  if(!utilLoad(szFile,
@@ -1756,7 +1727,6 @@ void CPUSoftwareInterrupt(int comment)
   }
 #endif
   if(comment == 0xfa) {
-    agbPrintFlush();
     return;
   }
   if(comment == 0xf9) {
@@ -3089,8 +3059,6 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
   if(romSize < 0x1fe2000) {
     *((u16 *)&rom[0x1fe209c]) = 0xdffa; // SWI 0xFA
     *((u16 *)&rom[0x1fe209e]) = 0x4770; // BX LR
-  } else {
-    agbPrintEnable(false);
   }
 }
 
