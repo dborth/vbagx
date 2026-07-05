@@ -446,38 +446,40 @@ static inline u8 CPUReadByte(u32 address)
 
 static inline void CPUWriteMemory(u32 address, u32 value)
 {
-  address &= 0xFFFFFFFC;
+  // OPTIMIZATION: ~0x03 maps cleanly to a 1-cycle rlwinm mask
+  address &= ~0x03;
 
   switch(address >> 24) {
   case 0x02:
-      WRITE32LE(((u32 *)&workRAM[address & 0x3FFFC]), value);
+    WRITE32LE(((u32 *)&workRAM[address & 0x3FFFC]), value);
     break;
   case 0x03:
-      WRITE32LE(((u32 *)&internalRAM[address & 0x7ffC]), value);
+    WRITE32LE(((u32 *)&internalRAM[address & 0x7ffC]), value);
     break;
   case 0x04:
-    if(address < 0x4000400) {
-      CPUUpdateRegister((address & 0x3FC), value & 0xFFFF);
-      CPUUpdateRegister((address & 0x3FC) + 2, (value >> 16));
+    if(LIKELY(address < 0x4000400)) {
+      u32 ioAddr = address & 0x3FC;
+      CPUUpdateRegister(ioAddr, value & 0xFFFF);
+      CPUUpdateRegister(ioAddr + 2, (value >> 16));
     } else goto unwritable;
     break;
   case 0x05:
-    if(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE)
+    if(LIKELY(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE))
       WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
     break;
   case 0x06:
-    address = (address & 0x1fffc);
-    if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+    address &= 0x1fffc;
+    if (UNLIKELY(((DISPCNT & 7) > 2) && ((address & 0x1C000) == 0x18000)))
       return;
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
-      WRITE32LE(((u32 *)&vram[address]), value);
+    WRITE32LE(((u32 *)&vram[address]), value);
     break;
   case 0x07:
-      WRITE32LE(((u32 *)&oam[address & 0x3fc]), value);
+    WRITE32LE(((u32 *)&oam[address & 0x3fc]), value);
     break;
   case 0x0D:
-    if(cpuEEPROMEnabled) {
+    if(LIKELY(cpuEEPROMEnabled)) {
       eepromWrite(address, value);
       break;
     }
@@ -488,53 +490,54 @@ static inline void CPUWriteMemory(u32 address, u32 value)
       (*cpuSaveGameFunc)(address, (u8)value);
       break;
     }
-    // default
   default:
-unwritable:
+  unwritable:
     break;
   }
 }
 
+
 static inline void CPUWriteHalfWord(u32 address, u16 value)
 {
-  address &= 0xFFFFFFFE;
+  // OPTIMIZATION: 1-cycle rlwinm
+  address &= ~0x01;
 
   switch(address >> 24) {
   case 2:
-      WRITE16LE(((u16 *)&workRAM[address & 0x3FFFE]),value);
+    WRITE16LE(((u16 *)&workRAM[address & 0x3FFFE]),value);
     break;
   case 3:
-      WRITE16LE(((u16 *)&internalRAM[address & 0x7ffe]), value);
+    WRITE16LE(((u16 *)&internalRAM[address & 0x7ffe]), value);
     break;
   case 4:
-    if(address < 0x4000400)
+    if(LIKELY(address < 0x4000400))
       CPUUpdateRegister(address & 0x3fe, value);
     else goto unwritable;
     break;
   case 5:
-    if(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE)
+    if(LIKELY(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE))
       WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
     break;
   case 6:
-    address = (address & 0x1fffe);
-    if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+    address &= 0x1fffe;
+    if (UNLIKELY(((DISPCNT & 7) > 2) && ((address & 0x1C000) == 0x18000)))
       return;
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
-      WRITE16LE(((u16 *)&vram[address]), value);
+    WRITE16LE(((u16 *)&vram[address]), value);
     break;
   case 7:
-      WRITE16LE(((u16 *)&oam[address & 0x3fe]), value);
+    WRITE16LE(((u16 *)&oam[address & 0x3fe]), value);
     break;
   case 8:
   case 9:
-    if(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8) {
+    if(UNLIKELY(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)) {
       if(!rtcWrite(address, value))
         goto unwritable;
     } else if(!agbPrintWrite(address, value)) goto unwritable;
     break;
   case 13:
-    if(cpuEEPROMEnabled) {
+    if(LIKELY(cpuEEPROMEnabled)) {
       eepromWrite(address, (u8)value);
       break;
     }
@@ -547,7 +550,7 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
     }
     goto unwritable;
   default:
-unwritable:
+  unwritable:
     break;
   }
 }
@@ -556,115 +559,83 @@ static inline void CPUWriteByte(u32 address, u8 b)
 {
   switch(address >> 24) {
   case 2:
-      workRAM[address & 0x3FFFF] = b;
+    workRAM[address & 0x3FFFF] = b;
     break;
   case 3:
-      internalRAM[address & 0x7fff] = b;
+    internalRAM[address & 0x7fff] = b;
     break;
   case 4:
-    if(address < 0x4000400) {
-      switch(address & 0x3FF) {
-      case 0x60:
-      case 0x61:
-      case 0x62:
-      case 0x63:
-      case 0x64:
-      case 0x65:
-      case 0x68:
-      case 0x69:
-      case 0x6c:
-      case 0x6d:
-      case 0x70:
-      case 0x71:
-      case 0x72:
-      case 0x73:
-      case 0x74:
-      case 0x75:
-      case 0x78:
-      case 0x79:
-      case 0x7c:
-      case 0x7d:
-      case 0x80:
-      case 0x81:
-      case 0x84:
-      case 0x85:
-      case 0x90:
-      case 0x91:
-      case 0x92:
-      case 0x93:
-      case 0x94:
-      case 0x95:
-      case 0x96:
-      case 0x97:
-      case 0x98:
-      case 0x99:
-      case 0x9a:
-      case 0x9b:
-      case 0x9c:
-      case 0x9d:
-      case 0x9e:
-      case 0x9f:
-        soundEvent(address&0xFF, b);
-        break;
-      case 0x301: // HALTCNT, undocumented
-        if(b == 0x80)
-          stopState = true;
+    if(LIKELY(address < 0x4000400)) {
+      u32 ioAddr = address & 0x3FF;
+
+      // OPTIMIZATION: HALTCNT separated to fast-path default registers
+      if (UNLIKELY(ioAddr == 0x301)) {
+        if(b == 0x80) stopState = true;
         holdState = 1;
         holdType = -1;
         cpuNextEvent = cpuTotalTicks;
         break;
-      default: // every other register
-        u32 lowerBits = address & 0x3fe;
-        if(address & 1) {
-          CPUUpdateRegister(lowerBits, (READ16LE(&ioMem[lowerBits]) & 0x00FF) | (b << 8));
-        } else {
-          CPUUpdateRegister(lowerBits, (READ16LE(&ioMem[lowerBits]) & 0xFF00) | b);
+      }
+
+      // OPTIMIZATION: Branchless Sound Event Validation (SWAR-lite).
+      // Eliminates the massive 40-case jump table completely.
+      // 0x333F333F matches valid bits 0x60-0x7F. 0xFFFF0033 matches 0x80-0x9F.
+      u32 sndOffset = ioAddr - 0x60;
+      if (UNLIKELY(sndOffset <= 0x3F)) {
+        // Pure arithmetic mask selection. Avoids array caching & ternary branch stalls.
+        u32 highMask = -(sndOffset >> 5); // 0x00000000 if < 32, 0xFFFFFFFF if >= 32
+        u32 validMask = (0x333F333F & ~highMask) | (0xFFFF0033 & highMask);
+
+        if ((validMask >> (sndOffset & 31)) & 1) {
+          soundEvent(address & 0xFF, b);
+          break;
         }
       }
-      break;
+
+      // OPTIMIZATION: Branchless IO register Byte-Write.
+      // Resolves exact shift boundaries using single-cycle shifts and adds.
+      u32 lowerBits = ioAddr & ~0x01;
+      u32 shift = (ioAddr & 1) << 3;        // Shift is 0 or 8
+      u16 ioVal = READ16LE(&ioMem[lowerBits]);
+      u16 mask = 0xFF00U >> shift;          // Mask is 0xFF00 or 0x00FF
+
+      CPUUpdateRegister(lowerBits, (ioVal & mask) | (b << shift));
+
     } else goto unwritable;
     break;
   case 5:
-    // no need to switch
     *((u16 *)&paletteRAM[address & 0x3FE]) = (b << 8) | b;
     break;
   case 6:
-    address = (address & 0x1fffe);
-    if (((DISPCNT & 7) >2) && ((address & 0x1C000) == 0x18000))
+    address &= 0x1fffe;
+    if (UNLIKELY(((DISPCNT & 7) > 2) && ((address & 0x1C000) == 0x18000)))
       return;
     if ((address & 0x18000) == 0x18000)
       address &= 0x17fff;
 
-    // no need to switch
-    // byte writes to OBJ VRAM are ignored
-    if ((address) < objTilesAddress[((DISPCNT&7)+1)>>2])
+    // Shift is used exclusively instead of division (/4)
+    if (address < objTilesAddress[((DISPCNT&7)+1)>>2])
     {
-        *((u16 *)&vram[address]) = (b << 8) | b;
+      *((u16 *)&vram[address]) = (b << 8) | b;
     }
     break;
   case 7:
-    // no need to switch
-    // byte writes to OAM are ignored
-    //    *((u16 *)&oam[address & 0x3FE]) = (b << 8) | b;
     break;
   case 13:
-    if(cpuEEPROMEnabled) {
+    if(LIKELY(cpuEEPROMEnabled)) {
       eepromWrite(address, b);
       break;
     }
     goto unwritable;
   case 14:
   case 15:
+    // Bitwise OR preserved to avoid branch penalties
     if ((saveType != 5) && ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)) {
-
-      //if(!cpuEEPROMEnabled && (cpuSramEnabled | cpuFlashEnabled)) {
-
       (*cpuSaveGameFunc)(address, b);
       break;
     }
-    // default
   default:
-unwritable:
+  unwritable:
     break;
   }
 }
