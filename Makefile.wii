@@ -180,16 +180,17 @@ $(OFILES_SOURCES) : $(HFILES)
 #---------------------------------------------------------------------------------
 # Optimized rules for GBA-arm.cpp and GBA-thumb.cpp to prevent I-Cache thrashing
 # Forces -O2 and restricts code-bloating unrolls inside large switch blocks
+# Place -O2 and -fno-unroll-loops AFTER $(CXXFLAGS) to ensure they aren't overwritten by the global -O3
 #---------------------------------------------------------------------------------
 GBA-arm.o: GBA-arm.cpp
 	@mkdir -p $(dir $@)
 	@echo "Compiling GBA-arm.o with I-Cache optimized flags..."
-	$(CXX) -c -O2 -fno-unroll-loops $(CXXFLAGS) $< -o $@
+	$(CXX) -c $(CXXFLAGS) -O2 -fno-unroll-loops $< -o $@
 
 GBA-thumb.o: GBA-thumb.cpp
 	@mkdir -p $(dir $@)
 	@echo "Compiling GBA-thumb.o with I-Cache optimized flags..."
-	$(CXX) -c -O2 -fno-unroll-loops $(CXXFLAGS) $< -o $@
+	$(CXX) -c $(CXXFLAGS) -O2 -fno-unroll-loops $< -o $@
 
 #---------------------------------------------------------------------------------
 endif
