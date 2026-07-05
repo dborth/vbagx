@@ -508,8 +508,6 @@ static void SetupVideoMode(GXRModeObj * mode)
 		}
 	}
 
-	last_fbWidth = mode->fbWidth;
-
 	VIDEO_SetPostRetraceCallback (NULL);
 	copynow = GX_FALSE;
 	VIDEO_Configure (mode);
