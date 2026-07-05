@@ -186,7 +186,8 @@ static inline void gfxDrawRotScreen(u16 control,
 
       u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
 
-      line[x] = color ? (READ16LE(&palette[color])|prio): 0x80000000;
+      u32 mask = -(color != 0);
+	  line[x] = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
 
       realX += dx;
       realY += dy;
@@ -209,7 +210,8 @@ static inline void gfxDrawRotScreen(u16 control,
 
         u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
 
-        line[x] = color ? (READ16LE(&palette[color])|prio): 0x80000000;
+        u32 mask = -(color != 0);
+		line[x] = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
       }
       realX += dx;
       realY += dy;
@@ -405,7 +407,8 @@ static inline void gfxDrawRotScreen256(u16 control,
     } else {
       u8 color = screenBase[yyy * 240 + xxx];
 
-      line[x] = color ? (READ16LE(&palette[color])|prio): 0x80000000;
+      u32 mask = -(color != 0);
+      line[x] = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
     }
     realX += dx;
     realY += dy;
@@ -1301,20 +1304,15 @@ static inline void gfxIncreaseBrightness(u32 *line, int coeff)
 {
   for(int x = 0; x < 240; x++) {
     u32 color = *line;
-    int r = (color & 0x1F);
-    int g = ((color >> 5) & 0x1F);
-    int b = ((color >> 10) & 0x1F);
+    // SWAR: Unpack RGB565 into 32-bit with padding
+    u32 c1 = ((color << 16) | color) & 0x03E07C1F;
 
-    r = r + (((31 - r) * coeff) >> 4);
-    g = g + (((31 - g) * coeff) >> 4);
-    b = b + (((31 - b) * coeff) >> 4);
-    if(r > 31)
-      r = 31;
-    if(g > 31)
-      g = 31;
-    if(b > 31)
-      b = 31;
-    *line++ = (color & 0xFFFF0000) | (b << 10) | (g << 5) | r;
+    // Process all 3 channels in parallel
+    u32 blended = c1 + (((0x03E07C1F - c1) * coeff) >> 4);
+    blended &= 0x03E07C1F;
+
+    // Repack and assign
+    *line++ = (color & 0xFFFF0000) | (blended >> 16) | blended;
   }
 }
 
@@ -1332,20 +1330,14 @@ static inline void gfxDecreaseBrightness(u32 *line, int coeff)
 {
   for(int x = 0; x < 240; x++) {
     u32 color = *line;
-    int r = (color & 0x1F);
-    int g = ((color >> 5) & 0x1F);
-    int b = ((color >> 10) & 0x1F);
+    // SWAR: Unpack RGB565 into 32-bit with padding
+    u32 c1 = ((color << 16) | color) & 0x03E07C1F;
 
-    r = r - ((r * coeff) >> 4);
-    g = g - ((g * coeff) >> 4);
-    b = b - ((b * coeff) >> 4);
-    if(r < 0)
-      r = 0;
-    if(g < 0)
-      g = 0;
-    if(b < 0)
-      b = 0;
-    *line++ = (color & 0xFFFF0000) | (b << 10) | (g << 5) | r;
+    // Process all 3 channels in parallel
+    u32 blended = c1 - (((c1 * coeff) >> 4) & 0x03E07C1F);
+
+    // Repack and assign
+    *line++ = (color & 0xFFFF0000) | (blended >> 16) | blended;
   }
 }
 
@@ -1380,30 +1372,25 @@ static inline void gfxAlphaBlend(u32 *ta, u32 *tb, int ca, int cb)
   for(int x = 0; x < 240; x++) {
     u32 color = *ta;
     if(color < 0x80000000) {
-      int r = (color & 0x1F);
-      int g = ((color >> 5) & 0x1F);
-      int b = ((color >> 10) & 0x1F);
-      u32 color2 = (*tb++);
-      int r0 = (color2 & 0x1F);
-      int g0 = ((color2 >> 5) & 0x1F);
-      int b0 = ((color2 >> 10) & 0x1F);
+      u32 color2 = *tb;
 
-      r = ((r * ca) + (r0 * cb)) >> 4;
-      g = ((g * ca) + (g0 * cb)) >> 4;
-      b = ((b * ca) + (b0 * cb)) >> 4;
+      // SWAR: Unpack both colors
+      u32 c1 = ((color << 16) | color) & 0x03E07C1F;
+      u32 c2 = ((color2 << 16) | color2) & 0x03E07C1F;
 
-      if(r > 31)
-        r = 31;
-      if(g > 31)
-        g = 31;
-      if(b > 31)
-        b = 31;
+      u32 blended = ((c1 * ca) + (c2 * cb)) >> 4;
 
-      *ta++ = (color & 0xFFFF0000) | (b << 10) | (g << 5) | r;
-    } else {
-      ta++;
-      tb++;
+      if ((ca + cb) > 16) {
+        if (blended & 0x20) blended |= 0x1f;
+        if (blended & 0x8000) blended |= 0x7C00;
+        if (blended & 0x04000000) blended |= 0x03E00000;
+      }
+
+      blended &= 0x03E07C1F;
+      *ta = (color & 0xFFFF0000) | (blended >> 16) | blended;
     }
+    ta++;
+    tb++;
   }
 }
 

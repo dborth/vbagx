@@ -58,27 +58,17 @@ void mode0RenderLine()
   for(u32 x = 0; x < 240u; ++x) {
     u32 color = backdrop;
     u8 top = 0x20;
-	//--DCN
-	//
-	// !NON-PORTABLE!!NON-PORTABLE!
-	//
-	// This takes advantage of the fact that the Wii has far more registers 
-	// (32 vs 8) than IA-32 based processors processors (Intel, AMD). 
-	// This actually runs SLOWER on those. This code will only show 
-	// improvements on a PowerPC machine! (19.5% improvement: isolated tests)
-	//*
-	u8 li1 = (u8)(line1[x]>>24);
+
+    u8 li1 = (u8)(line1[x]>>24);
 	u8 li2 = (u8)(line2[x]>>24);
 	u8 li3 = (u8)(line3[x]>>24);
 	u8 li4 = (u8)(lineOBJ[x]>>24);	
 	
-	u8 r = 	(li2 < li1) ? (li2) : (li1);
-	
-	if(li3 < r) {
-		r = (li4 < li3) ? (li4) : (li3);
-	}else if(li4 < r){
-		r = (li4);
-	}
+	// Pure branchless bitwise MIN: y ^ ((x ^ y) & -(x < y))
+	// Broadway evaluates these as rapid 1-cycle logical shifts/ands
+	u8 r_12 = li2 ^ ((li1 ^ li2) & -(li1 < li2));
+	u8 r_34 = li4 ^ ((li3 ^ li4) & -(li3 < li4));
+	u8 r    = r_34 ^ ((r_12 ^ r_34) & -(r_12 < r_34));
 	
 	if(line0[x] < backdrop) {
 	  color = line0[x];
@@ -100,32 +90,6 @@ void mode0RenderLine()
 			top = 0x10;
 		}
 	}	
-	
-	//Original
-	/*
-	if(line0[x] < color) {
-      color = line0[x];
-      top = 0x01;
-    }
-
-    if((u8)(line1[x]>>24) < (u8)(color >> 24)) {
-      color = line1[x];
-      top = 0x02;
-    }
-
-    if((u8)(line2[x]>>24) < (u8)(color >> 24)) {
-      color = line2[x];
-      top = 0x04;
-    }
-	if((u8)(line3[x]>>24) < (u8)(color >> 24)) {
-      color = line3[x];
-      top = 0x08;
-    }
-    if((u8)(lineOBJ[x]>>24) < (u8)(color >> 24)) {
-      color = lineOBJ[x];
-      top = 0x10;
-    }
-	//*/
 
     if((top & 0x10) && (color & 0x00010000)) {
       // semi-transparent OBJ
