@@ -36,6 +36,9 @@ GXRModeObj *vmode = NULL; // Graphics Mode Object
 u32 *xfb[2] = { NULL, NULL }; // Framebuffers
 int whichfb = 0; // Frame buffer toggle
 
+#define MAX_FB_WIDTH 640
+#define MAX_FB_HEIGHT 576
+
 static Mtx GXmodelView2D;
 
 GameScreenPng gameScreenPng;
@@ -494,16 +497,46 @@ static void SetupVideoMode(GXRModeObj * mode)
 {
 	if(vmode == mode)
 		return;
-	
+
+	// Detect if we are transitioning between Progressive and Interlaced
+	bool mode_switch = false;
+	if (vmode != NULL) {
+		bool was_progressive = (vmode->viTVMode & 3) == VI_NON_INTERLACE || (vmode->viTVMode & 3) == VI_PROGRESSIVE;
+		bool is_progressive = (mode->viTVMode & 3) == VI_NON_INTERLACE || (mode->viTVMode & 3) == VI_PROGRESSIVE;
+		if (was_progressive != is_progressive) {
+			mode_switch = true;
+		}
+	}
+
+	last_fbWidth = mode->fbWidth;
+
 	VIDEO_SetPostRetraceCallback (NULL);
 	copynow = GX_FALSE;
 	VIDEO_Configure (mode);
 	VIDEO_Flush();
 
-	// Clear framebuffers etc.
-	VIDEO_ClearFrameBuffer (mode, xfb[0], COLOR_BLACK);
-	VIDEO_ClearFrameBuffer (mode, xfb[1], COLOR_BLACK);
+	// Clear framebuffers
+	// Force clear the maximum allocated size (640*576*2 bytes) to YUYV Black
+	// Prevents out-of-phase pink flashes when shrinking to 240p
+	u32 max_xfb_words = (MAX_FB_WIDTH * MAX_FB_HEIGHT * 2) / 4;
+	for(u32 i = 0; i < max_xfb_words; i++) {
+		xfb[0][i] = COLOR_BLACK;
+		xfb[1][i] = COLOR_BLACK;
+	}
+
+	// Flush the CPU data cache so the VI immediately sees the cleared memory
+	DCFlushRange(xfb[0], MAX_FB_WIDTH * MAX_FB_HEIGHT * 2);
+	DCFlushRange(xfb[1], MAX_FB_WIDTH * MAX_FB_HEIGHT * 2);
+
 	VIDEO_SetNextFramebuffer (xfb[0]);
+
+	// If the hardware sync is changing, hold the black screen for one extra frame
+	// to allow the TV DAC to lock before un-blanking.
+	if (mode_switch) {
+		VIDEO_SetBlack(true);
+		VIDEO_Flush();
+		VIDEO_WaitForFlush();
+	}
 
 	VIDEO_SetBlack (false);
 	VIDEO_Flush ();
@@ -527,7 +560,7 @@ InitializeVideo ()
 
 	// Allocate the video buffers. Sized for the largest supported mode
 	// (640x576, 2 bytes per pixel) so the same buffers serve every mode.
-	const u32 xfbSize = 640 * 576 * 2;
+	const u32 xfbSize = MAX_FB_WIDTH * MAX_FB_HEIGHT * 2;
 	xfb[0] = (u32 *) memalign(32, xfbSize);
 	xfb[1] = (u32 *) memalign(32, xfbSize);
 	DCInvalidateRange(xfb[0], xfbSize);
