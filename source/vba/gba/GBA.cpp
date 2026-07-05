@@ -17,7 +17,6 @@
 #include "../Util.h"
 #include "../common/Port.h"
 #include "../System.h"
-#include "GBALink.h"
 
 #ifdef PROFILING
 #include "prof/prof.h"
@@ -3396,12 +3395,6 @@ void CPULoop(int ticks)
   // variable used by the CPU core
   cpuTotalTicks = 0;
 
-#ifndef NO_LINK
-  // shuffle2: what's the purpose?
-  if(gba_link_enabled)
-    cpuNextEvent = 1;
-#endif
-
   cpuBreakLoop = false;
   cpuNextEvent = CPUUpdateTicks();
   if(cpuNextEvent > ticks)
@@ -3823,14 +3816,6 @@ void CPULoop(int ticks)
 
       ticks -= clockTicks;
 
-	  if (gba_joybus_enabled)
-		  JoyBusUpdate(clockTicks);
-
-#ifndef NO_LINK
-	  if (gba_link_enabled)
-		  LinkUpdate(clockTicks);
-#endif
-
       cpuNextEvent = CPUUpdateTicks();
 
       if(cpuDmaTicksToUpdate > 0) {
@@ -3844,11 +3829,6 @@ void CPULoop(int ticks)
         goto updateLoop;
       }
 
-#ifndef NO_LINK
-	  // shuffle2: what's the purpose?
-	  if(gba_link_enabled)
-  	       cpuNextEvent = 1;
-#endif
       if(IF && (IME & 1) && armIrqEnable) {
         int res = IF & IE;
         if(stopState)

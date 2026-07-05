@@ -18,10 +18,6 @@ extern "C" {
 #include "gba/RTC.h"
 #include "common/Port.h"
 
-#ifndef NO_FEX
-#include "fex/fex.h"
-#endif
-
 extern "C" {
 #include "common/memgzio.h"
 }
@@ -388,59 +384,10 @@ void utilStripDoubleExtension(const char *file, char *buffer)
   }
 }
 
-#ifndef NO_FEX
-// Opens and scans archive using accept(). Returns fex_t if found.
-// If error or not found, displays message and returns NULL.
-static fex_t* scan_arc(const char *file, bool (*accept)(const char *),
-		char (&buffer) [2048] )
-{
-	fex_t* fe;
-	fex_err_t err = fex_open( &fe, file );
-	if(!fe)
-	{
-		systemMessage(MSG_CANNOT_OPEN_FILE, N_("Cannot open file %s: %s"), file, err);
-		return NULL;
-	}
-
-	// Scan filenames
-	bool found=false;
-	while(!fex_done(fe)) {
-		strncpy(buffer,fex_name(fe),sizeof buffer);
-		buffer [sizeof buffer-1] = '\0';
-
-		utilStripDoubleExtension(buffer, buffer);
-
-		if(accept(buffer)) {
-			found = true;
-			break;
-		}
-
-		fex_err_t err = fex_next(fe);
-		if(err) {
-			systemMessage(MSG_BAD_ZIP_FILE, N_("Cannot read archive %s: %s"), file, err);
-			fex_close(fe);
-			return NULL;
-		}
-	}
-
-	if(!found) {
-		systemMessage(MSG_NO_IMAGE_ON_ZIP,
-									N_("No image found in file %s"), file);
-		fex_close(fe);
-		return NULL;
-	}
-	return fe;
-}
-#endif
-
 static bool utilIsImage(const char *file)
 {
 	return utilIsGBAImage(file) || utilIsGBImage(file);
 }
-
-#ifdef WIN32
-#include <Windows.h>
-#endif
 
 IMAGE_TYPE utilFindType(const char *file, char (&buffer)[2048]);
 
@@ -452,37 +399,6 @@ IMAGE_TYPE utilFindType(const char *file)
 
 IMAGE_TYPE utilFindType(const char *file, char (&buffer)[2048])
 {
-#ifndef NO_FEX
-#ifdef WIN32
-	DWORD dwNum = MultiByteToWideChar (CP_ACP, 0, file, -1, NULL, 0);
-	wchar_t *pwText;
-	pwText = new wchar_t[dwNum];
-	if(!pwText)
-	{
-		return IMAGE_UNKNOWN;
-	}
-	MultiByteToWideChar (CP_ACP, 0, file, -1, pwText, dwNum );
-	char* file_conv = fex_wide_to_path( pwText);
-//	if ( !utilIsImage( file_conv ) ) // TODO: utilIsArchive() instead?
-//	{
-		fex_t* fe = scan_arc(file_conv,utilIsImage,buffer);
-		if(!fe)
-			return IMAGE_UNKNOWN;
-		fex_close(fe);
-		file = buffer;
-//	}
-	free(file_conv);
-#else
-//	if ( !utilIsImage( file ) ) // TODO: utilIsArchive() instead?
-//	{
-		fex_t* fe = scan_arc(file,utilIsImage,buffer);
-		if(!fe)
-			return IMAGE_UNKNOWN;
-		fex_close(fe);
-		file = buffer;
-//	}
-#endif
-#endif
 	return utilIsGBAImage(file) ? IMAGE_GBA : IMAGE_GB;
 }
 
@@ -501,38 +417,11 @@ u8 *utilLoad(const char *file,
 {
 	// find image file
 	char buffer [2048];
-#ifdef NO_FEX
+
 	FILE* f = fopen(file, "rb");
 	fseek(f, 0, SEEK_END);
 	int fileSize = ftell(f);
 	fseek(f, 0, SEEK_SET);
-#else
-#ifdef WIN32
-	DWORD dwNum = MultiByteToWideChar (CP_ACP, 0, file, -1, NULL, 0);
-	wchar_t *pwText;
-	pwText = new wchar_t[dwNum];
-	if(!pwText)
-	{
-		return NULL;
-	}
-	MultiByteToWideChar (CP_ACP, 0, file, -1, pwText, dwNum );
-	char* file_conv = fex_wide_to_path( pwText);
-	delete []pwText;
-	fex_t *fe = scan_arc(file_conv,accept,buffer);
-	if(!fe)
-		return NULL;
-	free(file_conv);
-#else
-	fex_t *fe = scan_arc(file,accept,buffer);
-	if(!fe)
-		return NULL;
-#endif
-	// Allocate space for image
-	fex_err_t err = fex_stat(fe);
-	int fileSize = fex_size(fe);
-	if(size == 0)
-		size = fileSize;
-#endif
 
 	u8 *image = data;
 
@@ -540,11 +429,8 @@ u8 *utilLoad(const char *file,
 		// allocate buffer memory if none was passed to the function
 		image = (u8 *)malloc(utilGetSize(size));
 		if(image == NULL) {
-#ifdef NO_FEX
 			fclose(f);
-#else
-			fex_close(fe);
-#endif
+
 			systemMessage(MSG_OUT_OF_MEMORY, N_("Failed to allocate memory for %s"),
 										"data");
 			return NULL;
@@ -554,14 +440,11 @@ u8 *utilLoad(const char *file,
 
 	// Read image
 	int read = fileSize <= size ? fileSize : size; // do not read beyond file
-#ifdef NO_FEX
+
 	int br = fread(image, 1, read, f);
 	const char* err = (br < read) ? "too few bytes from fread" : NULL;
 	fclose(f);
-#else
-	err = fex_read(fe, image, read);
-	fex_close(fe);
-#endif
+
 	if(err) {
 		systemMessage(MSG_ERROR_READING_IMAGE,
 									N_("Error reading image from %s: %s"), buffer, err);
