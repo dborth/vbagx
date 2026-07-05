@@ -97,9 +97,9 @@ endif
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
 
-# ISOLATION: Filter out GBA-arm.o and GBA-thumb.o from the automatic optimization rule
-export OFILES_SOURCES := $(filter-out GBA-arm.o GBA-thumb.o, $(CPPFILES:.cpp=.o)) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) GBA-arm.o GBA-thumb.o
+# ISOLATION: Filter out GBA.o GBA-arm.o GBA-thumb.o from the automatic optimization rule
+export OFILES_SOURCES := $(filter-out GBA.o GBA-arm.o GBA-thumb.o, $(CPPFILES:.cpp=.o)) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) GBA.o GBA-arm.o GBA-thumb.o
 
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
 
@@ -173,10 +173,15 @@ $(OFILES_SOURCES) : $(HFILES)
 -include $(DEPENDS)
 
 #---------------------------------------------------------------------------------
-# Optimized rules for GBA-arm.cpp and GBA-thumb.cpp to prevent I-Cache thrashing
+# Optimized rules to prevent I-Cache thrashing
 # Forces -O2 and restricts code-bloating unrolls inside large switch blocks
 # Place -O2 and -fno-unroll-loops AFTER $(CXXFLAGS) to ensure they aren't overwritten by the global -O3
 #---------------------------------------------------------------------------------
+GBA.o: GBA.cpp
+	@mkdir -p $(dir $@)
+	@echo "Compiling GBA.o with I-Cache optimized flags (-O2 to compress template loops)..."
+	$(CXX) -c $(CXXFLAGS) -O2 $< -o $@
+	
 GBA-arm.o: GBA-arm.cpp
 	@mkdir -p $(dir $@)
 	@echo "Compiling GBA-arm.o with I-Cache optimized flags..."
