@@ -18,13 +18,7 @@
 #include "../common/Port.h"
 #include "../System.h"
 
-#ifdef PROFILING
-#include "prof/prof.h"
-#endif
-
-#ifdef __GNUC__
-#define _stricmp strcasecmp
-#endif
+#define strcasecmp strcasecmp
 
 extern int emulating;
 
@@ -58,20 +52,6 @@ bool cpuEEPROMSensorEnabled = false;
 u32 cpuPrefetch[2];
 
 int cpuTotalTicks = 0;
-#ifdef PROFILING
-int profilingTicks = 0;
-int profilingTicksReload = 0;
-static profile_segment *profilSegment = NULL;
-#endif
-
-#ifdef BKPT_SUPPORT
-u8 freezeWorkRAM[0x40000];
-u8 freezeInternalRAM[0x8000];
-u8 freezeVRAM[0x18000];
-u8 freezePRAM[0x400];
-u8 freezeOAM[0x400];
-bool debugger_last;
-#endif
 
 int lcdTicks = (useBios && !skipBios) ? 1008 : 208;
 u8 timerOnOffDelay = 0;
@@ -454,22 +434,6 @@ variable_desc saveGameStruct[] = {
 
 static int romSize = 0x2000000;
 
-#ifdef PROFILING
-void cpuProfil(profile_segment *seg)
-{
-    profilSegment = seg;
-}
-
-void cpuEnableProfiling(int hz)
-{
-  if(hz == 0)
-    hz = 100;
-  profilingTicks = profilingTicksReload = 16777216 / hz;
-  profSetHertz(hz);
-}
-#endif
-
-
 inline int CPUUpdateTicks()
 {
   int cpuLoopTicks = lcdTicks;
@@ -489,13 +453,6 @@ inline int CPUUpdateTicks()
   if(timer3On && !(TM3CNT & 4) && (timer3Ticks < cpuLoopTicks)) {
     cpuLoopTicks = timer3Ticks;
   }
-#ifdef PROFILING
-  if(profilingTicksReload != 0) {
-    if(profilingTicks < cpuLoopTicks) {
-      cpuLoopTicks = profilingTicks;
-    }
-  }
-#endif
 
   if (SWITicks) {
     if (SWITicks < cpuLoopTicks)
@@ -1193,7 +1150,7 @@ bool CPUIsZipFile(const char * file)
     const char * p = strrchr(file,'.');
 
     if(p != NULL) {
-      if(_stricmp(p, ".zip") == 0)
+      if(strcasecmp(p, ".zip") == 0)
         return true;
     }
   }
@@ -1208,15 +1165,15 @@ bool CPUIsGBAImage(const char * file)
     const char * p = strrchr(file,'.');
 
     if(p != NULL) {
-      if(_stricmp(p, ".gba") == 0)
+      if(strcasecmp(p, ".gba") == 0)
         return true;
-      if(_stricmp(p, ".agb") == 0)
+      if(strcasecmp(p, ".agb") == 0)
         return true;
-      if(_stricmp(p, ".bin") == 0)
+      if(strcasecmp(p, ".bin") == 0)
         return true;
-      if(_stricmp(p, ".elf") == 0)
+      if(strcasecmp(p, ".elf") == 0)
         return true;
-      if(_stricmp(p, ".mb") == 0) {
+      if(strcasecmp(p, ".mb") == 0) {
         cpuIsMultiBoot = true;
         return true;
       }
@@ -1232,15 +1189,15 @@ bool CPUIsGBABios(const char * file)
     const char * p = strrchr(file,'.');
 
     if(p != NULL) {
-      if(_stricmp(p, ".gba") == 0)
+      if(strcasecmp(p, ".gba") == 0)
         return true;
-      if(_stricmp(p, ".agb") == 0)
+      if(strcasecmp(p, ".agb") == 0)
         return true;
-      if(_stricmp(p, ".bin") == 0)
+      if(strcasecmp(p, ".bin") == 0)
         return true;
-      if(_stricmp(p, ".bios") == 0)
+      if(strcasecmp(p, ".bios") == 0)
         return true;
-      if(_stricmp(p, ".rom") == 0)
+      if(strcasecmp(p, ".rom") == 0)
         return true;
     }
   }
@@ -1257,7 +1214,7 @@ bool CPUIsELF(const char *file)
     const char * p = strrchr(file,'.');
 
     if(p != NULL) {
-      if(_stricmp(p, ".elf") == 0)
+      if(strcasecmp(p, ".elf") == 0)
         return true;
     }
   }
@@ -1266,12 +1223,6 @@ bool CPUIsELF(const char *file)
 
 void CPUCleanUp()
 {
-#ifdef PROFILING
-  if(profilingTicksReload) {
-    profCleanup();
-  }
-#endif
-
   if(rom != NULL) {
     free(rom);
     rom = NULL;
@@ -1822,13 +1773,7 @@ static void SWI_2A_SndDriverJmpTableCopy(int c) { BIOS_SndDriverJmpTableCopy(); 
 
 static void SWI_Default_Unsupported(int comment) {
   static bool disableMessage = false;
-#ifdef GBA_LOGGING
-  if (systemVerbose & VERBOSE_SWI) {
-    log("SWI: %08x at %08x (0x%08x,0x%08x,0x%08x,VCOUNT = %2d)\n", comment,
-        armState ? armNextPC - 4 : armNextPC - 2,
-        reg[0].I, reg[1].I, reg[2].I, VCOUNT);
-  }
-#endif
+
   if (!disableMessage) {
     systemMessage(MSG_UNSUPPORTED_BIOS_FUNCTION,
                   N_("Unsupported BIOS function %02x called from %08x. A BIOS file is needed in order to get correct behaviour."),
@@ -1864,16 +1809,6 @@ void CPUSoftwareInterrupt(int comment)
 {
   if (armState) comment >>= 16;
 
-#ifdef BKPT_SUPPORT
-  if(comment == 0xff) { dbgOutput(NULL, reg[0].I); return; }
-#endif
-#ifdef PROFILING
-  if(comment == 0xfe) { profStartup(reg[0].I, reg[1].I); return; }
-  if(comment == 0xfd) { profControl(reg[0].I); return; }
-  if(comment == 0xfc) { profCleanup(); return; }
-  if(comment == 0xfb) { profCount(); return; }
-#endif
-
   if (comment == 0xfa) return;
 
   if (comment == 0xf9) {
@@ -1884,13 +1819,6 @@ void CPUSoftwareInterrupt(int comment)
   }
 
   if (useBios) {
-#ifdef GBA_LOGGING
-    if(systemVerbose & VERBOSE_SWI) {
-      log("SWI: %08x at %08x (0x%08x,0x%08x,0x%08x,VCOUNT = %2d)\n", comment,
-          armState ? armNextPC - 4 : armNextPC - 2,
-          reg[0].I, reg[1].I, reg[2].I, VCOUNT);
-    }
-#endif
     CPUSoftwareInterrupt();
     return;
   }
@@ -2067,20 +1995,6 @@ static inline void CPUCheckDMA_T(int reason, int dmamask, u16& cnt_h, u16 cnt_l,
     u32 is_zero = (cnt_l == 0);
     count = cnt_l | (is_zero << 16); // Branchlessly evaluates: cnt_l ? cnt_l : 0x10000
   }
-
-#ifdef GBA_LOGGING
-  int verbose_flag = 0;
-  if (channel == 0) verbose_flag = VERBOSE_DMA0;
-  else if (channel == 1) verbose_flag = VERBOSE_DMA1;
-  else if (channel == 2) verbose_flag = VERBOSE_DMA2;
-  else if (channel == 3) verbose_flag = VERBOSE_DMA3;
-
-  if (systemVerbose & verbose_flag) {
-    int logCount = count << 1;
-    if (transfer32) logCount <<= 1;
-    log("DMA%d: s=%08x d=%08x c=%04x count=%08x\n", channel, src, dst, cnt_h, logCount);
-  }
-#endif
 
   // Execute the DMA transfer
   doDMA(src, dst, sourceIncrement, destIncrement, count, transfer32);
@@ -2542,14 +2456,6 @@ void CPUUpdateRegister(u32 address, u16 value)
     cpuNextEvent = cpuTotalTicks;
     break;
   case 0x128:
-#ifdef LINK_EMULATION
-    if (linkenable)
-    {
-      StartLink(value);
-    }
-    else
-#endif
-    {
       if(value & 0x80) {
         value &= 0xff7f;
         if(value & 1 && (value & 0x4000)) {
@@ -2560,16 +2466,9 @@ void CPUUpdateRegister(u32 address, u16 value)
         }
       }
       WriteReg16(0x128, value);
-    }
     break;
   case 0x12a:
-#ifdef LINK_EMULATION
-    if(linkenable && lspeed)
-      LinkSSend(value);
-#endif
-    {
       WriteReg16(0x134, value);
-    }
     break;
   case 0x130:
     P1 |= (value & 0x3FF);
@@ -2579,22 +2478,10 @@ void CPUUpdateRegister(u32 address, u16 value)
     WriteReg16(0x132, value & 0xC3FF);
     break;
   case 0x134:
-#ifdef LINK_EMULATION
-    if (linkenable)
-      StartGPLink(value);
-    else
-#endif
       WriteReg16(0x134, value);
-
     break;
   case 0x140:
-#ifdef LINK_EMULATION
-    if (linkenable)
-      StartJOYLink(value);
-    else
-#endif
       WriteReg16(0x140, value);
-
     break;
   case 0x200:
     IE = value & 0x3FFF;
@@ -3249,7 +3136,7 @@ static __attribute__((noinline)) void CPURenderLine_Wii() {
 // Template generation separates execution paths at compile-time,
 // keeping L1 I-Cache clean of dead branches.
 // -------------------------------------------------------------------------
-template <bool EnableCheats, bool EnableProfiling>
+template <bool EnableCheats>
 static void CPULoop_T(int ticks) {
   int clockTicks;
   int timerOverflow = 0;
@@ -3497,27 +3384,6 @@ static void CPULoop_T(int ticks) {
 
       timerOverflow = 0;
 
-      if (EnableProfiling) {
-#ifdef PROFILING
-        profilingTicks -= clockTicks;
-        if(profilingTicks <= 0) {
-          profilingTicks += profilingTicksReload;
-          if(profilSegment) {
-            profile_segment *seg = profilSegment;
-            do {
-              u16 *b = (u16 *)seg->sbuf;
-              int pc = ((reg[15].I - seg->s_lowpc) * seg->s_scale)/0x10000;
-              if(pc >= 0 && pc < seg->ssiz) {
-                b[pc]++;
-                break;
-              }
-              seg = seg->next;
-            } while(seg);
-          }
-        }
-#endif
-      }
-
       ticks -= clockTicks;
       cpuNextEvent = CPUUpdateTicks();
 
@@ -3581,13 +3447,8 @@ static void CPULoop_T(int ticks) {
 void CPULoop(int ticks) {
   bool useCheats = (cheatsEnabled && (mastercode == 0));
 
-#ifdef PROFILING
-  if (useCheats) CPULoop_T<true, true>(ticks);
-  else           CPULoop_T<false, true>(ticks);
-#else
-  if (useCheats) CPULoop_T<true, false>(ticks);
-  else           CPULoop_T<false, false>(ticks);
-#endif
+  if (useCheats) CPULoop_T<true>(ticks);
+  else           CPULoop_T<false>(ticks);
 }
 
 union u8h
