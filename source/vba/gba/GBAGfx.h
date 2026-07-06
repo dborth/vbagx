@@ -534,440 +534,407 @@ static inline void gfxDrawRotScreen16Bit160(u16 control,
 
 static inline void gfxDrawSprites(u32 *lineOBJ)
 {
-  // lineOBJpix is used to keep track of the drawn OBJs
-  // and to stop drawing them if the 'maximum number of OBJ per line'
-  // has been reached.
-  int lineOBJpix = (DISPCNT & 0x20) ? 954 : 1226;
-  int m=0;
-  gfxClearArray(lineOBJ);
-  if(layerEnable & 0x1000) {
-    u16 *sprites = (u16 *)oam;
-    u16 *spritePalette = &((u16 *)paletteRAM)[256];
-    int mosaicY = ((MOSAIC & 0xF000)>>12) + 1;
-    int mosaicX = ((MOSAIC & 0xF00)>>8) + 1;
-    for(int x = 0; x < 128 ; x++) {
-      u16 a0 = READ16LE(sprites++);
-      u16 a1 = READ16LE(sprites++);
-      u16 a2 = READ16LE(sprites++);
-      sprites++;
+	int lineOBJpix = (DISPCNT & 0x20) ? 954 : 1226;
+	int m = 0;
+	gfxClearArray(lineOBJ);
+	if(!(layerEnable & 0x1000)) return;
 
-      lineOBJpixleft[x]=lineOBJpix;
+	u16 *sprites = (u16 *)oam;
+	u16 *spritePalette = &((u16 *)paletteRAM)[256];
+	int mosaicY = ((MOSAIC & 0xF000)>>12) + 1;
+	int mosaicX = ((MOSAIC & 0xF00)>>8) + 1;
 
-      lineOBJpix-=2;
-      if (lineOBJpix<=0)
-        continue;
+	for(int x = 0; x < 128 ; x++) {
+		// PREFETCH: Pull the next sprite's OAM chunk into the L1 cache
+		__builtin_prefetch(sprites + 4, 0, 0);
 
-      if ((a0 & 0x0c00) == 0x0c00)
-        a0 &=0xF3FF;
+		u16 a0 = READ16LE(sprites++);
+		u16 a1 = READ16LE(sprites++);
+		u16 a2 = READ16LE(sprites++);
+		sprites++;
 
-      if ((a0>>14) == 3)
-      {
-        a0 &= 0x3FFF;
-        a1 &= 0x3FFF;
-      }
+		lineOBJpixleft[x] = lineOBJpix;
+		lineOBJpix -= 2;
+		if (lineOBJpix <= 0) continue;
 
-      int sizeX = 8<<(a1>>14);
-      int sizeY = sizeX;
+		if ((a0 & 0x0c00) == 0x0c00) a0 &= 0xF3FF;
+		if ((a0 >> 14) == 3) {
+			a0 &= 0x3FFF;
+			a1 &= 0x3FFF;
+		}
 
-      if ((a0>>14) & 1)
-      {
-        if (sizeX<32)
-          sizeX<<=1;
-        if (sizeY>8)
-          sizeY>>=1;
-      }
-      else if ((a0>>14) & 2)
-      {
-        if (sizeX>8)
-          sizeX>>=1;
-        if (sizeY<32)
-          sizeY<<=1;
-      }
+		int sizeX = 8 << (a1 >> 14);
+		int sizeY = sizeX;
 
-      int sy = (a0 & 255);
-      int sx = (a1 & 0x1FF);
+		if ((a0 >> 14) & 1) {
+			if (sizeX < 32) sizeX <<= 1;
+			if (sizeY > 8) sizeY >>= 1;
+		}
+		else if ((a0 >> 14) & 2) {
+			if (sizeX > 8) sizeX >>= 1;
+			if (sizeY < 32) sizeY <<= 1;
+		}
 
-      // computes ticks used by OBJ-WIN if OBJWIN is enabled
-      if (((a0 & 0x0c00) == 0x0800) && (layerEnable & 0x8000))
-      {
-        if ((a0 & 0x0300) == 0x0300)
-        {
-          sizeX<<=1;
-          sizeY<<=1;
-        }
-        if((sy+sizeY) > 256)
-          sy -= 256;
-        if ((sx+sizeX)> 512)
-          sx-=512;
-        if (sx<0)
-        {
-            sizeX+=sx;
-            sx = 0;
-        }
-        else if ((sx+sizeX)>240)
-            sizeX=240-sx;
-        if ((VCOUNT>=sy) && (VCOUNT<sy+sizeY) && (sx<240))
-        {
-          if (a0 & 0x0100)
-            lineOBJpix-=8+2*sizeX;
-          else
-            lineOBJpix-=sizeX-2;
-        }
-        continue;
-      }
-      // else ignores OBJ-WIN if OBJWIN is disabled, and ignored disabled OBJ
-      else
-      if(((a0 & 0x0c00) == 0x0800) || ((a0 & 0x0300) == 0x0200))
-        continue;
+		int sy = (a0 & 255);
+		int sx = (a1 & 0x1FF);
 
-      if (lineOBJpix<0)
-        continue;
+		// OBJ-WIN checks untouched for logic parity
+		if (((a0 & 0x0c00) == 0x0800) && (layerEnable & 0x8000)) {
+			if ((a0 & 0x0300) == 0x0300) { sizeX <<= 1; sizeY <<= 1; }
+			sy -= ((sy + sizeY) >> 8) << 8; // Branchless wrap
 
+			if ((sx+sizeX)> 512) sx -= 512;
+			if (sx < 0) { sizeX += sx; sx = 0; }
+			else if ((sx+sizeX)> 240) sizeX = 240 - sx;
 
+			if ((VCOUNT >= sy) && (VCOUNT < sy + sizeY) && (sx < 240)) {
+				lineOBJpix -= (a0 & 0x0100) ? (8 + 2 * sizeX) : (sizeX - 2);
+			}
+			continue;
+		}
+		else if(((a0 & 0x0c00) == 0x0800) || ((a0 & 0x0300) == 0x0200)) {
+			continue;
+		}
 
-      if(a0 & 0x0100) {
-        int fieldX = sizeX;
-        int fieldY = sizeY;
-        if(a0 & 0x0200) {
-          fieldX <<= 1;
-          fieldY <<= 1;
-        }
-        if((sy+fieldY) > 256)
-          sy -= 256;
-        int t = VCOUNT - sy;
-        if((t >= 0) && (t < fieldY)) {
-          int startpix = 0;
-          if ((sx+fieldX)> 512)
-          {
-            startpix=512-sx;
-          }
-          if (lineOBJpix>0)
-          if((sx < 240) || startpix) {
-            lineOBJpix-=8;
-            // int t2 = t - (fieldY >> 1);
-            int rot = (a1 >> 9) & 0x1F;
-            u16 *OAM = (u16 *)oam;
-            int dx = READ16LE(&OAM[3 + (rot << 4)]);
-            if(dx & 0x8000)
-              dx |= 0xFFFF8000;
-            int dmx = READ16LE(&OAM[7 + (rot << 4)]);
-            if(dmx & 0x8000)
-              dmx |= 0xFFFF8000;
-            int dy = READ16LE(&OAM[11 + (rot << 4)]);
-            if(dy & 0x8000)
-              dy |= 0xFFFF8000;
-            int dmy = READ16LE(&OAM[15 + (rot << 4)]);
-            if(dmy & 0x8000)
-              dmy |= 0xFFFF8000;
+		if (lineOBJpix < 0) continue;
 
-            if(a0 & 0x1000) {
-              t -= (t % mosaicY);
-            }
+			if(a0 & 0x0100) {
+			int fieldX = sizeX;
+			int fieldY = sizeY;
+			if(a0 & 0x0200) {
+			fieldX <<= 1;
+			fieldY <<= 1;
+			}
 
-            int realX = ((sizeX) << 7) - (fieldX >> 1)*dx - (fieldY>>1)*dmx
-              + t * dmx;
-            int realY = ((sizeY) << 7) - (fieldX >> 1)*dy - (fieldY>>1)*dmy
-              + t * dmy;
+			// Branchless Y boundary wrapper
+			sy -= ((sy + fieldY) >> 8) << 8;
 
-            u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+			int t = VCOUNT - sy;
+			if((t >= 0) && (t < fieldY)) {
+			// Branchless X clamping
+			int startpix = ((sx + fieldX) >> 9) * (512 - sx);
 
-            if(a0 & 0x2000) {
-              int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
-              int inc = 32;
-              if(DISPCNT & 0x40)
-                inc = sizeX >> 2;
-              else
-                c &= 0x3FE;
-              for(int x = 0; x < fieldX; x++) {
-                if (x >= startpix)
-                  lineOBJpix-=2;
-                if (lineOBJpix<0)
-                  continue;
-                int xxx = realX >> 8;
-                int yyy = realY >> 8;
+			if (lineOBJpix > 0 && ((sx < 240) || startpix)) {
+			  lineOBJpix -= 8;
+			  int rot = (a1 >> 9) & 0x1F;
+			  u16 *OAM = (u16 *)oam;
 
-                if(xxx < 0 || xxx >= sizeX ||
-                   yyy < 0 || yyy >= sizeY ||
-                   sx >= 240);
-                else {
-                  u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
-									+ ((yyy & 7)<<3) + ((xxx >> 3)<<6) +
-                                    (xxx & 7))&0x7FFF)];
-                  if ((color==0) && (((prio >> 25)&3) <
-                                     ((lineOBJ[sx]>>25)&3))) {
-                    lineOBJ[sx] = (lineOBJ[sx] & 0xF9FFFFFF) | prio;
-                    if((a0 & 0x1000) && m)
-                      lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
-                  } else if((color) && (prio < (lineOBJ[sx]&0xFF000000))) {
-                    lineOBJ[sx] = READ16LE(&spritePalette[color]) | prio;
-                    if((a0 & 0x1000) && m)
-                      lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
-                  }
+			  // Matrix prefetching
+			  __builtin_prefetch(&OAM[3 + (rot << 4)], 0, 0);
 
-                  if (a0 & 0x1000) {
-                    m++;
-                    if (m==mosaicX)
-                      m=0;
-                  }
-                }
-                sx = (sx+1)&511;
-                realX += dx;
-                realY += dy;
-              }
-            } else {
-              int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
+			  int dx = READ16LE(&OAM[3 + (rot << 4)]);
+			  if(dx & 0x8000) dx |= 0xFFFF8000;
+			  int dmx = READ16LE(&OAM[7 + (rot << 4)]);
+			  if(dmx & 0x8000) dmx |= 0xFFFF8000;
+			  int dy = READ16LE(&OAM[11 + (rot << 4)]);
+			  if(dy & 0x8000) dy |= 0xFFFF8000;
+			  int dmy = READ16LE(&OAM[15 + (rot << 4)]);
+			  if(dmy & 0x8000) dmy |= 0xFFFF8000;
 
-              int inc = 32;
-              if(DISPCNT & 0x40)
-                inc = sizeX >> 3;
-              int palette = (a2 >> 8) & 0xF0;
-              for(int x = 0; x < fieldX; x++) {
-                if (x >= startpix)
-                  lineOBJpix-=2;
-                if (lineOBJpix<0)
-                  continue;
-                int xxx = realX >> 8;
-                int yyy = realY >> 8;
-                if(xxx < 0 || xxx >= sizeX ||
-                   yyy < 0 || yyy >= sizeY ||
-                   sx >= 240);
-                else {
-                  u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
-                                                + ((yyy & 7)<<2) + ((xxx >> 3)<<5) +
-                                               ((xxx & 7)>>1))&0x7FFF)];
-                  if(xxx & 1)
-                    color >>= 4;
-                  else
-                    color &= 0x0F;
+			  if(a0 & 0x1000) t -= (t % mosaicY);
 
-                  if ((color==0) && (((prio >> 25)&3) <
-                                     ((lineOBJ[sx]>>25)&3))) {
-                    lineOBJ[sx] = (lineOBJ[sx] & 0xF9FFFFFF) | prio;
-                    if((a0 & 0x1000) && m)
-                      lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
-                  } else if((color) && (prio < (lineOBJ[sx]&0xFF000000))) {
-                    lineOBJ[sx] = READ16LE(&spritePalette[palette+color]) | prio;
-                    if((a0 & 0x1000) && m)
-                      lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
-                  }
-                }
-                if((a0 & 0x1000) && m) {
-                  m++;
-                  if (m==mosaicX)
-                    m=0;
-                }
+			  int realX = ((sizeX) << 7) - (fieldX >> 1)*dx - (fieldY>>1)*dmx + t * dmx;
+			  int realY = ((sizeY) << 7) - (fieldX >> 1)*dy - (fieldY>>1)*dmy + t * dmy;
 
-                sx = (sx+1)&511;
-                realX += dx;
-                realY += dy;
+			  u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
 
-              }
-            }
-          }
-        }
-      } else {
-        if(sy+sizeY > 256)
-          sy -= 256;
-        int t = VCOUNT - sy;
-        if((t >= 0) && (t < sizeY)) {
-          int startpix = 0;
-          if ((sx+sizeX)> 512)
-          {
-            startpix=512-sx;
-          }
-          if((sx < 240) || startpix) {
-            lineOBJpix+=2;
-            if(a0 & 0x2000) {
-              if(a1 & 0x2000)
-                t = sizeY - t - 1;
-              int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
+				if(a0 & 0x2000) {
+				  int c = (a2 & 0x3FF);
+				  if((DISPCNT & 7) > 2 && (c < 512))
+					continue;
+				  int inc = 32;
+				  if(DISPCNT & 0x40)
+					inc = sizeX >> 2;
+				  else
+					c &= 0x3FE;
+				  for(int x = 0; x < fieldX; x++) {
+					if (x >= startpix)
+					  lineOBJpix-=2;
+					if (lineOBJpix<0)
+					  continue;
+					int xxx = realX >> 8;
+					int yyy = realY >> 8;
 
-              int inc = 32;
-              if(DISPCNT & 0x40) {
-                inc = sizeX >> 2;
-              } else {
-                c &= 0x3FE;
-              }
-              int xxx = 0;
-              if(a1 & 0x1000)
-                xxx = sizeX-1;
+					if(xxx < 0 || xxx >= sizeX ||
+					   yyy < 0 || yyy >= sizeY ||
+					   sx >= 240);
+					else {
+					  u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
+										+ ((yyy & 7)<<3) + ((xxx >> 3)<<6) +
+										(xxx & 7))&0x7FFF)];
+					  if ((color==0) && (((prio >> 25)&3) <
+										 ((lineOBJ[sx]>>25)&3))) {
+						lineOBJ[sx] = (lineOBJ[sx] & 0xF9FFFFFF) | prio;
+						if((a0 & 0x1000) && m)
+						  lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+					  } else if((color) && (prio < (lineOBJ[sx]&0xFF000000))) {
+						lineOBJ[sx] = READ16LE(&spritePalette[color]) | prio;
+						if((a0 & 0x1000) && m)
+						  lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+					  }
 
-              if(a0 & 0x1000) {
-                t -= (t % mosaicY);
-              }
+					  if (a0 & 0x1000) {
+						m++;
+						if (m==mosaicX)
+						  m=0;
+					  }
+					}
+					sx = (sx+1)&511;
+					realX += dx;
+					realY += dy;
+				  }
+				} else {
+				  int c = (a2 & 0x3FF);
+				  if((DISPCNT & 7) > 2 && (c < 512))
+					continue;
 
-              int address = 0x10000 + ((((c+ (t>>3) * inc) << 5)
-                + ((t & 7) << 3) + ((xxx>>3)<<6) + (xxx & 7)) & 0x7FFF);
+				  int inc = 32;
+				  if(DISPCNT & 0x40)
+					inc = sizeX >> 3;
+				  int palette = (a2 >> 8) & 0xF0;
+				  for(int x = 0; x < fieldX; x++) {
+					if (x >= startpix)
+					  lineOBJpix-=2;
+					if (lineOBJpix<0)
+					  continue;
+					int xxx = realX >> 8;
+					int yyy = realY >> 8;
+					if(xxx < 0 || xxx >= sizeX ||
+					   yyy < 0 || yyy >= sizeY ||
+					   sx >= 240);
+					else {
+					  u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
+													+ ((yyy & 7)<<2) + ((xxx >> 3)<<5) +
+												   ((xxx & 7)>>1))&0x7FFF)];
+					  if(xxx & 1)
+						color >>= 4;
+					  else
+						color &= 0x0F;
 
-              if(a1 & 0x1000)
-                xxx = 7;
-              u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+					  if ((color==0) && (((prio >> 25)&3) <
+										 ((lineOBJ[sx]>>25)&3))) {
+						lineOBJ[sx] = (lineOBJ[sx] & 0xF9FFFFFF) | prio;
+						if((a0 & 0x1000) && m)
+						  lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+					  } else if((color) && (prio < (lineOBJ[sx]&0xFF000000))) {
+						lineOBJ[sx] = READ16LE(&spritePalette[palette+color]) | prio;
+						if((a0 & 0x1000) && m)
+						  lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+					  }
+					}
+					if((a0 & 0x1000) && m) {
+					  m++;
+					  if (m==mosaicX)
+						m=0;
+					}
 
-              for(int xx = 0; xx < sizeX; xx++) {
-                if (xx >= startpix)
-                  lineOBJpix--;
-                if (lineOBJpix<0)
-                  continue;
-                if(sx < 240) {
-                  u8 color = vram[address];
-                  if ((color==0) && (((prio >> 25)&3) <
-                                     ((lineOBJ[sx]>>25)&3))) {
-                    lineOBJ[sx] = (lineOBJ[sx] & 0xF9FFFFFF) | prio;
-                    if((a0 & 0x1000) && m)
-                      lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
-                  } else if((color) && (prio < (lineOBJ[sx]&0xFF000000))) {
-                    lineOBJ[sx] = READ16LE(&spritePalette[color]) | prio;
-                    if((a0 & 0x1000) && m)
-                      lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
-                  }
+					sx = (sx+1)&511;
+					realX += dx;
+					realY += dy;
 
-                  if (a0 & 0x1000) {
-                    m++;
-                    if (m==mosaicX)
-                      m=0;
-                  }
+				  }
+				}
+			  }
+			}
+		}
+		else {
+			if(sy+sizeY > 256)
+			  sy -= 256;
+			int t = VCOUNT - sy;
+			if((t >= 0) && (t < sizeY)) {
+			  int startpix = 0;
+			  if ((sx+sizeX)> 512)
+			  {
+				startpix=512-sx;
+			  }
+			  if((sx < 240) || startpix) {
+				lineOBJpix+=2;
+				if(a0 & 0x2000) {
+				  if(a1 & 0x2000)
+					t = sizeY - t - 1;
+				  int c = (a2 & 0x3FF);
+				  if((DISPCNT & 7) > 2 && (c < 512))
+					continue;
 
-                }
+				  int inc = 32;
+				  if(DISPCNT & 0x40) {
+					inc = sizeX >> 2;
+				  } else {
+					c &= 0x3FE;
+				  }
+				  int xxx = 0;
+				  if(a1 & 0x1000)
+					xxx = sizeX-1;
 
-                sx = (sx+1) & 511;
-                if(a1 & 0x1000) {
-                  xxx--;
-                  address--;
-                  if(xxx == -1) {
-                    address -= 56;
-                    xxx = 7;
-                  }
-                  if(address < 0x10000)
-                    address += 0x8000;
-                } else {
-                  xxx++;
-                  address++;
-                  if(xxx == 8) {
-                    address += 56;
-                    xxx = 0;
-                  }
-                  if(address > 0x17fff)
-                    address -= 0x8000;
-                }
-              }
-            } else {
-              if(a1 & 0x2000)
-                t = sizeY - t - 1;
-              int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
+				  if(a0 & 0x1000) {
+					t -= (t % mosaicY);
+				  }
 
-              int inc = 32;
-              if(DISPCNT & 0x40) {
-                inc = sizeX >> 3;
-              }
-              int xxx = 0;
-              if(a1 & 0x1000)
-                xxx = sizeX - 1;
+				  int address = 0x10000 + ((((c+ (t>>3) * inc) << 5)
+					+ ((t & 7) << 3) + ((xxx>>3)<<6) + (xxx & 7)) & 0x7FFF);
 
-                if(a0 & 0x1000) {
-                  t -= (t % mosaicY);
-                }
+				  if(a1 & 0x1000)
+					xxx = 7;
+				  u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
 
-              int address = 0x10000 + ((((c + (t>>3) * inc)<<5)
-                + ((t & 7)<<2) + ((xxx>>3)<<5) + ((xxx & 7) >> 1))&0x7FFF);
-              u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
-              int palette = (a2 >> 8) & 0xF0;
-              if(a1 & 0x1000) {
-                xxx = 7;
-                for(int xx = sizeX - 1; xx >= 0; xx--) {
-                  if (xx >= startpix)
-                    lineOBJpix--;
-                  if (lineOBJpix<0)
-                    continue;
-                  if(sx < 240) {
-                    u8 color = vram[address];
-                    if(xx & 1) {
-                      color = (color >> 4);
-                    } else
-                      color &= 0x0F;
+				  for(int xx = 0; xx < sizeX; xx++) {
+					if (xx >= startpix)
+					  lineOBJpix--;
+					if (lineOBJpix<0)
+					  continue;
+					if(sx < 240) {
+					  u8 color = vram[address];
+					  if ((color==0) && (((prio >> 25)&3) <
+										 ((lineOBJ[sx]>>25)&3))) {
+						lineOBJ[sx] = (lineOBJ[sx] & 0xF9FFFFFF) | prio;
+						if((a0 & 0x1000) && m)
+						  lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+					  } else if((color) && (prio < (lineOBJ[sx]&0xFF000000))) {
+						lineOBJ[sx] = READ16LE(&spritePalette[color]) | prio;
+						if((a0 & 0x1000) && m)
+						  lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+					  }
 
-                    if ((color==0) && (((prio >> 25)&3) <
-                                       ((lineOBJ[sx]>>25)&3))) {
-                      lineOBJ[sx] = (lineOBJ[sx] & 0xF9FFFFFF) | prio;
-                      if((a0 & 0x1000) && m)
-                        lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
-                    } else if((color) && (prio < (lineOBJ[sx]&0xFF000000))) {
-                      lineOBJ[sx] = READ16LE(&spritePalette[palette + color]) | prio;
-                      if((a0 & 0x1000) && m)
-                        lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
-                    }
-                  }
-                  if (a0 & 0x1000) {
-                    m++;
-                    if (m==mosaicX)
-                      m=0;
-                  }
-                  sx = (sx+1) & 511;
-                  xxx--;
-                  if(!(xx & 1))
-                    address--;
-                  if(xxx == -1) {
-                    xxx = 7;
-                    address -= 28;
-                  }
-                  if(address < 0x10000)
-                    address += 0x8000;
-                }
-              } else {
-                for(int xx = 0; xx < sizeX; xx++) {
-                  if (xx >= startpix)
-                    lineOBJpix--;
-                  if (lineOBJpix<0)
-                    continue;
-                  if(sx < 240) {
-                    u8 color = vram[address];
-                    if(xx & 1) {
-                      color = (color >> 4);
-                    } else
-                      color &= 0x0F;
+					  if (a0 & 0x1000) {
+						m++;
+						if (m==mosaicX)
+						  m=0;
+					  }
 
-                    if ((color==0) && (((prio >> 25)&3) <
-                                       ((lineOBJ[sx]>>25)&3))) {
-                      lineOBJ[sx] = (lineOBJ[sx] & 0xF9FFFFFF) | prio;
-                      if((a0 & 0x1000) && m)
-                        lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
-                    } else if((color) && (prio < (lineOBJ[sx]&0xFF000000))) {
-                      lineOBJ[sx] = READ16LE(&spritePalette[palette + color]) | prio;
-                      if((a0 & 0x1000) && m)
-                        lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+					}
 
-                    }
-                  }
-                  if (a0 & 0x1000) {
-                    m++;
-                    if (m==mosaicX)
-                      m=0;
-                  }
-                  sx = (sx+1) & 511;
-                  xxx++;
-                  if(xx & 1)
-                    address++;
-                  if(xxx == 8) {
-                    address += 28;
-                    xxx = 0;
-                  }
-                  if(address > 0x17fff)
-                    address -= 0x8000;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+					sx = (sx+1) & 511;
+					if(a1 & 0x1000) {
+					  xxx--;
+					  address--;
+					  if(xxx == -1) {
+						address -= 56;
+						xxx = 7;
+					  }
+					  if(address < 0x10000)
+						address += 0x8000;
+					} else {
+					  xxx++;
+					  address++;
+					  if(xxx == 8) {
+						address += 56;
+						xxx = 0;
+					  }
+					  if(address > 0x17fff)
+						address -= 0x8000;
+					}
+				  }
+				} else {
+				  if(a1 & 0x2000)
+					t = sizeY - t - 1;
+				  int c = (a2 & 0x3FF);
+				  if((DISPCNT & 7) > 2 && (c < 512))
+					continue;
+
+				  int inc = 32;
+				  if(DISPCNT & 0x40) {
+					inc = sizeX >> 3;
+				  }
+				  int xxx = 0;
+				  if(a1 & 0x1000)
+					xxx = sizeX - 1;
+
+					if(a0 & 0x1000) {
+					  t -= (t % mosaicY);
+					}
+
+				  int address = 0x10000 + ((((c + (t>>3) * inc)<<5)
+					+ ((t & 7)<<2) + ((xxx>>3)<<5) + ((xxx & 7) >> 1))&0x7FFF);
+				  u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+				  int palette = (a2 >> 8) & 0xF0;
+				  if(a1 & 0x1000) {
+					xxx = 7;
+					for(int xx = sizeX - 1; xx >= 0; xx--) {
+					  if (xx >= startpix)
+						lineOBJpix--;
+					  if (lineOBJpix<0)
+						continue;
+					  if(sx < 240) {
+						u8 color = vram[address];
+						if(xx & 1) {
+						  color = (color >> 4);
+						} else
+						  color &= 0x0F;
+
+						if ((color==0) && (((prio >> 25)&3) <
+										   ((lineOBJ[sx]>>25)&3))) {
+						  lineOBJ[sx] = (lineOBJ[sx] & 0xF9FFFFFF) | prio;
+						  if((a0 & 0x1000) && m)
+							lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+						} else if((color) && (prio < (lineOBJ[sx]&0xFF000000))) {
+						  lineOBJ[sx] = READ16LE(&spritePalette[palette + color]) | prio;
+						  if((a0 & 0x1000) && m)
+							lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+						}
+					  }
+					  if (a0 & 0x1000) {
+						m++;
+						if (m==mosaicX)
+						  m=0;
+					  }
+					  sx = (sx+1) & 511;
+					  xxx--;
+					  if(!(xx & 1))
+						address--;
+					  if(xxx == -1) {
+						xxx = 7;
+						address -= 28;
+					  }
+					  if(address < 0x10000)
+						address += 0x8000;
+					}
+				  } else {
+					for(int xx = 0; xx < sizeX; xx++) {
+					  if (xx >= startpix)
+						lineOBJpix--;
+					  if (lineOBJpix<0)
+						continue;
+					  if(sx < 240) {
+						u8 color = vram[address];
+						if(xx & 1) {
+						  color = (color >> 4);
+						} else
+						  color &= 0x0F;
+
+						if ((color==0) && (((prio >> 25)&3) <
+										   ((lineOBJ[sx]>>25)&3))) {
+						  lineOBJ[sx] = (lineOBJ[sx] & 0xF9FFFFFF) | prio;
+						  if((a0 & 0x1000) && m)
+							lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+						} else if((color) && (prio < (lineOBJ[sx]&0xFF000000))) {
+						  lineOBJ[sx] = READ16LE(&spritePalette[palette + color]) | prio;
+						  if((a0 & 0x1000) && m)
+							lineOBJ[sx]=(lineOBJ[sx-1] & 0xF9FFFFFF) | prio;
+
+						}
+					  }
+					  if (a0 & 0x1000) {
+						m++;
+						if (m==mosaicX)
+						  m=0;
+					  }
+					  sx = (sx+1) & 511;
+					  xxx++;
+					  if(xx & 1)
+						address++;
+					  if(xxx == 8) {
+						address += 28;
+						xxx = 0;
+					  }
+					  if(address > 0x17fff)
+						address -= 0x8000;
+					}
+				  }
+				}
+			  }
+			}
+		}
+	}
 }
 
 static inline void gfxDrawOBJWin(u32 *lineOBJWin)
@@ -1344,47 +1311,43 @@ static inline void gfxDecreaseBrightness(u32 *line, int coeff)
 static inline u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
 {
   if(color < 0x80000000) {
-    color&=0xffff;
-    color2&=0xffff;
+    // SWAR: Unpack and align channels
+    u32 c1 = ((color << 16) | color) & 0x03E07C1F;
+    u32 c2 = ((color2 << 16) | color2) & 0x03E07C1F;
 
-    color = ((color << 16) | color) & 0x03E07C1F;
-    color2 = ((color2 << 16) | color2) & 0x03E07C1F;
-    color = ((color * ca) + (color2 * cb)) >> 4;
+    // Unified 32-bit mask multiplier for R, G, B concurrently
+    u32 blended = ((c1 * ca) + (c2 * cb)) >> 4;
 
-    if ((ca + cb)>16)
-    {
-      if (color & 0x20)
-        color |= 0x1f;
-      if (color & 0x8000)
-        color |= 0x7C00;
-      if (color & 0x4000000)
-        color |= 0x03E00000;
-    }
+    // Branchless SWAR clamping
+    // 0x04008020 identifies the specific overflow bits for the 5-bit RGB boundaries
+    u32 overflow = blended & 0x04008020;
 
-    color &= 0x03E07C1F;
-    color = (color >> 16) | color;
+    // Subtracting the shifted overflow bit generates a perfect clamp mask
+    u32 clamp_mask = overflow - (overflow >> 5);
+    blended |= clamp_mask;
+
+    blended &= 0x03E07C1F;
+    color = (blended >> 16) | blended;
   }
   return color;
 }
 
 static inline void gfxAlphaBlend(u32 *ta, u32 *tb, int ca, int cb)
 {
+  // Flattened for GCC auto-vectorization and dual-issue ALU execution
   for(int x = 0; x < 240; x++) {
     u32 color = *ta;
     if(color < 0x80000000) {
       u32 color2 = *tb;
 
-      // SWAR: Unpack both colors
       u32 c1 = ((color << 16) | color) & 0x03E07C1F;
       u32 c2 = ((color2 << 16) | color2) & 0x03E07C1F;
 
       u32 blended = ((c1 * ca) + (c2 * cb)) >> 4;
 
-      if ((ca + cb) > 16) {
-        if (blended & 0x20) blended |= 0x1f;
-        if (blended & 0x8000) blended |= 0x7C00;
-        if (blended & 0x04000000) blended |= 0x03E00000;
-      }
+      u32 overflow = blended & 0x04008020;
+      u32 clamp_mask = overflow - (overflow >> 5);
+      blended |= clamp_mask;
 
       blended &= 0x03E07C1F;
       *ta = (color & 0xFFFF0000) | (blended >> 16) | blended;

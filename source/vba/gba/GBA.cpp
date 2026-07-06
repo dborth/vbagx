@@ -3491,7 +3491,9 @@ typedef const TileLine (*TileReader) (const u16 *, const int, const u8 *, u16 *,
 
 static inline void gfxDrawPixel(u32 *dest, const u8 color, const u16 *palette, const u32 prio)
 {
-   *dest = color ? (READ16LE(&palette[color]) | prio): 0x80000000;
+   // Pure bitwise clamping mapping to 1-cycle execution
+   u32 mask = -(color != 0);
+   *dest = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
 }
 
 inline const TileLine gfxReadTile(const u16 *screenSource, const int yyy, const u8 *charBase, u16 *palette, const u32 prio)
@@ -3660,6 +3662,9 @@ static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
    // Middle tiles, full
    while (x < 240 - firstTileX)
    {
+	  // PREFETCH: Pull the next tile's memory into L1 D-Cache asynchronously
+	  __builtin_prefetch(screenSource + 4, 0, 0);
+
       gfxDrawTile(readTile(screenSource, yyy, charBase, palette, prio), &line[x]);
       screenSource++;
       xxx += 8;
