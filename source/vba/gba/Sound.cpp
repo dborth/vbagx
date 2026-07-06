@@ -187,13 +187,19 @@ void Gba_Pcm_Fifo::timer_overflowed( int which_timer )
 		{
 			// Need to fill FIFO
 			int saved_count = count;
-			CPUCheckDMA( 3, which ? 4 : 2 );
+
+			// BROADWAY OPTIMIZATION: Removed ternary branch (which ? 4 : 2)
+			// If which = 0 -> 2 << 0 = 2. If which = 1 -> 2 << 1 = 4.
+			CPUCheckDMA( 3, 2 << which );
+
 			if ( saved_count == 0 && count == 16 )
-				CPUCheckDMA( 3, which ? 4 : 2 );
+				CPUCheckDMA( 3, 2 << which );
 			if ( count == 0 )
 			{
 				// Not filled by DMA, so fill with 16 bytes of silence
-				int reg = which ? FIFOB_L : FIFOA_L;
+				// BROADWAY OPTIMIZATION: FIFOA_L is 0xA0. FIFOB_L is 0xA4.
+				// (which << 2) cleanly calculates the 4-byte offset without a branch.
+				int reg = FIFOA_L + (which << 2);
 				for ( int n = 8; n--; )
 				{
 					soundEvent(reg  , (u16)0);
@@ -212,8 +218,10 @@ void Gba_Pcm_Fifo::timer_overflowed( int which_timer )
 
 void Gba_Pcm_Fifo::write_control( int data )
 {
-	enabled = (data & 0x0300) ? true : false;
-	timer   = (data & 0x0400) ? 1 : 0;
+	// BROADWAY OPTIMIZATION: Removed ternaries.
+	// C++ implicit boolean cast and bitwise shift compile to branchless 1-cycle ops.
+	enabled = (data & 0x0300) != 0;
+	timer   = (data >> 10) & 1;
 
 	if ( data & 0x0800 )
 	{

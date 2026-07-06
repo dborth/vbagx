@@ -218,64 +218,65 @@ void Stereo_Mixer::mix_mono( blip_sample_t* out_, int count )
 {
 	int const bass = BLIP_READER_BASS( *bufs [2] );
 	BLIP_READER_BEGIN( center, *bufs [2] );
-	BLIP_READER_ADJ_( center, samples_read );
 
-	typedef blip_sample_t stereo_blip_sample_t [stereo];
-	stereo_blip_sample_t* BLIP_RESTRICT out = (stereo_blip_sample_t*) out_ + count;
-	int offset = -count;
-	do
+	// samples_read already includes count, so we backtrack to the chunk's start
+	BLIP_READER_ADJ_( center, samples_read - count );
+
+	blip_sample_t* BLIP_RESTRICT out = out_;
+
+	for ( int i = 0; i < count; ++i )
 	{
 		blargg_long s = BLIP_READER_READ( center );
-		BLIP_READER_NEXT_IDX_( center, bass, offset );
+
+		// NEXT naturally advances center##_reader_buf forward (*buf++)
+		BLIP_READER_NEXT( center, bass );
 		BLIP_CLAMP( s, s );
 
-		out [offset] [0] = (blip_sample_t) s;
-		out [offset] [1] = (blip_sample_t) s;
+		// Forward pointer increments let GCC leverage PowerPC sthu
+		*out++ = (blip_sample_t) s; // Left channel
+		*out++ = (blip_sample_t) s; // Right channel
 	}
-	while ( ++offset );
 
 	BLIP_READER_END( center, *bufs [2] );
 }
 
 void Stereo_Mixer::mix_stereo( blip_sample_t* out_, int count )
 {
-	blip_sample_t* BLIP_RESTRICT out = out_ + count * stereo;
-
-	// do left + center and right + center separately to reduce register load
-	Tracked_Blip_Buffer* const* buf = &bufs [2];
-	while ( true ) // loop runs twice
+	// Process channels explicitly (0 = Left, 1 = Right) to keep register usage low
+	for ( int ch = 0; ch < 2; ++ch )
 	{
-		--buf;
-		--out;
-
 		int const bass = BLIP_READER_BASS( *bufs [2] );
-		BLIP_READER_BEGIN( side,   **buf );
+		BLIP_READER_BEGIN( side,   *bufs [ch] );
 		BLIP_READER_BEGIN( center, *bufs [2] );
 
-		BLIP_READER_ADJ_( side,   samples_read );
-		BLIP_READER_ADJ_( center, samples_read );
+		// Backtrack pointers to the start of the current chunk
+		BLIP_READER_ADJ_( side,   samples_read - count );
+		BLIP_READER_ADJ_( center, samples_read - count );
 
-		int offset = -count;
-		do
+		blip_sample_t* BLIP_RESTRICT out = out_ + ch; // Starts at out_[0] or out_[1]
+
+		for ( int i = 0; i < count; ++i )
 		{
 			blargg_long s = BLIP_READER_READ_RAW( center ) + BLIP_READER_READ_RAW( side );
 			s >>= blip_sample_bits - 16;
-			BLIP_READER_NEXT_IDX_( side,   bass, offset );
-			BLIP_READER_NEXT_IDX_( center, bass, offset );
+
+			// Native forward iteration handles array lookups natively
+			BLIP_READER_NEXT( side, bass );
+			BLIP_READER_NEXT( center, bass );
+
 			BLIP_CLAMP( s, s );
 
-			++offset; // before write since out is decremented to slightly before end
-			out [offset * stereo] = (blip_sample_t) s;
+			*out = (blip_sample_t) s;
+			out += stereo; // Forward increment by 2
 		}
-		while ( offset );
 
-		BLIP_READER_END( side,   **buf );
+		BLIP_READER_END( side, *bufs [ch] );
 
-		if ( buf != bufs )
-			continue;
-
-		// only end center once
-		BLIP_READER_END( center, *bufs [2] );
-		break;
+		// Only commit the center state on the final pass (Right channel)
+		// The Left pass discards center state, allowing it to correctly recalculate
+		if ( ch == 1 )
+		{
+			BLIP_READER_END( center, *bufs [2] );
+		}
 	}
 }

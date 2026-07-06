@@ -362,16 +362,19 @@ private:
 	blip_long accum;
 };
 
-#if defined (_M_IX86) || defined (_M_IA64) || defined (__i486__) || \
-		defined (__x86_64__) || defined (__ia64__) || defined (__i386__)
-	#define BLIP_CLAMP_( in ) in < -0x8000 || 0x7FFF < in
-#else
-	#define BLIP_CLAMP_( in ) (blip_sample_t) in != in
-#endif
+// Pure branchless check for 16-bit signed out-of-bounds condition
+// Returns 0 if within bounds, or -1 (bitwise true) if out of bounds
+#define BLIP_CLAMP_( in ) \
+	((((int)(in) + 32768) >> 31) | ((32767 - (int)(in)) >> 31))
 
-// Clamp sample to blip_sample_t range
-#define BLIP_CLAMP( sample, out )\
-	{ if ( BLIP_CLAMP_( (sample) ) ) (out) = ((sample) >> 24) ^ 0x7FFF; }
+// Clamp sample to signed 16-bit blip_sample_t range [-32768, 32767]
+// 100% branchless. If in bounds, mask is 0. If out of bounds, mask applies the shift trick.
+#define BLIP_CLAMP( sample, out ) \
+{ \
+	int const _s = (sample); \
+	int const _mask = BLIP_CLAMP_(_s); \
+	(out) = (_s & ~_mask) | (((_s >> 24) ^ 0x7FFF) & _mask); \
+}
 
 struct blip_buffer_state_t
 {

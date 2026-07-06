@@ -507,7 +507,7 @@ void Effects_Buffer::mix_effects( blip_sample_t* out_, int pair_count )
 			{
 				if ( buf->non_silent() && ( buf->echo == (bool)echo_phase ) )
 				{
-					stereo_fixed_t* BLIP_RESTRICT out = (stereo_fixed_t*) &echo [echo_pos];
+					stereo_fixed_t* BLIP_RESTRICT out_ptr = (stereo_fixed_t*) &echo [echo_pos];
 					int const bass = BLIP_READER_BASS( *buf );
 					BLIP_READER_BEGIN( in, *buf );
 					BLIP_READER_ADJ_( in, mixer.samples_read );
@@ -521,21 +521,19 @@ void Effects_Buffer::mix_effects( blip_sample_t* out_, int pair_count )
 					do
 					{
 						remain -= count;
-						BLIP_READER_ADJ_( in, count );
 
-						out += count;
-						int offset = -count;
-						do
+						// Forward pointer iteration leverages Broadway's dual IU units
+						for ( int j = 0; j < count; ++j )
 						{
 							fixed_t s = BLIP_READER_READ( in );
-							BLIP_READER_NEXT_IDX_( in, bass, offset );
+							BLIP_READER_NEXT( in, bass );
 
-							out [offset] [0] += s * vol_0;
-							out [offset] [1] += s * vol_1;
+							(*out_ptr) [0] += s * vol_0;
+							(*out_ptr) [1] += s * vol_1;
+							out_ptr++; // Auto-increment compiles to basic pointer offsets
 						}
-						while ( ++offset );
 
-						out = (stereo_fixed_t*) echo.begin();
+						out_ptr = (stereo_fixed_t*) echo.begin();
 						count = remain;
 					}
 					while ( remain );
@@ -566,8 +564,6 @@ void Effects_Buffer::mix_effects( blip_sample_t* out_, int pair_count )
 				assert( out_offset < echo_size );
 				fixed_t* BLIP_RESTRICT out_pos = &echo [out_offset];
 
-				// break into up to three chunks to avoid having to handle wrap-around
-				// in middle of core loop
 				int remain = pair_count;
 				do
 				{
@@ -580,15 +576,22 @@ void Effects_Buffer::mix_effects( blip_sample_t* out_, int pair_count )
 						count = remain;
 					remain -= count;
 
+					// Localized forward-marching traversal pointers
+					fixed_t const* BLIP_RESTRICT curr_in = in_pos;
+					fixed_t* BLIP_RESTRICT curr_out = out_pos;
+
 					in_pos  += count * stereo;
 					out_pos += count * stereo;
-					int offset = -count;
-					do
+
+					for ( int j = 0; j < count; ++j )
 					{
-						low_pass += FROM_FIXED( in_pos [offset * stereo] - low_pass ) * treble;
-						out_pos [offset * stereo] = FROM_FIXED( low_pass ) * feedback;
+						// FROM_FIXED uses a 1-cycle bit-shift instruction
+						low_pass += FROM_FIXED( *curr_in - low_pass ) * treble;
+						*curr_out = FROM_FIXED( low_pass ) * feedback;
+
+						curr_in  += stereo; // Linear stride advances cleanly by 2 elements
+						curr_out += stereo;
 					}
-					while ( ++offset );
 
 					if (  in_pos >= echo_end )  in_pos -= echo_size;
 					if ( out_pos >= echo_end ) out_pos -= echo_size;
@@ -602,11 +605,10 @@ void Effects_Buffer::mix_effects( blip_sample_t* out_, int pair_count )
 	}
 	while ( --echo_phase >= 0 );
 
-	// clamp to 16 bits
+	// clamp to 16 bits and copy to the output buffer
 	{
-		stereo_fixed_t const* BLIP_RESTRICT in = (stereo_fixed_t*) &echo [echo_pos];
-		typedef blip_sample_t stereo_blip_sample_t [stereo];
-		stereo_blip_sample_t* BLIP_RESTRICT out = (stereo_blip_sample_t*) out_;
+		stereo_fixed_t const* BLIP_RESTRICT in_ptr = (stereo_fixed_t*) &echo [echo_pos];
+		blip_sample_t* BLIP_RESTRICT out_ptr = out_;
 		int count = unsigned (echo_size - echo_pos) / (unsigned) stereo;
 		int remain = pair_count;
 		if ( count > remain )
@@ -614,23 +616,21 @@ void Effects_Buffer::mix_effects( blip_sample_t* out_, int pair_count )
 		do
 		{
 			remain -= count;
-			in  += count;
-			out += count;
-			int offset = -count;
-			do
+			for ( int j = 0; j < count; ++j )
 			{
-				fixed_t in_0 = FROM_FIXED( in [offset] [0] );
-				fixed_t in_1 = FROM_FIXED( in [offset] [1] );
+				fixed_t in_0 = FROM_FIXED( (*in_ptr) [0] );
+				fixed_t in_1 = FROM_FIXED( (*in_ptr) [1] );
+				in_ptr++;
 
+				// Fully branchless clamping logic
 				BLIP_CLAMP( in_0, in_0 );
-				out [offset] [0] = (blip_sample_t) in_0;
+				*out_ptr++ = (blip_sample_t) in_0;
 
 				BLIP_CLAMP( in_1, in_1 );
-				out [offset] [1] = (blip_sample_t) in_1;
+				*out_ptr++ = (blip_sample_t) in_1;
 			}
-			while ( ++offset );
 
-			in = (stereo_fixed_t*) echo.begin();
+			in_ptr = (stereo_fixed_t const*) echo.begin();
 			count = remain;
 		}
 		while ( remain );
