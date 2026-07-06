@@ -21,13 +21,13 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 | Name                             | Status                            | File                                     |
 |----------------------------------|-----------------------------------|------------------------------------------|
-| Visual Boy Advance GX Wii/Wii U  | [![Build Status][Build]][Actions] | [![Emulator][Download]][vbagx-wiiu]      |
+| Visual Boy Advance GX Wii/Wii U  | [![Build Status][Build]][Actions] | [![Emulator][Download]][vbagx-wii]       |
 | Visual Boy Advance GX GameCube   | [![Build Status][Build]][Actions] | [![Emulator][Download]][vbagx-gamecube]  |
 
 [Actions]: https://github.com/dborth/vbagx/actions/workflows/build.yml
 [Build]: https://github.com/dborth/vbagx/actions/workflows/build.yml/badge.svg
 [Download]: https://img.shields.io/badge/Download-blue
-[vbagx-wiiu]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX.zip
+[vbagx-wii]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX.zip
 [vbagx-gamecube]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX-GameCube.zip
 
 
@@ -44,16 +44,33 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Compatibility based on VBA-M r1231
 * MEM2 ROM Storage for fast access
 * Auto frame skip (optional) for those core heavy games
-* Turbo speed, video zooming, widescreen, and unfiltered video options
+* Turbo speed, video zooming, widescreen, unfiltered, and 240p video options
+* Video filters - hq2x, Scale2x, Scanlines, 2xBR, DDT
 * Native loading/saving of ROMS and SRAM from Goomba (a GB emulator for GBA)
-* Improved video rendering from RetroArch
 * Screenshots can be displayed on the main menu
 * Fixed pixel ratio mode (1x, 2x, and 3x)
 * Borders (from Super Game Boy games or custom from .png)
-* 240p support
 
 
 ## UPDATE HISTORY
+
+[3.0.0 - July 6, 2026]
+
+* Added video filters - hq2x, Scale2x, Scanlines, 2xBR, DDT
+* Optimized video rendering
+* Replaced C texture generation with optimized PPC ASM
+* Improved audio code
+* Refactored/improved synchronization and frameskip handling
+* Numerous VBA-M core performance optimizations
+* New blur effect when pausing a game
+* Rewritten in-game cursor
+* Reworked save/load device and preferences logic
+* Fixed crash when removing devices (eg: SD/USB)
+* Fixed flashes/artifacts/colors when switching video modes
+* Streamlined/enhanced build
+* General performance enhancements
+* Other general enhancements
+* Compiled with latest devkitPPC/libogc2
 
 [2.5.1 - April 13, 2026]
 
