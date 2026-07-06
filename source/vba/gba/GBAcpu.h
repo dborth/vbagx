@@ -8,11 +8,6 @@ extern int thumbExecute();
 # define LIKELY(x) __builtin_expect(!!(x),1)
 # define UNLIKELY(x) __builtin_expect(!!(x),0)
 
-#define UPDATE_REG(address, value)\
-  {\
-    WRITE16LE(((u16 *)&ioMem[address]),value);\
-  }\
-
 #define ARM_PREFETCH \
   {\
     cpuPrefetch[0] = CPUReadMemoryQuick(armNextPC);\
