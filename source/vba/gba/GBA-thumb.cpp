@@ -105,22 +105,18 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
      ADDOVERFLOW(lhs, rhs, res);\
    }
 #endif
-#ifndef ADD_RD_RS_O3_0
 # define ADD_RD_RS_O3_0 ADD_RD_RS_O3
-#endif
-#ifndef ADD_RN_O8
- #define ADD_RN_O8(d) \
+#define ADD_RN_O8(d) \
    {\
      u32 lhs = reg[(d)].I;\
      u32 rhs = (opcode & 255);\
      u32 res = lhs + rhs;\
      reg[(d)].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
-#endif
 #define CMN_RD_RS \
    {\
      u32 lhs = reg[dest].I;\
@@ -164,22 +160,18 @@ static INSN_REGPARM void thumbBreakpoint(u32 opcode)
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
-#ifndef SUB_RD_RS_O3_0
 # define SUB_RD_RS_O3_0 SUB_RD_RS_O3
-#endif
-#ifndef SUB_RN_O8
- #define SUB_RN_O8(d) \
+#define SUB_RN_O8(d) \
    {\
      u32 lhs = reg[(d)].I;\
      u32 rhs = (opcode & 255);\
      u32 res = lhs - rhs;\
      reg[(d)].I = res;\
-     Z_FLAG = (res == 0) ? true : false;\
-     N_FLAG = NEG(res) ? true : false;\
+     Z_FLAG = (res == 0);\
+     N_FLAG = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
-#endif
 #define MOV_RN_O8(d) \
    {\
      reg[(d)].I = opcode & 255;\

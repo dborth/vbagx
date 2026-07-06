@@ -507,10 +507,17 @@ extern u32 line3[240];
 #define CLEAR_ARRAY(a) \
   {\
     u32 *array = (a);\
-    for(int i = 0; i < 240; i++) {\
+    for(int i = 0; i < 30; i++) {\
+      *array++ = 0x80000000;\
+      *array++ = 0x80000000;\
+      *array++ = 0x80000000;\
+      *array++ = 0x80000000;\
+      *array++ = 0x80000000;\
+      *array++ = 0x80000000;\
+      *array++ = 0x80000000;\
       *array++ = 0x80000000;\
     }\
-  }\
+  }
 
 void CPUUpdateRenderBuffers(bool force)
 {
