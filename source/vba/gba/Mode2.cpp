@@ -42,21 +42,26 @@ static inline void mode2RenderLine_Impl() {
 
   u32 backdrop = (customBackdropColor == -1) ? (READ16LE(&palette[0]) | 0x30000000) : ((customBackdropColor & 0x7FFF) | 0x30000000);
 
-  for(int x = 0; x < 240; ++x) {
+  // Flattened GPR pointer alignment
+  u32* l2 = line2; u32* l3 = line3;
+  u32* lO = lineOBJ; u32* lM = lineMix;
+
+  for(u32 x = 0; x < 240u; ++x) {
+    u32 c2 = *l2++; u32 c3 = *l3++; u32 cO = *lO++;
     u32 color = backdrop;
     u8 top = 0x20;
 
-    u8 li2 = (u8)(line2[x]>>24);
-    u8 li3 = (u8)(line3[x]>>24);
-    u8 li4 = (u8)(lineOBJ[x]>>24);
+    u8 li2 = (u8)(c2 >> 24);
+    u8 li3 = (u8)(c3 >> 24);
+    u8 li4 = (u8)(cO >> 24);
 
     u8 r_23 = li3 ^ ((li2 ^ li3) & -(li2 < li3));
     u8 r    = li4 ^ ((r_23 ^ li4) & -(r_23 < li4));
 
     if(r < (u8)(color >> 24)) {
-      if(r == li2) { color = line2[x]; top = 0x04; }
-      else if(r == li3) { color = line3[x]; top = 0x08; }
-      else if(r == li4) { color = lineOBJ[x]; top = 0x10; }
+      if(r == li2) { color = c2; top = 0x04; }
+      else if(r == li3) { color = c3; top = 0x08; }
+      else if(r == li4) { color = cO; top = 0x10; }
     }
 
     if((top & 0x10) && (color & 0x00010000)) {
@@ -65,8 +70,8 @@ static inline void mode2RenderLine_Impl() {
       u8 r_back = li3 ^ ((li2 ^ li3) & -(li2 < li3));
 
       if(r_back < (u8)(back >> 24)) {
-        if(r_back == li2) { back = line2[x]; top2 = 0x04; }
-        else if(r_back == li3) { back = line3[x]; top2 = 0x08; }
+        if(r_back == li2) { back = c2; top2 = 0x04; }
+        else if(r_back == li3) { back = c3; top2 = 0x08; }
       }
 
       if(top2 & (BLDMOD>>8)) {
@@ -79,7 +84,7 @@ static inline void mode2RenderLine_Impl() {
         }
       }
     }
-    lineMix[x] = color;
+    *lM++ = color;
   }
   gfxBG2Changed = 0;
   gfxBG3Changed = 0;
@@ -105,21 +110,25 @@ static inline void mode2RenderLineNoWindow_Impl() {
 
   u32 backdrop = (customBackdropColor == -1) ? (READ16LE(&palette[0]) | 0x30000000) : ((customBackdropColor & 0x7FFF) | 0x30000000);
 
-  for(int x = 0; x < 240; ++x) {
+  u32* l2 = line2; u32* l3 = line3;
+  u32* lO = lineOBJ; u32* lM = lineMix;
+
+  for(u32 x = 0; x < 240u; ++x) {
+    u32 c2 = *l2++; u32 c3 = *l3++; u32 cO = *lO++;
     u32 color = backdrop;
     u8 top = 0x20;
 
-    u8 li2 = (u8)(line2[x]>>24);
-    u8 li3 = (u8)(line3[x]>>24);
-    u8 li4 = (u8)(lineOBJ[x]>>24);
+    u8 li2 = (u8)(c2>>24);
+    u8 li3 = (u8)(c3>>24);
+    u8 li4 = (u8)(cO>>24);
 
     u8 r_23 = li3 ^ ((li2 ^ li3) & -(li2 < li3));
     u8 r    = li4 ^ ((r_23 ^ li4) & -(r_23 < li4));
 
     if(r < (u8)(color >> 24)) {
-      if(r == li2) { color = line2[x]; top = 0x04; }
-      else if(r == li3) { color = line3[x]; top = 0x08; }
-      else if(r == li4) { color = lineOBJ[x]; top = 0x10; }
+      if(r == li2) { color = c2; top = 0x04; }
+      else if(r == li3) { color = c3; top = 0x08; }
+      else if(r == li4) { color = cO; top = 0x10; }
     }
 
     if(!(color & 0x00010000)) {
@@ -128,9 +137,9 @@ static inline void mode2RenderLineNoWindow_Impl() {
           u32 back = backdrop;
           u8 top2 = 0x20;
 
-          if((top != 0x04) && (u8)(line2[x]>>24) < (u8)(back >> 24)) { back = line2[x]; top2 = 0x04; }
-          if((top != 0x08) && (u8)(line3[x]>>24) < (u8)(back >> 24)) { back = line3[x]; top2 = 0x08; }
-          if((top != 0x10) && (u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) { back = lineOBJ[x]; top2 = 0x10; }
+          if((top != 0x04) && (u8)(c2>>24) < (u8)(back >> 24)) { back = c2; top2 = 0x04; }
+          if((top != 0x08) && (u8)(c3>>24) < (u8)(back >> 24)) { back = c3; top2 = 0x08; }
+          if((top != 0x10) && (u8)(cO>>24) < (u8)(back >> 24)) { back = cO; top2 = 0x10; }
 
           if(top2 & (BLDMOD>>8)) color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
         }
@@ -145,8 +154,8 @@ static inline void mode2RenderLineNoWindow_Impl() {
       u8 r_back = li3 ^ ((li2 ^ li3) & -(li2 < li3));
 
       if(r_back < (u8)(back >> 24)) {
-        if(r_back == li2) { back = line2[x]; top2 = 0x04; }
-        else if(r_back == li3) { back = line3[x]; top2 = 0x08; }
+        if(r_back == li2) { back = c2; top2 = 0x04; }
+        else if(r_back == li3) { back = c3; top2 = 0x08; }
       }
 
       if(top2 & (BLDMOD>>8)) {
@@ -159,7 +168,7 @@ static inline void mode2RenderLineNoWindow_Impl() {
         }
       }
     }
-    lineMix[x] = color;
+    *lM++ = color;
   }
   gfxBG2Changed = 0;
   gfxBG3Changed = 0;
@@ -205,25 +214,31 @@ static inline void mode2RenderLineAll_Impl() {
   u8 inWin1Mask = WININ >> 8;
   u8 outMask = WINOUT & 0xFF;
 
-  for(int x = 0; x < 240; x++) {
+  u32* l2 = line2; u32* l3 = line3;
+  u32* lO = lineOBJ; u32* lOW = lineOBJWin; u32* lM = lineMix;
+  const bool* w0 = gfxInWin0; const bool* w1 = gfxInWin1;
+
+  for(u32 x = 0; x < 240u; ++x) {
+    u32 c2 = *l2++; u32 c3 = *l3++; u32 cO = *lO++;
+    u32 cOW = *lOW++; bool cw0 = *w0++; bool cw1 = *w1++;
     u32 color = backdrop;
     u8 top = 0x20;
     u8 mask = outMask;
 
-    if(!(lineOBJWin[x] & 0x80000000)) mask = WINOUT >> 8;
-    if(inWindow1 && gfxInWin1[x]) mask = inWin1Mask;
-    if(inWindow0 && gfxInWin0[x]) mask = inWin0Mask;
+    if(!(cOW & 0x80000000)) mask = WINOUT >> 8;
+    if(inWindow1 && cw1) mask = inWin1Mask;
+    if(inWindow0 && cw0) mask = inWin0Mask;
 
-    if((mask & 4) && line2[x] < color) { color = line2[x]; top = 0x04; }
-    if((mask & 8) && (u8)(line3[x]>>24) < (u8)(color >> 24)) { color = line3[x]; top = 0x08; }
-    if((mask & 16) && (u8)(lineOBJ[x]>>24) < (u8)(color >> 24)) { color = lineOBJ[x]; top = 0x10; }
+    if((mask & 4) && c2 < color) { color = c2; top = 0x04; }
+    if((mask & 8) && (u8)(c3>>24) < (u8)(color >> 24)) { color = c3; top = 0x08; }
+    if((mask & 16) && (u8)(cO>>24) < (u8)(color >> 24)) { color = cO; top = 0x10; }
 
     if(color & 0x00010000) {
       u32 back = backdrop;
       u8 top2 = 0x20;
 
-      if((mask & 4) && line2[x] < back) { back = line2[x]; top2 = 0x04; }
-      if((mask & 8) && (u8)(line3[x]>>24) < (u8)(back >> 24)) { back = line3[x]; top2 = 0x08; }
+      if((mask & 4) && c2 < back) { back = c2; top2 = 0x04; }
+      if((mask & 8) && (u8)(c3>>24) < (u8)(back >> 24)) { back = c3; top2 = 0x08; }
 
       if(top2 & (BLDMOD>>8)) {
         color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
@@ -240,9 +255,9 @@ static inline void mode2RenderLineAll_Impl() {
           u32 back = backdrop;
           u8 top2 = 0x20;
 
-          if((mask & 4) && (top != 0x04) && line2[x] < back) { back = line2[x]; top2 = 0x04; }
-          if((mask & 8) && (top != 0x08) && (u8)(line3[x]>>24) < (u8)(back >> 24)) { back = line3[x]; top2 = 0x08; }
-          if((mask & 16) && (top != 0x10) && (u8)(lineOBJ[x]>>24) < (u8)(back >> 24)) { back = lineOBJ[x]; top2 = 0x10; }
+          if((mask & 4) && (top != 0x04) && c2 < back) { back = c2; top2 = 0x04; }
+          if((mask & 8) && (top != 0x08) && (u8)(c3>>24) < (u8)(back >> 24)) { back = c3; top2 = 0x08; }
+          if((mask & 16) && (top != 0x10) && (u8)(cO>>24) < (u8)(back >> 24)) { back = cO; top2 = 0x10; }
 
           if(top2 & (BLDMOD>>8)) color = gfxAlphaBlend(color, back, coeff[COLEV & 0x1F], coeff[(COLEV >> 8) & 0x1F]);
         }
@@ -252,7 +267,7 @@ static inline void mode2RenderLineAll_Impl() {
         if(BLDMOD & top) color = gfxDecreaseBrightness(color, coeff[COLY & 0x1F]);
       }
     }
-    lineMix[x] = color;
+    *lM++ = color;
   }
   gfxBG2Changed = 0;
   gfxBG3Changed = 0;
