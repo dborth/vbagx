@@ -1410,15 +1410,19 @@ static insnfunc_t thumbInsnTable[1024] = {
 
 // Wrapper routine (execution loop) ///////////////////////////////////////
 
+// ========================================================================
+// OPTIMIZED THUMB EXECUTION LOOP (FAST-PATH DISPATCHER)
+// Bypasses the 1,024 function table for the hottest ALU opcodes
+// (LSL, LSR, ASR, ADD, SUB, MOV, CMP). Eliminates I-Cache thrashing and
+// localizes the clockTicks state to prevent global register spilling.
+// ========================================================================
+
 int thumbExecute()
 {
   do {
-	  if( cheatsEnabled ) {
-		  cpuMasterCodeCheck();
-	  }
-
-    //if ((armNextPC & 0x0803FFFF) == 0x08020000)
-    //    busPrefetchCount=0x100;
+      if( cheatsEnabled ) {
+          cpuMasterCodeCheck();
+      }
 
     u32 opcode = cpuPrefetch[0];
     cpuPrefetch[0] = cpuPrefetch[1];
@@ -1426,20 +1430,176 @@ int thumbExecute()
     busPrefetch = false;
     if (busPrefetchCount & 0xFFFFFF00)
       busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
-    clockTicks = 0;
-    u32 oldArmNextPC = armNextPC;
 
+    u32 oldArmNextPC = armNextPC;
     armNextPC = reg[15].I;
     reg[15].I += 2;
     THUMB_PREFETCH_NEXT;
 
-    (*thumbInsnTable[opcode>>6])(opcode);
+    int localTicks = 0;
+    bool handledInline = false;
 
-    if (clockTicks < 0)
+    // FAST-PATH DISPATCHER
+    // Extract top 5 bits (opcode >> 11) to intercept ALU/Shift/Immediate ops
+    int top5 = opcode >> 11;
+    switch (top5) {
+        case 0: // LSL Rd, Rm, #Imm5
+        {
+            int dest = opcode & 0x07;
+            int source = (opcode >> 3) & 0x07;
+            int shift = (opcode >> 6) & 0x1F;
+            u32 value;
+            if (LIKELY(shift)) {
+                C_FLAG = (reg[source].I >> (32 - shift)) & 1;
+                value = reg[source].I << shift;
+            } else {
+                value = reg[source].I;
+            }
+            reg[dest].I = value;
+            N_FLAG = (value >> 31);
+            Z_FLAG = (value == 0);
+            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+            handledInline = true;
+            break;
+        }
+        case 1: // LSR Rd, Rm, #Imm5
+        {
+            int dest = opcode & 0x07;
+            int source = (opcode >> 3) & 0x07;
+            int shift = (opcode >> 6) & 0x1F;
+            u32 value;
+            if (LIKELY(shift)) {
+                C_FLAG = (reg[source].I >> (shift - 1)) & 1;
+                value = reg[source].I >> shift;
+            } else {
+                C_FLAG = (reg[source].I >> 31);
+                value = 0;
+            }
+            reg[dest].I = value;
+            N_FLAG = (value >> 31);
+            Z_FLAG = (value == 0);
+            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+            handledInline = true;
+            break;
+        }
+        case 2: // ASR Rd, Rm, #Imm5
+        {
+            int dest = opcode & 0x07;
+            int source = (opcode >> 3) & 0x07;
+            int shift = (opcode >> 6) & 0x1F;
+            u32 value;
+            if (LIKELY(shift)) {
+                C_FLAG = ((u32)((s32)reg[source].I >> (int)(shift - 1))) & 1;
+                value = (u32)((s32)reg[source].I >> (int)shift);
+            } else {
+                C_FLAG = (reg[source].I >> 31);
+                value = (u32)((s32)reg[source].I >> 31);
+            }
+            reg[dest].I = value;
+            N_FLAG = (value >> 31);
+            Z_FLAG = (value == 0);
+            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+            handledInline = true;
+            break;
+        }
+        case 3: // ADD/SUB Rd, Rs, Rn / #Imm3
+        {
+            int dest = opcode & 0x07;
+            int source = (opcode >> 3) & 0x07;
+            u32 lhs = reg[source].I;
+
+            // Bit 10 distinguishes between immediate (1) and register (0)
+            u32 rhs = (opcode & 0x0400) ? ((opcode >> 6) & 0x07) : reg[(opcode >> 6) & 0x07].I;
+            u32 res;
+
+            // Bit 9 distinguishes between SUB (1) and ADD (0)
+            if (opcode & 0x0200) {
+                res = lhs - rhs;
+                SUBCARRY(lhs, rhs, res);
+                SUBOVERFLOW(lhs, rhs, res);
+            } else {
+                res = lhs + rhs;
+                ADDCARRY(lhs, rhs, res);
+                ADDOVERFLOW(lhs, rhs, res);
+            }
+
+            reg[dest].I = res;
+            Z_FLAG = (res == 0);
+            N_FLAG = (res >> 31);
+            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+            handledInline = true;
+            break;
+        }
+        case 4: // MOV Rd, #Imm8
+        {
+            int dest = (opcode >> 8) & 0x07;
+            u32 value = opcode & 0xFF;
+            reg[dest].I = value;
+            N_FLAG = 0;
+            Z_FLAG = (value == 0);
+            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+            handledInline = true;
+            break;
+        }
+        case 5: // CMP Rd, #Imm8
+        {
+            int dest = (opcode >> 8) & 0x07;
+            u32 lhs = reg[dest].I;
+            u32 rhs = opcode & 0xFF;
+            u32 res = lhs - rhs;
+            Z_FLAG = (res == 0);
+            N_FLAG = (res >> 31);
+            SUBCARRY(lhs, rhs, res);
+            SUBOVERFLOW(lhs, rhs, res);
+            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+            handledInline = true;
+            break;
+        }
+        case 6: // ADD Rd, #Imm8
+        {
+            int dest = (opcode >> 8) & 0x07;
+            u32 lhs = reg[dest].I;
+            u32 rhs = opcode & 0xFF;
+            u32 res = lhs + rhs;
+            reg[dest].I = res;
+            Z_FLAG = (res == 0);
+            N_FLAG = (res >> 31);
+            ADDCARRY(lhs, rhs, res);
+            ADDOVERFLOW(lhs, rhs, res);
+            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+            handledInline = true;
+            break;
+        }
+        case 7: // SUB Rd, #Imm8
+        {
+            int dest = (opcode >> 8) & 0x07;
+            u32 lhs = reg[dest].I;
+            u32 rhs = opcode & 0xFF;
+            u32 res = lhs - rhs;
+            reg[dest].I = res;
+            Z_FLAG = (res == 0);
+            N_FLAG = (res >> 31);
+            SUBCARRY(lhs, rhs, res);
+            SUBOVERFLOW(lhs, rhs, res);
+            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+            handledInline = true;
+            break;
+        }
+    }
+
+    // FALLBACK: The original 1,024 instruction table
+    if (!handledInline) {
+        clockTicks = 0;
+        (*thumbInsnTable[opcode>>6])(opcode);
+        localTicks = clockTicks; // Extract resulting global payload
+    }
+
+    if (localTicks < 0)
       return 0;
-    if (clockTicks==0)
-      clockTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-    cpuTotalTicks += clockTicks;
+    if (localTicks == 0)
+      localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+
+    cpuTotalTicks += localTicks;
 
   } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
   return 1;
