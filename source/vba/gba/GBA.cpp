@@ -3149,6 +3149,64 @@ static __attribute__((noinline)) void CPURenderLine_Wii() {
 }
 
 // -------------------------------------------------------------------------
+// WII OPTIMIZATION: Template unrolled Timer Updates
+// Eliminates I-Cache bloat and converts cascade checks into 1-cycle bitwise math.
+// -------------------------------------------------------------------------
+template <int channel>
+static inline void CPUTimerUpdate_T(int clockTicks, int& timerTicks, int& timerReload, int& timerClockReload, u16& timerD, u16 timerCNT, int& timerOverflow) {
+  // Compile-time resolution: Timer 0 can never count-up (cascade).
+  // For Timers 1-3, check the hardware flag.
+  if (channel > 0 && (timerCNT & 4)) {
+
+    // Check if the preceding timer triggered an overflow
+    if (timerOverflow & (1 << (channel - 1))) {
+      // 1-cycle addition
+      u32 nextD = timerD + 1;
+
+      // Branchless overflow evaluation: 1 if rolled over 0xFFFF, else 0
+      u32 overflowed = (nextD >> 16);
+
+      // Branchless reload using 0xFFFFFFFF or 0x00000000 mask
+      timerD = (u16)(nextD + (timerReload & -overflowed));
+
+      if (overflowed) {
+        timerOverflow |= (1 << channel);
+        if (channel == 1) soundTimerOverflow(1);
+        if (timerCNT & 0x40) {
+          // Compile-time shift maps perfectly to 0x08, 0x10, 0x20, 0x40
+          IF |= (0x08 << channel);
+          WriteReg16(0x202, IF);
+        }
+      }
+      // Compile-time register address calculation (0x100, 0x104, etc.)
+      WriteReg16(0x100 + (channel * 4), timerD);
+    }
+
+  } else {
+    // Normal timing mode
+    timerTicks -= clockTicks;
+
+    // Highly predictable branch - favored over heavy bitwise math here
+    if (timerTicks <= 0) {
+      timerTicks += (0x10000 - timerReload) << timerClockReload;
+      timerOverflow |= (1 << channel);
+
+      if (channel == 0) soundTimerOverflow(0);
+      if (channel == 1) soundTimerOverflow(1);
+
+      if (timerCNT & 0x40) {
+        IF |= (0x08 << channel);
+        WriteReg16(0x202, IF);
+      }
+    }
+
+    // 1-cycle shift and subtract
+    timerD = (u16)(0xFFFF - (timerTicks >> timerClockReload));
+    WriteReg16(0x100 + (channel * 4), timerD);
+  }
+}
+
+// -------------------------------------------------------------------------
 // Template generation separates execution paths at compile-time,
 // keeping L1 I-Cache clean of dead branches.
 // -------------------------------------------------------------------------
@@ -3315,88 +3373,15 @@ static void CPULoop_T(int ticks) {
       }
 
       if(!stopState) {
-        // Timers maintained in tight scoping
-        if(timer0On) {
-          timer0Ticks -= clockTicks;
-          if(timer0Ticks <= 0) {
-            timer0Ticks += (0x10000 - timer0Reload) << timer0ClockReload;
-            timerOverflow |= 1;
-            soundTimerOverflow(0);
-            if(TM0CNT & 0x40) { IF |= 0x08; WriteReg16(0x202, IF); }
-          }
-          TM0D = 0xFFFF - (timer0Ticks >> timer0ClockReload);
-          WriteReg16(0x100, TM0D);
-        }
+		  // Timers maintained in tight scoping, unrolled via templates
+		  // to prevent branch prediction thrashing and stack spilling.
+		  if(timer0On) CPUTimerUpdate_T<0>(clockTicks, timer0Ticks, timer0Reload, timer0ClockReload, TM0D, TM0CNT, timerOverflow);
+		  if(timer1On) CPUTimerUpdate_T<1>(clockTicks, timer1Ticks, timer1Reload, timer1ClockReload, TM1D, TM1CNT, timerOverflow);
+		  if(timer2On) CPUTimerUpdate_T<2>(clockTicks, timer2Ticks, timer2Reload, timer2ClockReload, TM2D, TM2CNT, timerOverflow);
+		  if(timer3On) CPUTimerUpdate_T<3>(clockTicks, timer3Ticks, timer3Reload, timer3ClockReload, TM3D, TM3CNT, timerOverflow);
+		}
 
-        if(timer1On) {
-          if(TM1CNT & 4) {
-            if(timerOverflow & 1) {
-              ++TM1D;
-              if(TM1D == 0) {
-                TM1D += timer1Reload;
-                timerOverflow |= 2;
-                soundTimerOverflow(1);
-                if(TM1CNT & 0x40) { IF |= 0x10; WriteReg16(0x202, IF); }
-              }
-              WriteReg16(0x104, TM1D);
-            }
-          } else {
-            timer1Ticks -= clockTicks;
-            if(timer1Ticks <= 0) {
-              timer1Ticks += (0x10000 - timer1Reload) << timer1ClockReload;
-              timerOverflow |= 2;
-              soundTimerOverflow(1);
-              if(TM1CNT & 0x40) { IF |= 0x10; WriteReg16(0x202, IF); }
-            }
-            TM1D = 0xFFFF - (timer1Ticks >> timer1ClockReload);
-            WriteReg16(0x104, TM1D);
-          }
-        }
-
-        if(timer2On) {
-          if(TM2CNT & 4) {
-            if(timerOverflow & 2) {
-              ++TM2D;
-              if(TM2D == 0) {
-                TM2D += timer2Reload;
-                timerOverflow |= 4;
-                if(TM2CNT & 0x40) { IF |= 0x20; WriteReg16(0x202, IF); }
-              }
-              WriteReg16(0x108, TM2D);
-            }
-          } else {
-            timer2Ticks -= clockTicks;
-            if(timer2Ticks <= 0) {
-              timer2Ticks += (0x10000 - timer2Reload) << timer2ClockReload;
-              timerOverflow |= 4;
-              if(TM2CNT & 0x40) { IF |= 0x20; WriteReg16(0x202, IF); }
-            }
-            TM2D = 0xFFFF - (timer2Ticks >> timer2ClockReload);
-            WriteReg16(0x108, TM2D);
-          }
-        }
-
-        if(timer3On) {
-          if(TM3CNT & 4) {
-            if(timerOverflow & 4) {
-              ++TM3D;
-              if(TM3D == 0) {
-                TM3D += timer3Reload;
-                if(TM3CNT & 0x40) { IF |= 0x40; WriteReg16(0x202, IF); }
-              }
-              WriteReg16(0x10C, TM3D);
-            }
-          } else {
-            timer3Ticks -= clockTicks;
-            if(timer3Ticks <= 0) {
-              timer3Ticks += (0x10000 - timer3Reload) << timer3ClockReload;
-              if(TM3CNT & 0x40) { IF |= 0x40; WriteReg16(0x202, IF); }
-            }
-            TM3D = 0xFFFF - (timer3Ticks >> timer3ClockReload);
-            WriteReg16(0x10C, TM3D);
-          }
-        }
-      }
+		timerOverflow = 0;
 
       timerOverflow = 0;
 
