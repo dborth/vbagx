@@ -147,7 +147,7 @@ void ExitApp()
 {
 	SavePrefs(SILENT);
 
-	if (ROMLoaded && !ConfigRequested && GCSettings.AutoSave == 1)
+	if (ROMLoaded && !ConfigRequested && GCSettings.AutoSave == AUTOSAVE_SRAM)
 		SaveBatteryOrStateAuto(FILE_SRAM, SILENT);
 
 	SystemExit(GCSettings.ExitAction, autoboot);

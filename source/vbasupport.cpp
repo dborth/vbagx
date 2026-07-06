@@ -297,7 +297,7 @@ int MemCPUWriteBatteryFile(char * membuffer)
 * LoadBatteryOrState
 * Load Battery/State file into memory
 * action = FILE_SRAM - Load battery
-* action = FILE_SNAPSHOT - Load state
+* action = FILE_STATE - Load state
 ****************************************************************************/
 
 bool LoadBatteryOrState(char * filepath, int action, bool silent)
@@ -431,7 +431,7 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 	if(!FindDevice(filepath, &device))
 		return 0;
 
-	if(action == FILE_SNAPSHOT && gameScreenPng.size > 0)
+	if(action == FILE_STATE && gameScreenPng.size > 0)
 	{
 		char screenpath[1024];
 		strncpy(screenpath, filepath, 1024);
@@ -1143,7 +1143,7 @@ bool LoadGBROM()
 		}
 	}
 	
-	if (GCSettings.SGBBorder == 2) LoadPNGBorder("default");
+	if (GCSettings.SGBBorder == SGBBORDER_FROMPNG) LoadPNGBorder("default");
 
 	if(gbRomSize <= 0)
 		return false;
@@ -1233,7 +1233,7 @@ bool LoadVBAROM()
 		if (loaded == 2) {
 			loaded = 0;
 			cartridgeType = CARTRIDGE_GB;
-		} else if (loaded == 1 && GCSettings.SGBBorder == 2) {
+		} else if (loaded == 1 && GCSettings.SGBBorder == SGBBORDER_FROMPNG) {
 			LoadPNGBorder("defaultgba");
 		}
 	}
@@ -1241,7 +1241,7 @@ bool LoadVBAROM()
 	if (cartridgeType == CARTRIDGE_GB)
 	{
 		emulator = GBSystem;
-		gbBorderOn = (GCSettings.SGBBorder == 1);
+		gbBorderOn = (GCSettings.SGBBorder == SGBBORDER_FROMGAME);
 
 		if(gbBorderOn)
 		{
@@ -1340,7 +1340,7 @@ void InitialisePalette()
 	for( i = 0; i < 24; )
 	{
 
-		if (GCSettings.BasicPalette == 0) //Greenish color
+		if (GCSettings.BasicPalette == BASICPALETTE_GREEN) //Greenish color
 		{
 			systemGbPalette[i++] = (0x1c) | (0x1e << 5) | (0x1c << 10);
 			systemGbPalette[i++] = (0x10) | (0x17 << 5) | (0x0b << 10);

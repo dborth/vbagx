@@ -1564,21 +1564,21 @@ static int MenuGame()
 
 	if(lastMenu == MENU_NONE)
 	{
-		if (GCSettings.AutoSave == 1)
+		if (GCSettings.AutoSave == AUTOSAVE_SRAM)
 		{
 			SaveBatteryOrStateAuto(FILE_SRAM, SILENT); // save battery
 		}
-		else if (GCSettings.AutoSave == 2)
+		else if (GCSettings.AutoSave == AUTOSAVE_STATE)
 		{
 			if (WindowPrompt("Save", "Save State?", "Save", "Don't Save") )
-				SaveBatteryOrStateAuto(FILE_SNAPSHOT, NOTSILENT); // save state
+				SaveBatteryOrStateAuto(FILE_STATE, NOTSILENT); // save state
 		}
-		else if (GCSettings.AutoSave == 3)
+		else if (GCSettings.AutoSave == AUTOSAVE_BOTH)
 		{
 			if (WindowPrompt("Save", "Save SRAM and State?", "Save", "Don't Save") )
 			{
 				SaveBatteryOrStateAuto(FILE_SRAM, NOTSILENT); // save battery
-				SaveBatteryOrStateAuto(FILE_SNAPSHOT, NOTSILENT); // save state
+				SaveBatteryOrStateAuto(FILE_STATE, NOTSILENT); // save state
 			}
 		}
 	}
@@ -1889,7 +1889,7 @@ static int MenuGameSaves(int action)
 		if(strncmp(&browserList[i].filename[len2-4], ".sav", 4) == 0)
 			type = FILE_SRAM;
 		else if(strncmp(&browserList[i].filename[len2-4], ".sgm", 4) == 0)
-			type = FILE_SNAPSHOT;
+			type = FILE_STATE;
 		else
 			continue;
 
@@ -1903,7 +1903,7 @@ static int MenuGameSaves(int action)
 			saves.files[saves.type[j]][n] = 1;
 			strcpy(saves.filename[j], browserList[i].filename);
 
-			if(saves.type[j] == FILE_SNAPSHOT)
+			if(saves.type[j] == FILE_STATE)
 			{
 				sprintf(scrfile, "%s%s/%s.png", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, tmp);
 
@@ -1960,7 +1960,7 @@ static int MenuGameSaves(int action)
 						result = LoadBatteryOrState(filepath, saves.type[ret], NOTSILENT);
 						emulator.emuReset();
 						break;
-					case FILE_SNAPSHOT:
+					case FILE_STATE:
 						result = LoadBatteryOrState(filepath, saves.type[ret], NOTSILENT);
 						break;
 				}
@@ -1980,7 +1980,7 @@ static int MenuGameSaves(int action)
 							strcat(deletepath, ".sav");
 							remove(deletepath); // Delete the *.srm file (Battery save file)
 						break;
-						case FILE_SNAPSHOT:
+						case FILE_STATE:
 							strncpy(deletepath, filepath, 1024);
 							deletepath[strlen(deletepath)-4] = 0;
 							strcat(deletepath, ".png");
@@ -2014,13 +2014,13 @@ static int MenuGameSaves(int action)
 				else if(ret == -1) // new State
 				{
 					for(i=1; i < 100; i++)
-						if(saves.files[FILE_SNAPSHOT][i] == 0)
+						if(saves.files[FILE_STATE][i] == 0)
 							break;
 
 					if(i < 100)
 					{
-						MakeFilePath(filepath, FILE_SNAPSHOT, ROMFilename, i);
-						SaveBatteryOrState(filepath, FILE_SNAPSHOT, NOTSILENT);
+						MakeFilePath(filepath, FILE_STATE, ROMFilename, i);
+						SaveBatteryOrState(filepath, FILE_STATE, NOTSILENT);
 						menu = MENU_GAME_SAVE;
 					}
 				}
@@ -2032,8 +2032,8 @@ static int MenuGameSaves(int action)
 						case FILE_SRAM:
 							SaveBatteryOrState(filepath, FILE_SRAM, NOTSILENT);
 							break;
-						case FILE_SNAPSHOT:
-							SaveBatteryOrState(filepath, FILE_SNAPSHOT, NOTSILENT);
+						case FILE_STATE:
+							SaveBatteryOrState(filepath, FILE_STATE, NOTSILENT);
 							break;
 					}
 					menu = MENU_GAME_SAVE;
@@ -2250,7 +2250,7 @@ static int MenuGameSettings()
 		}
 		else if(wiiControlsBtn.GetState() == STATE_CLICKED)
 		{
-			GCSettings.WiiControls ^= 1;
+			GCSettings.WiiControls = !GCSettings.WiiControls;
 			if (GCSettings.WiiControls) sprintf(s, "ON");
 			else sprintf(s, "OFF");
 			wiiControlsBtnTxt2.SetText(s);
@@ -3242,7 +3242,7 @@ static int MenuSettingsVideo()
 				break;
 
 			case 7:
-				GCSettings.colorize ^= 1;
+				GCSettings.colorize = !GCSettings.colorize;
 				break;
 
 			case 8:
@@ -3250,10 +3250,10 @@ static int MenuSettingsVideo()
 				break;
 
 			case 9:
-				GCSettings.gbaFrameskip ^= 1;
+				GCSettings.gbaFrameskip = !GCSettings.gbaFrameskip;
 				break;
 			case 10:
-				GCSettings.TurboModeEnabled ^= 1;
+				GCSettings.TurboModeEnabled = !GCSettings.TurboModeEnabled;
 				break;
 		}
 
@@ -3337,7 +3337,7 @@ static int MenuSettingsVideo()
 			else
 				sprintf (options.value[9], "Off");
 
-			sprintf (options.value[10], "%s", GCSettings.TurboModeEnabled == 1 ? "On" : "Off");
+			sprintf (options.value[10], "%s", GCSettings.TurboModeEnabled ? "On" : "Off");
 
 			optionBrowser.TriggerUpdate();
 		}
@@ -3418,14 +3418,14 @@ static int MenuSettingsEmulation()
 		{
 			case 0:
 				GCSettings.GBHardware++;
-				if (GCSettings.GBHardware > 5)
-					GCSettings.GBHardware = 0;
+				if (GCSettings.GBHardware >= GBHARDWARE_LENGTH)
+					GCSettings.GBHardware = GBHARDWARE_AUTO;
 				break;
 			
 			case 1:
 				GCSettings.SGBBorder++;
-				if (GCSettings.SGBBorder > 2)
-					GCSettings.SGBBorder = 0;
+				if (GCSettings.SGBBorder >= SGBBORDER_LENGTH)
+					GCSettings.SGBBorder = SGBBORDER_OFF;
 				break;
 			
 			case 2:
@@ -3443,29 +3443,29 @@ static int MenuSettingsEmulation()
 		{
 			firstRun = false;
 
-			if (GCSettings.GBHardware == 0)
+			if (GCSettings.GBHardware == GBHARDWARE_AUTO)
 				sprintf (options.value[0], "Auto");
-			else if (GCSettings.GBHardware == 1)
+			else if (GCSettings.GBHardware == GBHARDWARE_GBC)
 				sprintf (options.value[0], "Game Boy Color");
-			else if (GCSettings.GBHardware == 2)
+			else if (GCSettings.GBHardware == GBHARDWARE_SGB)
 				sprintf (options.value[0], "Super Game Boy");
-			else if (GCSettings.GBHardware == 3)
+			else if (GCSettings.GBHardware == GBHARDWARE_GB)
 				sprintf (options.value[0], "Game Boy");
-			else if (GCSettings.GBHardware == 4)
+			else if (GCSettings.GBHardware == GBHARDWARE_GBA)
 				sprintf (options.value[0], "Game Boy Advance");
-			else if (GCSettings.GBHardware == 5)
+			else if (GCSettings.GBHardware == GBHARDWARE_SGB2)
 				sprintf (options.value[0], "Super Game Boy 2");
 			
-			if (GCSettings.SGBBorder == 0)
+			if (GCSettings.SGBBorder == SGBBORDER_OFF)
 				sprintf (options.value[1], "Off");
-			else if (GCSettings.SGBBorder == 1)
+			else if (GCSettings.SGBBorder == SGBBORDER_FROMGAME)
 				sprintf (options.value[1], "From game (SGB only)");
-			else if (GCSettings.SGBBorder == 2)
+			else if (GCSettings.SGBBorder == SGBBORDER_FROMPNG)
 				sprintf (options.value[1], "From .png file");
 			
 			sprintf (options.value[2], "%+.2f", GCSettings.OffsetMinutesUTC / 60.0);
 
-			if (GCSettings.BasicPalette == 0)
+			if (GCSettings.BasicPalette == BASICPALETTE_GREEN)
 				sprintf (options.value[3], "Green Screen");
 			else
 				sprintf (options.value[3], "Monochrome Screen");
@@ -3777,20 +3777,18 @@ static int MenuSettingsFile()
 			
 			case 7:
 				GCSettings.AutoLoad++;
-				if (GCSettings.AutoLoad > 2)
-					GCSettings.AutoLoad = 0;
+				if (GCSettings.AutoLoad > AUTOLOAD_STATE)
+					GCSettings.AutoLoad = AUTOLOAD_OFF;
 				break;
 
 			case 8:
 				GCSettings.AutoSave++;
-				if (GCSettings.AutoSave > 3)
-					GCSettings.AutoSave = 0;
+				if (GCSettings.AutoSave > AUTOSAVE_BOTH)
+					GCSettings.AutoSave = AUTOSAVE_OFF;
 				break;
 
 			case 9:
-				GCSettings.AppendAuto++;
-				if (GCSettings.AppendAuto > 1)
-					GCSettings.AppendAuto = 0;
+				GCSettings.AppendAuto = !GCSettings.AppendAuto;
 				break;
 		}
 
@@ -3868,17 +3866,17 @@ static int MenuSettingsFile()
 			snprintf (options.value[5], 35, "%s", GCSettings.CoverFolder);
 			snprintf (options.value[6], 35, "%s", GCSettings.ArtworkFolder);
 			
-			if (GCSettings.AutoLoad == 0) sprintf (options.value[7],"Off");
-			else if (GCSettings.AutoLoad == 1) sprintf (options.value[7],"SRAM");
-			else if (GCSettings.AutoLoad == 2) sprintf (options.value[7],"State");
+			if (GCSettings.AutoLoad == AUTOLOAD_OFF) sprintf (options.value[7],"Off");
+			else if (GCSettings.AutoLoad == AUTOLOAD_SRAM) sprintf (options.value[7],"SRAM");
+			else if (GCSettings.AutoLoad == AUTOLOAD_STATE) sprintf (options.value[7],"State");
 
-			if (GCSettings.AutoSave == 0) sprintf (options.value[8],"Off");
-			else if (GCSettings.AutoSave == 1) sprintf (options.value[8],"SRAM");
-			else if (GCSettings.AutoSave == 2) sprintf (options.value[8],"State");
-			else if (GCSettings.AutoSave == 3) sprintf (options.value[8],"Both");
+			if (GCSettings.AutoSave == AUTOSAVE_OFF) sprintf (options.value[8],"Off");
+			else if (GCSettings.AutoSave == AUTOSAVE_SRAM) sprintf (options.value[8],"SRAM");
+			else if (GCSettings.AutoSave == AUTOSAVE_STATE) sprintf (options.value[8],"State");
+			else if (GCSettings.AutoSave == AUTOSAVE_BOTH) sprintf (options.value[8],"Both");
 
-			if (GCSettings.AppendAuto == 0) sprintf (options.value[9],"Off");
-			else if (GCSettings.AppendAuto == 1) sprintf (options.value[9],"On");
+			if (!GCSettings.AppendAuto) sprintf (options.value[9],"Off");
+			else sprintf (options.value[9],"On");
 
 			optionBrowser.TriggerUpdate();
 		}
@@ -3991,7 +3989,7 @@ static int MenuSettingsMenu()
 					GCSettings.SFXVolume = 0;
 				break;
 			case 4:
-				GCSettings.Rumble ^= 1;
+				GCSettings.Rumble = !GCSettings.Rumble;
 				break;
 			case 5:
 				GCSettings.language++;
@@ -4048,7 +4046,7 @@ static int MenuSettingsMenu()
 			else
 				sprintf(options.value[3], "Mute");
 
-			if (GCSettings.Rumble == 1)
+			if (GCSettings.Rumble)
 				sprintf (options.value[4], "Enabled");
 			else
 				sprintf (options.value[4], "Disabled");

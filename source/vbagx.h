@@ -76,9 +76,22 @@ const FolderDef loadFolder[] = {
 enum 
 {
 	FILE_SRAM,
-	FILE_SNAPSHOT,
+	FILE_STATE,
 	FILE_ROM,
 	FILE_BORDER_PNG
+};
+
+enum {
+	AUTOLOAD_OFF = 0,
+	AUTOLOAD_SRAM,
+	AUTOLOAD_STATE
+};
+
+enum {
+	AUTOSAVE_OFF = 0,
+	AUTOSAVE_SRAM,
+	AUTOSAVE_STATE,
+	AUTOSAVE_BOTH
 };
 
 enum {
@@ -121,8 +134,30 @@ enum {
 	SCALING_LENGTH
 };
 
-enum 
-{
+enum {
+	GBHARDWARE_AUTO = 0,
+	GBHARDWARE_GBC,
+	GBHARDWARE_SGB,
+	GBHARDWARE_GB,
+	GBHARDWARE_GBA,
+	GBHARDWARE_SGB2,
+	SGBBORDER_LENGTH
+};
+
+enum {
+	SGBBORDER_OFF = 0,
+	SGBBORDER_FROMGAME,
+	SGBBORDER_FROMPNG,
+	SGBBORDER_LENGTH
+};
+
+enum {
+	BASICPALETTE_GREEN = 0,
+	BASICPALETTE_MONOCHROME,
+	BASICPALETTE_LENGTH
+};
+
+enum {
 	LANG_JAPANESE = 0,
 	LANG_ENGLISH,
 	LANG_GERMAN,
@@ -153,25 +188,25 @@ struct SGCSettings
 	int		AutoSave;
 	int		LoadMethod;    // For ROMS: Auto, SD, DVD, USB, Network (SMB)
 	int		SaveMethod;    // For SRAM, Freeze, Prefs: Auto, SD, USB, SMB
-	int		AppendAuto;    // 0 - no, 1 - yes
+	bool	AppendAuto;
 	int		videomode;     // 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
 	int		scaling;       // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
 	int		render;		   // 1 - filtered, 2 - unfiltered
 	int		FilterMethod; // convert to RenderFilter
 	int		xshift;		   // video output shift
 	int		yshift;
-	int		colorize;      // colorize Mono Gameboy games
-	int		gbaFrameskip;  // turn on auto-frameskip for GBA games
-	int		WiiControls;   // Match Wii Game
+	bool	colorize;      // colorize Mono Gameboy games
+	bool	gbaFrameskip;  // turn on auto-frameskip for GBA games
+	bool	WiiControls;   // Match Wii Game
 	int		WiimoteOrientation;
 	int		ExitAction;
 	int		MusicVolume;
 	int		SFXVolume;
-	int		Rumble;
+	bool	Rumble;
 	int 	language;
 	int		PreviewImage;
-	int		TurboModeEnabled; // 0 - disabled, 1 - enabled
-	int		AutoloadGame;
+	bool	TurboModeEnabled; // 0 - disabled, 1 - enabled
+	bool	AutoloadGame;
 	
 	int		OffsetMinutesUTC; // Used for clock on MBC3 and TAMA5
 	int 	GBHardware;    // Mapped to gbEmulatorType in VBA
