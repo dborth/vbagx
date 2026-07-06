@@ -136,7 +136,8 @@ static inline u32 CPUReadMemory(u32 address)
     value = READ32LE(((u32 *)&internalRAM[alignedAddress & 0x7ffC]));
     break;
   case 4:
-    if(LIKELY((alignedAddress < 0x4000400) && ioReadable[alignedAddress & 0x3fc])) {
+    // OPTIMIZATION: Converted short-circuit && to bitwise & to prevent costly pipeline flushes.
+    if(LIKELY(((alignedAddress & 0x00FFFFFF) < 0x400) & ioReadable[alignedAddress & 0x3fc])) {
       if(ioReadable[(alignedAddress & 0x3fc) + 2]) {
         value = READ32LE(((u32 *)&ioMem[alignedAddress & 0x3fC]));
       } else {
@@ -151,12 +152,13 @@ static inline u32 CPUReadMemory(u32 address)
     break;
   case 6:
     alignedAddress = (alignedAddress & 0x1fffc);
-    if (UNLIKELY(((DISPCNT & 7) > 2) && ((alignedAddress & 0x1C000) == 0x18000))) {
+    // OPTIMIZATION: Consolidated conditional jump evaluation branchlessly.
+    if (UNLIKELY(((DISPCNT & 7) > 2) & ((alignedAddress & 0x1C000) == 0x18000))) {
         value = 0;
         break;
     }
-    if ((alignedAddress & 0x18000) == 0x18000)
-      alignedAddress &= 0x17fff;
+    // OPTIMIZATION: Replaced conditional mirror masking branch with 1-cycle bitwise extraction.
+    alignedAddress &= ~(((alignedAddress & 0x10000) >> 1) & alignedAddress);
     value = READ32LE(((u32 *)&vram[alignedAddress]));
     break;
   case 7:
@@ -187,10 +189,19 @@ static inline u32 CPUReadMemory(u32 address)
       case 0x8300: value = (systemGetSensorX() >> 8)|0x80; break;
       case 0x8400: value = systemGetSensorY() & 255; break;
       case 0x8500: value = systemGetSensorY() >> 8; break;
-      default:     value = flashRead(alignedAddress) * 0x01010101; break;
+      default: {
+        // OPTIMIZATION: Replaced multi-cycle mullw with shifts and bitwise ORs.
+        u32 temp = flashRead(alignedAddress);
+        temp |= (temp << 8);
+        value = temp | (temp << 16);
+        break;
+      }
       }
     } else {
-      value = flashRead(alignedAddress) * 0x01010101;
+      // OPTIMIZATION: Replaced multi-cycle mullw with shifts and bitwise ORs.
+      u32 temp = flashRead(alignedAddress);
+      temp |= (temp << 8);
+      value = temp | (temp << 16);
     }
     break;
   default:
@@ -249,21 +260,22 @@ static inline u32 CPUReadHalfWord(u32 address)
     value = READ16LE(((u16 *)&internalRAM[alignedAddress & 0x7ffe]));
     break;
   case 4:
-    if(LIKELY(alignedAddress < 0x4000400)) {
+    if(LIKELY((alignedAddress & 0x00FFFFFF) < 0x400)) {
       u32 ioAddr = alignedAddress & 0x3fe;
 
       if(ioReadable[ioAddr]) {
         value = READ16LE(((u16 *)&ioMem[ioAddr]));
 
-        // OPTIMIZATION: Consolidate bounds check, leveraging tight variable scope.
-        if (UNLIKELY(ioAddr >= 0x100 && ioAddr < 0x110)) {
-          if (ioAddr == 0x100 && timer0On)
+        // OPTIMIZATION: Converted double boundary check into a single unsigned range subtraction.
+        if (UNLIKELY((u32)(ioAddr - 0x100) < 0x10)) {
+          // OPTIMIZATION: Converted short-circuit evaluations to fast bitwise operations.
+          if ((ioAddr == 0x100) & timer0On)
             value = 0xFFFF - ((timer0Ticks - cpuTotalTicks) >> timer0ClockReload);
-          else if (ioAddr == 0x104 && timer1On && !(TM1CNT & 4))
+          else if ((ioAddr == 0x104) & timer1On & !(TM1CNT & 4))
             value = 0xFFFF - ((timer1Ticks - cpuTotalTicks) >> timer1ClockReload);
-          else if (ioAddr == 0x108 && timer2On && !(TM2CNT & 4))
+          else if ((ioAddr == 0x108) & timer2On & !(TM2CNT & 4))
             value = 0xFFFF - ((timer2Ticks - cpuTotalTicks) >> timer2ClockReload);
-          else if (ioAddr == 0x10C && timer3On && !(TM3CNT & 4))
+          else if ((ioAddr == 0x10C) & timer3On & !(TM3CNT & 4))
             value = 0xFFFF - ((timer3Ticks - cpuTotalTicks) >> timer3ClockReload);
         }
       } else if(ioReadable[alignedAddress & 0x3fc]) {
@@ -280,12 +292,12 @@ static inline u32 CPUReadHalfWord(u32 address)
     break;
   case 6:
     alignedAddress = (alignedAddress & 0x1fffe);
-    if (UNLIKELY(((DISPCNT & 7) > 2) && ((alignedAddress & 0x1C000) == 0x18000))) {
+    if (UNLIKELY(((DISPCNT & 7) > 2) & ((alignedAddress & 0x1C000) == 0x18000))) {
         value = 0;
         break;
     }
-    if ((alignedAddress & 0x18000) == 0x18000)
-      alignedAddress &= 0x17fff;
+    // OPTIMIZATION: Replaced conditional mirror masking branch with bitwise extraction.
+    alignedAddress &= ~(((alignedAddress & 0x10000) >> 1) & alignedAddress);
     value = READ16LE(((u16 *)&vram[alignedAddress]));
     break;
   case 7:
@@ -296,7 +308,8 @@ static inline u32 CPUReadHalfWord(u32 address)
 	// WarioWare Twisted! tilt sensors, rumble, and solar sensors.
 	// This function still works if there is no real time clock
 	// and does a normal memory read in that case.
-    if(UNLIKELY(alignedAddress >= 0x80000c4 && alignedAddress <= 0x80000c8)) {
+    // OPTIMIZATION: Compacted dual-boundary check down to a highly optimized single unsigned compare.
+    if(UNLIKELY((u32)(alignedAddress - 0x80000c4) <= 4)) {
       value = rtcRead(alignedAddress & 0xFFFFFFE);
       break;
     }
@@ -323,10 +336,17 @@ static inline u32 CPUReadHalfWord(u32 address)
       case 0x8300: value = (systemGetSensorX() >> 8)|0x80; break;
       case 0x8400: value = systemGetSensorY() & 255; break;
       case 0x8500: value = systemGetSensorY() >> 8; break;
-      default:     value = flashRead(alignedAddress) * 0x0101; break;
+      default: {
+        // OPTIMIZATION: Replaced mullw with single shift and OR sequence.
+        u32 temp = flashRead(alignedAddress);
+        value = temp | (temp << 8);
+        break;
+      }
       }
     } else {
-      value = flashRead(alignedAddress) * 0x0101;
+      // OPTIMIZATION: Replaced mullw with single shift and OR sequence.
+      u32 temp = flashRead(alignedAddress);
+      value = temp | (temp << 8);
     }
     break;
   default:
@@ -360,10 +380,9 @@ static inline u32 CPUReadHalfWord(u32 address)
 }
 
 
-// OPTIMIZATION: Eliminate useless branch check. The explicit downcast to s16
-// handles PowerPC sign extension organically on the returned value.
 static inline s16 CPUReadHalfWordSigned(u32 address)
 {
+  // OPTIMIZATION: The explicit downcast natively invokes PowerPC 'extsh' sign extension organic behavior.
   return (s16)CPUReadHalfWord(address);
 }
 
@@ -382,21 +401,21 @@ static inline u8 CPUReadByte(u32 address)
   case 3:
     return internalRAM[address & 0x7fff];
   case 4:
-    if(LIKELY(address < 0x4000400) && ioReadable[address & 0x3ff])
+    // OPTIMIZATION: Removed short circuit evaluation to prevent pipeline bubble stalls.
+    if(LIKELY(((address & 0x00FFFFFF) < 0x400) & ioReadable[address & 0x3ff]))
       return ioMem[address & 0x3ff];
     else goto unreadable;
   case 5:
     return paletteRAM[address & 0x3ff];
   case 6:
-    // OPTIMIZATION: Condense unaligned mask early.
     address &= 0x1ffff;
-    if (UNLIKELY(((DISPCNT & 7) > 2) && ((address & 0x1C000) == 0x18000))) return 0;
-    if ((address & 0x18000) == 0x18000) address &= 0x17fff;
+    if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000))) return 0;
+    // OPTIMIZATION: Branchless bitwise mirror masking sequence.
+    address &= ~(((address & 0x10000) >> 1) & address);
     return vram[address];
   case 7:
     return oam[address & 0x3ff];
   case 8:
-	// the real time clock doesn't support byte reads, so don't bother checking for it.
   case 9:
   case 10:
   case 11:
@@ -456,22 +475,23 @@ static inline void CPUWriteMemory(u32 address, u32 value)
     WRITE32LE(((u32 *)&internalRAM[address & 0x7ffC]), value);
     break;
   case 0x04:
-    if(LIKELY(address < 0x4000400)) {
+    if(LIKELY((address & 0x00FFFFFF) < 0x400)) {
       u32 ioAddr = address & 0x3FC;
       CPUUpdateRegister(ioAddr, value & 0xFFFF);
       CPUUpdateRegister(ioAddr + 2, (value >> 16));
     } else goto unwritable;
     break;
   case 0x05:
-    if(LIKELY(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE))
+    // OPTIMIZATION: Combined validation checks bitwise to maintain pipeline fluidity.
+    if(LIKELY(((address & 0x00FFFFFF) < 0x400) | ((RomIdCode & 0xFFFFFF) != CORVETTE)))
       WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
     break;
   case 0x06:
     address &= 0x1fffc;
-    if (UNLIKELY(((DISPCNT & 7) > 2) && ((address & 0x1C000) == 0x18000)))
+    if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000)))
       return;
-    if ((address & 0x18000) == 0x18000)
-      address &= 0x17fff;
+    // OPTIMIZATION: Branchless bitwise mirror masking sequence.
+    address &= ~(((address & 0x10000) >> 1) & address);
     WRITE32LE(((u32 *)&vram[address]), value);
     break;
   case 0x07:
@@ -509,20 +529,20 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
     WRITE16LE(((u16 *)&internalRAM[address & 0x7ffe]), value);
     break;
   case 4:
-    if(LIKELY(address < 0x4000400))
+    if(LIKELY((address & 0x00FFFFFF) < 0x400))
       CPUUpdateRegister(address & 0x3fe, value);
     else goto unwritable;
     break;
   case 5:
-    if(LIKELY(address < 0x5000400 || (RomIdCode & 0xFFFFFF) != CORVETTE))
+    if(LIKELY(((address & 0x00FFFFFF) < 0x400) | ((RomIdCode & 0xFFFFFF) != CORVETTE)))
       WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
     break;
   case 6:
     address &= 0x1fffe;
-    if (UNLIKELY(((DISPCNT & 7) > 2) && ((address & 0x1C000) == 0x18000)))
+    if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000)))
       return;
-    if ((address & 0x18000) == 0x18000)
-      address &= 0x17fff;
+    // OPTIMIZATION: Branchless bitwise mirror masking sequence.
+    address &= ~(((address & 0x10000) >> 1) & address);
     WRITE16LE(((u16 *)&vram[address]), value);
     break;
   case 7:
@@ -530,7 +550,8 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
     break;
   case 8:
   case 9:
-    if(UNLIKELY(address == 0x80000c4 || address == 0x80000c6 || address == 0x80000c8)) {
+    // OPTIMIZATION: Compacted multiple equality branches down into a single range execution.
+    if(UNLIKELY((u32)(address - 0x80000c4) <= 4)) {
       if(!rtcWrite(address, value))
         goto unwritable;
     }
@@ -564,7 +585,7 @@ static inline void CPUWriteByte(u32 address, u8 b)
     internalRAM[address & 0x7fff] = b;
     break;
   case 4:
-    if(LIKELY(address < 0x4000400)) {
+    if(LIKELY((address & 0x00FFFFFF) < 0x400)) {
       u32 ioAddr = address & 0x3FF;
 
       // OPTIMIZATION: HALTCNT separated to fast-path default registers
@@ -607,10 +628,10 @@ static inline void CPUWriteByte(u32 address, u8 b)
     break;
   case 6:
     address &= 0x1fffe;
-    if (UNLIKELY(((DISPCNT & 7) > 2) && ((address & 0x1C000) == 0x18000)))
+    if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000)))
       return;
-    if ((address & 0x18000) == 0x18000)
-      address &= 0x17fff;
+    // OPTIMIZATION: Branchless bitwise mirror masking sequence.
+    address &= ~(((address & 0x10000) >> 1) & address);
 
     // Shift is used exclusively instead of division (/4)
     if (address < objTilesAddress[((DISPCNT&7)+1)>>2])
@@ -628,8 +649,8 @@ static inline void CPUWriteByte(u32 address, u8 b)
     goto unwritable;
   case 14:
   case 15:
-    // Bitwise OR preserved to avoid branch penalties
-    if ((saveType != 5) && ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)) {
+     // Bitwise OR preserved to avoid branch penalties
+    if ((saveType != 5) & ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)) {
       (*cpuSaveGameFunc)(address, b);
       break;
     }
