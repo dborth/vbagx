@@ -586,8 +586,8 @@ static INSN_REGPARM void thumb43_0(u32 opcode)
 {
   int dest = opcode & 7;
   reg[dest].I |= reg[(opcode >> 3) & 7].I;
-  Z_FLAG = reg[dest].I ? false : true;
-  N_FLAG = reg[dest].I & 0x80000000 ? true : false;
+  Z_FLAG = (reg[dest].I == 0);
+  N_FLAG = (reg[dest].I >> 31);
 }
 
 // MUL Rd, Rs
@@ -621,8 +621,8 @@ static INSN_REGPARM void thumb43_2(u32 opcode)
 {
   int dest = opcode & 7;
   reg[dest].I &= (~reg[(opcode >> 3) & 7].I);
-  Z_FLAG = reg[dest].I ? false : true;
-  N_FLAG = reg[dest].I & 0x80000000 ? true : false;
+  Z_FLAG = (reg[dest].I == 0);
+  N_FLAG = (reg[dest].I >> 31);
 }
 
 // MVN Rd, Rs
@@ -630,8 +630,8 @@ static INSN_REGPARM void thumb43_3(u32 opcode)
 {
   int dest = opcode & 7;
   reg[dest].I = ~reg[(opcode >> 3) & 7].I;
-  Z_FLAG = reg[dest].I ? false : true;
-  N_FLAG = reg[dest].I & 0x80000000 ? true : false;
+  Z_FLAG = (reg[dest].I == 0);
+  N_FLAG = (reg[dest].I >> 31);
 }
 
 // High-register instructions and BX //////////////////////////////////////
@@ -944,9 +944,10 @@ static INSN_REGPARM void thumbA8(u32 opcode)
 static INSN_REGPARM void thumbB0(u32 opcode)
 {
   int offset = (opcode & 127) << 2;
-  if(opcode & 0x80)
-    offset = -offset;
-  reg[13].I += offset;
+  // Branchless negation: if bit 7 is set, mask becomes 0xFFFFFFFF, else 0x0
+  u32 mask = -((opcode >> 7) & 1);
+  // 2's complement branchless negation: (val ^ mask) - mask
+  reg[13].I += (offset ^ mask) - mask;
   clockTicks = 1 + codeTicksAccess16(armNextPC);
 }
 
@@ -955,24 +956,24 @@ static INSN_REGPARM void thumbB0(u32 opcode)
 #define PUSH_REG(val, r)                                    \
   if (opcode & (val)) {                                     \
     CPUWriteMemory(address, reg[(r)].I);                    \
-    if (!count) {                                           \
-        clockTicks += 1 + dataTicksAccess32(address);       \
-    } else {                                                \
+    if (LIKELY(count)) {                                    \
         clockTicks += 1 + dataTicksAccessSeq32(address);    \
+    } else {                                                \
+        clockTicks += 1 + dataTicksAccess32(address);       \
+        count = 1;                                          \
     }                                                       \
-    count++;                                                \
     address += 4;                                           \
   }
 
 #define POP_REG(val, r)                                     \
   if (opcode & (val)) {                                     \
     reg[(r)].I = CPUReadMemory(address);                    \
-    if (!count) {                                           \
-        clockTicks += 1 + dataTicksAccess32(address);       \
-    } else {                                                \
+    if (LIKELY(count)) {                                    \
         clockTicks += 1 + dataTicksAccessSeq32(address);    \
+    } else {                                                \
+        clockTicks += 1 + dataTicksAccess32(address);       \
+        count = 1;                                          \
     }                                                       \
-    count++;                                                \
     address += 4;                                           \
   }
 
@@ -1070,24 +1071,24 @@ static INSN_REGPARM void thumbBD(u32 opcode)
   if(opcode & (val)) {                                      \
     CPUWriteMemory(address, reg[(r)].I);                    \
     reg[(b)].I = temp;                                      \
-    if (!count) {                                           \
-        clockTicks += 1 + dataTicksAccess32(address);       \
-    } else {                                                \
+    if (LIKELY(count)) {                                    \
         clockTicks += 1 + dataTicksAccessSeq32(address);    \
+    } else {                                                \
+        clockTicks += 1 + dataTicksAccess32(address);       \
+        count = 1;                                          \
     }                                                       \
-    count++;                                                \
     address += 4;                                           \
   }
 
 #define THUMB_LDM_REG(val,r)                                \
   if(opcode & (val)) {                                      \
     reg[(r)].I = CPUReadMemory(address);                    \
-    if (!count) {                                           \
-        clockTicks += 1 + dataTicksAccess32(address);       \
-    } else {                                                \
+    if (LIKELY(count)) {                                    \
         clockTicks += 1 + dataTicksAccessSeq32(address);    \
+    } else {                                                \
+        clockTicks += 1 + dataTicksAccess32(address);       \
+        count = 1;                                          \
     }                                                       \
-    count++;                                                \
     address += 4;                                           \
   }
 
