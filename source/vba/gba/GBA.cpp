@@ -3083,90 +3083,30 @@ void CPUInterrupt()
 // -------------------------------------------------------------------------
 static __attribute__((noinline)) void CPURenderLine_Wii() {
   (*renderLine)();
-  switch(systemColorDepth) {
-    case 16:
-    {
-      u16 *dest = (u16 *)pix + 242 * (VCOUNT+1);
-      for(u32 x = 0; x < 240u;) {
-        WII_PREFETCH(&lineMix[x + 16]); // Wii: Fetch 64 bytes ahead into L1 D-Cache
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+  u16 *dest = (u16 *)pix + 242 * (VCOUNT+1);
+	for(u32 x = 0; x < 240u;) {
+		WII_PREFETCH(&lineMix[x + 16]); // Wii: Fetch 64 bytes ahead into L1 D-Cache
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
 
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
 
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
 
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-        *dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
-      }
-      *dest++ = 0;
-    }
-    break;
-    case 24:
-    {
-      u8 *dest = (u8 *)pix +  VCOUNT * 720;
-      for(u32 x = 0; x < 240u;) {
-        WII_PREFETCH(&lineMix[x + 16]);
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-        *((u32 *)dest) = systemColorMap32[lineMix[x++] & 0xFFFF]; dest += 3;
-      }
-    }
-    break;
-    case 32:
-    {
-      u32 *dest = (u32 *)pix + 241 * (VCOUNT+1);
-      for(u32 x = 0; x < 240u; ) {
-        WII_PREFETCH(&lineMix[x + 16]);
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-        *dest++ = systemColorMap32[lineMix[x++] & 0xFFFF];
-      }
-    }
-    break;
-  }
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+		*dest++ = systemColorMap16[lineMix[x++]&0xFFFF];
+	}
+	*dest++ = 0;
 }
 
 // -------------------------------------------------------------------------

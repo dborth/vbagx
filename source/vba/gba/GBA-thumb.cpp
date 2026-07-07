@@ -979,8 +979,7 @@ static INSN_REGPARM void thumbB0(u32 opcode)
 // PUSH {Rlist}
 static INSN_REGPARM void thumbB4(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   int count = 0;
   u32 temp = reg[13].I - 4 * cpuBitsSet[opcode & 0xff];
   u32 address = temp & 0xFFFFFFFC;
@@ -999,8 +998,7 @@ static INSN_REGPARM void thumbB4(u32 opcode)
 // PUSH {Rlist, LR}
 static INSN_REGPARM void thumbB5(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   int count = 0;
   u32 temp = reg[13].I - 4 - 4 * cpuBitsSet[opcode & 0xff];
   u32 address = temp & 0xFFFFFFFC;
@@ -1020,8 +1018,7 @@ static INSN_REGPARM void thumbB5(u32 opcode)
 // POP {Rlist}
 static INSN_REGPARM void thumbBC(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   int count = 0;
   u32 address = reg[13].I & 0xFFFFFFFC;
   u32 temp = reg[13].I + 4*cpuBitsSet[opcode & 0xFF];
@@ -1040,8 +1037,7 @@ static INSN_REGPARM void thumbBC(u32 opcode)
 // POP {Rlist, PC}
 static INSN_REGPARM void thumbBD(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   int count = 0;
   u32 address = reg[13].I & 0xFFFFFFFC;
   u32 temp = reg[13].I + 4 + 4*cpuBitsSet[opcode & 0xFF];
@@ -1099,8 +1095,7 @@ static INSN_REGPARM void thumbBD(u32 opcode)
 static INSN_REGPARM void thumbC0(u32 opcode)
 {
   u8 regist = (opcode >> 8) & 7;
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[regist].I & 0xFFFFFFFC;
   u32 temp = reg[regist].I + 4*cpuBitsSet[opcode & 0xff];
   int count = 0;
@@ -1120,8 +1115,7 @@ static INSN_REGPARM void thumbC0(u32 opcode)
 static INSN_REGPARM void thumbC8(u32 opcode)
 {
   u8 regist = (opcode >> 8) & 7;
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[regist].I & 0xFFFFFFFC;
   u32 temp = reg[regist].I + 4*cpuBitsSet[opcode & 0xFF];
   int count = 0;
@@ -1632,6 +1626,49 @@ int thumbExecute()
 			u32 address = reg[13].I + ((opcode & 255) << 2);
 			reg[(opcode >> 8) & 7].I = CPUReadMemoryQuick(address);
 			localTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(oldArmNextPC);
+			handledInline = true;
+			break;
+		}
+		// ========================================================================
+		// Broadway Optimization: Branch & Link Fast-Path
+		// Intercepts opcodes 0xE and 0xF to bypass the 1,024-entry indirect table.
+		// Uses 1-cycle hardware arithmetic shifts to handle sign-extension branchlessly.
+		// ========================================================================
+
+		case 28: // B offset (thumbE0)
+		{
+			// Branchless 11-bit sign extension and multiply-by-two
+			s32 offset = ((s32)(opcode << 21)) >> 20;
+			reg[15].I += offset;
+			armNextPC = reg[15].I;
+			reg[15].I += 2;
+			THUMB_PREFETCH;
+			localTicks = codeTicksAccessSeq16(armNextPC) * 2 + codeTicksAccess16(armNextPC) + 3;
+			busPrefetchCount = 0;
+			handledInline = true;
+			break;
+		}
+		case 30: // BL prefix (thumbF0 and thumbF4)
+		{
+			// Broadway Optimization: Branchless sign extension of the 11-bit offset.
+			// opcode << 21 places the 11th bit (the sign bit) directly at the MSB (bit 31).
+			// Arithmetic shift right by 9 sign-extends it and aligns it to a 12-bit left shift natively.
+			// Replaces conditional 'if (opcode & 0x0400)' entirely.
+			reg[14].I = reg[15].I + (((s32)(opcode << 21)) >> 9);
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+			handledInline = true;
+			break;
+		}
+		case 31: // BL/BLX suffix (thumbF8)
+		{
+			u32 temp = reg[15].I - 2;
+			reg[15].I = (reg[14].I + ((opcode & 0x7FF) << 1)) & 0xFFFFFFFE;
+			armNextPC = reg[15].I;
+			reg[15].I += 2;
+			reg[14].I = temp | 1;
+			THUMB_PREFETCH;
+			localTicks = codeTicksAccessSeq16(armNextPC) * 2 + codeTicksAccess16(armNextPC) + 3;
+			busPrefetchCount = 0;
 			handledInline = true;
 			break;
 		}

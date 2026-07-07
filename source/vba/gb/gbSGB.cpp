@@ -8,8 +8,6 @@
 #include "gbGlobals.h"
 
 extern u8 *pix;
-extern bool speedup;
-extern bool gbSgbResetFlag;
 
 #define GBSGB_NONE            0
 #define GBSGB_RESET           1
@@ -37,16 +35,6 @@ u16 gbSgbSCPPalette[4*512];
 u8  gbSgbATF[20 * 18];
 u8  gbSgbATFList[45 * 20 * 18];
 u8  gbSgbScreenBuffer[4160];
-
-inline void gbSgbDraw24Bit(u8 *p, u16 v)
-{
-  memcpy(p, &systemColorMap32[v], 3);
-}
-
-inline void gbSgbDraw32Bit(u32 *p, u16 v)
-{
-  *p = systemColorMap32[v];
-}
 
 inline void gbSgbDraw16Bit(u16 *p, u16 v)
 {
@@ -110,42 +98,12 @@ void gbSgbShutdown()
 
 void gbSgbFillScreen(u16 color)
 {
-  switch(systemColorDepth) {
-  case 16:
-    {
-      for(int y = 0; y < 144; y++) {
-        int yLine = (y+gbBorderRowSkip+1)*(gbBorderLineSkip+2) +
-          gbBorderColumnSkip;
-        u16 *dest = (u16*)pix + yLine;
-        for(int x = 0; x < 160; x++)
-          gbSgbDraw16Bit(dest++, color);
-      }
-    }
-    break;
-  case 24:
-    {
-      for(int y = 0; y < 144; y++) {
-        int yLine = (y+gbBorderRowSkip)*gbBorderLineSkip + gbBorderColumnSkip;
-        u8 *dest = (u8 *)pix + yLine*3;
-        for(int x = 0; x < 160; x++) {
-          gbSgbDraw24Bit(dest, color);
-          dest += 3;
-        }
-      }
-    }
-    break;
-  case 32:
-    {
-      for(int y = 0; y < 144; y++) {
-        int yLine = (y+gbBorderRowSkip+1)*(gbBorderLineSkip+1) + gbBorderColumnSkip;
-        u32 *dest = (u32 *)pix + yLine;
-        for(int x = 0; x < 160; x++) {
-          gbSgbDraw32Bit(dest++, color);
-        }
-      }
-    }
-    break;
-  }
+	for(int y = 0; y < 144; y++) {
+		int yLine = (y+gbBorderRowSkip+1)*(gbBorderLineSkip+2) + gbBorderColumnSkip;
+		u16 *dest = (u16*)pix + yLine;
+		for(int x = 0; x < 160; x++)
+			gbSgbDraw16Bit(dest++, color);
+	}
 }
 
 #define getmem(x) gbMemoryMap[(x) >> 12][(x) & 0xfff]
@@ -252,17 +210,7 @@ void gbSgbDrawBorderTile(int x, int y, int tile, int attr)
           cc = gbPalette[0];
         }
 
-        switch(systemColorDepth) {
-        case 16:
-          gbSgbDraw16Bit(dest + yyy*(256+2) + xxx, cc);
-          break;
-        case 24:
-          gbSgbDraw24Bit(dest8 + (yyy*256+xxx)*3, cc);
-          break;
-        case 32:
-          gbSgbDraw32Bit(dest32 + yyy*(256+1)+xxx, cc);
-          break;
-        }
+        gbSgbDraw16Bit(dest + yyy*(256+2) + xxx, cc);
       }
 
       mask >>= 1;

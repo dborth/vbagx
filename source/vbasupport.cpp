@@ -74,10 +74,8 @@ int systemVerbose = 0;
 int systemRedShift = 0;
 int systemBlueShift = 0;
 int systemGreenShift = 0;
-int systemColorDepth = 0;
 u16 systemGbPalette[24];
 u16 systemColorMap16[0x10000];
-u32 *systemColorMap32 = NULL;
 
 void StopColorizing();
 
@@ -1355,7 +1353,6 @@ void InitialisePalette()
 		systemGbPalette[i++] = 0;
 	}
 	// Set palette etc - Fixed to RGB565
-	systemColorDepth = 16;
 	systemRedShift = 11;
 	systemGreenShift = 6;
 	systemBlueShift = 0;
