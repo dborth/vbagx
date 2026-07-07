@@ -434,25 +434,17 @@ variable_desc saveGameStruct[] = {
 
 static int romSize = 0x2000000;
 
-inline int CPUUpdateTicks()
+static inline int CPUUpdateTicks()
 {
   int cpuLoopTicks = lcdTicks;
 
-  // WII OPTIMIZATION: Branchless MIN using 1-cycle bitwise arithmetic
-  // Avoids pipeline-stalling conditional jumps.
-  #define BROADWAY_MIN(a, b) ((b) + (((a) - (b)) & (((a) - (b)) >> 31)))
-
-  cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, soundTicks);
-
-  if(timer0On) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, timer0Ticks);
-  if(timer1On && !(TM1CNT & 4)) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, timer1Ticks);
-  if(timer2On && !(TM2CNT & 4)) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, timer2Ticks);
-  if(timer3On && !(TM3CNT & 4)) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, timer3Ticks);
-
-  if (SWITicks) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, SWITicks);
-  if (IRQTicks) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, IRQTicks);
-
-  #undef BROADWAY_MIN
+  if (soundTicks < cpuLoopTicks) cpuLoopTicks = soundTicks;
+  if (timer0On && timer0Ticks < cpuLoopTicks) cpuLoopTicks = timer0Ticks;
+  if (timer1On && !(TM1CNT & 4) && timer1Ticks < cpuLoopTicks) cpuLoopTicks = timer1Ticks;
+  if (timer2On && !(TM2CNT & 4) && timer2Ticks < cpuLoopTicks) cpuLoopTicks = timer2Ticks;
+  if (timer3On && !(TM3CNT & 4) && timer3Ticks < cpuLoopTicks) cpuLoopTicks = timer3Ticks;
+  if (SWITicks && SWITicks < cpuLoopTicks) cpuLoopTicks = SWITicks;
+  if (IRQTicks && IRQTicks < cpuLoopTicks) cpuLoopTicks = IRQTicks;
 
   return cpuLoopTicks;
 }
@@ -1430,16 +1422,14 @@ void CPUUpdateRender()
 
 void CPUUpdateCPSR()
 {
-  // --- WII OPTIMIZATION: BRANCHLESS CPSR GENERATION ---
-  // Eliminates 6 conditional branches by relying on 1-cycle bitwise extraction.
-
   u32 CPSR = reg[16].I & 0x40;
-  CPSR |= (N_FLAG << 31);
-  CPSR |= (Z_FLAG << 30);
-  CPSR |= (C_FLAG << 29);
-  CPSR |= (V_FLAG << 28);
-  CPSR |= ((!armState) << 5);
-  CPSR |= ((!armIrqEnable) << 7);
+
+  CPSR |= (N_FLAG ? 0x80000000 : 0);
+  CPSR |= (Z_FLAG ? 0x40000000 : 0);
+  CPSR |= (C_FLAG ? 0x20000000 : 0);
+  CPSR |= (V_FLAG ? 0x10000000 : 0);
+  CPSR |= (armState ? 0 : 0x20);
+  CPSR |= (armIrqEnable ? 0 : 0x80);
   CPSR |= (armMode & 0x1F);
 
   reg[16].I = CPSR;
@@ -1832,14 +1822,7 @@ void CPUSoftwareInterrupt(int comment)
 // Use a static inline function instead of a macro for better type safety
 // and to allow the compiler to inline the assembly without hidden side effects.
 static inline void WriteReg16(u32 address, u16 value) {
-    // We use sthbrx to perform the store-halfword-byte-reversed
-    // This is the correct instruction for GBA (Little Endian) on Wii (Big Endian)
-    __asm__ volatile (
-        "sthbrx %0, 0, %1"
-        :
-        : "r" (value), "r" (&ioMem[address])
-        : "memory"
-    );
+    WRITE16LE(((u16 *)&ioMem[address]), value);
 }
 
 void CPUCompareVCOUNT()
@@ -1865,13 +1848,14 @@ void CPUCompareVCOUNT()
   }
 }
 
-// --- WII OPTIMIZATION: DMA TEMPLATE & PIPELINE TUNING ---
-// Extracts transfer32 to compile-time to allow GCC to prune dead code.
-// Unrolls the memory traversal by 4 to heavily optimize lwzu/stwu instruction flow.
 template <bool transfer32>
 static void doDMA_T(u32 &s, u32 &d, u32 si, u32 di, u32 c)
 {
-  // Branchless 1-cycle clamp mapping, bypassing the original if (sm > 15) branches
+  // GBA Hardware Quirk: A transfer count of 0 implies max length.
+  if (c == 0) {
+      c = transfer32 ? 0x4000 : 0x10000;
+  }
+
   u32 sm = (s >> 24) & 15;
   u32 dm = (d >> 24) & 15;
   u32 sc = c;
@@ -1949,18 +1933,7 @@ static void doDMA_T(u32 &s, u32 &d, u32 si, u32 di, u32 c)
 
   u32 tickAdd = sw + dw;
   u32 t = sc - 1;
-  u32 totalWait = waitBase;
-
-  // --- WII OPTIMIZATION: BRANCHLESS MULTIPLY (mullw avoidance) ---
-  // Calculates: totalWait += (tickAdd * t)
-  // Because tickAdd is a known bounded variable (max ~34), we replace
-  // the costly mullw instruction with 6 cycles of pure bitwise shifts and masked adds.
-  totalWait += (t & -(tickAdd & 1));
-  totalWait += ((t << 1) & -((tickAdd >> 1) & 1));
-  totalWait += ((t << 2) & -((tickAdd >> 2) & 1));
-  totalWait += ((t << 3) & -((tickAdd >> 3) & 1));
-  totalWait += ((t << 4) & -((tickAdd >> 4) & 1));
-  totalWait += ((t << 5) & -((tickAdd >> 5) & 1));
+  u32 totalWait = waitBase + (tickAdd * t);
 
   cpuDmaTicksToUpdate += totalWait;
   cpuDmaHack = false;

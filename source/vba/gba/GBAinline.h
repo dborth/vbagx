@@ -186,7 +186,7 @@ static inline u32 CPUReadMemory(u32 address)
     value = READ32LE(((u32 *)&paletteRAM[alignedAddress & 0x3fC]));
     break;
   case 6:
-    alignedAddress = (alignedAddress & 0x1fffc);
+    alignedAddress &= 0x1fffc;
     // OPTIMIZATION: Consolidated conditional jump evaluation branchlessly.
     if (UNLIKELY(((DISPCNT & 7) > 2) & ((alignedAddress & 0x1C000) == 0x18000))) {
         value = 0;
@@ -254,7 +254,6 @@ static inline u32 CPUReadMemory(u32 address)
   return value;
 }
 
-
 static inline u32 CPUReadHalfWord(u32 address)
 {
   // OPTIMIZATION: Unconditional rlwinm mask
@@ -311,7 +310,7 @@ static inline u32 CPUReadHalfWord(u32 address)
     value = READ16LE(((u16 *)&paletteRAM[alignedAddress & 0x3fe]));
     break;
   case 6:
-    alignedAddress = (alignedAddress & 0x1fffe);
+    alignedAddress &= 0x1fffe;
     if (UNLIKELY(((DISPCNT & 7) > 2) & ((alignedAddress & 0x1C000) == 0x18000))) {
         value = 0;
         break;
@@ -381,7 +380,6 @@ static inline u32 CPUReadHalfWord(u32 address)
 
   return value;
 }
-
 
 static inline s16 CPUReadHalfWordSigned(u32 address)
 {
