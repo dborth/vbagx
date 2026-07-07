@@ -16,9 +16,6 @@
 #include "../NLS.h"
 #include "../Util.h"
 #include "../System.h"
-#ifdef PROFILING
-#include "prof/prof.h"
-#endif
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -26,45 +23,18 @@ static int clockTicks;
 
 static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
 {
-#ifdef GBA_LOGGING
-  if(systemVerbose & VERBOSE_UNDEFINED)
-    log("Undefined THUMB instruction %04x at %08x\n", opcode, armNextPC-2);
-#endif
   CPUUndefinedException();
 }
 
-#ifdef BKPT_SUPPORT
-static INSN_REGPARM void thumbBreakpoint(u32 opcode)
-{
-  reg[15].I -= 2;
-  armNextPC -= 2;
-  dbgSignal(5, opcode & 255);
-  clockTicks = -1;
-}
-#endif
-
 // Common macros //////////////////////////////////////////////////////////
 
-#ifdef BKPT_SUPPORT
-# define THUMB_CONSOLE_OUTPUT(a,b) do {                     \
-    if ((opcode == 0x4000) && (reg[0].I == 0xC0DED00D)) {   \
-      dbgOutput((a), (b));                                  \
-    }                                                       \
-} while (0)
-# define UPDATE_OLDREG do {                                 \
-    if (debugger_last) {                                    \
-        snprintf(oldbuffer, sizeof(oldbuffer), "%08X",      \
-                 armState ? reg[15].I - 4 : reg[15].I - 2); \
-        int i;						    \
-        for (i = 0; i < 18; i++) {                          \
-            oldreg[i] = reg[i].I;                           \
-        }                                                   \
-    }                                                       \
-} while (0)
-#else
 # define THUMB_CONSOLE_OUTPUT(a,b)
 # define UPDATE_OLDREG
-#endif
+
+// Broadway Optimization: Branchless Memory Prefetch Evaluation
+// Replaces volatile if (busPrefetchCount == 0) branches with 1-cycle bitwise logic
+#define UPDATE_BUS_PREFETCH \
+    busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
 
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
@@ -780,8 +750,7 @@ static INSN_REGPARM void thumb47(u32 opcode)
 static INSN_REGPARM void thumb48(u32 opcode)
 {
   u8 regist = (opcode >> 8) & 7;
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = (reg[15].I & 0xFFFFFFFC) + ((opcode & 0xFF) << 2);
   reg[regist].I = CPUReadMemoryQuick(address);
   busPrefetchCount=0;
@@ -791,8 +760,7 @@ static INSN_REGPARM void thumb48(u32 opcode)
 // STR Rd, [Rs, Rn]
 static INSN_REGPARM void thumb50(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + reg[(opcode>>6)&7].I;
   CPUWriteMemory(address, reg[opcode & 7].I);
   clockTicks = dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2;
@@ -801,8 +769,7 @@ static INSN_REGPARM void thumb50(u32 opcode)
 // STRH Rd, [Rs, Rn]
 static INSN_REGPARM void thumb52(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + reg[(opcode>>6)&7].I;
   CPUWriteHalfWord(address, reg[opcode&7].W.W0);
   clockTicks = dataTicksAccess16(address) + codeTicksAccess16(armNextPC) + 2;
@@ -811,8 +778,7 @@ static INSN_REGPARM void thumb52(u32 opcode)
 // STRB Rd, [Rs, Rn]
 static INSN_REGPARM void thumb54(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + reg[(opcode >>6)&7].I;
   CPUWriteByte(address, reg[opcode & 7].B.B0);
   clockTicks = dataTicksAccess16(address) + codeTicksAccess16(armNextPC) + 2;
@@ -821,8 +787,7 @@ static INSN_REGPARM void thumb54(u32 opcode)
 // LDSB Rd, [Rs, Rn]
 static INSN_REGPARM void thumb56(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + reg[(opcode>>6)&7].I;
   reg[opcode&7].I = (s8)CPUReadByte(address);
   clockTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(armNextPC);
@@ -831,8 +796,7 @@ static INSN_REGPARM void thumb56(u32 opcode)
 // LDR Rd, [Rs, Rn]
 static INSN_REGPARM void thumb58(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + reg[(opcode>>6)&7].I;
   reg[opcode&7].I = CPUReadMemory(address);
   clockTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC);
@@ -841,8 +805,7 @@ static INSN_REGPARM void thumb58(u32 opcode)
 // LDRH Rd, [Rs, Rn]
 static INSN_REGPARM void thumb5A(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + reg[(opcode>>6)&7].I;
   reg[opcode&7].I = CPUReadHalfWord(address);
   clockTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC);
@@ -851,8 +814,7 @@ static INSN_REGPARM void thumb5A(u32 opcode)
 // LDRB Rd, [Rs, Rn]
 static INSN_REGPARM void thumb5C(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + reg[(opcode>>6)&7].I;
   reg[opcode&7].I = CPUReadByte(address);
   clockTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(armNextPC);
@@ -861,8 +823,7 @@ static INSN_REGPARM void thumb5C(u32 opcode)
 // LDSH Rd, [Rs, Rn]
 static INSN_REGPARM void thumb5E(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + reg[(opcode>>6)&7].I;
   reg[opcode&7].I = (u32)CPUReadHalfWordSigned(address);
   clockTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(armNextPC);
@@ -871,8 +832,7 @@ static INSN_REGPARM void thumb5E(u32 opcode)
 // STR Rd, [Rs, #Imm]
 static INSN_REGPARM void thumb60(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + (((opcode>>6)&31)<<2);
   CPUWriteMemory(address, reg[opcode&7].I);
   clockTicks = dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2;
@@ -881,8 +841,7 @@ static INSN_REGPARM void thumb60(u32 opcode)
 // LDR Rd, [Rs, #Imm]
 static INSN_REGPARM void thumb68(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + (((opcode>>6)&31)<<2);
   reg[opcode&7].I = CPUReadMemory(address);
   clockTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC);
@@ -891,8 +850,7 @@ static INSN_REGPARM void thumb68(u32 opcode)
 // STRB Rd, [Rs, #Imm]
 static INSN_REGPARM void thumb70(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + (((opcode>>6)&31));
   CPUWriteByte(address, reg[opcode&7].B.B0);
   clockTicks = dataTicksAccess16(address) + codeTicksAccess16(armNextPC) + 2;
@@ -901,8 +859,7 @@ static INSN_REGPARM void thumb70(u32 opcode)
 // LDRB Rd, [Rs, #Imm]
 static INSN_REGPARM void thumb78(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + (((opcode>>6)&31));
   reg[opcode&7].I = CPUReadByte(address);
   clockTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(armNextPC);
@@ -911,8 +868,7 @@ static INSN_REGPARM void thumb78(u32 opcode)
 // STRH Rd, [Rs, #Imm]
 static INSN_REGPARM void thumb80(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + (((opcode>>6)&31)<<1);
   CPUWriteHalfWord(address, reg[opcode&7].W.W0);
   clockTicks = dataTicksAccess16(address) + codeTicksAccess16(armNextPC) + 2;
@@ -921,8 +877,7 @@ static INSN_REGPARM void thumb80(u32 opcode)
 // LDRH Rd, [Rs, #Imm]
 static INSN_REGPARM void thumb88(u32 opcode)
 {
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[(opcode>>3)&7].I + (((opcode>>6)&31)<<1);
   reg[opcode&7].I = CPUReadHalfWord(address);
   clockTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(armNextPC);
@@ -932,8 +887,7 @@ static INSN_REGPARM void thumb88(u32 opcode)
 static INSN_REGPARM void thumb90(u32 opcode)
 {
   u8 regist = (opcode >> 8) & 7;
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[13].I + ((opcode&255)<<2);
   CPUWriteMemory(address, reg[regist].I);
   clockTicks = dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2;
@@ -943,8 +897,7 @@ static INSN_REGPARM void thumb90(u32 opcode)
 static INSN_REGPARM void thumb98(u32 opcode)
 {
   u8 regist = (opcode >> 8) & 7;
-  if (busPrefetchCount == 0)
-    busPrefetch = busPrefetchEnable;
+  UPDATE_BUS_PREFETCH
   u32 address = reg[13].I + ((opcode&255)<<2);
   reg[regist].I = CPUReadMemoryQuick(address);
   clockTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC);
@@ -1439,151 +1392,230 @@ int thumbExecute()
     bool handledInline = false;
 
     // FAST-PATH DISPATCHER
-    // Extract top 5 bits (opcode >> 11) to intercept ALU/Shift/Immediate ops
-    int top5 = opcode >> 11;
-    switch (top5) {
-        case 0: // LSL Rd, Rm, #Imm5
-        {
-            int dest = opcode & 0x07;
-            int source = (opcode >> 3) & 0x07;
-            int shift = (opcode >> 6) & 0x1F;
-            u32 value;
-            if (LIKELY(shift)) {
-                C_FLAG = (reg[source].I >> (32 - shift)) & 1;
-                value = reg[source].I << shift;
-            } else {
-                value = reg[source].I;
-            }
-            reg[dest].I = value;
-            N_FLAG = (value >> 31);
-            Z_FLAG = (value == 0);
-            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-            handledInline = true;
-            break;
-        }
-        case 1: // LSR Rd, Rm, #Imm5
-        {
-            int dest = opcode & 0x07;
-            int source = (opcode >> 3) & 0x07;
-            int shift = (opcode >> 6) & 0x1F;
-            u32 value;
-            if (LIKELY(shift)) {
-                C_FLAG = (reg[source].I >> (shift - 1)) & 1;
-                value = reg[source].I >> shift;
-            } else {
-                C_FLAG = (reg[source].I >> 31);
-                value = 0;
-            }
-            reg[dest].I = value;
-            N_FLAG = (value >> 31);
-            Z_FLAG = (value == 0);
-            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-            handledInline = true;
-            break;
-        }
-        case 2: // ASR Rd, Rm, #Imm5
-        {
-            int dest = opcode & 0x07;
-            int source = (opcode >> 3) & 0x07;
-            int shift = (opcode >> 6) & 0x1F;
-            u32 value;
-            if (LIKELY(shift)) {
-                C_FLAG = ((u32)((s32)reg[source].I >> (int)(shift - 1))) & 1;
-                value = (u32)((s32)reg[source].I >> (int)shift);
-            } else {
-                C_FLAG = (reg[source].I >> 31);
-                value = (u32)((s32)reg[source].I >> 31);
-            }
-            reg[dest].I = value;
-            N_FLAG = (value >> 31);
-            Z_FLAG = (value == 0);
-            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-            handledInline = true;
-            break;
-        }
-        case 3: // ADD/SUB Rd, Rs, Rn / #Imm3
-        {
-            int dest = opcode & 0x07;
-            int source = (opcode >> 3) & 0x07;
-            u32 lhs = reg[source].I;
+	// Extract top 5 bits (opcode >> 11) to intercept ALU/Shift/Immediate ops
+	int top5 = opcode >> 11;
+	switch (top5) {
+		case 0: // LSL Rd, Rm, #Imm5
+		{
+			int dest = opcode & 0x07;
+			int source = (opcode >> 3) & 0x07;
+			int shift = (opcode >> 6) & 0x1F;
+			u32 value;
+			if (LIKELY(shift)) {
+				C_FLAG = (reg[source].I >> (32 - shift)) & 1;
+				value = reg[source].I << shift;
+			} else {
+				value = reg[source].I;
+			}
+			reg[dest].I = value;
+			N_FLAG = (value >> 31);
+			Z_FLAG = (value == 0);
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+			handledInline = true;
+			break;
+		}
+		case 1: // LSR Rd, Rm, #Imm5
+		{
+			int dest = opcode & 0x07;
+			int source = (opcode >> 3) & 0x07;
+			int shift = (opcode >> 6) & 0x1F;
+			u32 value;
+			if (LIKELY(shift)) {
+				C_FLAG = (reg[source].I >> (shift - 1)) & 1;
+				value = reg[source].I >> shift;
+			} else {
+				C_FLAG = (reg[source].I >> 31);
+				value = 0;
+			}
+			reg[dest].I = value;
+			N_FLAG = (value >> 31);
+			Z_FLAG = (value == 0);
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+			handledInline = true;
+			break;
+		}
+		case 2: // ASR Rd, Rm, #Imm5
+		{
+			int dest = opcode & 0x07;
+			int source = (opcode >> 3) & 0x07;
+			int shift = (opcode >> 6) & 0x1F;
+			u32 value;
+			if (LIKELY(shift)) {
+				C_FLAG = ((u32)((s32)reg[source].I >> (int)(shift - 1))) & 1;
+				value = (u32)((s32)reg[source].I >> (int)shift);
+			} else {
+				C_FLAG = (reg[source].I >> 31);
+				value = (u32)((s32)reg[source].I >> 31);
+			}
+			reg[dest].I = value;
+			N_FLAG = (value >> 31);
+			Z_FLAG = (value == 0);
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+			handledInline = true;
+			break;
+		}
+		case 3: // ADD/SUB Rd, Rs, Rn / #Imm3
+		{
+			int dest = opcode & 0x07;
+			int source = (opcode >> 3) & 0x07;
+			u32 lhs = reg[source].I;
 
-            // Bit 10 distinguishes between immediate (1) and register (0)
-            u32 rhs = (opcode & 0x0400) ? ((opcode >> 6) & 0x07) : reg[(opcode >> 6) & 0x07].I;
-            u32 res;
+			// Bit 10 distinguishes between immediate (1) and register (0)
+			u32 rhs = (opcode & 0x0400) ? ((opcode >> 6) & 0x07) : reg[(opcode >> 6) & 0x07].I;
+			u32 res;
 
-            // Bit 9 distinguishes between SUB (1) and ADD (0)
-            if (opcode & 0x0200) {
-                res = lhs - rhs;
-                SUBCARRY(lhs, rhs, res);
-                SUBOVERFLOW(lhs, rhs, res);
-            } else {
-                res = lhs + rhs;
-                ADDCARRY(lhs, rhs, res);
-                ADDOVERFLOW(lhs, rhs, res);
-            }
+			// Bit 9 distinguishes between SUB (1) and ADD (0)
+			if (opcode & 0x0200) {
+				res = lhs - rhs;
+				SUBCARRY(lhs, rhs, res);
+				SUBOVERFLOW(lhs, rhs, res);
+			} else {
+				res = lhs + rhs;
+				ADDCARRY(lhs, rhs, res);
+				ADDOVERFLOW(lhs, rhs, res);
+			}
 
-            reg[dest].I = res;
-            Z_FLAG = (res == 0);
-            N_FLAG = (res >> 31);
-            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-            handledInline = true;
-            break;
-        }
-        case 4: // MOV Rd, #Imm8
-        {
-            int dest = (opcode >> 8) & 0x07;
-            u32 value = opcode & 0xFF;
-            reg[dest].I = value;
-            N_FLAG = 0;
-            Z_FLAG = (value == 0);
-            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-            handledInline = true;
-            break;
-        }
-        case 5: // CMP Rd, #Imm8
-        {
-            int dest = (opcode >> 8) & 0x07;
-            u32 lhs = reg[dest].I;
-            u32 rhs = opcode & 0xFF;
-            u32 res = lhs - rhs;
-            Z_FLAG = (res == 0);
-            N_FLAG = (res >> 31);
-            SUBCARRY(lhs, rhs, res);
-            SUBOVERFLOW(lhs, rhs, res);
-            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-            handledInline = true;
-            break;
-        }
-        case 6: // ADD Rd, #Imm8
-        {
-            int dest = (opcode >> 8) & 0x07;
-            u32 lhs = reg[dest].I;
-            u32 rhs = opcode & 0xFF;
-            u32 res = lhs + rhs;
-            reg[dest].I = res;
-            Z_FLAG = (res == 0);
-            N_FLAG = (res >> 31);
-            ADDCARRY(lhs, rhs, res);
-            ADDOVERFLOW(lhs, rhs, res);
-            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-            handledInline = true;
-            break;
-        }
-        case 7: // SUB Rd, #Imm8
-        {
-            int dest = (opcode >> 8) & 0x07;
-            u32 lhs = reg[dest].I;
-            u32 rhs = opcode & 0xFF;
-            u32 res = lhs - rhs;
-            reg[dest].I = res;
-            Z_FLAG = (res == 0);
-            N_FLAG = (res >> 31);
-            SUBCARRY(lhs, rhs, res);
-            SUBOVERFLOW(lhs, rhs, res);
-            localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-            handledInline = true;
-            break;
-        }
+			reg[dest].I = res;
+			Z_FLAG = (res == 0);
+			N_FLAG = (res >> 31);
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+			handledInline = true;
+			break;
+		}
+		case 4: // MOV Rd, #Imm8
+		{
+			int dest = (opcode >> 8) & 0x07;
+			u32 value = opcode & 0xFF;
+			reg[dest].I = value;
+			N_FLAG = 0;
+			Z_FLAG = (value == 0);
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+			handledInline = true;
+			break;
+		}
+		case 5: // CMP Rd, #Imm8
+		{
+			int dest = (opcode >> 8) & 0x07;
+			u32 lhs = reg[dest].I;
+			u32 rhs = opcode & 0xFF;
+			u32 res = lhs - rhs;
+			Z_FLAG = (res == 0);
+			N_FLAG = (res >> 31);
+			SUBCARRY(lhs, rhs, res);
+			SUBOVERFLOW(lhs, rhs, res);
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+			handledInline = true;
+			break;
+		}
+		case 6: // ADD Rd, #Imm8
+		{
+			int dest = (opcode >> 8) & 0x07;
+			u32 lhs = reg[dest].I;
+			u32 rhs = opcode & 0xFF;
+			u32 res = lhs + rhs;
+			reg[dest].I = res;
+			Z_FLAG = (res == 0);
+			N_FLAG = (res >> 31);
+			ADDCARRY(lhs, rhs, res);
+			ADDOVERFLOW(lhs, rhs, res);
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+			handledInline = true;
+			break;
+		}
+		case 7: // SUB Rd, #Imm8
+		{
+			int dest = (opcode >> 8) & 0x07;
+			u32 lhs = reg[dest].I;
+			u32 rhs = opcode & 0xFF;
+			u32 res = lhs - rhs;
+			reg[dest].I = res;
+			Z_FLAG = (res == 0);
+			N_FLAG = (res >> 31);
+			SUBCARRY(lhs, rhs, res);
+			SUBOVERFLOW(lhs, rhs, res);
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+			handledInline = true;
+			break;
+		}
+
+		// ========================================================================
+		// Broadway Optimization: Memory I/O Fast-Path
+		// Intercepts Load/Store immediates to bypass the indirect pointer tables.
+		// Replaces conditional 'busPrefetch' branch with 1-cycle bitwise masking.
+		// ========================================================================
+
+		case 12: // STR Rd, [Rs, #Imm5] (thumb60)
+		{
+			busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
+			u32 address = reg[(opcode >> 3) & 7].I + (((opcode >> 6) & 31) << 2);
+			CPUWriteMemory(address, reg[opcode & 7].I);
+			localTicks = dataTicksAccess32(address) + codeTicksAccess16(oldArmNextPC) + 2;
+			handledInline = true;
+			break;
+		}
+		case 13: // LDR Rd, [Rs, #Imm5] (thumb68)
+		{
+			busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
+			u32 address = reg[(opcode >> 3) & 7].I + (((opcode >> 6) & 31) << 2);
+			reg[opcode & 7].I = CPUReadMemory(address);
+			localTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(oldArmNextPC);
+			handledInline = true;
+			break;
+		}
+		case 14: // STRB Rd, [Rs, #Imm5] (thumb70)
+		{
+			busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
+			u32 address = reg[(opcode >> 3) & 7].I + ((opcode >> 6) & 31);
+			CPUWriteByte(address, reg[opcode & 7].B.B0);
+			localTicks = dataTicksAccess16(address) + codeTicksAccess16(oldArmNextPC) + 2;
+			handledInline = true;
+			break;
+		}
+		case 15: // LDRB Rd, [Rs, #Imm5] (thumb78)
+		{
+			busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
+			u32 address = reg[(opcode >> 3) & 7].I + ((opcode >> 6) & 31);
+			reg[opcode & 7].I = CPUReadByte(address);
+			localTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(oldArmNextPC);
+			handledInline = true;
+			break;
+		}
+		case 16: // STRH Rd, [Rs, #Imm5] (thumb80)
+		{
+			busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
+			u32 address = reg[(opcode >> 3) & 7].I + (((opcode >> 6) & 31) << 1);
+			CPUWriteHalfWord(address, reg[opcode & 7].W.W0);
+			localTicks = dataTicksAccess16(address) + codeTicksAccess16(oldArmNextPC) + 2;
+			handledInline = true;
+			break;
+		}
+		case 17: // LDRH Rd, [Rs, #Imm5] (thumb88)
+		{
+			busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
+			u32 address = reg[(opcode >> 3) & 7].I + (((opcode >> 6) & 31) << 1);
+			reg[opcode & 7].I = CPUReadHalfWord(address);
+			localTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(oldArmNextPC);
+			handledInline = true;
+			break;
+		}
+		case 18: // STR R0~R7, [SP, #Imm8] (thumb90)
+		{
+			busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
+			u32 address = reg[13].I + ((opcode & 255) << 2);
+			CPUWriteMemory(address, reg[(opcode >> 8) & 7].I);
+			localTicks = dataTicksAccess32(address) + codeTicksAccess16(oldArmNextPC) + 2;
+			handledInline = true;
+			break;
+		}
+		case 19: // LDR R0~R7, [SP, #Imm8] (thumb98)
+		{
+			busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
+			u32 address = reg[13].I + ((opcode & 255) << 2);
+			reg[(opcode >> 8) & 7].I = CPUReadMemoryQuick(address);
+			localTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(oldArmNextPC);
+			handledInline = true;
+			break;
+		}
     }
 
     // FAST-PATH: Conditional Branches (Bcc) Intercept (Opcodes 0xD000 - 0xDDFF)
