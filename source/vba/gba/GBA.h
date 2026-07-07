@@ -69,23 +69,11 @@ extern int  oldreg[18];
 extern char oldbuffer[10];
 #endif
 
-extern bool CPUReadGSASnapshot(const char *);
-extern bool CPUReadGSASPSnapshot(const char *);
-extern bool CPUWriteGSASnapshot(const char *, const char *, const char *, const char *);
-extern bool CPUWriteBatteryFile(const char *);
-extern bool CPUReadBatteryFile(const char *);
-extern bool CPUExportEepromFile(const char *);
-extern bool CPUImportEepromFile(const char *);
-extern bool CPUWritePNGFile(const char *);
-extern bool CPUWriteBMPFile(const char *);
 extern void CPUCleanUp();
 extern void CPUUpdateRender();
 extern void CPUUpdateRenderBuffers(bool);
 extern bool CPUReadMemState(char *, int);
 extern bool CPUWriteMemState(char *, int);
-extern bool CPUReadState(const char *);
-extern bool CPUWriteState(const char *);
-extern int CPULoadRom(const char *);
 extern void doMirroring(bool);
 extern void CPUUpdateRegister(u32, u16);
 extern void applyTimer ();
@@ -93,8 +81,6 @@ extern void CPUInit(const char *,bool);
 extern void CPUReset();
 extern void CPULoop(int);
 extern void CPUCheckDMA(int,int);
-extern bool CPUIsGBAImage(const char *);
-extern bool CPUIsZipFile(const char *);
 #ifdef PROFILING
 #include "prof/prof.h"
 extern void cpuProfil(profile_segment *seg);

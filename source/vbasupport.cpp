@@ -87,12 +87,6 @@ struct EmulatedSystem emulator =
 	NULL,
 	NULL,
 	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
 	false,
 	0
 };
@@ -1280,10 +1274,6 @@ bool LoadVBAROM()
 		if (cartridgeType == CARTRIDGE_GB)
 		{
 			gbGetHardwareType();
-
-			// used for the handling of the gb Boot Rom
-			//if (gbHardware & 5)
-			//gbCPUInit(gbBiosFileName, useBios);
 
 			LoadPatch();
 

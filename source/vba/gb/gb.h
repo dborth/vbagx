@@ -17,7 +17,6 @@ extern gbRegister AF, BC, DE, HL, SP, PC;
 extern u16 IFF;
 int gbDis(char *, u16);
 
-bool gbLoadRom(const char *);
 bool gbUpdateSizes();
 void gbEmulate(int);
 void gbWriteMemory(u16, u8);
@@ -26,18 +25,10 @@ bool gbIsGameboyRom(const char *);
 void gbGetHardwareType();
 void gbReset();
 void gbCleanUp();
-void gbCPUInit(const char *,bool);
-bool gbWriteBatteryFile(const char *);
-bool gbWriteBatteryFile(const char *, bool);
-bool gbReadBatteryFile(const char *);
-bool gbWriteSaveState(const char *);
 bool gbWriteMemSaveState(char *, int);
 bool gbReadSaveState(const char *);
 bool gbReadMemSaveState(char *, int);
 void gbSgbRenderBorder();
-bool gbWritePNGFile(const char *);
-bool gbWriteBMPFile(const char *);
-bool gbReadGSASnapshot(const char *);
 
 extern int gbHardware;
 
