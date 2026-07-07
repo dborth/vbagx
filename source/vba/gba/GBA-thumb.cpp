@@ -456,42 +456,56 @@ static INSN_REGPARM void thumb40_2(u32 opcode)
 // LSR Rd, Rs
 static INSN_REGPARM void thumb40_3(u32 opcode)
 {
-  int dest = opcode & 7;
-  u32 value = reg[(opcode >> 3)&7].B.B0;
-  if(value) {
-    if(value == 32) {
-      C_FLAG = (reg[dest].I >> 31);
-      value = 0;
-    } else if(value < 32) {
-      LSR_RD_RS;
-    } else {
-      C_FLAG = 0;
-      value = 0;
-    }
-    reg[dest].I = value;
-  }
-  N_FLAG = (reg[dest].I >> 31);
-  Z_FLAG = (reg[dest].I == 0);
-  clockTicks = codeTicksAccess16(armNextPC)+2;
+    int dest = opcode & 7;
+    u32 shift = reg[(opcode >> 3) & 7].B.B0;
+    u32 val = reg[dest].I;
+
+    // Generate masks
+    u32 mask_not_0 = -(u32)(shift != 0);
+    u32 mask_less_32 = -(u32)(shift < 32);
+
+    // Shift result logic (shift >= 32 yields 0)
+    u32 res_shifted = (val >> (shift & 0x1F)) & mask_less_32;
+    reg[dest].I = (res_shifted & mask_not_0) | (val & ~mask_not_0);
+
+    // C_FLAG logic (shift == 32 yields bit 31; shift > 32 yields 0)
+    u32 c_shift = shift - 1;
+    u32 mask_c_valid = -(u32)(c_shift < 32);
+    u32 new_c = ((val >> (c_shift & 0x1F)) & 1) & mask_c_valid;
+
+    C_FLAG = (new_c & mask_not_0) | (C_FLAG & ~mask_not_0);
+
+    N_FLAG = (reg[dest].I >> 31);
+    Z_FLAG = (reg[dest].I == 0);
+    clockTicks = codeTicksAccess16(armNextPC) + 2;
 }
 
 // ASR Rd, Rs
 static INSN_REGPARM void thumb41_0(u32 opcode)
 {
-  int dest = opcode & 7;
-  u32 value = reg[(opcode >> 3)&7].B.B0;
-  if(value) {
-    if(value < 32) {
-      ASR_RD_RS;
-      reg[dest].I = value;
-    } else {
-      C_FLAG = (reg[dest].I >> 31);
-      reg[dest].I = (u32)((s32)reg[dest].I >> 31);
-    }
-  }
-  N_FLAG = (reg[dest].I >> 31);
-  Z_FLAG = (reg[dest].I == 0);
-  clockTicks = codeTicksAccess16(armNextPC)+2;
+    int dest = opcode & 7;
+    u32 shift = reg[(opcode >> 3) & 7].B.B0;
+    s32 val = (s32)reg[dest].I;
+
+    u32 mask_not_0 = -(u32)(shift != 0);
+    u32 mask_less_32 = -(u32)(shift < 32);
+
+    // If shift >= 32, clamp to 31 to propagate the sign bit across the whole register
+    u32 shift_clamped = (shift & mask_less_32) | (31 & ~mask_less_32);
+    u32 res_shifted = (u32)(val >> shift_clamped);
+
+    reg[dest].I = (res_shifted & mask_not_0) | ((u32)val & ~mask_not_0);
+
+    // C_FLAG logic: bit 31 if shift >= 32
+    u32 c_shift = shift - 1;
+    u32 c_shift_clamped = (c_shift & mask_less_32) | (31 & ~mask_less_32);
+    u32 new_c = ((u32)val >> c_shift_clamped) & 1;
+
+    C_FLAG = (new_c & mask_not_0) | (C_FLAG & ~mask_not_0);
+
+    N_FLAG = (reg[dest].I >> 31);
+    Z_FLAG = (reg[dest].I == 0);
+    clockTicks = codeTicksAccess16(armNextPC) + 2;
 }
 
 // ADC Rd, Rs
@@ -513,21 +527,26 @@ static INSN_REGPARM void thumb41_2(u32 opcode)
 // ROR Rd, Rs
 static INSN_REGPARM void thumb41_3(u32 opcode)
 {
-  int dest = opcode & 7;
-  u32 value = reg[(opcode >> 3)&7].B.B0;
+    int dest = opcode & 7;
+    u32 shift = reg[(opcode >> 3) & 7].B.B0;
+    u32 val = reg[dest].I;
 
-  if(value) {
-    value = value & 0x1f;
-    if(value == 0) {
-      C_FLAG = (reg[dest].I >> 31);
-    } else {
-      ROR_RD_RS;
-      reg[dest].I = value;
-    }
-  }
-  clockTicks = codeTicksAccess16(armNextPC)+2;
-  N_FLAG = (reg[dest].I >> 31);
-  Z_FLAG = (reg[dest].I == 0);
+    u32 mask_not_0 = -(u32)(shift != 0);
+
+    // Safe branchless ROR (avoids C++ Undefined Behavior when s == 0)
+    // ((-s) & 0x1F) safely wraps back to 0 without triggering a << 32
+    u32 s = shift & 0x1F;
+    u32 res_shifted = (val >> s) | (val << ((-s) & 0x1F));
+
+    reg[dest].I = (res_shifted & mask_not_0) | (val & ~mask_not_0);
+
+    // C_FLAG logic: for ROR, C_FLAG is always bit 31 of the result if shift != 0
+    u32 new_c = (res_shifted >> 31) & 1;
+    C_FLAG = (new_c & mask_not_0) | (C_FLAG & ~mask_not_0);
+
+    N_FLAG = (reg[dest].I >> 31);
+    Z_FLAG = (reg[dest].I == 0);
+    clockTicks = codeTicksAccess16(armNextPC) + 2;
 }
 
 // TST Rd, Rs
