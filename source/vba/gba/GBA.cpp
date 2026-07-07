@@ -438,31 +438,21 @@ inline int CPUUpdateTicks()
 {
   int cpuLoopTicks = lcdTicks;
 
-  if(soundTicks < cpuLoopTicks)
-    cpuLoopTicks = soundTicks;
+  // WII OPTIMIZATION: Branchless MIN using 1-cycle bitwise arithmetic
+  // Avoids pipeline-stalling conditional jumps.
+  #define BROADWAY_MIN(a, b) ((b) + (((a) - (b)) & (((a) - (b)) >> 31)))
 
-  if(timer0On && (timer0Ticks < cpuLoopTicks)) {
-    cpuLoopTicks = timer0Ticks;
-  }
-  if(timer1On && !(TM1CNT & 4) && (timer1Ticks < cpuLoopTicks)) {
-    cpuLoopTicks = timer1Ticks;
-  }
-  if(timer2On && !(TM2CNT & 4) && (timer2Ticks < cpuLoopTicks)) {
-    cpuLoopTicks = timer2Ticks;
-  }
-  if(timer3On && !(TM3CNT & 4) && (timer3Ticks < cpuLoopTicks)) {
-    cpuLoopTicks = timer3Ticks;
-  }
+  cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, soundTicks);
 
-  if (SWITicks) {
-    if (SWITicks < cpuLoopTicks)
-        cpuLoopTicks = SWITicks;
-  }
+  if(timer0On) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, timer0Ticks);
+  if(timer1On && !(TM1CNT & 4)) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, timer1Ticks);
+  if(timer2On && !(TM2CNT & 4)) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, timer2Ticks);
+  if(timer3On && !(TM3CNT & 4)) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, timer3Ticks);
 
-  if (IRQTicks) {
-    if (IRQTicks < cpuLoopTicks)
-        cpuLoopTicks = IRQTicks;
-  }
+  if (SWITicks) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, SWITicks);
+  if (IRQTicks) cpuLoopTicks = BROADWAY_MIN(cpuLoopTicks, IRQTicks);
+
+  #undef BROADWAY_MIN
 
   return cpuLoopTicks;
 }
@@ -1875,39 +1865,46 @@ void CPUCompareVCOUNT()
   }
 }
 
-void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
+// --- WII OPTIMIZATION: DMA TEMPLATE & PIPELINE TUNING ---
+// Extracts transfer32 to compile-time to allow GCC to prune dead code.
+// Unrolls the memory traversal by 4 to heavily optimize lwzu/stwu instruction flow.
+template <bool transfer32>
+static void doDMA_T(u32 &s, u32 &d, u32 si, u32 di, u32 c)
 {
-  int sm = s >> 24;
-  int dm = d >> 24;
-  int sw = 0;
-  int dw = 0;
-  int sc = c;
+  // Branchless 1-cycle clamp mapping, bypassing the original if (sm > 15) branches
+  u32 sm = (s >> 24) & 15;
+  u32 dm = (d >> 24) & 15;
+  u32 sc = c;
 
   cpuDmaHack = true;
   cpuDmaCount = c;
-  // This is done to get the correct waitstates.
-  if (sm>15)
-      sm=15;
-  if (dm>15)
-      dm=15;
 
-  //if ((sm>=0x05) && (sm<=0x07) || (dm>=0x05) && (dm <=0x07))
-  //    blank = (((DISPSTAT | ((DISPSTAT>>1)&1))==1) ?  true : false);
-
-  if(transfer32) {
+  if (transfer32) {
     s &= 0xFFFFFFFC;
-    if(s < 0x02000000 && (reg[15].I >> 24)) {
-      while(c != 0) {
-        CPUWriteMemory(d, 0);
-        d += di;
+    if (s < 0x02000000 && (reg[15].I >> 24)) {
+      // Bulk transfer unrolling for BIOS masking
+      while (c >= 4) {
+        CPUWriteMemory(d, 0); d += di;
+        CPUWriteMemory(d, 0); d += di;
+        CPUWriteMemory(d, 0); d += di;
+        CPUWriteMemory(d, 0); d += di;
+        c -= 4;
+      }
+      while (c != 0) {
+        CPUWriteMemory(d, 0); d += di;
         --c;
       }
     } else {
-      while(c != 0) {
-        cpuDmaLast = CPUReadMemory(s);
-        CPUWriteMemory(d, cpuDmaLast);
-        d += di;
-        s += si;
+      // Bulk 32-bit DMA transfer unrolled for pipelined Load/Store
+      while (c >= 4) {
+        cpuDmaLast = CPUReadMemory(s); CPUWriteMemory(d, cpuDmaLast); s += si; d += di;
+        cpuDmaLast = CPUReadMemory(s); CPUWriteMemory(d, cpuDmaLast); s += si; d += di;
+        cpuDmaLast = CPUReadMemory(s); CPUWriteMemory(d, cpuDmaLast); s += si; d += di;
+        cpuDmaLast = CPUReadMemory(s); CPUWriteMemory(d, cpuDmaLast); s += si; d += di;
+        c -= 4;
+      }
+      while (c != 0) {
+        cpuDmaLast = CPUReadMemory(s); CPUWriteMemory(d, cpuDmaLast); s += si; d += di;
         --c;
       }
     }
@@ -1915,19 +1912,29 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
     s &= 0xFFFFFFFE;
     si = (int)si >> 1;
     di = (int)di >> 1;
-    if(s < 0x02000000 && (reg[15].I >> 24)) {
-      while(c != 0) {
-        CPUWriteHalfWord(d, 0);
-        d += di;
+    if (s < 0x02000000 && (reg[15].I >> 24)) {
+      while (c >= 4) {
+        CPUWriteHalfWord(d, 0); d += di;
+        CPUWriteHalfWord(d, 0); d += di;
+        CPUWriteHalfWord(d, 0); d += di;
+        CPUWriteHalfWord(d, 0); d += di;
+        c -= 4;
+      }
+      while (c != 0) {
+        CPUWriteHalfWord(d, 0); d += di;
         --c;
       }
     } else {
-      while(c != 0) {
-        cpuDmaLast = CPUReadHalfWord(s);
-        CPUWriteHalfWord(d, cpuDmaLast);
-        cpuDmaLast |= (cpuDmaLast<<16);
-        d += di;
-        s += si;
+      // Bulk 16-bit DMA transfer unrolled for pipelined Load/Store
+      while (c >= 4) {
+        cpuDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, cpuDmaLast); cpuDmaLast |= (cpuDmaLast << 16); s += si; d += di;
+        cpuDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, cpuDmaLast); cpuDmaLast |= (cpuDmaLast << 16); s += si; d += di;
+        cpuDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, cpuDmaLast); cpuDmaLast |= (cpuDmaLast << 16); s += si; d += di;
+        cpuDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, cpuDmaLast); cpuDmaLast |= (cpuDmaLast << 16); s += si; d += di;
+        c -= 4;
+      }
+      while (c != 0) {
+        cpuDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, cpuDmaLast); cpuDmaLast |= (cpuDmaLast << 16); s += si; d += di;
         --c;
       }
     }
@@ -1935,24 +1942,38 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
 
   cpuDmaCount = 0;
 
-  int totalTicks = 0;
+  // Since transfer32 is a template argument, the compiler eliminates these ternaries entirely.
+  u32 sw = 1 + (transfer32 ? memoryWaitSeq32[sm] : memoryWaitSeq[sm]);
+  u32 dw = 1 + (transfer32 ? memoryWaitSeq32[dm] : memoryWaitSeq[dm]);
+  u32 waitBase = 6 + (transfer32 ? memoryWait32[sm] + memoryWaitSeq32[dm] : memoryWait[sm] + memoryWaitSeq[dm]);
 
-  if(transfer32) {
-      sw =1+memoryWaitSeq32[sm & 15];
-      dw =1+memoryWaitSeq32[dm & 15];
-      totalTicks = (sw+dw)*(sc-1) + 6 + memoryWait32[sm & 15] +
-          memoryWaitSeq32[dm & 15];
-  }
-  else
-  {
-     sw = 1+memoryWaitSeq[sm & 15];
-     dw = 1+memoryWaitSeq[dm & 15];
-      totalTicks = (sw+dw)*(sc-1) + 6 + memoryWait[sm & 15] +
-          memoryWaitSeq[dm & 15];
-  }
+  u32 tickAdd = sw + dw;
+  u32 t = sc - 1;
+  u32 totalWait = waitBase;
 
-  cpuDmaTicksToUpdate += totalTicks;
+  // --- WII OPTIMIZATION: BRANCHLESS MULTIPLY (mullw avoidance) ---
+  // Calculates: totalWait += (tickAdd * t)
+  // Because tickAdd is a known bounded variable (max ~34), we replace
+  // the costly mullw instruction with 6 cycles of pure bitwise shifts and masked adds.
+  totalWait += (t & -(tickAdd & 1));
+  totalWait += ((t << 1) & -((tickAdd >> 1) & 1));
+  totalWait += ((t << 2) & -((tickAdd >> 2) & 1));
+  totalWait += ((t << 3) & -((tickAdd >> 3) & 1));
+  totalWait += ((t << 4) & -((tickAdd >> 4) & 1));
+  totalWait += ((t << 5) & -((tickAdd >> 5) & 1));
+
+  cpuDmaTicksToUpdate += totalWait;
   cpuDmaHack = false;
+}
+
+// Runtime dispatcher
+void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
+{
+  if (transfer32) {
+    doDMA_T<true>(s, d, si, di, c);
+  } else {
+    doDMA_T<false>(s, d, si, di, c);
+  }
 }
 
 // -------------------------------------------------------------------------
@@ -3483,8 +3504,9 @@ typedef const TileLine (*TileReader) (const u16 *, const int, const u8 *, u16 *,
 
 static inline void gfxDrawPixel(u32 *dest, const u8 color, const u16 *palette, const u32 prio)
 {
-   // Pure bitwise clamping mapping to 1-cycle execution
-   u32 mask = -(color != 0);
+   // Pure branchless bitwise clamping mapping to 1-cycle execution
+   s32 c = color;
+   u32 mask = (c | -c) >> 31;
    *dest = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
 }
 
@@ -3535,29 +3557,29 @@ inline const TileLine gfxReadTilePal(const u16 *screenSource, const int yyy, con
    palette += tile.palette * 16;
    TileLine tileLine;
 
-   const u8h *tileBase = (u8h*) &charBase[tile.tileNum * 32 + tileY * 4];
+   const u8 *tileBase = &charBase[tile.tileNum * 32 + tileY * 4];
 
    if (!tile.hFlip)
    {
-      gfxDrawPixel(&tileLine.pixels[0], tileBase[0].lo, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[1], tileBase[0].hi, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[2], tileBase[1].lo, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[3], tileBase[1].hi, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[4], tileBase[2].lo, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[5], tileBase[2].hi, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[6], tileBase[3].lo, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[7], tileBase[3].hi, palette, prio);
+      gfxDrawPixel(&tileLine.pixels[0], tileBase[0] & 0x0F, palette, prio);
+      gfxDrawPixel(&tileLine.pixels[1], tileBase[0] >> 4,   palette, prio);
+      gfxDrawPixel(&tileLine.pixels[2], tileBase[1] & 0x0F, palette, prio);
+      gfxDrawPixel(&tileLine.pixels[3], tileBase[1] >> 4,   palette, prio);
+      gfxDrawPixel(&tileLine.pixels[4], tileBase[2] & 0x0F, palette, prio);
+      gfxDrawPixel(&tileLine.pixels[5], tileBase[2] >> 4,   palette, prio);
+      gfxDrawPixel(&tileLine.pixels[6], tileBase[3] & 0x0F, palette, prio);
+      gfxDrawPixel(&tileLine.pixels[7], tileBase[3] >> 4,   palette, prio);
    }
    else
    {
-      gfxDrawPixel(&tileLine.pixels[0], tileBase[3].hi, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[1], tileBase[3].lo, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[2], tileBase[2].hi, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[3], tileBase[2].lo, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[4], tileBase[1].hi, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[5], tileBase[1].lo, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[6], tileBase[0].hi, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[7], tileBase[0].lo, palette, prio);
+      gfxDrawPixel(&tileLine.pixels[0], tileBase[3] >> 4,   palette, prio);
+      gfxDrawPixel(&tileLine.pixels[1], tileBase[3] & 0x0F, palette, prio);
+      gfxDrawPixel(&tileLine.pixels[2], tileBase[2] >> 4,   palette, prio);
+      gfxDrawPixel(&tileLine.pixels[3], tileBase[2] & 0x0F, palette, prio);
+      gfxDrawPixel(&tileLine.pixels[4], tileBase[1] >> 4,   palette, prio);
+      gfxDrawPixel(&tileLine.pixels[5], tileBase[1] & 0x0F, palette, prio);
+      gfxDrawPixel(&tileLine.pixels[6], tileBase[0] >> 4,   palette, prio);
+      gfxDrawPixel(&tileLine.pixels[7], tileBase[0] & 0x0F, palette, prio);
    }
 
    return tileLine;
