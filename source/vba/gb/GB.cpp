@@ -2099,19 +2099,6 @@ bool CPUIsGBBios(const char * file)
 void gbCPUInit(const char *biosFileName, bool useBiosFile)
 {
   useBios = false;
-  if (useBiosFile)
-  {
-/*    int size = 0x100;
-    if(utilLoad(biosFileName,
-                CPUIsGBBios,
-                bios,
-                size)) {
-      if(size == 0x100)
-        useBios = true;
-      else
-        systemMessage(MSG_INVALID_BIOS_FILE_SIZE, N_("Invalid BOOTROM file size"));
-    }*/
-  }
 }
 
 void gbGetHardwareType()

@@ -1571,21 +1571,59 @@ int thumbExecute()
 		// Replaces conditional 'busPrefetch' branch with 1-cycle bitwise masking.
 		// ========================================================================
 
-		case 12: // STR Rd, [Rs, #Imm5] (thumb60)
+		case 12: // STR Rd, [Rb, #Imm]
 		{
-			busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-			u32 address = reg[(opcode >> 3) & 7].I + (((opcode >> 6) & 31) << 2);
-			CPUWriteMemory(address, reg[opcode & 7].I);
-			localTicks = dataTicksAccess32(address) + codeTicksAccess16(oldArmNextPC) + 2;
+			int dest = opcode & 0x07;
+			int base = (opcode >> 3) & 0x07;
+			u32 offset = ((opcode >> 6) & 0x1F) << 2;
+			u32 address = reg[base].I + offset;
+			u32 bank = address >> 24;
+
+			if (LIKELY((bank & 0x1E) == 0x02)) { // Catches 0x02 (WRAM) and 0x03 (IRAM)
+				u32 idx = bank & 1;
+				static u8* const ram_banks[2] = { workRAM, internalRAM };
+				static const u32 ram_masks[2] = { 0x3FFFC, 0x7FFC };
+
+				// Pre-calculating the target pointer allows the compiler to assign a clean base register
+				u32 *targetPtr = (u32*)&ram_banks[idx][address & ram_masks[idx]];
+				WRITE32LE(targetPtr, reg[dest].I); //[cite: 2]
+			} else {
+				CPUWriteMemory(address, reg[dest].I); //
+			}
+
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 			handledInline = true;
 			break;
 		}
-		case 13: // LDR Rd, [Rs, #Imm5] (thumb68)
+		case 13: // LDR Rd, [Rb, #Imm]
 		{
-			busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-			u32 address = reg[(opcode >> 3) & 7].I + (((opcode >> 6) & 31) << 2);
-			reg[opcode & 7].I = CPUReadMemory(address);
-			localTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(oldArmNextPC);
+			int dest = opcode & 0x07;
+			int base = (opcode >> 3) & 0x07;
+			u32 offset = ((opcode >> 6) & 0x1F) << 2;
+			u32 address = reg[base].I + offset;
+			u32 bank = address >> 24;
+
+			if (LIKELY((bank & 0x1E) == 0x02)) { // Catches 0x02 (WRAM) and 0x03 (IRAM)
+				u32 idx = bank & 1;
+				static u8* const ram_banks[2] = { workRAM, internalRAM };
+				static const u32 ram_masks[2] = { 0x3FFFC, 0x7FFC };
+
+				// Resolve pointer to a dedicated variable first to satisfy Port.h assembly constraints
+				u32 *targetPtr = (u32*)&ram_banks[idx][address & ram_masks[idx]];
+				u32 val = READ32LE(targetPtr); //[cite: 2]
+
+				// Standard GBA unaligned read rotation inline
+				if (UNLIKELY(address & 3)) {
+					u32 shift = (address & 3) << 3;
+					val = (val >> shift) | (val << (32 - shift));
+				}
+				reg[dest].I = val;
+			} else {
+				// Safely drop back to the main memory map if it hits ROM/MMIO
+				reg[dest].I = CPUReadMemory(address); //
+			}
+
+			localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 			handledInline = true;
 			break;
 		}

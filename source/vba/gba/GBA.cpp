@@ -2668,24 +2668,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
   gbaSaveType = 0;
   eepromInUse = 0;
   saveType = 0;
-  useBios = false;
-
-/*  if(useBiosFile) {
-    int size = 0x4000;
-    if(utilLoad(biosFileName,
-                CPUIsGBABios,
-                bios,
-                size)) {
-      if(size == 0x4000)
-        useBios = true;
-      else
-        systemMessage(MSG_INVALID_BIOS_FILE_SIZE, N_("Invalid BIOS file size"));
-    }
-  }*/
-
-  if(!useBios) {
-    memcpy(bios, myROM, sizeof(myROM));
-  }
+  memcpy(bios, myROM, sizeof(myROM));
 
   int i = 0;
 
