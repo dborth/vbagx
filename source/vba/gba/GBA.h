@@ -20,15 +20,13 @@ typedef struct {
   u32 mask;
 } memoryMap;
 
-// Represents a single 16MB memory region slice
-// OPTIMIZATION: 8-byte aligned structure prevents struct padding bloat
-struct __attribute__((aligned(8))) GBAPage {
-    u8* base;
-    u32 mask;
-};
-
-// Global page table covering the entire 32-bit address space (256 * 16MB banks)
-extern GBAPage gbaMemoryPages[256];
+// -------------------------------------------------------------------------
+// OPTIMIZATION: Parallel Arrays (SoA) completely eliminate mullw penalties.
+// GCC natively maps array offsets to 1-cycle 'idx << 2' shifts.
+// -------------------------------------------------------------------------
+extern u8* gbaReadPagePtrs[256];
+extern u32 gbaReadPageMasks[256];
+extern u8* gbaWritePagePtrs[256];
 
 typedef union {
   struct {

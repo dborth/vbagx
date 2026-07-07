@@ -2629,27 +2629,44 @@ void applyTimer ()
 u8 cpuBitsSet[256];
 u8 cpuLowestBitSet[256];
 
-GBAPage gbaMemoryPages[256];
+u8* gbaReadPagePtrs[256];
+u32 gbaReadPageMasks[256];
+u8* gbaWritePagePtrs[256];
 
 static inline void GBA_InitMemoryPages() {
-    // 1. Secure default state. A NULL base branchlessly signals the MMIO slow-path.
     for (int i = 0; i < 256; i++) {
-        gbaMemoryPages[i].base = NULL;
-        gbaMemoryPages[i].mask = 0;
+        gbaReadPagePtrs[i]  = NULL;
+        gbaReadPageMasks[i] = 0;
+        gbaWritePagePtrs[i] = NULL;
     }
 
-    // 0x00 - 0x07 standard mappings
-    gbaMemoryPages[0x00].base = bios;        gbaMemoryPages[0x00].mask = 0x3FFF;
-    gbaMemoryPages[0x02].base = workRAM;     gbaMemoryPages[0x02].mask = 0x3FFFF;
-    gbaMemoryPages[0x03].base = internalRAM; gbaMemoryPages[0x03].mask = 0x7FFF;
-    gbaMemoryPages[0x05].base = paletteRAM;  gbaMemoryPages[0x05].mask = 0x3FF;
-    gbaMemoryPages[0x06].base = vram;        gbaMemoryPages[0x06].mask = 0x1FFFF;
-    gbaMemoryPages[0x07].base = oam;         gbaMemoryPages[0x07].mask = 0x3FF;
+    // 0x02: WRAM
+    gbaReadPagePtrs[0x02]  = workRAM;
+    gbaReadPageMasks[0x02] = 0x3FFFF;
+    gbaWritePagePtrs[0x02] = workRAM;
 
-#ifndef USE_VM // Only populate physical ROM pointers if GC Virtual Memory is disabled
-    for (int i = 0x08; i <= 0x0D; i++) {
-        gbaMemoryPages[i].base = rom;
-        gbaMemoryPages[i].mask = 0x1FFFFFF; 
+    // 0x03: IRAM
+    gbaReadPagePtrs[0x03]  = internalRAM;
+    gbaReadPageMasks[0x03] = 0x7FFF;
+    gbaWritePagePtrs[0x03] = internalRAM;
+
+    // 0x05: PaletteRAM
+    // Write array is intentionally left NULL to force Corvette hack checks via slow-path.
+    gbaReadPagePtrs[0x05]  = paletteRAM;
+    gbaReadPageMasks[0x05] = 0x3FF;
+
+    // 0x07: OAM
+    gbaReadPagePtrs[0x07]  = oam;
+    gbaReadPageMasks[0x07] = 0x3FF;
+    gbaWritePagePtrs[0x07] = oam;
+
+    // 0x09 - 0x0C: ROM (Wait States 1 & 2)
+    // 0x08 is intentionally left NULL to force RTC checks via slow-path.
+    // Only populate physical ROM pointers if GC Virtual Memory is disabled
+#ifndef USE_VM
+    for (int i = 0x09; i <= 0x0C; i++) {
+        gbaReadPagePtrs[i]  = rom;
+        gbaReadPageMasks[i] = 0x1FFFFFF;
     }
 #endif
 }
