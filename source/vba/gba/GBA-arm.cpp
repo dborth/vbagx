@@ -167,10 +167,10 @@ static void count(u32 opcode, int cond_res)
     if (LIKELY(shift)) {                                     \
         if (shift == 32) {                                   \
             value = 0;                                       \
-            C_OUT = (rm & 1 ? true : false);                 \
+            C_OUT = (rm & 1);                                \
         } else if (LIKELY(shift < 32)) {                     \
             u32 v = rm;                                      \
-            C_OUT = (v >> (32 - shift)) & 1 ? true : false;  \
+            C_OUT = (v >> (32 - shift)) & 1;                 \
             value = v << shift;                              \
         } else {                                             \
             value = 0;                                       \
@@ -200,17 +200,17 @@ static void count(u32 opcode, int cond_res)
     if (LIKELY(shift)) {                                \
         if (shift == 32) {                              \
             value = 0;                                  \
-            C_OUT = (rm & 0x80000000 ? true : false);\
+            C_OUT = (rm >> 31);                         \
         } else if (LIKELY(shift < 32)) {                \
-            u32 v = rm;               \
-            C_OUT = (v >> (shift - 1)) & 1 ? true : false;\
+            u32 v = rm;                                 \
+            C_OUT = (v >> (shift - 1)) & 1;             \
             value = v >> shift;                         \
         } else {                                        \
             value = 0;                                  \
             C_OUT = false;                              \
         }                                               \
     } else {                                            \
-        value = rm;                   \
+        value = rm;                                     \
     }
 // OP Rd,Rb,Rm ASR #
 #define VALUE_ASR_IMM_C \
@@ -692,9 +692,20 @@ static INSN_REGPARM void arm0F9(u32 opcode) { MUL_INSN(OP_SMLAL, SETCOND_MULL, 3
 static INSN_REGPARM void arm109(u32 opcode)
 {
     u32 address = reg[(opcode >> 16) & 15].I;
+
+    // 1. Hoist ALU register extractions to dual-issue alongside memory prep
+    u32 srcVal = reg[opcode & 15].I;
+    int destReg = (opcode >> 12) & 15;
+
+    // 2. Prefetch the translated host memory address for writing (rw=1, locality=0)
+    // NOTE: Ensure CPUGetHostPointer safely translates the GBA address to Wii RAM.
+    // __builtin_prefetch(CPUGetHostPointer(address), 1, 0);
+
+    // 3. Execute Swap
     u32 temp = CPUReadMemory(address);
-    CPUWriteMemory(address, reg[opcode&15].I);
-    reg[(opcode >> 12) & 15].I = temp;
+    CPUWriteMemory(address, srcVal);
+    reg[destReg].I = temp;
+
     clockTicks = 4 + dataTicksAccess32(address) + dataTicksAccess32(address)
                    + codeTicksAccess32(armNextPC);
 }
@@ -703,9 +714,20 @@ static INSN_REGPARM void arm109(u32 opcode)
 static INSN_REGPARM void arm149(u32 opcode)
 {
     u32 address = reg[(opcode >> 16) & 15].I;
+
+    // 1. Hoist ALU register extractions to dual-issue alongside memory prep
+    u8 srcVal = reg[opcode & 15].B.B0;
+    int destReg = (opcode >> 12) & 15;
+
+    // 2. Prefetch the translated host memory address for writing (rw=1, locality=0)
+    // NOTE: Ensure CPUGetHostPointer safely translates the GBA address to Wii RAM.
+    // __builtin_prefetch(CPUGetHostPointer(address), 1, 0);
+
+    // 3. Execute Swap
     u32 temp = CPUReadByte(address);
-    CPUWriteByte(address, reg[opcode&15].B.B0);
-    reg[(opcode>>12)&15].I = temp;
+    CPUWriteByte(address, srcVal);
+    reg[destReg].I = temp;
+
     clockTicks = 4 + dataTicksAccess32(address) + dataTicksAccess32(address)
                    + codeTicksAccess32(armNextPC);
 }
@@ -847,7 +869,10 @@ static INSN_REGPARM void arm121(u32 opcode)
     if (LIKELY((opcode & 0x0FFFFFF0) == 0x012FFF10)) {
         int base = opcode & 0x0F;
         busPrefetchCount = 0;
-        armState = reg[base].I & 1 ? false : true;
+
+        // FIXED: Branchless boolean inversion
+        armState = !(reg[base].I & 1);
+
         if (armState) {
             reg[15].I = reg[base].I & 0xFFFFFFFC;
             armNextPC = reg[15].I;
@@ -882,24 +907,22 @@ static INSN_REGPARM void arm121(u32 opcode)
     int offset = reg[opcode & 15].I << ((opcode>>7) & 31);
 #define OFFSET_LSR \
     int shift = (opcode >> 7) & 31;                     \
-    int offset = shift ? reg[opcode & 15].I >> shift : 0;
+    s32 mask = (s32)(shift - 1) >> 31;                  \
+    int offset = (reg[opcode & 15].I >> shift) & ~mask;
+
 #define OFFSET_ASR \
     int shift = (opcode >> 7) & 31;                     \
-    int offset;                                         \
-    if (shift)                                          \
-        offset = (int)((s32)reg[opcode & 15].I >> shift);\
-    else if (reg[opcode & 15].I & 0x80000000)           \
-        offset = 0xFFFFFFFF;                            \
-    else                                                \
-        offset = 0;
+    u32 val = reg[opcode & 15].I;                       \
+    s32 mask = (s32)(shift - 1) >> 31;                  \
+    int offset = (((s32)val >> shift) & ~mask) | (((s32)val >> 31) & mask);
+
 #define OFFSET_ROR \
     int shift = (opcode >> 7) & 31;                     \
-    u32 offset = reg[opcode & 15].I;                    \
-    if (shift) {                                        \
-        ROR_OFFSET;                                     \
-    } else {                                            \
-        RRX_OFFSET;                                     \
-    }
+    u32 val = reg[opcode & 15].I;                       \
+    s32 mask = (s32)(shift - 1) >> 31;                  \
+    u32 ror_shift = (val >> shift) | (val << ((32 - shift) & 31)); \
+    u32 rrx_shift = (val >> 1) | ((u32)C_FLAG << 31);   \
+    int offset = (ror_shift & ~mask) | (rrx_shift & mask);
 
 #define ADDRESS_POST (reg[base].I)
 #define ADDRESS_PREDEC (reg[base].I - offset)
@@ -1325,7 +1348,7 @@ static INSN_REGPARM void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB,
 #define STM_REG(bit,num) \
     if (opcode & (1U<<(bit))) {                         \
         CPUWriteMemory(address, reg[(num)].I);          \
-        if (count) {                                    \
+        if (LIKELY(count)) {                            \
             clockTicks += 1 + dataTicksAccessSeq32(address);\
         } else {                                        \
             clockTicks += 1 + dataTicksAccess32(address);\
@@ -1333,10 +1356,11 @@ static INSN_REGPARM void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB,
         }                                               \
         address += 4;                                   \
     }
+
 #define STMW_REG(bit,num) \
     if (opcode & (1U<<(bit))) {                         \
         CPUWriteMemory(address, reg[(num)].I);          \
-        if (count) {                                    \
+        if (LIKELY(count)) {                            \
             clockTicks += 1 + dataTicksAccessSeq32(address);\
         } else {                                        \
             clockTicks += 1 + dataTicksAccess32(address);\
@@ -1349,7 +1373,7 @@ static INSN_REGPARM void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB,
 #define LDM_REG(bit,num) \
     if (opcode & (1U<<(bit))) {                         \
         reg[(num)].I = CPUReadMemory(address);          \
-        if (count) {                                    \
+        if (LIKELY(count)) {                            \
             clockTicks += 1 + dataTicksAccessSeq32(address);\
         } else {                                        \
             clockTicks += 1 + dataTicksAccess32(address);\
@@ -1398,23 +1422,24 @@ static INSN_REGPARM void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB,
 #define STM_PC \
     if (opcode & (1U<<15)) {                            \
         CPUWriteMemory(address, reg[15].I+4);           \
-        if (!count) {                                   \
-            clockTicks += 1 + dataTicksAccess32(address);\
-        } else {                                        \
+        if (LIKELY(count)) {                            \
             clockTicks += 1 + dataTicksAccessSeq32(address);\
+        } else {                                        \
+            clockTicks += 1 + dataTicksAccess32(address);\
+            count = 1;                                  \
         }                                               \
-        count++;                                        \
     }
+
 #define STMW_PC \
     if (opcode & (1U<<15)) {                            \
         CPUWriteMemory(address, reg[15].I+4);           \
-        if (!count) {                                   \
-            clockTicks += 1 + dataTicksAccess32(address);\
-        } else {                                        \
+        if (LIKELY(count)) {                            \
             clockTicks += 1 + dataTicksAccessSeq32(address);\
+        } else {                                        \
+            clockTicks += 1 + dataTicksAccess32(address);\
+            count = 1;                                  \
         }                                               \
         reg[base].I = temp;                             \
-        count++;                                        \
     }
 #define LDM_LOW \
     LDM_REG(0, 0);                                      \
@@ -1467,12 +1492,12 @@ static INSN_REGPARM void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB,
     LDM_HIGH;                                           \
     if (opcode & (1U<<15)) {                            \
         reg[15].I = CPUReadMemory(address);             \
-        if (!count) {                                   \
-            clockTicks += 1 + dataTicksAccess32(address);\
-        } else {                                        \
+        if (LIKELY(count)) {                            \
             clockTicks += 1 + dataTicksAccessSeq32(address);\
+        } else {                                        \
+            clockTicks += 1 + dataTicksAccess32(address);\
+            count = 1;                                  \
         }                                               \
-        count++;                                        \
     }                                                   \
     if (opcode & (1U<<15)) {                            \
         armNextPC = reg[15].I;                          \
@@ -1493,12 +1518,12 @@ static INSN_REGPARM void arm7F6(u32 opcode) { LDR_PREINC_WB(OFFSET_ROR, OP_LDRB,
     if (opcode & (1U<<15)) {                            \
         LDM_HIGH;                                       \
         reg[15].I = CPUReadMemory(address);             \
-        if (!count) {                                   \
-            clockTicks += 1 + dataTicksAccess32(address); \
-        } else {                                        \
+        if (LIKELY(count)) {                            \
             clockTicks += 1 + dataTicksAccessSeq32(address); \
+        } else {                                        \
+            clockTicks += 1 + dataTicksAccess32(address); \
+            count = 1;                                  \
         }                                               \
-        count++;                                        \
     } else {                                            \
         LDM_HIGH_2;                                     \
     }

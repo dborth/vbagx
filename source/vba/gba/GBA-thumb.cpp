@@ -467,16 +467,15 @@ static INSN_REGPARM void thumb40_2(u32 opcode)
 {
   int dest = opcode & 7;
   u32 value = reg[(opcode >> 3)&7].B.B0;
+
   if(value) {
-    if(value == 32) {
-      C_FLAG = (reg[dest].I & 1);
-      value = 0;
-    } else if(value < 32) {
-      LSL_RD_RS;
-    } else {
-      C_FLAG = 0;
-      value = 0;
-    }
+    u32 is32 = (value == 32);
+    u32 isUnder32 = (value < 32);
+
+    // Branchless flag and shift evaluation using Broadway's dual IUs
+    C_FLAG = (is32 & (reg[dest].I & 1)) | (isUnder32 & ((reg[dest].I >> (32 - (value & 31))) & 1));
+    value = isUnder32 * (reg[dest].I << (value & 31));
+
     reg[dest].I = value;
   }
   N_FLAG = (reg[dest].I >> 31);
@@ -1586,6 +1585,40 @@ int thumbExecute()
             break;
         }
     }
+
+    // FAST-PATH: Conditional Branches (Bcc) Intercept (Opcodes 0xD000 - 0xDDFF)
+	if (!handledInline && (opcode >> 12) == 0xD && ((opcode >> 8) & 0xF) < 0xE) {
+		int cond = 0;
+		switch ((opcode >> 8) & 0xF) {
+			case 0x0: cond = Z_FLAG; break;
+			case 0x1: cond = !Z_FLAG; break;
+			case 0x2: cond = C_FLAG; break;
+			case 0x3: cond = !C_FLAG; break;
+			case 0x4: cond = N_FLAG; break;
+			case 0x5: cond = !N_FLAG; break;
+			case 0x6: cond = V_FLAG; break;
+			case 0x7: cond = !V_FLAG; break;
+			case 0x8: cond = C_FLAG && !Z_FLAG; break;
+			case 0x9: cond = !C_FLAG || Z_FLAG; break;
+			case 0xA: cond = N_FLAG == V_FLAG; break;
+			case 0xB: cond = N_FLAG != V_FLAG; break;
+			case 0xC: cond = !Z_FLAG && (N_FLAG == V_FLAG); break;
+			case 0xD: cond = Z_FLAG || (N_FLAG != V_FLAG); break;
+		}
+
+		UPDATE_OLDREG;
+		localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+
+		if (cond) {
+			reg[15].I += ((s8)(opcode & 0xFF)) << 1;
+			armNextPC = reg[15].I;
+			reg[15].I += 2;
+			THUMB_PREFETCH;
+			localTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
+			busPrefetchCount = 0;
+		}
+		handledInline = true;
+	}
 
     // FALLBACK: The original 1,024 instruction table
     if (!handledInline) {
