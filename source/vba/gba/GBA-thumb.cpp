@@ -32,9 +32,10 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
 # define UPDATE_OLDREG
 
 // Broadway Optimization: Branchless Memory Prefetch Evaluation
-// Replaces volatile if (busPrefetchCount == 0) branches with 1-cycle bitwise logic
+// Replaces volatile boolean comparisons with pure 1-cycle bitwise logic
+// Logic: ~((v | -v) >> 31) & 1 yields 1 ONLY if v is exactly 0.
 #define UPDATE_BUS_PREFETCH \
-    busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
+    busPrefetch |= (busPrefetchEnable & (~((busPrefetchCount | -busPrefetchCount) >> 31) & 1));
 
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
@@ -1414,13 +1415,18 @@ int thumbExecute()
 			int dest = opcode & 0x07;
 			int source = (opcode >> 3) & 0x07;
 			int shift = (opcode >> 6) & 0x1F;
-			u32 value;
-			if (LIKELY(shift)) {
-				C_FLAG = (reg[source].I >> (32 - shift)) & 1;
-				value = reg[source].I << shift;
-			} else {
-				value = reg[source].I;
-			}
+			u32 src_val = reg[source].I;
+
+			// Branchless mask: 0xFFFFFFFF if shift > 0, 0x00000000 if shift == 0
+			u32 shift_mask = -(u32)(shift != 0);
+
+			// If shift==0, C_FLAG is untouched. If shift>0, C_FLAG = bit (32-shift).
+			u32 new_c = (src_val >> ((32 - shift) & 0x1F)) & 1;
+			C_FLAG = (new_c & shift_mask) | (C_FLAG & ~shift_mask);
+
+			// Branchless value calculation
+			u32 value = ((src_val << shift) & shift_mask) | (src_val & ~shift_mask);
+
 			reg[dest].I = value;
 			N_FLAG = (value >> 31);
 			Z_FLAG = (value == 0);
@@ -1433,14 +1439,18 @@ int thumbExecute()
 			int dest = opcode & 0x07;
 			int source = (opcode >> 3) & 0x07;
 			int shift = (opcode >> 6) & 0x1F;
-			u32 value;
-			if (LIKELY(shift)) {
-				C_FLAG = (reg[source].I >> (shift - 1)) & 1;
-				value = reg[source].I >> shift;
-			} else {
-				C_FLAG = (reg[source].I >> 31);
-				value = 0;
-			}
+			u32 src_val = reg[source].I;
+
+			u32 shift_mask = -(u32)(shift != 0);
+
+			// If shift != 0, C is bit (shift-1). If shift == 0, C is bit 31.
+			u32 c_shift_nz = (shift - 1) & 0x1F;
+			u32 new_c = ((src_val >> c_shift_nz) & shift_mask) | ((src_val >> 31) & ~shift_mask);
+			C_FLAG = new_c & 1;
+
+			// If shift==0, value is 0.
+			u32 value = (src_val >> shift) & shift_mask;
+
 			reg[dest].I = value;
 			N_FLAG = (value >> 31);
 			Z_FLAG = (value == 0);
@@ -1453,14 +1463,17 @@ int thumbExecute()
 			int dest = opcode & 0x07;
 			int source = (opcode >> 3) & 0x07;
 			int shift = (opcode >> 6) & 0x1F;
-			u32 value;
-			if (LIKELY(shift)) {
-				C_FLAG = ((u32)((s32)reg[source].I >> (int)(shift - 1))) & 1;
-				value = (u32)((s32)reg[source].I >> (int)shift);
-			} else {
-				C_FLAG = (reg[source].I >> 31);
-				value = (u32)((s32)reg[source].I >> 31);
-			}
+			s32 src_val = (s32)reg[source].I;
+
+			u32 shift_mask = -(u32)(shift != 0);
+
+			u32 c_shift_nz = (shift - 1) & 0x1F;
+			u32 new_c = (((u32)src_val >> c_shift_nz) & shift_mask) | (((u32)src_val >> 31) & ~shift_mask);
+			C_FLAG = new_c & 1;
+
+			// If shift==0, ASR relies on bit 31 extended.
+			u32 value = (((u32)(src_val >> shift)) & shift_mask) | (((u32)(src_val >> 31)) & ~shift_mask);
+
 			reg[dest].I = value;
 			N_FLAG = (value >> 31);
 			Z_FLAG = (value == 0);
