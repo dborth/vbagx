@@ -8,23 +8,31 @@ extern int thumbExecute();
 # define LIKELY(x) __builtin_expect(!!(x),1)
 # define UNLIKELY(x) __builtin_expect(!!(x),0)
 
+// Hardware Prefetch helper (pulls host address into L1 D-Cache asynchronously)
+#define GBA_DCBT(addr) \
+    __builtin_prefetch(&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask], 0, 0)
+
 #define ARM_PREFETCH \
   {\
     cpuPrefetch[0] = CPUReadMemoryQuick(armNextPC);\
     cpuPrefetch[1] = CPUReadMemoryQuick(armNextPC+4);\
+    GBA_DCBT(armNextPC + 32);\
   }
 
 #define THUMB_PREFETCH \
   {\
     cpuPrefetch[0] = CPUReadHalfWordQuick(armNextPC);\
     cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);\
+    GBA_DCBT(armNextPC + 32);\
   }
 
 #define ARM_PREFETCH_NEXT \
-  cpuPrefetch[1] = CPUReadMemoryQuick(armNextPC+4);
+  cpuPrefetch[1] = CPUReadMemoryQuick(armNextPC+4);\
+  GBA_DCBT(armNextPC + 32);
 
 #define THUMB_PREFETCH_NEXT\
-  cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);
+  cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);\
+  GBA_DCBT(armNextPC + 32);
 
 
 extern int SWITicks;
@@ -144,54 +152,32 @@ inline int codeTicksAccess16(u32 address) // THUMB NON SEQ
   {
     if (busPrefetchCount & 0x1)
     {
-      if (busPrefetchCount & 0x2)
-      {
-        busPrefetchCount = ((busPrefetchCount & 0xFF) >> 2) | (busPrefetchCount & 0xFFFFFF00);
-        return 0;
-      }
-      busPrefetchCount = ((busPrefetchCount & 0xFF) >> 1) | (busPrefetchCount & 0xFFFFFF00);
-      return memoryWaitSeq[addr] - 1;
-    }
-    else
-    {
-      busPrefetchCount = 0;
-      return memoryWait[addr];
+      // 1-cycle bitwise resolution: shift is either 1 or 2
+      u32 shift = 1 + ((busPrefetchCount >> 1) & 1);
+      busPrefetchCount = ((busPrefetchCount & 0xFF) >> shift) | (busPrefetchCount & 0xFFFFFF00);
+
+      // If shift == 1, mask = 0xFFFFFFFF. If shift == 2, mask = 0.
+      return (memoryWaitSeq[addr] - 1) & ((s32)(shift - 2) >> 31);
     }
   }
-  else
-  {
-    busPrefetchCount = 0;
-    return memoryWait[addr];
-  }
+  busPrefetchCount = 0;
+  return memoryWait[addr];
 }
 
 inline int codeTicksAccess32(u32 address) // ARM NON SEQ
 {
   u32 addr = (address >> 24) & 15;
-
   if (LIKELY((u32)(addr - 0x08) <= 5))
   {
     if (busPrefetchCount & 0x1)
     {
-      if (busPrefetchCount & 0x2)
-      {
-        busPrefetchCount = ((busPrefetchCount & 0xFF) >> 2) | (busPrefetchCount & 0xFFFFFF00);
-        return 0;
-      }
-      busPrefetchCount = ((busPrefetchCount & 0xFF) >> 1) | (busPrefetchCount & 0xFFFFFF00);
-      return memoryWaitSeq[addr] - 1;
-    }
-    else
-    {
-      busPrefetchCount = 0;
-      return memoryWait32[addr];
+      u32 shift = 1 + ((busPrefetchCount >> 1) & 1);
+      busPrefetchCount = ((busPrefetchCount & 0xFF) >> shift) | (busPrefetchCount & 0xFFFFFF00);
+      return (memoryWaitSeq[addr] - 1) & ((s32)(shift - 2) >> 31);
     }
   }
-  else
-  {
-    busPrefetchCount = 0;
-    return memoryWait32[addr];
-  }
+  busPrefetchCount = 0;
+  return memoryWait32[addr];
 }
 
 inline int codeTicksAccessSeq16(u32 address) // THUMB SEQ
@@ -223,31 +209,22 @@ inline int codeTicksAccessSeq16(u32 address) // THUMB SEQ
 inline int codeTicksAccessSeq32(u32 address) // ARM SEQ
 {
   u32 addr = (address >> 24) & 15;
-
   if (LIKELY((u32)(addr - 0x08) <= 5))
   {
     if (busPrefetchCount & 0x1)
     {
-      if (busPrefetchCount & 0x2)
-      {
-        busPrefetchCount = ((busPrefetchCount & 0xFF) >> 2) | (busPrefetchCount & 0xFFFFFF00);
-        return 0;
-      }
-      busPrefetchCount = ((busPrefetchCount & 0xFF) >> 1) | (busPrefetchCount & 0xFFFFFF00);
-      return memoryWaitSeq[addr];
+      u32 shift = 1 + ((busPrefetchCount >> 1) & 1);
+      busPrefetchCount = ((busPrefetchCount & 0xFF) >> shift) | (busPrefetchCount & 0xFFFFFF00);
+      return memoryWaitSeq[addr] & ((s32)(shift - 2) >> 31);
     }
     else if (busPrefetchCount > 0xFF)
     {
       busPrefetchCount = 0;
       return memoryWait32[addr];
     }
-    else
-      return memoryWaitSeq32[addr];
-  }
-  else
-  {
     return memoryWaitSeq32[addr];
   }
+  return memoryWaitSeq32[addr];
 }
 
 // Emulates the Cheat System (m) code

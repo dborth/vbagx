@@ -112,6 +112,37 @@ u32 inline CPUReadMemoryQuick( u32 addr )
  * End of VM override
  ****************************************************************************/
 
+#ifdef USE_VM
+#define SAFE_QUICK_READ32(addr) CPUReadMemoryQuick(addr)
+#define SAFE_QUICK_READ16(addr) CPUReadHalfWordQuick(addr)
+#define SAFE_QUICK_READ8(addr) CPUReadByteQuick(addr)
+#else
+#define SAFE_QUICK_READ32(addr) CPUReadMemoryQuickDef(addr)
+#define SAFE_QUICK_READ16(addr) CPUReadHalfWordQuickDef(addr)
+#define SAFE_QUICK_READ8(addr) CPUReadByteQuickDef(addr)
+#endif
+
+#define FALLBACK_UNREADABLE_32() \
+    do { \
+        if(cpuDmaHack) { value = cpuDmaLast; } \
+        else if(armState) { value = SAFE_QUICK_READ32(reg[15].I); } \
+        else { value = SAFE_QUICK_READ16(reg[15].I) | (SAFE_QUICK_READ16(reg[15].I) << 16); } \
+    } while(0)
+
+#define FALLBACK_UNREADABLE_16() \
+    do { \
+        if(cpuDmaHack) { value = cpuDmaLast & 0xFFFF; } \
+        else if(armState) { value = SAFE_QUICK_READ16(reg[15].I + (address & 2)); } \
+        else { value = SAFE_QUICK_READ16(reg[15].I); } \
+    } while(0)
+
+#define FALLBACK_UNREADABLE_8() \
+    do { \
+        if(cpuDmaHack) { return cpuDmaLast & 0xFF; } \
+        else if(armState) { return SAFE_QUICK_READ8(reg[15].I + (address & 3)); } \
+        else { return SAFE_QUICK_READ8(reg[15].I + (address & 1)); } \
+    } while(0)
+
 static inline u32 CPUReadMemory(u32 address)
 {
   // OPTIMIZATION: Broadway evaluates this unconditional bitwise mask in 1 cycle (rlwinm).
@@ -121,13 +152,16 @@ static inline u32 CPUReadMemory(u32 address)
 
   switch(alignedAddress >> 24) {
   case 0:
-    if(reg[15].I >> 24) {
-      if(alignedAddress < 0x4000) {
-        value = READ32LE(((u32 *)&biosProtected));
-      } else goto unreadable;
-    } else {
-      value = READ32LE(((u32 *)&bios[alignedAddress & 0x3FFC]));
-    }
+	  if(reg[15].I >> 24) {
+		if(alignedAddress < 0x4000) {
+		  value = READ32LE(((u32 *)&biosProtected));
+		} else {
+		  FALLBACK_UNREADABLE_32();
+		  break;
+		}
+	  } else {
+		value = READ32LE(((u32 *)&bios[alignedAddress & 0x3FFC]));
+	  }
     break;
   case 2:
     value = READ32LE(((u32 *)&workRAM[alignedAddress & 0x3FFFC]));
@@ -137,15 +171,16 @@ static inline u32 CPUReadMemory(u32 address)
     break;
   case 4:
     // OPTIMIZATION: Converted short-circuit && to bitwise & to prevent costly pipeline flushes.
-    if(LIKELY(((alignedAddress & 0x00FFFFFF) < 0x400) & ioReadable[alignedAddress & 0x3fc])) {
-      if(ioReadable[(alignedAddress & 0x3fc) + 2]) {
-        value = READ32LE(((u32 *)&ioMem[alignedAddress & 0x3fC]));
-      } else {
-        value = READ16LE(((u16 *)&ioMem[alignedAddress & 0x3fc]));
-      }
-    } else {
-      goto unreadable;
-    }
+	  if(LIKELY(((alignedAddress & 0x00FFFFFF) < 0x400) & ioReadable[alignedAddress & 0x3fc])) {
+		if(ioReadable[(alignedAddress & 0x3fc) + 2]) {
+		  value = READ32LE(((u32 *)&ioMem[alignedAddress & 0x3fC]));
+		} else {
+		  value = READ16LE(((u16 *)&ioMem[alignedAddress & 0x3fc]));
+		}
+	  } else {
+		FALLBACK_UNREADABLE_32();
+		break;
+	  }
     break;
   case 5:
     value = READ32LE(((u32 *)&paletteRAM[alignedAddress & 0x3fC]));
@@ -205,24 +240,7 @@ static inline u32 CPUReadMemory(u32 address)
     }
     break;
   default:
-  unreadable:
-    if(cpuDmaHack) {
-      value = cpuDmaLast;
-    } else {
-      if(armState) {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        return CPUReadMemoryQuick(reg[15].I);
-#else
-        return CPUReadMemoryQuickDef(reg[15].I);
-#endif
-      } else {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        return CPUReadHalfWordQuick(reg[15].I) | (CPUReadHalfWordQuick(reg[15].I) << 16);
-#else
-        return CPUReadHalfWordQuickDef(reg[15].I) | (CPUReadHalfWordQuickDef(reg[15].I) << 16);
-#endif
-      }
-    }
+	FALLBACK_UNREADABLE_32();
     break;
   }
 
@@ -248,7 +266,9 @@ static inline u32 CPUReadHalfWord(u32 address)
     if (reg[15].I >> 24) {
       if(alignedAddress < 0x4000) {
         value = READ16LE(((u16 *)&biosProtected[alignedAddress & 2]));
-      } else goto unreadable;
+      } else {
+        FALLBACK_UNREADABLE_16();
+      }
     } else {
       value = READ16LE(((u16 *)&bios[alignedAddress & 0x3FFE]));
     }
@@ -281,10 +301,10 @@ static inline u32 CPUReadHalfWord(u32 address)
       } else if(ioReadable[alignedAddress & 0x3fc]) {
         value = 0;
       } else {
-        goto unreadable;
+        FALLBACK_UNREADABLE_16();
       }
     } else {
-      goto unreadable;
+      FALLBACK_UNREADABLE_16();
     }
     break;
   case 5:
@@ -350,25 +370,8 @@ static inline u32 CPUReadHalfWord(u32 address)
     }
     break;
   default:
-  unreadable:
-    if(cpuDmaHack) {
-      value = cpuDmaLast & 0xFFFF;
-    } else {
-      if(armState) {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        value = CPUReadHalfWordQuick(reg[15].I + (address & 2));
-#else
-        value = CPUReadHalfWordQuickDef(reg[15].I + (address & 2));
-#endif
-        } else {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        value = CPUReadHalfWordQuick(reg[15].I);
-#else
-        value = CPUReadHalfWordQuickDef(reg[15].I);
-#endif
-      }
-    }
-    return value;
+    FALLBACK_UNREADABLE_16();
+    break;
   }
 
   // OPTIMIZATION: ROTR 8 branchless equivalent.
@@ -386,14 +389,13 @@ static inline s16 CPUReadHalfWordSigned(u32 address)
   return (s16)CPUReadHalfWord(address);
 }
 
-
 static inline u8 CPUReadByte(u32 address)
 {
   switch(address >> 24) {
   case 0:
     if (reg[15].I >> 24) {
       if(address < 0x4000) return biosProtected[address & 3];
-      else goto unreadable;
+      else { FALLBACK_UNREADABLE_8(); }
     }
     return bios[address & 0x3FFF];
   case 2:
@@ -404,7 +406,7 @@ static inline u8 CPUReadByte(u32 address)
     // OPTIMIZATION: Removed short circuit evaluation to prevent pipeline bubble stalls.
     if(LIKELY(((address & 0x00FFFFFF) < 0x400) & ioReadable[address & 0x3ff]))
       return ioMem[address & 0x3ff];
-    else goto unreadable;
+    else { FALLBACK_UNREADABLE_8(); }
   case 5:
     return paletteRAM[address & 0x3ff];
   case 6:
@@ -441,24 +443,8 @@ static inline u8 CPUReadByte(u32 address)
     }
     return flashRead(address);
   default:
-  unreadable:
-    if(cpuDmaHack) {
-      return cpuDmaLast & 0xFF;
-    } else {
-      if(armState) {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        return CPUReadByteQuick(reg[15].I + (address & 3));
-#else
-        return CPUReadByteQuickDef(reg[15].I + (address & 3));
-#endif
-      } else {
-#ifdef USE_VM // Nintendo GC Virtual Memory
-        return CPUReadByteQuick(reg[15].I + (address & 1));
-#else
-        return CPUReadByteQuickDef(reg[15].I + (address & 1));
-#endif
-      }
-    }
+    FALLBACK_UNREADABLE_8();
+    break;
   }
 }
 
