@@ -20,6 +20,16 @@ typedef struct {
   u32 mask;
 } memoryMap;
 
+// Represents a single 16MB memory region slice
+// OPTIMIZATION: 8-byte aligned structure prevents struct padding bloat
+struct __attribute__((aligned(8))) GBAPage {
+    u8* base;
+    u32 mask;
+};
+
+// Global page table covering the entire 32-bit address space (256 * 16MB banks)
+extern GBAPage gbaMemoryPages[256];
+
 typedef union {
   struct {
     u8 B3;

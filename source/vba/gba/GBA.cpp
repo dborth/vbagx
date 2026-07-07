@@ -2629,6 +2629,31 @@ void applyTimer ()
 u8 cpuBitsSet[256];
 u8 cpuLowestBitSet[256];
 
+GBAPage gbaMemoryPages[256];
+
+static inline void GBA_InitMemoryPages() {
+    // 1. Secure default state. A NULL base branchlessly signals the MMIO slow-path.
+    for (int i = 0; i < 256; i++) {
+        gbaMemoryPages[i].base = NULL;
+        gbaMemoryPages[i].mask = 0;
+    }
+
+    // 0x00 - 0x07 standard mappings
+    gbaMemoryPages[0x00].base = bios;        gbaMemoryPages[0x00].mask = 0x3FFF;
+    gbaMemoryPages[0x02].base = workRAM;     gbaMemoryPages[0x02].mask = 0x3FFFF;
+    gbaMemoryPages[0x03].base = internalRAM; gbaMemoryPages[0x03].mask = 0x7FFF;
+    gbaMemoryPages[0x05].base = paletteRAM;  gbaMemoryPages[0x05].mask = 0x3FF;
+    gbaMemoryPages[0x06].base = vram;        gbaMemoryPages[0x06].mask = 0x1FFFF;
+    gbaMemoryPages[0x07].base = oam;         gbaMemoryPages[0x07].mask = 0x3FF;
+
+#ifndef USE_VM // Only populate physical ROM pointers if GC Virtual Memory is disabled
+    for (int i = 0x08; i <= 0x0D; i++) {
+        gbaMemoryPages[i].base = rom;
+        gbaMemoryPages[i].mask = 0x1FFFFFF; 
+    }
+#endif
+}
+
 void CPUInit(const char *biosFileName, bool useBiosFile)
 {
   if(!cpuBiosSwapped) {
@@ -2642,6 +2667,8 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
   eepromInUse = 0;
   saveType = 0;
   memcpy(bios, myROM, sizeof(myROM));
+
+  GBA_InitMemoryPages();
 
   int i = 0;
 

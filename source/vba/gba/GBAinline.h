@@ -149,99 +149,72 @@ static inline u32 CPUReadMemory(u32 address)
   // This avoids a costly 2-3 cycle conditional branch if it were an if-statement.
   u32 alignedAddress = address & ~0x03;
   u32 value = 0;
+  u8 pageIdx = alignedAddress >> 24;
+  u8* base = gbaMemoryPages[pageIdx].base;
 
-  switch(alignedAddress >> 24) {
-  case 0:
-	  if(reg[15].I >> 24) {
-		if(alignedAddress < 0x4000) {
-		  value = READ32LE(((u32 *)&biosProtected));
-		} else {
-		  FALLBACK_UNREADABLE_32();
-		  break;
-		}
-	  } else {
-		value = READ32LE(((u32 *)&bios[alignedAddress & 0x3FFC]));
-	  }
-    break;
-  case 2:
-    value = READ32LE(((u32 *)&workRAM[alignedAddress & 0x3FFFC]));
-    break;
-  case 3:
-    value = READ32LE(((u32 *)&internalRAM[alignedAddress & 0x7ffC]));
-    break;
-  case 4:
-    // OPTIMIZATION: Converted short-circuit && to bitwise & to prevent costly pipeline flushes.
-	  if(LIKELY(((alignedAddress & 0x00FFFFFF) < 0x400) & ioReadable[alignedAddress & 0x3fc])) {
-		if(ioReadable[(alignedAddress & 0x3fc) + 2]) {
-		  value = READ32LE(((u32 *)&ioMem[alignedAddress & 0x3fC]));
-		} else {
-		  value = READ16LE(((u16 *)&ioMem[alignedAddress & 0x3fc]));
-		}
-	  } else {
-		FALLBACK_UNREADABLE_32();
-		break;
-	  }
-    break;
-  case 5:
-    value = READ32LE(((u32 *)&paletteRAM[alignedAddress & 0x3fC]));
-    break;
-  case 6:
-    alignedAddress &= 0x1fffc;
-    // OPTIMIZATION: Consolidated conditional jump evaluation branchlessly.
-    if (UNLIKELY(((DISPCNT & 7) > 2) & ((alignedAddress & 0x1C000) == 0x18000))) {
-        value = 0;
+  // FAST PATH: Branchless lookup mapped perfectly to Broadway architecture
+  if (LIKELY(base != NULL)) {
+      value = READ32LE((u32*)(base + (alignedAddress & gbaMemoryPages[pageIdx].mask)));
+  }
+  // SLOW PATH: Legacy fallbacks for MMIO, Bios protection, EEPROM, Sensors, and Virtual Memory
+  else {
+      switch(pageIdx) {
+      case 0:
+          if(reg[15].I >> 24) {
+            if(alignedAddress < 0x4000) value = READ32LE(((u32 *)&biosProtected));
+            else { FALLBACK_UNREADABLE_32(); break; }
+          } else {
+            value = READ32LE(((u32 *)&bios[alignedAddress & 0x3FFC]));
+          }
         break;
-    }
-    // OPTIMIZATION: Replaced conditional mirror masking branch with 1-cycle bitwise extraction.
-    alignedAddress &= ~(((alignedAddress & 0x10000) >> 1) & alignedAddress);
-    value = READ32LE(((u32 *)&vram[alignedAddress]));
-    break;
-  case 7:
-    value = READ32LE(((u32 *)&oam[alignedAddress & 0x3FC]));
-    break;
-  case 8:
-    // Must be cartridge ROM, reading other sensors doesn't allow 32-bit access.
-  case 9:
-  case 10:
-  case 11:
-  case 12:
+      case 4:
+          // OPTIMIZATION: Converted short-circuit && to bitwise & to prevent costly pipeline flushes.
+          if(LIKELY(((alignedAddress & 0x00FFFFFF) < 0x400) & ioReadable[alignedAddress & 0x3fc])) {
+            if(ioReadable[(alignedAddress & 0x3fc) + 2]) value = READ32LE(((u32 *)&ioMem[alignedAddress & 0x3fC]));
+            else value = READ16LE(((u16 *)&ioMem[alignedAddress & 0x3fc]));
+          } else { FALLBACK_UNREADABLE_32(); break; }
+        break;
+      case 8:
+      case 9:
+      case 10:
+      case 11:
+      case 12:
 #ifdef USE_VM // Nintendo GC Virtual Memory
-      value = VMRead32( alignedAddress & 0x1FFFFFC );
-#else
-      value = READ32LE(((u32 *)&rom[alignedAddress & 0x1FFFFFC]));
+          value = VMRead32( alignedAddress & 0x1FFFFFC );
 #endif
-    break;
-  case 13:
-    value = eepromRead(alignedAddress);
-    break;
-  case 14:
-  case 15:
+        break;
+      case 13:
+        value = eepromRead(alignedAddress);
+        break;
+      case 14:
+      case 15:
     // Yoshi's Universal Gravitation (Topsy Turvy)
 	// Koro Koro
-    if(UNLIKELY(cpuEEPROMSensorEnabled)) {
-      switch(alignedAddress & 0x00008f00) {
-      case 0x8200: value = systemGetSensorX() & 255; break;
-      case 0x8300: value = (systemGetSensorX() >> 8)|0x80; break;
-      case 0x8400: value = systemGetSensorY() & 255; break;
-      case 0x8500: value = systemGetSensorY() >> 8; break;
-      default: {
+        if(UNLIKELY(cpuEEPROMSensorEnabled)) {
+          switch(alignedAddress & 0x00008f00) {
+          case 0x8200: value = systemGetSensorX() & 255; break;
+          case 0x8300: value = (systemGetSensorX() >> 8)|0x80; break;
+          case 0x8400: value = systemGetSensorY() & 255; break;
+          case 0x8500: value = systemGetSensorY() >> 8; break;
+          default: {
         // OPTIMIZATION: Replaced multi-cycle mullw with shifts and bitwise ORs.
-        u32 temp = flashRead(alignedAddress);
-        temp |= (temp << 8);
-        value = temp | (temp << 16);
+            u32 temp = flashRead(alignedAddress);
+            temp |= (temp << 8);
+            value = temp | (temp << 16);
+            break;
+          }
+          }
+        } else {
+      // OPTIMIZATION: Replaced multi-cycle mullw with shifts and bitwise ORs.
+          u32 temp = flashRead(alignedAddress);
+          temp |= (temp << 8);
+          value = temp | (temp << 16);
+        }
+        break;
+      default:
+        FALLBACK_UNREADABLE_32();
         break;
       }
-      }
-    } else {
-      // OPTIMIZATION: Replaced multi-cycle mullw with shifts and bitwise ORs.
-      u32 temp = flashRead(alignedAddress);
-      temp |= (temp << 8);
-      value = temp | (temp << 16);
-    }
-    break;
-  default:
-	FALLBACK_UNREADABLE_32();
-    break;
   }
 
   // OPTIMIZATION: Predict unaligned accesses as UNLIKELY.
@@ -254,123 +227,95 @@ static inline u32 CPUReadMemory(u32 address)
   return value;
 }
 
+
 static inline u32 CPUReadHalfWord(u32 address)
 {
   // OPTIMIZATION: Unconditional rlwinm mask
   u32 alignedAddress = address & ~0x01;
   u32 value = 0;
+  u8 pageIdx = alignedAddress >> 24;
+  u8* base = gbaMemoryPages[pageIdx].base;
 
-  switch(alignedAddress >> 24) {
-  case 0:
-    if (reg[15].I >> 24) {
-      if(alignedAddress < 0x4000) {
-        value = READ16LE(((u16 *)&biosProtected[alignedAddress & 2]));
-      } else {
-        FALLBACK_UNREADABLE_16();
-      }
-    } else {
-      value = READ16LE(((u16 *)&bios[alignedAddress & 0x3FFE]));
-    }
-    break;
-  case 2:
-    value = READ16LE(((u16 *)&workRAM[alignedAddress & 0x3FFFE]));
-    break;
-  case 3:
-    value = READ16LE(((u16 *)&internalRAM[alignedAddress & 0x7ffe]));
-    break;
-  case 4:
-    if(LIKELY((alignedAddress & 0x00FFFFFF) < 0x400)) {
-      u32 ioAddr = alignedAddress & 0x3fe;
-
-      if(ioReadable[ioAddr]) {
-        value = READ16LE(((u16 *)&ioMem[ioAddr]));
-
-        // OPTIMIZATION: Converted double boundary check into a single unsigned range subtraction.
-        if (UNLIKELY((u32)(ioAddr - 0x100) < 0x10)) {
-          // OPTIMIZATION: Converted short-circuit evaluations to fast bitwise operations.
-          if ((ioAddr == 0x100) & timer0On)
-            value = 0xFFFF - ((timer0Ticks - cpuTotalTicks) >> timer0ClockReload);
-          else if ((ioAddr == 0x104) & timer1On & !(TM1CNT & 4))
-            value = 0xFFFF - ((timer1Ticks - cpuTotalTicks) >> timer1ClockReload);
-          else if ((ioAddr == 0x108) & timer2On & !(TM2CNT & 4))
-            value = 0xFFFF - ((timer2Ticks - cpuTotalTicks) >> timer2ClockReload);
-          else if ((ioAddr == 0x10C) & timer3On & !(TM3CNT & 4))
-            value = 0xFFFF - ((timer3Ticks - cpuTotalTicks) >> timer3ClockReload);
+  // FAST PATH
+  if (LIKELY(base != NULL)) {
+      value = READ16LE((u16*)(base + (alignedAddress & gbaMemoryPages[pageIdx].mask)));
+  }
+  // SLOW PATH
+  else {
+      switch(pageIdx) {
+      case 0:
+        if (reg[15].I >> 24) {
+          if(alignedAddress < 0x4000) value = READ16LE(((u16 *)&biosProtected[alignedAddress & 2]));
+          else { FALLBACK_UNREADABLE_16(); }
+        } else {
+          value = READ16LE(((u16 *)&bios[alignedAddress & 0x3FFE]));
         }
-      } else if(ioReadable[alignedAddress & 0x3fc]) {
-        value = 0;
-      } else {
-        FALLBACK_UNREADABLE_16();
-      }
-    } else {
-      FALLBACK_UNREADABLE_16();
-    }
-    break;
-  case 5:
-    value = READ16LE(((u16 *)&paletteRAM[alignedAddress & 0x3fe]));
-    break;
-  case 6:
-    alignedAddress &= 0x1fffe;
-    if (UNLIKELY(((DISPCNT & 7) > 2) & ((alignedAddress & 0x1C000) == 0x18000))) {
-        value = 0;
         break;
-    }
-    // OPTIMIZATION: Replaced conditional mirror masking branch with bitwise extraction.
-    alignedAddress &= ~(((alignedAddress & 0x10000) >> 1) & alignedAddress);
-    value = READ16LE(((u16 *)&vram[alignedAddress]));
-    break;
-  case 7:
-    value = READ16LE(((u16 *)&oam[alignedAddress & 0x3fe]));
-    break;
-  case 8:
-    // This is possibly the GPIO port that controls the real time clock,
-	// WarioWare Twisted! tilt sensors, rumble, and solar sensors.
-	// This function still works if there is no real time clock
-	// and does a normal memory read in that case.
-    // OPTIMIZATION: Compacted dual-boundary check down to a highly optimized single unsigned compare.
-    if(UNLIKELY((u32)(alignedAddress - 0x80000c4) <= 4)) {
-      value = rtcRead(alignedAddress & 0xFFFFFFE);
-      break;
-    }
-  case 9:
-  case 10:
-  case 11:
-  case 12:
-#ifdef USE_VM // Nintendo GC Virtual Memory
-    value = VMRead16( alignedAddress & 0x1FFFFFE );
-#else
-    value = READ16LE(((u16 *)&rom[alignedAddress & 0x1FFFFFE]));
+      case 4:
+        if(LIKELY((alignedAddress & 0x00FFFFFF) < 0x400)) {
+          u32 ioAddr = alignedAddress & 0x3fe;
+
+          if(ioReadable[ioAddr]) {
+            value = READ16LE(((u16 *)&ioMem[ioAddr]));
+            if (UNLIKELY((u32)(ioAddr - 0x100) < 0x10)) {
+              if ((ioAddr == 0x100) & timer0On)
+                value = 0xFFFF - ((timer0Ticks - cpuTotalTicks) >> timer0ClockReload);
+              else if ((ioAddr == 0x104) & timer1On & !(TM1CNT & 4))
+                value = 0xFFFF - ((timer1Ticks - cpuTotalTicks) >> timer1ClockReload);
+              else if ((ioAddr == 0x108) & timer2On & !(TM2CNT & 4))
+                value = 0xFFFF - ((timer2Ticks - cpuTotalTicks) >> timer2ClockReload);
+              else if ((ioAddr == 0x10C) & timer3On & !(TM3CNT & 4))
+                value = 0xFFFF - ((timer3Ticks - cpuTotalTicks) >> timer3ClockReload);
+            }
+          } else if(ioReadable[alignedAddress & 0x3fc]) {
+            value = 0;
+          } else { FALLBACK_UNREADABLE_16(); }
+        } else { FALLBACK_UNREADABLE_16(); }
+        break;
+      case 8:
+        // This is possibly the GPIO port that controls the real time clock,
+		// WarioWare Twisted! tilt sensors, rumble, and solar sensors.
+		// This function still works if there is no real time clock
+		// and does a normal memory read in that case.
+		// OPTIMIZATION: Compacted dual-boundary check down to a highly optimized single unsigned compare.
+        if(UNLIKELY((u32)(alignedAddress - 0x80000c4) <= 4)) {
+          value = rtcRead(alignedAddress & 0xFFFFFFE);
+          break;
+        }
+      case 9:
+      case 10:
+      case 11:
+      case 12:
+#ifdef USE_VM
+        value = VMRead16( alignedAddress & 0x1FFFFFE );
 #endif
-    break;
-  case 13:
-    value = eepromRead(alignedAddress);
-    break;
-  case 14:
-  case 15:
-    // Yoshi's Universal Gravitation (Topsy Turvy)
-	// Koro Koro
-    if(UNLIKELY(cpuEEPROMSensorEnabled)) {
-      switch(alignedAddress & 0x00008f00) {
-      case 0x8200: value = systemGetSensorX() & 255; break;
-      case 0x8300: value = (systemGetSensorX() >> 8)|0x80; break;
-      case 0x8400: value = systemGetSensorY() & 255; break;
-      case 0x8500: value = systemGetSensorY() >> 8; break;
-      default: {
-        // OPTIMIZATION: Replaced mullw with single shift and OR sequence.
-        u32 temp = flashRead(alignedAddress);
-        value = temp | (temp << 8);
+        break;
+      case 13:
+        value = eepromRead(alignedAddress);
+        break;
+      case 14:
+      case 15:
+        if(UNLIKELY(cpuEEPROMSensorEnabled)) {
+          switch(alignedAddress & 0x00008f00) {
+          case 0x8200: value = systemGetSensorX() & 255; break;
+          case 0x8300: value = (systemGetSensorX() >> 8)|0x80; break;
+          case 0x8400: value = systemGetSensorY() & 255; break;
+          case 0x8500: value = systemGetSensorY() >> 8; break;
+          default: {
+            u32 temp = flashRead(alignedAddress);
+            value = temp | (temp << 8);
+            break;
+          }
+          }
+        } else {
+          u32 temp = flashRead(alignedAddress);
+          value = temp | (temp << 8);
+        }
+        break;
+      default:
+        FALLBACK_UNREADABLE_16();
         break;
       }
-      }
-    } else {
-      // OPTIMIZATION: Replaced mullw with single shift and OR sequence.
-      u32 temp = flashRead(alignedAddress);
-      value = temp | (temp << 8);
-    }
-    break;
-  default:
-    FALLBACK_UNREADABLE_16();
-    break;
   }
 
   // OPTIMIZATION: ROTR 8 branchless equivalent.
@@ -383,48 +328,41 @@ static inline u32 CPUReadHalfWord(u32 address)
 
 static inline s16 CPUReadHalfWordSigned(u32 address)
 {
-  // OPTIMIZATION: The explicit downcast natively invokes PowerPC 'extsh' sign extension organic behavior.
   return (s16)CPUReadHalfWord(address);
 }
 
 static inline u8 CPUReadByte(u32 address)
 {
-  switch(address >> 24) {
+  u8 pageIdx = address >> 24;
+  u8* base = gbaMemoryPages[pageIdx].base;
+
+  // FAST PATH
+  if (LIKELY(base != NULL)) {
+      return base[address & gbaMemoryPages[pageIdx].mask];
+  }
+
+  // SLOW PATH
+  switch(pageIdx) {
   case 0:
     if (reg[15].I >> 24) {
       if(address < 0x4000) return biosProtected[address & 3];
       else { FALLBACK_UNREADABLE_8(); }
     }
     return bios[address & 0x3FFF];
-  case 2:
-    return workRAM[address & 0x3FFFF];
-  case 3:
-    return internalRAM[address & 0x7fff];
   case 4:
-    // OPTIMIZATION: Removed short circuit evaluation to prevent pipeline bubble stalls.
+     // OPTIMIZATION: Removed short circuit evaluation to prevent pipeline bubble stalls.
     if(LIKELY(((address & 0x00FFFFFF) < 0x400) & ioReadable[address & 0x3ff]))
       return ioMem[address & 0x3ff];
     else { FALLBACK_UNREADABLE_8(); }
-  case 5:
-    return paletteRAM[address & 0x3ff];
-  case 6:
-    address &= 0x1ffff;
-    if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000))) return 0;
-    // OPTIMIZATION: Branchless bitwise mirror masking sequence.
-    address &= ~(((address & 0x10000) >> 1) & address);
-    return vram[address];
-  case 7:
-    return oam[address & 0x3ff];
   case 8:
   case 9:
   case 10:
   case 11:
   case 12:
-#ifdef USE_VM // Nintendo GC Virtual Memory
+#ifdef USE_VM 
     return VMRead8( address & 0x1FFFFFF );
-#else
-    return rom[address & 0x1FFFFFF];
 #endif
+    break; // Break here if undefined VM handler defaults.
   case 13:
     return eepromRead(address);
   case 14:
@@ -441,9 +379,10 @@ static inline u8 CPUReadByte(u32 address)
     }
     return flashRead(address);
   default:
-    FALLBACK_UNREADABLE_8();
     break;
   }
+  
+  FALLBACK_UNREADABLE_8();
 }
 
 static inline void CPUWriteMemory(u32 address, u32 value)
