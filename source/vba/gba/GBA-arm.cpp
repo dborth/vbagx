@@ -2293,29 +2293,38 @@ int armExecute()
         ARM_PREFETCH_NEXT;
 
         int cond = opcode >> 28;
-        bool cond_res = true;
+		bool cond_res = true;
 
-        // Condition Predictor (0x0E "AL" handles 90%+ of cases instantly)
-        if (UNLIKELY(cond != 0x0E)) {
-            switch(cond) {
-              case 0x00: cond_res = Z_FLAG; break;
-              case 0x01: cond_res = !Z_FLAG; break;
-              case 0x02: cond_res = C_FLAG; break;
-              case 0x03: cond_res = !C_FLAG; break;
-              case 0x04: cond_res = N_FLAG; break;
-              case 0x05: cond_res = !N_FLAG; break;
-              case 0x06: cond_res = V_FLAG; break;
-              case 0x07: cond_res = !V_FLAG; break;
-              case 0x08: cond_res = C_FLAG && !Z_FLAG; break;
-              case 0x09: cond_res = !C_FLAG || Z_FLAG; break;
-              case 0x0A: cond_res = N_FLAG == V_FLAG; break;
-              case 0x0B: cond_res = N_FLAG != V_FLAG; break;
-              case 0x0C: cond_res = !Z_FLAG && (N_FLAG == V_FLAG); break;
-              case 0x0D: cond_res = Z_FLAG || (N_FLAG != V_FLAG); break;
-              case 0x0E: cond_res = true; break;
-              default:   cond_res = false; break;
-            }
-        }
+		// Condition Predictor (0x0E "AL" handles 90%+ of cases instantly)
+		// This is a highly predictable branch, allowing us to bypass the lookup entirely.
+		if (UNLIKELY(cond != 0x0E)) {
+			// Broadway Optimization: 32-byte flat table locked in a single L1 D-Cache line.
+			// Maps the 16 possible flag states (N, Z, C, V) to the 16 ARM condition codes.
+			static const u16 condTable[16] = {
+				0xF0F0, // 00: EQ (Z=1)
+				0x0F0F, // 01: NE (Z=0)
+				0xCCCC, // 02: CS/HS (C=1)
+				0x3333, // 03: CC/LO (C=0)
+				0xFF00, // 04: MI (N=1)
+				0x00FF, // 05: PL (N=0)
+				0xAAAA, // 06: VS (V=1)
+				0x5555, // 07: VC (V=0)
+				0x0C0C, // 08: HI (C=1 & Z=0)
+				0xF3F3, // 09: LS (C=0 | Z=1)
+				0xAA55, // 0A: GE (N==V)
+				0x55AA, // 0B: LT (N!=V)
+				0x0A05, // 0C: GT (Z=0 & N==V)
+				0xF5FA, // 0D: LE (Z=1 | N!=V)
+				0xFFFF, // 0E: AL (Always)
+				0x0000  // 0F: NV (Never)
+			};
+
+			// Pack flags into a 4-bit index: [N : Z : C : V]
+			u32 flags = ((u32)N_FLAG << 3) | ((u32)Z_FLAG << 2) | ((u32)C_FLAG << 1) | (u32)V_FLAG;
+
+			// Shift the condition mask by the flag index to extract the pass/fail bit
+			cond_res = (condTable[cond] >> flags) & 1;
+		}
 
         if (cond_res) {
             int index = ((opcode >> 16) & 0xFF0) | ((opcode >> 4) & 0x0F);
