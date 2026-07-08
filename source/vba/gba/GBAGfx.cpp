@@ -1089,7 +1089,6 @@ void gfxDrawOBJWin(u32 *lineOBJWin)
   gfxClearArray(lineOBJWin);
   if((layerEnable & 0x9000) == 0x9000) {
     u16 *sprites = (u16 *)oam;
-    // u16 *spritePalette = &((u16 *)paletteRAM)[256];
     for(int x = 0; x < 128 ; x++) {
       int lineOBJpix = lineOBJpixleft[x];
       u16 a0 = READ16LE(sprites++);
@@ -1133,7 +1132,7 @@ void gfxDrawOBJWin(u32 *lineOBJWin)
 
       int sy = (a0 & 255);
 
-      if(a0 & 0x0100) {
+      if(a0 & 0x0100) { // Affine OBJ-WIN Processing
         int fieldX = sizeX;
         int fieldY = sizeY;
         if(a0 & 0x0200) {
@@ -1142,60 +1141,53 @@ void gfxDrawOBJWin(u32 *lineOBJWin)
         }
         if((sy+fieldY) > 256)
           sy -= 256;
+
         int t = VCOUNT - sy;
-        if((t >= 0) && (t < fieldY)) {
+
+        // OPTIMIZATION: Unsigned cast trick for immediate bounds collapse
+        if((u32)t < (u32)fieldY) {
           int sx = (a1 & 0x1FF);
           int startpix = 0;
           if ((sx+fieldX)> 512)
           {
             startpix=512-sx;
           }
-          if((sx < 240) || startpix) {
+          if((u32)sx < 240 || startpix) {
             lineOBJpix-=8;
-            // int t2 = t - (fieldY >> 1);
             int rot = (a1 >> 9) & 0x1F;
-            u16 *OAM = (u16 *)oam;
-            int dx = READ16LE(&OAM[3 + (rot << 4)]);
-            if(dx & 0x8000)
-              dx |= 0xFFFF8000;
-            int dmx = READ16LE(&OAM[7 + (rot << 4)]);
-            if(dmx & 0x8000)
-              dmx |= 0xFFFF8000;
-            int dy = READ16LE(&OAM[11 + (rot << 4)]);
-            if(dy & 0x8000)
-              dy |= 0xFFFF8000;
-            int dmy = READ16LE(&OAM[15 + (rot << 4)]);
-            if(dmy & 0x8000)
-              dmy |= 0xFFFF8000;
 
-            int realX = ((sizeX) << 7) - (fieldX >> 1)*dx - (fieldY>>1)*dmx
-              + t * dmx;
-            int realY = ((sizeY) << 7) - (fieldX >> 1)*dy - (fieldY>>1)*dmy
-              + t * dmy;
+            // OPTIMIZATION: Hoisted OAM Math and Prefetch
+            u16 *OAM_ptr = &((u16 *)oam)[rot << 4];
+            __builtin_prefetch(&OAM_ptr[3], 0, 0);
 
-            // u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+            int dx = READ16LE(&OAM_ptr[3]);
+            if(dx & 0x8000) dx |= 0xFFFF8000;
+            int dmx = READ16LE(&OAM_ptr[7]);
+            if(dmx & 0x8000) dmx |= 0xFFFF8000;
+            int dy = READ16LE(&OAM_ptr[11]);
+            if(dy & 0x8000) dy |= 0xFFFF8000;
+            int dmy = READ16LE(&OAM_ptr[15]);
+            if(dmy & 0x8000) dmy |= 0xFFFF8000;
 
-            if(a0 & 0x2000) {
+            int realX = ((sizeX) << 7) - (fieldX >> 1)*dx - (fieldY>>1)*dmx + t * dmx;
+            int realY = ((sizeY) << 7) - (fieldX >> 1)*dy - (fieldY>>1)*dmy + t * dmy;
+
+            if(a0 & 0x2000) { // 256 Color Mode
               int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
-              int inc = 32;
-              if(DISPCNT & 0x40)
-                inc = sizeX >> 2;
-              else
-                c &= 0x3FE;
+              if((DISPCNT & 7) > 2 && (c < 512)) continue;
+
+              int inc = (DISPCNT & 0x40) ? (sizeX >> 2) : 32;
+              if(!(DISPCNT & 0x40)) c &= 0x3FE;
+
               for(int x = 0; x < fieldX; x++) {
-                if (x >= startpix)
-                  lineOBJpix-=2;
-                if (lineOBJpix<0)
-                  continue;
+                if (x >= startpix) lineOBJpix-=2;
+                if (lineOBJpix<0) continue;
+
                 int xxx = realX >> 8;
                 int yyy = realY >> 8;
 
-                if(xxx < 0 || xxx >= sizeX ||
-                   yyy < 0 || yyy >= sizeY ||
-                   sx >= 240) {
-                } else {
+                // OPTIMIZATION: Unsigned Bounds Cast and empty IF removal
+                if((u32)xxx < (u32)sizeX && (u32)yyy < (u32)sizeY && (u32)sx < 240) {
                   u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
                                     + ((yyy & 7)<<3) + ((xxx >> 3)<<6) +
                                    (xxx & 7))&0x7fff)];
@@ -1207,44 +1199,31 @@ void gfxDrawOBJWin(u32 *lineOBJWin)
                 realX += dx;
                 realY += dy;
               }
-            } else {
+            } else { // 16 Color Mode
               int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
+              if((DISPCNT & 7) > 2 && (c < 512)) continue;
 
-              int inc = 32;
-              if(DISPCNT & 0x40)
-                inc = sizeX >> 3;
-              // int palette = (a2 >> 8) & 0xF0;
+              int inc = (DISPCNT & 0x40) ? (sizeX >> 3) : 32;
+
               for(int x = 0; x < fieldX; x++) {
-                if (x >= startpix)
-                  lineOBJpix-=2;
-                if (lineOBJpix<0)
-                  continue;
+                if (x >= startpix) lineOBJpix-=2;
+                if (lineOBJpix<0) continue;
+
                 int xxx = realX >> 8;
                 int yyy = realY >> 8;
 
-                //              if(x == 0 || x == (sizeX-1) ||
-                //                 t == 0 || t == (sizeY-1)) {
-                //                lineOBJ[sx] = 0x001F | prio;
-                //              } else {
-                  if(xxx < 0 || xxx >= sizeX ||
-                     yyy < 0 || yyy >= sizeY ||
-                     sx >= 240) {
-                  } else {
-                    u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
-                                     + ((yyy & 7)<<2) + ((xxx >> 3)<<5) +
-                                     ((xxx & 7)>>1))&0x7fff)];
-                    if(xxx & 1)
-                      color >>= 4;
-                    else
-                      color &= 0x0F;
+                // OPTIMIZATION: Unsigned Bounds Cast and empty IF removal
+                if((u32)xxx < (u32)sizeX && (u32)yyy < (u32)sizeY && (u32)sx < 240) {
+                  u32 color = vram[0x10000 + ((((c + (yyy>>3) * inc)<<5)
+                                   + ((yyy & 7)<<2) + ((xxx >> 3)<<5) +
+                                   ((xxx & 7)>>1))&0x7fff)];
+                  if(xxx & 1) color >>= 4;
+                  else color &= 0x0F;
 
-                    if(color) {
-                      lineOBJWin[sx] = 1;
-                    }
+                  if(color) {
+                    lineOBJWin[sx] = 1;
                   }
-                  //            }
+                }
                 sx = (sx+1)&511;
                 realX += dx;
                 realY += dy;
@@ -1252,46 +1231,43 @@ void gfxDrawOBJWin(u32 *lineOBJWin)
             }
           }
         }
-      } else {
+      } else { // Standard OBJ-WIN Processing
         if((sy+sizeY) > 256)
           sy -= 256;
+
         int t = VCOUNT - sy;
-        if((t >= 0) && (t < sizeY)) {
+
+        // OPTIMIZATION: Unsigned bounds cast trick
+        if((u32)t < (u32)sizeY) {
           int sx = (a1 & 0x1FF);
           int startpix = 0;
           if ((sx+sizeX)> 512)
           {
             startpix=512-sx;
           }
-          if((sx < 240) || startpix) {
+          if((u32)sx < 240 || startpix) {
             lineOBJpix+=2;
-            if(a0 & 0x2000) {
-              if(a1 & 0x2000)
-                t = sizeY - t - 1;
-              int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
+            if(a0 & 0x2000) { // 256 Color Mode
+              if(a1 & 0x2000) t = sizeY - t - 1;
 
-              int inc = 32;
-              if(DISPCNT & 0x40) {
-                inc = sizeX >> 2;
-              } else {
-                c &= 0x3FE;
-              }
-              int xxx = 0;
-              if(a1 & 0x1000)
-                xxx = sizeX-1;
+              int c = (a2 & 0x3FF);
+              if((DISPCNT & 7) > 2 && (c < 512)) continue;
+
+              int inc = (DISPCNT & 0x40) ? (sizeX >> 2) : 32;
+              if(!(DISPCNT & 0x40)) c &= 0x3FE;
+
+              int xxx = (a1 & 0x1000) ? (sizeX-1) : 0;
               int address = 0x10000 + ((((c+ (t>>3) * inc) << 5)
                 + ((t & 7) << 3) + ((xxx>>3)<<6) + (xxx & 7))&0x7fff);
-              if(a1 & 0x1000)
-                xxx = 7;
-              // u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+
+              if(a1 & 0x1000) xxx = 7;
+
               for(int xx = 0; xx < sizeX; xx++) {
-                if (xx >= startpix)
-                  lineOBJpix--;
-                if (lineOBJpix<0)
-                  continue;
-                if(sx < 240) {
+                if (xx >= startpix) lineOBJpix--;
+                if (lineOBJpix<0) continue;
+
+                // OPTIMIZATION: Unsigned Bounds Cast
+                if((u32)sx < 240) {
                   u8 color = vram[address];
                   if(color) {
                     lineOBJWin[sx] = 1;
@@ -1302,97 +1278,71 @@ void gfxDrawOBJWin(u32 *lineOBJWin)
                 if(a1 & 0x1000) {
                   xxx--;
                   address--;
-                  if(xxx == -1) {
-                    address -= 56;
-                    xxx = 7;
-                  }
-                  if(address < 0x10000)
-                    address += 0x8000;
+                  if(xxx == -1) { address -= 56; xxx = 7; }
+                  if(address < 0x10000) address += 0x8000;
                 } else {
                   xxx++;
                   address++;
-                  if(xxx == 8) {
-                    address += 56;
-                    xxx = 0;
-                  }
-                  if(address > 0x17fff)
-                    address -= 0x8000;
+                  if(xxx == 8) { address += 56; xxx = 0; }
+                  if(address > 0x17fff) address -= 0x8000;
                 }
               }
-            } else {
-              if(a1 & 0x2000)
-                t = sizeY - t - 1;
-              int c = (a2 & 0x3FF);
-              if((DISPCNT & 7) > 2 && (c < 512))
-                continue;
+            } else { // 16 Color Mode
+              if(a1 & 0x2000) t = sizeY - t - 1;
 
-              int inc = 32;
-              if(DISPCNT & 0x40) {
-                inc = sizeX >> 3;
-              }
-              int xxx = 0;
-              if(a1 & 0x1000)
-                xxx = sizeX - 1;
+              int c = (a2 & 0x3FF);
+              if((DISPCNT & 7) > 2 && (c < 512)) continue;
+
+              int inc = (DISPCNT & 0x40) ? (sizeX >> 3) : 32;
+              int xxx = (a1 & 0x1000) ? (sizeX - 1) : 0;
+
               int address = 0x10000 + ((((c + (t>>3) * inc)<<5)
                 + ((t & 7)<<2) + ((xxx>>3)<<5) + ((xxx & 7) >> 1))&0x7fff);
-              // u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
-              // int palette = (a2 >> 8) & 0xF0;
+
               if(a1 & 0x1000) {
                 xxx = 7;
                 for(int xx = sizeX - 1; xx >= 0; xx--) {
-                  if (xx >= startpix)
-                    lineOBJpix--;
-                  if (lineOBJpix<0)
-                    continue;
-                  if(sx < 240) {
+                  if (xx >= startpix) lineOBJpix--;
+                  if (lineOBJpix<0) continue;
+
+                  // OPTIMIZATION: Unsigned Bounds Cast
+                  if((u32)sx < 240) {
                     u8 color = vram[address];
-                    if(xx & 1) {
-                      color = (color >> 4);
-                    } else
-                      color &= 0x0F;
+                    if(xx & 1) color = (color >> 4);
+                    else color &= 0x0F;
 
                     if(color) {
                       lineOBJWin[sx] = 1;
                     }
                   }
+
                   sx = (sx+1) & 511;
                   xxx--;
-                  if(!(xx & 1))
-                    address--;
-                  if(xxx == -1) {
-                    xxx = 7;
-                    address -= 28;
-                  }
-                  if(address < 0x10000)
-                    address += 0x8000;
+                  if(!(xx & 1)) address--;
+                  if(xxx == -1) { xxx = 7; address -= 28; }
+                  if(address < 0x10000) address += 0x8000;
                 }
               } else {
                 for(int xx = 0; xx < sizeX; xx++) {
-                  if (xx >= startpix)
-                    lineOBJpix--;
-                  if (lineOBJpix<0)
-                    continue;
-                  if(sx < 240) {
+                  if (xx >= startpix) lineOBJpix--;
+                  if (lineOBJpix<0) continue;
+
+                  // OPTIMIZATION: Unsigned Bounds Cast
+                  if((u32)sx < 240) {
                     u8 color = vram[address];
-                    if(xx & 1) {
-                      color = (color >> 4);
-                    } else
-                      color &= 0x0F;
+                    if(xx & 1) color = (color >> 4);
+                    else color &= 0x0F;
 
                     if(color) {
                       lineOBJWin[sx] = 1;
                     }
                   }
+
                   sx = (sx+1) & 511;
                   xxx++;
-                  if(xx & 1)
-                    address++;
-                  if(xxx == 8) {
-                    address += 28;
-                    xxx = 0;
-                  }
-                  if(address > 0x17fff)
-                    address -= 0x8000;
+                  if(xx & 1) address++;
+                  if(xxx == 8) { address += 28; xxx = 0; }
+                  if(address > 0x17fff) address -= 0x8000;
                 }
               }
             }
