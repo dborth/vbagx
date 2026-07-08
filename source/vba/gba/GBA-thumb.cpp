@@ -957,24 +957,23 @@ static INSN_REGPARM void thumbB0(u32 opcode)
 #define PUSH_REG(val, r)                                    \
   if (opcode & (val)) {                                     \
     CPUWriteMemory(address, reg[(r)].I);                    \
-    if (LIKELY(count)) {                                    \
-        clockTicks += 1 + dataTicksAccessSeq32(address);    \
-    } else {                                                \
-        clockTicks += 1 + dataTicksAccess32(address);       \
-        count = 1;                                          \
-    }                                                       \
+    u32 c = (u32)count;                                     \
+    u32 seq = dataTicksAccessSeq32(address);                \
+    u32 non = dataTicksAccess32(address);                   \
+    /* Branchlessly select N-Cycle (count=0) or S-Cycle (count=1) */ \
+    clockTicks += 1 + ((seq & -c) | (non & (c - 1)));       \
+    count = 1;                                              \
     address += 4;                                           \
   }
 
 #define POP_REG(val, r)                                     \
   if (opcode & (val)) {                                     \
     reg[(r)].I = CPUReadMemory(address);                    \
-    if (LIKELY(count)) {                                    \
-        clockTicks += 1 + dataTicksAccessSeq32(address);    \
-    } else {                                                \
-        clockTicks += 1 + dataTicksAccess32(address);       \
-        count = 1;                                          \
-    }                                                       \
+    u32 c = (u32)count;                                     \
+    u32 seq = dataTicksAccessSeq32(address);                \
+    u32 non = dataTicksAccess32(address);                   \
+    clockTicks += 1 + ((seq & -c) | (non & (c - 1)));       \
+    count = 1;                                              \
     address += 4;                                           \
   }
 
@@ -1072,24 +1071,22 @@ static INSN_REGPARM void thumbBD(u32 opcode)
   if(opcode & (val)) {                                      \
     CPUWriteMemory(address, reg[(r)].I);                    \
     reg[(b)].I = temp;                                      \
-    if (LIKELY(count)) {                                    \
-        clockTicks += 1 + dataTicksAccessSeq32(address);    \
-    } else {                                                \
-        clockTicks += 1 + dataTicksAccess32(address);       \
-        count = 1;                                          \
-    }                                                       \
+    u32 c = (u32)count;                                     \
+    u32 seq = dataTicksAccessSeq32(address);                \
+    u32 non = dataTicksAccess32(address);                   \
+    clockTicks += 1 + ((seq & -c) | (non & (c - 1)));       \
+    count = 1;                                              \
     address += 4;                                           \
   }
 
 #define THUMB_LDM_REG(val,r)                                \
   if(opcode & (val)) {                                      \
     reg[(r)].I = CPUReadMemory(address);                    \
-    if (LIKELY(count)) {                                    \
-        clockTicks += 1 + dataTicksAccessSeq32(address);    \
-    } else {                                                \
-        clockTicks += 1 + dataTicksAccess32(address);       \
-        count = 1;                                          \
-    }                                                       \
+    u32 c = (u32)count;                                     \
+    u32 seq = dataTicksAccessSeq32(address);                \
+    u32 non = dataTicksAccess32(address);                   \
+    clockTicks += 1 + ((seq & -c) | (non & (c - 1)));       \
+    count = 1;                                              \
     address += 4;                                           \
   }
 

@@ -436,17 +436,34 @@ static int romSize = 0x2000000;
 
 static inline int CPUUpdateTicks()
 {
-  int cpuLoopTicks = lcdTicks;
+	int cpuLoopTicks = lcdTicks;
 
-  if (soundTicks < cpuLoopTicks) cpuLoopTicks = soundTicks;
-  if (timer0On && timer0Ticks < cpuLoopTicks) cpuLoopTicks = timer0Ticks;
-  if (timer1On && !(TM1CNT & 4) && timer1Ticks < cpuLoopTicks) cpuLoopTicks = timer1Ticks;
-  if (timer2On && !(TM2CNT & 4) && timer2Ticks < cpuLoopTicks) cpuLoopTicks = timer2Ticks;
-  if (timer3On && !(TM3CNT & 4) && timer3Ticks < cpuLoopTicks) cpuLoopTicks = timer3Ticks;
-  if (SWITicks && SWITicks < cpuLoopTicks) cpuLoopTicks = SWITicks;
-  if (IRQTicks && IRQTicks < cpuLoopTicks) cpuLoopTicks = IRQTicks;
+	// Branchless minimum macro mapping to Broadway's dual integer pipeline
+	#define B_MIN(a, b) ((b) ^ (((a) ^ (b)) & -((a) < (b))))
 
-  return cpuLoopTicks;
+	cpuLoopTicks = B_MIN(cpuLoopTicks, soundTicks);
+
+	// Mask out inactive timers with INT_MAX (0x7FFFFFFF) so they drop out of the min evaluation
+	int t0 = timer0On ? timer0Ticks : 0x7FFFFFFF;
+	cpuLoopTicks = B_MIN(cpuLoopTicks, t0);
+
+	int t1 = (timer1On & !(TM1CNT & 4)) ? timer1Ticks : 0x7FFFFFFF;
+	cpuLoopTicks = B_MIN(cpuLoopTicks, t1);
+
+	int t2 = (timer2On & !(TM2CNT & 4)) ? timer2Ticks : 0x7FFFFFFF;
+	cpuLoopTicks = B_MIN(cpuLoopTicks, t2);
+
+	int t3 = (timer3On & !(TM3CNT & 4)) ? timer3Ticks : 0x7FFFFFFF;
+	cpuLoopTicks = B_MIN(cpuLoopTicks, t3);
+
+	int swi = SWITicks ? SWITicks : 0x7FFFFFFF;
+	cpuLoopTicks = B_MIN(cpuLoopTicks, swi);
+
+	int irq = IRQTicks ? IRQTicks : 0x7FFFFFFF;
+	cpuLoopTicks = B_MIN(cpuLoopTicks, irq);
+
+	#undef B_MIN
+	return cpuLoopTicks;
 }
 
 void CPUUpdateWindow0()
@@ -3108,23 +3125,25 @@ static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
       gfxDrawTileClipped(readTile(screenSource, yyy, charBase, palette, prio), &line[x], 0, firstTileX);
    }
 
-   if (mosaicOn)
-   {
-      if (mosaicX > 1)
-      {
-         int m = 1;
-         for (int i = 0; i < 239; i++)
-         {
-            line[i+1] = line[i];
-            m++;
-            if (m == mosaicX)
-            {
-               m = 1;
-               i++;
-            }
-         }
-      }
-   }
+	if (mosaicOn)
+	{
+		if (mosaicX > 1)
+		{
+			for (int i = 0; i < 240; i += mosaicX)
+			{
+				u32 pixel = line[i];
+				int limit = i + mosaicX;
+
+				// Mathematical clamp without branching out of the loop
+				limit = (limit > 240) ? 240 : limit;
+
+				for (int m = i + 1; m < limit; m++)
+				{
+					line[m] = pixel;
+				}
+			}
+		}
+	}
 }
 
 void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
