@@ -2195,31 +2195,33 @@ static void tester(void) {
 // Bypasses the 4,096 function table for the hottest ALU opcodes
 // (MOV, ADD, SUB, CMP). Eliminates I-Cache thrashing and localizes
 // the clockTicks state to prevent global register spilling on PPC.
+// Integrates O(1) Memory Pages & Branchless Condition Evaluation
 // ========================================================================
 
 int armExecute()
 {
-    do {
-        if( cheatsEnabled ) {
-            cpuMasterCodeCheck();
-        }
+	do {
+		if( cheatsEnabled ) {
+			cpuMasterCodeCheck();
+		}
 
-        if ((armNextPC & 0x0803FFFF) == 0x08020000)
-          busPrefetchCount = 0x100;
+		if ((armNextPC & 0x0803FFFF) == 0x08020000)
+			busPrefetchCount = 0x100;
 
-        u32 opcode = cpuPrefetch[0];
-        cpuPrefetch[0] = cpuPrefetch[1];
+		u32 opcode = cpuPrefetch[0];
+		cpuPrefetch[0] = cpuPrefetch[1];
 
-        busPrefetch = false;
-        if (busPrefetchCount & 0xFFFFFE00)
-            busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
+		// Branchless Bus Prefetch Evaluation
+		busPrefetch = false;
+		if (busPrefetchCount & 0xFFFFFE00)
+			busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
 
-        int oldArmNextPC = armNextPC;
-        armNextPC = reg[15].I;
-        reg[15].I += 4;
-        ARM_PREFETCH_NEXT;
+		int oldArmNextPC = armNextPC;
+		armNextPC = reg[15].I;
+		reg[15].I += 4;
+		ARM_PREFETCH_NEXT;
 
-        int cond = opcode >> 28;
+		int cond = opcode >> 28;
 		bool cond_res = true;
 
 		// Condition Predictor (0x0E "AL" handles 90%+ of cases instantly)
@@ -2253,35 +2255,35 @@ int armExecute()
 			cond_res = (condTable[cond] >> flags) & 1;
 		}
 
-        if (cond_res) {
-            int index = ((opcode >> 16) & 0xFF0) | ((opcode >> 4) & 0x0F);
-            int top8 = index >> 4; // opcode bits 27-20
-            int dest = (opcode >> 12) & 15;
+		if (cond_res) {
+			int index = ((opcode >> 16) & 0xFF0) | ((opcode >> 4) & 0x0F);
+			int top8 = index >> 4; // opcode bits 27-20
+			int dest = (opcode >> 12) & 15;
 
-            bool handledInline = false;
-            int localTicks = 0; // Localized variable to pin to GPR
+			bool handledInline = false;
+			int localTicks = 0; // Localized variable to pin to GPR
 
-            // Macro specifically tailored to prevent inline bloat
-            #define INLINE_PC_CHECK(MODECHANGE) \
-                if (LIKELY(dest != 15)) { \
-                    localTicks = 1 + codeTicksAccessSeq32(armNextPC); \
-                } else { \
-                    MODECHANGE; \
-                    if (armState) { \
-                        reg[15].I &= 0xFFFFFFFC; \
-                        armNextPC = reg[15].I; \
-                        reg[15].I += 4; \
-                        ARM_PREFETCH; \
-                    } else { \
-                        reg[15].I &= 0xFFFFFFFE; \
-                        armNextPC = reg[15].I; \
-                        reg[15].I += 2; \
-                        THUMB_PREFETCH; \
-                    } \
-                    localTicks = 3 + codeTicksAccess32(armNextPC) + \
-                                 codeTicksAccessSeq32(armNextPC) + \
-                                 codeTicksAccessSeq32(armNextPC); \
-                }
+			// Macro specifically tailored to prevent inline bloat
+			#define INLINE_PC_CHECK(MODECHANGE) \
+				if (LIKELY(dest != 15)) { \
+					localTicks = 1 + codeTicksAccessSeq32(armNextPC); \
+				} else { \
+					MODECHANGE; \
+					if (armState) { \
+						reg[15].I &= 0xFFFFFFFC; \
+						armNextPC = reg[15].I; \
+						reg[15].I += 4; \
+						ARM_PREFETCH; \
+					} else { \
+						reg[15].I &= 0xFFFFFFFE; \
+						armNextPC = reg[15].I; \
+						reg[15].I += 2; \
+						THUMB_PREFETCH; \
+					} \
+					localTicks = 3 + codeTicksAccess32(armNextPC) + \
+						codeTicksAccessSeq32(armNextPC) + \
+						codeTicksAccessSeq32(armNextPC); \
+				}
 
             // ========================================================
             // FAST PATH 1: DATA PROCESSING IMMEDIATE (0x20 - 0x3F)
@@ -2305,7 +2307,6 @@ int armExecute()
                         reg[dest].I = reg[(opcode>>16)&15].I + value;
                         INLINE_PC_CHECK(/*nothing*/);
                         handledInline = true; break;
-
                     case 0x29: // ADDS imm
                     {
                         u32 lhs = reg[(opcode>>16)&15].I;
@@ -2320,12 +2321,10 @@ int armExecute()
                         INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
                         handledInline = true; break;
                     }
-
                     case 0x24: // SUB imm
                         reg[dest].I = reg[(opcode>>16)&15].I - value;
                         INLINE_PC_CHECK(/*nothing*/);
                         handledInline = true; break;
-
                     case 0x25: // SUBS imm
                     {
                         u32 lhs = reg[(opcode>>16)&15].I;
@@ -2340,7 +2339,6 @@ int armExecute()
                         INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
                         handledInline = true; break;
                     }
-
                     case 0x35: // CMP imm
                     {
                         u32 lhs = reg[(opcode>>16)&15].I;
@@ -2352,12 +2350,10 @@ int armExecute()
                         localTicks = 1 + codeTicksAccessSeq32(armNextPC);
                         handledInline = true; break;
                     }
-
                     case 0x3A: // MOV imm
                         reg[dest].I = value;
                         INLINE_PC_CHECK(/*nothing*/);
                         handledInline = true; break;
-
                     case 0x3B: // MOVS imm
                         reg[dest].I = value;
                         if (LIKELY(dest != 15)) {
@@ -2381,7 +2377,6 @@ int armExecute()
                         reg[dest].I = reg[(opcode>>16)&15].I + value;
                         INLINE_PC_CHECK(/*nothing*/);
                         handledInline = true; break;
-
                     case 0x09: // ADDS reg
                     {
                         u32 lhs = reg[(opcode>>16)&15].I;
@@ -2396,12 +2391,10 @@ int armExecute()
                         INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
                         handledInline = true; break;
                     }
-
                     case 0x04: // SUB reg
                         reg[dest].I = reg[(opcode>>16)&15].I - value;
                         INLINE_PC_CHECK(/*nothing*/);
                         handledInline = true; break;
-
                     case 0x05: // SUBS reg
                     {
                         u32 lhs = reg[(opcode>>16)&15].I;
@@ -2416,7 +2409,6 @@ int armExecute()
                         INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
                         handledInline = true; break;
                     }
-
                     case 0x15: // CMP reg
                     {
                         u32 lhs = reg[(opcode>>16)&15].I;
@@ -2428,12 +2420,10 @@ int armExecute()
                         localTicks = 1 + codeTicksAccessSeq32(armNextPC);
                         handledInline = true; break;
                     }
-
                     case 0x1A: // MOV reg
                         reg[dest].I = value;
                         INLINE_PC_CHECK(/*nothing*/);
                         handledInline = true; break;
-
                     case 0x1B: // MOVS reg
                         reg[dest].I = value;
                         if (LIKELY(dest != 15)) {
@@ -2445,6 +2435,86 @@ int armExecute()
                         handledInline = true; break;
                 }
             }
+            // ========================================================
+            // FAST PATH 3: SINGLE DATA TRANSFER IMMEDIATE (LDR/STR)
+            // Relies completely on O(1) inline arrays
+            // ========================================================
+            else if (top8 >= 0x40 && top8 <= 0x5F) {
+                int base = (opcode >> 16) & 15;
+                u32 offset = opcode & 0xFFF;
+                u32 base_val = reg[base].I;
+                u32 address;
+                bool writeback = false;
+
+                if (busPrefetchCount == 0) busPrefetch = busPrefetchEnable;
+
+                // Branchless U-bit (Up/Down) coercion
+                if (!(opcode & 0x00800000)) offset = (u32)(-(s32)offset);
+
+                // Pre/Post Indexing
+                if (opcode & 0x01000000) { // P=1 (Pre-indexed)
+                    address = base_val + offset;
+                    writeback = (opcode & 0x00200000); // W bit dictates WB
+                } else { // P=0 (Post-indexed)
+                    address = base_val;
+                    writeback = true; // Post-index always dictates WB
+                }
+
+                if (opcode & 0x00100000) { // LDR
+                    if (opcode & 0x00400000) { // Byte
+                        reg[dest].I = CPUReadByte(address);
+                        localTicks = 3 + dataTicksAccess16(address) + codeTicksAccess32(armNextPC);
+                    } else { // Word
+                        reg[dest].I = CPUReadMemory(address);
+                        localTicks = 3 + dataTicksAccess32(address) + codeTicksAccess32(armNextPC);
+                    }
+
+                    if (dest != base && writeback) reg[base].I = base_val + offset;
+
+                    // Handle R15 Load
+                    if (UNLIKELY(dest == 15)) {
+                        reg[15].I &= 0xFFFFFFFC;
+                        armNextPC = reg[15].I;
+                        reg[15].I += 4;
+                        ARM_PREFETCH;
+                        localTicks += 2 + dataTicksAccessSeq32(address) + dataTicksAccessSeq32(address);
+                    }
+                } else { // STR
+                    if (writeback && (opcode & 0x01000000)) reg[base].I = address; // Store Writeback PRE
+
+                    if (opcode & 0x00400000) { // Byte
+                        CPUWriteByte(address, reg[dest].B.B0);
+                        localTicks = 2 + dataTicksAccess16(address) + codeTicksAccess32(armNextPC);
+                    } else { // Word
+                        CPUWriteMemory(address, reg[dest].I);
+                        localTicks = 2 + dataTicksAccess32(address) + codeTicksAccess32(armNextPC);
+                    }
+
+                    if (writeback && !(opcode & 0x01000000)) reg[base].I = base_val + offset; // Store Writeback POST
+                }
+                handledInline = true;
+            }
+            // ========================================================
+            // FAST PATH 4: BRANCH & BRANCH-LINK (B / BL)
+            // ========================================================
+            else if (top8 >= 0xA0 && top8 <= 0xBF) {
+                int offset = opcode & 0x00FFFFFF;
+                if (offset & 0x00800000) offset |= 0xFF000000;  // Branchless sign extension
+
+                if (opcode & 0x01000000) { // BL
+                    reg[14].I = reg[15].I - 4;
+                }
+
+                reg[15].I += (offset << 2);
+                armNextPC = reg[15].I;
+                reg[15].I += 4;
+                ARM_PREFETCH;
+
+                localTicks = codeTicksAccessSeq32(armNextPC) + 1;
+                localTicks = (localTicks * 2) + codeTicksAccess32(armNextPC) + 1;
+                busPrefetchCount = 0;
+                handledInline = true;
+            }
             #undef INLINE_PC_CHECK
 
             // ========================================================
@@ -2455,10 +2525,6 @@ int armExecute()
                 (*armInsnTable[index])(opcode);
                 localTicks = clockTicks; // Extract resulting global payload
             }
-
-            #ifdef INSN_COUNTER
-            count(opcode, cond_res);
-            #endif
 
             if (localTicks < 0)
                 return 0;
