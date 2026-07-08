@@ -1347,6 +1347,9 @@ static void doDMA_T(u32 &s, u32 &d, u32 si, u32 di, u32 c)
   cpuDmaHack = true;
   cpuDmaCount = c;
 
+  // Pin global to a local GPR to prevent continuous stack spilling in the unrolled loop
+  u32 localDmaLast = cpuDmaLast;
+
   if (transfer32) {
     s &= 0xFFFFFFFC;
     if (s < 0x02000000 && (reg[15].I >> 24)) {
@@ -1365,14 +1368,19 @@ static void doDMA_T(u32 &s, u32 &d, u32 si, u32 di, u32 c)
     } else {
       // Bulk 32-bit DMA transfer unrolled for pipelined Load/Store
       while (c >= 4) {
-        cpuDmaLast = CPUReadMemory(s); CPUWriteMemory(d, cpuDmaLast); s += si; d += di;
-        cpuDmaLast = CPUReadMemory(s); CPUWriteMemory(d, cpuDmaLast); s += si; d += di;
-        cpuDmaLast = CPUReadMemory(s); CPUWriteMemory(d, cpuDmaLast); s += si; d += di;
-        cpuDmaLast = CPUReadMemory(s); CPUWriteMemory(d, cpuDmaLast); s += si; d += di;
+        // Asynchronously prefetch the next unrolled block (16 bytes ahead) securely from the host memory map
+        u8 page = (s + (si << 2)) >> 24;
+        u8* ptr = gbaReadPagePtrs[page];
+        if (ptr) __builtin_prefetch(ptr + ((s + (si << 2)) & gbaReadPageMasks[page]), 0, 0);
+
+        localDmaLast = CPUReadMemory(s); CPUWriteMemory(d, localDmaLast); s += si; d += di;
+        localDmaLast = CPUReadMemory(s); CPUWriteMemory(d, localDmaLast); s += si; d += di;
+        localDmaLast = CPUReadMemory(s); CPUWriteMemory(d, localDmaLast); s += si; d += di;
+        localDmaLast = CPUReadMemory(s); CPUWriteMemory(d, localDmaLast); s += si; d += di;
         c -= 4;
       }
       while (c != 0) {
-        cpuDmaLast = CPUReadMemory(s); CPUWriteMemory(d, cpuDmaLast); s += si; d += di;
+        localDmaLast = CPUReadMemory(s); CPUWriteMemory(d, localDmaLast); s += si; d += di;
         --c;
       }
     }
@@ -1395,22 +1403,29 @@ static void doDMA_T(u32 &s, u32 &d, u32 si, u32 di, u32 c)
     } else {
       // Bulk 16-bit DMA transfer unrolled for pipelined Load/Store
       while (c >= 4) {
-        cpuDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, cpuDmaLast); cpuDmaLast |= (cpuDmaLast << 16); s += si; d += di;
-        cpuDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, cpuDmaLast); cpuDmaLast |= (cpuDmaLast << 16); s += si; d += di;
-        cpuDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, cpuDmaLast); cpuDmaLast |= (cpuDmaLast << 16); s += si; d += di;
-        cpuDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, cpuDmaLast); cpuDmaLast |= (cpuDmaLast << 16); s += si; d += di;
+        // Asynchronously prefetch the next unrolled block (8 bytes ahead) securely from the host memory map
+        u8 page = (s + (si << 2)) >> 24;
+        u8* ptr = gbaReadPagePtrs[page];
+        if (ptr) __builtin_prefetch(ptr + ((s + (si << 2)) & gbaReadPageMasks[page]), 0, 0);
+
+        localDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, localDmaLast); localDmaLast |= (localDmaLast << 16); s += si; d += di;
+        localDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, localDmaLast); localDmaLast |= (localDmaLast << 16); s += si; d += di;
+        localDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, localDmaLast); localDmaLast |= (localDmaLast << 16); s += si; d += di;
+        localDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, localDmaLast); localDmaLast |= (localDmaLast << 16); s += si; d += di;
         c -= 4;
       }
       while (c != 0) {
-        cpuDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, cpuDmaLast); cpuDmaLast |= (cpuDmaLast << 16); s += si; d += di;
+        localDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, localDmaLast); localDmaLast |= (localDmaLast << 16); s += si; d += di;
         --c;
       }
     }
   }
 
+  // Restore the open bus state globally once the pipeline has finished
+  cpuDmaLast = localDmaLast;
   cpuDmaCount = 0;
 
-  // Since transfer32 is a template argument, the compiler eliminates these ternaries entirely.
+  // Since transfer32 is a template argument, the compiler eliminates these ternaries entirely at compile time.
   u32 sw = 1 + (transfer32 ? memoryWaitSeq32[sm] : memoryWaitSeq[sm]);
   u32 dw = 1 + (transfer32 ? memoryWaitSeq32[dm] : memoryWaitSeq[dm]);
   u32 waitBase = 6 + (transfer32 ? memoryWait32[sm] + memoryWaitSeq32[dm] : memoryWait[sm] + memoryWaitSeq[dm]);
@@ -1440,11 +1455,15 @@ void doDMA(u32 &s, u32 &d, u32 si, u32 di, u32 c, int transfer32)
 // -------------------------------------------------------------------------
 template <int channel>
 static inline void CPUCheckDMA_T(int reason, int dmamask, u16& cnt_h, u16 cnt_l, u32& src, u32& dst, u16 dad_h, u16 dad_l) {
-  // Fast-fail if channel is not triggered in the mask or DMA isn't enabled
-  if (!((cnt_h & 0x8000) && (dmamask & (1 << channel)))) return;
 
-  // Fast-fail if reason doesn't match
-  if (((cnt_h >> 12) & 3) != reason) return;
+  // 1-Cycle Bitwise Validation Mask: Bypasses sequential short-circuit branching overhead.
+  // 1. Is DMA enabled? (cnt_h & 0x8000)
+  // 2. Is channel triggered in mask? -> shifted to 0x8000
+  // 3. Does reason match? -> shifted to 0x8000
+  u32 valid = (cnt_h & 0x8000) & (((dmamask >> channel) & 1) << 15) & ((((cnt_h >> 12) & 3) == reason) << 15);
+
+  // Fast-fail natively with a single predictable branch
+  if (!valid) return;
 
   u32 ctrlSrc = (cnt_h >> 7) & 3;
   u32 ctrlDst = (cnt_h >> 5) & 3;
