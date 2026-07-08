@@ -42,10 +42,7 @@ typedef union {
   volatile u32 I;
 } reg_pair;
 
-#ifndef NO_GBA_MAP
 extern memoryMap map[256];
-#endif
-
 extern reg_pair reg[45];
 extern u8 biosProtected[4];
 
