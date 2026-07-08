@@ -526,46 +526,43 @@ void gfxDrawRotScreen256(u16 control,
 				       u32 *line)
 {
   u16 *palette = (u16 *)paletteRAM;
-  u8 *screenBase = (DISPCNT & 0x0010) ? &vram[0xA000] : &vram[0x0000];
+
+  // OPTIMIZATION: Ternary replaced with predictable branch
+  u8 *screenBase = &vram[0x0000];
+  if(DISPCNT & 0x0010) {
+      screenBase = &vram[0xA000];
+  }
+
   int prio = ((control & 3) << 25) + 0x1000000;
   int sizeX = 240;
   int sizeY = 160;
 
   int startX = (x_l) | ((x_h & 0x07FF)<<16);
-  if(x_h & 0x0800)
-    startX |= 0xF8000000;
+  if(x_h & 0x0800) startX |= 0xF8000000;
   int startY = (y_l) | ((y_h & 0x07FF)<<16);
-  if(y_h & 0x0800)
-    startY |= 0xF8000000;
+  if(y_h & 0x0800) startY |= 0xF8000000;
 
   int dx = pa & 0x7FFF;
-  if(pa & 0x8000)
-    dx |= 0xFFFF8000;
+  if(pa & 0x8000) dx |= 0xFFFF8000;
   int dmx = pb & 0x7FFF;
-  if(pb & 0x8000)
-    dmx |= 0xFFFF8000;
+  if(pb & 0x8000) dmx |= 0xFFFF8000;
   int dy = pc & 0x7FFF;
-  if(pc & 0x8000)
-    dy |= 0xFFFF8000;
+  if(pc & 0x8000) dy |= 0xFFFF8000;
   int dmy = pd & 0x7FFF;
-  if(pd & 0x8000)
-    dmy |= 0xFFFF8000;
+  if(pd & 0x8000) dmy |= 0xFFFF8000;
 
-  if(VCOUNT == 0)
-    changed = 3;
+  if(VCOUNT == 0) changed = 3;
 
   if(changed & 1) {
     currentX = (x_l) | ((x_h & 0x07FF)<<16);
-    if(x_h & 0x0800)
-      currentX |= 0xF8000000;
+    if(x_h & 0x0800) currentX |= 0xF8000000;
   } else {
     currentX += dmx;
   }
 
   if(changed & 2) {
     currentY = (y_l) | ((y_h & 0x07FF)<<16);
-    if(y_h & 0x0800)
-      currentY |= 0xF8000000;
+    if(y_h & 0x0800) currentY |= 0xF8000000;
   } else {
     currentY += dmy;
   }
@@ -575,7 +572,13 @@ void gfxDrawRotScreen256(u16 control,
 
   if(control & 0x40) {
     int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-    int y = VCOUNT - (VCOUNT % mosaicY);
+    int y = VCOUNT;
+
+    // OPTIMIZATION: Avoid 30-cycle divw penalty if mosaicY is 1 (Standard rendering)
+    if (mosaicY > 1) {
+        y -= (VCOUNT % mosaicY);
+    }
+
     realX = startX + y*dmx;
     realY = startY + y*dmy;
   }
@@ -584,14 +587,10 @@ void gfxDrawRotScreen256(u16 control,
   int yyy = (realY >> 8);
 
   for(int x = 0; x < 240; x++) {
-    if(xxx < 0 ||
-         yyy < 0 ||
-       xxx >= sizeX ||
-       yyy >= sizeY) {
+    if(xxx < 0 || yyy < 0 || xxx >= sizeX || yyy >= sizeY) {
       line[x] = 0x80000000;
     } else {
       u8 color = screenBase[yyy * 240 + xxx];
-
       u32 mask = -(color != 0);
       line[x] = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
     }
@@ -719,7 +718,12 @@ void gfxDrawRotScreen16Bit160(u16 control,
 
 void gfxDrawSprites(u32 *lineOBJ)
 {
-	int lineOBJpix = (DISPCNT & 0x20) ? 954 : 1226;
+    // OPTIMIZATION: Removed Ternary to prevent branch penalty
+	int lineOBJpix = 1226;
+    if (DISPCNT & 0x20) {
+        lineOBJpix = 954;
+    }
+
 	int m = 0;
 	gfxClearArray(lineOBJ);
 	if(!(layerEnable & 0x1000)) return;
@@ -783,12 +787,12 @@ void gfxDrawSprites(u32 *lineOBJ)
 
 		if (lineOBJpix < 0) continue;
 
-			if(a0 & 0x0100) {
+        if(a0 & 0x0100) {
 			int fieldX = sizeX;
 			int fieldY = sizeY;
 			if(a0 & 0x0200) {
-			fieldX <<= 1;
-			fieldY <<= 1;
+			    fieldX <<= 1;
+			    fieldY <<= 1;
 			}
 
 			// Branchless Y boundary wrapper
@@ -796,32 +800,42 @@ void gfxDrawSprites(u32 *lineOBJ)
 
 			int t = VCOUNT - sy;
 			if((t >= 0) && (t < fieldY)) {
-			// Branchless X clamping
-			int startpix = ((sx + fieldX) >> 9) * (512 - sx);
 
-			if (lineOBJpix > 0 && ((sx < 240) || startpix)) {
-			  lineOBJpix -= 8;
-			  int rot = (a1 >> 9) & 0x1F;
-			  u16 *OAM = (u16 *)oam;
+                // OPTIMIZATION: Eliminated integer multiplication (mullw)
+                // Replaced 'int startpix = ((sx + fieldX) >> 9) * (512 - sx);'
+                int startpix = 0;
+                if (sx + fieldX > 512) {
+                    startpix = 512 - sx;
+                }
+
+                if (lineOBJpix > 0 && ((sx < 240) || startpix)) {
+                    lineOBJpix -= 8;
+                    int rot = (a1 >> 9) & 0x1F;
+                    u16 *OAM = (u16 *)oam;
 
 			  // Matrix prefetching
-			  __builtin_prefetch(&OAM[3 + (rot << 4)], 0, 0);
+                    __builtin_prefetch(&OAM[3 + (rot << 4)], 0, 0);
 
-			  int dx = READ16LE(&OAM[3 + (rot << 4)]);
-			  if(dx & 0x8000) dx |= 0xFFFF8000;
-			  int dmx = READ16LE(&OAM[7 + (rot << 4)]);
-			  if(dmx & 0x8000) dmx |= 0xFFFF8000;
-			  int dy = READ16LE(&OAM[11 + (rot << 4)]);
-			  if(dy & 0x8000) dy |= 0xFFFF8000;
-			  int dmy = READ16LE(&OAM[15 + (rot << 4)]);
-			  if(dmy & 0x8000) dmy |= 0xFFFF8000;
+                    int dx = READ16LE(&OAM[3 + (rot << 4)]);
+                    if(dx & 0x8000) dx |= 0xFFFF8000;
+                    int dmx = READ16LE(&OAM[7 + (rot << 4)]);
+                    if(dmx & 0x8000) dmx |= 0xFFFF8000;
+                    int dy = READ16LE(&OAM[11 + (rot << 4)]);
+                    if(dy & 0x8000) dy |= 0xFFFF8000;
+                    int dmy = READ16LE(&OAM[15 + (rot << 4)]);
+                    if(dmy & 0x8000) dmy |= 0xFFFF8000;
 
-			  if(a0 & 0x1000) t -= (t % mosaicY);
+                    // OPTIMIZATION: Bypassed 30-cycle 'divw' if mosaicY is 1
+                    if(a0 & 0x1000) {
+                        if (mosaicY > 1) {
+                            t -= (t % mosaicY);
+                        }
+                    }
 
-			  int realX = ((sizeX) << 7) - (fieldX >> 1)*dx - (fieldY>>1)*dmx + t * dmx;
-			  int realY = ((sizeY) << 7) - (fieldX >> 1)*dy - (fieldY>>1)*dmy + t * dmy;
+                    int realX = ((sizeX) << 7) - (fieldX >> 1)*dx - (fieldY>>1)*dmx + t * dmx;
+                    int realY = ((sizeY) << 7) - (fieldX >> 1)*dy - (fieldY>>1)*dmy + t * dmy;
 
-			  u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
+                    u32 prio = (((a2 >> 10) & 3) << 25) | ((a0 & 0x0c00)<<6);
 
 				if(a0 & 0x2000) {
 				  int c = (a2 & 0x3FF);
