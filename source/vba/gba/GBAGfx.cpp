@@ -54,7 +54,7 @@ struct TileLine
 
 typedef const TileLine (*TileReader) (const u16 *, const int, const u8 *, u16 *, const u32);
 
-static inline void gfxDrawPixel(u32 *dest, const u8 color, const u16 *palette, const u32 prio)
+static inline void gfxDrawPixel(u32 *dest, const u32 color, const u16 *palette, const u32 prio)
 {
    // Pure branchless bitwise clamping mapping to 1-cycle execution
    s32 c = color;
@@ -62,79 +62,77 @@ static inline void gfxDrawPixel(u32 *dest, const u8 color, const u16 *palette, c
    *dest = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
 }
 
-inline const TileLine gfxReadTile(const u16 *screenSource, const int yyy, const u8 *charBase, u16 *palette, const u32 prio)
+// 256 Color Mode
+inline void gfxReadTile_Dest(const u16 *screenSource, const int yyy, const u8 *charBase, u16 *palette, const u32 prio, u32 *dest)
 {
-   TileEntry tile;
-   tile.val = READ16LE(screenSource);
+   // Branchless extraction bypassing C++ Bitfield struct penalties
+   u16 val = READ16LE(screenSource);
+   int tileNum = val & 0x03FF;
+   int hFlip   = (val >> 10) & 1;
+   int vFlip   = (val >> 11) & 1;
 
    int tileY = yyy & 7;
-   if (tile.vFlip) tileY = 7 - tileY;
-   TileLine tileLine;
+   if (vFlip) tileY = 7 - tileY;
 
-   const u8 *tileBase = &charBase[tile.tileNum * 64 + tileY * 8];
+   const u8 *tileBase = &charBase[(tileNum << 6) + (tileY << 3)];
 
-   if (!tile.hFlip)
-   {
-      gfxDrawPixel(&tileLine.pixels[0], tileBase[0], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[1], tileBase[1], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[2], tileBase[2], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[3], tileBase[3], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[4], tileBase[4], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[5], tileBase[5], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[6], tileBase[6], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[7], tileBase[7], palette, prio);
+   if (!hFlip) {
+      gfxDrawPixel(dest++, tileBase[0], palette, prio);
+      gfxDrawPixel(dest++, tileBase[1], palette, prio);
+      gfxDrawPixel(dest++, tileBase[2], palette, prio);
+      gfxDrawPixel(dest++, tileBase[3], palette, prio);
+      gfxDrawPixel(dest++, tileBase[4], palette, prio);
+      gfxDrawPixel(dest++, tileBase[5], palette, prio);
+      gfxDrawPixel(dest++, tileBase[6], palette, prio);
+      gfxDrawPixel(dest++, tileBase[7], palette, prio);
+   } else {
+      gfxDrawPixel(dest++, tileBase[7], palette, prio);
+      gfxDrawPixel(dest++, tileBase[6], palette, prio);
+      gfxDrawPixel(dest++, tileBase[5], palette, prio);
+      gfxDrawPixel(dest++, tileBase[4], palette, prio);
+      gfxDrawPixel(dest++, tileBase[3], palette, prio);
+      gfxDrawPixel(dest++, tileBase[2], palette, prio);
+      gfxDrawPixel(dest++, tileBase[1], palette, prio);
+      gfxDrawPixel(dest++, tileBase[0], palette, prio);
    }
-   else
-   {
-      gfxDrawPixel(&tileLine.pixels[0], tileBase[7], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[1], tileBase[6], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[2], tileBase[5], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[3], tileBase[4], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[4], tileBase[3], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[5], tileBase[2], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[6], tileBase[1], palette, prio);
-      gfxDrawPixel(&tileLine.pixels[7], tileBase[0], palette, prio);
-   }
-
-   return tileLine;
 }
 
-inline const TileLine gfxReadTilePal(const u16 *screenSource, const int yyy, const u8 *charBase, u16 *palette, const u32 prio)
+// 16 Color Mode
+inline void gfxReadTilePal_Dest(const u16 *screenSource, const int yyy, const u8 *charBase, u16 *palette, const u32 prio, u32 *dest)
 {
-   TileEntry tile;
-   tile.val = READ16LE(screenSource);
+   // Branchless extraction bypassing C++ Bitfield struct penalties
+   u16 val = READ16LE(screenSource);
+   int tileNum    = val & 0x03FF;
+   int hFlip      = (val >> 10) & 1;
+   int vFlip      = (val >> 11) & 1;
+   int paletteIdx = (val >> 12) & 0x0F;
 
    int tileY = yyy & 7;
-   if (tile.vFlip) tileY = 7 - tileY;
-   palette += tile.palette * 16;
-   TileLine tileLine;
+   if (vFlip) tileY = 7 - tileY;
+   palette += (paletteIdx << 4);
 
-   const u8 *tileBase = &charBase[tile.tileNum * 32 + tileY * 4];
+   const u8 *tileBase = &charBase[(tileNum << 5) + (tileY << 2)];
 
-   if (!tile.hFlip)
-   {
-      gfxDrawPixel(&tileLine.pixels[0], tileBase[0] & 0x0F, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[1], tileBase[0] >> 4,   palette, prio);
-      gfxDrawPixel(&tileLine.pixels[2], tileBase[1] & 0x0F, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[3], tileBase[1] >> 4,   palette, prio);
-      gfxDrawPixel(&tileLine.pixels[4], tileBase[2] & 0x0F, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[5], tileBase[2] >> 4,   palette, prio);
-      gfxDrawPixel(&tileLine.pixels[6], tileBase[3] & 0x0F, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[7], tileBase[3] >> 4,   palette, prio);
+   // Pointer increments map to Broadway's 1-cycle 'stwu' instruction
+   if (!hFlip) {
+      gfxDrawPixel(dest++, tileBase[0] & 0x0F, palette, prio);
+      gfxDrawPixel(dest++, tileBase[0] >> 4,   palette, prio);
+      gfxDrawPixel(dest++, tileBase[1] & 0x0F, palette, prio);
+      gfxDrawPixel(dest++, tileBase[1] >> 4,   palette, prio);
+      gfxDrawPixel(dest++, tileBase[2] & 0x0F, palette, prio);
+      gfxDrawPixel(dest++, tileBase[2] >> 4,   palette, prio);
+      gfxDrawPixel(dest++, tileBase[3] & 0x0F, palette, prio);
+      gfxDrawPixel(dest++, tileBase[3] >> 4,   palette, prio);
+   } else {
+      gfxDrawPixel(dest++, tileBase[3] >> 4,   palette, prio);
+      gfxDrawPixel(dest++, tileBase[3] & 0x0F, palette, prio);
+      gfxDrawPixel(dest++, tileBase[2] >> 4,   palette, prio);
+      gfxDrawPixel(dest++, tileBase[2] & 0x0F, palette, prio);
+      gfxDrawPixel(dest++, tileBase[1] >> 4,   palette, prio);
+      gfxDrawPixel(dest++, tileBase[1] & 0x0F, palette, prio);
+      gfxDrawPixel(dest++, tileBase[0] >> 4,   palette, prio);
+      gfxDrawPixel(dest++, tileBase[0] & 0x0F, palette, prio);
    }
-   else
-   {
-      gfxDrawPixel(&tileLine.pixels[0], tileBase[3] >> 4,   palette, prio);
-      gfxDrawPixel(&tileLine.pixels[1], tileBase[3] & 0x0F, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[2], tileBase[2] >> 4,   palette, prio);
-      gfxDrawPixel(&tileLine.pixels[3], tileBase[2] & 0x0F, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[4], tileBase[1] >> 4,   palette, prio);
-      gfxDrawPixel(&tileLine.pixels[5], tileBase[1] & 0x0F, palette, prio);
-      gfxDrawPixel(&tileLine.pixels[6], tileBase[0] >> 4,   palette, prio);
-      gfxDrawPixel(&tileLine.pixels[7], tileBase[0] & 0x0F, palette, prio);
-   }
-
-   return tileLine;
 }
 
 static inline void gfxDrawTile(const TileLine &tileLine, u32 *line)
@@ -147,139 +145,93 @@ static inline void gfxDrawTileClipped(const TileLine &tileLine, u32 *line, const
    memcpy(line, tileLine.pixels + start, w * sizeof(u32));
 }
 
-template<TileReader readTile>
-static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs,
-                       u32 *line)
+typedef void (*TileReader_Dest) (const u16 *, const int, const u8 *, u16 *, const u32, u32 *);
+
+template<TileReader_Dest readTileDest>
+static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 {
    u16 *palette = (u16 *)paletteRAM;
    u8 *charBase = &vram[((control >> 2) & 0x03) * 0x4000];
    u16 *screenBase = (u16 *)&vram[((control >> 8) & 0x1f) * 0x800];
    u32 prio = ((control & 3)<<25) + 0x1000000;
+
    int sizeX = 256;
    int sizeY = 256;
-   switch ((control >> 14) & 3)
-   {
-      case 0:
-         break;
-      case 1:
-         sizeX = 512;
-         break;
-      case 2:
-         sizeY = 512;
-         break;
-      case 3:
-         sizeX = 512;
-         sizeY = 512;
-         break;
+   switch ((control >> 14) & 3) {
+      case 1: sizeX = 512; break;
+      case 2: sizeY = 512; break;
+      case 3: sizeX = 512; sizeY = 512; break;
    }
 
-   int maskX = sizeX-1;
-   int maskY = sizeY-1;
-
+   int maskX = sizeX - 1;
+   int maskY = sizeY - 1;
    bool mosaicOn = (control & 0x40) ? true : false;
-
    int xxx = hofs & maskX;
    int yyy = (vofs + VCOUNT) & maskY;
-   int mosaicX = (MOSAIC & 0x000F)+1;
-   int mosaicY = ((MOSAIC & 0x00F0)>>4)+1;
+   int mosaicX = (MOSAIC & 0x000F) + 1;
+   int mosaicY = ((MOSAIC & 0x00F0) >> 4) + 1;
 
-   if (mosaicOn)
-   {
-      if ((VCOUNT % mosaicY) != 0)
-      {
-         mosaicY = VCOUNT - (VCOUNT % mosaicY);
-         yyy = (vofs + mosaicY) & maskY;
-      }
+   if (mosaicOn && mosaicY > 1) {
+       yyy -= ((vofs + VCOUNT) % mosaicY);
+       yyy &= maskY;
    }
 
-   if (yyy > 255 && sizeY > 256)
-   {
+   if (yyy > 255 && sizeY > 256) {
       yyy &= 255;
       screenBase += 0x400;
-      if (sizeX > 256)
-         screenBase += 0x400;
+      if (sizeX > 256) screenBase += 0x400;
    }
 
-   int yshift = ((yyy>>3)<<5);
-
-   u16 *screenSource = screenBase + 0x400 * (xxx>>8) + ((xxx & 255)>>3) + yshift;
+   int yshift = ((yyy >> 3) << 5);
+   u16 *screenSource = screenBase + 0x400 * (xxx >> 8) + ((xxx & 255) >> 3) + yshift;
    int x = 0;
    const int firstTileX = xxx & 7;
 
+   u32 tempPixels[8]; // Minimal stack usage exclusively for edge clipping
+
    // First tile, if clipped
-   if (firstTileX)
-   {
-      gfxDrawTileClipped(readTile(screenSource, yyy, charBase, palette, prio), &line[x], firstTileX, 8 - firstTileX);
+   if (firstTileX) {
+      readTileDest(screenSource, yyy, charBase, palette, prio, tempPixels);
+      memcpy(&line[x], tempPixels + firstTileX, (8 - firstTileX) * sizeof(u32));
       screenSource++;
       x += 8 - firstTileX;
       xxx += 8 - firstTileX;
 
-      if (xxx == 256 && sizeX > 256)
-      {
-         screenSource = screenBase + 0x400 + yshift;
-      }
-      else if (xxx >= sizeX)
-      {
-         xxx = 0;
-         screenSource = screenBase + yshift;
-      }
+      if (xxx == 256 && sizeX > 256) screenSource = screenBase + 0x400 + yshift;
+      else if (xxx >= sizeX) { xxx = 0; screenSource = screenBase + yshift; }
    }
 
-   // Middle tiles, full
-   while (x < 240 - firstTileX)
-   {
-	  // PREFETCH: Pull the next tile's memory into L1 D-Cache asynchronously
-	  __builtin_prefetch(screenSource + 4, 0, 0);
-
-      gfxDrawTile(readTile(screenSource, yyy, charBase, palette, prio), &line[x]);
+   // Middle tiles, full bypass - writes straight to buffer utilizing stwu
+   while (x < 240 - firstTileX) {
+      __builtin_prefetch(screenSource + 4, 0, 0);
+      readTileDest(screenSource, yyy, charBase, palette, prio, &line[x]);
       screenSource++;
       xxx += 8;
       x += 8;
 
-      if (xxx == 256 && sizeX > 256)
-      {
-         screenSource = screenBase + 0x400 + yshift;
-      }
-      else if (xxx >= sizeX)
-      {
-         xxx = 0;
-         screenSource = screenBase + yshift;
-      }
+      if (xxx == 256 && sizeX > 256) screenSource = screenBase + 0x400 + yshift;
+      else if (xxx >= sizeX) { xxx = 0; screenSource = screenBase + yshift; }
    }
 
    // Last tile, if clipped
-   if (firstTileX)
-   {
-      gfxDrawTileClipped(readTile(screenSource, yyy, charBase, palette, prio), &line[x], 0, firstTileX);
+   if (firstTileX) {
+      readTileDest(screenSource, yyy, charBase, palette, prio, tempPixels);
+      memcpy(&line[x], tempPixels, firstTileX * sizeof(u32));
    }
 
-	if (mosaicOn)
-	{
-		if (mosaicX > 1)
-		{
-			for (int i = 0; i < 240; i += mosaicX)
-			{
-				u32 pixel = line[i];
-				int limit = i + mosaicX;
-
-				// Mathematical clamp without branching out of the loop
-				limit = (limit > 240) ? 240 : limit;
-
-				for (int m = i + 1; m < limit; m++)
-				{
-					line[m] = pixel;
-				}
-			}
-		}
-	}
+   if (mosaicOn && mosaicX > 1) {
+      for (int i = 0; i < 240; i += mosaicX) {
+         u32 pixel = line[i];
+         int limit = (i + mosaicX > 240) ? 240 : (i + mosaicX);
+         for (int m = i + 1; m < limit; m++) line[m] = pixel;
+      }
+   }
 }
 
 void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
 {
-   if (control & 0x80) // 1 pal / 256 col
-      gfxDrawTextScreen<gfxReadTile>(control, hofs, vofs, line);
-   else // 16 pal / 16 col
-      gfxDrawTextScreen<gfxReadTilePal>(control, hofs, vofs, line);
+   if (control & 0x80) gfxDrawTextScreen<gfxReadTile_Dest>(control, hofs, vofs, line);
+   else gfxDrawTextScreen<gfxReadTilePal_Dest>(control, hofs, vofs, line);
 }
 
 void gfxDrawRotScreen(u16 control,
@@ -378,29 +330,25 @@ void gfxDrawRotScreen(u16 control,
       realY += dy;
     }
   } else {
-    for(int x = 0; x < 240; x++) {
-      int xxx = (realX >> 8);
-      int yyy = (realY >> 8);
+	    int xxx = (realX >> 8);
+	    int yyy = (realY >> 8);
 
-      if(xxx < 0 ||
-         yyy < 0 ||
-         xxx >= sizeX ||
-         yyy >= sizeY) {
-        line[x] = 0x80000000;
-      } else {
-        int tile = screenBase[(xxx>>3) + ((yyy>>3)<<yshift)];
+	    for(int x = 0; x < 240; x++) {
+	      // OPTIMIZATION: Unsigned cast instantly collapses negative values via underflow.
+	      // Broadway completes this check in 2 cycles instead of 4+.
+	      if((u32)xxx >= (u32)sizeX || (u32)yyy >= (u32)sizeY) {
+	        line[x] = 0x80000000;
+	      } else {
+	        u8 color = screenBase[yyy * 240 + xxx];
+	        u32 mask = -(color != 0);
+	        line[x] = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
+	      }
+	      realX += dx;
+	      realY += dy;
 
-        int tileX = (xxx & 7);
-        int tileY = yyy & 7;
-
-        u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
-
-        u32 mask = -(color != 0);
-		line[x] = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
-      }
-      realX += dx;
-      realY += dy;
-    }
+	      xxx = (realX >> 8);
+	      yyy = (realY >> 8);
+	    }
   }
 
   if(control & 0x40) {
