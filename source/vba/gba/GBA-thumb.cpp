@@ -28,9 +28,6 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
 
 // Common macros //////////////////////////////////////////////////////////
 
-# define THUMB_CONSOLE_OUTPUT(a,b)
-# define UPDATE_OLDREG
-
 // Broadway Optimization: Branchless Memory Prefetch Evaluation
 // Replaces volatile boolean comparisons with pure 1-cycle bitwise logic
 // Logic: ~((v | -v) >> 31) & 1 yields 1 ONLY if v is exactly 0.
@@ -421,7 +418,6 @@ static INSN_REGPARM void thumb40_0(u32 opcode)
   reg[dest].I &= reg[(opcode >> 3)&7].I;
   N_FLAG = (reg[dest].I >> 31);
   Z_FLAG = (reg[dest].I == 0);
-  THUMB_CONSOLE_OUTPUT(NULL, reg[2].I);
 }
 
 // EOR Rd, Rs
@@ -714,7 +710,6 @@ static INSN_REGPARM void thumb46_2(u32 opcode)
 {
   reg[(opcode&7)+8].I = reg[(opcode>>3)&7].I;
   if((opcode&7) == 7) {
-    UPDATE_OLDREG;
     reg[15].I &= 0xFFFFFFFE;
     armNextPC = reg[15].I;
     reg[15].I += 2;
@@ -729,7 +724,6 @@ static INSN_REGPARM void thumb46_3(u32 opcode)
 {
   reg[(opcode&7)+8].I = reg[((opcode>>3)&7)+8].I;
   if((opcode&7) == 7) {
-    UPDATE_OLDREG;
     reg[15].I &= 0xFFFFFFFE;
     armNextPC = reg[15].I;
     reg[15].I += 2;
@@ -745,7 +739,6 @@ static INSN_REGPARM void thumb47(u32 opcode)
 {
   int base = (opcode >> 3) & 15;
   busPrefetchCount=0;
-  UPDATE_OLDREG;
   reg[15].I = reg[base].I;
   if(reg[base].I & 1) {
     armState = false;
@@ -1137,7 +1130,6 @@ static INSN_REGPARM void thumbC8(u32 opcode)
 // Broadway Optimization: Shared macro prevents I-Cache bloat from duplicated branch logic.
 // It strictly restores the original clockTicks timing model which is critical for GBA sync.
 #define THUMB_BRANCH_EXEC(cond) \
-  UPDATE_OLDREG; \
   clockTicks = codeTicksAccessSeq16(armNextPC) + 1; \
   if (cond) { \
     reg[15].I += ((s8)(opcode & 0xFF)) << 1; \
@@ -1236,11 +1228,7 @@ static INSN_REGPARM void thumbF8(u32 opcode)
 
 typedef INSN_REGPARM void (*insnfunc_t)(u32 opcode);
 #define thumbUI thumbUnknownInsn
-#ifdef BKPT_SUPPORT
- #define thumbBP thumbBreakpoint
-#else
- #define thumbBP thumbUnknownInsn
-#endif
+#define thumbBP thumbUnknownInsn
 static insnfunc_t thumbInsnTable[1024] = {
   thumb00_00,thumb00_01,thumb00_02,thumb00_03,thumb00_04,thumb00_05,thumb00_06,thumb00_07,  // 00
   thumb00_08,thumb00_09,thumb00_0A,thumb00_0B,thumb00_0C,thumb00_0D,thumb00_0E,thumb00_0F,
