@@ -143,7 +143,7 @@ u32 inline CPUReadMemoryQuick( u32 addr )
         else { return SAFE_QUICK_READ8(reg[15].I + (address & 1)); } \
     } while(0)
 
-static inline u32 CPUReadMemory(u32 address)
+static inline u32 CPUReadMemorySlow(u32 address)
 {
 	// OPTIMIZATION: Broadway evaluates this unconditional bitwise mask in 1 cycle (rlwinm).
 	// This avoids a costly 2-3 cycle conditional branch if it were an if-statement.
@@ -264,7 +264,7 @@ static inline u32 CPUReadMemory(u32 address)
 	return value;
 }
 
-static inline u32 CPUReadHalfWord(u32 address)
+static inline u32 CPUReadHalfWordSlow(u32 address)
 {
 	// OPTIMIZATION: Unconditional rlwinm mask
 	u32 alignedAddress = address & ~0x01;
@@ -396,12 +396,7 @@ static inline u32 CPUReadHalfWord(u32 address)
 	return value;
 }
 
-static inline s16 CPUReadHalfWordSigned(u32 address)
-{
-  return (s16)CPUReadHalfWord(address);
-}
-
-static inline u8 CPUReadByte(u32 address)
+static inline u8 CPUReadByteSlow(u32 address)
 {
 	u8 pageIdx = address >> 24;
 	u8* base = gbaReadPagePtrs[pageIdx];
@@ -468,7 +463,7 @@ static inline u8 CPUReadByte(u32 address)
 	}
 }
 
-static inline void CPUWriteMemory(u32 address, u32 value)
+static inline void CPUWriteMemorySlow(u32 address, u32 value)
 {
   // OPTIMIZATION: ~0x03 maps cleanly to a 1-cycle rlwinm mask
   address &= ~0x03;
@@ -531,7 +526,7 @@ static inline void CPUWriteMemory(u32 address, u32 value)
 }
 
 
-static inline void CPUWriteHalfWord(u32 address, u16 value)
+static inline void CPUWriteHalfWordSlow(u32 address, u16 value)
 {
   address &= ~0x01;
   u8 pageIdx = address >> 24;
@@ -598,7 +593,7 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
   }
 }
 
-static inline void CPUWriteByte(u32 address, u8 b)
+static inline void CPUWriteByteSlow(u32 address, u8 b)
 {
   u8 pageIdx = address >> 24;
   u8* base = gbaWritePagePtrs[pageIdx];
@@ -691,6 +686,95 @@ static inline void CPUWriteByte(u32 address, u8 b)
   unwritable:
     break;
   }
+}
+
+// -------------------------------------------------------------------------
+// O(1) Memory Read Fast-Paths
+// -------------------------------------------------------------------------
+
+static inline u32 CPUReadMemory(u32 address) {
+    u8 bank = address >> 24;
+    u8* page = gbaReadPagePtrs[bank];
+
+    if (LIKELY(page != NULL)) {
+        u32 val = READ32LE((u32*)(page + (address & gbaReadPageMasks[bank])));
+
+        // Native GBA unaligned read rotation
+        if (UNLIKELY(address & 3)) {
+            u32 shift = (address & 3) << 3;
+            val = (val >> shift) | (val << (32 - shift));
+        }
+        return val;
+    }
+    return CPUReadMemorySlow(address); // Fallback to legacy IO / Unmapped
+}
+
+static inline u16 CPUReadHalfWord(u32 address) {
+    u8 bank = address >> 24;
+    u8* page = gbaReadPagePtrs[bank];
+
+    if (LIKELY(page != NULL)) {
+        u16 val = READ16LE((u16*)(page + (address & gbaReadPageMasks[bank])));
+
+        // Native GBA unaligned read rotation
+        if (UNLIKELY(address & 1)) {
+            val = (val >> 8) | (val << 8);
+        }
+        return val;
+    }
+    return CPUReadHalfWordSlow(address);
+}
+
+static inline u8 CPUReadByte(u32 address) {
+    u8 bank = address >> 24;
+    u8* page = gbaReadPagePtrs[bank];
+
+    if (LIKELY(page != NULL)) {
+        return page[address & gbaReadPageMasks[bank]];
+    }
+    return CPUReadByteSlow(address);
+}
+
+static inline s16 CPUReadHalfWordSigned(u32 address)
+{
+  return (s16)CPUReadHalfWord(address);
+}
+
+// -------------------------------------------------------------------------
+// O(1) Memory Write Fast-Paths
+// -------------------------------------------------------------------------
+
+static inline void CPUWriteMemory(u32 address, u32 value) {
+    u8 bank = address >> 24;
+    u8* page = gbaWritePagePtrs[bank];
+
+    if (LIKELY(page != NULL)) {
+        WRITE32LE((u32*)(page + (address & gbaReadPageMasks[bank])), value);
+        return;
+    }
+    CPUWriteMemorySlow(address, value); // Fallback to legacy IO / Protect ROM
+}
+
+static inline void CPUWriteHalfWord(u32 address, u16 value) {
+    u8 bank = address >> 24;
+    u8* page = gbaWritePagePtrs[bank];
+
+    if (LIKELY(page != NULL)) {
+        WRITE16LE((u16*)(page + (address & gbaReadPageMasks[bank])), value);
+        return;
+    }
+    CPUWriteHalfWordSlow(address, value);
+}
+
+static inline void CPUWriteByte(u32 address, u8 value) {
+    u8 bank = address >> 24;
+    u8* page = gbaWritePagePtrs[bank];
+
+    if (LIKELY(page != NULL)) {
+        page[address & gbaReadPageMasks[bank]] = value;
+        return;
+    }
+    CPUWriteByteSlow(address, value);
 }
 
 #endif // GBAINLINE_H

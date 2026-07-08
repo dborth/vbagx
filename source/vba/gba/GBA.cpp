@@ -2143,31 +2143,36 @@ static inline void GBA_InitMemoryPages() {
         gbaWritePagePtrs[i] = NULL;
     }
 
-    // 0x02: WRAM
+    // 0x02: On-board WRAM (256KB)
     gbaReadPagePtrs[0x02]  = workRAM;
     gbaReadPageMasks[0x02] = 0x3FFFF;
     gbaWritePagePtrs[0x02] = workRAM;
 
-    // 0x03: IRAM
+    // 0x03: On-chip IRAM (32KB)
     gbaReadPagePtrs[0x03]  = internalRAM;
     gbaReadPageMasks[0x03] = 0x7FFF;
     gbaWritePagePtrs[0x03] = internalRAM;
 
-    // 0x05: PaletteRAM
-    // Write array is intentionally left NULL to force Corvette hack checks via slow-path.
+    // 0x05: Palette RAM (1KB)
     gbaReadPagePtrs[0x05]  = paletteRAM;
     gbaReadPageMasks[0x05] = 0x3FF;
+    gbaWritePagePtrs[0x05] = paletteRAM;
 
-    // 0x07: OAM
+    // 0x06: VRAM (96KB)
+    gbaReadPagePtrs[0x06]  = vram;
+    gbaReadPageMasks[0x06] = 0x1FFFF;
+    gbaWritePagePtrs[0x06] = vram;
+
+    // 0x07: OAM (1KB)
     gbaReadPagePtrs[0x07]  = oam;
     gbaReadPageMasks[0x07] = 0x3FF;
     gbaWritePagePtrs[0x07] = oam;
 
-    // 0x09 - 0x0C: ROM (Wait States 1 & 2)
+    // 0x09 - 0x0D: Game Pak ROM (Up to 32MB)
     // 0x08 is intentionally left NULL to force RTC checks via slow-path.
     // Only populate physical ROM pointers if GC Virtual Memory is disabled
 #ifndef USE_VM
-    for (int i = 0x09; i <= 0x0C; i++) {
+    for (int i = 0x09; i <= 0x0D; i++) {
         gbaReadPagePtrs[i]  = rom;
         gbaReadPageMasks[i] = 0x1FFFFFF;
     }
