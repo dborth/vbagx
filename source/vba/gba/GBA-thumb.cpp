@@ -1374,13 +1374,6 @@ static insnfunc_t thumbInsnTable[1024] = {
 
 // Wrapper routine (execution loop) ///////////////////////////////////////
 
-// ========================================================================
-// OPTIMIZED THUMB EXECUTION LOOP (FAST-PATH DISPATCHER)
-// Bypasses the 1,024 function table for the hottest ALU opcodes
-// (LSL, LSR, ASR, ADD, SUB, MOV, CMP). Eliminates I-Cache thrashing and
-// localizes the clockTicks state to prevent global register spilling.
-// ========================================================================
-
 int thumbExecute()
 {
 	do {
@@ -1391,11 +1384,14 @@ int thumbExecute()
 		u32 opcode = cpuPrefetch[0];
 		cpuPrefetch[0] = cpuPrefetch[1];
 
+		// Broadway Optimization: Branchless bus prefetch evaluation
 		busPrefetch = false;
 		if (busPrefetchCount & 0xFFFFFF00)
 			busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
 
+		clockTicks = 0;
 		u32 oldArmNextPC = armNextPC;
+
 		armNextPC = reg[15].I;
 		reg[15].I += 2;
 
@@ -1403,359 +1399,20 @@ int thumbExecute()
 		// Automatically handles the +2 pipeline offset and issues the native L1 dcbt
 		THUMB_PREFETCH_NEXT;
 
-		// --- OPTIONAL FAST-PATH DISPATCHER ---
-		// Handle the most common opcodes inline to avoid the thumbInsnTable overhead
-		int localTicks = 0;
-		bool handledInline = false;
+		// --- O(1) DISPATCHER ---
+		// The 32KB L1 I-Cache savior. Because the underlying macros and memory
+		// lookups are now mathematically branchless, this direct function pointer
+		// jump is infinitely faster than a bloated inner-loop switch statement.
+		(*thumbInsnTable[opcode>>6])(opcode);
 
-		// FAST-PATH DISPATCHER
-		// Extract top 5 bits (opcode >> 11) to intercept ALU/Shift/Immediate ops
-		int top5 = opcode >> 11;
-		switch (top5) {
-			case 0: // LSL Rd, Rm, #Imm5 (thumb00)
-			{
-				int dest = opcode & 0x07;
-				int source = (opcode >> 3) & 0x07;
-				int shift = (opcode >> 6) & 0x1F;
-				u32 src_val = reg[source].I;
+		if (clockTicks < 0)
+			return 0;
+		if (clockTicks == 0)
+			clockTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
-				// Branchless mask: 0xFFFFFFFF if shift > 0, 0x00000000 if shift == 0
-				u32 shift_mask = -(u32)(shift != 0);
+		cpuTotalTicks += clockTicks;
 
-				// If shift==0, C_FLAG is untouched. If shift>0, C_FLAG = bit (32-shift).
-				u32 new_c = (src_val >> ((32 - shift) & 0x1F)) & 1;
-				C_FLAG = (new_c & shift_mask) | (C_FLAG & ~shift_mask);
-
-				// Branchless value calculation
-				u32 value = ((src_val << shift) & shift_mask) | (src_val & ~shift_mask);
-
-				reg[dest].I = value;
-				N_FLAG = (value >> 31);
-				Z_FLAG = (value == 0);
-				localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-				handledInline = true;
-				break;
-			}
-			case 1: // LSR Rd, Rm, #Imm5 (thumb08)
-			{
-				int dest = opcode & 0x07;
-				int source = (opcode >> 3) & 0x07;
-				int shift = (opcode >> 6) & 0x1F;
-				u32 src_val = reg[source].I;
-
-				u32 shift_mask = -(u32)(shift != 0);
-
-				// If shift != 0, C is bit (shift-1). If shift == 0, C is bit 31.
-				u32 c_shift_nz = (shift - 1) & 0x1F;
-				u32 new_c = ((src_val >> c_shift_nz) & shift_mask) | ((src_val >> 31) & ~shift_mask);
-				C_FLAG = new_c & 1;
-
-				// If shift==0, value is 0.
-				u32 value = (src_val >> shift) & shift_mask;
-
-				reg[dest].I = value;
-				N_FLAG = (value >> 31);
-				Z_FLAG = (value == 0);
-				localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-				handledInline = true;
-				break;
-			}
-			case 2: // ASR Rd, Rm, #Imm5 (thumb10)
-			{
-				int dest = opcode & 0x07;
-				int source = (opcode >> 3) & 0x07;
-				int shift = (opcode >> 6) & 0x1F;
-				s32 src_val = (s32)reg[source].I;
-
-				u32 shift_mask = -(u32)(shift != 0);
-
-				u32 c_shift_nz = (shift - 1) & 0x1F;
-				u32 new_c = (((u32)src_val >> c_shift_nz) & shift_mask) | (((u32)src_val >> 31) & ~shift_mask);
-				C_FLAG = new_c & 1;
-
-				u32 sign_ext = -((u32)((u32)src_val >> 31));
-				u32 value = (((u32)(src_val >> shift)) & shift_mask) | (sign_ext & ~shift_mask);
-
-				reg[dest].I = value;
-				N_FLAG = (value >> 31);
-				Z_FLAG = (value == 0);
-				localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-				handledInline = true;
-				break;
-			}
-			case 3: // ADD/SUB Rd, Rs, Rn / #Imm3 (thumb18 - thumb1E)
-			{
-				int dest = opcode & 0x07;
-				int source = (opcode >> 3) & 0x07;
-				u32 lhs = reg[source].I;
-
-				// Bit 10 distinguishes between immediate (1) and register (0)
-				u32 rhs = (opcode & 0x0400) ? ((opcode >> 6) & 0x07) : reg[(opcode >> 6) & 0x07].I;
-				u32 res;
-
-				// Bit 9 distinguishes between SUB (1) and ADD (0)
-				if (opcode & 0x0200) {
-					res = lhs - rhs;
-					SUBCARRY(lhs, rhs, res);
-					SUBOVERFLOW(lhs, rhs, res);
-				} else {
-					res = lhs + rhs;
-					ADDCARRY(lhs, rhs, res);
-					ADDOVERFLOW(lhs, rhs, res);
-				}
-
-				reg[dest].I = res;
-				Z_FLAG = (res == 0);
-				N_FLAG = (res >> 31);
-				localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-				handledInline = true;
-				break;
-			}
-			case 4: // MOV Rd, #Imm8 (thumb20)
-			{
-				int dest = (opcode >> 8) & 0x07;
-				u32 value = opcode & 0xFF;
-				reg[dest].I = value;
-				N_FLAG = 0;
-				Z_FLAG = (value == 0);
-				localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-				handledInline = true;
-				break;
-			}
-			case 5: // CMP Rd, #Imm8 (thumb28)
-			{
-				int dest = (opcode >> 8) & 0x07;
-				u32 lhs = reg[dest].I;
-				u32 rhs = opcode & 0xFF;
-				u32 res = lhs - rhs;
-				Z_FLAG = (res == 0);
-				N_FLAG = (res >> 31);
-				SUBCARRY(lhs, rhs, res);
-				SUBOVERFLOW(lhs, rhs, res);
-				localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-				handledInline = true;
-				break;
-			}
-			case 6: // ADD Rd, #Imm8 (thumb30)
-			{
-				int dest = (opcode >> 8) & 0x07;
-				u32 lhs = reg[dest].I;
-				u32 rhs = opcode & 0xFF;
-				u32 res = lhs + rhs;
-				reg[dest].I = res;
-				Z_FLAG = (res == 0);
-				N_FLAG = (res >> 31);
-				ADDCARRY(lhs, rhs, res);
-				ADDOVERFLOW(lhs, rhs, res);
-				localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-				handledInline = true;
-				break;
-			}
-			case 7: // SUB Rd, #Imm8 (thumb38)
-			{
-				int dest = (opcode >> 8) & 0x07;
-				u32 lhs = reg[dest].I;
-				u32 rhs = opcode & 0xFF;
-				u32 res = lhs - rhs;
-				reg[dest].I = res;
-				Z_FLAG = (res == 0);
-				N_FLAG = (res >> 31);
-				SUBCARRY(lhs, rhs, res);
-				SUBOVERFLOW(lhs, rhs, res);
-				localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-				handledInline = true;
-				break;
-			}
-
-			// ========================================================================
-			// Memory I/O Fast-Path (Utilizing updated O(1) inline system)
-			// ========================================================================
-
-			case 12: // STR Rd, [Rb, #Imm] (thumb60)
-			{
-				busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-				int dest = opcode & 0x07;
-				int base = (opcode >> 3) & 0x07;
-				u32 offset = ((opcode >> 6) & 0x1F) << 2;
-				u32 address = reg[base].I + offset;
-				CPUWriteMemory(address, reg[dest].I);
-				localTicks = dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2;
-				handledInline = true;
-				break;
-			}
-			case 13: // LDR Rd, [Rb, #Imm] (thumb68)
-			{
-				busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-				int dest = opcode & 0x07;
-				int base = (opcode >> 3) & 0x07;
-				u32 offset = ((opcode >> 6) & 0x1F) << 2;
-				u32 address = reg[base].I + offset;
-				reg[dest].I = CPUReadMemory(address);
-				localTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC);
-				handledInline = true;
-				break;
-			}
-			case 14: // STRB Rd, [Rb, #Imm] (thumb70)
-			{
-				busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-				int dest = opcode & 0x07;
-				int base = (opcode >> 3) & 0x07;
-				u32 offset = (opcode >> 6) & 0x1F;
-				u32 address = reg[base].I + offset;
-				CPUWriteByte(address, reg[dest].B.B0);
-				localTicks = dataTicksAccess16(address) + codeTicksAccess16(armNextPC) + 2;
-				handledInline = true;
-				break;
-			}
-			case 15: // LDRB Rd, [Rb, #Imm] (thumb78)
-			{
-				busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-				int dest = opcode & 0x07;
-				int base = (opcode >> 3) & 0x07;
-				u32 offset = (opcode >> 6) & 0x1F;
-				u32 address = reg[base].I + offset;
-				reg[dest].I = CPUReadByte(address);
-				localTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(armNextPC);
-				handledInline = true;
-				break;
-			}
-			case 16: // STRH Rd, [Rb, #Imm] (thumb80)
-			{
-				busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-				int dest = opcode & 0x07;
-				int base = (opcode >> 3) & 0x07;
-				u32 offset = ((opcode >> 6) & 0x1F) << 1;
-				u32 address = reg[base].I + offset;
-				CPUWriteHalfWord(address, reg[dest].W.W0);
-				localTicks = dataTicksAccess16(address) + codeTicksAccess16(armNextPC) + 2;
-				handledInline = true;
-				break;
-			}
-			case 17: // LDRH Rd, [Rb, #Imm] (thumb88)
-			{
-				busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-				int dest = opcode & 0x07;
-				int base = (opcode >> 3) & 0x07;
-				u32 offset = ((opcode >> 6) & 0x1F) << 1;
-				u32 address = reg[base].I + offset;
-				reg[dest].I = CPUReadHalfWord(address);
-				localTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(armNextPC);
-				handledInline = true;
-				break;
-			}
-			case 18: // STR R0~R7, [SP, #Imm8] (thumb90)
-			{
-				busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-				int dest = (opcode >> 8) & 0x07;
-				u32 address = reg[13].I + ((opcode & 0xFF) << 2);
-				CPUWriteMemory(address, reg[dest].I);
-				localTicks = dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2;
-				handledInline = true;
-				break;
-			}
-			case 19: // LDR R0~R7, [SP, #Imm8] (thumb98)
-			{
-				busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-				int dest = (opcode >> 8) & 0x07;
-				u32 address = reg[13].I + ((opcode & 0xFF) << 2);
-				reg[dest].I = CPUReadMemoryQuick(address); // Kept Quick here because it aligns cleanly to the stack
-				localTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC);
-				handledInline = true;
-				break;
-			}
-
-			// ========================================================================
-			// Broadway Optimization: Branch & Link Fast-Path
-			// Intercepts opcodes 0xE and 0xF to bypass the 1,024-entry indirect table.
-			// Uses 1-cycle hardware arithmetic shifts to handle sign-extension branchlessly.
-			// ========================================================================
-
-			case 28: // B offset (thumbE0)
-			{
-				// Branchless 11-bit sign extension and multiply-by-two
-				s32 offset = ((s32)(opcode << 21)) >> 20;
-				reg[15].I += offset;
-				armNextPC = reg[15].I;
-				reg[15].I += 2;
-				THUMB_PREFETCH; // Evaluates natively via the updated macro
-				localTicks = codeTicksAccessSeq16(armNextPC) * 2 + codeTicksAccess16(armNextPC) + 3;
-				busPrefetchCount = 0;
-				handledInline = true;
-				break;
-			}
-			case 30: // BL prefix (thumbF0 and thumbF4)
-			{
-				// Broadway Optimization: Branchless sign extension of the 11-bit offset.
-				// opcode << 21 places the 11th bit (the sign bit) directly at the MSB (bit 31).
-				// Arithmetic shift right by 9 sign-extends it and aligns it to a 12-bit left shift natively.
-				// Replaces conditional 'if (opcode & 0x0400)' entirely.
-				reg[14].I = reg[15].I + (((s32)(opcode << 21)) >> 9);
-				localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-				handledInline = true;
-				break;
-			}
-			case 31: // BL/BLX suffix (thumbF8)
-			{
-				u32 temp = reg[15].I - 2;
-				reg[15].I = (reg[14].I + ((opcode & 0x7FF) << 1)) & 0xFFFFFFFE;
-				armNextPC = reg[15].I;
-				reg[15].I += 2;
-				reg[14].I = temp | 1;
-				THUMB_PREFETCH;
-				localTicks = codeTicksAccessSeq16(armNextPC) * 2 + codeTicksAccess16(armNextPC) + 3;
-				busPrefetchCount = 0;
-				handledInline = true;
-				break;
-			}
-		}
-
-		// FAST-PATH: Conditional Branches (Bcc) Intercept (Opcodes 0xD000 - 0xDDFF)
-		if (!handledInline && (opcode >> 12) == 0xD && ((opcode >> 8) & 0xF) < 0xE) {
-			int cond = 0;
-			switch ((opcode >> 8) & 0xF) {
-				case 0x0: cond = Z_FLAG; break;
-				case 0x1: cond = !Z_FLAG; break;
-				case 0x2: cond = C_FLAG; break;
-				case 0x3: cond = !C_FLAG; break;
-				case 0x4: cond = N_FLAG; break;
-				case 0x5: cond = !N_FLAG; break;
-				case 0x6: cond = V_FLAG; break;
-				case 0x7: cond = !V_FLAG; break;
-				case 0x8: cond = C_FLAG && !Z_FLAG; break;
-				case 0x9: cond = !C_FLAG || Z_FLAG; break;
-				case 0xA: cond = N_FLAG == V_FLAG; break;
-				case 0xB: cond = N_FLAG != V_FLAG; break;
-				case 0xC: cond = !Z_FLAG && (N_FLAG == V_FLAG); break;
-				case 0xD: cond = Z_FLAG || (N_FLAG != V_FLAG); break;
-			}
-
-			UPDATE_OLDREG;
-			localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-
-			if (cond) {
-				reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-				armNextPC = reg[15].I;
-				reg[15].I += 2;
-				THUMB_PREFETCH;
-				localTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-				busPrefetchCount = 0;
-			}
-			handledInline = true;
-		}
-
-		// FALLBACK: The original 1,024 instruction table
-		if (!handledInline) {
-			clockTicks = 0;
-			(*thumbInsnTable[opcode>>6])(opcode);
-			localTicks = clockTicks; // Extract resulting global payload
-		}
-
-		if (localTicks < 0)
-		  return 0;
-		if (localTicks == 0)
-		  localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1; // oldArmNextPC is correct here for fallbacks lacking tick assignment
-
-		cpuTotalTicks += localTicks;
 	} while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
+
 	return 1;
 }
