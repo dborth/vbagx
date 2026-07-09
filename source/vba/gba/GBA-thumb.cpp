@@ -1371,7 +1371,7 @@ int thumbExecute() {
         BasicBlock* block = jitCache.getBlock(pc);
 
         if (__builtin_expect(block == nullptr, 0)) {
-            block = CompileThumbTrace_JIT(pc, jitCache);
+            block = JITCompileThumbTrace(pc, jitCache);
         }
 
         // ========================================================================

@@ -54,6 +54,6 @@ extern JITCache jitCache;
 
 extern "C" void ExecuteJITTrace(JITBlockFunc execute, u32* gbaRegs, u32* flags, JITResult* outResult, u8** readPages, u32* readMasks);
 
-BasicBlock* CompileThumbTrace_JIT(u32 startPC, JITCache& cache);
+BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache);
 
 #endif // BLOCK_CACHE_MANAGER_H
