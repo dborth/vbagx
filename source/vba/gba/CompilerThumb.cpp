@@ -29,9 +29,9 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 
     	u16 opcode = CPUReadHalfWord(currentPC);
 
-    	// 1. THUMB Formats 1, 2, & 3 - Native ALU (Shifts, Add, Sub, Mov)
-		if ((opcode & 0xE000) == 0x0000) {
-			// Format 3: Move Immediate (MOV Rd, #Imm8)
+    	// THUMB Formats 1, 2, 3, 4 - Native ALU (Shifts, Add, Sub, Mov, Cmp)
+		if ((opcode & 0xE000) == 0x0000 || (opcode & 0xFC00) == 0x4000) {
+            // Format 3: Move Immediate (MOV Rd, #Imm8)
 			if ((opcode & 0xF800) == 0x2000) {
 				u8 rd = (opcode >> 8) & 0x07;
 				u8 imm = opcode & 0xFF;
@@ -68,7 +68,7 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
 			}
 			// Format 1: LSL / LSR / ASR
-			else if ((opcode & 0x1800) != 0x1800) {
+			else if ((opcode & 0x1800) != 0x1800 && (opcode & 0xE000) == 0x0000) {
 				u8 rd = opcode & 0x07;
 				u8 rs = (opcode >> 3) & 0x07;
 				u8 offset = (opcode >> 6) & 0x1F;
@@ -107,13 +107,77 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
 				*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
-			} else {
+			}
+            // Format 4: ALU Operations (Specifically CMP)
+            else if ((opcode & 0xFC00) == 0x4000) {
+                u8 op = (opcode >> 6) & 0x0F;
+                u8 rs = (opcode >> 3) & 0x07;
+                u8 rd = opcode & 0x07;
+
+                if (op == 10) { // CMP (Compare)
+                    // Compare is Subtraction without saving the result to Rd.
+                    *emitPtr++ = PPC_SUBFCO(PPC_R12, MapGBARegister(rs), MapGBARegister(rd)); // R12 = Rd - Rs
+
+                    // Hardware CA flag directly maps to GBA C_FLAG!
+                    *emitPtr++ = PPC_MFXER(PPC_R11);
+                    *emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31);
+                    *emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31);
+
+                    *emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
+                    *emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
+                    *emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+
+                    staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+                } else {
+                    endBlock = true;
+                    break;
+                }
+            } else {
 				endBlock = true;
 				break;
 			}
 		}
 
-		// 2. THUMB Format 6 - PC-Relative Load (LDR Rd, [PC, #Imm])
+        // THUMB Format 5 - Branch Exchange (BX Rs)
+        else if ((opcode & 0xFF00) == 0x4700) {
+            u8 rs = (opcode >> 3) & 0x0F;
+
+            // Protect against dynamic reads of R15 causing a stale PC desync
+            if (rs == 15) {
+                *emitPtr++ = PPC_LIS(PPC_R12, (currentPC + 4) >> 16);
+                *emitPtr++ = PPC_ORI(PPC_R12, PPC_R12, (currentPC + 4) & 0xFFFF);
+            } else {
+                *emitPtr++ = PPC_OR(PPC_R12, MapGBARegister(rs), MapGBARegister(rs));
+            }
+
+            // Extract Bit 0 to check if we are switching to ARM mode
+            *emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R12, 0, 31, 31);
+            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+
+            u32* branchArmSwitch = emitPtr;
+            *emitPtr++ = PPC_BEQ(0); // If Bit 0 == 0 (ARM), jump to C++ bailout
+
+            // TRUE PATH: Stay in THUMB, exit block dynamically
+            u32 takenPenalty = codeTicksAccessSeq16(currentPC + 2) + 1; // Base penalty
+
+            *emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
+            *emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
+            *emitPtr++ = PPC_BLR();
+
+            // FALSE PATH: ARM Switch Bailout
+            u32* bailoutTarget = emitPtr;
+            *emitPtr++ = PPC_LI(PPC_R3, staticCycles);
+            *emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
+            *emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
+            *emitPtr++ = PPC_BLR();
+
+            *branchArmSwitch = PPC_BEQ((u32)((bailoutTarget - branchArmSwitch) * 4));
+
+            endBlock = true; // Block safely terminates here
+            break;
+        }
+
+		// THUMB Format 6 - PC-Relative Load (LDR Rd, [PC, #Imm])
 		else if ((opcode & 0xF800) == 0x4800) {
 			u8 rd = (opcode >> 8) & 0x07;
 			u8 imm = opcode & 0xFF;
@@ -143,7 +207,7 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 			}
 		}
 
-		// 3. THUMB Formats 9, 10, 11 - Unified Memory Loads AND Stores
+		// THUMB Formats 9, 10, 11 - Unified Memory Loads AND Stores
 		else if (((opcode & 0xE000) == 0x6000) || ((opcode & 0xF000) == 0x5000) || ((opcode & 0xF000) == 0x8000)) {
 
 			bool isMemLoad = false;
@@ -273,7 +337,7 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 			}
 		}
 
-		// 4. THUMB Format 16 - Conditional Branches (Bcc)
+		// THUMB Format 16 - Conditional Branches (Bcc)
 		else if ((opcode & 0xF000) == 0xD000 && (opcode & 0x0F00) != 0x0F00) {
 			u8 cond = (opcode >> 8) & 0x0F;
 			s8 offset = (s8)(opcode & 0xFF);
