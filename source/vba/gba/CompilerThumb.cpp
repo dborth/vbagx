@@ -1,6 +1,8 @@
 #include "BlockCacheManager.h"
+#include "JITPPCEmitter.h"
 #include "GBAinline.h"
 #include "GBAcpu.h"
+#include "JITProfiler.h"
 
 static inline void FlushJITCache(void* addr, u32 size) {
     u32 start = (u32)addr & ~31;
@@ -19,6 +21,8 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
     u32 instrCount = 0;
     u32 staticCycles = 0; 
     bool endBlock = false;
+
+	JIT_LOG_BLOCK_COMPILED();
 
     while (!endBlock && instrCount < 64) {
         // BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction (~20) + Epilogue

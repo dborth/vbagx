@@ -7,6 +7,7 @@
 #include "GBAcpu.h"
 #include "GBAinline.h"
 #include "BlockCacheManager.h"
+#include "JITProfiler.h"
 #include "Globals.h"
 #include "EEprom.h"
 #include "Flash.h"
@@ -1386,6 +1387,8 @@ int thumbExecute() {
 
 			// Execute Native Trace with flat memory maps
 			ExecuteJITTrace(block->execute, (u32*)&reg[0].I, flagBuffer, &result, gbaReadPagePtrs, gbaReadPageMasks);
+
+			JIT_LOG_EXEC(block->length);
 
 			// Restore updated status flags
 			N_FLAG = flagBuffer[0];

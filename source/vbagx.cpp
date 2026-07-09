@@ -25,6 +25,10 @@
 #include "vba/gba/Globals.h"
 #include "vba/gba/Sound.h"
 
+#ifdef ENABLE_JIT_PROFILING
+#include "vba/gba/JITProfiler.h"
+#endif
+
 extern int emulating;
 void StopColorizing();
 void gbSetPalette(u32 RRGGBB[]);
@@ -139,6 +143,10 @@ int main(int argc, char *argv[])
 				ExitApp();
 			#endif
 		} // emulation loop
+
+		#ifdef ENABLE_JIT_PROFILING
+		g_jitStats.print();
+		#endif
 	} // main loop
 	return 0;
 }
