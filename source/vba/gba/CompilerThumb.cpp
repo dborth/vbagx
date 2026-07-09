@@ -64,6 +64,7 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 				break;
 			}
 		}
+
 		// 3. THUMB Formats 9, 10, 11 - Unified Memory Loads AND Stores
 		else if (((opcode & 0xE000) == 0x6000) || ((opcode & 0xF000) == 0x5000) || ((opcode & 0xF000) == 0x8000)) {
 
@@ -73,21 +74,21 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 			u32 accessType = 0; // 4=Word, 2=Halfword, 1=Byte
 
 			// Format 9: LDR/STR Rd, [Rb, #Imm]
-			if ((opcode & 0xE800) == 0x6000) {
+			if ((opcode & 0xF000) == 0x6000) {
 				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; imm = (opcode >> 6) & 0x1F;
 				*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm << 2);
 				accessType = 4;
 				if (opcode & 0x0800) isMemLoad = true; else isMemStore = true;
 			}
 			// Format 9: LDRB/STRB Rd, [Rb, #Imm]
-			else if ((opcode & 0xE800) == 0x7000) {
+			else if ((opcode & 0xF000) == 0x7000) {
 				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; imm = (opcode >> 6) & 0x1F;
 				*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm);
 				accessType = 1;
 				if (opcode & 0x0800) isMemLoad = true; else isMemStore = true;
 			}
 			// Format 11: LDRH/STRH Rd, [Rb, #Imm]
-			else if ((opcode & 0xE800) == 0x8000) {
+			else if ((opcode & 0xF000) == 0x8000) {
 				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; imm = (opcode >> 6) & 0x1F;
 				*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm << 1);
 				accessType = 2;
@@ -119,15 +120,24 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 				// 1. Extract Memory Bank (R12 >> 24)
 				*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
 
-				u32* branchStoreInvalid = nullptr;
+				u32* branchGuard1 = nullptr;
+				u32* branchGuard2 = nullptr;
+
 				if (isMemStore) {
 					// STORE STRICT GUARD: Only allow writes to Bank 0x02 (WRAM) & 0x03 (IRAM).
-					// This perfectly protects ROM, VRAM Mirrors, and Save Flash from JIT corruption.
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
-					*emitPtr++ = PPC_BEQ(8); // If == 2, skip the BNE failure
+					*emitPtr++ = PPC_BEQ(12); // If Bank == 2, jump completely over the next two instructions
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
-					branchStoreInvalid = emitPtr;
-					*emitPtr++ = PPC_BNE(0); // If != 3, bail out to C++
+					branchGuard1 = emitPtr;
+					*emitPtr++ = PPC_BNE(0);  // If Bank != 3 (and wasn't 2), bail out
+				} else {
+					// LOAD STRICT GUARD: Block Bank 0x04 (MMIO) and Bank >= 0x0D (Save Media)
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
+					branchGuard1 = emitPtr;
+					*emitPtr++ = PPC_BEQ(0);  // If Bank == 4, bail out
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 13);
+					branchGuard2 = emitPtr;
+					*emitPtr++ = PPC_BGE(0);  // If Bank >= 13, bail out
 				}
 
 				// 2. Load Page Pointer and Mask
@@ -166,15 +176,18 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 				*emitPtr++ = PPC_BLR();
 
 				// 8. Patch Branch Offsets
-				*branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
-				if (branchStoreInvalid) {
-					*branchStoreInvalid = PPC_BNE((u32)((bailoutTarget - branchStoreInvalid) * 4));
+				if (branchGuard1) {
+					*branchGuard1 = (isMemStore) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
 				}
+				if (branchGuard2) {
+					*branchGuard2 = PPC_BGE((u32)((bailoutTarget - branchGuard2) * 4));
+				}
+				*branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
 
 				u32* safeTarget = emitPtr;
 				*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
 
-				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 2;
+				staticCycles += codeTicksAccessSeq16(currentPC + 2) + ((isMemStore) ? 2 : 3);
 			} else {
 				endBlock = true;
 				break;
