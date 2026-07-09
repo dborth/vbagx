@@ -5,6 +5,7 @@
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
+#include "BlockCacheManager.h"
 #include "Globals.h"
 #include "GBAGfx.h"
 #include "EEprom.h"
@@ -2194,7 +2195,9 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
   memcpy(bios, myROM, sizeof(myROM));
 
   GBA_InitMemoryPages();
-
+#ifdef JIT_COMPILER
+  g_blockCache.flushCache();
+#endif
   int i = 0;
 
   biosProtected[0] = 0x00;

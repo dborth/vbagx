@@ -1,8 +1,8 @@
 #ifndef GBAINLINE_H
 #define GBAINLINE_H
 
-#include "../System.h"
 #include "../common/Port.h"
+#include "GBA.h"
 #include "RTC.h"
 #include "Sound.h"
 #include "vmmem.h" // Nintendo GC Virtual Memory
