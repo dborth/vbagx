@@ -6,7 +6,7 @@
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
-#include "BlockCacheManager.h"
+#include "JITCache.h"
 #include "JITProfiler.h"
 #include "Globals.h"
 #include "EEprom.h"
@@ -1368,10 +1368,10 @@ static insnfunc_t thumbInsnTable[1024] = {
 int thumbExecute() {
     while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks) {
         u32 pc = armNextPC;
-        BasicBlock* block = g_blockCache.getBlock(pc);
+        BasicBlock* block = jitCache.getBlock(pc);
 
         if (__builtin_expect(block == nullptr, 0)) {
-            block = CompileThumbTrace_JIT(pc, g_blockCache);
+            block = CompileThumbTrace_JIT(pc, jitCache);
         }
 
         // ========================================================================

@@ -13,7 +13,7 @@
 #   R7: readPages (Pointer to gbaReadPagePtrs)
 #   R8: readMasks (Pointer to gbaReadPageMasks)
 #
-# JIT Execution Register Mapping (from BlockCacheManager.h):
+# JIT Execution Register Mapping (from JITCache.h):
 #   R14..R29 : GBA Registers R0..R15
 #   R30      : PPC_R30_PAGES (readPages base array pointer)
 #   R31      : PPC_R31_MASKS (readMasks base array pointer)

@@ -1,16 +1,17 @@
-#include "BlockCacheManager.h"
+#include "JITCache.h"
+
 #include <string.h>
 
-BlockCacheManager g_blockCache;
+JITCache jitCache;
 
-BlockCacheManager::BlockCacheManager() {
+JITCache::JITCache() {
     memset(blockTable, 0, sizeof(blockTable));
     arenaOffset = 0;
     jitArena = (u32*)memalign(32, JIT_ARENA_SIZE);
     flushCache();
 }
 
-BlockCacheManager::~BlockCacheManager() {
+JITCache::~JITCache() {
     flushCache();
     if (jitArena) {
         free(jitArena);
@@ -18,7 +19,7 @@ BlockCacheManager::~BlockCacheManager() {
     }
 }
 
-u32* BlockCacheManager::allocateJITMemory(size_t numBytes) {
+u32* JITCache::allocateJITMemory(size_t numBytes) {
     numBytes = (numBytes + 3) & ~3;
     if (arenaOffset + (numBytes / sizeof(u32)) >= (JIT_ARENA_SIZE / sizeof(u32))) {
         flushCache();
@@ -28,13 +29,13 @@ u32* BlockCacheManager::allocateJITMemory(size_t numBytes) {
     return ptr;
 }
 
-void BlockCacheManager::rewindJITMemory(size_t numBytes) {
+void JITCache::rewindJITMemory(size_t numBytes) {
     size_t words = (numBytes + 3) / sizeof(u32);
     if (arenaOffset >= words) arenaOffset -= words;
     else arenaOffset = 0;
 }
 
-void BlockCacheManager::registerBlock(BasicBlock* block) {
+void JITCache::registerBlock(BasicBlock* block) {
     if (!block) return;
     u32 index = ((block->startPC >> 1) ^ (block->startPC >> 13)) & (HASH_TABLE_SIZE - 1);
     if (blockTable[index]) {
@@ -43,7 +44,7 @@ void BlockCacheManager::registerBlock(BasicBlock* block) {
     blockTable[index] = block;
 }
 
-void BlockCacheManager::flushCache() {
+void JITCache::flushCache() {
     arenaOffset = 0;
     for (size_t i = 0; i < HASH_TABLE_SIZE; ++i) {
         if (blockTable[i]) {

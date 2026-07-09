@@ -5,7 +5,7 @@
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
-#include "BlockCacheManager.h"
+#include "JITCache.h"
 #include "Globals.h"
 #include "GBAGfx.h"
 #include "EEprom.h"
@@ -2196,7 +2196,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
 
   GBA_InitMemoryPages();
 #ifdef JIT_COMPILER
-  g_blockCache.flushCache();
+  jitCache.flushCache();
 #endif
   int i = 0;
 

@@ -1,5 +1,5 @@
-#ifndef BLOCK_CACHE_MANAGER_H
-#define BLOCK_CACHE_MANAGER_H
+#ifndef JIT_CACHE_H
+#define JIT_CACHE_H
 
 #include <stddef.h>
 #include <malloc.h>
@@ -22,7 +22,7 @@ struct BasicBlock {
     JITBlockFunc execute;
 };
 
-class BlockCacheManager {
+class JITCache {
 	private:
 		static constexpr size_t JIT_ARENA_SIZE = 512 * 1024; // 512 KB
 		u32* jitArena;
@@ -32,8 +32,8 @@ class BlockCacheManager {
 		BasicBlock* blockTable[HASH_TABLE_SIZE];
 
 	public:
-		BlockCacheManager();
-		~BlockCacheManager();
+		JITCache();
+		~JITCache();
 
 		u32* allocateJITMemory(size_t numBytes);
 		void rewindJITMemory(size_t numBytes);
@@ -50,10 +50,10 @@ class BlockCacheManager {
 		}
 };
 
-extern BlockCacheManager g_blockCache;
+extern JITCache jitCache;
 
 extern "C" void ExecuteJITTrace(JITBlockFunc execute, u32* gbaRegs, u32* flags, JITResult* outResult, u8** readPages, u32* readMasks);
 
-BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache);
+BasicBlock* CompileThumbTrace_JIT(u32 startPC, JITCache& cache);
 
 #endif // BLOCK_CACHE_MANAGER_H

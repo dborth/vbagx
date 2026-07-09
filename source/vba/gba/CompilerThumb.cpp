@@ -1,4 +1,4 @@
-#include "BlockCacheManager.h"
+#include "JITCache.h"
 #include "JITPPCEmitter.h"
 #include "GBAinline.h"
 #include "GBAcpu.h"
@@ -13,7 +13,7 @@ static inline void FlushJITCache(void* addr, u32 size) {
     asm volatile("sync \n isync" : : : "memory");
 }
 
-BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
+BasicBlock* CompileThumbTrace_JIT(u32 startPC, JITCache& cache) {
     u32* emitPtr = cache.allocateJITMemory(512 * sizeof(u32));
     u32* blockStart = emitPtr;
 
