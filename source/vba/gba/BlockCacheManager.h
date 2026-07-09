@@ -61,7 +61,7 @@ inline int MapGBARegister(int gbaReg) { return PPC_R14 + gbaReg; }
 
 // Advanced Memory & Bitwise
 // Endian-Correct Memory Loads & Stores (GBA is Little-Endian, Wii is Big-Endian)
-#define PPC_LWZX(rD, rA, rB)   ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (23 << 1))
+#define PPC_LWZX(rD, rA, rB)			((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (23 << 1))
 #define PPC_LWBRX(rD, rA, rB)			((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (534 << 1)) // Load Word Byte-Reverse
 #define PPC_LHBRX(rD, rA, rB)			((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (790 << 1)) // Load Halfword Byte-Reverse
 #define PPC_LBZX(rD, rA, rB)			((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (87 << 1))  // Load Byte Zero
@@ -70,8 +70,9 @@ inline int MapGBARegister(int gbaReg) { return PPC_R14 + gbaReg; }
 #define PPC_STHBRX(rS, rA, rB)          ((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (918 << 1)) // Store Halfword Byte-Reverse
 #define PPC_STBZX(rS, rA, rB)           ((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (215 << 1)) // Store Byte Zero
 
-#define PPC_RLWINM(rA, rS, sh, mb, me) ((21 << 26) | ((rS) << 21) | ((rA) << 16) | ((sh) << 11) | ((mb) << 6) | ((me) << 1))
-#define PPC_SRWI(rA, rS, sh)           PPC_RLWINM(rA, rS, (32 - (sh)) & 31, sh, 31)
+#define PPC_RLWINM(rA, rS, sh, mb, me)	((21 << 26) | ((rS) << 21) | ((rA) << 16) | ((sh) << 11) | ((mb) << 6) | ((me) << 1))
+#define PPC_SRWI(rA, rS, sh)			PPC_RLWINM(rA, rS, (32 - (sh)) & 31, sh, 31)
+#define PPC_SRAWI(rA, rS, sh)			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((sh) << 11) | (824 << 1))
 
 // -------------------------------------------------------------------------
 // ENGINE DEFINITIONS

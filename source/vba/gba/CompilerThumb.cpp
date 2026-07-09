@@ -21,6 +21,12 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
     bool endBlock = false;
 
     while (!endBlock && instrCount < 64) {
+        // BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction (~20) + Epilogue
+        if ((emitPtr - blockStart) > (512 - 32)) {
+            endBlock = true;
+            break;
+        }
+
     	u16 opcode = CPUReadHalfWord(currentPC);
 
     	// 1. THUMB Formats 1, 2, & 3 - Native ALU (Shifts, Add, Sub, Mov)
@@ -61,7 +67,7 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
 			}
-			// Format 1: LSL / LSR
+			// Format 1: LSL / LSR / ASR
 			else if ((opcode & 0x1800) != 0x1800) {
 				u8 rd = opcode & 0x07;
 				u8 rs = (opcode >> 3) & 0x07;
@@ -72,30 +78,35 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 					if (offset == 0) {
 						*emitPtr++ = PPC_OR(MapGBARegister(rd), MapGBARegister(rs), MapGBARegister(rs)); // MOV
 					} else {
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), offset, 31, 31);          // C = Last bit out
+                        // IBM Bit-Math: C = ARM bit (32 - offset) -> IBM bit (offset - 1). Rotate Left by (32 - offset).
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 32 - offset, 31, 31);
 						*emitPtr++ = PPC_RLWINM(MapGBARegister(rd), MapGBARegister(rs), offset, 0, 31 - offset);
 					}
-					*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
-					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
-					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
-					staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
 				}
 				else if (op == 1) { // LSR
 					if (offset == 0) {
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 1, 31, 31); // LSR #0 behaves as LSR #32
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 31, 31, 31); // LSR #0 is LSR #32 (C = ARM bit 31)
 						*emitPtr++ = PPC_LI(MapGBARegister(rd), 0);
 					} else {
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 33 - offset, 31, 31); // C = Last bit out
+                        // IBM Bit-Math: C = ARM bit (offset - 1) -> IBM bit (32 - offset). Rotate Left by (offset - 1).
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), offset - 1, 31, 31);
 						*emitPtr++ = PPC_SRWI(MapGBARegister(rd), MapGBARegister(rs), offset);
 					}
-					*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
-					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
-					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
-					staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
-				} else {
-					endBlock = true; // Bail to C++ for ASR for now to keep footprint light
-					break;
 				}
+                else if (op == 2) { // ASR
+					if (offset == 0) {
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 31, 31, 31); // ASR #0 is ASR #32 (C = ARM bit 31)
+						*emitPtr++ = PPC_SRAWI(MapGBARegister(rd), MapGBARegister(rs), 31);
+					} else {
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), offset - 1, 31, 31); // C = Last bit out
+						*emitPtr++ = PPC_SRAWI(MapGBARegister(rd), MapGBARegister(rs), offset);
+					}
+                }
+
+				*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
+				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
+				*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
 			} else {
 				endBlock = true;
 				break;
@@ -109,9 +120,9 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 			u32 targetAddr = ((currentPC + 4) & ~3) + (imm << 2);
 
 			u8 bank = targetAddr >> 24;
-			// ONLY statically bake BIOS (0x00) and ROM (0x08-0x0C).
-			// Bank 0x0D+ contains SRAM/Registers which mutate!
-			if (bank == 0x00 || (bank >= 0x08 && bank <= 0x0C)) {
+			// ONLY statically bake BIOS (0x00) and ROM (0x08-0x0D).
+			// Bank 0x0E+ contains SRAM/Registers which mutate!
+			if (bank == 0x00 || (bank >= 0x08 && bank <= 0x0D)) {
 				u32 loadedValue = CPUReadMemory(targetAddr);
 
 				if ((loadedValue & ~0x7FFF) == 0) {
@@ -198,13 +209,14 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 					branchGuard1 = emitPtr;
 					*emitPtr++ = PPC_BNE(0);  // If Bank != 3 (and wasn't 2), bail out
 				} else {
-					// LOAD STRICT GUARD: Block Bank 0x04 (MMIO) and Bank >= 0x0D (Save Media)
+					// LOAD STRICT GUARD: Block Bank 0x04 (MMIO) and Bank >= 0x0E (Save Media)
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
 					branchGuard1 = emitPtr;
-					*emitPtr++ = PPC_BEQ(0);  // If Bank == 4, bail out
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 13);
+					*emitPtr++ = PPC_BEQ(0); // If Bank == 4, bail out
+					// Bailout to Bank 14 (0x0E) to protect upper ROM boundaries
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 14);
 					branchGuard2 = emitPtr;
-					*emitPtr++ = PPC_BGE(0);  // If Bank >= 13, bail out
+					*emitPtr++ = PPC_BGE(0); // If Bank >= 14, bail out
 				}
 
 				// 2. Load Page Pointer and Mask
@@ -215,7 +227,7 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 				// 3. UNIVERSAL NULL POINTER GUARD (Prevents hardware DSI crashes)
 				*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
 				u32* branchNullToBailout = emitPtr;
-				*emitPtr++ = PPC_BEQ(0); // Patched below
+				*emitPtr++ = PPC_BEQ(0);
 
 				// 4. Apply Mask
 				*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);
