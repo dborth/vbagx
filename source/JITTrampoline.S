@@ -31,9 +31,9 @@ ExecuteJITTrace:
     stmw 14, 8(1)    # Save host registers r14-r31 to stack frame (offsets 8 to 79)
 
     # 3. Preserve Volatile Arguments to Stack Frame
-    stw 4, 80(1)     # Stack[80] = gbaRegs pointer
-    stw 5, 84(1)     # Stack[84] = flags pointer
-    stw 6, 88(1)     # Stack[88] = outResult pointer
+    stw 4, 80(1)     # Stack[80] = gbaRegs
+    stw 5, 84(1)     # Stack[84] = flags array
+    stw 6, 88(1)     # Stack[88] = outResult
 
     # 4. Load ALL 16 GBA Registers (R0-R15) individually into Hardware R14-R29
     # Explicitly load to prevent clobbering R30/R31 and out-of-bounds reads
@@ -58,29 +58,33 @@ ExecuteJITTrace:
     mr 30, 7        # R30 = readPages (PPC_R30_PAGES)
     mr 31, 8        # R31 = readMasks (PPC_R31_MASKS)
 
-    # 6. Load Flags into Dedicated JIT Flag Registers (R8 = N_FLAG, R9 = Z_FLAG)
+    # 6. Load ALL 4 Flags into Dedicated JIT Registers
     lwz 8, 0(5)     # R8 = N_FLAG (PPC_REG_N)
     lwz 9, 4(5)     # R9 = Z_FLAG (PPC_REG_Z)
+    lwz 6, 8(5)     # R6 = C_FLAG (PPC_REG_C)
+    lwz 7, 12(5)    # R7 = V_FLAG (PPC_REG_V)
 
     # 7. Execute JIT Block Trace
     mtctr 3         # Move JIT block function pointer to Count Register (CTR)
     bctrl           # Branch to CTR and Link (Returns: R3 = cycles, R4 = nextPC)
 
     # 8. Post-Execution: Write Back Return Values and GBA CPU State
-    # CRITICAL FIX: Reload original pointers since volatile registers were overwritten
+    # Reload original pointers since volatile registers were overwritten
 
-    # Save JIT execution results to outResult struct
-    lwz 6, 88(1)    # R6 = outResult pointer
-    stw 3, 0(6)     # outResult->cycles = R3
-    stw 4, 4(6)     # outResult->nextPC = R4
+    # 8. Post-Execution: Write Back Return Values
+    lwz 5, 84(1)    # Reload flags array pointer
+    stw 8, 0(5)
+    stw 9, 4(5)
+    stw 6, 8(5)
+    stw 7, 12(5)
 
-    # Save JIT Flag Registers back to C++ flagBuffer
-    lwz 5, 84(1)    # R5 = flags pointer
-    stw 8, 0(5)     # flagBuffer[0] = N_FLAG (R8)
-    stw 9, 4(5)     # flagBuffer[1] = Z_FLAG (R9)
+    # Reload outResult AFTER saving C_FLAG (which lived in R6)
+    lwz 6, 88(1)
+    stw 3, 0(6)     # outResult->cycles
+    stw 4, 4(6)     # outResult->nextPC
 
     # Save GBA Registers R0-R15 back to gbaRegs
-    # CRITICAL FIX: Explicitly store to prevent writing past the array bounds
+    # Explicitly store to prevent writing past the array bounds
     lwz 10, 80(1)   # R10 = gbaRegs pointer
     stw 14, 0(10)
     stw 15, 4(10)

@@ -23,16 +23,83 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
     while (!endBlock && instrCount < 64) {
     	u16 opcode = CPUReadHalfWord(currentPC);
 
-		// 1. THUMB Format 3 - Move Immediate (MOV Rd, #Imm8)
-		if ((opcode & 0xF800) == 0x2000) {
-			u8 rd = (opcode >> 8) & 0x07;
-			u8 imm = opcode & 0xFF;
-			*emitPtr++ = PPC_LI(MapGBARegister(rd), imm);
-			*emitPtr++ = PPC_LI(PPC_REG_N, 0);
-			*emitPtr++ = PPC_LI(PPC_REG_Z, (imm == 0) ? 1 : 0);
+    	// 1. THUMB Formats 1, 2, & 3 - Native ALU (Shifts, Add, Sub, Mov)
+		if ((opcode & 0xE000) == 0x0000) {
+			// Format 3: Move Immediate (MOV Rd, #Imm8)
+			if ((opcode & 0xF800) == 0x2000) {
+				u8 rd = (opcode >> 8) & 0x07;
+				u8 imm = opcode & 0xFF;
+				*emitPtr++ = PPC_LI(MapGBARegister(rd), imm);
+				*emitPtr++ = PPC_LI(PPC_REG_N, 0);
+				*emitPtr++ = PPC_LI(PPC_REG_Z, (imm == 0) ? 1 : 0);
+				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+			}
+			// Format 2: ADD / SUB (Register & Immediate)
+			else if ((opcode & 0xF800) == 0x1800) {
+				u8 rd = opcode & 0x07;
+				u8 rs = (opcode >> 3) & 0x07;
+				u8 type = (opcode >> 9) & 0x03; // 0=ADD reg, 1=SUB reg, 2=ADD imm, 3=SUB imm
+				u8 rn_imm = (opcode >> 6) & 0x07;
 
-			// Use currentPC + 2 to perfectly map C++ 'oldArmNextPC' timing sync
-			staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				// Stage the right-hand operand natively into R12
+				if (type == 0 || type == 1) *emitPtr++ = PPC_OR(PPC_R12, MapGBARegister(rn_imm), MapGBARegister(rn_imm));
+				else                        *emitPtr++ = PPC_LI(PPC_R12, rn_imm);
+
+				// Execute Math utilizing Broadway's Fixed-Point Exception Register (XER)
+				if (type == 0 || type == 2) *emitPtr++ = PPC_ADDCO(MapGBARegister(rd), MapGBARegister(rs), PPC_R12); // ADD
+				else                        *emitPtr++ = PPC_SUBFCO(MapGBARegister(rd), PPC_R12, MapGBARegister(rs)); // SUB (Rs - R12)
+
+				// Extract Hardware C and V Flags from XER (Branchless)
+				*emitPtr++ = PPC_MFXER(PPC_R11);
+				*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31); // IBM Bit 29 (CA) -> Bit 31
+				*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31); // IBM Bit 30 (OV) -> Bit 31
+
+				// Extract N and Z Flags natively (Branchless)
+				*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31); // N = Rd >> 31
+				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));   // cntlzw
+				*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);           // Z = (cntlzw == 32) ? 1 : 0
+
+				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+			}
+			// Format 1: LSL / LSR
+			else if ((opcode & 0x1800) != 0x1800) {
+				u8 rd = opcode & 0x07;
+				u8 rs = (opcode >> 3) & 0x07;
+				u8 offset = (opcode >> 6) & 0x1F;
+				u8 op = (opcode >> 11) & 0x03; // 0=LSL, 1=LSR, 2=ASR
+
+				if (op == 0) { // LSL
+					if (offset == 0) {
+						*emitPtr++ = PPC_OR(MapGBARegister(rd), MapGBARegister(rs), MapGBARegister(rs)); // MOV
+					} else {
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), offset, 31, 31);          // C = Last bit out
+						*emitPtr++ = PPC_RLWINM(MapGBARegister(rd), MapGBARegister(rs), offset, 0, 31 - offset);
+					}
+					*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
+					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
+					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+					staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				}
+				else if (op == 1) { // LSR
+					if (offset == 0) {
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 1, 31, 31); // LSR #0 behaves as LSR #32
+						*emitPtr++ = PPC_LI(MapGBARegister(rd), 0);
+					} else {
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 33 - offset, 31, 31); // C = Last bit out
+						*emitPtr++ = PPC_SRWI(MapGBARegister(rd), MapGBARegister(rs), offset);
+					}
+					*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
+					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
+					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+					staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				} else {
+					endBlock = true; // Bail to C++ for ASR for now to keep footprint light
+					break;
+				}
+			} else {
+				endBlock = true;
+				break;
+			}
 		}
 
 		// 2. THUMB Format 6 - PC-Relative Load (LDR Rd, [PC, #Imm])
@@ -200,11 +267,28 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 			s8 offset = (s8)(opcode & 0xFF);
 			u32 targetPC = currentPC + 4 + (offset << 1);
 
-			if (cond == 0x0 || cond == 0x1) {
-				*emitPtr++ = PPC_CMPWI(0, PPC_REG_Z, 0);
+			bool supported = false;
+			u32 flagReg = 0;
+			bool branchIfSet = false;
 
-				// BEQ/BNE skip over the 4 instructions of the True Path
-				if (cond == 0x0) *emitPtr++ = PPC_BEQ(20);
+			// Map native PowerPC hardware registers to GBA condition flags
+			switch (cond) {
+				case 0x0: flagReg = PPC_REG_Z; branchIfSet = true;  supported = true; break; // EQ (Z==1)
+				case 0x1: flagReg = PPC_REG_Z; branchIfSet = false; supported = true; break; // NE (Z==0)
+				case 0x2: flagReg = PPC_REG_C; branchIfSet = true;  supported = true; break; // CS (C==1)
+				case 0x3: flagReg = PPC_REG_C; branchIfSet = false; supported = true; break; // CC (C==0)
+				case 0x4: flagReg = PPC_REG_N; branchIfSet = true;  supported = true; break; // MI (N==1)
+				case 0x5: flagReg = PPC_REG_N; branchIfSet = false; supported = true; break; // PL (N==0)
+				case 0x6: flagReg = PPC_REG_V; branchIfSet = true;  supported = true; break; // VS (V==1)
+				case 0x7: flagReg = PPC_REG_V; branchIfSet = false; supported = true; break; // VC (V==0)
+			}
+
+			if (supported) {
+				*emitPtr++ = PPC_CMPWI(0, flagReg, 0);
+
+				// If branchIfSet == true, we skip the True Path when Flag == 0 (Equal to 0)
+				// If branchIfSet == false, we skip the True Path when Flag == 1 (Not Equal to 0)
+				if (branchIfSet) *emitPtr++ = PPC_BEQ(20);
 				else             *emitPtr++ = PPC_BNE(20);
 
 				// TRUE PATH (Branch Taken Exit)
@@ -220,6 +304,7 @@ BasicBlock* CompileThumbTrace_JIT(u32 startPC, BlockCacheManager& cache) {
 				// FALSE PATH (Branch Not Taken)
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
 			} else {
+				// Bail to C++ for composite flags (HI, LS, GE, LT, GT, LE)
 				endBlock = true;
 				break;
 			}
