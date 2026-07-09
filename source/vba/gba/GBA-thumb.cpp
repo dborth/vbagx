@@ -1447,6 +1447,7 @@ int thumbExecute() {
         // FALLBACK: Instruction jump table
         // ========================================================================
         if (!handledInline) {
+        	JIT_LOG_FALLBACK(opcode);
             clockTicks = 0;
             (*thumbInsnTable[opcode>>6])(opcode);
             int localTicks = clockTicks;

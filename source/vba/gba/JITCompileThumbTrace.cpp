@@ -28,6 +28,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
         // BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction (~20) + Epilogue
         if ((emitPtr - blockStart) > (512 - 32)) {
             endBlock = true;
+            JIT_LOG_BAILOUT(0, BAILOUT_BUFFER_OVERFLOW);
             break;
         }
 
@@ -134,10 +135,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
                     staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
                 } else {
                     endBlock = true;
+                    JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_ALU);
                     break;
                 }
             } else {
 				endBlock = true;
+				JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_ALU);
 				break;
 			}
 		}
@@ -177,7 +180,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
             *branchArmSwitch = PPC_BEQ((u32)((bailoutTarget - branchArmSwitch) * 4));
 
-            endBlock = true; // Block safely terminates here
+            endBlock = true;
+            JIT_LOG_BAILOUT(opcode, BAILOUT_ARM_SWITCH);
             break;
         }
 
@@ -207,6 +211,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 2;
 			} else {
 				endBlock = true;
+				JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_MEM_BANK);
 				break;
 			}
 		}
@@ -260,6 +265,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			if (isMemLoad || isMemStore) {
 				if (instrCount == 0) {
 					endBlock = true;
+					JIT_LOG_BAILOUT(opcode, BAILOUT_MEM_INSTR_COUNT_ZERO);
 					break;
 				}
 
@@ -337,6 +343,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + ((isMemStore) ? 2 : 3);
 			} else {
 				endBlock = true;
+				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM);
 				break;
 			}
 		}
@@ -385,11 +392,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
 			} else {
 				// Bail to C++ for composite flags (HI, LS, GE, LT, GT, LE)
+				JIT_LOG_BAILOUT(opcode, BAILOUT_COMPOSITE_FLAGS);
 				endBlock = true;
 				break;
 			}
 		}
 		else {
+			JIT_LOG_BAILOUT(opcode, BAILOUT_CONDITIONAL_BRANCH);
 			endBlock = true;
 			break;
 		}
