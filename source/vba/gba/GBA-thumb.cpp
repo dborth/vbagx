@@ -6,6 +6,7 @@
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
+#include "BlockCacheManager.h"
 #include "Globals.h"
 #include "EEprom.h"
 #include "Flash.h"
@@ -1359,7 +1360,103 @@ static insnfunc_t thumbInsnTable[1024] = {
   thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,
   thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,
 };
+#ifdef JIT_COMPILER
+// -------------------------------------------------------------------------
+// HYBRID TRACE-JIT / C++ EXECUTION ENGINE
+// -------------------------------------------------------------------------
+int thumbExecute() {
+    while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks) {
+        u32 pc = armNextPC;
+        BasicBlock* block = g_blockCache.getBlock(pc);
 
+        if (__builtin_expect(block == nullptr, 0)) {
+            block = CompileThumbTrace_JIT(pc, g_blockCache);
+        }
+
+        // ========================================================================
+		// JIT EXECUTION PATH
+		// ========================================================================
+		if (block != nullptr && block->execute != nullptr) {
+			u32 flagBuffer[4] = { (u32)N_FLAG, (u32)Z_FLAG, (u32)C_FLAG, (u32)V_FLAG };
+			JITResult result;
+
+			// Align reg[15].I to pc + 4 so that PC-relative reads
+			// inside the compiled JIT trace match authentic GBA pipeline values.
+			reg[15].I = pc + 4;
+
+			// Execute Native Trace with flat memory maps
+			ExecuteJITTrace(block->execute, (u32*)&reg[0].I, flagBuffer, &result, gbaReadPagePtrs, gbaReadPageMasks);
+
+			// Restore updated status flags
+			N_FLAG = flagBuffer[0];
+			Z_FLAG = flagBuffer[1];
+			C_FLAG = flagBuffer[2];
+			V_FLAG = flagBuffer[3];
+
+			// Account for execution cycles accumulated by the trace block
+			cpuTotalTicks += result.cycles;
+
+			// PERFECT PIPELINE RE-PRIME
+			armNextPC = result.nextPC;
+			reg[15].I = armNextPC + 2;
+			cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
+			cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+			continue;
+		}
+
+        // ========================================================================
+        // LEGACY C++ FALLBACK PATH
+        // ========================================================================
+        if (cheatsEnabled) cpuMasterCodeCheck();
+
+        u16 opcode = cpuPrefetch[0];
+        cpuPrefetch[0] = cpuPrefetch[1];
+
+        busPrefetch = false;
+        if (busPrefetchCount & 0xFFFFFF00)
+            busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
+
+        clockTicks = 0;
+        u32 oldArmNextPC = armNextPC;
+        armNextPC = reg[15].I;
+        reg[15].I += 2;
+
+        THUMB_PREFETCH_NEXT;
+
+        // --- OPTIMIZED INLINE DISPATCH FOR HIGH-FREQUENCY INSTRUCTIONS ---
+        bool handledInline = false;
+
+        // 1. THUMB Format 3: Move Immediate (MOV Rd, #Imm8)
+        if ((opcode & 0xF800) == 0x2000) {
+            u8 rd = (opcode >> 8) & 0x07;
+            u8 imm = opcode & 0xFF;
+
+            reg[rd].I = imm;
+            N_FLAG = 0;
+            Z_FLAG = (imm == 0);
+
+            int localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+            cpuTotalTicks += localTicks;
+            handledInline = true;
+        }
+
+        // ========================================================================
+        // FALLBACK: Instruction jump table
+        // ========================================================================
+        if (!handledInline) {
+            clockTicks = 0;
+            (*thumbInsnTable[opcode>>6])(opcode);
+            int localTicks = clockTicks;
+
+            if (localTicks < 0) return 0;
+            if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+
+            cpuTotalTicks += localTicks;
+        }
+    }
+    return 1;
+}
+#else
 // Wrapper routine (execution loop) ///////////////////////////////////////
 
 // ========================================================================
@@ -1707,3 +1804,4 @@ int thumbExecute()
 
     return 1;
 }
+#endif
