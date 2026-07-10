@@ -50,7 +50,6 @@ void JITStats::print() {
     append("Bailout Reasons:\n");
     append("  Buffer Overflow:       %u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
     append("  Unsupported ALU:       %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_ALU]);
-    append("  Composite Flags:       %u\n", bailoutReasons[BAILOUT_COMPOSITE_FLAGS]);
     append("  Unsupported Mem Bank:  %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
     append("  ARM Mode Switch:       %u\n", bailoutReasons[BAILOUT_ARM_SWITCH]);
     append("  Conditional Branch:    %u\n", bailoutReasons[BAILOUT_CONDITIONAL_BRANCH]);

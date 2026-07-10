@@ -659,13 +659,14 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			staticCycles += codeTicksAccessSeq16(currentPC + 2) + numRegs;
 		}
-		// THUMB Format 16 - Conditional Branches (Bcc)
+    	// THUMB Format 16 - Conditional Branches (Bcc)
 		else if ((opcode & 0xF000) == 0xD000 && (opcode & 0x0F00) != 0x0F00) {
 			u8 cond = (opcode >> 8) & 0x0F;
 			s8 offset = (s8)(opcode & 0xFF);
 			u32 targetPC = currentPC + 4 + (offset << 1);
 
 			bool supported = false;
+			bool isComposite = false;
 			u32 flagReg = 0;
 			bool branchIfSet = false;
 
@@ -679,20 +680,46 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				case 0x5: flagReg = PPC_REG_N; branchIfSet = false; supported = true; break; // PL (N==0)
 				case 0x6: flagReg = PPC_REG_V; branchIfSet = true;  supported = true; break; // VS (V==1)
 				case 0x7: flagReg = PPC_REG_V; branchIfSet = false; supported = true; break; // VC (V==0)
+				case 0x8: isComposite = true; branchIfSet = true;  supported = true; break;  // HI (C==1 & Z==0)
+				case 0x9: isComposite = true; branchIfSet = false; supported = true; break;  // LS (C==0 | Z==1)
+				case 0xA: isComposite = true; branchIfSet = true;  supported = true; break;  // GE (N==V)
+				case 0xB: isComposite = true; branchIfSet = false; supported = true; break;  // LT (N!=V)
+				case 0xC: isComposite = true; branchIfSet = true;  supported = true; break;  // GT (Z==0 & N==V)
+				case 0xD: isComposite = true; branchIfSet = false; supported = true; break;  // LE (Z==1 | N!=V)
 			}
 
 			if (supported) {
-				*emitPtr++ = PPC_CMPWI(0, flagReg, 0);
-
-				// If branchIfSet == true, we skip the True Path when Flag == 0 (Equal to 0)
-				// If branchIfSet == false, we skip the True Path when Flag == 1 (Not Equal to 0)
-				if (branchIfSet) *emitPtr++ = PPC_BEQ(20);
-				else             *emitPtr++ = PPC_BNE(20);
+				if (!isComposite) {
+					// If branchIfSet == true, we skip the True Path when Flag == 0 (Equal to 0)
+					// If branchIfSet == false, we skip the True Path when Flag == 1 (Not Equal to 0)
+					*emitPtr++ = PPC_CMPWI(0, flagReg, 0);
+					if (branchIfSet) *emitPtr++ = PPC_BEQ(20);
+					else             *emitPtr++ = PPC_BNE(20);
+				} else {
+					bool branchIfZero = false;
+					if (cond == 0x8 || cond == 0x9) {
+						// HI takes branch if (C & ~Z) == 1. LS takes branch if (C & ~Z) == 0.
+						*emitPtr++ = PPC_ANDC(PPC_R11, PPC_REG_C, PPC_REG_Z);
+						branchIfZero = (cond == 0x9); // LS
+					} else if (cond == 0xA || cond == 0xB) {
+						// GE takes branch if (N ^ V) == 0. LT takes branch if (N ^ V) != 0.
+						*emitPtr++ = PPC_XOR(PPC_R11, PPC_REG_N, PPC_REG_V);
+						branchIfZero = (cond == 0xA); // GE
+					} else if (cond == 0xC || cond == 0xD) {
+						// GT takes branch if Z | (N ^ V) == 0. LE takes branch if Z | (N ^ V) != 0.
+						*emitPtr++ = PPC_XOR(PPC_R11, PPC_REG_N, PPC_REG_V);
+						*emitPtr++ = PPC_OR(PPC_R11, PPC_R11, PPC_REG_Z);
+						branchIfZero = (cond == 0xC); // GT
+					}
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+					if (branchIfZero) *emitPtr++ = PPC_BNE(20); // Skip if R11 != 0
+					else              *emitPtr++ = PPC_BEQ(20); // Skip if R11 == 0
+				}
 
 				// TRUE PATH (Branch Taken Exit)
 				// PIPELINE SYNC: Perfectly models the GBA prefetch penalty for taken branches
-				u32 takenPenalty = codeTicksAccessSeq16(currentPC + 2) + 1 +
-								   codeTicksAccessSeq16(targetPC) + codeTicksAccess16(targetPC) + 2;
+				u32 takenPenalty = codeTicksAccessSeq16(currentPC) + 1 +
+									codeTicksAccessSeq16(targetPC) + codeTicksAccess16(targetPC) + 2;
 
 				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
@@ -701,11 +728,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// FALSE PATH (Branch Not Taken)
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
-			} else {
-				// Bail to C++ for composite flags (HI, LS, GE, LT, GT, LE)
-				JIT_LOG_BAILOUT(opcode, BAILOUT_COMPOSITE_FLAGS);
-				endBlock = true;
-				break;
 			}
 		}
 		else {
