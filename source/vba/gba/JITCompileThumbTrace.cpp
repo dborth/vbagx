@@ -341,20 +341,36 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			if (isMemLoad || isMemStore) {
 				if (instrCount == 0) {
 					endBlock = true;
-					JIT_LOG_BAILOUT(opcode, BAILOUT_MEM_INSTR_COUNT_ZERO);
+					JIT_LOG_BAILOUT(opcode, BAILOUT_INSTR_COUNT_ZERO);
 					break;
 				}
 
 				// 1. Extract Memory Bank (R12 >> 24)
 				*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
 
-				// UNIFIED STRICT GUARD: Only Banks 2 (EWRAM) & 3 (IWRAM)
-				// Blocks reads to Bank 0x08+ to prevent bypassing Cartridge Hardware intercepts (RTC/EEPROM)
-				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
-				*emitPtr++ = PPC_BEQ(12);
-				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
-				u32* branchGuard1 = emitPtr;
-				*emitPtr++ = PPC_BNE(0);
+				u32* branchGuard1 = nullptr;
+				u32* branchGuard2 = nullptr;
+				u32* branchGuard3 = nullptr;
+
+				if (isMemStore) {
+					// STORE STRICT GUARD: Only Banks 2 & 3
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
+					*emitPtr++ = PPC_BEQ(12);
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
+					branchGuard1 = emitPtr;
+					*emitPtr++ = PPC_BNE(0);
+				} else {
+					// LOAD GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+					branchGuard3 = emitPtr;
+					*emitPtr++ = PPC_BEQ(0);
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
+					branchGuard1 = emitPtr;
+					*emitPtr++ = PPC_BEQ(0);
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 13);
+					branchGuard2 = emitPtr;
+					*emitPtr++ = PPC_BGE(0);
+				}
 
 				// 2. Load Page Pointer and Mask
 				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
@@ -392,9 +408,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_BLR();
 
 				// 8. Patch Branch Offsets
-				if (branchGuard1) {
-					*branchGuard1 = (isMemStore) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
-				}
+				if (branchGuard1) *branchGuard1 = (isMemStore) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
+				if (branchGuard2) *branchGuard2 = PPC_BGE((u32)((bailoutTarget - branchGuard2) * 4));
+				if (branchGuard3) *branchGuard3 = PPC_BEQ((u32)((bailoutTarget - branchGuard3) * 4));
+
 				*branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
 
 				u32* safeTarget = emitPtr;
@@ -403,7 +420,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + ((isMemStore) ? 2 : 3);
 			} else {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM);
+				JIT_LOG_BAILOUT(opcode, BAILOUT_UNKNOWN_MEM_OP);
 				break;
 			}
 		}
@@ -415,7 +432,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (instrCount == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM_INSTR_COUNT_ZERO);
+				JIT_LOG_BAILOUT(opcode, BAILOUT_INSTR_COUNT_ZERO);
 				break;
 			}
 
@@ -425,7 +442,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (numRegs == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM);
+				JIT_LOG_BAILOUT(opcode, BAILOUT_PUSH_POP_REGS);
 				break;
 			}
 
@@ -454,14 +471,14 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				branchGuard1 = emitPtr;
 				*emitPtr++ = PPC_BNE(0);
 			} else {
-				// LOAD STRICT GUARD: Block Bank 0x00, 0x04, and >= 0x0E
+				// LOAD GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
 				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
 				branchGuard3 = emitPtr;
 				*emitPtr++ = PPC_BEQ(0);
 				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
 				branchGuard1 = emitPtr;
 				*emitPtr++ = PPC_BEQ(0);
-				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 14);
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 13);
 				branchGuard2 = emitPtr;
 				*emitPtr++ = PPC_BGE(0);
 			}
@@ -541,7 +558,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (instrCount == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM_INSTR_COUNT_ZERO);
+				JIT_LOG_BAILOUT(opcode, BAILOUT_INSTR_COUNT_ZERO);
 				break;
 			}
 
@@ -550,7 +567,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (numRegs == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM);
+				JIT_LOG_BAILOUT(opcode, BAILOUT_LDMIA_STMIA_REGS);
 				break;
 			}
 
@@ -572,7 +589,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				branchGuard1 = emitPtr;
 				*emitPtr++ = PPC_BNE(0);
 			} else {
-				// LDMIA GUARD: Block Bank 0x00, 0x04, and >= 0x0D (Save Memory Protection)
+				// LDMIA GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
 				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
 				branchGuard3 = emitPtr;
 				*emitPtr++ = PPC_BEQ(0);

@@ -54,8 +54,10 @@ void JITStats::print() {
     append("  ARM Mode Switch:       %u\n", bailoutReasons[BAILOUT_ARM_SWITCH]);
     append("  Conditional Branch:    %u\n", bailoutReasons[BAILOUT_CONDITIONAL_BRANCH]);
     append("  Branch with Link:      %u\n", bailoutReasons[BAILOUT_BRANCH_WITH_LINK]);
-    append("  MEM Instr Count 0:     %u\n", bailoutReasons[BAILOUT_MEM_INSTR_COUNT_ZERO]);
-    append("  MEM:                   %u\n", bailoutReasons[BAILOUT_MEM]);
+    append("  Instr Count Zero:      %u\n", bailoutReasons[BAILOUT_INSTR_COUNT_ZERO]);
+    append("  Unknown MEM Op:        %u\n", bailoutReasons[BAILOUT_UNKNOWN_MEM_OP]);
+    append("  No Push/Pop Regs:      %u\n", bailoutReasons[BAILOUT_PUSH_POP_REGS]);
+    append("  No LDMIA/STMIA Regs:   %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
     append("-----------------------------------------\n");
 
     // Top 10 Fallback Executions
