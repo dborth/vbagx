@@ -4,6 +4,8 @@
 #include "GBAcpu.h"
 #include "JITProfiler.h"
 
+#define MAX_WORDS 1024
+
 static inline void FlushJITCache(void* addr, u32 size) {
     u32 start = (u32)addr & ~31;
     u32 end   = ((u32)addr + size + 31) & ~31;
@@ -14,7 +16,7 @@ static inline void FlushJITCache(void* addr, u32 size) {
 }
 
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
-    u32* emitPtr = cache.allocateJITMemory(512 * sizeof(u32));
+    u32* emitPtr = cache.allocateJITMemory(MAX_WORDS * sizeof(u32));
     u32* blockStart = emitPtr;
 
     u32 currentPC = startPC;
@@ -26,7 +28,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     while (!endBlock && instrCount < 64) {
         // BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction (~20) + Epilogue
-        if ((emitPtr - blockStart) > (512 - 32)) {
+        if ((emitPtr - blockStart) > (MAX_WORDS - 32)) {
             endBlock = true;
             JIT_LOG_BAILOUT(0, BAILOUT_BUFFER_OVERFLOW);
             break;
@@ -175,7 +177,50 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 			}
 		}
+    	// THUMB Format 5 - High Register Operations (MOV / ADD)
+		else if ((opcode & 0xFC00) == 0x4400 && ((opcode >> 8) & 0x03) != 3) {
+			u8 op = (opcode >> 8) & 0x03; // 0=ADD, 1=CMP, 2=MOV
+			u8 h1 = (opcode >> 7) & 0x01;
+			u8 h2 = (opcode >> 6) & 0x01;
+			u8 rs = (opcode >> 3) & 0x07;
+			u8 rd = opcode & 0x07;
 
+			u8 actualRs = rs | (h2 << 3);
+			u8 actualRd = rd | (h1 << 3);
+
+			// Modifying the Program Counter directly triggers a branch pipeline flush.
+			// We bail these out to C++ to handle the complex timing sync.
+			if (actualRd == 15) {
+				endBlock = true;
+				JIT_LOG_BAILOUT(opcode, BAILOUT_CONDITIONAL_BRANCH);
+				break;
+			}
+
+			if (op == 2) { // MOV
+				if (actualRs == 15) {
+					*emitPtr++ = PPC_LIS(MapGBARegister(actualRd), (currentPC + 4) >> 16);
+					*emitPtr++ = PPC_ORI(MapGBARegister(actualRd), MapGBARegister(actualRd), (currentPC + 4) & 0xFFFF);
+				} else {
+					*emitPtr++ = PPC_OR(MapGBARegister(actualRd), MapGBARegister(actualRs), MapGBARegister(actualRs));
+				}
+				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+			}
+			else if (op == 0) { // ADD
+				if (actualRs == 15) {
+					*emitPtr++ = PPC_LIS(PPC_R12, (currentPC + 4) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R12, PPC_R12, (currentPC + 4) & 0xFFFF);
+					*emitPtr++ = PPC_ADD(MapGBARegister(actualRd), MapGBARegister(actualRd), PPC_R12);
+				} else {
+					*emitPtr++ = PPC_ADD(MapGBARegister(actualRd), MapGBARegister(actualRd), MapGBARegister(actualRs));
+				}
+				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+			} else {
+				// High-Register CMP (op == 1) requires flag updates. Bail for now.
+				endBlock = true;
+				JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_ALU);
+				break;
+			}
+		}
         // THUMB Format 5 - Branch Exchange (BX Rs)
         else if ((opcode & 0xFF00) == 0x4700) {
             u8 rs = (opcode >> 3) & 0x0F;
@@ -215,7 +260,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
             JIT_LOG_BAILOUT(opcode, BAILOUT_ARM_SWITCH);
             break;
         }
-
 		// THUMB Format 6 - PC-Relative Load (LDR Rd, [PC, #Imm])
 		else if ((opcode & 0xF800) == 0x4800) {
 			u8 rd = (opcode >> 8) & 0x07;
@@ -246,7 +290,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				break;
 			}
 		}
-
 		// THUMB Formats 9, 10, 11 - Unified Memory Loads AND Stores
 		else if (((opcode & 0xE000) == 0x6000) || ((opcode & 0xF000) == 0x5000) || ((opcode & 0xF000) == 0x8000)) {
 
@@ -384,7 +427,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				break;
 			}
 		}
-
     	// THUMB Format 14 - PUSH / POP
 		else if ((opcode & 0xF600) == 0xB400) {
 			bool isPop = (opcode & 0x0800) != 0;
@@ -511,7 +553,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			staticCycles += codeTicksAccessSeq16(currentPC + 2) + numRegs;
 		}
-
 		// THUMB Format 16 - Conditional Branches (Bcc)
 		else if ((opcode & 0xF000) == 0xD000 && (opcode & 0x0F00) != 0x0F00) {
 			u8 cond = (opcode >> 8) & 0x0F;
@@ -572,7 +613,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
     }
 
     if (instrCount == 0) {
-        cache.rewindJITMemory(512 * sizeof(u32));
+    	cache.rewindJITMemory(MAX_WORDS * sizeof(u32));
         // Cache the failure! A stub block routes it directly to C++ without thrashing the compiler.
         BasicBlock* failBlock = new BasicBlock();
         failBlock->startPC = startPC;
@@ -591,7 +632,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
     u32 emittedWords = (u32)(emitPtr - blockStart);
     u32 actualBytes = emittedWords * sizeof(u32);
 
-    cache.rewindJITMemory((512 - emittedWords) * sizeof(u32));
+    cache.rewindJITMemory((MAX_WORDS - emittedWords) * sizeof(u32));
     FlushJITCache(blockStart, actualBytes);
 
     BasicBlock* block = new BasicBlock();
