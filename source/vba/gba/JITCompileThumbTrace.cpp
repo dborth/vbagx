@@ -348,29 +348,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// 1. Extract Memory Bank (R12 >> 24)
 				*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
 
-				u32* branchGuard0 = nullptr;
-				u32* branchGuard1 = nullptr;
-				u32* branchGuard2 = nullptr;
-
-				if (isMemStore) {
-					// STORE STRICT GUARD: Only Banks 2 & 3
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
-					*emitPtr++ = PPC_BEQ(12);
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
-					branchGuard1 = emitPtr;
-					*emitPtr++ = PPC_BNE(0);
-				} else {
-					// LOAD STRICT GUARD: Block Bank 0x00 (BIOS Protection), 0x04 (MMIO), and >= 0x0E
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
-					branchGuard0 = emitPtr;
-					*emitPtr++ = PPC_BEQ(0); // If Bank == 0, bail out
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
-					branchGuard1 = emitPtr;
-					*emitPtr++ = PPC_BEQ(0); // If Bank == 4, bail out
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 14);
-					branchGuard2 = emitPtr;
-					*emitPtr++ = PPC_BGE(0); // If Bank >= 14, bail out
-				}
+				// UNIFIED STRICT GUARD: Only Banks 2 (EWRAM) & 3 (IWRAM)
+				// Blocks reads to Bank 0x08+ to prevent bypassing Cartridge Hardware intercepts (RTC/EEPROM)
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
+				*emitPtr++ = PPC_BEQ(12);
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
+				u32* branchGuard1 = emitPtr;
+				*emitPtr++ = PPC_BNE(0);
 
 				// 2. Load Page Pointer and Mask
 				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
@@ -408,14 +392,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_BLR();
 
 				// 8. Patch Branch Offsets
-				if (branchGuard0) {
-					*branchGuard0 = PPC_BEQ((u32)((bailoutTarget - branchGuard0) * 4));
-				}
 				if (branchGuard1) {
 					*branchGuard1 = (isMemStore) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
-				}
-				if (branchGuard2) {
-					*branchGuard2 = PPC_BGE((u32)((bailoutTarget - branchGuard2) * 4));
 				}
 				*branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
 
@@ -728,6 +706,44 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// FALSE PATH (Branch Not Taken)
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+			}
+		}
+    	// THUMB Formats 18 & 19 - Branch with Link (BL)
+		else if ((opcode & 0xF800) == 0xF000) {
+			u16 nextOpcode = CPUReadHalfWord(currentPC + 2);
+			if ((nextOpcode & 0xF800) == 0xF800) {
+				u32 offsetHigh = opcode & 0x07FF;
+				u32 offsetLow = nextOpcode & 0x07FF;
+
+				// Cast to signed BEFORE right shifting to force an arithmetic shift (sign extension)
+				s32 sOffset = (s32)(offsetHigh << 21);
+				sOffset >>= 9;
+				sOffset |= (offsetLow << 1);
+
+				u32 targetPC = currentPC + 4 + sOffset;
+
+				// 1. Update LR (GBA R14) with the return address: (currentPC + 4) | 1
+				u32 returnPC = (currentPC + 4) | 1;
+				*emitPtr++ = PPC_LIS(MapGBARegister(14), returnPC >> 16);
+				*emitPtr++ = PPC_ORI(MapGBARegister(14), MapGBARegister(14), returnPC & 0xFFFF);
+
+				// 2. JIT EXIT: Branch Taken
+				u32 takenPenalty = codeTicksAccessSeq16(currentPC) + 1 +
+								   codeTicksAccessSeq16(targetPC) + codeTicksAccess16(targetPC) + 2;
+
+				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
+				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
+				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
+				*emitPtr++ = PPC_BLR();
+
+				instrCount++;
+				currentPC += 2;
+				endBlock = true;
+				break;
+			} else {
+				JIT_LOG_BAILOUT(opcode, BAILOUT_BRANCH_WITH_LINK);
+				endBlock = true;
+				break;
 			}
 		}
 		else {
