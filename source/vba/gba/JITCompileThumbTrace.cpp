@@ -6,6 +6,13 @@
 
 #define MAX_WORDS 1024
 
+// STATIC TIMING MACROS
+// Prevents the JIT compiler from mutating the busPrefetchCount state during trace compilation.
+#define STATIC_CODE_TICKS_SEQ16(addr) memoryWaitSeq[((addr) >> 24) & 15]
+#define STATIC_CODE_TICKS_16(addr)    memoryWait[((addr) >> 24) & 15]
+#define STATIC_DATA_TICKS_32(addr)    memoryWait32[((addr) >> 24) & 15]
+#define STATIC_DATA_TICKS_16(addr)    memoryWait[((addr) >> 24) & 15]
+
 static inline void FlushJITCache(void* addr, u32 size) {
     u32 start = (u32)addr & ~31;
     u32 end   = ((u32)addr + size + 31) & ~31;
@@ -70,7 +77,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, flagSrc);
 					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
 				}
-				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
 			}
 			// Format 2: ADD / SUB (Register & Immediate)
 			else if ((opcode & 0xF800) == 0x1800) {
@@ -97,7 +104,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));   // cntlzw
 				*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);           // Z = (cntlzw == 32) ? 1 : 0
 
-				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
 			}
 			// Format 1: LSL / LSR / ASR
 			else if ((opcode & 0x1800) != 0x1800 && (opcode & 0xE000) == 0x0000) {
@@ -140,7 +147,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
 				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
 				*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
-				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
 			}
 			// Format 4: ALU Operations
 			else if ((opcode & 0xFC00) == 0x4000) {
@@ -158,7 +165,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
 					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
 					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
-					staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
 				}
 				else if (op == 0 || op == 1 || op == 12 || op == 14) { // AND, EOR, ORR, BIC
 					if (op == 0)  *emitPtr++ = PPC_AND(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
@@ -171,7 +178,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
 					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
 
-					staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
 				} else {
 					endBlock = true;
 					JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_ALU);
@@ -205,7 +212,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				} else {
 					*emitPtr++ = PPC_OR(MapGBARegister(actualRd), MapGBARegister(actualRs), MapGBARegister(actualRs));
 				}
-				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
 			}
 			else if (op == 0) { // ADD
 				if (actualRs == 15) {
@@ -215,7 +222,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				} else {
 					*emitPtr++ = PPC_ADD(MapGBARegister(actualRd), MapGBARegister(actualRd), MapGBARegister(actualRs));
 				}
-				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
 			} else {
 				// High-Register CMP (op == 1) requires flag updates. Bail for now.
 				endBlock = true;
@@ -285,7 +292,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_LIS(MapGBARegister(rd), loadedValue >> 16);
 					*emitPtr++ = PPC_ORI(MapGBARegister(rd), MapGBARegister(rd), loadedValue & 0xFFFF);
 				}
-				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 2;
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 2;
 			} else {
 				endBlock = true;
 				JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_MEM_BANK);
@@ -417,7 +424,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32* safeTarget = emitPtr;
 				*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
 
-				staticCycles += codeTicksAccessSeq16(currentPC + 2) + ((isMemStore) ? 2 : 3);
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + ((isMemStore) ? 2 : 3);
 			} else {
 				endBlock = true;
 				JIT_LOG_BAILOUT(opcode, BAILOUT_UNKNOWN_MEM_OP);
@@ -519,7 +526,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			if (isPop && Rbit) {
 				// POP PC: We must exit the block dynamically
 				*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
-				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + codeTicksAccessSeq16(currentPC + 2) + 2);
+				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 2);
 				*emitPtr++ = PPC_BLR();
 			} else {
 				branchSafe = emitPtr;
@@ -548,7 +555,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
 			}
 
-			staticCycles += codeTicksAccessSeq16(currentPC + 2) + numRegs;
+			staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + numRegs;
 		}
     	// THUMB Format 15 - Multiple Load/Store (LDMIA / STMIA)
 		else if ((opcode & 0xF000) == 0xC000) {
@@ -652,7 +659,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			u32* safeTarget = emitPtr;
 			*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
 
-			staticCycles += codeTicksAccessSeq16(currentPC + 2) + numRegs;
+			staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + numRegs;
 		}
     	// THUMB Format 16 - Conditional Branches (Bcc)
 		else if ((opcode & 0xF000) == 0xD000 && (opcode & 0x0F00) != 0x0F00) {
@@ -713,8 +720,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// TRUE PATH (Branch Taken Exit)
 				// PIPELINE SYNC: Perfectly models the GBA prefetch penalty for taken branches
-				u32 takenPenalty = codeTicksAccessSeq16(currentPC) + 1 +
-									codeTicksAccessSeq16(targetPC) + codeTicksAccess16(targetPC) + 2;
+				u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1 +
+								   STATIC_CODE_TICKS_SEQ16(targetPC) + STATIC_CODE_TICKS_16(targetPC) + 2;
 
 				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
@@ -722,7 +729,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_BLR();
 
 				// FALSE PATH (Branch Not Taken)
-				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
 			} else {
 				JIT_LOG_BAILOUT(opcode, BAILOUT_CONDITIONAL_BRANCH);
 				endBlock = true;
@@ -749,8 +756,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_ORI(MapGBARegister(14), MapGBARegister(14), returnPC & 0xFFFF);
 
 				// 2. JIT EXIT: Branch Taken
-				u32 takenPenalty = codeTicksAccessSeq16(currentPC) + 1 +
-								   codeTicksAccessSeq16(targetPC) + codeTicksAccess16(targetPC) + 2;
+				u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 1 +
+								   STATIC_CODE_TICKS_SEQ16(targetPC) + STATIC_CODE_TICKS_SEQ16(targetPC) + 2;
 
 				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
