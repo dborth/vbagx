@@ -110,30 +110,32 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					if (offset == 0) {
 						*emitPtr++ = PPC_OR(MapGBARegister(rd), MapGBARegister(rs), MapGBARegister(rs)); // MOV
 					} else {
-                        // IBM Bit-Math: C = ARM bit (32 - offset) -> IBM bit (offset - 1). Rotate Left by (32 - offset).
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 32 - offset, 31, 31);
+						// Correct IBM Bit-Math: Rotate Left by (offset)
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), offset, 31, 31);
 						*emitPtr++ = PPC_RLWINM(MapGBARegister(rd), MapGBARegister(rs), offset, 0, 31 - offset);
 					}
 				}
 				else if (op == 1) { // LSR
 					if (offset == 0) {
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 31, 31, 31); // LSR #0 is LSR #32 (C = ARM bit 31)
+						// LSR #32: ARM bit 31 (IBM bit 0) goes to carry. Rotate Left by 1.
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 1, 31, 31);
 						*emitPtr++ = PPC_LI(MapGBARegister(rd), 0);
 					} else {
-                        // IBM Bit-Math: C = ARM bit (offset - 1) -> IBM bit (32 - offset). Rotate Left by (offset - 1).
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), offset - 1, 31, 31);
+						// Correct IBM Bit-Math: Rotate Left by (33 - offset) & 31
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), (33 - offset) & 31, 31, 31);
 						*emitPtr++ = PPC_SRWI(MapGBARegister(rd), MapGBARegister(rs), offset);
 					}
 				}
-                else if (op == 2) { // ASR
+				else if (op == 2) { // ASR
 					if (offset == 0) {
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 31, 31, 31); // ASR #0 is ASR #32 (C = ARM bit 31)
+						// ASR #32: ARM bit 31 (IBM bit 0) goes to carry. Rotate Left by 1.
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 1, 31, 31);
 						*emitPtr++ = PPC_SRAWI(MapGBARegister(rd), MapGBARegister(rs), 31);
 					} else {
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), offset - 1, 31, 31); // C = Last bit out
+						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), (33 - offset) & 31, 31, 31);
 						*emitPtr++ = PPC_SRAWI(MapGBARegister(rd), MapGBARegister(rs), offset);
 					}
-                }
+				}
 
 				*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
 				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
