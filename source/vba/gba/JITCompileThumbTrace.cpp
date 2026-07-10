@@ -35,7 +35,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
     	u16 opcode = CPUReadHalfWord(currentPC);
 
     	// THUMB Formats 1, 2, 3, 4 - Native ALU (Shifts, Add, Sub, Mov, Cmp)
-		if ((opcode & 0xE000) == 0x0000 || (opcode & 0xFC00) == 0x4000) {
+    	if ((opcode & 0xC000) == 0x0000 || (opcode & 0xFC00) == 0x4000) {
 			// Format 3: Move, Compare, Add, Subtract Immediate
 			if ((opcode & 0xE000) == 0x2000) {
 				u8 op = (opcode >> 11) & 0x03; // 0=MOV, 1=CMP, 2=ADD, 3=SUB
@@ -303,22 +303,25 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// 1. Extract Memory Bank (R12 >> 24)
 				*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
 
+				u32* branchGuard0 = nullptr;
 				u32* branchGuard1 = nullptr;
 				u32* branchGuard2 = nullptr;
 
 				if (isMemStore) {
-					// STORE STRICT GUARD: Only allow writes to Bank 0x02 (WRAM) & 0x03 (IRAM).
+					// STORE STRICT GUARD: Only Banks 2 & 3
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
-					*emitPtr++ = PPC_BEQ(12); // If Bank == 2, jump completely over the next two instructions
+					*emitPtr++ = PPC_BEQ(12);
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
 					branchGuard1 = emitPtr;
-					*emitPtr++ = PPC_BNE(0);  // If Bank != 3 (and wasn't 2), bail out
+					*emitPtr++ = PPC_BNE(0);
 				} else {
-					// LOAD STRICT GUARD: Block Bank 0x04 (MMIO) and Bank >= 0x0E (Save Media)
+					// LOAD STRICT GUARD: Block Bank 0x00 (BIOS Protection), 0x04 (MMIO), and >= 0x0E
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+					branchGuard0 = emitPtr;
+					*emitPtr++ = PPC_BEQ(0); // If Bank == 0, bail out
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
 					branchGuard1 = emitPtr;
 					*emitPtr++ = PPC_BEQ(0); // If Bank == 4, bail out
-					// Bailout to Bank 14 (0x0E) to protect upper ROM boundaries
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 14);
 					branchGuard2 = emitPtr;
 					*emitPtr++ = PPC_BGE(0); // If Bank >= 14, bail out
@@ -360,6 +363,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_BLR();
 
 				// 8. Patch Branch Offsets
+				if (branchGuard0) {
+					*branchGuard0 = PPC_BEQ((u32)((bailoutTarget - branchGuard0) * 4));
+				}
 				if (branchGuard1) {
 					*branchGuard1 = (isMemStore) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
 				}
@@ -377,6 +383,133 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM);
 				break;
 			}
+		}
+
+    	// THUMB Format 14 - PUSH / POP
+		else if ((opcode & 0xF600) == 0xB400) {
+			bool isPop = (opcode & 0x0800) != 0;
+			bool Rbit = (opcode & 0x0100) != 0;
+			u8 regList = opcode & 0xFF;
+
+			if (instrCount == 0) {
+				endBlock = true;
+				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM_INSTR_COUNT_ZERO);
+				break;
+			}
+
+			int numRegs = 0;
+			for (int i = 0; i < 8; i++) if (regList & (1 << i)) numRegs++;
+			if (Rbit) numRegs++;
+
+			if (numRegs == 0) {
+				endBlock = true;
+				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM);
+				break;
+			}
+
+			// Stage SP natively into R12
+			if (!isPop) {
+				// PUSH: Decrement SP first. PPC_ADDI handles negative offsets.
+				*emitPtr++ = PPC_ADDI(MapGBARegister(13), MapGBARegister(13), -numRegs * 4);
+				*emitPtr++ = PPC_OR(PPC_R12, MapGBARegister(13), MapGBARegister(13));
+			} else {
+				// POP: Use SP as base address directly.
+				*emitPtr++ = PPC_OR(PPC_R12, MapGBARegister(13), MapGBARegister(13));
+			}
+
+			// 1. Extract Memory Bank (R12 >> 24)
+			*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
+
+			u32* branchGuard1 = nullptr;
+			u32* branchGuard2 = nullptr;
+			u32* branchGuard3 = nullptr;
+
+			if (!isPop) {
+				// STORE STRICT GUARD: Only Banks 2 & 3
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
+				*emitPtr++ = PPC_BEQ(12);
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
+				branchGuard1 = emitPtr;
+				*emitPtr++ = PPC_BNE(0);
+			} else {
+				// LOAD STRICT GUARD: Block Bank 0x00, 0x04, and >= 0x0E
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+				branchGuard3 = emitPtr;
+				*emitPtr++ = PPC_BEQ(0);
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
+				branchGuard1 = emitPtr;
+				*emitPtr++ = PPC_BEQ(0);
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 14);
+				branchGuard2 = emitPtr;
+				*emitPtr++ = PPC_BGE(0);
+			}
+
+			// 2. Load Page Pointer and Mask
+			*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
+			*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
+			*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
+
+			// 3. Null Pointer Guard
+			*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
+			u32* branchNullToBailout = emitPtr;
+			*emitPtr++ = PPC_BEQ(0);
+
+			// 4. Memory Operations Loop
+			*emitPtr++ = PPC_OR(PPC_R5, PPC_R12, PPC_R12); // R5 = Base Address Tracker
+			for (int i = 0; i < 8; i++) {
+				if (regList & (1 << i)) {
+					*emitPtr++ = PPC_AND(PPC_R4, PPC_R5, PPC_R11); // Apply Mask
+					if (isPop) *emitPtr++ = PPC_LWBRX(MapGBARegister(i), PPC_R10, PPC_R4);
+					else       *emitPtr++ = PPC_STWBRX(MapGBARegister(i), PPC_R10, PPC_R4);
+					*emitPtr++ = PPC_ADDI(PPC_R5, PPC_R5, 4); // Advance 4 bytes
+				}
+			}
+			if (Rbit) {
+				*emitPtr++ = PPC_AND(PPC_R4, PPC_R5, PPC_R11);
+				if (isPop) *emitPtr++ = PPC_LWBRX(PPC_R12, PPC_R10, PPC_R4); // POP PC into R12 scratch
+				else       *emitPtr++ = PPC_STWBRX(MapGBARegister(14), PPC_R10, PPC_R4); // PUSH LR (GBA R14)
+			}
+
+			// 5. Update SP (POP only)
+			if (isPop) {
+				*emitPtr++ = PPC_ADDI(MapGBARegister(13), MapGBARegister(13), numRegs * 4);
+			}
+
+			// 6. Branch out or Skip Bailout
+			u32* branchSafe = nullptr;
+			if (isPop && Rbit) {
+				// POP PC: We must exit the block dynamically
+				*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
+				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + codeTicksAccessSeq16(currentPC + 2) + 2);
+				*emitPtr++ = PPC_BLR();
+			} else {
+				branchSafe = emitPtr;
+				*emitPtr++ = PPC_B(0);
+			}
+
+			// 7. Bailout Stub Generation
+			u32* bailoutTarget = emitPtr;
+
+			// VITAL: If PUSH fails a guard, we must revert the SP decrement before bailing out!
+			if (!isPop) *emitPtr++ = PPC_ADDI(MapGBARegister(13), MapGBARegister(13), numRegs * 4);
+
+			*emitPtr++ = PPC_LI(PPC_R3, staticCycles);
+			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
+			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
+			*emitPtr++ = PPC_BLR();
+
+			// 8. Patch Branch Offsets
+			if (branchGuard1) *branchGuard1 = (!isPop) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
+			if (branchGuard2) *branchGuard2 = PPC_BGE((u32)((bailoutTarget - branchGuard2) * 4));
+			if (branchGuard3) *branchGuard3 = PPC_BEQ((u32)((bailoutTarget - branchGuard3) * 4));
+			*branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
+
+			if (branchSafe) {
+				u32* safeTarget = emitPtr;
+				*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
+			}
+
+			staticCycles += codeTicksAccessSeq16(currentPC + 2) + numRegs;
 		}
 
 		// THUMB Format 16 - Conditional Branches (Bcc)
