@@ -19,6 +19,8 @@
 #   R31      : PPC_R31_MASKS (readMasks base array pointer)
 #   R8       : PPC_REG_N (N_FLAG)
 #   R9       : PPC_REG_Z (Z_FLAG)
+#   R6       : PPC_REG_C (C_FLAG)
+#   R7       : PPC_REG_V (V_FLAG)
 # -----------------------------------------------------------------------------
 
 ExecuteJITTrace:
