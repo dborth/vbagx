@@ -555,6 +555,110 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			staticCycles += codeTicksAccessSeq16(currentPC + 2) + numRegs;
 		}
+    	// THUMB Format 15 - Multiple Load/Store (LDMIA / STMIA)
+		else if ((opcode & 0xF000) == 0xC000) {
+			bool isLoad = (opcode & 0x0800) != 0;
+			u8 rb = (opcode >> 8) & 0x07;
+			u8 regList = opcode & 0xFF;
+
+			if (instrCount == 0) {
+				endBlock = true;
+				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM_INSTR_COUNT_ZERO);
+				break;
+			}
+
+			int numRegs = 0;
+			for (int i = 0; i < 8; i++) if (regList & (1 << i)) numRegs++;
+
+			if (numRegs == 0) {
+				endBlock = true;
+				JIT_LOG_BAILOUT(opcode, BAILOUT_MEM);
+				break;
+			}
+
+			// Stage Base Address natively into R12
+			*emitPtr++ = PPC_OR(PPC_R12, MapGBARegister(rb), MapGBARegister(rb));
+
+			// 1. Extract Memory Bank (R12 >> 24)
+			*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
+
+			u32* branchGuard1 = nullptr;
+			u32* branchGuard2 = nullptr;
+			u32* branchGuard3 = nullptr;
+
+			if (!isLoad) {
+				// STMIA GUARD: Only Banks 2 & 3
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
+				*emitPtr++ = PPC_BEQ(12);
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
+				branchGuard1 = emitPtr;
+				*emitPtr++ = PPC_BNE(0);
+			} else {
+				// LDMIA GUARD: Block Bank 0x00, 0x04, and >= 0x0D (Save Memory Protection)
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+				branchGuard3 = emitPtr;
+				*emitPtr++ = PPC_BEQ(0);
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
+				branchGuard1 = emitPtr;
+				*emitPtr++ = PPC_BEQ(0);
+				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 13);
+				branchGuard2 = emitPtr;
+				*emitPtr++ = PPC_BGE(0);
+			}
+
+			// 2. Load Page Pointer and Mask
+			*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);
+			*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
+			*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
+
+			// 3. Null Pointer Guard
+			*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
+			u32* branchNullToBailout = emitPtr;
+			*emitPtr++ = PPC_BEQ(0);
+
+			// 4. Memory Operations Loop
+			*emitPtr++ = PPC_OR(PPC_R5, PPC_R12, PPC_R12); // R5 = Base Address Tracker
+			for (int i = 0; i < 8; i++) {
+				if (regList & (1 << i)) {
+					*emitPtr++ = PPC_AND(PPC_R4, PPC_R5, PPC_R11); // Apply Mask
+					if (isLoad) *emitPtr++ = PPC_LWBRX(MapGBARegister(i), PPC_R10, PPC_R4);
+					else        *emitPtr++ = PPC_STWBRX(MapGBARegister(i), PPC_R10, PPC_R4);
+					*emitPtr++ = PPC_ADDI(PPC_R5, PPC_R5, 4); // Advance 4 bytes
+				}
+			}
+
+			// 5. Writeback to Base Register (Rn)
+			// ARM protocol: If Rb is in the load list, the loaded value overrides writeback.
+			bool writeback = true;
+			if (isLoad && (regList & (1 << rb))) writeback = false;
+
+			if (writeback) {
+				*emitPtr++ = PPC_ADDI(MapGBARegister(rb), MapGBARegister(rb), numRegs * 4);
+			}
+
+			// 6. Branch out or Skip Bailout
+			u32* branchSafe = emitPtr;
+			*emitPtr++ = PPC_B(0);
+
+			// 7. Bailout Stub Generation
+			u32* bailoutTarget = emitPtr;
+
+			*emitPtr++ = PPC_LI(PPC_R3, staticCycles);
+			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
+			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
+			*emitPtr++ = PPC_BLR();
+
+			// 8. Patch Branch Offsets
+			if (branchGuard1) *branchGuard1 = (!isLoad) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
+			if (branchGuard2) *branchGuard2 = PPC_BGE((u32)((bailoutTarget - branchGuard2) * 4));
+			if (branchGuard3) *branchGuard3 = PPC_BEQ((u32)((bailoutTarget - branchGuard3) * 4));
+			*branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
+
+			u32* safeTarget = emitPtr;
+			*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
+
+			staticCycles += codeTicksAccessSeq16(currentPC + 2) + numRegs;
+		}
 		// THUMB Format 16 - Conditional Branches (Bcc)
 		else if ((opcode & 0xF000) == 0xD000 && (opcode & 0x0F00) != 0x0F00) {
 			u8 cond = (opcode >> 8) & 0x0F;
