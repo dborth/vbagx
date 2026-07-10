@@ -43,8 +43,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     	u16 opcode = CPUReadHalfWord(currentPC);
 
-    	// THUMB Formats 1, 2, 3, 4 - Native ALU (Shifts, Add, Sub, Mov, Cmp)
-    	if ((opcode & 0xC000) == 0x0000 || (opcode & 0xFC00) == 0x4000) {
+		// THUMB Formats 1, 2, 3, 4 - Native ALU (Shifts, Add, Sub, Mov, Cmp)
+		if ((opcode & 0xC000) == 0x0000 || (opcode & 0xFC00) == 0x4000) {
 			// Format 3: Move, Compare, Add, Subtract Immediate
 			if ((opcode & 0xE000) == 0x2000) {
 				u8 op = (opcode >> 11) & 0x03; // 0=MOV, 1=CMP, 2=ADD, 3=SUB
@@ -77,7 +77,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, flagSrc);
 					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
 				}
-				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
 			// Format 2: ADD / SUB (Register & Immediate)
 			else if ((opcode & 0xF800) == 0x1800) {
@@ -96,15 +96,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// Extract Hardware C and V Flags from XER (Branchless)
 				*emitPtr++ = PPC_MFXER(PPC_R11);
-				*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31); // IBM Bit 29 (CA) -> Bit 31
-				*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31); // IBM Bit 30 (OV) -> Bit 31
+				*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31); // IBM Bit 2 (CA) -> Bit 31
+				*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31); // IBM Bit 1 (OV) -> Bit 31
 
 				// Extract N and Z Flags natively (Branchless)
 				*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31); // N = Rd >> 31
 				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));   // cntlzw
 				*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);           // Z = (cntlzw == 32) ? 1 : 0
 
-				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
 			// Format 1: LSL / LSR / ASR
 			else if ((opcode & 0x1800) != 0x1800 && (opcode & 0xE000) == 0x0000) {
@@ -147,7 +147,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
 				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
 				*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
-				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
+				
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
 			// Format 4: ALU Operations
 			else if ((opcode & 0xFC00) == 0x4000) {
@@ -165,7 +166,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
 					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
 					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
-					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
+
+					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
 				else if (op == 0 || op == 1 || op == 12 || op == 14) { // AND, EOR, ORR, BIC
 					if (op == 0)  *emitPtr++ = PPC_AND(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
@@ -178,7 +180,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
 					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
 
-					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
+					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				} else {
 					endBlock = true;
 					JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_ALU);
@@ -186,7 +188,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 			}
 		}
-    	// THUMB Format 5 - High Register Operations (MOV / ADD)
+		// THUMB Format 5 - High Register Operations (MOV / ADD)
 		else if ((opcode & 0xFC00) == 0x4400 && ((opcode >> 8) & 0x03) != 3) {
 			u8 op = (opcode >> 8) & 0x03; // 0=ADD, 1=CMP, 2=MOV
 			u8 h1 = (opcode >> 7) & 0x01;
@@ -212,7 +214,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				} else {
 					*emitPtr++ = PPC_OR(MapGBARegister(actualRd), MapGBARegister(actualRs), MapGBARegister(actualRs));
 				}
-				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
+				
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
 			else if (op == 0) { // ADD
 				if (actualRs == 15) {
@@ -222,7 +225,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				} else {
 					*emitPtr++ = PPC_ADD(MapGBARegister(actualRd), MapGBARegister(actualRd), MapGBARegister(actualRs));
 				}
-				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
+				
+				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			} else {
 				// High-Register CMP (op == 1) requires flag updates. Bail for now.
 				endBlock = true;
@@ -230,45 +234,45 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				break;
 			}
 		}
-        // THUMB Format 5 - Branch Exchange (BX Rs)
-        else if ((opcode & 0xFF00) == 0x4700) {
-            u8 rs = (opcode >> 3) & 0x0F;
+		// THUMB Format 5 - Branch Exchange (BX Rs)
+		else if ((opcode & 0xFF00) == 0x4700) {
+			u8 rs = (opcode >> 3) & 0x0F;
 
-            // Protect against dynamic reads of R15 causing a stale PC desync
-            if (rs == 15) {
-                *emitPtr++ = PPC_LIS(PPC_R12, (currentPC + 4) >> 16);
-                *emitPtr++ = PPC_ORI(PPC_R12, PPC_R12, (currentPC + 4) & 0xFFFF);
-            } else {
-                *emitPtr++ = PPC_OR(PPC_R12, MapGBARegister(rs), MapGBARegister(rs));
-            }
+			// Protect against dynamic reads of R15 causing a stale PC desync
+			if (rs == 15) {
+				*emitPtr++ = PPC_LIS(PPC_R12, (currentPC + 4) >> 16);
+				*emitPtr++ = PPC_ORI(PPC_R12, PPC_R12, (currentPC + 4) & 0xFFFF);
+			} else {
+				*emitPtr++ = PPC_OR(PPC_R12, MapGBARegister(rs), MapGBARegister(rs));
+			}
 
-            // Extract Bit 0 to check if we are switching to ARM mode
-            *emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R12, 0, 31, 31);
-            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+			// Extract Bit 0 to check if we are switching to ARM mode
+			*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R12, 0, 31, 31);
+			*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
 
-            u32* branchArmSwitch = emitPtr;
-            *emitPtr++ = PPC_BEQ(0); // If Bit 0 == 0 (ARM), jump to C++ bailout
+			u32* branchArmSwitch = emitPtr;
+			*emitPtr++ = PPC_BEQ(0); // If Bit 0 == 0 (ARM), jump to C++ bailout
 
-            // TRUE PATH: Stay in THUMB, exit block dynamically
-            u32 takenPenalty = codeTicksAccessSeq16(currentPC + 2) + 1; // Base penalty
+			// TRUE PATH: Stay in THUMB, exit block dynamically
+			u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 
-            *emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
-            *emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
-            *emitPtr++ = PPC_BLR();
+			*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
+			*emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
+			*emitPtr++ = PPC_BLR();
 
-            // FALSE PATH: ARM Switch Bailout
-            u32* bailoutTarget = emitPtr;
-            *emitPtr++ = PPC_LI(PPC_R3, staticCycles);
-            *emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
-            *emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
-            *emitPtr++ = PPC_BLR();
+			// FALSE PATH: ARM Switch Bailout
+			u32* bailoutTarget = emitPtr;
+			*emitPtr++ = PPC_LI(PPC_R3, staticCycles);
+			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
+			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
+			*emitPtr++ = PPC_BLR();
 
-            *branchArmSwitch = PPC_BEQ((u32)((bailoutTarget - branchArmSwitch) * 4));
+			*branchArmSwitch = PPC_BEQ((u32)((bailoutTarget - branchArmSwitch) * 4));
 
-            endBlock = true;
-            JIT_LOG_BAILOUT(opcode, BAILOUT_ARM_SWITCH);
-            break;
-        }
+			endBlock = true;
+			JIT_LOG_BAILOUT(opcode, BAILOUT_ARM_SWITCH);
+			break;
+		}
 		// THUMB Format 6 - PC-Relative Load (LDR Rd, [PC, #Imm])
 		else if ((opcode & 0xF800) == 0x4800) {
 			u8 rd = (opcode >> 8) & 0x07;
