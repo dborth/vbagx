@@ -33,6 +33,8 @@ inline int MapGBARegister(int gbaReg) { return PPC_R14 + gbaReg; }
 #define PPC_SUBF(rD, rA, rB)   ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (40 << 1))
 #define PPC_AND(rA, rS, rB)    ((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (28 << 1))
 #define PPC_OR(rA, rS, rB)     ((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (444 << 1))
+#define PPC_XOR(rA, rS, rB)    ((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (316 << 1))
+#define PPC_ANDC(rA, rS, rB)   ((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (60 << 1))
 
 // Hardware Flag Math (XER & Zero Checks)
 #define PPC_ADDCO(rD, rA, rB)  ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (1 << 10) | (10 << 1))

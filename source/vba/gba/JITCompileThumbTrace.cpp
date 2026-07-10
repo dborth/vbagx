@@ -36,13 +36,38 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     	// THUMB Formats 1, 2, 3, 4 - Native ALU (Shifts, Add, Sub, Mov, Cmp)
 		if ((opcode & 0xE000) == 0x0000 || (opcode & 0xFC00) == 0x4000) {
-            // Format 3: Move Immediate (MOV Rd, #Imm8)
-			if ((opcode & 0xF800) == 0x2000) {
+			// Format 3: Move, Compare, Add, Subtract Immediate
+			if ((opcode & 0xE000) == 0x2000) {
+				u8 op = (opcode >> 11) & 0x03; // 0=MOV, 1=CMP, 2=ADD, 3=SUB
 				u8 rd = (opcode >> 8) & 0x07;
 				u8 imm = opcode & 0xFF;
-				*emitPtr++ = PPC_LI(MapGBARegister(rd), imm);
-				*emitPtr++ = PPC_LI(PPC_REG_N, 0);
-				*emitPtr++ = PPC_LI(PPC_REG_Z, (imm == 0) ? 1 : 0);
+
+				if (op == 0) { // MOV
+					*emitPtr++ = PPC_LI(MapGBARegister(rd), imm);
+					*emitPtr++ = PPC_LI(PPC_REG_N, 0);
+					*emitPtr++ = PPC_LI(PPC_REG_Z, (imm == 0) ? 1 : 0);
+				} else {
+					*emitPtr++ = PPC_LI(PPC_R12, imm);
+
+					if (op == 1) { // CMP (Rd - Imm, result discarded)
+						*emitPtr++ = PPC_SUBFCO(PPC_R11, PPC_R12, MapGBARegister(rd)); // R11 = Rd - Imm
+					} else if (op == 2) { // ADD
+						*emitPtr++ = PPC_ADDCO(MapGBARegister(rd), MapGBARegister(rd), PPC_R12);
+					} else if (op == 3) { // SUB
+						*emitPtr++ = PPC_SUBFCO(MapGBARegister(rd), PPC_R12, MapGBARegister(rd));
+					}
+
+					// Extract Hardware C and V Flags from XER natively
+					*emitPtr++ = PPC_MFXER(PPC_R10);
+					*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R10, 3, 31, 31);
+					*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R10, 2, 31, 31);
+
+					// Extract N and Z Flags
+					u32 flagSrc = (op == 1) ? PPC_R11 : MapGBARegister(rd);
+					*emitPtr++ = PPC_SRWI(PPC_REG_N, flagSrc, 31);
+					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, flagSrc);
+					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+				}
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
 			}
 			// Format 2: ADD / SUB (Register & Immediate)
@@ -113,35 +138,41 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
 			}
-            // Format 4: ALU Operations (Specifically CMP)
-            else if ((opcode & 0xFC00) == 0x4000) {
-                u8 op = (opcode >> 6) & 0x0F;
-                u8 rs = (opcode >> 3) & 0x07;
-                u8 rd = opcode & 0x07;
+			// Format 4: ALU Operations
+			else if ((opcode & 0xFC00) == 0x4000) {
+				u8 op = (opcode >> 6) & 0x0F;
+				u8 rs = (opcode >> 3) & 0x07;
+				u8 rd = opcode & 0x07;
 
-                if (op == 10) { // CMP (Compare)
-                    // Compare is Subtraction without saving the result to Rd.
-                    *emitPtr++ = PPC_SUBFCO(PPC_R12, MapGBARegister(rs), MapGBARegister(rd)); // R12 = Rd - Rs
+				if (op == 10) { // CMP (Compare)
+					*emitPtr++ = PPC_SUBFCO(PPC_R12, MapGBARegister(rs), MapGBARegister(rd)); // R12 = Rd - Rs
 
-                    // Hardware CA flag directly maps to GBA C_FLAG!
-                    *emitPtr++ = PPC_MFXER(PPC_R11);
-                    *emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31);
-                    *emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31);
+					*emitPtr++ = PPC_MFXER(PPC_R11);
+					*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31);
+					*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31);
 
-                    *emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
-                    *emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
-                    *emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+					*emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
+					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
+					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+					staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				}
+				else if (op == 0 || op == 1 || op == 12 || op == 14) { // AND, EOR, ORR, BIC
+					if (op == 0)  *emitPtr++ = PPC_AND(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
+					if (op == 1)  *emitPtr++ = PPC_XOR(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
+					if (op == 12) *emitPtr++ = PPC_OR(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
+					if (op == 14) *emitPtr++ = PPC_ANDC(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs)); // BIC
 
-                    staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
-                } else {
-                    endBlock = true;
-                    JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_ALU);
-                    break;
-                }
-            } else {
-				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_ALU);
-				break;
+					// Only N and Z update; C and V remain untouched
+					*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
+					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
+					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+
+					staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+				} else {
+					endBlock = true;
+					JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_ALU);
+					break;
+				}
 			}
 		}
 
