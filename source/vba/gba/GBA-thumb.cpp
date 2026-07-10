@@ -1400,6 +1400,10 @@ int thumbExecute() {
 			cpuTotalTicks += result.cycles;
 
 			// PERFECT PIPELINE RE-PRIME
+			// When returning from the JIT, the GBA hardware prefetcher is broken.
+			// We MUST reset busPrefetchCount or the C++ fallback will falsely charge 0 cycles.
+			busPrefetchCount = 0;
+
 			armNextPC = result.nextPC;
 			reg[15].I = armNextPC + 2;
 			cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
