@@ -27,7 +27,7 @@ struct JITStats {
 	void reset();
 	void print();
 };
-	extern JITStats g_jitStats;
+extern JITStats g_jitStats;
 #if ENABLE_JIT_PROFILING
 	// Clean macros to use inside the compiler/interpreter
 	#define JIT_LOG_BLOCK_COMPILED()           g_jitStats.blocksCompiled++
