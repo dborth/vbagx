@@ -723,6 +723,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// FALSE PATH (Branch Not Taken)
 				staticCycles += codeTicksAccessSeq16(currentPC + 2) + 1;
+			} else {
+				JIT_LOG_BAILOUT(opcode, BAILOUT_CONDITIONAL_BRANCH);
+				endBlock = true;
+				break;
 			}
 		}
     	// THUMB Formats 18 & 19 - Branch with Link (BL)
@@ -764,7 +768,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			}
 		}
 		else {
-			JIT_LOG_BAILOUT(opcode, BAILOUT_CONDITIONAL_BRANCH);
+			JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_OPCODE);
 			endBlock = true;
 			break;
 		}

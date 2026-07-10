@@ -48,6 +48,7 @@ void JITStats::print() {
     append("-----------------------------------------\n");
 
     append("Bailout Reasons:\n");
+	append("  Unsupported opcode:    %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_OPCODE]);
     append("  Buffer Overflow:       %u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
     append("  Unsupported ALU:       %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_ALU]);
     append("  Unsupported Mem Bank:  %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
