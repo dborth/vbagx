@@ -35,7 +35,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     while (!endBlock && instrCount < 64) {
         // BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction (~20) + Epilogue
-        if ((emitPtr - blockStart) > (MAX_WORDS - 32)) {
+        if ((emitPtr - blockStart) > (MAX_WORDS - 64)) {
             endBlock = true;
             JIT_LOG_BAILOUT(0, BAILOUT_BUFFER_OVERFLOW);
             break;
