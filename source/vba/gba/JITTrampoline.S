@@ -66,6 +66,31 @@ ExecuteJITTrace:
     lwz 6, 8(5)     # R6 = C_FLAG (PPC_REG_C)
     lwz 7, 12(5)    # R7 = V_FLAG (PPC_REG_V)
 
+    # --- NORMALIZE C++ FLAGS TO STRICT 0 OR 1 ---
+    # Normalize N_FLAG
+    cmpwi 8, 0
+    li 8, 0
+    beq 1f
+    li 8, 1
+1:
+    # Normalize Z_FLAG
+    cmpwi 9, 0
+    li 9, 0
+    beq 2f
+    li 9, 1
+2:
+    # Normalize C_FLAG
+    cmpwi 6, 0
+    li 6, 0
+    beq 3f
+    li 6, 1
+3:
+    # Normalize V_FLAG
+    cmpwi 7, 0
+    li 7, 0
+    beq 4f
+    li 7, 1
+4:
     # 7. Execute JIT Block Trace
     mtctr 3         # Move JIT block function pointer to Count Register (CTR)
     bctrl           # Branch to CTR and Link (Returns: R3 = cycles, R4 = nextPC)

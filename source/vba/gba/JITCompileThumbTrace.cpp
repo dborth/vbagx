@@ -254,7 +254,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*emitPtr++ = PPC_BEQ(0); // If Bit 0 == 0 (ARM), jump to C++ bailout
 
 			// TRUE PATH: Stay in THUMB, exit block dynamically
-			u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+			// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
+			u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 3;
 
 			*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
 			*emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
@@ -529,8 +530,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			u32* branchSafe = nullptr;
 			if (isPop && Rbit) {
 				// POP PC: We must exit the block dynamically
+				// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
 				*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
-				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + STATIC_CODE_TICKS_SEQ16(currentPC) + 2);
+				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + STATIC_CODE_TICKS_SEQ16(currentPC) + numRegs + 3);
 				*emitPtr++ = PPC_BLR();
 			} else {
 				branchSafe = emitPtr;
