@@ -1,6 +1,7 @@
 #ifndef JIT_PROFILER_H
 #define JIT_PROFILER_H
 #include "../common/Port.h"
+#include "JITDebugLog.h"
 
 enum BailoutReason {
 	BAILOUT_UNKNOWN = 0,
@@ -32,16 +33,44 @@ struct JITStats {
 };
 extern JITStats g_jitStats;
 #if ENABLE_JIT_PROFILING
-	// Clean macros to use inside the compiler/interpreter
-	#define JIT_LOG_BLOCK_COMPILED()           g_jitStats.blocksCompiled++
-	#define JIT_LOG_EXEC(count)                g_jitStats.jitInstructionsExecuted += (count)
-	#define JIT_LOG_FALLBACK(opcode)           do { g_jitStats.fallbackInstructionsExecuted++; g_jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; } while(0)
-	#define JIT_LOG_BAILOUT(opcode, reason)    do { g_jitStats.compileBailoutFreq[(opcode) >> 6]++; g_jitStats.bailoutReasons[reason]++; } while(0)
+	// Profiling & Debug Logging Macros
+	#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
+		g_jitStats.blocksCompiled++; \
+		LogJITBlockCompileStart(startPC); \
+	} while(0)
+
+	#define JIT_LOG_INSN_COMPILED(pc, opcode, fmt, ...) \
+		LogJITInsnCompiled((pc), (opcode), fmt, ##__VA_ARGS__)
+
+	#define JIT_LOG_BAILOUT(pc, opcode, reason) do { \
+        g_jitStats.compileBailoutFreq[(opcode) >> 6]++; \
+        g_jitStats.bailoutReasons[reason]++; \
+        LogJITBailout((pc), (opcode), #reason); \
+    } while(0)
+
+	#define JIT_LOG_EXEC(count) \
+		g_jitStats.jitInstructionsExecuted += (count)
+
+	#define JIT_LOG_FALLBACK(opcode) do { \
+		g_jitStats.fallbackInstructionsExecuted++; \
+		g_jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
+	} while(0)
+
+	// Trace Execution Logging
+	#define JIT_LOG_TRACE_ENTRY(pc, flags) \
+		LogJITTraceExecution(true, (pc), 0, (flags), 0)
+
+	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) \
+		LogJITTraceExecution(false, (pc), (nextPC), (flags), (cycles))
+
 #else
-    // If disabled, these macros vanish and cost 0 CPU cycles
-    #define JIT_LOG_BLOCK_COMPILED()
-    #define JIT_LOG_EXEC(count)
-    #define JIT_LOG_FALLBACK(opcode)
-    #define JIT_LOG_BAILOUT(opcode, reason)
+	#define JIT_LOG_BLOCK_COMPILED(startPC)                		((void)0)
+	#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     ((void)0)
+	#define JIT_LOG_BAILOUT(pc, opcode, reason)            		((void)0)
+	#define JIT_LOG_EXEC(count)                            		((void)0)
+	#define JIT_LOG_FALLBACK(opcode)                      		((void)0)
+	#define JIT_LOG_TRACE_ENTRY(pc, flags)                		((void)0)
+	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) 		((void)0)
 #endif
-#endif
+
+#endif // JIT_PROFILER_H

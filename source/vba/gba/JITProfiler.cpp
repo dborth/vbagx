@@ -1,4 +1,5 @@
 #include "JITProfiler.h"
+#include "JITDebugLog.h"
 #include <stdio.h>
 #include <algorithm>
 #include <ogc/system.h>
@@ -24,42 +25,26 @@ void JITStats::print() {
 
     double jitPct = (double)jitInstructionsExecuted / total * 100.0;
 
-    char buf[2048];
-    size_t offset = 0;
+    LOG("\n========== JIT PROFILING STATS ==========\n");
+    LOG("Total Instructions: %llu\n", total);
+    LOG("JIT Handled:        %llu (%.2f%%)\n", jitInstructionsExecuted, jitPct);
+    LOG("Fallback (Interp):  %llu (%.2f%%)\n", fallbackInstructionsExecuted, 100.0 - jitPct);
+    LOG("Blocks Compiled:    %u\n", blocksCompiled);
+    LOG("-----------------------------------------\n");
 
-    // Helper lambda to append formatted strings into the single buffer
-    auto append = [&](const char* fmt, ...) {
-        if (offset >= sizeof(buf)) return;
-        va_list args;
-        va_start(args, fmt);
-        int written = vsnprintf(buf + offset, sizeof(buf) - offset, fmt, args);
-        va_end(args);
-        if (written > 0) {
-            offset += written;
-            if (offset > sizeof(buf)) offset = sizeof(buf);
-        }
-    };
-
-    append("\n========== JIT PROFILING STATS ==========\n");
-    append("Total Instructions: %llu\n", total);
-    append("JIT Handled:        %llu (%.2f%%)\n", jitInstructionsExecuted, jitPct);
-    append("Fallback (Interp):  %llu (%.2f%%)\n", fallbackInstructionsExecuted, 100.0 - jitPct);
-    append("Blocks Compiled:    %u\n", blocksCompiled);
-    append("-----------------------------------------\n");
-
-    append("Bailout Reasons:\n");
-	append("  Unsupported opcode:    %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_OPCODE]);
-    append("  Buffer Overflow:       %u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
-    append("  Unsupported ALU:       %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_ALU]);
-    append("  Unsupported Mem Bank:  %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
-    append("  ARM Mode Switch:       %u\n", bailoutReasons[BAILOUT_ARM_SWITCH]);
-    append("  Conditional Branch:    %u\n", bailoutReasons[BAILOUT_CONDITIONAL_BRANCH]);
-    append("  Branch with Link:      %u\n", bailoutReasons[BAILOUT_BRANCH_WITH_LINK]);
-    append("  Instr Count Zero:      %u\n", bailoutReasons[BAILOUT_INSTR_COUNT_ZERO]);
-    append("  Unknown MEM Op:        %u\n", bailoutReasons[BAILOUT_UNKNOWN_MEM_OP]);
-    append("  No Push/Pop Regs:      %u\n", bailoutReasons[BAILOUT_PUSH_POP_REGS]);
-    append("  No LDMIA/STMIA Regs:   %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
-    append("-----------------------------------------\n");
+    LOG("Bailout Reasons:\n");
+    LOG("  Unsupported opcode:    %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_OPCODE]);
+    LOG("  Buffer Overflow:       %u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
+    LOG("  Unsupported ALU:       %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_ALU]);
+    LOG("  Unsupported Mem Bank:  %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
+    LOG("  ARM Mode Switch:       %u\n", bailoutReasons[BAILOUT_ARM_SWITCH]);
+    LOG("  Conditional Branch:    %u\n", bailoutReasons[BAILOUT_CONDITIONAL_BRANCH]);
+    LOG("  Branch with Link:      %u\n", bailoutReasons[BAILOUT_BRANCH_WITH_LINK]);
+    LOG("  Instr Count Zero:      %u\n", bailoutReasons[BAILOUT_INSTR_COUNT_ZERO]);
+    LOG("  Unknown MEM Op:        %u\n", bailoutReasons[BAILOUT_UNKNOWN_MEM_OP]);
+    LOG("  No Push/Pop Regs:      %u\n", bailoutReasons[BAILOUT_PUSH_POP_REGS]);
+    LOG("  No LDMIA/STMIA Regs:   %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
+    LOG("-----------------------------------------\n");
 
     // Top 10 Fallback Executions
     struct Stat { u16 bucket; u64 count; };
@@ -74,15 +59,14 @@ void JITStats::print() {
         return a.count > b.count;
     });
 
-    append("Top 10 Fallback Executions (Interpreter):\n");
+    LOG("Top 10 Fallback Executions (Interpreter):\n");
     for (int i = 0; i < 10; i++) {
         if (topFallback[i].count == 0)
             continue;
-        append("  #%d: Opcode Prefix ~0x%04X (Bucket %4d) - %llu times\n",
+        LOG("  #%d: Opcode Prefix ~0x%04X (Bucket %4d) - %llu times\n",
                i + 1, topFallback[i].bucket << 6, topFallback[i].bucket, topFallback[i].count);
     }
-    append("=========================================\n\n");
+    LOG("=========================================\n\n");
 
-    // Single call to print the assembled message
-    SYS_Report("%s", buf);
+    WriteJITLogToFile();
 }

@@ -31,13 +31,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
     u32 staticCycles = 0; 
     bool endBlock = false;
 
-	JIT_LOG_BLOCK_COMPILED();
+    JIT_LOG_BLOCK_COMPILED(startPC);
 
     while (!endBlock && instrCount < 64) {
         // BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction (~20) + Epilogue
         if ((emitPtr - blockStart) > (MAX_WORDS - 64)) {
             endBlock = true;
-            JIT_LOG_BAILOUT(0, BAILOUT_BUFFER_OVERFLOW);
+            JIT_LOG_BAILOUT(currentPC, 0, BAILOUT_BUFFER_OVERFLOW);
             break;
         }
 
@@ -50,6 +50,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u8 op = (opcode >> 11) & 0x03; // 0=MOV, 1=CMP, 2=ADD, 3=SUB
 				u8 rd = (opcode >> 8) & 0x07;
 				u8 imm = opcode & 0xFF;
+
+				static const char* fmt[] = { "MOV", "CMP", "ADD", "SUB" };
+				JIT_LOG_INSN_COMPILED(currentPC, opcode, "%s R%u, #0x%02X", fmt[op], rd, imm);
 
 				if (op == 0) { // MOV
 					*emitPtr++ = PPC_LI(MapGBARegister(rd), imm);
@@ -188,7 +191,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				} else {
 					endBlock = true;
-					JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_ALU);
+					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_ALU);
 					break;
 				}
 			}
@@ -208,7 +211,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// We bail these out to C++ to handle the complex timing sync.
 			if (actualRd == 15) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_CONDITIONAL_BRANCH);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_CONDITIONAL_BRANCH);
 				break;
 			}
 
@@ -235,7 +238,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			} else {
 				// High-Register CMP (op == 1) requires flag updates. Bail for now.
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_ALU);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_ALU);
 				break;
 			}
 		}
@@ -276,7 +279,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*branchArmSwitch = PPC_BEQ((u32)((bailoutTarget - branchArmSwitch) * 4));
 
 			endBlock = true;
-			JIT_LOG_BAILOUT(opcode, BAILOUT_ARM_SWITCH);
+			JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_ARM_SWITCH);
 			break;
 		}
 		// THUMB Format 6 - PC-Relative Load (LDR Rd, [PC, #Imm])
@@ -284,6 +287,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			u8 rd = (opcode >> 8) & 0x07;
 			u8 imm = opcode & 0xFF;
 			u32 targetAddr = ((currentPC + 4) & ~3) + (imm << 2);
+
+			JIT_LOG_INSN_COMPILED(currentPC, opcode, "LDR R%u, [PC, #0x%X] ; (0x%08X)", rd, imm, targetAddr);
 
 			u8 bank = targetAddr >> 24;
 			// ONLY statically bake BIOS (0x00) and ROM (0x08-0x0D).
@@ -305,7 +310,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 2;
 			} else {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_MEM_BANK);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_MEM_BANK);
 				break;
 			}
 		}
@@ -358,7 +363,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			if (isMemLoad || isMemStore) {
 				if (instrCount == 0) {
 					endBlock = true;
-					JIT_LOG_BAILOUT(opcode, BAILOUT_INSTR_COUNT_ZERO);
+					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_INSTR_COUNT_ZERO);
 					break;
 				}
 
@@ -437,7 +442,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + ((isMemStore) ? 2 : 3);
 			} else {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_UNKNOWN_MEM_OP);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNKNOWN_MEM_OP);
 				break;
 			}
 		}
@@ -449,7 +454,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (instrCount == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_INSTR_COUNT_ZERO);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_INSTR_COUNT_ZERO);
 				break;
 			}
 
@@ -459,7 +464,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (numRegs == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_PUSH_POP_REGS);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_PUSH_POP_REGS);
 				break;
 			}
 
@@ -576,7 +581,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (instrCount == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_INSTR_COUNT_ZERO);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_INSTR_COUNT_ZERO);
 				break;
 			}
 
@@ -585,7 +590,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (numRegs == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(opcode, BAILOUT_LDMIA_STMIA_REGS);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_LDMIA_STMIA_REGS);
 				break;
 			}
 
@@ -742,7 +747,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// FALSE PATH (Branch Not Taken)
 				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
 			} else {
-				JIT_LOG_BAILOUT(opcode, BAILOUT_CONDITIONAL_BRANCH);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_CONDITIONAL_BRANCH);
 				endBlock = true;
 				break;
 			}
@@ -781,13 +786,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				endBlock = true;
 				break;
 			} else {
-				JIT_LOG_BAILOUT(opcode, BAILOUT_BRANCH_WITH_LINK);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_BRANCH_WITH_LINK);
 				endBlock = true;
 				break;
 			}
 		}
 		else {
-			JIT_LOG_BAILOUT(opcode, BAILOUT_UNSUPPORTED_OPCODE);
+			JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_OPCODE);
 			endBlock = true;
 			break;
 		}

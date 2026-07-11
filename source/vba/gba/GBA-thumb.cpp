@@ -1385,8 +1385,12 @@ int thumbExecute() {
 			// inside the compiled JIT trace match authentic GBA pipeline values.
 			reg[15].I = pc + 4;
 
+			JIT_LOG_TRACE_ENTRY(pc, flagBuffer);
+
 			// Execute Native Trace with flat memory maps
 			ExecuteJITTrace(block->execute, (u32*)&reg[0].I, flagBuffer, &result, gbaReadPagePtrs, gbaReadPageMasks);
+
+			JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
 
 			JIT_LOG_EXEC(block->length);
 
