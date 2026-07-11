@@ -75,7 +75,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					u32 flagSrc = (op == 1) ? PPC_R11 : MapGBARegister(rd);
 					*emitPtr++ = PPC_SRWI(PPC_REG_N, flagSrc, 31);
 					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, flagSrc);
-					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+					// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
+					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
 				}
 				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
@@ -99,10 +100,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31); // IBM Bit 2 (CA) -> Bit 31
 				*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31); // IBM Bit 1 (OV) -> Bit 31
 
-				// Extract N and Z Flags natively (Branchless)
-				*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31); // N = Rd >> 31
-				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));   // cntlzw
-				*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);           // Z = (cntlzw == 32) ? 1 : 0
+				// Extract N and Z Flags
+				*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
+				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
+				// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
+				*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
 
 				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
@@ -144,9 +146,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					}
 				}
 
+				// Extract N and Z Flags
 				*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
 				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
-				*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+				// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
+				*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
 				
 				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
@@ -165,7 +169,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					*emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
 					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
-					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
 
 					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
@@ -175,10 +179,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					if (op == 12) *emitPtr++ = PPC_OR(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
 					if (op == 14) *emitPtr++ = PPC_ANDC(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs)); // BIC
 
-					// Only N and Z update; C and V remain untouched
+					// Extract N and Z Flags
 					*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
 					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
-					*emitPtr++ = PPC_SRWI(PPC_REG_Z, PPC_REG_Z, 5);
+					// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
+					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
 
 					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				} else {
