@@ -33,6 +33,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     JIT_LOG_BLOCK_COMPILED(startPC);
 
+    // R3 doubles as a LIVE runtime accumulator for data-access wait-state cycles
+    // (dataTicksAccess32/16 in the interpreter) that can't be folded into the
+    // compile-time-constant `staticCycles`, because the target bank of a
+    // register-relative memory access isn't known until the block actually runs.
+    // Every exit stub below ADDs staticCycles into R3 rather than overwriting it,
+    // so this must start at zero and every memory-access instruction accumulates
+    // into it in place, on the guaranteed-safe (post-guard) path only.
+    *emitPtr++ = PPC_LI(PPC_R3, 0);
+
     while (!endBlock && instrCount < 64) {
         // BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction (~20) + Epilogue
         if ((emitPtr - blockStart) > (MAX_WORDS - 64)) {
@@ -266,12 +275,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 3;
 
 			*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
-			*emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
+			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles + takenPenalty);
 			*emitPtr++ = PPC_BLR();
 
 			// FALSE PATH: ARM Switch Bailout
 			u32* bailoutTarget = emitPtr;
-			*emitPtr++ = PPC_LI(PPC_R3, staticCycles);
+			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles);
 			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
 			*emitPtr++ = PPC_BLR();
@@ -307,7 +316,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_LIS(MapGBARegister(rd), loadedValue >> 16);
 					*emitPtr++ = PPC_ORI(MapGBARegister(rd), MapGBARegister(rd), loadedValue & 0xFFFF);
 				}
-				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 2;
+				// Format 6 is always a 32-bit load, and its target is a compile-time
+				// constant, so (unlike Format 9/10/11) the real data-access wait-state
+				// cost folds directly into staticCycles here. Matches thumb48's
+				// `3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)`:
+				// non-sequential code table (a memory access breaks the sequential
+				// prefetch stream), +3 (load constant, not +2 which was the store one).
+				staticCycles += STATIC_DATA_TICKS_32(targetAddr) + STATIC_CODE_TICKS_16(currentPC) + 3;
 			} else {
 				endBlock = true;
 				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_MEM_BANK);
@@ -369,6 +384,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// 1. Extract Memory Bank (R12 >> 24)
 				*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
+				// Stash the bank in R5 (instruction-local scratch only - nothing here
+				// needs it to survive to the next instruction) since R11 gets
+				// overwritten by the page/mask lookup below, and we need the bank
+				// again afterward for the data-access cycle-cost lookup.
+				*emitPtr++ = PPC_OR(PPC_R5, PPC_R11, PPC_R11);
 
 				u32* branchGuard1 = nullptr;
 				u32* branchGuard2 = nullptr;
@@ -407,6 +427,21 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// 4. Apply Mask
 				*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);
 
+				// 4.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only - every guard
+				// above has already passed by this point, so R3 is correctly left
+				// untouched on every bailout path). Mirrors dataTicksAccess32/16:
+				// word accesses use memoryWait32[], byte/halfword share memoryWait[].
+				// The bank isn't known until runtime here (unlike Format 6's
+				// PC-relative case), so this has to be an emitted table lookup
+				// rather than a compile-time constant.
+				{
+					u8* dataTicksTable = (accessType == 4) ? memoryWait32 : memoryWait;
+					*emitPtr++ = PPC_LIS(PPC_R11, ((u32)dataTicksTable) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
+					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R11, PPC_R5); // R11 = dataTicksTable[bank]
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+				}
+
 				// 5. Execute Memory Fetch or Store
 				if (isMemLoad) {
 					if (accessType == 4) *emitPtr++ = PPC_LWBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
@@ -424,7 +459,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// 7. Bailout Stub Generation
 				u32* bailoutTarget = emitPtr;
-				*emitPtr++ = PPC_LI(PPC_R3, staticCycles);
+				*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles);
 				*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
 				*emitPtr++ = PPC_BLR();
@@ -439,7 +474,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32* safeTarget = emitPtr;
 				*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
 
-				staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + ((isMemStore) ? 2 : 3);
+				// Non-sequential table for the code-fetch component: a data-bus access
+				// disrupts the prefetch pipeline, so the interpreter's real formula
+				// (thumb68 etc: `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2/3`)
+				// always pays the non-sequential cost for the instruction after a memory op.
+				staticCycles += STATIC_CODE_TICKS_16(currentPC) + ((isMemStore) ? 2 : 3);
 			} else {
 				endBlock = true;
 				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNKNOWN_MEM_OP);
@@ -480,6 +519,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			// 1. Extract Memory Bank (R12 >> 24)
 			*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
+			// Stash the bank in R4 (free until the per-register loop below starts
+			// using it) since R11 becomes the mask and R5 becomes the address
+			// tracker before we get a chance to look up the data-access cost.
+			*emitPtr++ = PPC_OR(PPC_R4, PPC_R11, PPC_R11);
+			bool pushPopAccumulateDataTicks = !(isPop && !Rbit);
 
 			u32* branchGuard1 = nullptr;
 			u32* branchGuard2 = nullptr;
@@ -515,6 +559,30 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			u32* branchNullToBailout = emitPtr;
 			*emitPtr++ = PPC_BEQ(0);
 
+			// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only).
+			// PUSH_REG/POP_REG charge dataTicksAccess32 (non-seq) for the first
+			// register and dataTicksAccessSeq32 (seq) for every register after
+			// that, all in the same bank (SP never crosses a bank mid-instruction).
+			// numRegs is compile-time-known, so the repeat count is unrolled here
+			// (avoids mullw per Broadway convention) - only the two table values
+			// themselves need a runtime lookup. Skipped entirely for POP{Rlist}
+			// (see pushPopAccumulateDataTicks above).
+			if (pushPopAccumulateDataTicks) {
+				*emitPtr++ = PPC_LIS(PPC_R5, ((u32)memoryWait32) >> 16);
+				*emitPtr++ = PPC_ORI(PPC_R5, PPC_R5, ((u32)memoryWait32) & 0xFFFF);
+				*emitPtr++ = PPC_LBZX(PPC_R5, PPC_R5, PPC_R4); // R5 = memoryWait32[bank] (non-seq, 1st access)
+				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R5);
+
+				if (numRegs > 1) {
+					*emitPtr++ = PPC_LIS(PPC_R5, ((u32)memoryWaitSeq32) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R5, PPC_R5, ((u32)memoryWaitSeq32) & 0xFFFF);
+					*emitPtr++ = PPC_LBZX(PPC_R5, PPC_R5, PPC_R4); // R5 = memoryWaitSeq32[bank] (seq, rest)
+					for (int k = 0; k < numRegs - 1; k++) {
+						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R5);
+					}
+				}
+			}
+
 			// 4. Memory Operations Loop
 			*emitPtr++ = PPC_OR(PPC_R5, PPC_R12, PPC_R12); // R5 = Base Address Tracker
 			for (int i = 0; i < 8; i++) {
@@ -542,7 +610,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// POP PC: We must exit the block dynamically
 				// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
 				*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
-				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + STATIC_CODE_TICKS_SEQ16(currentPC) + numRegs + 3);
+				// thumbBD: `clockTicks += 3 + codeTicksAccess16(armNextPC) + codeTicksAccess16(armNextPC);`
+				// - non-sequential table, doubled (extra pipeline refill for the PC-changing pop).
+				*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles + numRegs + STATIC_CODE_TICKS_16(currentPC) * 2 + 3);
 				*emitPtr++ = PPC_BLR();
 			} else {
 				branchSafe = emitPtr;
@@ -555,7 +625,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// VITAL: If PUSH fails a guard, we must revert the SP decrement before bailing out!
 			if (!isPop) *emitPtr++ = PPC_ADDI(MapGBARegister(13), MapGBARegister(13), numRegs * 4);
 
-			*emitPtr++ = PPC_LI(PPC_R3, staticCycles);
+			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles);
 			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
 			*emitPtr++ = PPC_BLR();
@@ -571,7 +641,22 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
 			}
 
-			staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + numRegs;
+			if (isPop && !Rbit) {
+				// POP {Rlist}: thumbBC ends with `clockTicks = 2 + codeTicksAccess16(...)`
+				// - a plain assignment, not +=, which discards every +1-per-register
+				// AND every per-register data-tick that POP_REG built up. Verified
+				// directly against GBA-thumb.cpp. Faithfully reproduce that discard
+				// (numRegs deliberately excluded here) rather than "fixing" it into
+				// something more hardware-accurate but interpreter-divergent.
+				staticCycles += STATIC_CODE_TICKS_16(currentPC) + 2;
+			} else if (!(isPop && Rbit)) {
+				// PUSH {Rlist} / PUSH {Rlist, LR}: thumbB4/B5 use += throughout, so
+				// numRegs' +1s and their data-ticks (already accumulated into R3
+				// above) both survive, plus each one's own flat "+1".
+				staticCycles += STATIC_CODE_TICKS_16(currentPC) + numRegs + 1;
+			}
+			// (POP {Rlist, PC} already emitted its own exit above and always ends
+			// the block there, so it never reaches this trailing accumulation.)
 		}
     	// THUMB Format 15 - Multiple Load/Store (LDMIA / STMIA)
 		else if ((opcode & 0xF000) == 0xC000) {
@@ -661,7 +746,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// 7. Bailout Stub Generation
 			u32* bailoutTarget = emitPtr;
 
-			*emitPtr++ = PPC_LI(PPC_R3, staticCycles);
+			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles);
 			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
 			*emitPtr++ = PPC_BLR();
@@ -675,7 +760,14 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			u32* safeTarget = emitPtr;
 			*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
 
-			staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + numRegs;
+			// thumbC0 (STMIA) / thumbC8 (LDMIA) both end with a plain assignment -
+			// `clockTicks = (1 or 2) + codeTicksAccess16(armNextPC)` - which discards
+			// every +1-per-register and per-register data-tick that THUMB_STM_REG/
+			// THUMB_LDM_REG accumulated.
+			// The real cost is just this flat constant + one code-fetch lookup;
+			// `numRegs` never survives to be observable, so it's deliberately
+			// excluded here rather than added (as it was before this fix).
+			staticCycles += STATIC_CODE_TICKS_16(currentPC) + (isLoad ? 2 : 1);
 		}
     	// THUMB Format 16 - Conditional Branches (Bcc)
 		else if ((opcode & 0xF000) == 0xD000 && (opcode & 0x0F00) != 0x0F00) {
@@ -739,7 +831,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1 +
 								   STATIC_CODE_TICKS_SEQ16(targetPC) + STATIC_CODE_TICKS_16(targetPC) + 2;
 
-				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
+				*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles + takenPenalty);
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
 				*emitPtr++ = PPC_BLR();
@@ -776,13 +868,14 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1 +
 								   (STATIC_CODE_TICKS_SEQ16(targetPC) * 2) + STATIC_CODE_TICKS_16(targetPC) + 3;
 
-				*emitPtr++ = PPC_LI(PPC_R3, staticCycles + takenPenalty);
+				*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles + takenPenalty);
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
 				*emitPtr++ = PPC_BLR();
 
-				instrCount++;
-				currentPC += 2;
+				// BL is two THUMB halfwords (prefix + suffix), not one.
+				instrCount += 2;
+				currentPC += 4;
 				endBlock = true;
 				break;
 			} else {
@@ -813,7 +906,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
     }
 
     // Default Epilogue
-    *emitPtr++ = PPC_LI(PPC_R3, staticCycles);
+    *emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles);
     *emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
     *emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
     *emitPtr++ = PPC_BLR();
