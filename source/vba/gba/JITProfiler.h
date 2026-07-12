@@ -47,10 +47,8 @@ extern JITStats g_jitStats;
 		LogJITBlockCompileStart(startPC); \
 	} while(0)
 
-	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, instrCount, staticCycles, bailedOut, bailoutReason) do { \
-		g_jitStats.blocksCompiled++; \
-		LogJITBlockCompileEnd((startPC), (endPC), (instrCount), (staticCycles), (bailedOut), (bailoutReason)); \
-	} while(0)
+	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, instrCount, staticCycles, bailedOut, bailoutReason) \ \
+		LogJITBlockCompileEnd((startPC), (endPC), (instrCount), (staticCycles), (bailedOut), (bailoutReason))
 
 	#define JIT_LOG_INSN_COMPILED(pc, opcode, fmt, ...) \
 		LogJITInsnCompiled((pc), (opcode), fmt, ##__VA_ARGS__)
