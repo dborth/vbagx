@@ -1366,7 +1366,7 @@ static insnfunc_t thumbInsnTable[1024] = {
 // HYBRID TRACE-JIT / C++ EXECUTION ENGINE
 // -------------------------------------------------------------------------
 int thumbExecute() {
-    while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks) {
+    do {
         u32 pc = armNextPC;
         BasicBlock* block = jitCache.getBlock(pc);
 
@@ -1378,6 +1378,84 @@ int thumbExecute() {
 		// JIT EXECUTION PATH
 		// ========================================================================
 		if (block != nullptr && block->execute != nullptr) {
+#ifdef JIT_COMPILER_DIFFERENTIAL_TESTING
+        	static int mismatchCount = 0;
+
+        	if(mismatchCount < 50) {
+				// 1. SAVE CPU STATE BEFORE JIT TRACE
+				u32 savedRegs[16];
+				for (size_t i = 0; i < 16; i++) savedRegs[i] = reg[i].I;
+				u32 savedN = N_FLAG, savedZ = Z_FLAG, savedC = C_FLAG, savedV = V_FLAG;
+
+				// 2. RUN JIT EXECUTION
+				u32 jitFlags[4] = { (u32)N_FLAG, (u32)Z_FLAG, (u32)C_FLAG, (u32)V_FLAG };
+				JITResult jitResult;
+
+				reg[15].I = pc + 4;
+				ExecuteJITTrace(block->execute, (u32*)(void*)&reg[0].I, jitFlags, &jitResult, gbaReadPagePtrs, gbaReadPageMasks);
+
+				u32 jitRegs[16];
+				for (size_t i = 0; i < 16; i++) jitRegs[i] = reg[i].I;
+				u32 jitN = jitFlags[0], jitZ = jitFlags[1], jitC = jitFlags[2], jitV = jitFlags[3];
+
+				// 3. REWIND CPU STATE FOR C++ INTERPRETER
+				for (size_t i = 0; i < 16; i++) reg[i].I = savedRegs[i];
+				N_FLAG = savedN; Z_FLAG = savedZ; C_FLAG = savedC; V_FLAG = savedV;
+
+				// 4. RUN C++ INTERPRETER FOR THE EXACT SAME NUMBER OF INSTRUCTIONS IN THE TRACE
+				u32 interpPC = pc;
+				int cppCycles = 0;
+
+				for (u32 i = 0; i < block->length; i++) {
+					u16 opcode = CPUReadHalfWord(interpPC);
+					armNextPC = interpPC + 2;
+					reg[15].I = interpPC + 4;
+
+					clockTicks = 0;
+					(*thumbInsnTable[opcode >> 6])(opcode);
+
+					int localTicks = clockTicks;
+					if (localTicks <= 0) localTicks = codeTicksAccessSeq16(interpPC) + 1;
+					cppCycles += localTicks;
+
+					interpPC = reg[15].I - 2;
+				}
+
+				// 5. COMPARE RESULTS & DETECT MISMATCHES
+				bool mismatch = false;
+				for (int r = 0; r < 15; r++) {
+					if (jitRegs[r] != reg[r].I) {
+						LOG("[JIT REG MISMATCH] StartPC: 0x%08X | R%d: JIT=0x%08X vs C++=0x%08X\n", pc, r, jitRegs[r], reg[r].I);
+						mismatch = true;
+					}
+				}
+				if (jitResult.nextPC != interpPC) {
+					LOG("[JIT PC MISMATCH] StartPC: 0x%08X | NextPC: JIT=0x%08X vs C++=0x%08X\n", pc, jitResult.nextPC, interpPC);
+					mismatch = true;
+				}
+				if (jitN != N_FLAG || jitZ != Z_FLAG || jitC != C_FLAG || jitV != V_FLAG) {
+					LOG("[JIT FLAG MISMATCH] StartPC: 0x%08X\n", pc);
+					mismatch = true;
+				}
+				if (jitResult.cycles == 0) {
+					LOG("[JIT ZERO CYCLES] StartPC: 0x%08X | JIT returned 0 cycles!\n", pc);
+					mismatch = true;
+				}
+
+				if (mismatch) mismatchCount++;
+
+				JIT_LOG_EXEC(block->length);
+
+				// 6. SYNCHRONIZE STATE & RE-PRIME PIPELINE
+				cpuTotalTicks += cppCycles;
+				busPrefetchCount = 0;
+				armNextPC = interpPC;
+				reg[15].I = armNextPC + 2;
+				cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
+				cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+				continue;
+        	}
+#endif
 			u32 flagBuffer[4] = { (u32)N_FLAG, (u32)Z_FLAG, (u32)C_FLAG, (u32)V_FLAG };
 			JITResult result;
 
@@ -1465,7 +1543,8 @@ int thumbExecute() {
 
             cpuTotalTicks += localTicks;
         }
-    }
+    } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
+
     return 1;
 }
 #else
