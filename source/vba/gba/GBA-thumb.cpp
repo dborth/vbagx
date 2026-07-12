@@ -1403,11 +1403,13 @@ int thumbExecute() {
                 for (size_t i = 0; i < 16; i++) reg[i].I = savedRegs[i];
                 N_FLAG = savedN; Z_FLAG = savedZ; C_FLAG = savedC; V_FLAG = savedV;
 
-                // 4. RUN C++ INTERPRETER FOR THE EXACT SAME NUMBER OF INSTRUCTIONS IN THE TRACE
+                // 4. RUN C++ INTERPRETER UNTIL IT REACHES THE SAME PC THE JIT REACHED
                 u32 interpPC = pc;
                 int cppCycles = 0;
+                const u32 kMaxSteps = 256; // safety cap — real divergence, not infinite loop
+                u32 steps = 0;
 
-                for (u32 i = 0; i < block->length; i++) {
+                while (interpPC != jitResult.nextPC && steps < kMaxSteps) {
                     u16 opcode = CPUReadHalfWord(interpPC);
                     armNextPC = interpPC + 2;
                     reg[15].I = interpPC + 4;
@@ -1417,6 +1419,7 @@ int thumbExecute() {
                     if (localTicks <= 0) localTicks = codeTicksAccessSeq16(interpPC) + 1;
                     cppCycles += localTicks;
                     interpPC = armNextPC;
+                    steps++;
                 }
 
                 // 5. DETECT & COMPARE ALL CPU FIELDS (BEFORE & AFTER)
