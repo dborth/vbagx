@@ -31,22 +31,35 @@ struct JITStats {
 	void reset();
 	void print();
 };
+
 extern JITStats g_jitStats;
+
 #if ENABLE_JIT_DEBUG_LOG
 	// Profiling & Debug Logging Macros
+	#define JIT_LOG(fmt, ...) \
+		LogJIT(fmt, ##__VA_ARGS__)
+
+	#define JIT_LOG_MISMATCH(fmt, ...) \
+		LogJITMismatch(fmt, ##__VA_ARGS__)
+
 	#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
 		g_jitStats.blocksCompiled++; \
 		LogJITBlockCompileStart(startPC); \
+	} while(0)
+
+	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, instrCount, staticCycles, bailedOut, bailoutReason) do { \
+		g_jitStats.blocksCompiled++; \
+		LogJITBlockCompileEnd((startPC), (endPC), (instrCount), (staticCycles), (bailedOut), (bailoutReason)); \
 	} while(0)
 
 	#define JIT_LOG_INSN_COMPILED(pc, opcode, fmt, ...) \
 		LogJITInsnCompiled((pc), (opcode), fmt, ##__VA_ARGS__)
 
 	#define JIT_LOG_BAILOUT(pc, opcode, reason) do { \
-        g_jitStats.compileBailoutFreq[(opcode) >> 6]++; \
-        g_jitStats.bailoutReasons[reason]++; \
-        LogJITBailout((pc), (opcode), #reason); \
-    } while(0)
+		g_jitStats.compileBailoutFreq[(opcode) >> 6]++; \
+		g_jitStats.bailoutReasons[reason]++; \
+		LogJITBailout((pc), (opcode), #reason); \
+	} while(0)
 
 	#define JIT_LOG_EXEC(count) \
 		g_jitStats.jitInstructionsExecuted += (count)
@@ -64,13 +77,16 @@ extern JITStats g_jitStats;
 		LogJITTraceExecution(false, (pc), (nextPC), (flags), (cycles))
 
 #else
-	#define JIT_LOG_BLOCK_COMPILED(startPC)                		((void)0)
-	#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     ((void)0)
-	#define JIT_LOG_BAILOUT(pc, opcode, reason)            		((void)0)
-	#define JIT_LOG_EXEC(count)                            		((void)0)
-	#define JIT_LOG_FALLBACK(opcode)                      		((void)0)
-	#define JIT_LOG_TRACE_ENTRY(pc, flags)                		((void)0)
-	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) 		((void)0)
+	#define JIT_LOG(fmt, ...) 														((void)0)
+	#define JIT_LOG_MISMATCH(fmt, ...)												((void)0)
+	#define JIT_LOG_BLOCK_COMPILED(startPC)                							((void)0)
+	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, count, cycles, bailed, rsn)	((void)0)
+	#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     					((void)0)
+	#define JIT_LOG_BAILOUT(pc, opcode, reason)            							((void)0)
+	#define JIT_LOG_EXEC(count) 													((void)0)
+	#define JIT_LOG_FALLBACK(opcode) 												((void)0)
+	#define JIT_LOG_TRACE_ENTRY(pc, flags) 											((void)0)
+	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) 							((void)0)
 #endif
 
 #endif // JIT_PROFILER_H

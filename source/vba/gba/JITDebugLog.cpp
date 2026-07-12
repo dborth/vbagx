@@ -1,8 +1,10 @@
 #include "JITDebugLog.h"
 
 #include <time.h>
+#include <ogc/system.h>
 #include <string>
 #include <cstdarg>
+#include <cstdio>
 
 // -----------------------------------------------------------------------------
 // JIT Trace Logger Buffer & Utility Method
@@ -11,15 +13,68 @@ static std::string g_jitLogBuffer;
 static int g_jitLogCount = 0;
 static const int MAX_JIT_TRACE_CALLS = 50;
 
+// Helper to handle va_list directly without double formatting/buffer corruption
+static void vLogJITInternal(const char* format, va_list args) {
+    char tempBuf[512];
+    vsnprintf(tempBuf, sizeof(tempBuf), format, args);
+    g_jitLogBuffer.append(tempBuf);
+}
+
 // Appends formatted log strings to the in-memory log buffer
-void LOG(const char* format, ...) {
-    char tempBuf[256];
+void LogJIT(const char* format, ...) {
     va_list args;
     va_start(args, format);
-    vsnprintf(tempBuf, sizeof(tempBuf), format, args);
+    vLogJITInternal(format, args);
     va_end(args);
-    
-    g_jitLogBuffer.append(tempBuf);
+}
+
+void LogJITMismatch(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    vLogJITInternal(format, args);
+    va_end(args);
+}
+
+void LogJITBlockCompileStart(u32 startPC) {
+	return;
+    LogJIT("=== COMPILING JIT BLOCK @ 0x%08X ===\n", startPC);
+}
+
+void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...) {
+	return;
+    char details[256];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(details, sizeof(details), format, args);
+    va_end(args);
+	LogJIT("  [0x%08X] Opcode: 0x%04X | %s\n", pc, opcode, details);
+}
+
+void LogJITBailout(u32 pc, u32 opcode, const char* reasonName) {
+	return;
+    LogJIT("[JIT BAILOUT] PC: 0x%08X | Opcode: 0x%04X | Reason: %s\n", pc, opcode, reasonName);
+}
+
+void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCycles, bool bailedOut, u32 bailoutReason) {
+    return;
+    if (bailedOut) {
+        LogJIT("=== BLOCK COMPILE FAILED @ 0x%08X (Reason Code: %u) ===\n", startPC, bailoutReason);
+    } else {
+        LogJIT("=== BLOCK COMPILED @ 0x%08X -> 0x%08X | Insns: %u | Cycles: %u ===\n", startPC, endPC, instrCount, staticCycles);
+    }
+}
+
+void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags[4], u32 cycles) {
+    if (g_jitLogCount >= MAX_JIT_TRACE_CALLS) return;
+
+    if (isEntry) {
+        LogJIT("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
+            g_jitLogCount, entryPC, flags[0], flags[1], flags[2], flags[3]);
+    } else {
+        LogJIT("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
+            g_jitLogCount, entryPC, nextPC, flags[0], flags[1], flags[2], flags[3], cycles);
+        g_jitLogCount++;
+    }
 }
 
 // Flushes the accumulated string buffer out to the SD card log file
@@ -45,44 +100,4 @@ void WriteJITLogToFile() {
     // Clear buffer after writing
     g_jitLogBuffer.clear();
     g_jitLogBuffer.shrink_to_fit();
-}
-
-// High-level log handling method called around ExecuteJITTrace
-void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags[4], u32 cycles) {
-    if (g_jitLogCount >= MAX_JIT_TRACE_CALLS) {
-        return;
-    }
-
-    if (isEntry) {
-        LOG("[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
-            g_jitLogCount, entryPC, flags[0], flags[1], flags[2], flags[3]);
-    } else {
-        LOG("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
-            g_jitLogCount, entryPC, nextPC, flags[0], flags[1], flags[2], flags[3], cycles);
-        
-        g_jitLogCount++;
-    }
-}
-
-void LogJITBailout(u32 pc, u32 opcode, const char* reasonName) {
-	LOG("[JIT BAILOUT] PC: 0x%08X | Opcode: 0x%04X | Reason: %s\n", pc, opcode, reasonName);
-}
-
-void LogJITBlockCompileStart(u32 startPC) {
-    LOG("=== COMPILING JIT BLOCK @ 0x%08X ===\n", startPC);
-}
-
-void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...) {
-    char details[256];
-    va_list args;
-    va_start(args, format);
-    vsnprintf(details, sizeof(details), format, args);
-    va_end(args);
-
-    LOG("  [0x%08X] Opcode: 0x%04X | %s\n", pc, opcode, details);
-}
-
-void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCycles, bool bailedOut, u32 bailoutReason) {
-    LOG("=== BLOCK 0x%08X END | Insns: %u | Cycles: %u | End PC: 0x%08X | Bailed: %s (Reason: %u) ===\n\n",
-        startPC, instrCount, staticCycles, endPC, bailedOut ? "YES" : "NO", bailoutReason);
 }
