@@ -666,7 +666,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (instrCount == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_TMB15_INSTR_COUNT_ZERO);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_THB15_INSTR_COUNT_ZERO);
 				break;
 			}
 
