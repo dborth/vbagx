@@ -198,6 +198,53 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
 
 					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+				} else if (op == 9) { // NEG (Rd = 0 - Rs)
+					*emitPtr++ = PPC_LI(PPC_R12, 0); // Load 0 into scratch
+					*emitPtr++ = PPC_SUBFCO(MapGBARegister(rd), MapGBARegister(rs), PPC_R12); // Rd = R12 (0) - Rs
+
+					// Extract Hardware C and V Flags natively from XER
+					*emitPtr++ = PPC_MFXER(PPC_R11);
+					*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31);
+					*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31);
+
+					// Extract N and Z Flags
+					*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
+					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
+					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+
+					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+				}
+				else if (op == 15) { // MVN (Bitwise NOT: Rd = ~Rs)
+					*emitPtr++ = PPC_NOR(MapGBARegister(rd), MapGBARegister(rs), MapGBARegister(rs));
+
+					// MVN only updates N and Z
+					*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
+					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
+					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+
+					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+				}
+				else if (op == 8) { // TST (AND flags only, discard result)
+					*emitPtr++ = PPC_AND(PPC_R12, MapGBARegister(rd), MapGBARegister(rs)); // R12 = Rd & Rs
+
+					// TST only updates N and Z
+					*emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
+					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
+					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+
+					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+				}
+				else if (op == 13) { // MUL (Rd = Rd * Rs)
+					*emitPtr++ = PPC_MULLW(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
+
+					// MUL only updates N and Z in Thumb
+					*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
+					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
+					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+
+					// GBA Multiply cycles are data-dependent based on the multiplier,
+					// but for trace compilation, a static +1 (or +2) is safe enough until dynamic wait-states are mapped.
+					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				} else {
 					endBlock = true;
 					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_ALU);
