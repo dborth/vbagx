@@ -247,7 +247,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			} else {
 				// High-Register CMP (op == 1) requires flag updates. Bail for now.
 				endBlock = true;
-				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_ALU);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_HIGH_REGISTER_CMP);
 				break;
 			}
 		}
@@ -378,7 +378,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			if (isMemLoad || isMemStore) {
 				if (instrCount == 0) {
 					endBlock = true;
-					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_INSTR_COUNT_ZERO);
+					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_TMB9_10_11_INSTR_COUNT_ZERO);
 					break;
 				}
 
@@ -493,7 +493,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (instrCount == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_INSTR_COUNT_ZERO);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_THB14_INSTR_COUNT_ZERO);
 				break;
 			}
 
@@ -666,7 +666,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			if (instrCount == 0) {
 				endBlock = true;
-				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_INSTR_COUNT_ZERO);
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_TMB15_INSTR_COUNT_ZERO);
 				break;
 			}
 

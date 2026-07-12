@@ -32,17 +32,20 @@ void JITStats::print() {
     JIT_LOG("-----------------------------------------\n");
 
     JIT_LOG("Bailout Reasons:\n");
-    JIT_LOG("  Unsupported opcode:    %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_OPCODE]);
-    JIT_LOG("  Buffer Overflow:       %u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
-    JIT_LOG("  Unsupported ALU:       %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_ALU]);
-    JIT_LOG("  Unsupported Mem Bank:  %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
-    JIT_LOG("  ARM Mode Switch:       %u\n", bailoutReasons[BAILOUT_ARM_SWITCH]);
-    JIT_LOG("  Conditional Branch:    %u\n", bailoutReasons[BAILOUT_CONDITIONAL_BRANCH]);
-    JIT_LOG("  Branch with Link:      %u\n", bailoutReasons[BAILOUT_BRANCH_WITH_LINK]);
-    JIT_LOG("  Instr Count Zero:      %u\n", bailoutReasons[BAILOUT_INSTR_COUNT_ZERO]);
-    JIT_LOG("  Unknown MEM Op:        %u\n", bailoutReasons[BAILOUT_UNKNOWN_MEM_OP]);
-    JIT_LOG("  No Push/Pop Regs:      %u\n", bailoutReasons[BAILOUT_PUSH_POP_REGS]);
-    JIT_LOG("  No LDMIA/STMIA Regs:   %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
+    JIT_LOG("  Unsupported opcode:     			%u\n", bailoutReasons[BAILOUT_UNSUPPORTED_OPCODE]);
+    JIT_LOG("  Buffer Overflow:        			%u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
+    JIT_LOG("  Unsupported ALU:        			%u\n", bailoutReasons[BAILOUT_UNSUPPORTED_ALU]);
+    JIT_LOG("  Unsupported Mem Bank:   			%u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
+    JIT_LOG("  ARM Mode Switch:        			%u\n", bailoutReasons[BAILOUT_ARM_SWITCH]);
+    JIT_LOG("  Conditional Branch:     			%u\n", bailoutReasons[BAILOUT_CONDITIONAL_BRANCH]);
+    JIT_LOG("  Branch with Link: 		      	%u\n", bailoutReasons[BAILOUT_BRANCH_WITH_LINK]);
+    JIT_LOG("  TMB9/10/11 Instr Count Zero:		%u\n", bailoutReasons[BAILOUT_TMB9_10_11_INSTR_COUNT_ZERO]);
+    JIT_LOG("  THB14 Instr Count Zero: 			%u\n", bailoutReasons[BAILOUT_THB14_INSTR_COUNT_ZERO]);
+    JIT_LOG("  THB15 Instr Count Zero: 			%u\n", bailoutReasons[BAILOUT_THB15_INSTR_COUNT_ZERO]);
+    JIT_LOG("  Unknown MEM Op:         			%u\n", bailoutReasons[BAILOUT_UNKNOWN_MEM_OP]);
+    JIT_LOG("  No Push/Pop Regs:       			%u\n", bailoutReasons[BAILOUT_PUSH_POP_REGS]);
+    JIT_LOG("  No LDMIA/STMIA Regs:    			%u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
+    JIT_LOG("  High-Register CMP:     			%u\n", bailoutReasons[BAILOUT_HIGH_REGISTER_CMP]);
     JIT_LOG("-----------------------------------------\n");
 
     // Top 10 Fallback Executions
