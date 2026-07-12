@@ -68,11 +68,11 @@ void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags
     if (g_jitLogCount >= MAX_JIT_TRACE_CALLS) return;
 
     if (isEntry) {
-        LogJIT("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
-            g_jitLogCount, entryPC, flags[0], flags[1], flags[2], flags[3]);
+       // LogJIT("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
+       //     g_jitLogCount, entryPC, flags[0], flags[1], flags[2], flags[3]);
     } else {
-        LogJIT("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
-            g_jitLogCount, entryPC, nextPC, flags[0], flags[1], flags[2], flags[3], cycles);
+        //LogJIT("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
+         //   g_jitLogCount, entryPC, nextPC, flags[0], flags[1], flags[2], flags[3], cycles);
         g_jitLogCount++;
     }
 }
