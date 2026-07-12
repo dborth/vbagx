@@ -32,7 +32,7 @@ struct JITStats {
 	void print();
 };
 extern JITStats g_jitStats;
-#if ENABLE_JIT_PROFILING
+#if ENABLE_JIT_DEBUG_LOG
 	// Profiling & Debug Logging Macros
 	#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
 		g_jitStats.blocksCompiled++; \
