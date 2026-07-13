@@ -28,6 +28,7 @@ void LogJIT(const char* format, ...) {
 }
 
 void LogJITMismatch(const char* message) {
+	g_jitStats.mismatchCount++;
 	int written = snprintf(tmpBuffer, sizeof(tmpBuffer),
 						   "==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n",
 						   g_jitStats.mismatchCount);
@@ -35,7 +36,6 @@ void LogJITMismatch(const char* message) {
 	g_jitLogBuffer.append(tmpBuffer, written);
 	g_jitLogBuffer.append(message);
 	g_jitLogBuffer.append("========================================================================\n");
-	g_jitStats.mismatchCount++;
 }
 
 void LogJITBlockCompileStart(u32 startPC) {
