@@ -379,100 +379,98 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		// THUMB Formats 9, 10, 11 - Unified Memory Loads AND Stores
 		else if (((opcode & 0xE000) == 0x6000) || ((opcode & 0xF000) == 0x5000) || ((opcode & 0xF000) == 0x8000)) {
 
-			bool isMemLoad = false;
-			bool isMemStore = false;
-			u8 rd, rb, ro, imm;
-			u32 accessType = 0; // 4=Word, 2=Halfword, 1=Byte
+		    bool isMemLoad = false;
+		    bool isMemStore = false;
+		    u8 rd, rb, ro, imm;
+		    u32 accessType = 0; // 4=Word, 2=Halfword, 1=Byte
 
-			// Format 9: LDR/STR Rd, [Rb, #Imm]
-			if ((opcode & 0xF000) == 0x6000) {
+			// Format 9: LDR/STR Rd, [Rb, #Imm] (Word Access)
+		    if ((opcode & 0xF000) == 0x6000) {
 				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; imm = (opcode >> 6) & 0x1F;
-				*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm << 2);
-				accessType = 4;
+		        *emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm << 2);
+		        accessType = 4;
 				if (opcode & 0x0800) isMemLoad = true; else isMemStore = true;
-			}
-			// Format 9: LDRB/STRB Rd, [Rb, #Imm]
-			else if ((opcode & 0xF000) == 0x7000) {
+		    }
+		    // Format 9: LDRB/STRB Rd, [Rb, #Imm] (Byte Access)
+		    else if ((opcode & 0xF000) == 0x7000) {
 				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; imm = (opcode >> 6) & 0x1F;
-				*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm);
-				accessType = 1;
-				if (opcode & 0x0800) isMemLoad = true; else isMemStore = true;
-			}
-			// Format 11: LDRH/STRH Rd, [Rb, #Imm]
-			else if ((opcode & 0xF000) == 0x8000) {
+		        *emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm);
+		        accessType = 1;
+		        if (opcode & 0x0800) isMemLoad = true; else isMemStore = true;
+		    }
+		    // Format 11: LDRH/STRH Rd, [Rb, #Imm] (Halfword Access)
+		    else if ((opcode & 0xF000) == 0x8000) {
 				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; imm = (opcode >> 6) & 0x1F;
-				*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm << 1);
-				accessType = 2;
+		        *emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm << 1);
+		        accessType = 2;
 				if (opcode & 0x0800) isMemLoad = true; else isMemStore = true;
-			}
-			// Format 10: Register Offset Loads & Stores (LDR, LDRH, LDRB, STR, STRH, STRB)
-			else if ((opcode & 0xF000) == 0x5000) {
+		    }
+		    // Format 10: Register Offset Loads & Stores (LDR, LDRH, LDRB, STR, STRH, STRB)
+		    else if ((opcode & 0xF000) == 0x5000) {
 				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; ro = (opcode >> 6) & 0x07;
-				u16 subOp = opcode & 0x0E00;
+		        u16 subOp = opcode & 0x0E00;
+		        if (subOp <= 0x0C00 && subOp != 0x0600) {
+		            *emitPtr++ = PPC_ADD(PPC_R12, MapGBARegister(rb), MapGBARegister(ro));
+		            if (subOp == 0x0800) { isMemLoad = true; accessType = 4; }
+		            else if (subOp == 0x0A00) { isMemLoad = true; accessType = 2; }
+		            else if (subOp == 0x0C00) { isMemLoad = true; accessType = 1; }
+		            else if (subOp == 0x0000) { isMemStore = true; accessType = 4; }
+		            else if (subOp == 0x0200) { isMemStore = true; accessType = 2; }
+		            else if (subOp == 0x0400) { isMemStore = true; accessType = 1; }
+		        }
+		    }
 
-				if (subOp <= 0x0C00 && subOp != 0x0600) {
-					*emitPtr++ = PPC_ADD(PPC_R12, MapGBARegister(rb), MapGBARegister(ro));
+		    if (isMemLoad || isMemStore) {
+		        if (instrCount == 0) {
+		            endBlock = true;
+		            JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_TMB9_10_11_INSTR_COUNT_ZERO);
+		            break;
+		        }
 
-					if (subOp == 0x0800) { isMemLoad = true; accessType = 4; }
-					else if (subOp == 0x0A00) { isMemLoad = true; accessType = 2; }
-					else if (subOp == 0x0C00) { isMemLoad = true; accessType = 1; }
-					else if (subOp == 0x0000) { isMemStore = true; accessType = 4; }
-					else if (subOp == 0x0200) { isMemStore = true; accessType = 2; }
-					else if (subOp == 0x0400) { isMemStore = true; accessType = 1; }
-				}
-			}
-
-			if (isMemLoad || isMemStore) {
-				if (instrCount == 0) {
-					endBlock = true;
-					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_TMB9_10_11_INSTR_COUNT_ZERO);
-					break;
-				}
-
-				// 1. Extract Memory Bank (R12 >> 24)
-				*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
+		        // 1. Extract Memory Bank (R12 >> 24)
+		        *emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
 				// Stash the bank in R5 (instruction-local scratch only - nothing here
 				// needs it to survive to the next instruction) since R11 gets
 				// overwritten by the page/mask lookup below, and we need the bank
 				// again afterward for the data-access cycle-cost lookup.
-				*emitPtr++ = PPC_OR(PPC_R5, PPC_R11, PPC_R11);
+		        *emitPtr++ = PPC_OR(PPC_R5, PPC_R11, PPC_R11);
 
-				u32* branchGuard1 = nullptr;
-				u32* branchGuard2 = nullptr;
-				u32* branchGuard3 = nullptr;
+		        u32* branchGuard1 = nullptr;
+		        u32* branchGuard2 = nullptr;
+		        u32* branchGuard3 = nullptr;
 
-				if (isMemStore) {
-					// STORE STRICT GUARD: Only Banks 2 & 3
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
-					*emitPtr++ = PPC_BEQ(12);
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
-					branchGuard1 = emitPtr;
-					*emitPtr++ = PPC_BNE(0);
-				} else {
-					// LOAD GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
-					branchGuard3 = emitPtr;
-					*emitPtr++ = PPC_BEQ(0);
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
-					branchGuard1 = emitPtr;
-					*emitPtr++ = PPC_BEQ(0);
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 13);
-					branchGuard2 = emitPtr;
-					*emitPtr++ = PPC_BGE(0);
-				}
+		        if (isMemStore) {
+		            // STORE STRICT GUARD: Only Banks 2 & 3 (WRAM) allowed
+		            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
+		            *emitPtr++ = PPC_BEQ(12);
+		            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
+		            branchGuard1 = emitPtr;
+		            *emitPtr++ = PPC_BNE(0);
+		        } else {
+		            // LOAD GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
+		            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+		            branchGuard3 = emitPtr;
+		            *emitPtr++ = PPC_BEQ(0);
+		            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
+		            branchGuard1 = emitPtr;
+		            *emitPtr++ = PPC_BEQ(0);
+		            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 13);
+		            branchGuard2 = emitPtr;
+		            *emitPtr++ = PPC_BGE(0);
+		        }
 
-				// 2. Load Page Pointer and Mask
-				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
-				*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
-				*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
+		        // 2. Load Page Pointer and Memory Mask
+		        *emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
+		        *emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
+		        *emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
 
 				// 3. UNIVERSAL NULL POINTER GUARD (Prevents hardware DSI crashes)
-				*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
-				u32* branchNullToBailout = emitPtr;
-				*emitPtr++ = PPC_BEQ(0);
+		        *emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
+		        u32* branchNullToBailout = emitPtr;
+		        *emitPtr++ = PPC_BEQ(0);
 
-				// 4. Apply Mask
-				*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);
+		        // 4. Apply Memory Mask
+		        *emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);
 
 				// 4.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only - every guard
 				// above has already passed by this point, so R3 is correctly left
@@ -481,56 +479,56 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// The bank isn't known until runtime here (unlike Format 6's
 				// PC-relative case), so this has to be an emitted table lookup
 				// rather than a compile-time constant.
-				{
-					u8* dataTicksTable = (accessType == 4) ? memoryWait32 : memoryWait;
-					*emitPtr++ = PPC_LIS(PPC_R11, ((u32)dataTicksTable) >> 16);
-					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
-					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R11, PPC_R5); // R11 = dataTicksTable[bank]
-					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-				}
+		        {
+		            u8* dataTicksTable = (accessType == 4) ? memoryWait32 : memoryWait;
+		            *emitPtr++ = PPC_LIS(PPC_R11, ((u32)dataTicksTable) >> 16);
+		            *emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
+		            *emitPtr++ = PPC_LBZX(PPC_R11, PPC_R11, PPC_R5); // R11 = dataTicksTable[bank]
+		            *emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+		        }
 
-				// 5. Execute Memory Fetch or Store
-				if (isMemLoad) {
-					if (accessType == 4) *emitPtr++ = PPC_LWBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
-					else if (accessType == 2) *emitPtr++ = PPC_LHBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
-					else *emitPtr++ = PPC_LBZX(MapGBARegister(rd), PPC_R10, PPC_R12);
-				} else {
-					if (accessType == 4) *emitPtr++ = PPC_STWBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
-					else if (accessType == 2) *emitPtr++ = PPC_STHBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
-					else *emitPtr++ = PPC_STBZX(MapGBARegister(rd), PPC_R10, PPC_R12);
-				}
+		        // 5. Execute Memory Load or Store Instruction
+		        if (isMemLoad) {
+		            if (accessType == 4) *emitPtr++ = PPC_LWBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
+		            else if (accessType == 2) *emitPtr++ = PPC_LHBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
+		            else *emitPtr++ = PPC_LBZX(MapGBARegister(rd), PPC_R10, PPC_R12);
+		        } else {
+		            if (accessType == 4) *emitPtr++ = PPC_STWBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
+		            else if (accessType == 2) *emitPtr++ = PPC_STHBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
+		            else *emitPtr++ = PPC_STBZX(MapGBARegister(rd), PPC_R10, PPC_R12);
+		        }
 
-				// 6. Jump Over Bailout Stub
-				u32* branchSafe = emitPtr;
-				*emitPtr++ = PPC_B(0);
+		        // 6. Jump Over Bailout Stub
+		        u32* branchSafe = emitPtr;
+		        *emitPtr++ = PPC_B(0);
 
-				// 7. Bailout Stub Generation
-				u32* bailoutTarget = emitPtr;
-				*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles);
-				*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
-				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
-				*emitPtr++ = PPC_BLR();
+		        // 7. Bailout Stub Generation
+		        u32* bailoutTarget = emitPtr;
+		        *emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles);
+		        *emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
+		        *emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
+		        *emitPtr++ = PPC_BLR();
 
-				// 8. Patch Branch Offsets
+		        // 8. Patch Branch Offsets
 				if (branchGuard1) *branchGuard1 = (isMemStore) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
-				if (branchGuard2) *branchGuard2 = PPC_BGE((u32)((bailoutTarget - branchGuard2) * 4));
-				if (branchGuard3) *branchGuard3 = PPC_BEQ((u32)((bailoutTarget - branchGuard3) * 4));
+		        if (branchGuard2) *branchGuard2 = PPC_BGE((u32)((bailoutTarget - branchGuard2) * 4));
+		        if (branchGuard3) *branchGuard3 = PPC_BEQ((u32)((bailoutTarget - branchGuard3) * 4));
 
-				*branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
+		        *branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
 
-				u32* safeTarget = emitPtr;
-				*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
+		        u32* safeTarget = emitPtr;
+		        *branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
 
 				// Non-sequential table for the code-fetch component: a data-bus access
 				// disrupts the prefetch pipeline, so the interpreter's real formula
 				// (thumb68 etc: `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2/3`)
 				// always pays the non-sequential cost for the instruction after a memory op.
-				staticCycles += STATIC_CODE_TICKS_16(currentPC) + ((isMemStore) ? 2 : 3);
-			} else {
-				endBlock = true;
-				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNKNOWN_MEM_OP);
-				break;
-			}
+		        staticCycles += STATIC_CODE_TICKS_16(currentPC) + ((isMemStore) ? 2 : 3);
+		    } else {
+		        endBlock = true;
+		        JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNKNOWN_MEM_OP);
+		        break;
+		    }
 		}
 		// THUMB Format 11: SP-relative Load/Store (LDR/STR Rd, [SP, #imm])
 		else if ((opcode & 0xF000) == 0x9000) {
@@ -571,7 +569,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			// 5. Bailout Stub (triggered if SP target is outside EWRAM/IWRAM)
 			*branchToBailout = PPC_BNE((u32)(emitPtr - branchToBailout) * 4);
-			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles + STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
+			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles);
 			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
 			*emitPtr++ = PPC_BLR();
