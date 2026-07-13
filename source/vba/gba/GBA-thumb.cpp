@@ -1468,6 +1468,7 @@ int thumbExecute() {
 
                     static std::string assembledMsg;
                     static char tempBuf[1024];
+                    assembledMsg.clear();
 
                     auto appendToMsg = [&](const char* format, ...) {
 						va_list args;
