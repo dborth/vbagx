@@ -3,6 +3,9 @@
 #include "../common/Port.h"
 #include "JITDebugLog.h"
 
+static const int MAX_JIT_TRACE_CALLS = 100;
+static const int MAX_JIT_MISMATCH_COUNT = 100;
+
 enum BailoutReason {
 	BAILOUT_UNKNOWN = 0,
 	BAILOUT_UNSUPPORTED_OPCODE,
@@ -31,6 +34,9 @@ struct JITStats {
 	u32 compileBailoutFreq[1024];
 	u32 bailoutReasons[BAILOUT_REASON_COUNT];
 
+	int mismatchCount = 0;
+	int traceLogCount = 0;
+
 	void reset();
 	void print();
 };
@@ -42,8 +48,7 @@ extern JITStats g_jitStats;
 	#define JIT_LOG(fmt, ...) \
 		LogJIT(fmt, ##__VA_ARGS__)
 
-	#define JIT_LOG_MISMATCH(fmt, ...) \
-		LogJITMismatch(fmt, ##__VA_ARGS__)
+	#define JIT_LOG_MISMATCH(msg) LogJITMismatch(msg)
 
 	#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
 		g_jitStats.blocksCompiled++; \
@@ -79,7 +84,7 @@ extern JITStats g_jitStats;
 
 #else
 	#define JIT_LOG(fmt, ...) 														((void)0)
-	#define JIT_LOG_MISMATCH(fmt, ...)												((void)0)
+	#define JIT_LOG_MISMATCH(msg)													((void)0)
 	#define JIT_LOG_BLOCK_COMPILED(startPC)                							((void)0)
 	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, count, cycles, bailed, rsn)	((void)0)
 	#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     					((void)0)

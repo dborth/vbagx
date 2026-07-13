@@ -17,6 +17,8 @@ void JITStats::reset() {
     for (int i = 0; i < BAILOUT_REASON_COUNT; i++) {
         bailoutReasons[i] = 0;
     }
+    mismatchCount = 0;
+    traceLogCount = 0;
 }
 
 void JITStats::print() {

@@ -1,4 +1,5 @@
 #include "JITDebugLog.h"
+#include "JITProfiler.h"
 
 #include <time.h>
 #include <ogc/system.h>
@@ -10,29 +11,31 @@
 // JIT Trace Logger Buffer & Utility Method
 // -----------------------------------------------------------------------------
 static std::string g_jitLogBuffer;
-static int g_jitLogCount = 0;
-static const int MAX_JIT_TRACE_CALLS = 50;
+static char tmpBuffer[2048];
 
-// Helper to handle va_list directly without double formatting/buffer corruption
 static void vLogJITInternal(const char* format, va_list args) {
-    char tempBuf[512];
-    vsnprintf(tempBuf, sizeof(tempBuf), format, args);
-    g_jitLogBuffer.append(tempBuf);
+	int written = vsnprintf(tmpBuffer, sizeof(tmpBuffer), format, args);
+	if (written > 0) {
+		g_jitLogBuffer.append(tmpBuffer, written);
+	}
 }
 
-// Appends formatted log strings to the in-memory log buffer
 void LogJIT(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    vLogJITInternal(format, args);
-    va_end(args);
+	va_list args;
+	va_start(args, format);
+	vLogJITInternal(format, args);
+	va_end(args);
 }
 
-void LogJITMismatch(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    vLogJITInternal(format, args);
-    va_end(args);
+void LogJITMismatch(const char* message) {
+	int written = snprintf(tmpBuffer, sizeof(tmpBuffer),
+						   "==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n",
+						   g_jitStats.mismatchCount);
+
+	g_jitLogBuffer.append(tmpBuffer, written);
+	g_jitLogBuffer.append(message);
+	g_jitLogBuffer.append("========================================================================\n");
+	g_jitStats.mismatchCount++;
 }
 
 void LogJITBlockCompileStart(u32 startPC) {
@@ -42,12 +45,13 @@ void LogJITBlockCompileStart(u32 startPC) {
 
 void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...) {
 	return;
-    char details[256];
+	int written = snprintf(tmpBuffer, sizeof(tmpBuffer), "  [0x%08X] Opcode: 0x%04X | ", pc, opcode);
+    g_jitLogBuffer.append(tmpBuffer, written);
     va_list args;
     va_start(args, format);
-    vsnprintf(details, sizeof(details), format, args);
+    vLogJITInternal(format, args);
     va_end(args);
-	LogJIT("  [0x%08X] Opcode: 0x%04X | %s\n", pc, opcode, details);
+    g_jitLogBuffer.append("\n");
 }
 
 void LogJITBailout(u32 pc, u32 opcode, const char* reasonName) {
@@ -65,7 +69,7 @@ void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCyc
 }
 
 void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags[4], u32 cycles) {
-    if (g_jitLogCount >= MAX_JIT_TRACE_CALLS) return;
+    if (g_jitStats.traceLogCount >= MAX_JIT_TRACE_CALLS) return;
 
     if (isEntry) {
        // LogJIT("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
@@ -73,7 +77,7 @@ void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags
     } else {
         //LogJIT("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
          //   g_jitLogCount, entryPC, nextPC, flags[0], flags[1], flags[2], flags[3], cycles);
-        g_jitLogCount++;
+    	g_jitStats.traceLogCount++;
     }
 }
 

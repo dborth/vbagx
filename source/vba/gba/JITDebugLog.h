@@ -7,7 +7,7 @@
 void LogJIT(const char* format, ...);
 void WriteJITLogToFile();
 void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags[4], u32 cycles);
-void LogJITMismatch(const char* format, ...);
+void LogJITMismatch(const char* msg);
 void LogJITBlockCompileStart(u32 startPC);
 void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...);
 void LogJITBailout(u32 pc, u32 opcode, const char* reasonName);

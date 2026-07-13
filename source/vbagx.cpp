@@ -124,6 +124,10 @@ int main(int argc, char *argv[])
 				StopColorizing();
 		}
 
+		#ifdef ENABLE_JIT_PROFILING
+		g_jitStats.reset();
+		#endif
+
 		while (emulating) // emulation loop
 		{
 			emulator.emuMain(emulator.emuCount);

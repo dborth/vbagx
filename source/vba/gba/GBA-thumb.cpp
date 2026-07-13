@@ -3,6 +3,10 @@
 #include <stdarg.h>
 #include <string.h>
 
+#ifdef JIT_COMPILER_DIFFERENTIAL_TESTING
+#include <string>
+#endif
+
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
@@ -1362,6 +1366,7 @@ static insnfunc_t thumbInsnTable[1024] = {
   thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,
 };
 #ifdef JIT_COMPILER_DIFFERENTIAL_TESTING
+
 // -------------------------------------------------------------------------
 // HYBRID TRACE-JIT / C++ EXECUTION ENGINE DIFFERENTIAL TESTING
 // -------------------------------------------------------------------------
@@ -1378,9 +1383,7 @@ int thumbExecute() {
         // JIT EXECUTION PATH
         // ========================================================================
         if (block != nullptr && block->execute != nullptr) {
-            static int mismatchCount = 0;
-
-            if (mismatchCount < 50) {
+            if (g_jitStats.mismatchCount < MAX_JIT_MISMATCH_COUNT) {
                 // 1. SAVE CPU STATE BEFORE JIT TRACE
                 u32 savedRegs[16];
                 for (size_t i = 0; i < 16; i++) savedRegs[i] = reg[i].I;
@@ -1457,39 +1460,50 @@ int thumbExecute() {
 
                 // 6. LOG DETAILED MISMATCH REPORT IF DISCREPANCY FOUND
                 if (mismatch) {
-                    mismatchCount++;
+                	g_jitStats.mismatchCount++;
                     static const char* regNames[15] = {
                         "R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7",
                         "R8", "R9", "R10", "R11", "R12", "SP", "LR"
                     };
                     u16 startOpcode = CPUReadHalfWord(pc);
 
-                    JIT_LOG_MISMATCH("==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n", mismatchCount);
-                    JIT_LOG_MISMATCH("StartPC: 0x%08X | Trace Length: %u | Opcode: 0x%04X\n", pc, block->length, startOpcode);
-                    JIT_LOG_MISMATCH("Initial Flags: N=%u Z=%u C=%u V=%u\n", savedN, savedZ, savedC, savedV);
-                    JIT_LOG_MISMATCH("JIT Result:  NextPC=0x%08X | Cycles=%u | Flags=(N:%u Z:%u C:%u V:%u)\n",
+                    static std::string assembledMsg;
+                    static char tempBuf[1024];
+
+                    auto appendToMsg = [&](const char* format, ...) {
+						va_list args;
+						va_start(args, format);
+						vsnprintf(tempBuf, sizeof(tempBuf), format, args);
+						va_end(args);
+						assembledMsg.append(tempBuf);
+					};
+
+					appendToMsg("StartPC: 0x%08X | Trace Length: %u | Opcode: 0x%04X\n", pc, block->length, startOpcode);
+					appendToMsg("Initial Flags: N=%u Z=%u C=%u V=%u\n", savedN, savedZ, savedC, savedV);
+					appendToMsg("JIT Result:  NextPC=0x%08X | Cycles=%u | Flags=(N:%u Z:%u C:%u V:%u)\n",
                         jitResult.nextPC, jitResult.cycles, jitN, jitZ, jitC, jitV);
-                    JIT_LOG_MISMATCH("C++ Result:  NextPC=0x%08X | Cycles=%d | Flags=(N:%u Z:%u C:%u V:%u)\n",
+					appendToMsg("C++ Result:  NextPC=0x%08X | Cycles=%d | Flags=(N:%u Z:%u C:%u V:%u)\n",
                         interpPC, cppCycles, N_FLAG, Z_FLAG, C_FLAG, V_FLAG);
 
-                    JIT_LOG_MISMATCH("--- MISMATCH DETAILS ---\n");
+					appendToMsg("--- MISMATCH DETAILS ---\n");
                     for (int i = 0; i < 15; i++) {
                         if (regMismatches[i]) {
-                            JIT_LOG_MISMATCH("  [REG %-3s] Initial=0x%08X | JIT=0x%08X vs C++=0x%08X\n",
+                        	appendToMsg("  [REG %-3s] Initial=0x%08X | JIT=0x%08X vs C++=0x%08X\n",
                                 regNames[i], savedRegs[i], jitRegs[i], reg[i].I);
                         }
                     }
                     if (pcMismatch) {
-                        JIT_LOG_MISMATCH("  [NEXT PC] JIT=0x%08X vs C++=0x%08X\n", jitResult.nextPC, interpPC);
+                    	appendToMsg("  [NEXT PC] JIT=0x%08X vs C++=0x%08X\n", jitResult.nextPC, interpPC);
                     }
                     if (flagMismatch) {
-                        JIT_LOG_MISMATCH("  [FLAGS]   JIT=(N:%u Z:%u C:%u V:%u) vs C++=(N:%u Z:%u C:%u V:%u)\n",
+                    	appendToMsg("  [FLAGS]   JIT=(N:%u Z:%u C:%u V:%u) vs C++=(N:%u Z:%u C:%u V:%u)\n",
                             jitN, jitZ, jitC, jitV, N_FLAG, Z_FLAG, C_FLAG, V_FLAG);
                     }
                     if (cycleMismatch) {
-                        JIT_LOG_MISMATCH("  [CYCLES]  JIT=%u vs C++=%d\n", jitResult.cycles, cppCycles);
+                    	appendToMsg("  [CYCLES]  JIT=%u vs C++=%d\n", jitResult.cycles, cppCycles);
                     }
-                    JIT_LOG_MISMATCH("========================================================================\n");
+
+                    JIT_LOG_MISMATCH(assembledMsg.c_str());
 
                     // RESTORE C++ STATE AS GROUND TRUTH
                     armNextPC = interpPC;
