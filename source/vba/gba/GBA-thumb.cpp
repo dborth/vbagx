@@ -1388,6 +1388,10 @@ int thumbExecute() {
                 u32 savedRegs[16];
                 for (size_t i = 0; i < 16; i++) savedRegs[i] = reg[i].I;
                 u32 savedN = N_FLAG, savedZ = Z_FLAG, savedC = C_FLAG, savedV = V_FLAG;
+                u32 savedArmNextPC = armNextPC;
+				u32 savedTotalTicks = cpuTotalTicks;
+				u32 savedPrefetch[2] = { cpuPrefetch[0], cpuPrefetch[1] };
+				u32 savedBusPrefetchCount = busPrefetchCount;
 
                 // 2. RUN JIT EXECUTION
                 u32 jitFlags[4] = { (u32)N_FLAG, (u32)Z_FLAG, (u32)C_FLAG, (u32)V_FLAG };
@@ -1405,28 +1409,48 @@ int thumbExecute() {
                 // 3. REWIND CPU STATE FOR C++ INTERPRETER
                 for (size_t i = 0; i < 16; i++) reg[i].I = savedRegs[i];
                 N_FLAG = savedN; Z_FLAG = savedZ; C_FLAG = savedC; V_FLAG = savedV;
+                armNextPC = savedArmNextPC;
+				cpuTotalTicks = savedTotalTicks;
+				cpuPrefetch[0] = savedPrefetch[0];
+				cpuPrefetch[1] = savedPrefetch[1];
+				busPrefetchCount = savedBusPrefetchCount;
 
                 // 4. RUN C++ INTERPRETER UNTIL IT REACHES THE SAME PC THE JIT REACHED
-				u32 interpPC = pc;
+				int cppLocalTicks = 0;
 				int cppCycles = 0;
                 const u32 kMaxSteps = 256; // safety cap — real divergence, not infinite loop
 				u32 steps = 0;
+				u32 targetPC = jitResult.nextPC;
 
-                while (interpPC != jitResult.nextPC && steps < kMaxSteps) {
-					u16 opcode = CPUReadHalfWord(interpPC);
-					armNextPC = interpPC + 2;
-					reg[15].I = interpPC + 4;
+				do {
+					u32 opcode = cpuPrefetch[0];
+					cpuPrefetch[0] = cpuPrefetch[1];
+
+					busPrefetch = false;
+					if (busPrefetchCount & 0xFFFFFF00)
+						busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
+
+					u32 oldArmNextPC = armNextPC;
+					armNextPC = reg[15].I;
+					reg[15].I += 2;
+
+					THUMB_PREFETCH_NEXT;
+
+					int localTicks = 0;
 					clockTicks = 0;
+					(*thumbInsnTable[opcode>>6])(opcode);
+					cppLocalTicks = clockTicks;
 
-					(*thumbInsnTable[opcode >> 6])(opcode);
+					if (cppLocalTicks >= 0) {
+						if (cppLocalTicks == 0)
+							cppLocalTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
-					int localTicks = clockTicks;
-					if (localTicks <= 0) localTicks = codeTicksAccessSeq16(interpPC) + 1;
-					cppCycles += localTicks;
-
-					interpPC = armNextPC;
-					steps++;
-				}
+						cpuTotalTicks += cppLocalTicks;
+						cppCycles += cppLocalTicks;
+						steps++;
+					}
+				} while (armNextPC != targetPC && steps < kMaxSteps && cppLocalTicks >= 0 &&
+						cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
 				// 5. DETECT & COMPARE ALL CPU FIELDS (BEFORE & AFTER)
 				bool mismatch = false;
@@ -1444,7 +1468,7 @@ int thumbExecute() {
 				}
 
                 // Compare Next PC
-				if (jitResult.nextPC != interpPC) {
+				if (jitResult.nextPC != armNextPC) {
 					pcMismatch = true;
 					mismatch = true;
 				}
@@ -1486,7 +1510,7 @@ int thumbExecute() {
 					appendToMsg("JIT Result:  NextPC=0x%08X | Cycles=%u | Flags=(N:%u Z:%u C:%u V:%u)\n",
 						jitResult.nextPC, jitResult.cycles, jitN, jitZ, jitC, jitV);
 					appendToMsg("C++ Result:  NextPC=0x%08X | Cycles=%d | Flags=(N:%u Z:%u C:%u V:%u)\n",
-						interpPC, cppCycles, N_FLAG, Z_FLAG, C_FLAG, V_FLAG);
+							armNextPC, cppCycles, N_FLAG, Z_FLAG, C_FLAG, V_FLAG);
 
 					appendToMsg("--- MISMATCH DETAILS ---\n");
 					for (int i = 0; i < 15; i++) {
@@ -1496,7 +1520,7 @@ int thumbExecute() {
 						}
 					}
 					if (pcMismatch) {
-						appendToMsg("  [NEXT PC] JIT=0x%08X vs C++=0x%08X\n", jitResult.nextPC, interpPC);
+						appendToMsg("  [NEXT PC] JIT=0x%08X vs C++=0x%08X\n", jitResult.nextPC, armNextPC);
 					}
 					if (flagMismatch) {
 						appendToMsg("  [FLAGS]   JIT=(N:%u Z:%u C:%u V:%u) vs C++=(N:%u Z:%u C:%u V:%u)\n",
@@ -1507,29 +1531,14 @@ int thumbExecute() {
 					}
 
 					JIT_LOG_MISMATCH(assembledMsg.c_str());
+				}
 
-					// RESTORE C++ STATE AS GROUND TRUTH
-					armNextPC = interpPC;
-					reg[15].I = armNextPC + 2;
-					cpuTotalTicks += cppCycles;
-
-					cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
-					cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
-					return 1;
-
-				} else {
-                    // SUCCESSFUL MATCH: Commit JIT state and return immediately (prevents double execution)
-					N_FLAG = jitN; Z_FLAG = jitZ; C_FLAG = jitC; V_FLAG = jitV;
-					for (size_t i = 0; i < 15; i++) reg[i].I = jitRegs[i];
-
-					armNextPC = jitResult.nextPC;
-					reg[15].I = armNextPC + 2;
-					cpuTotalTicks += jitResult.cycles;
-
-					cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
-					cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+				if(cppLocalTicks < 0) {
+					return 0;
+				} else if(cpuTotalTicks >= cpuNextEvent || armState || holdState || SWITicks) {
 					return 1;
 				}
+				continue;
             }
 
             u32 flagBuffer[4] = { (u32)N_FLAG, (u32)Z_FLAG, (u32)C_FLAG, (u32)V_FLAG };
