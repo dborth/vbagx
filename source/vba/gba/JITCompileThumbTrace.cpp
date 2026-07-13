@@ -532,6 +532,55 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				break;
 			}
 		}
+		// THUMB Format 11: SP-relative Load/Store (LDR/STR Rd, [SP, #imm])
+		else if ((opcode & 0xF000) == 0x9000) {
+			u8 isLoad = (opcode >> 11) & 0x01;
+			u8 rd     = (opcode >> 8) & 0x07;
+			u32 offset = (opcode & 0xFF) << 2;
+
+			// 1. Calculate Target Address in PPC_R12 (SP + offset)
+			if (offset == 0) {
+				*emitPtr++ = PPC_OR(PPC_R12, MapGBARegister(13), MapGBARegister(13));
+			} else {
+				*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(13), offset);
+			}
+
+			// 2. Bank Guard Check: Check if EA is in EWRAM (0x02) or IWRAM (0x03)
+			// (EA >> 25) == 1 is true IF AND ONLY IF bank is 2 or 3.
+			*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R12, 7, 25, 31); // R11 = EA >> 25
+			*emitPtr++ = PPC_CMPWI(0, PPC_R11, 1);
+
+			u32* branchToBailout = emitPtr++; // Placeholder for PPC_BNE
+
+			// 3. Host Address Translation
+			*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R12, 8, 24, 31); // R11 = bank (EA >> 24)
+			*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);  // R11 = bank * 4
+			*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11); // R10 = readPages[bank]
+			*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11); // R11 = readMasks[bank]
+			*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);       // R12 = EA & mask
+
+			// 4. Endian-Correct Load or Store
+			if (isLoad) {
+				*emitPtr++ = PPC_LWBRX(MapGBARegister(rd), PPC_R10, PPC_R12); // LDR Rd, [R10 + R12]
+			} else {
+				*emitPtr++ = PPC_STWBRX(MapGBARegister(rd), PPC_R10, PPC_R12); // STR Rd, [R10 + R12]
+			}
+
+			// Jump past the bailout stub on normal execution
+			u32* branchToCont = emitPtr++;
+
+			// 5. Bailout Stub (triggered if SP target is outside EWRAM/IWRAM)
+			*branchToBailout = PPC_BNE((u32)(emitPtr - branchToBailout) * 4);
+			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, staticCycles + STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
+			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
+			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
+			*emitPtr++ = PPC_BLR();
+
+			// Patch jump to continuation
+			*branchToCont = PPC_B((u32)(emitPtr - branchToCont) * 4);
+
+			staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 2;
+		}
     	// THUMB Format 14 - PUSH / POP
 		else if ((opcode & 0xF600) == 0xB400) {
 			bool isPop = (opcode & 0x0800) != 0;
