@@ -235,16 +235,38 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
 				else if (op == 13) { // MUL (Rd = Rd * Rs)
+					// thumb43_1's real cost depends on the ORIGINAL Rd's magnitude
+					// (ARM7TDMI multiply early-termination): rm = |original Rd|-ish
+					// (sign-complemented if negative), active_bits = 31-clz(rm|1),
+					// cost = 2 + (active_bits>>3) [0..3] + codeTicksAccess16(armNextPC).
+					// Save the original Rd before MULLW overwrites it.
+					*emitPtr++ = PPC_OR(PPC_R11, MapGBARegister(rd), MapGBARegister(rd));
+
 					*emitPtr++ = PPC_MULLW(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
+
+					// rm = (original Rd < 0) ? ~original Rd : original Rd - branchless
+					// via arithmetic-shift sign mask (0 or -1), same trick as thumb43_1.
+					*emitPtr++ = PPC_SRAWI(PPC_R12, PPC_R11, 31);
+					*emitPtr++ = PPC_XOR(PPC_R11, PPC_R11, PPC_R12);
+					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, 1); // avoid clz(0)
+
+					// active_bits = 31 - cntlzw(rm); (>>3) maps 0-31 to 0..3
+					*emitPtr++ = PPC_CNTLZW(PPC_R12, PPC_R11);
+					*emitPtr++ = PPC_LI(PPC_R10, 31);
+					*emitPtr++ = PPC_SUBF(PPC_R12, PPC_R12, PPC_R10);
+					*emitPtr++ = PPC_SRWI(PPC_R12, PPC_R12, 3);
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R12);
 
 					// MUL only updates N and Z in Thumb
 					*emitPtr++ = PPC_SRWI(PPC_REG_N, MapGBARegister(rd), 31);
 					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, MapGBARegister(rd));
 					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
 
-					// GBA Multiply cycles are data-dependent based on the multiplier,
-					// but for trace compilation, a static +1 (or +2) is safe enough until dynamic wait-states are mapped.
-					staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+					// Non-sequential code-fetch table - thumb43_1 uses codeTicksAccess16
+					// (non-seq) even though MUL isn't a guest memory access; that's just
+					// what the real multiplier timing quirk calls. Flat "+2" (was "+1",
+					// missing thumb43_1's separate "clockTicks = 1" base plus its final "+ 1").
+					staticCycles += STATIC_CODE_TICKS_16(currentPC) + 2;
 				} else {
 					endBlock = true;
 					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_ALU);
@@ -552,10 +574,26 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			// 3. Host Address Translation
 			*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R12, 8, 24, 31); // R11 = bank (EA >> 24)
+			// Stash the bank in R5 (unused elsewhere in this handler) before R11
+			// gets turned into a table index below - needed for the data-tick
+			// lookup once the guard has passed.
+			*emitPtr++ = PPC_OR(PPC_R5, PPC_R11, PPC_R11);
 			*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);  // R11 = bank * 4
 			*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11); // R10 = readPages[bank]
 			*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11); // R11 = readMasks[bank]
 			*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);       // R12 = EA & mask
+
+			// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only - the guard
+			// above has already passed by this point). Always a 32-bit access,
+			// so always memoryWait32[] - matches thumb90/thumb98's
+			// dataTicksAccess32(address). The bank is fixed to 2 or 3 by the
+			// guard, but not known at compile time (SP is a runtime value).
+			{
+				*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWait32) >> 16);
+				*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
+				*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R11, PPC_R5); // R11 = memoryWait32[bank]
+				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+			}
 
 			// 4. Endian-Correct Load or Store
 			if (isLoad) {
@@ -577,7 +615,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// Patch jump to continuation
 			*branchToCont = PPC_B((u32)(emitPtr - branchToCont) * 4);
 
-			staticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 2;
+			// thumb90 (STR): `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2`
+			// thumb98 (LDR): `3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)`
+			// Non-sequential code-fetch table (a memory access breaks the sequential
+			// prefetch stream), and the flat constant depends on load vs store -
+			// this previously used +2 for both, which under-counts every LDR by 1.
+			staticCycles += STATIC_CODE_TICKS_16(currentPC) + (isLoad ? 3 : 2);
 		}
     	// THUMB Format 14 - PUSH / POP
 		else if ((opcode & 0xF600) == 0xB400) {
