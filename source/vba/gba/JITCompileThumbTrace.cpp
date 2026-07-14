@@ -810,10 +810,20 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_LIS(PPC_R0, ((u32)memoryWaitSeq32) >> 16);
 					*emitPtr++ = PPC_ORI(PPC_R0, PPC_R0, ((u32)memoryWaitSeq32) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R0, PPC_R4, PPC_R0); // EA = R4 + R0
-					for (int k = 0; k < numRegs - 1; k++) {
+					
+					// Add (numRegs - 1) * R0 directly to R3 without looping
+					if ((numRegs - 1) == 1) {
 						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R0);
-						EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R0); // Recharge during seq accesses
+					} else if ((numRegs - 1) == 2) {
+						*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R0, 1, 0, 30); // R11 = R0 * 2
+						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+					} else {
+						*emitPtr++ = PPC_MULLI(PPC_R11, PPC_R0, numRegs - 1);
+						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
 					}
+
+					// We only need to call recharge once for the sequential block
+					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11);
 				}
 			}
 
