@@ -1409,7 +1409,7 @@ int thumbExecute() {
                 JITResult jitResult;
 
                 reg[15].I = pc + 4;
-                ExecuteJITTrace(block->execute, (u32*)(void*)&reg[0].I, jitFlags, &jitResult, gbaReadPagePtrs, gbaReadPageMasks);
+                ExecuteJITTrace(block->execute, (u32*)(void*)&reg[0].I, jitFlags, &jitResult, gbaReadPagePtrs, gbaReadPageMasks, &busPrefetchCount);
 
                 JIT_LOG_EXEC(block->length);
 
@@ -1525,7 +1525,6 @@ int thumbExecute() {
 
 				// 6. LOG DETAILED MISMATCH REPORT IF DISCREPANCY FOUND
 				if (mismatch) {
-					g_jitStats.mismatchCount++;
 					static const char* regNames[15] = {
 						"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7",
 						"R8", "R9", "R10", "R11", "R12", "SP", "LR"
@@ -1639,7 +1638,7 @@ int thumbExecute() {
 			JIT_LOG_TRACE_ENTRY(pc, flagBuffer);
 
 			// Execute Native Trace with flat memory maps
-			ExecuteJITTrace(block->execute, (u32*)&reg[0].I, flagBuffer, &result, gbaReadPagePtrs, gbaReadPageMasks);
+			ExecuteJITTrace(block->execute, (u32*)&reg[0].I, flagBuffer, &result, gbaReadPagePtrs, gbaReadPageMasks, &busPrefetchCount);
 
 			JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
 

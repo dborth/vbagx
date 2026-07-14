@@ -36,6 +36,7 @@ ExecuteJITTrace:
     stw 4, 80(1)     # Stack[80] = gbaRegs
     stw 5, 84(1)     # Stack[84] = flags array
     stw 6, 88(1)     # Stack[88] = outResult
+    stw 9, 92(1)     # Stack[92] = busPrefetchCount pointer (7th EABI argument)
 
     # 4. Load ALL 16 GBA Registers (R0-R15) individually into Hardware R14-R29
     # Explicitly load to prevent clobbering R30/R31 and out-of-bounds reads
@@ -65,6 +66,10 @@ ExecuteJITTrace:
     lwz 9, 4(5)     # R9 = Z_FLAG (PPC_REG_Z)
     lwz 6, 8(5)     # R6 = C_FLAG (PPC_REG_C)
     lwz 7, 12(5)    # R7 = V_FLAG (PPC_REG_V)
+
+    # Load live busPrefetchCount into R5
+    lwz 10, 92(1)    # R10 = busPrefetchCount pointer
+    lwz 5, 0(10)     # R5 = *busPrefetchCount
 
     # --- NORMALIZE C++ FLAGS TO STRICT 0 OR 1 ---
     # Normalize N_FLAG
@@ -99,6 +104,8 @@ ExecuteJITTrace:
     # Reload original pointers since volatile registers were overwritten
 
     # 8. Post-Execution: Write Back Return Values
+    lwz 10, 92(1)   # R10 = busPrefetchCount pointer
+    stw 5, 0(10)    # *busPrefetchCount = R5
     lwz 5, 84(1)    # Reload flags array pointer
     stw 8, 0(5)
     stw 9, 4(5)

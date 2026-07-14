@@ -52,7 +52,7 @@ class JITCache {
 
 extern JITCache jitCache;
 
-extern "C" void ExecuteJITTrace(JITBlockFunc execute, u32* gbaRegs, u32* flags, JITResult* outResult, u8** readPages, u32* readMasks);
+extern "C" void ExecuteJITTrace(JITBlockFunc execute, u32* gbaRegs, u32* flags, JITResult* outResult, u8** readPages, u32* readMasks, u32* busPrefetchCount);
 
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache);
 

@@ -4,6 +4,7 @@
 // -------------------------------------------------------------------------
 // POWERPC BROADWAY EMITTER MACROS & REGISTER MAPPINGS
 // -------------------------------------------------------------------------
+#define PPC_R0   0
 #define PPC_R3   3
 #define PPC_R4   4
 #define PPC_R5   5
@@ -37,6 +38,7 @@ inline int MapGBARegister(int gbaReg) { return PPC_R14 + gbaReg; }
 #define PPC_ANDC(rA, rS, rB)   ((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (60 << 1))
 #define PPC_NOR(rD, rA, rB)    ((31 << 26) | ((rA) << 21) | ((rD) << 16) | ((rB) << 11) | (124 << 1))
 #define PPC_MULLW(rD, rA, rB)  ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (235 << 1))
+#define PPC_MULLI(rD, rA, imm) ((7 << 26) | ((rD) << 21) | ((rA) << 16) | ((imm) & 0xFFFF))
 
 // Hardware Flag Math (XER & Zero Checks)
 #define PPC_ADDCO(rD, rA, rB)  ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (1 << 10) | (10 << 1))
@@ -56,6 +58,8 @@ inline int MapGBARegister(int gbaReg) { return PPC_R14 + gbaReg; }
 #define PPC_BEQ(offset)        ((16 << 26) | (12 << 21) | (2 << 16) | ((offset) & 0xFFFC))
 #define PPC_BGE(offset)        ((16 << 26) | (4 << 21) | (0 << 16) | ((offset) & 0xFFFC))
 #define PPC_B(offset)          ((18 << 26) | ((offset) & 0x3FFFFFC))
+#define PPC_BLE(offset)        ((16 << 26) | (4 << 21) | (1 << 16) | ((offset) & 0xFFFC))
+#define PPC_BLT(offset)        ((16 << 26) | (12 << 21) | (0 << 16) | ((offset) & 0xFFFC))
 #define PPC_BLR()              0x4E800020
 
 // Advanced Memory & Bitwise
@@ -72,5 +76,7 @@ inline int MapGBARegister(int gbaReg) { return PPC_R14 + gbaReg; }
 #define PPC_RLWINM(rA, rS, sh, mb, me)	((21 << 26) | ((rS) << 21) | ((rA) << 16) | ((sh) << 11) | ((mb) << 6) | ((me) << 1))
 #define PPC_SRWI(rA, rS, sh)			PPC_RLWINM(rA, rS, (32 - (sh)) & 31, sh, 31)
 #define PPC_SRAWI(rA, rS, sh)			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((sh) << 11) | (824 << 1))
+#define PPC_SRW(rA, rS, rB)    			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (536 << 1))
+#define PPC_SLW(rA, rS, rB)    			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (24 << 1))
 
 #endif // JIT_PPC_EMITTER_H
