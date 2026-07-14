@@ -407,7 +407,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// TRUE PATH: Stay in THUMB, exit block dynamically
 			// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
 			u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 3;
-			EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + takenPenalty, chunkStartPC);
+			EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 			*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 			*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
 			*emitPtr++ = PPC_BLR();
@@ -1067,7 +1067,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 1 +
 				                           STATIC_CODE_TICKS_SEQ16(targetPC) + STATIC_CODE_TICKS_16(targetPC) + 2;
 
-				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + takenPenalty, chunkStartPC);
+				EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
@@ -1105,7 +1105,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1 +
 								   (STATIC_CODE_TICKS_SEQ16(targetPC) * 2) + STATIC_CODE_TICKS_16(targetPC) + 3;
 
-				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + takenPenalty, chunkStartPC);
+				EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
