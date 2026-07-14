@@ -1382,8 +1382,19 @@ int thumbExecute() {
         // ========================================================================
         // JIT EXECUTION PATH
         // ========================================================================
-        if (block != nullptr && block->execute != nullptr) {
-            if (g_jitStats.mismatchCount < MAX_JIT_MISMATCH_COUNT) {
+        // Only attempt the JIT path (compiled block + shadow-compare) while we
+        // still have diagnostic budget left. Comparing costs a full interpreter
+        // replay on top of the JIT run for every single invocation - fine for a
+        // bounded window, but unconditionally forever means paying that cost on
+        // >90% of all instructions for the whole session (confirmed: both new
+        // logs show 93-95% JIT-handled), which is a severe, compounding slowdown
+        // that looks exactly like a lockup, not a correctness bug. Once the
+        // budget is spent, we deliberately do NOT fall back to trusting raw JIT
+        // output (that's the black-screen bug from before) - we fall through to
+        // the plain interpreter path below instead, which is cheap and has been
+        // correct this whole time.
+        if (block != nullptr && block->execute != nullptr && g_jitStats.mismatchCount < MAX_JIT_MISMATCH_COUNT) {
+            {
                 // 1. SAVE CPU STATE BEFORE JIT TRACE
                 u32 savedRegs[16];
                 for (size_t i = 0; i < 16; i++) savedRegs[i] = reg[i].I;
@@ -1415,14 +1426,34 @@ int thumbExecute() {
 				cpuPrefetch[1] = savedPrefetch[1];
 				busPrefetchCount = savedBusPrefetchCount;
 
-                // 4. RUN C++ INTERPRETER UNTIL IT REACHES THE SAME PC THE JIT REACHED
-				int cppLocalTicks = 0;
-				int cppCycles = 0;
-                const u32 kMaxSteps = 256; // safety cap — real divergence, not infinite loop
-				u32 steps = 0;
-				u32 targetPC = jitResult.nextPC;
+                // 4. RUN C++ INTERPRETER UNTIL IT HAS ACCUMULATED AT LEAST AS MANY
+                // CYCLES AS THE JIT REPORTED.
+                //
+                // This must be cycle-based, not PC-based. PC-equality is ambiguous
+                // for any trace containing a backward branch (a loop): if the loop
+                // body revisits an address that's also the JIT's eventual exit PC,
+                // stopping at PC-equality catches the FIRST visit, not the real
+                // (possibly much later) final one - comparing state from the wrong
+                // iteration. Confirmed directly: block 0x08002964 (a bounds-checked
+                // clear loop) now shows matching PC (0x08002970, visited every
+                // iteration) but wildly different cycles (83 vs 21-29) and R2 -
+                // both engines stopped at the same address but after a different
+                // number of loop iterations. Cycle count is monotonic and can't be
+                // accidentally revisited, so it's the correct primary signal.
+                //
+                // A `while` (not `do-while`) matters here too: if the JIT's own
+                // bailout reports nextPC == pc (a trace whose loop back-edge returns
+                // to its own entry, or a bail on its very first instruction with
+                // zero cycles accumulated so far), zero catch-up instructions should
+                // run - not one forced extra, which a do-while would execute before
+                // ever checking the condition.
+                int cppCycles = 0;
+                const u32 kMaxSteps = 8192; // loops can iterate many times
+                u32 steps = 0;
+                int cppLocalTicks = 0;
 
-				do {
+                while (cppCycles < (int)jitResult.cycles && steps < kMaxSteps &&
+                       cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks) {
 					u32 opcode = cpuPrefetch[0];
 					cpuPrefetch[0] = cpuPrefetch[1];
 
@@ -1436,21 +1467,28 @@ int thumbExecute() {
 
 					THUMB_PREFETCH_NEXT;
 
-					int localTicks = 0;
 					clockTicks = 0;
 					(*thumbInsnTable[opcode>>6])(opcode);
 					cppLocalTicks = clockTicks;
 
-					if (cppLocalTicks >= 0) {
-						if (cppLocalTicks == 0)
-							cppLocalTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+					if (cppLocalTicks < 0) break;
 
-						cpuTotalTicks += cppLocalTicks;
-						cppCycles += cppLocalTicks;
-						steps++;
-					}
-				} while (armNextPC != targetPC && steps < kMaxSteps && cppLocalTicks >= 0 &&
-						cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
+					if (cppLocalTicks == 0)
+						cppLocalTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+
+					cpuTotalTicks += cppLocalTicks;
+					cppCycles += cppLocalTicks;
+					steps++;
+				}
+
+				// If the interpreter dropped into ARM mode mid-catch-up, this
+				// comparison is no longer meaningful: the JIT never attempts to
+				// compile through a mode switch (it bails cleanly at the BX,
+				// reporting the BX's own address as the resume point), but this
+				// catch-up loop only knows how to dispatch THUMB opcodes. Any
+				// "mismatch" from here on on is an artifact of comparing a Thumb
+				// bailout against real ARM-mode execution, not a JIT bug.
+				bool armModeDuringCatchup = armState;
 
 				// 5. DETECT & COMPARE ALL CPU FIELDS (BEFORE & AFTER)
 				bool mismatch = false;
@@ -1487,6 +1525,7 @@ int thumbExecute() {
 
 				// 6. LOG DETAILED MISMATCH REPORT IF DISCREPANCY FOUND
 				if (mismatch) {
+					g_jitStats.mismatchCount++;
 					static const char* regNames[15] = {
 						"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7",
 						"R8", "R9", "R10", "R11", "R12", "SP", "LR"
@@ -1529,6 +1568,9 @@ int thumbExecute() {
 					if (cycleMismatch) {
 						appendToMsg("  [CYCLES]  JIT=%u vs C++=%d\n", jitResult.cycles, cppCycles);
 					}
+					if (armModeDuringCatchup) {
+						appendToMsg("  [NOTE] Interpreter entered ARM mode during catch-up - this comparison reflects a shadow-harness blind spot (Thumb-only catch-up can't follow a real mode switch), not a JIT bug. The JIT itself bails cleanly at the BX in this case.\n");
+					}
 
 					JIT_LOG_MISMATCH(assembledMsg.c_str());
 				}
@@ -1540,42 +1582,6 @@ int thumbExecute() {
 				}
 				continue;
             }
-
-            u32 flagBuffer[4] = { (u32)N_FLAG, (u32)Z_FLAG, (u32)C_FLAG, (u32)V_FLAG };
-			JITResult result;
-
-			// Align reg[15].I to pc + 4 so that PC-relative reads
-			// inside the compiled JIT trace match authentic GBA pipeline values.
-			reg[15].I = pc + 4;
-
-			JIT_LOG_TRACE_ENTRY(pc, flagBuffer);
-
-			// Execute Native Trace with flat memory maps
-			ExecuteJITTrace(block->execute, (u32*)&reg[0].I, flagBuffer, &result, gbaReadPagePtrs, gbaReadPageMasks);
-
-			JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
-
-			JIT_LOG_EXEC(block->length);
-
-			// Restore updated status flags
-			N_FLAG = flagBuffer[0];
-			Z_FLAG = flagBuffer[1];
-			C_FLAG = flagBuffer[2];
-			V_FLAG = flagBuffer[3];
-
-			// Account for execution cycles accumulated by the trace block
-			cpuTotalTicks += result.cycles;
-
-			// PERFECT PIPELINE RE-PRIME
-			// When returning from the JIT, the GBA hardware prefetcher is broken.
-			// We MUST reset busPrefetchCount or the C++ fallback will falsely charge 0 cycles.
-			busPrefetchCount = 0;
-
-			armNextPC = result.nextPC;
-			reg[15].I = armNextPC + 2;
-			cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
-			cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
-			continue;
         }
 
         // FALLBACK TO C++ INTERPRETER
