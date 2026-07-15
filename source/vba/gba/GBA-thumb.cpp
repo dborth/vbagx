@@ -1648,7 +1648,7 @@ int thumbExecute() {
 			cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
 			cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
 
-			JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks);
+			JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles);
 			continue;
 		}
 
@@ -1681,7 +1681,7 @@ int thumbExecute() {
 		if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
 		cpuTotalTicks += localTicks;
-		JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks);
+		JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, localTicks);
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     return 1;
@@ -2029,7 +2029,7 @@ int thumbExecute()
         	localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
         cpuTotalTicks += localTicks;
-        JIT_LOG_STATE_CPP(oldArmNextPC, armNextPC, cpuTotalTicks);
+        JIT_LOG_STATE_CPP(oldArmNextPC, armNextPC, cpuTotalTicks, localTicks);
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     return 1;
