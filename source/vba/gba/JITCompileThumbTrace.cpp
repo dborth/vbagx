@@ -512,27 +512,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		    u32 accessType = 0; // 4=Word, 2=Halfword, 1=Byte
 
 			// Format 9: LDR/STR Rd, [Rb, #Imm] (Word Access)
-		    if ((opcode & 0xF000) == 0x6000) {
-				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; imm = (opcode >> 6) & 0x1F;
-		        *emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm << 2);
-		        accessType = 4;
-				if (opcode & 0x0800) isMemLoad = true; else isMemStore = true;
-		    }
-		    // Format 9: LDRB/STRB Rd, [Rb, #Imm] (Byte Access)
-		    else if ((opcode & 0xF000) == 0x7000) {
-				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; imm = (opcode >> 6) & 0x1F;
-		        *emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm);
-		        accessType = 1;
-		        if (opcode & 0x0800) isMemLoad = true; else isMemStore = true;
-		    }
-		    // Format 11: LDRH/STRH Rd, [Rb, #Imm] (Halfword Access)
-		    else if ((opcode & 0xF000) == 0x8000) {
-				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; imm = (opcode >> 6) & 0x1F;
-		        *emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm << 1);
-		        accessType = 2;
-				if (opcode & 0x0800) isMemLoad = true; else isMemStore = true;
-		    }
-		    // Format 9: LDR/STR Rd, [Rb, #Imm] (Word Access)
 			if ((opcode & 0xF000) == 0x6000) {
 				rd = opcode & 0x07;
 				rb = (opcode >> 3) & 0x07;
@@ -564,8 +543,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				isMemLoad = (opcode & 0x0800) != 0;
 				isMemStore = !isMemLoad;
 			}
-			// Format 10: Register Offset Loads & Stores (LDR, LDRH, LDRB, STR, STRH, STRB)
-			else if ((opcode & 0xF000) == 0x5000) {
+		    // Format 10: Register Offset Loads & Stores (LDR, LDRH, LDRB, STR, STRH, STRB)
+		    else if ((opcode & 0xF000) == 0x5000) {
 				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; ro = (opcode >> 6) & 0x07;
 		        u16 subOp = opcode & 0x0E00;
 		        if (subOp <= 0x0C00 && subOp != 0x0600) {
