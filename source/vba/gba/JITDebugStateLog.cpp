@@ -7,7 +7,6 @@
 #include <string.h>
 #include <time.h>
 
-#include "mem2.h"
 #include "JITDebugStateLog.h"
 #include "Globals.h"
 
@@ -83,6 +82,6 @@ void JITDebugStateLog::WriteToFile() {
 		logFile = nullptr;
 	}
 
-	mem2_free(logBuffer);
+	free(logBuffer);
 	logBuffer = nullptr;
 }
