@@ -85,21 +85,20 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 	};
 
-    auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg) {
-		// Natively emulates C++ recharge: busPrefetchCount = ((1 << waitState) - 1) | 0x100
+    auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg) {
+		// Natively emulates C++ recharge without obliterating an already-active buffer
 		*ptr++ = PPC_CMPWI(0, bankReg, 8);
 		*ptr++ = PPC_BLT(12);       // If bank < 8 (WRAM/IWRAM), branch to Recharge Path
 		*ptr++ = PPC_LI(PPC_R5, 0); // Bank >= 8 (ROM) Data Read completely flushes prefetch!
-		*ptr++ = PPC_B(28);         // Skip recharge logic (7 instructions * 4 = 28 bytes)
+		*ptr++ = PPC_B(28);         // Skip recharge logic (6 instructions * 4 = 24 bytes)
 
 		// Recharge Path (Bank < 8)
-		*ptr++ = PPC_CMPWI(0, PPC_R5, 0);
-		*ptr++ = PPC_BNE(20);       // Skip recharge if buffer already active (R5 != 0)
-
-		*ptr++ = PPC_LI(PPC_R5, 1);
-		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, dataWaitStateReg); // 1 << waitState (handles 0 natively)
-		*ptr++ = PPC_ADDI(PPC_R5, PPC_R5, -1);              // (1 << waitState) - 1
-		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100);            // | 0x100
+		*ptr++ = PPC_LI(scratchReg, 1);
+		*ptr++ = PPC_SLW(scratchReg, scratchReg, dataWaitStateReg); // 1 << waitState
+		*ptr++ = PPC_ADDI(scratchReg, scratchReg, -1);              // (1 << waitState) - 1
+		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, dataWaitStateReg);         // Shift existing hits
+		*ptr++ = PPC_OR(PPC_R5, PPC_R5, scratchReg);                // Add new hits
+		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100);                    // Ensure active flag
 	};
 
     JIT_LOG_BLOCK_COMPILED(startPC);
@@ -437,6 +436,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// ONLY statically bake BIOS (0x00) and ROM (0x08-0x0D).
 			// Bank 0x0E+ contains SRAM/Registers which mutate!
 			if (bank == 0x00 || (bank >= 0x08 && bank <= 0x0D)) {
+				// Sync the pipeline BEFORE processing the load to balance the chunk ledger
+				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
+				*emitPtr++ = PPC_LI(PPC_R5, 0);
+				chunkInstrCount = 0;
+				chunkStaticCycles = 0;
+				chunkStartPC = currentPC + 2;
+
 				u32 loadedValue = CPUReadMemory(targetAddr);
 
 				if ((loadedValue & ~0x7FFF) == 0) {
@@ -457,13 +463,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// non-sequential code table (a memory access breaks the sequential
 				// prefetch stream), +3 (load constant, not +2 which was the store one).
 				chunkStaticCycles += STATIC_DATA_TICKS_32(targetAddr) + STATIC_CODE_TICKS_16(currentPC) + 3;
-
-				// Format 6 reads from ROM/BIOS, so it breaks the prefetch stream.
-				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
-				*emitPtr++ = PPC_LI(PPC_R5, 0);
-				chunkInstrCount = 0;
-				chunkStaticCycles = 0;
-				chunkStartPC = currentPC + 2;
 			} else {
 				endBlock = true;
 				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_MEM_BANK);
@@ -579,14 +578,14 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// PC-relative case), so this has to be an emitted table lookup
 				// rather than a compile-time constant.
 		        {
-		            u8* dataTicksTable = (accessType == 4) ? memoryWait32 : memoryWait;
-		            *emitPtr++ = PPC_LIS(PPC_R11, ((u32)dataTicksTable) >> 16);
-		            *emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
-		            *emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // EA = R4 + R11
-		            *emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+					u8* dataTicksTable = (accessType == 4) ? memoryWait32 : memoryWait;
+					*emitPtr++ = PPC_LIS(PPC_R11, ((u32)dataTicksTable) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
+					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // EA = R4 + R11
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
 
-		            EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11);
-		        }
+					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R0); // Use R0 as scratch
+				}
 
 		        // 5. Execute Memory Load or Store Instruction
 		        if (isMemLoad) {
@@ -683,7 +682,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
 			*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // Safe: rA=R4
 			*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-			EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11); // Recharge prefetch buffer
+			EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R0); // Recharge prefetch buffer
 
 			// 4. Endian-Correct Load or Store
 			if (isLoad) {
@@ -799,31 +798,36 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// (avoids mullw per Broadway convention) - only the two table values
 			// themselves need a runtime lookup. Skipped entirely for POP{Rlist}
 			// (see pushPopAccumulateDataTicks above).
+			// Dynamic Cycle Calculation & Prefetcher Recharge
 			if (pushPopAccumulateDataTicks) {
+				// We must do a runtime lookup because bank is dynamic (SP). R4 holds the bank.
+
+				// 1. First register is non-sequential (memoryWait32)
 				*emitPtr++ = PPC_LIS(PPC_R0, ((u32)memoryWait32) >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R0, PPC_R0, ((u32)memoryWait32) & 0xFFFF);
-				*emitPtr++ = PPC_LBZX(PPC_R0, PPC_R4, PPC_R0); // EA = R4 (Bank) + R0 (Table)
+				*emitPtr++ = PPC_LBZX(PPC_R0, PPC_R4, PPC_R0); // R0 = nWait
+
 				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R0);
-				EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R0); // Recharge during first access
+				EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R0, PPC_R4); // Recharge using R4 as scratch
+
+				// R4 was clobbered by the lambda. Safely restore it from R12 base address.
+				*emitPtr++ = PPC_SRWI(PPC_R4, PPC_R12, 24);
+				*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R4, 0, 28, 31); // R4 = Bank
 
 				if (numRegs > 1) {
-					*emitPtr++ = PPC_LIS(PPC_R0, ((u32)memoryWaitSeq32) >> 16);
-					*emitPtr++ = PPC_ORI(PPC_R0, PPC_R0, ((u32)memoryWaitSeq32) & 0xFFFF);
-					*emitPtr++ = PPC_LBZX(PPC_R0, PPC_R4, PPC_R0); // EA = R4 + R0
-					
-					// Add (numRegs - 1) * R0 directly to R3 without looping
-					if ((numRegs - 1) == 1) {
-						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R0);
-					} else if ((numRegs - 1) == 2) {
-						*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R0, 1, 0, 30); // R11 = R0 * 2
-						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-					} else {
-						*emitPtr++ = PPC_MULLI(PPC_R11, PPC_R0, numRegs - 1);
-						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+					// 2. Sequential cycles for remaining registers (memoryWaitSeq)
+					*emitPtr++ = PPC_LIS(PPC_R0, ((u32)memoryWaitSeq) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R0, PPC_R0, ((u32)memoryWaitSeq) & 0xFFFF);
+					*emitPtr++ = PPC_LBZX(PPC_R0, PPC_R4, PPC_R0); // R0 = sWait
+
+					if ((numRegs - 1) > 1) {
+						*emitPtr++ = PPC_MULLI(PPC_R0, PPC_R0, numRegs - 1); // R0 = sWait * (numRegs - 1)
 					}
 
-					// We only need to call recharge once for the sequential block
-					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11);
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R0);
+					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R0, PPC_R4); // Recharge total seq wait
+					// R4 is clobbered again, but it's safe as it's immediately
+					// overwritten by PPC_AND in the memory loop below.
 				}
 			}
 
@@ -853,8 +857,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// POP PC: We must exit the block dynamically
 				// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
 				*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
-				// non-sequential table, doubled (extra pipeline refill for the PC-changing pop)
-				u32 takenPenalty = chunkStaticCycles + numRegs + STATIC_CODE_TICKS_16(currentPC) * 2 + 3;
+
+				u32 takenPenalty = numRegs + STATIC_CODE_TICKS_16(currentPC) * 2 + 3;
 				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 				*emitPtr++ = PPC_BLR();
