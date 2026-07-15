@@ -1082,16 +1082,19 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				case 0xC: isComposite = true; branchIfSet = true;  supported = true; break;  // GT (Z==0 & N==V)
 				case 0xD: isComposite = true; branchIfSet = false; supported = true; break;  // LE (Z==1 | N!=V)
 			}
-
+			
 			if (supported) {
+				u32* branchSkipTruePath = nullptr;
+				bool branchIfZero = false;
+
 				if (!isComposite) {
 					// If branchIfSet == true, we skip the True Path when Flag == 0 (Equal to 0)
 					// If branchIfSet == false, we skip the True Path when Flag == 1 (Not Equal to 0)
 					*emitPtr++ = PPC_CMPWI(0, flagReg, 0);
-					if (branchIfSet) *emitPtr++ = PPC_BEQ(20);
-					else             *emitPtr++ = PPC_BNE(20);
+					branchSkipTruePath = emitPtr;
+					if (branchIfSet) *emitPtr++ = PPC_BEQ(0);
+					else             *emitPtr++ = PPC_BNE(0);
 				} else {
-					bool branchIfZero = false;
 					if (cond == 0x8 || cond == 0x9) {
 						// HI takes branch if (C & ~Z) == 1. LS takes branch if (C & ~Z) == 0.
 						*emitPtr++ = PPC_ANDC(PPC_R11, PPC_REG_C, PPC_REG_Z);
@@ -1107,8 +1110,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						branchIfZero = (cond == 0xC); // GT
 					}
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
-					if (branchIfZero) *emitPtr++ = PPC_BNE(20); // Skip if R11 != 0
-					else              *emitPtr++ = PPC_BEQ(20); // Skip if R11 == 0
+					branchSkipTruePath = emitPtr;
+					if (branchIfZero) *emitPtr++ = PPC_BNE(0);
+					else              *emitPtr++ = PPC_BEQ(0);
 				}
 
 				// TRUE PATH (Branch Taken Exit)
@@ -1120,6 +1124,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
 				*emitPtr++ = PPC_BLR();
+
+				// Back-patch the guard branch to skip exactly the stub we just emitted
+				u32* truePathEnd = emitPtr;
+				u32 skipOffset = (u32)((truePathEnd - branchSkipTruePath) * 4);
+				bool guardBranchIsBEQ = isComposite ? !branchIfZero : branchIfSet;
+				*branchSkipTruePath = guardBranchIsBEQ ? PPC_BEQ(skipOffset) : PPC_BNE(skipOffset);
 
 				// FALSE PATH (Branch Not Taken)
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
