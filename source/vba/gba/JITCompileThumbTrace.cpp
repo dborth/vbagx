@@ -85,20 +85,54 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 	};
 
-    auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg) {
+    auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg, u32 pc) {
+		u32 execBank = (pc >> 24) & 15;
+		// The hardware prefetcher only runs if the CPU is executing from ROM
+		if (execBank < 0x08 || execBank > 0x0D) return;
+
+		u32 seqCost = memoryWaitSeq[execBank];
+		if (seqCost == 0) seqCost = 1; // Fallback safety
+
 		// Natively emulates C++ recharge without obliterating an already-active buffer
 		*ptr++ = PPC_CMPWI(0, bankReg, 8);
-		*ptr++ = PPC_BLT(12);       // If bank < 8 (WRAM/IWRAM), branch to Recharge Path
-		*ptr++ = PPC_LI(PPC_R5, 0); // Bank >= 8 (ROM) Data Read completely flushes prefetch!
-		*ptr++ = PPC_B(28);         // Skip recharge logic (6 instructions * 4 = 24 bytes)
+		u32* branchRecharge = ptr++; // Branch to Recharge Path if bank < 8
+
+		// Bank >= 8 (ROM) Data Read completely flushes prefetch!
+		*ptr++ = PPC_LI(PPC_R5, 0);
+		u32* branchSkip = ptr++; // Skip recharge logic
 
 		// Recharge Path (Bank < 8)
-		*ptr++ = PPC_LI(scratchReg, 1);
-		*ptr++ = PPC_SLW(scratchReg, scratchReg, dataWaitStateReg); // 1 << waitState
-		*ptr++ = PPC_ADDI(scratchReg, scratchReg, -1);              // (1 << waitState) - 1
-		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, dataWaitStateReg);         // Shift existing hits
-		*ptr++ = PPC_OR(PPC_R5, PPC_R5, scratchReg);                // Add new hits
-		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100);                    // Ensure active flag
+		*branchRecharge = PPC_BLT((u32)((ptr - branchRecharge) * 4));
+
+		// 1. Calculate hits (waitState / seqCost) into scratchReg
+		if (seqCost == 1) {
+			*ptr++ = PPC_OR(scratchReg, dataWaitStateReg, dataWaitStateReg);
+		} else if (seqCost == 2) {
+			*ptr++ = PPC_SRWI(scratchReg, dataWaitStateReg, 1);
+		} else {
+			*ptr++ = PPC_SRWI(scratchReg, dataWaitStateReg, 1); // Safe fallback
+		}
+
+		// 2. Clamp hits to 8 maximum safely
+		*ptr++ = PPC_CMPWI(0, scratchReg, 8);
+		u32* branchClamp = ptr++;
+		*ptr++ = PPC_LI(scratchReg, 8);
+		*branchClamp = PPC_BLE((u32)((ptr - branchClamp) * 4));
+
+		// 3. Shift existing hits in R5 by the total wait cycles FIRST
+		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, dataWaitStateReg);
+
+		// 4. Create bitmask: (1 << hits) - 1
+		// We use dataWaitStateReg as a secondary scratch to absolutely avoid the PPC_ADDI R0 trap.
+		*ptr++ = PPC_LI(dataWaitStateReg, 1);
+		*ptr++ = PPC_SLW(scratchReg, dataWaitStateReg, scratchReg);  // scratchReg = 1 << hits
+		*ptr++ = PPC_SUBF(scratchReg, dataWaitStateReg, scratchReg); // scratchReg = scratchReg - 1
+
+		// 5. Append hits
+		*ptr++ = PPC_OR(PPC_R5, PPC_R5, scratchReg); // Add new hits
+		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100);     // Ensure active flag
+
+		*branchSkip = PPC_B((u32)((ptr - branchSkip) * 4));
 	};
 
     JIT_LOG_BLOCK_COMPILED(startPC);
@@ -109,7 +143,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     while (!endBlock && instrCount < 64) {
         // BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
-        if ((emitPtr - blockStart) > (MAX_WORDS - 64)) {
+        if ((emitPtr - blockStart) > (MAX_WORDS - 256)) {
             endBlock = true;
             JIT_LOG_BAILOUT(currentPC, 0, BAILOUT_BUFFER_OVERFLOW);
             break;
@@ -584,7 +618,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // EA = R4 + R11
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
 
-					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R0); // Use R0 as scratch
+					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R0, currentPC); // Use R0 as scratch
 				}
 
 		        // 5. Execute Memory Load or Store Instruction
@@ -682,7 +716,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
 			*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // Safe: rA=R4
 			*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-			EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R0); // Recharge prefetch buffer
+			EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R0, currentPC); // Recharge prefetch buffer
 
 			// 4. Endian-Correct Load or Store
 			if (isLoad) {
@@ -808,7 +842,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_LBZX(PPC_R0, PPC_R4, PPC_R0); // R0 = nWait
 
 				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R0);
-				EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R0, PPC_R4); // Recharge using R4 as scratch
+				EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R0, PPC_R4, currentPC); // Recharge using R4 as scratch
 
 				// R4 was clobbered by the lambda. Safely restore it from R12 base address.
 				*emitPtr++ = PPC_SRWI(PPC_R4, PPC_R12, 24);
@@ -825,7 +859,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					}
 
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R0);
-					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R0, PPC_R4); // Recharge total seq wait
+					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R0, PPC_R4, currentPC); // Recharge total seq wait
 					// R4 is clobbered again, but it's safe as it's immediately
 					// overwritten by PPC_AND in the memory loop below.
 				}
