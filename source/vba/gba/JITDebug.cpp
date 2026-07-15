@@ -1,4 +1,5 @@
-#include "JITDebugLog.h"
+#include "JITDebug.h"
+
 #include "JITProfiler.h"
 
 #include <time.h>

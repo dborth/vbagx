@@ -1,7 +1,7 @@
 #ifndef JIT_PROFILER_H
 #define JIT_PROFILER_H
 #include "../common/Port.h"
-#include "JITDebugLog.h"
+#include "JITDebug.h"
 
 static const int MAX_JIT_TRACE_CALLS = 100;
 static const int MAX_JIT_MISMATCH_COUNT = 100;

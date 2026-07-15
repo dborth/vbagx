@@ -1,8 +1,8 @@
 #include "JITProfiler.h"
-#include "JITDebugLog.h"
 #include <stdio.h>
 #include <algorithm>
 #include <ogc/system.h>
+#include "JITDebug.h"
 
 JITStats g_jitStats;
 
