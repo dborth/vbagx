@@ -3,17 +3,21 @@
 
 # -----------------------------------------------------------------------------
 # ExecuteJITTrace(JITBlockFunc execute, u32* gbaRegs, u32* flags,
-#                 JITResult* outResult, u8** readPages, u32* readMasks)
+#                 JITResult* outResult, u8** readPages, u32* readMasks,
+#                 u32* busPrefetchCount)
 #
 # Register Allocations on Entry (PowerPC Standard EABI):
 #   R3: execute (Function pointer to JIT block)
 #   R4: gbaRegs (Pointer to GBA registers array, reg[0..15])
-#   R5: flags (Pointer to flag buffer array)
+#   R5: flags (Pointer to flag buffer array) -- CONSUMED early; see note below
 #   R6: outResult (Pointer to JITResult struct)
 #   R7: readPages (Pointer to gbaReadPagePtrs)
 #   R8: readMasks (Pointer to gbaReadPageMasks)
+#   R9: busPrefetchCount (Pointer to the live hardware-prefetch-buffer state,
+#       shared with the C++ interpreter loop -- read in, written back out,
+#       so JIT'd and interpreted execution see a consistent prefetch model)
 #
-# JIT Execution Register Mapping (from JITCache.h):
+# JIT Execution Register Mapping (from JITCache.h / JITPPCEmitter.h):
 #   R14..R29 : GBA Registers R0..R15
 #   R30      : PPC_R30_PAGES (readPages base array pointer)
 #   R31      : PPC_R31_MASKS (readMasks base array pointer)
@@ -21,6 +25,19 @@
 #   R9       : PPC_REG_Z (Z_FLAG)
 #   R6       : PPC_REG_C (C_FLAG)
 #   R7       : PPC_REG_V (V_FLAG)
+#   R5       : PPC_R5 -- live busPrefetchCount accumulator DURING the trace.
+#       NOTE the reuse: R5 is the `flags` pointer argument on entry, but only
+#       until the four lwz's below have drained it into R8/R9/R6/R7. After
+#       that point R5 is repointed to hold the *value* at *busPrefetchCount
+#       (loaded via R9, the 7th arg) for the duration of bctrl, since the
+#       compiled trace itself reads/writes R5 as its prefetch-buffer state
+#       (see EmitPrefetchSync/EmitPrefetchDataWait in JITCompileThumbTrace.cpp).
+#       R9 is likewise dual-purpose: incoming busPrefetchCount pointer at
+#       entry, later reloaded from the stack as scratch to write the final
+#       R5 value back out. Neither reuse is accidental, but both are easy to
+#       misread without this note -- if you're adding a new live-register
+#       accumulator here, follow this same drain-then-repurpose pattern and
+#       document it the same way.
 # -----------------------------------------------------------------------------
 
 ExecuteJITTrace:
