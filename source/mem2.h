@@ -13,6 +13,8 @@
 #ifndef _MEM2MANAGER_H_
 #define _MEM2MANAGER_H_
 
+#include <gctypes.h>
+
 u32 InitMem2Manager ();
 void* mem2_malloc(u32 size);
 bool mem2_free(void *ptr);

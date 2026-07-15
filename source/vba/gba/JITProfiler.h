@@ -1,7 +1,6 @@
 #ifndef JIT_PROFILER_H
 #define JIT_PROFILER_H
 #include "../common/Port.h"
-#include "JITDebug.h"
 
 static const int MAX_JIT_TRACE_CALLS = 100;
 static const int MAX_JIT_MISMATCH_COUNT = 100;
@@ -49,58 +48,6 @@ extern JITStats jitStats;
 #else
 	#define JIT_RESET_STATS() ((void)0)
 	#define JIT_PRINT_STATS() ((void)0)
-#endif
-
-#if JIT_DEBUG
-	// Profiling & Debug Logging Macros
-	#define JIT_LOG(fmt, ...) \
-		LogJIT(fmt, ##__VA_ARGS__)
-
-	#define JIT_LOG_MISMATCH(msg) LogJITMismatch(msg)
-
-	#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
-		jitStats.blocksCompiled++; \
-		LogJITBlockCompileStart(startPC); \
-	} while(0)
-
-	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, instrCount, staticCycles, bailedOut, bailoutReason) \ \
-		LogJITBlockCompileEnd((startPC), (endPC), (instrCount), (staticCycles), (bailedOut), (bailoutReason))
-
-	#define JIT_LOG_INSN_COMPILED(pc, opcode, fmt, ...) \
-		LogJITInsnCompiled((pc), (opcode), fmt, ##__VA_ARGS__)
-
-	#define JIT_LOG_BAILOUT(pc, opcode, reason) do { \
-		jitStats.compileBailoutFreq[(opcode) >> 6]++; \
-		jitStats.bailoutReasons[reason]++; \
-		LogJITBailout((pc), (opcode), #reason); \
-	} while(0)
-
-	#define JIT_LOG_EXEC(count) \
-		jitStats.jitInstructionsExecuted += (count)
-
-	#define JIT_LOG_FALLBACK(opcode) do { \
-		jitStats.fallbackInstructionsExecuted++; \
-		jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
-	} while(0)
-
-	// Trace Execution Logging
-	#define JIT_LOG_TRACE_ENTRY(pc, flags) \
-		LogJITTraceExecution(true, (pc), 0, (flags), 0)
-
-	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) \
-		LogJITTraceExecution(false, (pc), (nextPC), (flags), (cycles))
-
-#else
-	#define JIT_LOG(fmt, ...) 														((void)0)
-	#define JIT_LOG_MISMATCH(msg)													((void)0)
-	#define JIT_LOG_BLOCK_COMPILED(startPC)                							((void)0)
-	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, count, cycles, bailed, rsn)	((void)0)
-	#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     					((void)0)
-	#define JIT_LOG_BAILOUT(pc, opcode, reason)            							((void)0)
-	#define JIT_LOG_EXEC(count) 													((void)0)
-	#define JIT_LOG_FALLBACK(opcode) 												((void)0)
-	#define JIT_LOG_TRACE_ENTRY(pc, flags) 											((void)0)
-	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) 							((void)0)
 #endif
 
 #endif // JIT_PROFILER_H

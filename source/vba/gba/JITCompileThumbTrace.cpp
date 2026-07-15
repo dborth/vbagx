@@ -2,7 +2,7 @@
 #include "JITPPCEmitter.h"
 #include "GBAinline.h"
 #include "GBAcpu.h"
-#include "JITProfiler.h"
+#include "JITDebug.h"
 
 #define MAX_WORDS 2048
 

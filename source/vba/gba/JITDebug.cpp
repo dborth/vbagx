@@ -113,7 +113,7 @@ void WriteJITLogToFile() {
     char logPath[128];
 
     if (t != NULL) {
-        strftime(logPath, sizeof(logPath), "sd:/jit-log-%Y%m%d-%H%M%S.txt", t);
+        strftime(logPath, sizeof(logPath), "sd:/jit-log-trace-%Y%m%d-%H%M%S.txt", t);
     } else {
         snprintf(logPath, sizeof(logPath), "sd:/jit-log-trace.txt");
     }

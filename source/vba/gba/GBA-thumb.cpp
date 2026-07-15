@@ -11,7 +11,7 @@
 #include "GBAcpu.h"
 #include "GBAinline.h"
 #include "JITCache.h"
-#include "JITProfiler.h"
+#include "JITDebug.h"
 #include "Globals.h"
 #include "EEprom.h"
 #include "Flash.h"
@@ -1382,17 +1382,6 @@ int thumbExecute() {
         // ========================================================================
         // JIT EXECUTION PATH
         // ========================================================================
-        // Only attempt the JIT path (compiled block + shadow-compare) while we
-        // still have diagnostic budget left. Comparing costs a full interpreter
-        // replay on top of the JIT run for every single invocation - fine for a
-        // bounded window, but unconditionally forever means paying that cost on
-        // >90% of all instructions for the whole session (confirmed: both new
-        // logs show 93-95% JIT-handled), which is a severe, compounding slowdown
-        // that looks exactly like a lockup, not a correctness bug. Once the
-        // budget is spent, we deliberately do NOT fall back to trusting raw JIT
-        // output (that's the black-screen bug from before) - we fall through to
-        // the plain interpreter path below instead, which is cheap and has been
-        // correct this whole time.
         if (block != nullptr && block->execute != nullptr && jitStats.mismatchCount < MAX_JIT_MISMATCH_COUNT) {
             {
                 // 1. SAVE CPU STATE BEFORE JIT TRACE
@@ -1662,6 +1651,8 @@ int thumbExecute() {
 			reg[15].I = armNextPC + 2;
 			cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
 			cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+
+			JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks);
 			continue;
 		}
 
@@ -1701,6 +1692,7 @@ int thumbExecute() {
             int localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
             cpuTotalTicks += localTicks;
             handledInline = true;
+            JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks);
         }
 
         // ========================================================================
@@ -1715,6 +1707,7 @@ int thumbExecute() {
             if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
             cpuTotalTicks += localTicks;
+            JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks);
         }
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
