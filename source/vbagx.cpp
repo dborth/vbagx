@@ -24,10 +24,7 @@
 
 #include "vba/gba/Globals.h"
 #include "vba/gba/Sound.h"
-
-#ifdef ENABLE_JIT_PROFILING
 #include "vba/gba/JITProfiler.h"
-#endif
 
 extern int emulating;
 void StopColorizing();
@@ -124,9 +121,7 @@ int main(int argc, char *argv[])
 				StopColorizing();
 		}
 
-		#ifdef ENABLE_JIT_PROFILING
-		g_jitStats.reset();
-		#endif
+		JIT_RESET_STATS();
 
 		while (emulating) // emulation loop
 		{
@@ -147,10 +142,7 @@ int main(int argc, char *argv[])
 				ExitApp();
 			#endif
 		} // emulation loop
-
-		#ifdef ENABLE_JIT_PROFILING
-		g_jitStats.print();
-		#endif
+		JIT_PRINT_STATS();
 	} // main loop
 	return 0;
 }

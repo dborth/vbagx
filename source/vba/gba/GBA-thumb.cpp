@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#ifdef JIT_COMPILER_DIFFERENTIAL_TESTING
+#if JIT_COMPILER_DIFFERENTIAL_TESTING
 #include <string>
 #endif
 
@@ -1365,7 +1365,7 @@ static insnfunc_t thumbInsnTable[1024] = {
   thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,
   thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,
 };
-#ifdef JIT_COMPILER_DIFFERENTIAL_TESTING
+#if JIT_COMPILER_DIFFERENTIAL_TESTING
 
 // -------------------------------------------------------------------------
 // HYBRID TRACE-JIT / C++ EXECUTION ENGINE DIFFERENTIAL TESTING
@@ -1393,7 +1393,7 @@ int thumbExecute() {
         // output (that's the black-screen bug from before) - we fall through to
         // the plain interpreter path below instead, which is cheap and has been
         // correct this whole time.
-        if (block != nullptr && block->execute != nullptr && g_jitStats.mismatchCount < MAX_JIT_MISMATCH_COUNT) {
+        if (block != nullptr && block->execute != nullptr && jitStats.mismatchCount < MAX_JIT_MISMATCH_COUNT) {
             {
                 // 1. SAVE CPU STATE BEFORE JIT TRACE
                 u32 savedRegs[16];

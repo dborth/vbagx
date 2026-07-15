@@ -41,9 +41,17 @@ struct JITStats {
 	void print();
 };
 
-extern JITStats g_jitStats;
+extern JITStats jitStats;
 
-#if ENABLE_JIT_DEBUG_LOG
+#if JIT_PROFILING
+	#define JIT_RESET_STATS() jitStats.reset();
+	#define JIT_PRINT_STATS() jitStats.print();
+#else
+	#define JIT_RESET_STATS() ((void)0)
+	#define JIT_PRINT_STATS() ((void)0)
+#endif
+
+#if JIT_DEBUG
 	// Profiling & Debug Logging Macros
 	#define JIT_LOG(fmt, ...) \
 		LogJIT(fmt, ##__VA_ARGS__)
@@ -51,7 +59,7 @@ extern JITStats g_jitStats;
 	#define JIT_LOG_MISMATCH(msg) LogJITMismatch(msg)
 
 	#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
-		g_jitStats.blocksCompiled++; \
+		jitStats.blocksCompiled++; \
 		LogJITBlockCompileStart(startPC); \
 	} while(0)
 
@@ -62,17 +70,17 @@ extern JITStats g_jitStats;
 		LogJITInsnCompiled((pc), (opcode), fmt, ##__VA_ARGS__)
 
 	#define JIT_LOG_BAILOUT(pc, opcode, reason) do { \
-		g_jitStats.compileBailoutFreq[(opcode) >> 6]++; \
-		g_jitStats.bailoutReasons[reason]++; \
+		jitStats.compileBailoutFreq[(opcode) >> 6]++; \
+		jitStats.bailoutReasons[reason]++; \
 		LogJITBailout((pc), (opcode), #reason); \
 	} while(0)
 
 	#define JIT_LOG_EXEC(count) \
-		g_jitStats.jitInstructionsExecuted += (count)
+		jitStats.jitInstructionsExecuted += (count)
 
 	#define JIT_LOG_FALLBACK(opcode) do { \
-		g_jitStats.fallbackInstructionsExecuted++; \
-		g_jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
+		jitStats.fallbackInstructionsExecuted++; \
+		jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
 	} while(0)
 
 	// Trace Execution Logging

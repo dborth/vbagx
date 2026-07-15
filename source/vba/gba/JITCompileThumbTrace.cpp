@@ -23,6 +23,15 @@ static inline void FlushJITCache(void* addr, u32 size) {
 }
 
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
+	if (!JIT_REGION_ALLOWED(startPC)) {
+		BasicBlock* failBlock = new BasicBlock();
+		failBlock->startPC = startPC;
+		failBlock->length = 0;
+		failBlock->execute = nullptr;
+		cache.registerBlock(failBlock);
+		return failBlock;
+	}
+
     u32* emitPtr = cache.allocateJITMemory(MAX_WORDS * sizeof(u32));
     u32* blockStart = emitPtr;
 

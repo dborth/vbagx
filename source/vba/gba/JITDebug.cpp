@@ -8,6 +8,30 @@
 #include <cstdarg>
 #include <cstdio>
 
+static JITRegionConfig jitRegions = {
+	true,  // enableBIOS
+	true,  // enableEWRAM
+	true,  // enableIWRAM
+	true,  // enableROM0
+    true,  // enableROM1
+	true   // enableROM2
+};
+
+bool JITRegionAllowed(u32 opcode) {
+	u8 bank = opcode >> 24;
+
+	bool allowed = false;
+
+	if (bank == 0x00) allowed = jitRegions.enableBIOS;
+	else if (bank == 0x02) allowed = jitRegions.enableEWRAM;
+	else if (bank == 0x03) allowed = jitRegions.enableIWRAM;
+	else if (bank == 0x08 || bank == 0x09) allowed = jitRegions.enableROM0;
+	else if (bank == 0x0A || bank == 0x0B) allowed = jitRegions.enableROM1;
+	else if (bank == 0x0C || bank == 0x0D) allowed = jitRegions.enableROM2;
+
+	return allowed;
+}
+
 // -----------------------------------------------------------------------------
 // JIT Trace Logger Buffer & Utility Method
 // -----------------------------------------------------------------------------
@@ -29,10 +53,10 @@ void LogJIT(const char* format, ...) {
 }
 
 void LogJITMismatch(const char* message) {
-	g_jitStats.mismatchCount++;
+	jitStats.mismatchCount++;
 	int written = snprintf(tmpBuffer, sizeof(tmpBuffer),
 						   "==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n",
-						   g_jitStats.mismatchCount);
+						   jitStats.mismatchCount);
 
 	g_jitLogBuffer.append(tmpBuffer, written);
 	g_jitLogBuffer.append(message);
@@ -70,7 +94,7 @@ void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCyc
 }
 
 void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags[4], u32 cycles) {
-    if (g_jitStats.traceLogCount >= MAX_JIT_TRACE_CALLS) return;
+    if (jitStats.traceLogCount >= MAX_JIT_TRACE_CALLS) return;
 
     if (isEntry) {
        // LogJIT("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
@@ -78,7 +102,7 @@ void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags
     } else {
         //LogJIT("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
          //   g_jitLogCount, entryPC, nextPC, flags[0], flags[1], flags[2], flags[3], cycles);
-    	g_jitStats.traceLogCount++;
+    	jitStats.traceLogCount++;
     }
 }
 
