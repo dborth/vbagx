@@ -1642,11 +1642,7 @@ int thumbExecute() {
 			// Account for execution cycles accumulated by the trace block
 			cpuTotalTicks += result.cycles;
 
-			// PERFECT PIPELINE RE-PRIME
-			// When returning from the JIT, the GBA hardware prefetcher is broken.
-			// We MUST reset busPrefetchCount or the C++ fallback will falsely charge 0 cycles.
-			busPrefetchCount = 0;
-
+			// Pipeline re-prime
 			armNextPC = result.nextPC;
 			reg[15].I = armNextPC + 2;
 			cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
@@ -1677,38 +1673,15 @@ int thumbExecute() {
 
         THUMB_PREFETCH_NEXT;
 
-        // --- OPTIMIZED INLINE DISPATCH FOR HIGH-FREQUENCY INSTRUCTIONS ---
-        bool handledInline = false;
+        clockTicks = 0;
+		(*thumbInsnTable[opcode>>6])(opcode);
+		int localTicks = clockTicks;
 
-        // 1. THUMB Format 3: Move Immediate (MOV Rd, #Imm8)
-        if ((opcode & 0xF800) == 0x2000) {
-            u8 rd = (opcode >> 8) & 0x07;
-            u8 imm = opcode & 0xFF;
+		if (localTicks < 0) return 0;
+		if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
-            reg[rd].I = imm;
-            N_FLAG = 0;
-            Z_FLAG = (imm == 0);
-
-            int localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-            cpuTotalTicks += localTicks;
-            handledInline = true;
-            JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks);
-        }
-
-        // ========================================================================
-        // FALLBACK: Instruction jump table
-        // ========================================================================
-        if (!handledInline) {
-            clockTicks = 0;
-            (*thumbInsnTable[opcode>>6])(opcode);
-            int localTicks = clockTicks;
-
-            if (localTicks < 0) return 0;
-            if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-
-            cpuTotalTicks += localTicks;
-            JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks);
-        }
+		cpuTotalTicks += localTicks;
+		JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks);
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     return 1;
@@ -2056,7 +2029,7 @@ int thumbExecute()
         	localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
         cpuTotalTicks += localTicks;
-
+        JIT_LOG_STATE_CPP(opcode, armNextPC, cpuTotalTicks);
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     return 1;

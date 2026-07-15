@@ -18,7 +18,7 @@
 #endif
 
 #define BUFFER_SIZE		(2 * 1024 * 1024)
-#define MAX_COUNT		1000
+#define MAX_COUNT		5000
 
 JITDebugStateLog jitDebugStateLog;
 
