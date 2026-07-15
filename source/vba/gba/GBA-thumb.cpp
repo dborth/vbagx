@@ -2029,7 +2029,7 @@ int thumbExecute()
         	localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
         cpuTotalTicks += localTicks;
-        JIT_LOG_STATE_CPP(opcode, armNextPC, cpuTotalTicks);
+        JIT_LOG_STATE_CPP(oldArmNextPC, armNextPC, cpuTotalTicks);
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     return 1;
