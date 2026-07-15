@@ -41,9 +41,11 @@ inline int MapGBARegister(int gbaReg) { return PPC_R14 + gbaReg; }
 #define PPC_MULLI(rD, rA, imm) ((7 << 26) | ((rD) << 21) | ((rA) << 16) | ((imm) & 0xFFFF))
 
 // Hardware Flag Math (XER & Zero Checks)
-#define PPC_ADDCO(rD, rA, rB)  ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (1 << 10) | (10 << 1))
-#define PPC_SUBFCO(rD, rA, rB) ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (1 << 10) | (8 << 1))
-#define PPC_MFXER(rD)          ((31 << 26) | ((rD) << 21) | (1 << 16) | (339 << 1))
+#define PPC_ADDCO(rD, rA, rB)	((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (1 << 10) | (10 << 1))
+#define PPC_SUBFCO(rD, rA, rB)	((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (1 << 10) | (8 << 1))
+#define PPC_MFXER(rD)			((31 << 26) | ((rD) << 21) | (1 << 16) | (339 << 1))
+#define PPC_MTSPR(spr, rS)		((31 << 26) | ((rS) << 21) | ((((spr) & 0x1F) << 16) | (((spr) >> 5) & 0x1F) << 11) | (467 << 1))
+#define PPC_MTXER(rt)			PPC_MTSPR(1, (rt))
 #define PPC_CNTLZW(rA, rS)     ((31 << 26) | ((rS) << 21) | ((rA) << 16) | (26 << 1))
 
 // Immediate Operations

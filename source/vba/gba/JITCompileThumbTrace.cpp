@@ -250,10 +250,18 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					if (offset == 0) {
 						// ASR #32: ARM bit 31 (IBM bit 0) goes to carry. Rotate Left by 1.
 						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), 1, 31, 31);
+
+						// Protect host XER CA flag from being clobbered by srawi
+						*emitPtr++ = PPC_MFXER(PPC_R10);
 						*emitPtr++ = PPC_SRAWI(MapGBARegister(rd), MapGBARegister(rs), 31);
+						*emitPtr++ = PPC_MTXER(PPC_R10);
 					} else {
 						*emitPtr++ = PPC_RLWINM(PPC_REG_C, MapGBARegister(rs), (33 - offset) & 31, 31, 31);
+
+						// Protect host XER CA flag from being clobbered by srawi
+						*emitPtr++ = PPC_MFXER(PPC_R10);
 						*emitPtr++ = PPC_SRAWI(MapGBARegister(rd), MapGBARegister(rs), offset);
+						*emitPtr++ = PPC_MTXER(PPC_R10);
 					}
 				}
 
@@ -344,7 +352,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					// rm = (original Rd < 0) ? ~original Rd : original Rd - branchless
 					// via arithmetic-shift sign mask (0 or -1), same trick as thumb43_1.
+					*emitPtr++ = PPC_MFXER(PPC_R10); // Protect host XER CA flag from srawi
 					*emitPtr++ = PPC_SRAWI(PPC_R12, PPC_R11, 31);
+					*emitPtr++ = PPC_MTXER(PPC_R10);
 					*emitPtr++ = PPC_XOR(PPC_R11, PPC_R11, PPC_R12);
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, 1); // avoid clz(0)
 
