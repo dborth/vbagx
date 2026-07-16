@@ -470,100 +470,71 @@ decodePrefsData ()
 
 	if(xml)
 	{
-		// check settings version
-		// we don't do anything with the version #, but we'll store it anyway
-		item = mxmlFindElement(xml, xml, "file", "version", NULL, MXML_DESCEND);
-		if(item) // a version entry exists
-		{
-			const char * version = mxmlElementGetAttr(item, "version");
+		// File Settings
 
-			if(version && strlen(version) == 5)
-			{
-				// this code assumes version in format X.X.X
-				// XX.X.X, X.XX.X, or X.X.XX will NOT work
-				int verMajor = version[0] - '0';
-				int verMinor = version[2] - '0';
-				int verPoint = version[4] - '0';
+		loadXMLSetting(&GCSettings.AutoLoad, "AutoLoad");
+		loadXMLSetting(&GCSettings.AutoSave, "AutoSave");
+		loadXMLSetting(&GCSettings.LoadMethod, "LoadMethod");
+		loadXMLSetting(&GCSettings.SaveMethod, "SaveMethod");
+		loadXMLSetting(GCSettings.LoadFolder, "LoadFolder", sizeof(GCSettings.LoadFolder));
+		loadXMLSetting(GCSettings.LastFileLoaded, "LastFileLoaded", sizeof(GCSettings.LastFileLoaded));
+		loadXMLSetting(GCSettings.SaveFolder, "SaveFolder", sizeof(GCSettings.SaveFolder));
+		loadXMLSetting(&GCSettings.AppendAuto, "AppendAuto");
+		//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder", sizeof(GCSettings.CheatFolder));
+		loadXMLSetting(GCSettings.ScreenshotsFolder, "ScreenshotsFolder", sizeof(GCSettings.ScreenshotsFolder));
+		loadXMLSetting(GCSettings.BorderFolder, "BorderFolder", sizeof(GCSettings.BorderFolder));
+		loadXMLSetting(GCSettings.CoverFolder, "CoverFolder", sizeof(GCSettings.CoverFolder));
+		loadXMLSetting(GCSettings.ArtworkFolder, "ArtworkFolder", sizeof(GCSettings.ArtworkFolder));
 
-				// check that the versioning is valid
-				if(!(verMajor >= 2 && verMajor <= 9 &&
-					verMinor >= 0 && verMinor <= 9 &&
-					verPoint >= 0 && verPoint <= 9))
-					result = false;
-				else
-					result = true;
-			}
-		}
+		// Network Settings
 
-		if(result)
-		{
-			// File Settings
+		loadXMLSetting(GCSettings.smbip, "smbip", sizeof(GCSettings.smbip));
+		loadXMLSetting(GCSettings.smbshare, "smbshare", sizeof(GCSettings.smbshare));
+		loadXMLSetting(GCSettings.smbuser, "smbuser", sizeof(GCSettings.smbuser));
+		loadXMLSetting(GCSettings.smbpwd, "smbpwd", sizeof(GCSettings.smbpwd));
 
-			loadXMLSetting(&GCSettings.AutoLoad, "AutoLoad");
-			loadXMLSetting(&GCSettings.AutoSave, "AutoSave");
-			loadXMLSetting(&GCSettings.LoadMethod, "LoadMethod");
-			loadXMLSetting(&GCSettings.SaveMethod, "SaveMethod");
-			loadXMLSetting(GCSettings.LoadFolder, "LoadFolder", sizeof(GCSettings.LoadFolder));
-			loadXMLSetting(GCSettings.LastFileLoaded, "LastFileLoaded", sizeof(GCSettings.LastFileLoaded));
-			loadXMLSetting(GCSettings.SaveFolder, "SaveFolder", sizeof(GCSettings.SaveFolder));
-			loadXMLSetting(&GCSettings.AppendAuto, "AppendAuto");
-			//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder", sizeof(GCSettings.CheatFolder));
-			loadXMLSetting(GCSettings.ScreenshotsFolder, "ScreenshotsFolder", sizeof(GCSettings.ScreenshotsFolder));
-			loadXMLSetting(GCSettings.BorderFolder, "BorderFolder", sizeof(GCSettings.BorderFolder));
-			loadXMLSetting(GCSettings.CoverFolder, "CoverFolder", sizeof(GCSettings.CoverFolder));
-			loadXMLSetting(GCSettings.ArtworkFolder, "ArtworkFolder", sizeof(GCSettings.ArtworkFolder));
+		// Video Settings
 
-			// Network Settings
+		loadXMLSetting(&GCSettings.videomode, "videomode");
+		loadXMLSetting(&GCSettings.gbaZoomHor, "gbaZoomHor");
+		loadXMLSetting(&GCSettings.gbaZoomVert, "gbaZoomVert");
+		loadXMLSetting(&GCSettings.gbZoomHor, "gbZoomHor");
+		loadXMLSetting(&GCSettings.gbZoomVert, "gbZoomVert");
+		loadXMLSetting(&GCSettings.gbaFixed, "gbaFixed");
+		loadXMLSetting(&GCSettings.gbFixed, "gbFixed");
+		loadXMLSetting(&GCSettings.render, "render");
+		loadXMLSetting(&GCSettings.FilterMethod, "FilterMethod");
+		loadXMLSetting(&GCSettings.scaling, "scaling");
+		loadXMLSetting(&GCSettings.xshift, "xshift");
+		loadXMLSetting(&GCSettings.yshift, "yshift");
+		loadXMLSetting(&GCSettings.colorize, "colorize");
+		loadXMLSetting(&GCSettings.gbaFrameskip, "gbaFrameskip");
+		loadXMLSetting(&GCSettings.TurboModeEnabled, "TurboModeEnabled");
 
-			loadXMLSetting(GCSettings.smbip, "smbip", sizeof(GCSettings.smbip));
-			loadXMLSetting(GCSettings.smbshare, "smbshare", sizeof(GCSettings.smbshare));
-			loadXMLSetting(GCSettings.smbuser, "smbuser", sizeof(GCSettings.smbuser));
-			loadXMLSetting(GCSettings.smbpwd, "smbpwd", sizeof(GCSettings.smbpwd));
+		// Menu Settings
 
-			// Video Settings
+		loadXMLSetting(&GCSettings.WiimoteOrientation, "WiimoteOrientation");
+		loadXMLSetting(&GCSettings.ExitAction, "ExitAction");
+		loadXMLSetting(&GCSettings.MusicVolume, "MusicVolume");
+		loadXMLSetting(&GCSettings.SFXVolume, "SFXVolume");
+		loadXMLSetting(&GCSettings.Rumble, "Rumble");
+		loadXMLSetting(&GCSettings.language, "language");
+		loadXMLSetting(&GCSettings.PreviewImage, "PreviewImage");
 
-			loadXMLSetting(&GCSettings.videomode, "videomode");
-			loadXMLSetting(&GCSettings.gbaZoomHor, "gbaZoomHor");
-			loadXMLSetting(&GCSettings.gbaZoomVert, "gbaZoomVert");
-			loadXMLSetting(&GCSettings.gbZoomHor, "gbZoomHor");
-			loadXMLSetting(&GCSettings.gbZoomVert, "gbZoomVert");
-			loadXMLSetting(&GCSettings.gbaFixed, "gbaFixed");
-			loadXMLSetting(&GCSettings.gbFixed, "gbFixed");
-			loadXMLSetting(&GCSettings.render, "render");
-			loadXMLSetting(&GCSettings.FilterMethod, "FilterMethod");
-			loadXMLSetting(&GCSettings.scaling, "scaling");
-			loadXMLSetting(&GCSettings.xshift, "xshift");
-			loadXMLSetting(&GCSettings.yshift, "yshift");
-			loadXMLSetting(&GCSettings.colorize, "colorize");
-			loadXMLSetting(&GCSettings.gbaFrameskip, "gbaFrameskip");
-			loadXMLSetting(&GCSettings.TurboModeEnabled, "TurboModeEnabled");
+		// Controller Settings
+		loadXMLController(btnmap[CTRLR_GCPAD], "gcpadmap");
+		loadXMLSetting(&GCSettings.WiiControls, "WiiControls");
+		loadXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap");
+		loadXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap");
+		loadXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap");
+		loadXMLController(btnmap[CTRLR_WUPC], "wupcpadmap");
+		loadXMLController(btnmap[CTRLR_WIIDRC], "drcpadmap");
+		// Emulation Settings
 
-			// Menu Settings
-
-			loadXMLSetting(&GCSettings.WiimoteOrientation, "WiimoteOrientation");
-			loadXMLSetting(&GCSettings.ExitAction, "ExitAction");
-			loadXMLSetting(&GCSettings.MusicVolume, "MusicVolume");
-			loadXMLSetting(&GCSettings.SFXVolume, "SFXVolume");
-			loadXMLSetting(&GCSettings.Rumble, "Rumble");
-			loadXMLSetting(&GCSettings.language, "language");
-			loadXMLSetting(&GCSettings.PreviewImage, "PreviewImage");
-
-			// Controller Settings
-			loadXMLController(btnmap[CTRLR_GCPAD], "gcpadmap");
-			loadXMLSetting(&GCSettings.WiiControls, "WiiControls");
-			loadXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap");
-			loadXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap");
-			loadXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap");
-			loadXMLController(btnmap[CTRLR_WUPC], "wupcpadmap");
-			loadXMLController(btnmap[CTRLR_WIIDRC], "drcpadmap");
-			// Emulation Settings
-			
-			loadXMLSetting(&GCSettings.OffsetMinutesUTC, "OffsetMinutesUTC");
-			loadXMLSetting(&GCSettings.GBHardware, "GBHardware");
-			loadXMLSetting(&GCSettings.SGBBorder, "SGBBorder");
-			loadXMLSetting(&GCSettings.BasicPalette, "BasicPalette");
-		}
-		mxmlDelete(xml);
+		loadXMLSetting(&GCSettings.OffsetMinutesUTC, "OffsetMinutesUTC");
+		loadXMLSetting(&GCSettings.GBHardware, "GBHardware");
+		loadXMLSetting(&GCSettings.SGBBorder, "SGBBorder");
+		loadXMLSetting(&GCSettings.BasicPalette, "BasicPalette");
 	}
 	return result;
 }
@@ -614,10 +585,20 @@ decodePalsData ()
  ***************************************************************************/
 void FixInvalidSettings()
 {
-	if(GCSettings.LoadMethod >= DEVICE_LENGTH)
+	if(!isValidLoadDevice(GCSettings.LoadMethod))
 		GCSettings.LoadMethod = DEVICE_AUTO;
-	if(GCSettings.SaveMethod >= DEVICE_LENGTH)
+	if(!isValidSaveDevice(GCSettings.SaveMethod))
 		GCSettings.SaveMethod = DEVICE_AUTO;
+
+	if(strlen(GCSettings.smbshare) == 0 || strlen(GCSettings.smbip) == 0) {
+		if(GCSettings.LoadMethod == DEVICE_SMB) {
+			GCSettings.LoadMethod = DEVICE_AUTO;
+		}
+		if(GCSettings.SaveMethod == DEVICE_SMB) {
+			GCSettings.SaveMethod = DEVICE_AUTO;
+		}
+	}
+
 	if(!(GCSettings.gbaZoomHor >= 0.5 && GCSettings.gbaZoomHor <= 1.6))
 		GCSettings.gbaZoomHor = 1.0;
 	if(!(GCSettings.gbaZoomVert >= 0.5 && GCSettings.gbaZoomVert <= 1.6))
@@ -655,8 +636,8 @@ DefaultSettings ()
 	memset (&GCSettings, 0, sizeof (GCSettings));
 	ResetControls(); // controller button mappings
 
-	GCSettings.LoadMethod = DEVICE_AUTO; // Auto, SD, DVD, USB, Network (SMB)
-	GCSettings.SaveMethod = DEVICE_AUTO; // Auto, SD, USB, Network (SMB)
+	GCSettings.LoadMethod = DEVICE_AUTO;
+	GCSettings.SaveMethod = DEVICE_AUTO;
 	sprintf (GCSettings.LoadFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_ROMS].name); // Path to game files
 	sprintf (GCSettings.SaveFolder, "%s/%s", APPFOLDER, saveFolder[SAVEFOLDER_SAVES].name); // Path to save files
 	sprintf (GCSettings.ScreenshotsFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_SCREENSHOTS].name); // Path to screenshots files
