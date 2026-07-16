@@ -16,8 +16,8 @@
 #define LOG_TYPE "interp"
 #endif
 
-#define BUFFER_SIZE		(2 * 1024 * 1024)
-#define MAX_COUNT		5000
+#define BUFFER_SIZE				(2 * 1024 * 1024)
+#define MAX_INSTRUCTIONS		1000
 
 JITDebugStateLog jitDebugStateLog;
 
@@ -35,24 +35,24 @@ void JITDebugStateLog::Init() {
 	snprintf(logPath, sizeof(logPath), "sd:/jit-log-state-%s%s.txt", LOG_TYPE, logTime);
 }
 
-void JITDebugStateLog::LogState(const char* source, u32 executedPC, u32 nextPC, u32 ticks, u32 cycles) {
+void JITDebugStateLog::LogState(const char* source, u32 executedPC, u32 nextPC, u32 ticks, u32 cycles, u32 instrCount) {
 	if(!logBuffer) {
 		return;
 	}
 
-	if (logCount >= MAX_COUNT) {
+	if (instrCount >= MAX_INSTRUCTIONS) {
 		WriteToFile();
 		return;
 	}
 
 	int written = snprintf(logBuffer + currentOffset, BUFFER_SIZE - currentOffset,
-			"%s Ticks: %08u | Cycles: %04d | PC: 0x%08X | NextPC: 0x%08X | "
+			"%s Ticks: %08u | Cycles: %04d | InstrCount: %04d | PC: 0x%08X | NextPC: 0x%08X | "
 		"Flags: N%d Z%d C%d V%d | "
 		"R0: 0x%08X | R1: 0x%08X | R2: 0x%08X | R3: 0x%08X | "
 		"R4: 0x%08X | R5: 0x%08X | R6: 0x%08X | R7: 0x%08X | "
 		"R8: 0x%08X | R9: 0x%08X | R10: 0x%08X | R11: 0x%08X | "
 		"R12: 0x%08X | SP: 0x%08X | LR: 0x%08X\n",
-		source, ticks, cycles, executedPC, nextPC,
+		source, ticks, cycles, instrCount, executedPC, nextPC,
 		(reg[16].B.B0 >> 3) & 1,  // N Flag (assuming mapping matches your architecture)
 		(reg[16].B.B0 >> 2) & 1,  // Z Flag
 		(reg[16].B.B0 >> 1) & 1,  // C Flag
@@ -66,7 +66,6 @@ void JITDebugStateLog::LogState(const char* source, u32 executedPC, u32 nextPC, 
 	if (written > 0) {
 		currentOffset += written;
 	}
-	logCount++;
 }
 
 void JITDebugStateLog::WriteToFile() {

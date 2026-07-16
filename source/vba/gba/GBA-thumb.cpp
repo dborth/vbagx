@@ -1604,6 +1604,8 @@ int thumbExecute() {
 // -------------------------------------------------------------------------
 // HYBRID TRACE-JIT / C++ EXECUTION ENGINE
 // -------------------------------------------------------------------------
+int instrCount = 0;
+
 int thumbExecute() {
     do {
         u32 pc = armNextPC;
@@ -1641,6 +1643,7 @@ int thumbExecute() {
 
 			// Account for execution cycles accumulated by the trace block
 			cpuTotalTicks += result.cycles;
+			instrCount += block->length;
 
 			// Pipeline re-prime
 			armNextPC = result.nextPC;
@@ -1648,7 +1651,7 @@ int thumbExecute() {
 			cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
 			cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
 
-			JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles);
+			JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, instrCount);
 			continue;
 		}
 
@@ -1681,7 +1684,7 @@ int thumbExecute() {
 		if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
 		cpuTotalTicks += localTicks;
-		JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, localTicks);
+		JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, localTicks, ++instrCount);
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     return 1;
@@ -1695,6 +1698,7 @@ int thumbExecute() {
 // Eliminates Function Call ABI overhead and CTR indirect branch stalling.
 // Localizes the clockTicks state to prevent global register spilling.
 // ========================================================================
+int instrCount = 0;
 
 int thumbExecute()
 {
@@ -2029,7 +2033,7 @@ int thumbExecute()
         	localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
         cpuTotalTicks += localTicks;
-        JIT_LOG_STATE_CPP(oldArmNextPC, armNextPC, cpuTotalTicks, localTicks);
+        JIT_LOG_STATE_CPP(oldArmNextPC, armNextPC, cpuTotalTicks, localTicks, ++instrCount);
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     return 1;
