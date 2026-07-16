@@ -1188,6 +1188,7 @@ bool LoadVBAROM()
 		}
 		else
 		{
+			ErrorPrompt("Unrecognized file extension!");
 			free(zippedFilename);
 			return false;
 		}
@@ -1229,8 +1230,7 @@ bool LoadVBAROM()
 			LoadPNGBorder("defaultgba");
 		}
 	}
-	
-	if (cartridgeType == CARTRIDGE_GB)
+	else if (cartridgeType == CARTRIDGE_GB)
 	{
 		emulator = GBSystem;
 		gbBorderOn = (GCSettings.SGBBorder == SGBBORDER_FROMGAME);
@@ -1257,13 +1257,7 @@ bool LoadVBAROM()
 		soundSetSampleRate(44100);
 	}
 
-	if(!loaded)
-	{
-		ErrorPrompt("Error loading game!");
-		return false;
-	}
-	else
-	{
+	if(loaded) {
 		// Setup GX
 		if (InitialBorder) {
 			GX_Render_Init(InitialBorderWidth, InitialBorderHeight);
@@ -1312,9 +1306,8 @@ bool LoadVBAROM()
 
 		// Start system clock
 		start = gettime();
-
-		return true;
 	}
+	return loaded;
 }
 
 /****************************************************************************

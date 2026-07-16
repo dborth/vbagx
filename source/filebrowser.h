@@ -44,7 +44,6 @@ extern BROWSERINFO browser;
 extern BROWSERENTRY * browserList;
 extern char ROMFilename[512];
 extern bool ROMLoaded;
-extern bool loadingFile;
 extern char szpath[MAXPATHLEN];
 extern bool inSz;
 extern char szname[MAXPATHLEN];

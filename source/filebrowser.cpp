@@ -45,7 +45,6 @@ bool inSz = false;
 
 char ROMFilename[512];
 bool ROMLoaded = false;
-bool loadingFile = false;
 
 #ifdef HW_RVL
 	static const int numLoadDevices = 5;
@@ -601,9 +600,7 @@ int BrowserLoadFile()
 	StripExt(ROMFilename, browserList[browser.selIndex].filename);
 	snprintf(GCSettings.LastFileLoaded, MAXPATHLEN, "%s", browserList[browser.selIndex].filename);
 
-	loadingFile = true;
 	ROMLoaded = LoadVBAROM();
-	loadingFile = false;
 
 	if (!ROMLoaded)
 	{
@@ -612,7 +609,6 @@ int BrowserLoadFile()
 			browser.selIndex = 0;
 			BrowserChangeFolder();
 		}
-		ErrorPrompt("Error loading game!");
 	}
 	else
 	{
