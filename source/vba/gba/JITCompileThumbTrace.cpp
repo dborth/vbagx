@@ -600,26 +600,52 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		        u32* branchGuard1 = nullptr;
 		        u32* branchGuard2 = nullptr;
 		        u32* branchGuard3 = nullptr;
+		        u32* branchGuard4 = nullptr;
 
 		        if (isMemStore) {
-		            // STORE STRICT GUARD: Only Banks 2 & 3 (WRAM) allowed
-		            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
-		            *emitPtr++ = PPC_BEQ(12);
-		            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
-		            branchGuard1 = emitPtr;
-		            *emitPtr++ = PPC_BNE(0);
-		        } else {
-		            // LOAD GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
-		            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
-		            branchGuard3 = emitPtr;
-		            *emitPtr++ = PPC_BEQ(0);
-		            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
-		            branchGuard1 = emitPtr;
-		            *emitPtr++ = PPC_BEQ(0);
-		            *emitPtr++ = PPC_CMPWI(0, PPC_R11, 13);
-		            branchGuard2 = emitPtr;
-		            *emitPtr++ = PPC_BGE(0);
-		        }
+					// STORE STRICT GUARD: Only Banks 2 & 3 (WRAM) allowed
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
+					*emitPtr++ = PPC_BEQ(12);
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
+					branchGuard1 = emitPtr;
+					*emitPtr++ = PPC_BNE(0);
+				} else {
+					// LOAD GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
+					// 1. BIOS GUARD (Bank 0x00) - Enforce "Open-Bus" protection
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+					branchGuard3 = emitPtr;
+					*emitPtr++ = PPC_BEQ(0);
+
+					// 2. MMIO HARDWARE GUARD (Bank 0x04) - Trigger hardware updates
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
+					branchGuard1 = emitPtr;
+					*emitPtr++ = PPC_BEQ(0);
+
+					// 3. EEPROM/SRAM SAVE GUARD (Banks >= 0x0D) - Enforce save intercepts
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 13);
+					branchGuard2 = emitPtr;
+					*emitPtr++ = PPC_BGE(0);
+
+					// 4. REAL-TIME CLOCK (RTC) GUARD (Bank 0x08, Offsets 0xC4-0xC8)
+					// Prevent Pokémon games from fetching raw ROM data instead of the clock response.
+					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 8);
+					u32* branchSkipRTC = emitPtr;
+					*emitPtr++ = PPC_BNE(0); // If not Bank 8, skip RTC checks
+
+					// Extract the lower 16 bits of the Effective Address (R4 = R12 & 0xFFFF)
+					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 16, 31);
+					*emitPtr++ = PPC_CMPWI(0, PPC_R4, 0x00C4);
+					u32* branchRTC_Low = emitPtr;
+					*emitPtr++ = PPC_BLT(0); // If Offset < 0xC4, skip bailout
+
+					*emitPtr++ = PPC_CMPWI(0, PPC_R4, 0x00C8);
+					u32* branchGuard4 = emitPtr;
+					*emitPtr++ = PPC_BLE(0); // If 0xC4 <= Offset <= 0xC8, Bailout!
+
+					// Patch the RTC skip branches to cleanly hop over the bailout trigger
+					*branchSkipRTC = PPC_BNE((u32)((emitPtr - branchSkipRTC) * 4));
+					*branchRTC_Low = PPC_BLT((u32)((emitPtr - branchRTC_Low) * 4));
+				}
 
 		        // 2. Load Page Pointer and Memory Mask
 		        *emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
@@ -677,6 +703,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				if (branchGuard1) *branchGuard1 = (isMemStore) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
 		        if (branchGuard2) *branchGuard2 = PPC_BGE((u32)((bailoutTarget - branchGuard2) * 4));
 		        if (branchGuard3) *branchGuard3 = PPC_BEQ((u32)((bailoutTarget - branchGuard3) * 4));
+		        if (branchGuard4) *branchGuard4 = PPC_BLE((u32)((bailoutTarget - branchGuard4) * 4));
 
 		        *branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
 
