@@ -74,21 +74,43 @@ void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCyc
 
 	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) \
 		LogJITTraceExecution(false, (pc), (nextPC), (flags), (cycles))
-#else
-	#define JIT_RESET_LOGS()			((void)0)
-	#define JIT_OUTPUT_LOGS()			((void)0)
-	#define JIT_REGION_ALLOWED(opcode)	((void)(opcode), true)
 
-	#define JIT_LOG(fmt, ...) 														((void)0)
-	#define JIT_LOG_MISMATCH(msg)													((void)0)
-	#define JIT_LOG_BLOCK_COMPILED(startPC)                							((void)0)
-	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, count, cycles, bailed, rsn)	((void)0)
-	#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     					((void)0)
-	#define JIT_LOG_BAILOUT(pc, opcode, reason)            							((void)0)
-	#define JIT_LOG_EXEC(count) 													((void)0)
-	#define JIT_LOG_FALLBACK(opcode) 												((void)0)
-	#define JIT_LOG_TRACE_ENTRY(pc, flags) 											((void)0)
-	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) 							((void)0)
+	#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter) do { \
+		LogJIT("[CACHE] Bucket: %4u | Insert: 0x%08X | Evicted: 0x%08X | Arena: 0x%08X -> 0x%08X\n", \
+			   (u32)(bucket), (u32)(startPC), (u32)(evictedPC), (u32)(arenaBefore), (u32)(arenaAfter)); \
+	} while(0)
+
+	#define JIT_LOG_CACHE_FLUSH() do { \
+		LogJIT("[CACHE] FLUSH TRIGGERED - Arena Rewound to 0\n"); \
+	} while(0)
+
+	#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind) do { \
+		LogJIT("[ARENA] Block 0x%08X | Offset: 0x%08X | Res: %u | Used: %u | Rewind: %u\n", \
+			   (u32)(startPC), (u32)(allocOffset), (u32)(reserved), (u32)(used), (u32)(rewind)); \
+	} while(0)
+
+	#define JIT_LOG_INSN_DUMP(pc, phase, addr, word) do { \
+		LogJIT("[%s] PC: 0x%08X | Addr: 0x%p | Word: 0x%08X\n", \
+			   (phase), (u32)(pc), (void*)(addr), (u32)(word)); \
+	} while(0)
+#else
+	#define JIT_RESET_LOGS()															((void)0)
+	#define JIT_OUTPUT_LOGS()															((void)0)
+	#define JIT_REGION_ALLOWED(opcode)													((void)(opcode), true)
+	#define JIT_LOG(fmt, ...) 															((void)0)
+	#define JIT_LOG_MISMATCH(msg)														((void)0)
+	#define JIT_LOG_BLOCK_COMPILED(startPC)                								((void)0)
+	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, count, cycles, bailed, rsn)		((void)0)
+	#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     						((void)0)
+	#define JIT_LOG_BAILOUT(pc, opcode, reason)            								((void)0)
+	#define JIT_LOG_EXEC(count) 														((void)0)
+	#define JIT_LOG_FALLBACK(opcode) 													((void)0)
+	#define JIT_LOG_TRACE_ENTRY(pc, flags) 												((void)0)
+	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) 								((void)0)
+	#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter)	((void)0)
+	#define JIT_LOG_CACHE_FLUSH()														((void)0)
+	#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind)					((void)0)
+	#define JIT_LOG_INSN_DUMP(pc, phase, addr, word)									((void)0)
 #endif
 
 #endif // JIT_DEBUGLOG_H

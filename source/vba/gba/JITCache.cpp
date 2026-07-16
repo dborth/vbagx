@@ -1,4 +1,5 @@
 #include "JITCache.h"
+#include "JITDebug.h"
 
 #include <string.h>
 
@@ -38,13 +39,19 @@ void JITCache::rewindJITMemory(size_t numBytes) {
 void JITCache::registerBlock(BasicBlock* block) {
     if (!block) return;
     u32 index = ((block->startPC >> 1) ^ (block->startPC >> 13)) & (HASH_TABLE_SIZE - 1);
-    if (blockTable[index]) {
-        delete blockTable[index];
-    }
-    blockTable[index] = block;
+
+	u32 evictedPC = 0;
+	if (blockTable[index]) {
+		evictedPC = blockTable[index]->startPC;
+		delete blockTable[index];
+	}
+	blockTable[index] = block;
+    JIT_LOG_CACHE_EVENT(index, block->startPC, evictedPC, arenaOffset, arenaOffset);
 }
 
 void JITCache::flushCache() {
+	JIT_LOG_CACHE_FLUSH();
+
     arenaOffset = 0;
     for (size_t i = 0; i < HASH_TABLE_SIZE; ++i) {
         if (blockTable[i]) {

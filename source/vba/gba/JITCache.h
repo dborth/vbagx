@@ -38,6 +38,7 @@ class JITCache {
 		u32* allocateJITMemory(size_t numBytes);
 		void rewindJITMemory(size_t numBytes);
 		void registerBlock(BasicBlock* block);
+		inline size_t getArenaOffset() const { return arenaOffset; }
 		void flushCache();
 
 		inline BasicBlock* getBlock(u32 pc) const {
