@@ -32,8 +32,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		return failBlock;
 	}
 
-    u32* emitPtr = cache.allocateJITMemory(MAX_WORDS * sizeof(u32));
-    u32* blockStart = emitPtr;
+	u32 arenaOffsetStart = cache.getArenaOffset();
+	u32* emitPtr = cache.allocateJITMemory(MAX_WORDS * sizeof(u32));
+	u32* blockStart = emitPtr;
 
     u32 currentPC = startPC;
     u32 instrCount = 0;
@@ -1249,6 +1250,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
     }
 
     if (instrCount == 0) {
+    	JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, 0, MAX_WORDS);
     	cache.rewindJITMemory(MAX_WORDS * sizeof(u32));
         // Cache the failure! A stub block routes it directly to C++ without thrashing the compiler.
         BasicBlock* failBlock = new BasicBlock();
@@ -1267,6 +1269,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     u32 emittedWords = (u32)(emitPtr - blockStart);
     u32 actualBytes = emittedWords * sizeof(u32);
+    u32 rewindAmount = MAX_WORDS - emittedWords;
+
+    JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, emittedWords, rewindAmount);
 
     cache.rewindJITMemory((MAX_WORDS - emittedWords) * sizeof(u32));
     FlushJITCache(blockStart, actualBytes);
