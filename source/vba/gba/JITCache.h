@@ -21,10 +21,12 @@ struct JITResult {
     u32 nextPC;
 };
 
-struct BasicBlock {
+// Force 16-byte alignment to allow fast PowerPC bit-shifting
+struct __attribute__((aligned(16))) BasicBlock {
     u32 startPC;
     u32 length;
     JITBlockFunc execute;
+    u32 padding;
 };
 
 class JITCache {
@@ -34,7 +36,7 @@ class JITCache {
 		size_t arenaOffset;
 
 		static constexpr size_t HASH_TABLE_SIZE = 8192;
-		BasicBlock* blockTable[HASH_TABLE_SIZE];
+		alignas(32) BasicBlock blockTable[HASH_TABLE_SIZE];
 
 	public:
 		JITCache();
@@ -45,14 +47,14 @@ class JITCache {
 
 		u32* allocateJITMemory(size_t numBytes);
 		void rewindJITMemory(size_t numBytes);
-		void registerBlock(BasicBlock* block);
-		inline size_t getArenaOffset() const { return arenaOffset; }
+        BasicBlock* registerBlock(u32 pc, u32 length, JITBlockFunc execute);
+        inline size_t getArenaOffset() const { return arenaOffset; }
 		void flushCache();
 
-		inline BasicBlock* getBlock(u32 pc) const {
+		inline BasicBlock* getBlock(u32 pc) {
 			u32 index = ((pc >> 1) ^ (pc >> 13)) & (HASH_TABLE_SIZE - 1);
-			BasicBlock* block = blockTable[index];
-			if (block && block->startPC == pc) {
+			BasicBlock* block = &blockTable[index];
+			if (block->startPC == pc) {
 				return block;
 			}
 			return nullptr;

@@ -26,25 +26,39 @@ static inline void FlushJITCache(void* addr, u32 size) {
 
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	if (!JIT_REGION_ALLOWED(startPC)) {
-		BasicBlock* failBlock = new BasicBlock();
-		failBlock->startPC = startPC;
-		failBlock->length = 0;
-		failBlock->execute = nullptr;
-		cache.registerBlock(failBlock);
-		return failBlock;
+		return cache.registerBlock(startPC, 0, nullptr);
 	}
 
-	u32 arenaOffsetStart = cache.getArenaOffset();
-	u32* emitPtr = cache.allocateJITMemory(MAX_WORDS * sizeof(u32));
-	u32* blockStart = emitPtr;
+	u32 arenaOffsetStart = 0;
+	u32* emitPtr = nullptr;
+	u32* blockStart = nullptr;
+	u32* quotaGuard = nullptr;
+	bool arenaAllocated = false;
 
-    u32 currentPC = startPC;
-    u32 instrCount = 0;
-    // O(1) Chunk Tracking State
+	u32 currentPC = startPC;
+	u32 instrCount = 0;
 	u32 chunkStartPC = startPC;
 	u32 chunkInstrCount = 0;
 	u32 chunkStaticCycles = 0;
-    bool endBlock = false;
+	bool endBlock = false;
+
+	// Lazily claims arena space (and emits the prologue) the FIRST time we're
+	// actually about to commit real code -- not up front. Walking cold/unsupported
+	// code costs a couple of branches and nothing else: no allocate(), no rewind(),
+	// no arena traffic, no registerBlock spam beyond the one at the end.
+	auto EnsureArenaAllocated = [&]() {
+	    if (arenaAllocated) return;
+	    arenaAllocated = true;
+
+	    arenaOffsetStart = cache.getArenaOffset();
+	    emitPtr = cache.allocateJITMemory(MAX_WORDS * sizeof(u32));
+	    blockStart = emitPtr;
+
+	    // EVENT QUOTA SHIELD
+	    *emitPtr++ = PPC_CMPWI(0, PPC_R3, YIELD_NUMBER);
+	    quotaGuard = emitPtr;
+	    *emitPtr++ = PPC_BGE(0);
+	};
 
     auto EmitPrefetchSync = [&](u32*& ptr, u32 cInstrCount, u32 cStaticCost, u32 pc) {
 		if (cInstrCount == 0) {
@@ -149,23 +163,18 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     JIT_LOG_BLOCK_COMPILED(startPC);
 
-    // EVENT QUOTA SHIELD: Prevents directly patched blocks from infinite native loops.
-	// Yields back to the C++ emulator if we've accumulated too many cycles natively.
-	*emitPtr++ = PPC_CMPWI(0, PPC_R3, YIELD_NUMBER);
-	u32* quotaGuard = emitPtr;
-	*emitPtr++ = PPC_BGE(0); // Patched at the end of compilation
-
     while (!endBlock && instrCount < 64) {
-        // BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
-        if ((emitPtr - blockStart) > (MAX_WORDS - 256)) {
-            endBlock = true;
-            JIT_LOG_BAILOUT(currentPC, 0, BAILOUT_BUFFER_OVERFLOW);
-            break;
-        }
+    	// BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
+		if (arenaAllocated && (emitPtr - blockStart) > (MAX_WORDS - 256)) {
+			endBlock = true;
+			JIT_LOG_BAILOUT(currentPC, 0, BAILOUT_BUFFER_OVERFLOW);
+			break;
+		}
 
     	u16 opcode = CPUReadHalfWord(currentPC);
 
-		// THUMB Formats 1, 2, 3, 4 - Native ALU (Shifts, Add, Sub, Mov, Cmp)
+
+    	// THUMB Formats 1, 2, 3, 4 - Native ALU (Shifts, Add, Sub, Mov, Cmp)
 		if ((opcode & 0xC000) == 0x0000 || (opcode & 0xFC00) == 0x4000) {
 			// Format 3: Move, Compare, Add, Subtract Immediate
 			if ((opcode & 0xE000) == 0x2000) {
@@ -175,6 +184,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				static const char* fmt[] = { "MOV", "CMP", "ADD", "SUB" };
 				JIT_LOG_INSN_COMPILED(currentPC, opcode, "%s R%u, #0x%02X", fmt[op], rd, imm);
+
+				EnsureArenaAllocated();
 
 				if (op == 0) { // MOV
 					*emitPtr++ = PPC_LI(MapGBARegister(rd), imm);
@@ -207,6 +218,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			}
 			// Format 2: ADD / SUB (Register & Immediate)
 			else if ((opcode & 0xF800) == 0x1800) {
+				EnsureArenaAllocated();
+
 				u8 rd = opcode & 0x07;
 				u8 rs = (opcode >> 3) & 0x07;
 				u8 type = (opcode >> 9) & 0x03; // 0=ADD reg, 1=SUB reg, 2=ADD imm, 3=SUB imm
@@ -235,6 +248,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			}
 			// Format 1: LSL / LSR / ASR
 			else if ((opcode & 0x1800) != 0x1800 && (opcode & 0xE000) == 0x0000) {
+				EnsureArenaAllocated();
+
 				u8 rd = opcode & 0x07;
 				u8 rs = (opcode >> 3) & 0x07;
 				u8 offset = (opcode >> 6) & 0x1F;
@@ -294,6 +309,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u8 rd = opcode & 0x07;
 
 				if (op == 10) { // CMP (Compare)
+					EnsureArenaAllocated();
 					*emitPtr++ = PPC_SUBFCO(PPC_R12, MapGBARegister(rs), MapGBARegister(rd)); // R12 = Rd - Rs
 
 					*emitPtr++ = PPC_MFXER(PPC_R11);
@@ -307,6 +323,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
 				else if (op == 0 || op == 1 || op == 12 || op == 14) { // AND, EOR, ORR, BIC
+					EnsureArenaAllocated();
 					if (op == 0)  *emitPtr++ = PPC_AND(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
 					if (op == 1)  *emitPtr++ = PPC_XOR(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
 					if (op == 12) *emitPtr++ = PPC_OR(MapGBARegister(rd), MapGBARegister(rd), MapGBARegister(rs));
@@ -319,6 +336,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				} else if (op == 9) { // NEG (Rd = 0 - Rs)
+					EnsureArenaAllocated();
 					*emitPtr++ = PPC_LI(PPC_R12, 0); // Load 0 into scratch
 					*emitPtr++ = PPC_SUBFCO(MapGBARegister(rd), MapGBARegister(rs), PPC_R12); // Rd = R12 (0) - Rs
 
@@ -335,6 +353,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
 				else if (op == 15) { // MVN (Bitwise NOT: Rd = ~Rs)
+					EnsureArenaAllocated();
 					*emitPtr++ = PPC_NOR(MapGBARegister(rd), MapGBARegister(rs), MapGBARegister(rs));
 
 					// MVN only updates N and Z
@@ -345,6 +364,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
 				else if (op == 8) { // TST (AND flags only, discard result)
+					EnsureArenaAllocated();
 					*emitPtr++ = PPC_AND(PPC_R12, MapGBARegister(rd), MapGBARegister(rs)); // R12 = Rd & Rs
 
 					// TST only updates N and Z
@@ -355,6 +375,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
 				else if (op == 13) { // MUL (Rd = Rd * Rs)
+					EnsureArenaAllocated();
 					// thumb43_1's real cost depends on the ORIGINAL Rd's magnitude
 					// (ARM7TDMI multiply early-termination): rm = |original Rd|-ish
 					// (sign-complemented if negative), active_bits = 31-clz(rm|1),
@@ -415,6 +436,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				break;
 			}
 
+			if (op == 1) {
+			    // High-Register CMP requires flag updates. Bail for now.
+			    endBlock = true;
+			    JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_HIGH_REGISTER_CMP);
+			    break;
+			}
+
+			EnsureArenaAllocated();
+
 			if (op == 2) { // MOV
 				if (actualRs == 15) {
 					*emitPtr++ = PPC_LIS(MapGBARegister(actualRd), (currentPC + 4) >> 16);
@@ -435,15 +465,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 				
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
-			} else {
-				// High-Register CMP (op == 1) requires flag updates. Bail for now.
-				endBlock = true;
-				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_HIGH_REGISTER_CMP);
-				break;
 			}
 		}
 		// THUMB Format 5 - Branch Exchange (BX Rs)
 		else if ((opcode & 0xFF00) == 0x4700) {
+			EnsureArenaAllocated();
+
 			u8 rs = (opcode >> 3) & 0x0F;
 
 			// Protect against dynamic reads of R15 causing a stale PC desync
@@ -498,6 +525,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// ONLY statically bake BIOS (0x00) and ROM (0x08-0x0D).
 			// Bank 0x0E+ contains SRAM/Registers which mutate!
 			if (bank == 0x00 || (bank >= 0x08 && bank <= 0x0D)) {
+				EnsureArenaAllocated();
+
 				// Sync the pipeline BEFORE processing the load to balance the chunk ledger
 				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0);
@@ -533,18 +562,21 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 		// THUMB Formats 9, 10, 11 - Unified Memory Loads AND Stores
 		else if (((opcode & 0xE000) == 0x6000) || ((opcode & 0xF000) == 0x5000) || ((opcode & 0xF000) == 0x8000)) {
+			bool isMemLoad = false;
+			bool isMemStore = false;
+			u8 rd = 0, rb = 0, ro = 0, imm = 0;
+			u32 accessType = 0; // 4=Word, 2=Halfword, 1=Byte
 
-		    bool isMemLoad = false;
-		    bool isMemStore = false;
-		    u8 rd, rb, ro, imm;
-		    u32 accessType = 0; // 4=Word, 2=Halfword, 1=Byte
+			// Deferred emission variables
+			u32 immediateOffset = 0;
+			bool useRegisterOffset = false;
 
 			// Format 9: LDR/STR Rd, [Rb, #Imm] (Word Access)
 			if ((opcode & 0xF000) == 0x6000) {
 				rd = opcode & 0x07;
 				rb = (opcode >> 3) & 0x07;
 				imm = (opcode >> 6) & 0x1F;
-				*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm << 2);
+				immediateOffset = imm << 2;
 				accessType = 4;
 				isMemLoad = (opcode & 0x0800) != 0;
 				isMemStore = !isMemLoad;
@@ -554,8 +586,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				rd = opcode & 0x07;
 				rb = (opcode >> 3) & 0x07;
 				imm = (opcode >> 6) & 0x1F;
-				// Byte access requires no shift for the immediate offset
-				*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm);
+				immediateOffset = imm; // Byte access requires no shift
 				accessType = 1;
 				isMemLoad = (opcode & 0x0800) != 0;
 				isMemStore = !isMemLoad;
@@ -565,53 +596,61 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				rd = opcode & 0x07;
 				rb = (opcode >> 3) & 0x07;
 				imm = (opcode >> 6) & 0x1F;
-				// Halfword access immediate offset is multiplied by 2
-				*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), imm << 1);
+				immediateOffset = imm << 1; // Halfword access immediate offset is multiplied by 2
 				accessType = 2;
 				isMemLoad = (opcode & 0x0800) != 0;
 				isMemStore = !isMemLoad;
 			}
-		    // Format 10: Register Offset Loads & Stores (LDR, LDRH, LDRB, STR, STRH, STRB)
-		    else if ((opcode & 0xF000) == 0x5000) {
+			// Format 10: Register Offset Loads & Stores (LDR, LDRH, LDRB, STR, STRH, STRB)
+			else if ((opcode & 0xF000) == 0x5000) {
 				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; ro = (opcode >> 6) & 0x07;
-		        u16 subOp = opcode & 0x0E00;
-		        if (subOp <= 0x0C00 && subOp != 0x0600) {
-		            *emitPtr++ = PPC_ADD(PPC_R12, MapGBARegister(rb), MapGBARegister(ro));
-		            if (subOp == 0x0800) { isMemLoad = true; accessType = 4; }
-		            else if (subOp == 0x0A00) { isMemLoad = true; accessType = 2; }
-		            else if (subOp == 0x0C00) { isMemLoad = true; accessType = 1; }
-		            else if (subOp == 0x0000) { isMemStore = true; accessType = 4; }
-		            else if (subOp == 0x0200) { isMemStore = true; accessType = 2; }
-		            else if (subOp == 0x0400) { isMemStore = true; accessType = 1; }
-		        }
-		    }
+				u16 subOp = opcode & 0x0E00;
+				if (subOp <= 0x0C00 && subOp != 0x0600) {
+					useRegisterOffset = true;
+					if (subOp == 0x0800) { isMemLoad = true; accessType = 4; }
+					else if (subOp == 0x0A00) { isMemLoad = true; accessType = 2; }
+					else if (subOp == 0x0C00) { isMemLoad = true; accessType = 1; }
+					else if (subOp == 0x0000) { isMemStore = true; accessType = 4; }
+					else if (subOp == 0x0200) { isMemStore = true; accessType = 2; }
+					else if (subOp == 0x0400) { isMemStore = true; accessType = 1; }
+				}
+			}
 
-		    if (isMemLoad || isMemStore) {
-		        if (instrCount == 0) {
-		            endBlock = true;
-		            JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_TMB9_10_11_INSTR_COUNT_ZERO);
-		            break;
-		        }
+			if (isMemLoad || isMemStore) {
+				if (instrCount == 0) {
+					endBlock = true;
+					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_TMB9_10_11_INSTR_COUNT_ZERO);
+					break;
+				}
+
+				EnsureArenaAllocated();
+
+				// Emit the deferred Effective Address calculation natively into R12
+				if (useRegisterOffset) {
+					*emitPtr++ = PPC_ADD(PPC_R12, MapGBARegister(rb), MapGBARegister(ro));
+				} else {
+					*emitPtr++ = PPC_ADDI(PPC_R12, MapGBARegister(rb), immediateOffset);
+				}
 
 				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 				chunkInstrCount = 0;
 				chunkStaticCycles = 0;
 				chunkStartPC = currentPC + 2;
 
-		        // 1. Extract Memory Bank (R12 >> 24)
-		        *emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
-		        // Stash the bank in R4 (instruction-local scratch only - nothing here
+				// 1. Extract Memory Bank (R12 >> 24)
+				*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
+				// Stash the bank in R4 (instruction-local scratch only - nothing here
 				// needs it to survive to the next instruction) since R11 gets
 				// overwritten by the page/mask lookup below, and we need the bank
 				// again afterward for the data-access cycle-cost lookup.
-		        *emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R11, 0, 28, 31); // R4 = R11 & 15
+				*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R11, 0, 28, 31); // R4 = R11 & 15
 
-		        u32* branchGuard1 = nullptr;
-		        u32* branchGuard2 = nullptr;
-		        u32* branchGuard3 = nullptr;
-		        u32* branchGuard4 = nullptr;
+				u32* branchGuard1 = nullptr;
+				u32* branchGuard2 = nullptr;
+				u32* branchGuard3 = nullptr;
+				u32* branchGuard4 = nullptr;
 
-		        if (isMemStore) {
+				if (isMemStore) {
 					// STORE STRICT GUARD: Only Banks 2 & 3 (WRAM) allowed
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
 					*emitPtr++ = PPC_BEQ(12);
@@ -656,18 +695,18 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*branchRTC_Low = PPC_BLT((u32)((emitPtr - branchRTC_Low) * 4));
 				}
 
-		        // 2. Load Page Pointer and Memory Mask
-		        *emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
-		        *emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
-		        *emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
+				// 2. Load Page Pointer and Memory Mask
+				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
+				*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
+				*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
 
 				// 3. UNIVERSAL NULL POINTER GUARD (Prevents hardware DSI crashes)
-		        *emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
-		        u32* branchNullToBailout = emitPtr;
-		        *emitPtr++ = PPC_BEQ(0);
+				*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
+				u32* branchNullToBailout = emitPtr;
+				*emitPtr++ = PPC_BEQ(0);
 
-		        // 4. Apply Memory Mask
-		        *emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);
+				// 4. Apply Memory Mask
+				*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);
 
 				// 4.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only - every guard
 				// above has already passed by this point, so R3 is correctly left
@@ -676,7 +715,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// The bank isn't known until runtime here (unlike Format 6's
 				// PC-relative case), so this has to be an emitted table lookup
 				// rather than a compile-time constant.
-		        {
+				{
 					u8* dataTicksTable = (accessType == 4) ? memoryWait32 : memoryWait;
 					*emitPtr++ = PPC_LIS(PPC_R11, ((u32)dataTicksTable) >> 16);
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
@@ -686,50 +725,50 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R0, currentPC); // Use R0 as scratch
 				}
 
-		        // 5. Execute Memory Load or Store Instruction
-		        if (isMemLoad) {
-		            if (accessType == 4) *emitPtr++ = PPC_LWBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
-		            else if (accessType == 2) *emitPtr++ = PPC_LHBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
-		            else *emitPtr++ = PPC_LBZX(MapGBARegister(rd), PPC_R10, PPC_R12);
-		        } else {
-		            if (accessType == 4) *emitPtr++ = PPC_STWBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
-		            else if (accessType == 2) *emitPtr++ = PPC_STHBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
-		            else *emitPtr++ = PPC_STBZX(MapGBARegister(rd), PPC_R10, PPC_R12);
-		        }
+				// 5. Execute Memory Load or Store Instruction
+				if (isMemLoad) {
+					if (accessType == 4) *emitPtr++ = PPC_LWBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
+					else if (accessType == 2) *emitPtr++ = PPC_LHBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
+					else *emitPtr++ = PPC_LBZX(MapGBARegister(rd), PPC_R10, PPC_R12);
+				} else {
+					if (accessType == 4) *emitPtr++ = PPC_STWBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
+					else if (accessType == 2) *emitPtr++ = PPC_STHBRX(MapGBARegister(rd), PPC_R10, PPC_R12);
+					else *emitPtr++ = PPC_STBZX(MapGBARegister(rd), PPC_R10, PPC_R12);
+				}
 
-		        // 6. Jump Over Bailout Stub
-		        u32* branchSafe = emitPtr;
-		        *emitPtr++ = PPC_B(0);
+				// 6. Jump Over Bailout Stub
+				u32* branchSafe = emitPtr;
+				*emitPtr++ = PPC_B(0);
 
-		        // 7. Bailout Stub Generation
-		        u32* bailoutTarget = emitPtr;
-		        *emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, chunkStaticCycles);
-		        *emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
-		        *emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
-		        s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
-		        *emitPtr++ = PPC_B(returnOffset);
+				// 7. Bailout Stub Generation
+				u32* bailoutTarget = emitPtr;
+				*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, chunkStaticCycles);
+				*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
+				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
+				s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+				*emitPtr++ = PPC_B(returnOffset);
 
-		        // 8. Patch Branch Offsets
+				// 8. Patch Branch Offsets
 				if (branchGuard1) *branchGuard1 = (isMemStore) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
-		        if (branchGuard2) *branchGuard2 = PPC_BGE((u32)((bailoutTarget - branchGuard2) * 4));
-		        if (branchGuard3) *branchGuard3 = PPC_BEQ((u32)((bailoutTarget - branchGuard3) * 4));
-		        if (branchGuard4) *branchGuard4 = PPC_BLE((u32)((bailoutTarget - branchGuard4) * 4));
+				if (branchGuard2) *branchGuard2 = PPC_BGE((u32)((bailoutTarget - branchGuard2) * 4));
+				if (branchGuard3) *branchGuard3 = PPC_BEQ((u32)((bailoutTarget - branchGuard3) * 4));
+				if (branchGuard4) *branchGuard4 = PPC_BLE((u32)((bailoutTarget - branchGuard4) * 4));
 
-		        *branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
+				*branchNullToBailout = PPC_BEQ((u32)((bailoutTarget - branchNullToBailout) * 4));
 
-		        u32* safeTarget = emitPtr;
-		        *branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
+				u32* safeTarget = emitPtr;
+				*branchSafe = PPC_B((u32)((safeTarget - branchSafe) * 4));
 				
 				// Non-sequential table for the code-fetch component: a data-bus access
 				// disrupts the prefetch pipeline, so the interpreter's real formula
 				// (thumb68 etc: `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2/3`)
 				// always pays the non-sequential cost for the instruction after a memory op.
-		        chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + ((isMemStore) ? 2 : 3);
-		    } else {
-		        endBlock = true;
-		        JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNKNOWN_MEM_OP);
-		        break;
-		    }
+				chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + ((isMemStore) ? 2 : 3);
+			} else {
+				endBlock = true;
+				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNKNOWN_MEM_OP);
+				break;
+			}
 		}
 		// THUMB Format 11: SP-relative Load/Store (LDR/STR Rd, [SP, #imm])
 		else if ((opcode & 0xF000) == 0x9000) {
@@ -739,6 +778,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				break;
 			}
 			
+			EnsureArenaAllocated();
+
 			// SP-relative loads/stores also break the prefetch stream!
 			EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 			chunkInstrCount = 0;
@@ -834,6 +875,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_PUSH_POP_REGS);
 				break;
 			}
+
+			EnsureArenaAllocated();
 
 			EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 			chunkInstrCount = 0;
@@ -1033,6 +1076,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				break;
 			}
 
+			EnsureArenaAllocated();
+
 			EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 			chunkInstrCount = 0;
 			chunkStaticCycles = 0;
@@ -1157,6 +1202,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			}
 			
 			if (supported) {
+				EnsureArenaAllocated();
+
 				u32* branchSkipTruePath = nullptr;
 				bool branchIfZero = false;
 
@@ -1222,6 +1269,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		else if ((opcode & 0xF800) == 0xF000) {
 			u16 nextOpcode = CPUReadHalfWord(currentPC + 2);
 			if ((nextOpcode & 0xF800) == 0xF800) {
+				EnsureArenaAllocated();
+
 				u32 offsetHigh = opcode & 0x07FF;
 				u32 offsetLow = nextOpcode & 0x07FF;
 
@@ -1276,19 +1325,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		currentPC += 2;
     }
 
-    if (instrCount == 0) {
-    	JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, 0, MAX_WORDS);
-    	cache.rewindJITMemory(MAX_WORDS * sizeof(u32));
-        // Cache the failure! A stub block routes it directly to C++ without thrashing the compiler.
-        BasicBlock* failBlock = new BasicBlock();
-        failBlock->startPC = startPC;
-        failBlock->length = 0;
-        failBlock->execute = nullptr;
-        cache.registerBlock(failBlock);
-        return failBlock;
-    }
+	if (instrCount == 0) {
+		JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, 0, MAX_WORDS);
+		// Nothing was ever compilable -- the arena was never touched at all.
+		return cache.registerBlock(startPC, 0, nullptr);
+	}
 
-    // Default Epilogue
+	// Default Epilogue
 	EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 
 	// Synchronize R29 (GBA R15) so the incoming chained block inherits the correct pipeline PC
@@ -1310,21 +1353,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	// Patch the prologue guard to hit this yield stub
 	*quotaGuard = PPC_BGE((u32)((yieldTarget - quotaGuard) * 4));
 
-    u32 emittedWords = (u32)(emitPtr - blockStart);
-    u32 actualBytes = emittedWords * sizeof(u32);
-    u32 rewindAmount = MAX_WORDS - emittedWords;
+	u32 emittedWords = (u32)(emitPtr - blockStart);
+	u32 actualBytes = emittedWords * sizeof(u32);
+	u32 rewindAmount = MAX_WORDS - emittedWords;
 
-    JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, emittedWords, rewindAmount);
+	JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, emittedWords, rewindAmount);
 
-    cache.rewindJITMemory((MAX_WORDS - emittedWords) * sizeof(u32));
-    FlushJITCache(blockStart, actualBytes);
+	cache.rewindJITMemory((MAX_WORDS - emittedWords) * sizeof(u32));
+	FlushJITCache(blockStart, actualBytes);
 
-    BasicBlock* block = new BasicBlock();
-    block->startPC = startPC;
-    block->length = instrCount;
-    block->execute = (JITBlockFunc)blockStart;
-
-    cache.registerBlock(block);
-    return block;
+	return cache.registerBlock(startPC, instrCount, (JITBlockFunc)blockStart);
 }
 #endif
