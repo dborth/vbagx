@@ -107,8 +107,8 @@ void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCyc
 #endif
 
 #if JIT_PROFILING
-	#define JIT_RESET_STATS() jitStats.reset();
-	#define JIT_PRINT_STATS() jitStats.print();
+	#define JIT_RESET_STATS() jitStats.reset()
+	#define JIT_PRINT_STATS() jitStats.print()
 
 	#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
 		jitStats.blocksCompiled++; \
