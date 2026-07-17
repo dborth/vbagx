@@ -84,7 +84,6 @@ void JITStats::print() {
 	JIT_LOG("  Unknown MEM Op:                   %u\n", bailoutReasons[BAILOUT_UNKNOWN_MEM_OP]);
 	JIT_LOG("  No Push/Pop Regs:                 %u\n", bailoutReasons[BAILOUT_PUSH_POP_REGS]);
 	JIT_LOG("  No LDMIA/STMIA Regs:              %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
-	JIT_LOG("  High-Register CMP:                %u\n", bailoutReasons[BAILOUT_HIGH_REGISTER_CMP]);
 	JIT_LOG("-----------------------------------------\n");
 
 	// Top 10 Fallback Executions

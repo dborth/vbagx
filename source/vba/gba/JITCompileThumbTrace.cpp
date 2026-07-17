@@ -417,7 +417,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 			}
 		}
-		// THUMB Format 5 - High Register Operations (MOV / ADD)
+		// THUMB Format 5 - High Register Operations (ADD / CMP / MOV)
 		else if ((opcode & 0xFC00) == 0x4400 && ((opcode >> 8) & 0x03) != 3) {
 			u8 op = (opcode >> 8) & 0x03; // 0=ADD, 1=CMP, 2=MOV
 			u8 h1 = (opcode >> 7) & 0x01;
@@ -430,22 +430,49 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			// Modifying the Program Counter directly triggers a branch pipeline flush.
 			// We bail these out to C++ to handle the complex timing sync.
-			if (actualRd == 15) {
+			// NOTE: CMP (op == 1) only reads Rd, it does not modify it, so skip bailout!
+			if (actualRd == 15 && op != 1) {
 				endBlock = true;
 				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_CONDITIONAL_BRANCH);
 				break;
 			}
 
-			if (op == 1) {
-			    // High-Register CMP requires flag updates. Bail for now.
-			    endBlock = true;
-			    JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_HIGH_REGISTER_CMP);
-			    break;
-			}
-
 			EnsureArenaAllocated();
 
-			if (op == 2) { // MOV
+			if (op == 1) { // CMP
+				u32 regRd = MapGBARegister(actualRd);
+				u32 regRs = MapGBARegister(actualRs);
+
+				// Stage PC natively into scratch registers if it is used as an operand
+				if (actualRd == 15) {
+					regRd = PPC_R11;
+					*emitPtr++ = PPC_LIS(regRd, (currentPC + 4) >> 16);
+					*emitPtr++ = PPC_ORI(regRd, regRd, (currentPC + 4) & 0xFFFF);
+				}
+				if (actualRs == 15) {
+					regRs = PPC_R10;
+					*emitPtr++ = PPC_LIS(regRs, (currentPC + 4) >> 16);
+					*emitPtr++ = PPC_ORI(regRs, regRs, (currentPC + 4) & 0xFFFF);
+				}
+
+				// Execute Math utilizing Broadway's Fixed-Point Exception Register (XER)
+				// PPC_SUBFCO(rD, rA, rB) computes rB - rA[cite: 2]. So R12 = regRd - regRs.
+				*emitPtr++ = PPC_SUBFCO(PPC_R12, regRs, regRd);
+
+				// Extract Hardware C and V Flags from XER (Branchless)[cite: 2]
+				*emitPtr++ = PPC_MFXER(PPC_R10);
+				*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R10, 3, 31, 31); // IBM Bit 2 (CA) -> Bit 31[cite: 2]
+				*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R10, 2, 31, 31); // IBM Bit 1 (OV) -> Bit 31[cite: 2]
+
+				// Extract N and Z Flags from the Result (PPC_R12)[cite: 2]
+				*emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
+				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
+				// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
+				*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+
+				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+			}
+			else if (op == 2) { // MOV
 				if (actualRs == 15) {
 					*emitPtr++ = PPC_LIS(MapGBARegister(actualRd), (currentPC + 4) >> 16);
 					*emitPtr++ = PPC_ORI(MapGBARegister(actualRd), MapGBARegister(actualRd), (currentPC + 4) & 0xFFFF);
