@@ -18,6 +18,8 @@
 
 #define PPC_R14  14  // Base GBA Register (GBA R0 -> PPC R14 ... GBA R15 -> PPC R29)
 
+#define PPC_R29  29
+
 #define PPC_R30_PAGES 30  // readPages Base Pointer Array (Non-volatile, no overlap with GBA registers)
 #define PPC_R31_MASKS 31  // readMasks Base Pointer Array (Non-volatile, no overlap with GBA registers)
 
@@ -80,5 +82,24 @@ inline int MapGBARegister(int gbaReg) { return PPC_R14 + gbaReg; }
 #define PPC_SRAWI(rA, rS, sh)			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((sh) << 11) | (824 << 1))
 #define PPC_SRW(rA, rS, rB)    			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (536 << 1))
 #define PPC_SLW(rA, rS, rB)    			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (24 << 1))
+
+// -------------------------------------------------------------------------
+// LINKER & PATCHING MACROS
+// -------------------------------------------------------------------------
+#define PPC_MFLR(rD)           ((31 << 26) | ((rD) << 21) | (256 << 11) | (339 << 1))
+#define PPC_LWZ(rD, rA, d)     ((32 << 26) | ((rD) << 21) | ((rA) << 16) | ((d) & 0xFFFF))
+#define PPC_STW(rS, rA, d)     ((36 << 26) | ((rS) << 21) | ((rA) << 16) | ((d) & 0xFFFF))
+#define PPC_CMPW(cr, rA, rB)   ((31 << 26) | ((cr) << 23) | ((rA) << 16) | ((rB) << 11) | (0 << 1))
+
+// Hardware Cache Maintenance
+#define PPC_DCBST(rA, rB)      ((31 << 26) | ((rA) << 16) | ((rB) << 11) | (54 << 1))
+#define PPC_ICBI(rA, rB)       ((31 << 26) | ((rA) << 16) | ((rB) << 11) | (982 << 1))
+#define PPC_SYNC()             ((31 << 26) | (598 << 1))
+#define PPC_ISYNC()            ((19 << 26) | (150 << 1))
+
+// Dynamic Register Branching
+#define PPC_MTCTR(rS)          ((31 << 26) | ((rS) << 21) | (288 << 11) | (467 << 1))
+#define PPC_BCTR()             ((19 << 26) | (20 << 21) | (528 << 1))
+#define PPC_BL(offset)         ((18 << 26) | ((offset) & 0x3FFFFFC) | 1)
 
 #endif // JIT_PPC_EMITTER_H

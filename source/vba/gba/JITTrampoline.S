@@ -115,10 +115,16 @@ ExecuteJITTrace:
 4:
     # 7. Execute JIT Block Trace
     mtctr 3         # Move JIT block function pointer to Count Register (CTR)
-    bctrl           # Branch to CTR and Link (Returns: R3 = cycles, R4 = nextPC)
+    li 3, 0         # Zero out the hardware cycle accumulator
+    bctr            # Branch to CTR (Returns natively via ExecuteJITTrace_Return)
 
-    # 8. Post-Execution: Write Back Return Values and GBA CPU State
-    # Reload original pointers since volatile registers were overwritten
+    # -------------------------------------------------------------------------
+    # LINKER STUB MISS LANDING PAD
+    # The JIT Cache Linker jumps here when a native Block-to-Block hash lookup
+    # fails, cleanly returning execution to the C++ host.
+    # -------------------------------------------------------------------------
+    .global ExecuteJITTrace_Return
+ExecuteJITTrace_Return:
 
     # 8. Post-Execution: Write Back Return Values
     lwz 10, 92(1)   # R10 = busPrefetchCount pointer

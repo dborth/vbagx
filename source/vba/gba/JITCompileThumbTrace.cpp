@@ -147,9 +147,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     JIT_LOG_BLOCK_COMPILED(startPC);
 
-    // R3 doubles as a LIVE runtime accumulator for data-access wait-state cycles
-    // Every exit stub below ADDs chunkStaticCycles into R3 rather than overwriting it
-    *emitPtr++ = PPC_LI(PPC_R3, 0);
+    // EVENT QUOTA SHIELD: Prevents directly patched blocks from infinite native loops.
+	// Yields back to the C++ emulator if we've accumulated too many cycles natively.
+	*emitPtr++ = PPC_CMPWI(0, PPC_R3, 512);
+	u32* quotaGuard = emitPtr;
+	*emitPtr++ = PPC_BGE(0); // Patched at the end of compilation
 
     while (!endBlock && instrCount < 64) {
         // BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
@@ -463,14 +465,18 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 			*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 			*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
-			*emitPtr++ = PPC_BLR();
+			
+			// Do NOT call linkerStubAddress. Return to C++ host instead.
+			s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+			*emitPtr++ = PPC_B(returnOffset);
 
 			// FALSE PATH: ARM Switch Bailout
 			u32* bailoutTarget = emitPtr;
 			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, chunkStaticCycles);
 			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
-			*emitPtr++ = PPC_BLR();
+			s32 returnOffset2 = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+			*emitPtr++ = PPC_B(returnOffset2);
 
 			*branchArmSwitch = PPC_BEQ((u32)((bailoutTarget - branchArmSwitch) * 4));
 
@@ -698,7 +704,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		        *emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, chunkStaticCycles);
 		        *emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 		        *emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
-		        *emitPtr++ = PPC_BLR();
+		        s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+		        *emitPtr++ = PPC_B(returnOffset);
 
 		        // 8. Patch Branch Offsets
 				if (branchGuard1) *branchGuard1 = (isMemStore) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
@@ -791,7 +798,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, chunkStaticCycles);
 			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
-			*emitPtr++ = PPC_BLR();
+			s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+			*emitPtr++ = PPC_B(returnOffset);
 
 			// Patch jump to continuation
 			*branchToCont = PPC_B((u32)(emitPtr - branchToCont) * 4);
@@ -953,7 +961,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32 takenPenalty = numRegs + STATIC_CODE_TICKS_16(currentPC) * 2 + 3;
 				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
-				*emitPtr++ = PPC_BLR();
+				
+				// Do NOT call linkerStubAddress. Return to C++ host instead.
+    			s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+  				*emitPtr++ = PPC_B(returnOffset);
 			} else {
 				branchSafe = emitPtr;
 				*emitPtr++ = PPC_B(0);
@@ -968,7 +979,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, chunkStaticCycles);
 			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
-			*emitPtr++ = PPC_BLR();
+			s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+			*emitPtr++ = PPC_B(returnOffset);
 
 			// 8. Patch Branch Offsets
 			if (branchGuard1) *branchGuard1 = (!isPop) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
@@ -1092,7 +1104,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, chunkStaticCycles);
 			*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
-			*emitPtr++ = PPC_BLR();
+			s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+			*emitPtr++ = PPC_B(returnOffset);
 
 			// 8. Patch Branch Offsets
 			if (branchGuard1) *branchGuard1 = (!isLoad) ? PPC_BNE((u32)((bailoutTarget - branchGuard1) * 4)) : PPC_BEQ((u32)((bailoutTarget - branchGuard1) * 4));
@@ -1179,9 +1192,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
+				
+				// Synchronize Pipeline PC
+				*emitPtr++ = PPC_LIS(PPC_R29, (targetPC + 4) >> 16);
+				*emitPtr++ = PPC_ORI(PPC_R29, PPC_R29, (targetPC + 4) & 0xFFFF);
+				
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
-				*emitPtr++ = PPC_BLR();
+				s32 takenStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
+				*emitPtr++ = PPC_BL(takenStubOffset);
 
 				// Back-patch the guard branch to skip exactly the stub we just emitted
 				u32* truePathEnd = emitPtr;
@@ -1223,10 +1242,16 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
+				
+				// Synchronize Pipeline PC
+				*emitPtr++ = PPC_LIS(PPC_R29, (targetPC + 4) >> 16);
+				*emitPtr++ = PPC_ORI(PPC_R29, PPC_R29, (targetPC + 4) & 0xFFFF);
+				
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
-				*emitPtr++ = PPC_BLR();
-
+				s32 takenStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
+				*emitPtr++ = PPC_BL(takenStubOffset);
+				
 				// BL is two THUMB halfwords (prefix + suffix), not one.
 				instrCount += 2;
 				currentPC += 4;
@@ -1262,10 +1287,26 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
     }
 
     // Default Epilogue
-    EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
+	EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
+
+	// Synchronize R29 (GBA R15) so the incoming chained block inherits the correct pipeline PC
+	*emitPtr++ = PPC_LIS(PPC_R29, (currentPC + 4) >> 16);
+	*emitPtr++ = PPC_ORI(PPC_R29, PPC_R29, (currentPC + 4) & 0xFFFF);
+
 	*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
 	*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
-	*emitPtr++ = PPC_BLR();
+	s32 defaultStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
+	*emitPtr++ = PPC_BL(defaultStubOffset);
+
+	// --- QUOTA SHIELD BAILOUT STUB ---
+	u32* yieldTarget = emitPtr;
+	*emitPtr++ = PPC_LIS(PPC_R4, startPC >> 16);
+	*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, startPC & 0xFFFF);
+	s32 yieldOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+	*emitPtr++ = PPC_B(yieldOffset);
+
+	// Patch the prologue guard to hit this yield stub
+	*quotaGuard = PPC_BGE((u32)((yieldTarget - quotaGuard) * 4));
 
     u32 emittedWords = (u32)(emitPtr - blockStart);
     u32 actualBytes = emittedWords * sizeof(u32);

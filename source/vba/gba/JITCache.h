@@ -6,6 +6,8 @@
 #include <string.h>
 #include "../common/Port.h"
 
+extern "C" void ExecuteJITTrace_Return();
+
 // -------------------------------------------------------------------------
 // ENGINE DEFINITIONS
 // -------------------------------------------------------------------------
@@ -35,6 +37,9 @@ class JITCache {
 		JITCache();
 		~JITCache();
 
+		u32* linkerStubAddress;
+		u32* linkerReturnAddress;
+
 		u32* allocateJITMemory(size_t numBytes);
 		void rewindJITMemory(size_t numBytes);
 		void registerBlock(BasicBlock* block);
@@ -57,4 +62,4 @@ extern "C" void ExecuteJITTrace(JITBlockFunc execute, u32* gbaRegs, u32* flags, 
 
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache);
 
-#endif // BLOCK_CACHE_MANAGER_H
+#endif // JIT_CACHE_H
