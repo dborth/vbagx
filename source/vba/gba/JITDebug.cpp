@@ -64,12 +64,10 @@ void LogJITMismatch(const char* message) {
 }
 
 void LogJITBlockCompileStart(u32 startPC) {
-	return;
     LogJIT("=== COMPILING JIT BLOCK @ 0x%08X ===\n", startPC);
 }
 
 void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...) {
-	return;
 	int written = snprintf(tmpBuffer, sizeof(tmpBuffer), "  [0x%08X] Opcode: 0x%04X | ", pc, opcode);
     g_jitLogBuffer.append(tmpBuffer, written);
     va_list args;
@@ -80,12 +78,10 @@ void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...) {
 }
 
 void LogJITBailout(u32 pc, u32 opcode, const char* reasonName) {
-	return;
     LogJIT("[JIT BAILOUT] PC: 0x%08X | Opcode: 0x%04X | Reason: %s\n", pc, opcode, reasonName);
 }
 
 void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCycles, bool bailedOut, u32 bailoutReason) {
-    return;
     if (bailedOut) {
         LogJIT("=== BLOCK COMPILE FAILED @ 0x%08X (Reason Code: %u) ===\n", startPC, bailoutReason);
     } else {
@@ -97,11 +93,11 @@ void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags
     if (jitStats.traceLogCount >= MAX_JIT_TRACE_CALLS) return;
 
     if (isEntry) {
-       // LogJIT("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
-       //     g_jitLogCount, entryPC, flags[0], flags[1], flags[2], flags[3]);
+       LogJIT("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
+    		   jitStats.traceLogCount, entryPC, flags[0], flags[1], flags[2], flags[3]);
     } else {
-        //LogJIT("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
-         //   g_jitLogCount, entryPC, nextPC, flags[0], flags[1], flags[2], flags[3], cycles);
+        LogJIT("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
+        		jitStats.traceLogCount, entryPC, nextPC, flags[0], flags[1], flags[2], flags[3], cycles);
     	jitStats.traceLogCount++;
     }
 }

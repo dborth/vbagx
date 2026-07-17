@@ -16,8 +16,8 @@
 #define LOG_TYPE "interp"
 #endif
 
-#define BUFFER_SIZE				(2 * 1024 * 1024)
-#define MAX_INSTRUCTIONS		1000
+#define BUFFER_SIZE				(4 * 1024 * 1024)
+#define MAX_INSTRUCTIONS		10000
 
 JITDebugStateLog jitDebugStateLog;
 

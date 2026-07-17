@@ -1,5 +1,6 @@
 #ifndef JIT_PROFILER_H
 #define JIT_PROFILER_H
+#include "JITDebug.h"
 #include "../common/Port.h"
 
 static const int MAX_JIT_TRACE_CALLS = 100;
@@ -41,13 +42,5 @@ struct JITStats {
 };
 
 extern JITStats jitStats;
-
-#if JIT_PROFILING
-	#define JIT_RESET_STATS() jitStats.reset();
-	#define JIT_PRINT_STATS() jitStats.print();
-#else
-	#define JIT_RESET_STATS() ((void)0)
-	#define JIT_PRINT_STATS() ((void)0)
-#endif
 
 #endif // JIT_PROFILER_H
