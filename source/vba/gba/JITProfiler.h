@@ -31,6 +31,13 @@ struct JITStats {
 	u64 fallbackInstructionsExecuted;
 	u32 blocksCompiled;
 
+	u64 timeSpentCompiling;
+	u64 timeSpentJIT;
+	u64 timeSpentFallback;
+	u64 jitInvocations;
+	u64 fallbackInvocations;
+	u32 blockLengthBins[6];
+
 	u64 fallbackOpcodeFreq[1024];
 	u32 compileBailoutFreq[1024];
 	u32 bailoutReasons[BAILOUT_REASON_COUNT];

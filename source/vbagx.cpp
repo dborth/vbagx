@@ -24,6 +24,7 @@
 
 #include "vba/gba/Globals.h"
 #include "vba/gba/Sound.h"
+#include "vba/gba/JITCache.h"
 
 extern int emulating;
 void StopColorizing();
@@ -119,6 +120,9 @@ int main(int argc, char *argv[])
 			else
 				StopColorizing();
 		}
+		#ifndef NO_JIT_COMPILER
+		JIT_RESET_LOGS();
+		#endif
 
 		while (emulating) // emulation loop
 		{
@@ -139,6 +143,10 @@ int main(int argc, char *argv[])
 				ExitApp();
 			#endif
 		} // emulation loop
+
+		#ifndef NO_JIT_COMPILER
+		JIT_OUTPUT_LOGS();
+		#endif
 	} // main loop
 	return 0;
 }

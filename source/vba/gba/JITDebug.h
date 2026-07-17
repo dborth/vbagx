@@ -2,143 +2,189 @@
 #define JIT_DEBUGLOG_H
 
 #ifndef NO_JIT_COMPILER
-#include "JITDebugStateLog.h"
-#include "JITProfiler.h"
-#include "../common/Types.h"
-#include <cstdarg>
+	//#define JIT_PROFILING 1
+	//#define JIT_CACHE_AND_ARENA_LOG 1
+	//#define JIT_COMPILER_DIFFERENTIAL_TESTING 1
+	//#define JIT_DEBUGSTATELOG 1
+	//#define JIT_DETAILED_LOG 1
 
-struct JITRegionConfig {
-    bool enableBIOS;   // 0x00 (16KB System ROM)
-    bool enableEWRAM;  // 0x02 (256KB External WRAM)
-    bool enableIWRAM;  // 0x03 (32KB Internal WRAM)
-    bool enableROM0;   // 0x08, 0x09 (Game Pak ROM - Wait State 0)
-    bool enableROM1;   // 0x0A, 0x0B (Game Pak ROM - Wait State 1)
-    bool enableROM2;   // 0x0C, 0x0D (Game Pak ROM - Wait State 2)
-};
+	#include "JITDebugStateLog.h"
+	#include "JITProfiler.h"
+	#include "../common/Types.h"
+	#include <cstdarg>
 
-bool JITRegionAllowed(u32 opcode);
-void LogJIT(const char* format, ...);
-void WriteJITLogToFile();
-void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags[4], u32 cycles);
-void LogJITMismatch(const char* msg);
-void LogJITBlockCompileStart(u32 startPC);
-void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...);
-void LogJITBailout(u32 pc, u32 opcode, const char* reasonName);
-void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCycles, bool bailedOut, u32 bailoutReason);
+	struct JITRegionConfig {
+		bool enableBIOS;   // 0x00 (16KB System ROM)
+		bool enableEWRAM;  // 0x02 (256KB External WRAM)
+		bool enableIWRAM;  // 0x03 (32KB Internal WRAM)
+		bool enableROM0;   // 0x08, 0x09 (Game Pak ROM - Wait State 0)
+		bool enableROM1;   // 0x0A, 0x0B (Game Pak ROM - Wait State 1)
+		bool enableROM2;   // 0x0C, 0x0D (Game Pak ROM - Wait State 2)
+	};
 
-#if JIT_DEBUG
-//#define JIT_PROFILING 1
-//#define JIT_COMPILER_DIFFERENTIAL_TESTING 1
-//#define JIT_DEBUGSTATELOG 1
-//#define JIT_DETAILED_LOG 1
+	bool JITRegionAllowed(u32 opcode);
+	void LogJIT(const char* format, ...);
+	void WriteJITLogToFile();
+	void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags[4], u32 cycles);
+	void LogJITMismatch(const char* msg);
+	void LogJITBlockCompileStart(u32 startPC);
+	void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...);
+	void LogJITBailout(u32 pc, u32 opcode, const char* reasonName);
+	void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCycles, bool bailedOut, u32 bailoutReason);
 
-	#define JIT_RESET_LOGS() do { \
-		JIT_RESET_STATS(); \
-		JIT_LOG_STATE_INIT(); \
-	} while(0)
-	#define JIT_OUTPUT_LOGS() do { \
-		JIT_PRINT_STATS(); \
-		JIT_LOG_STATE_WRITE_TO_FILE(); \
-	} while(0)
-	#define JIT_REGION_ALLOWED(opcode) JITRegionAllowed(opcode)
+	#if JIT_PROFILING
+		#define PROFILER_START_TIMER(name) u64 name = gettime()
+		#define PROFILER_ADD_TIME(stat, name) jitStats.stat += (gettime() - (name))
+		#define PROFILER_INC(stat) jitStats.stat++
+		#define PROFILER_ADD(stat, val) jitStats.stat += (val)
+		#define PROFILER_BIN_BLOCK(len) do { \
+			if ((len) <= 4) jitStats.blockLengthBins[0]++; \
+			else if ((len) <= 8) jitStats.blockLengthBins[1]++; \
+			else if ((len) <= 16) jitStats.blockLengthBins[2]++; \
+			else if ((len) <= 32) jitStats.blockLengthBins[3]++; \
+			else if ((len) <= 64) jitStats.blockLengthBins[4]++; \
+			else jitStats.blockLengthBins[5]++; \
+		} while(0)
+		#define PROFILER_TRACK_FALLBACK(opcode) jitStats.fallbackOpcodeFreq[(opcode) >> 6]++
 
-	#define JIT_LOG(fmt, ...) \
-		LogJIT(fmt, ##__VA_ARGS__)
-#else
-	#define JIT_RESET_LOGS()															((void)0)
-	#define JIT_OUTPUT_LOGS()															((void)0)
-	#define JIT_REGION_ALLOWED(opcode)													((void)(opcode), true)
-	#define JIT_LOG(fmt, ...) 															((void)0)
+		#define JIT_RESET_LOGS() do { \
+			JIT_RESET_STATS(); \
+			JIT_LOG_STATE_INIT(); \
+		} while(0)
+		#define JIT_OUTPUT_LOGS() do { \
+			JIT_PRINT_STATS(); \
+			JIT_LOG_STATE_WRITE_TO_FILE(); \
+		} while(0)
+		#define JIT_REGION_ALLOWED(opcode) JITRegionAllowed(opcode)
+
+		#define JIT_LOG(fmt, ...) \
+			LogJIT(fmt, ##__VA_ARGS__)
+	#endif // JIT_PROFILING
+
+	#if JIT_CACHE_AND_ARENA_LOG
+		#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter) do { \
+			LogJIT("[CACHE] Bucket: %4u | Insert: 0x%08X | Evicted: 0x%08X | Arena: 0x%08X -> 0x%08X\n", \
+				   (u32)(bucket), (u32)(startPC), (u32)(evictedPC), (u32)(arenaBefore), (u32)(arenaAfter)); \
+		} while(0)
+
+		#define JIT_LOG_CACHE_FLUSH() \
+			LogJIT("[CACHE] FLUSH TRIGGERED - Arena Rewound to 0\n")
+
+		#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind) do { \
+			LogJIT("[ARENA] Block 0x%08X | Offset: 0x%08X | Res: %u | Used: %u | Rewind: %u\n", \
+				   (u32)(startPC), (u32)(allocOffset), (u32)(reserved), (u32)(used), (u32)(rewind)); \
+		} while(0)
+	#else
+		#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter)	((void)0)
+		#define JIT_LOG_CACHE_FLUSH()														((void)0)
+		#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind)					((void)0)
+	#endif //JIT_CACHE_AND_ARENA_LOG
+
+	#if JIT_DETAILED_LOG
+		#define JIT_LOG_BLOCK_COMPILED_DETAILS(startPC) \
+			LogJITBlockCompileStart((startPC))
+
+		#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, instrCount, staticCycles, bailedOut, bailoutReason) \
+			LogJITBlockCompileEnd((startPC), (endPC), (instrCount), (staticCycles), (bailedOut), (bailoutReason))
+
+		#define JIT_LOG_INSN_COMPILED(pc, opcode, fmt, ...) \
+			LogJITInsnCompiled((pc), (opcode), fmt, ##__VA_ARGS__)
+
+		#define JIT_LOG_TRACE_ENTRY(pc, flags) \
+			LogJITTraceExecution(true, (pc), 0, (flags), 0)
+
+		#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) \
+			LogJITTraceExecution(false, (pc), (nextPC), (flags), (cycles))
+
+		#define JIT_LOG_BAILOUT_DETAILS(pc, opcode, reason) \
+			LogJITBailout((pc), (opcode), (reason))
+
+		#define JIT_LOG_INSN_DUMP(pc, phase, addr, word) do { \
+			LogJIT("[%s] PC: 0x%08X | Addr: 0x%p | Word: 0x%08X\n", \
+				   (phase), (u32)(pc), (void*)(addr), (u32)(word)); \
+		} while(0)
+	#else
+		#define JIT_LOG_BLOCK_COMPILED_DETAILS(startPC)										((void)0)
+		#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, count, cycles, bailed, rsn)		((void)0)
+		#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     						((void)0)
+		#define JIT_LOG_TRACE_ENTRY(pc, flags) 												((void)0)
+		#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) 								((void)0)
+		#define JIT_LOG_BAILOUT_DETAILS(pc, opcode, reason)									((void)0)
+		#define JIT_LOG_INSN_DUMP(pc, phase, addr, word)									((void)0)
+	#endif // JIT_DETAILED_LOG
+
+	#if JIT_COMPILER_DIFFERENTIAL_TESTING
+		#define JIT_LOG_MISMATCH(msg)														LogJITMismatch(msg)
+	#endif
+
+	#if JIT_PROFILING
+		#define JIT_RESET_STATS() jitStats.reset()
+		#define JIT_PRINT_STATS() jitStats.print()
+
+		#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
+			jitStats.blocksCompiled++; \
+			JIT_LOG_BLOCK_COMPILED_DETAILS((startPC)); \
+		} while(0)
+
+		#define JIT_LOG_BAILOUT(pc, opcode, reason) do { \
+			jitStats.compileBailoutFreq[(opcode) >> 6]++; \
+			jitStats.bailoutReasons[reason]++; \
+			JIT_LOG_BAILOUT_DETAILS((pc), (opcode), #reason); \
+		} while(0)
+
+		#define JIT_LOG_EXEC(count) do { \
+			jitStats.jitInstructionsExecuted += (count); \
+		} while(0)
+
+		#define JIT_LOG_FALLBACK(opcode) do { \
+			jitStats.fallbackInstructionsExecuted++; \
+			jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
+		} while(0)
+	#endif // JIT_PROFILING
+
+#endif // !NO_JIT_COMPILER
+
+#ifndef PROFILER_START_TIMER
+#define PROFILER_START_TIMER(name)					((void)0)
+#endif
+#ifndef PROFILER_ADD_TIME
+#define PROFILER_ADD_TIME(stat, name)				((void)0)
+#endif
+#ifndef PROFILER_INC
+#define PROFILER_INC(stat)							((void)0)
+#endif
+#ifndef PROFILER_ADD
+#define PROFILER_ADD(stat, val)						((void)0)
+#endif
+#ifndef PROFILER_BIN_BLOCK
+#define PROFILER_BIN_BLOCK(len)						((void)0)
+#endif
+#ifndef PROFILER_TRACK_FALLBACK
+#define PROFILER_TRACK_FALLBACK(opcode)				((void)0)
+#endif
+#ifndef JIT_LOG
+#define JIT_LOG(fmt, ...) 							((void)0)
+#endif
+#ifndef JIT_RESET_LOGS
+#define JIT_RESET_LOGS()							((void)0)
+#endif
+#ifndef JIT_OUTPUT_LOGS
+#define JIT_OUTPUT_LOGS()							((void)0)
+#endif
+#ifndef JIT_REGION_ALLOWED
+#define JIT_REGION_ALLOWED(opcode)					((void)(opcode), true)
+#endif
+#ifndef JIT_LOG_BLOCK_COMPILED
+#define JIT_LOG_BLOCK_COMPILED(startPC)				((void)0)
+#endif
+#ifndef JIT_LOG_BAILOUT
+#define JIT_LOG_BAILOUT(pc, opcode, reason)			((void)0)
+#endif
+#ifndef JIT_LOG_EXEC
+#define JIT_LOG_EXEC(count)							((void)0)
+#endif
+#ifndef JIT_LOG_FALLBACK
+#define JIT_LOG_FALLBACK(opcode)					((void)0)
 #endif
 
-#if JIT_DETAILED_LOG
-	#define JIT_LOG_BLOCK_COMPILED_DETAILS(startPC) \
-		LogJITBlockCompileStart((startPC))
-
-	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, instrCount, staticCycles, bailedOut, bailoutReason) \
-		LogJITBlockCompileEnd((startPC), (endPC), (instrCount), (staticCycles), (bailedOut), (bailoutReason))
-
-	#define JIT_LOG_INSN_COMPILED(pc, opcode, fmt, ...) \
-		LogJITInsnCompiled((pc), (opcode), fmt, ##__VA_ARGS__)
-
-	#define JIT_LOG_TRACE_ENTRY(pc, flags) \
-		LogJITTraceExecution(true, (pc), 0, (flags), 0)
-
-	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) \
-		LogJITTraceExecution(false, (pc), (nextPC), (flags), (cycles))
-
-	#define JIT_LOG_BAILOUT_DETAILS(pc, opcode, reason) \
-		LogJITBailout((pc), (opcode), (reason))
-
-	#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter) do { \
-		LogJIT("[CACHE] Bucket: %4u | Insert: 0x%08X | Evicted: 0x%08X | Arena: 0x%08X -> 0x%08X\n", \
-			   (u32)(bucket), (u32)(startPC), (u32)(evictedPC), (u32)(arenaBefore), (u32)(arenaAfter)); \
-	} while(0)
-
-	#define JIT_LOG_CACHE_FLUSH() \
-		LogJIT("[CACHE] FLUSH TRIGGERED - Arena Rewound to 0\n")
-
-	#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind) do { \
-		LogJIT("[ARENA] Block 0x%08X | Offset: 0x%08X | Res: %u | Used: %u | Rewind: %u\n", \
-			   (u32)(startPC), (u32)(allocOffset), (u32)(reserved), (u32)(used), (u32)(rewind)); \
-	} while(0)
-
-	#define JIT_LOG_INSN_DUMP(pc, phase, addr, word) do { \
-		LogJIT("[%s] PC: 0x%08X | Addr: 0x%p | Word: 0x%08X\n", \
-			   (phase), (u32)(pc), (void*)(addr), (u32)(word)); \
-	} while(0)
-#else
-	#define JIT_LOG_BLOCK_COMPILED_DETAILS(startPC)										((void)0)
-	#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, count, cycles, bailed, rsn)		((void)0)
-	#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     						((void)0)
-	#define JIT_LOG_TRACE_ENTRY(pc, flags) 												((void)0)
-	#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) 								((void)0)
-	#define JIT_LOG_BAILOUT_DETAILS(pc, opcode, reason)									((void)0)
-	#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter)	((void)0)
-	#define JIT_LOG_CACHE_FLUSH()														((void)0)
-	#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind)					((void)0)
-	#define JIT_LOG_INSN_DUMP(pc, phase, addr, word)									((void)0)
-#endif
-
-#if JIT_COMPILER_DIFFERENTIAL_TESTING
-	#define JIT_LOG_MISMATCH(msg)														LogJITMismatch(msg)
-#else
-	#define JIT_LOG_MISMATCH(msg)														((void)0)
-#endif
-
-#if JIT_PROFILING
-	#define JIT_RESET_STATS() jitStats.reset()
-	#define JIT_PRINT_STATS() jitStats.print()
-
-	#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
-		jitStats.blocksCompiled++; \
-		JIT_LOG_BLOCK_COMPILED_DETAILS((startPC)); \
-	} while(0)
-
-	#define JIT_LOG_BAILOUT(pc, opcode, reason) do { \
-		jitStats.compileBailoutFreq[(opcode) >> 6]++; \
-		jitStats.bailoutReasons[reason]++; \
-		JIT_LOG_BAILOUT_DETAILS((pc), (opcode), #reason); \
-	} while(0)
-
-	#define JIT_LOG_EXEC(count) \
-		jitStats.jitInstructionsExecuted += (count)
-
-	#define JIT_LOG_FALLBACK(opcode) do { \
-		jitStats.fallbackInstructionsExecuted++; \
-		jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
-	} while(0)
-#else
-	#define JIT_RESET_STATS() ((void)0)
-	#define JIT_PRINT_STATS() ((void)0)
-	#define JIT_LOG_BLOCK_COMPILED(startPC)                								((void)0)
-	#define JIT_LOG_BAILOUT(pc, opcode, reason)            								((void)0)
-	#define JIT_LOG_EXEC(count) 														((void)0)
-	#define JIT_LOG_FALLBACK(opcode) 													((void)0)
-#endif
-
-#else
-#define JIT_RESET_LOGS()																((void)0)
-#define JIT_OUTPUT_LOGS()																((void)0)
-#endif
 #endif // JIT_DEBUGLOG_H
