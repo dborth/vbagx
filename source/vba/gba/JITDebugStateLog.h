@@ -1,3 +1,4 @@
+#ifndef NO_JIT_COMPILER
 #ifndef JIT_DEBUGSTATELOG_H
 #define JIT_DEBUGSTATELOG_H
 
@@ -20,7 +21,7 @@ class JITDebugStateLog {
 		 * @param cycles     	Cycles
 		 * @param instrCount    Total instruction count
 		 */
-		void Init();
+		void Init(char * logType);
 		void LogState(const char* source, u32 executedPC, u32 nextPC, u32 ticks, u32 cycles, u32 instrCount);
 		void WriteToFile();
 };
@@ -28,7 +29,11 @@ class JITDebugStateLog {
 extern JITDebugStateLog jitDebugStateLog;
 
 #if JIT_DEBUGSTATELOG
-	#define JIT_LOG_STATE_INIT()													jitDebugStateLog.Init()
+	#if JIT_COMPILER
+	#define JIT_LOG_STATE_INIT()													jitDebugStateLog.Init("jit")
+	#else
+	#define JIT_LOG_STATE_INIT()													jitDebugStateLog.Init("interp")
+	#endif
 	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles, instrCount)		jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), (instrCount))
     #define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)		jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), (instrCount))
 	#define JIT_LOG_STATE_WRITE_TO_FILE()											jitDebugStateLog.WriteToFile()
@@ -40,3 +45,4 @@ extern JITDebugStateLog jitDebugStateLog;
 #endif
 
 #endif // JIT_DEBUGLOG_H
+#endif

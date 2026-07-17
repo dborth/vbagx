@@ -1,3 +1,4 @@
+#ifndef NO_JIT_COMPILER
 #ifndef JIT_PROFILER_H
 #define JIT_PROFILER_H
 #include "JITDebug.h"
@@ -44,3 +45,4 @@ struct JITStats {
 extern JITStats jitStats;
 
 #endif // JIT_PROFILER_H
+#endif

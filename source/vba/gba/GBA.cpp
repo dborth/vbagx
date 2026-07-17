@@ -2918,10 +2918,14 @@ static void CPULoop_T(int ticks) {
 // Main dispatcher. Forwards to the correct compiled template.
 // -------------------------------------------------------------------------
 void CPULoop(int ticks) {
-  bool useCheats = (cheatsEnabled && (mastercode == 0));
+	JIT_RESET_LOGS();
 
-  if (useCheats) CPULoop_T<true>(ticks);
-  else           CPULoop_T<false>(ticks);
+	bool useCheats = (cheatsEnabled && (mastercode == 0));
+
+	if (useCheats) CPULoop_T<true>(ticks);
+	else           CPULoop_T<false>(ticks);
+
+	JIT_OUTPUT_LOGS();
 }
 
 struct EmulatedSystem GBASystem = {

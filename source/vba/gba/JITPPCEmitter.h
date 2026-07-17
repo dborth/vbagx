@@ -1,3 +1,4 @@
+#ifndef NO_JIT_COMPILER
 #ifndef JIT_PPC_EMITTER_H
 #define JIT_PPC_EMITTER_H
 
@@ -103,3 +104,4 @@ inline int MapGBARegister(int gbaReg) { return PPC_R14 + gbaReg; }
 #define PPC_BL(offset)         ((18 << 26) | ((offset) & 0x3FFFFFC) | 1)
 
 #endif // JIT_PPC_EMITTER_H
+#endif

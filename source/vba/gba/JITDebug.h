@@ -1,3 +1,4 @@
+#ifndef NO_JIT_COMPILER
 #ifndef JIT_DEBUGLOG_H
 #define JIT_DEBUGLOG_H
 
@@ -146,3 +147,4 @@ void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCyc
 #endif
 
 #endif // JIT_DEBUGLOG_H
+#endif

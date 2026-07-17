@@ -1,3 +1,4 @@
+#ifndef NO_JIT_COMPILER
 #include "JITCache.h"
 #include "JITDebug.h"
 #include "JITPPCEmitter.h"
@@ -69,11 +70,14 @@ void JITCache::flushCache() {
         *emitPtr++ = PPC_LIS(PPC_R10, (u32)blockTable >> 16);
         *emitPtr++ = PPC_ORI(PPC_R10, PPC_R10, (u32)blockTable & 0xFFFF);
 
-        // 2. Native Hash: index = ((R4 >> 1) ^ (R4 >> 13)) & 8191
+        // 2. Native Hash: index = ((R4 >> 1) ^ (R4 >> 13)) & (HASH_TABLE_SIZE - 1)
         *emitPtr++ = PPC_SRWI(PPC_R11, PPC_R4, 1);
         *emitPtr++ = PPC_SRWI(PPC_R12, PPC_R4, 13);
         *emitPtr++ = PPC_XOR(PPC_R11, PPC_R11, PPC_R12);
-        *emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 17, 29);
+
+        // Dynamically calculate the PowerPC RLWINM starting mask bit based on the table size
+        u32 maskStart = 30 - __builtin_ctz(HASH_TABLE_SIZE);
+        *emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, maskStart, 29);
 
         // 3. Fetch BasicBlock*
         *emitPtr++ = PPC_LWZX(PPC_R11, PPC_R10, PPC_R11);
@@ -147,3 +151,4 @@ void JITCache::flushCache() {
         asm volatile("sync \n isync" : : : "memory");
     }
 }
+#endif

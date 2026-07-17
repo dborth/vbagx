@@ -1,7 +1,4 @@
-// ========================================================================
-// JIT DEBUG STATE LOG TRACE HARNESS
-// ========================================================================
-
+#ifndef NO_JIT_COMPILER
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,18 +7,12 @@
 #include "JITDebugStateLog.h"
 #include "Globals.h"
 
-#if JIT_COMPILER
-#define LOG_TYPE "jit"
-#else
-#define LOG_TYPE "interp"
-#endif
-
 #define BUFFER_SIZE				(4 * 1024 * 1024)
 #define MAX_INSTRUCTIONS		10000
 
 JITDebugStateLog jitDebugStateLog;
 
-void JITDebugStateLog::Init() {
+void JITDebugStateLog::Init(char * logType) {
 	logBuffer = (char *)malloc(BUFFER_SIZE);
 	time_t now = time(NULL);
 	struct tm *t = localtime(&now);
@@ -32,7 +23,7 @@ void JITDebugStateLog::Init() {
 		strftime(logTime, sizeof(logTime), "-%Y%m%d-%H%M%S", t);
 	}
 
-	snprintf(logPath, sizeof(logPath), "sd:/jit-log-state-%s%s.txt", LOG_TYPE, logTime);
+	snprintf(logPath, sizeof(logPath), "sd:/jit-log-state-%s%s.txt", logType, logTime);
 }
 
 void JITDebugStateLog::LogState(const char* source, u32 executedPC, u32 nextPC, u32 ticks, u32 cycles, u32 instrCount) {
@@ -84,3 +75,4 @@ void JITDebugStateLog::WriteToFile() {
 	free(logBuffer);
 	logBuffer = nullptr;
 }
+#endif

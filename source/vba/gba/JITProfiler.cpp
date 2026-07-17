@@ -1,3 +1,4 @@
+#ifndef NO_JIT_COMPILER
 #include "JITProfiler.h"
 #include <stdio.h>
 #include <algorithm>
@@ -73,3 +74,4 @@ void JITStats::print() {
 	JIT_LOG("=========================================\n\n");
 	WriteJITLogToFile();
 }
+#endif

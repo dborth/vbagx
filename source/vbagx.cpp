@@ -24,7 +24,6 @@
 
 #include "vba/gba/Globals.h"
 #include "vba/gba/Sound.h"
-#include "vba/gba/JITDebug.h"
 
 extern int emulating;
 void StopColorizing();
@@ -121,8 +120,6 @@ int main(int argc, char *argv[])
 				StopColorizing();
 		}
 
-		JIT_RESET_LOGS();
-
 		while (emulating) // emulation loop
 		{
 			emulator.emuMain(emulator.emuCount);
@@ -142,7 +139,6 @@ int main(int argc, char *argv[])
 				ExitApp();
 			#endif
 		} // emulation loop
-		JIT_OUTPUT_LOGS();
 	} // main loop
 	return 0;
 }

@@ -3,10 +3,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-#if JIT_COMPILER_DIFFERENTIAL_TESTING
-#include <string>
-#endif
-
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
@@ -1604,7 +1600,9 @@ int thumbExecute() {
 // -------------------------------------------------------------------------
 // HYBRID TRACE-JIT / C++ EXECUTION ENGINE
 // -------------------------------------------------------------------------
+#ifdef JIT_DETAILED_LOG
 int instrCount = 0;
+#endif
 
 int thumbExecute() {
     do {
@@ -1643,7 +1641,6 @@ int thumbExecute() {
 
 			// Account for execution cycles accumulated by the trace block
 			cpuTotalTicks += result.cycles;
-			instrCount += block->length;
 
 			// Pipeline re-prime
 			armNextPC = result.nextPC;
@@ -1651,7 +1648,10 @@ int thumbExecute() {
 			cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
 			cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
 
+			#ifdef JIT_DETAILED_LOG
+			instrCount += block->length;
 			JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, instrCount);
+			#endif
 			continue;
 		}
 
@@ -1684,7 +1684,9 @@ int thumbExecute() {
 		if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
 		cpuTotalTicks += localTicks;
+		#ifdef JIT_DETAILED_LOG
 		JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, localTicks, ++instrCount);
+		#endif
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     return 1;
@@ -1698,7 +1700,9 @@ int thumbExecute() {
 // Eliminates Function Call ABI overhead and CTR indirect branch stalling.
 // Localizes the clockTicks state to prevent global register spilling.
 // ========================================================================
+#ifdef JIT_DETAILED_LOG
 int instrCount = 0;
+#endif
 
 int thumbExecute()
 {
@@ -2033,7 +2037,9 @@ int thumbExecute()
         	localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
         cpuTotalTicks += localTicks;
+		#ifdef JIT_DETAILED_LOG
         JIT_LOG_STATE_CPP(oldArmNextPC, armNextPC, cpuTotalTicks, localTicks, ++instrCount);
+		#endif
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     return 1;

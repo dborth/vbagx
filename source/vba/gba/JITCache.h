@@ -1,6 +1,7 @@
 #ifndef JIT_CACHE_H
 #define JIT_CACHE_H
 
+#ifndef NO_JIT_COMPILER
 #include <stddef.h>
 #include <malloc.h>
 #include <string.h>
@@ -62,4 +63,8 @@ extern "C" void ExecuteJITTrace(JITBlockFunc execute, u32* gbaRegs, u32* flags, 
 
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache);
 
+#else
+#define JIT_RESET_LOGS()																((void)0)
+#define JIT_OUTPUT_LOGS()																((void)0)
+#endif
 #endif // JIT_CACHE_H

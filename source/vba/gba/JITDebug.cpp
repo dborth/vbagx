@@ -1,3 +1,4 @@
+#ifndef NO_JIT_COMPILER
 #include "JITDebug.h"
 
 #include "JITProfiler.h"
@@ -126,3 +127,4 @@ void WriteJITLogToFile() {
     g_jitLogBuffer.clear();
     g_jitLogBuffer.shrink_to_fit();
 }
+#endif

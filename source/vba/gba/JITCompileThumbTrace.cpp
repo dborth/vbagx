@@ -1,3 +1,4 @@
+#ifndef NO_JIT_COMPILER
 #include "JITCache.h"
 #include "JITPPCEmitter.h"
 #include "GBAinline.h"
@@ -5,6 +6,7 @@
 #include "JITDebug.h"
 
 #define MAX_WORDS 2048
+#define YIELD_NUMBER 512
 
 // STATIC TIMING MACROS
 // Prevents the JIT compiler from mutating the busPrefetchCount state during trace compilation.
@@ -149,7 +151,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     // EVENT QUOTA SHIELD: Prevents directly patched blocks from infinite native loops.
 	// Yields back to the C++ emulator if we've accumulated too many cycles natively.
-	*emitPtr++ = PPC_CMPWI(0, PPC_R3, 512);
+	*emitPtr++ = PPC_CMPWI(0, PPC_R3, YIELD_NUMBER);
 	u32* quotaGuard = emitPtr;
 	*emitPtr++ = PPC_BGE(0); // Patched at the end of compilation
 
@@ -1325,3 +1327,4 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
     cache.registerBlock(block);
     return block;
 }
+#endif
