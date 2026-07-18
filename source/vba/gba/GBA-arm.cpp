@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "GBA.h"
+#include "JITCache.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
 #include "Globals.h"
@@ -2200,6 +2201,7 @@ static void tester(void) {
 
 int armExecute()
 {
+	PROFILER_START_TIMER(armTimeStart);
 	do {
 		if( cheatsEnabled ) {
 			cpuMasterCodeCheck();
@@ -2526,8 +2528,10 @@ int armExecute()
                 localTicks = clockTicks; // Extract resulting global payload
             }
 
-            if (localTicks < 0)
-                return 0;
+            if (localTicks < 0) {
+            	PROFILER_ADD_TIME(timeSpentARM, armTimeStart);
+            	return 0;
+            }
             if (localTicks == 0)
                 localTicks = 1 + codeTicksAccessSeq32(oldArmNextPC);
 
@@ -2539,6 +2543,6 @@ int armExecute()
         }
 
     } while (cpuTotalTicks < cpuNextEvent && armState && !holdState && !SWITicks);
-
+	PROFILER_ADD_TIME(timeSpentARM, armTimeStart);
     return 1;
 }

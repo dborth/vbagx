@@ -1605,6 +1605,8 @@ int instrCount = 0;
 #endif
 
 int thumbExecute() {
+    PROFILER_START_TIMER(thumbTimeStart);
+
     do {
         u32 pc = armNextPC;
         BasicBlock* block = jitCache.getBlock(pc);
@@ -1700,7 +1702,11 @@ int thumbExecute() {
         (*thumbInsnTable[opcode>>6])(opcode);
         int localTicks = clockTicks;
 
-        if (localTicks < 0) return 0;
+        if (localTicks < 0) {
+            PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart);
+            return 0;
+        }
+
         if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
         cpuTotalTicks += localTicks;
@@ -1711,6 +1717,7 @@ int thumbExecute() {
         PROFILER_ADD_TIME(timeSpentFallback, execFallbackStart);
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
+    PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart);
     return 1;
 }
 #else

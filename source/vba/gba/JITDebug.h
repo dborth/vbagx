@@ -2,16 +2,16 @@
 #define JIT_DEBUGLOG_H
 
 #ifndef NO_JIT_COMPILER
-	//#define JIT_PROFILING 1
+	#define JIT_PROFILING 1
 	//#define JIT_CACHE_AND_ARENA_LOG 1
 	//#define JIT_COMPILER_DIFFERENTIAL_TESTING 1
 	//#define JIT_DEBUGSTATELOG 1
 	//#define JIT_DETAILED_LOG 1
 
+	#include <ogc/timesupp.h>
 	#include "JITDebugStateLog.h"
 	#include "JITProfiler.h"
 	#include "../common/Types.h"
-	#include <cstdarg>
 
 	struct JITRegionConfig {
 		bool enableBIOS;   // 0x00 (16KB System ROM)

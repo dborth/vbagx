@@ -3,63 +3,92 @@
 #include <stdio.h>
 #include <algorithm>
 #include <ogc/system.h>
+#include <ogc/lwp_watchdog.h>
 #include "JITDebug.h"
 
 JITStats jitStats;
 
 void JITStats::reset() {
-    jitInstructionsExecuted = 0;
-    fallbackInstructionsExecuted = 0;
-    blocksCompiled = 0;
+    timeTotalStart = gettime(); // Automatically drops anchor on JIT_RESET_LOGS()
+    timeTotalElapsed = 0;
+    timeSpentThumb = 0;
+    timeSpentARM = 0;
 
     timeSpentCompiling = 0;
 	timeSpentJIT = 0;
 	timeSpentFallback = 0;
+
+    jitInstructionsExecuted = 0;
+    fallbackInstructionsExecuted = 0;
+    blocksCompiled = 0;
 	jitInvocations = 0;
 	fallbackInvocations = 0;
-	for (int i = 0; i < 6; i++) blockLengthBins[i] = 0;
 
+	for (int i = 0; i < 6; i++) blockLengthBins[i] = 0;
     for (int i = 0; i < 1024; i++) {
         fallbackOpcodeFreq[i] = 0;
         compileBailoutFreq[i] = 0;
     }
-    for (int i = 0; i < BAILOUT_REASON_COUNT; i++) {
-        bailoutReasons[i] = 0;
-    }
+    for (int i = 0; i < BAILOUT_REASON_COUNT; i++) bailoutReasons[i] = 0;
+
     mismatchCount = 0;
     traceLogCount = 0;
 }
 
 void JITStats::print() {
+    // 1. Calculate Real-World Seconds
+    timeTotalElapsed = gettime() - timeTotalStart;
+
+    double totalSecs   = ticks_to_microsecs(timeTotalElapsed) / 1000000.0;
+    double thumbSecs   = ticks_to_microsecs(timeSpentThumb) / 1000000.0;
+    double armSecs     = ticks_to_microsecs(timeSpentARM) / 1000000.0;
+    double compileSecs = ticks_to_microsecs(timeSpentCompiling) / 1000000.0;
+    double jitSecs     = ticks_to_microsecs(timeSpentJIT) / 1000000.0;
+    double fallSecs    = ticks_to_microsecs(timeSpentFallback) / 1000000.0;
+    double otherSecs   = totalSecs - (thumbSecs + armSecs);
+
+    // 2. Calculate Percentages
+    double thumbPct  = totalSecs > 0 ? (thumbSecs / totalSecs * 100.0) : 0.0;
+    double armPct    = totalSecs > 0 ? (armSecs / totalSecs * 100.0) : 0.0;
+    double otherPct  = totalSecs > 0 ? (otherSecs / totalSecs * 100.0) : 0.0;
+
+    double compPct   = thumbSecs > 0 ? (compileSecs / thumbSecs * 100.0) : 0.0;
+    double execPct   = thumbSecs > 0 ? (jitSecs / thumbSecs * 100.0) : 0.0;
+    double interpPct = thumbSecs > 0 ? (fallSecs / thumbSecs * 100.0) : 0.0;
+
+    // 3. Print the Hierarchical Time Breakdown
+	JIT_LOG("\n========== JIT REAL-TIME PROFILING ==========\n");
+	JIT_LOG("Total Wall-Clock Time: %.3f seconds\n\n", totalSecs);
+
+	JIT_LOG("THUMB Execution: %.3f seconds (%.1f%% of Total)\n", thumbSecs, thumbPct);
+	JIT_LOG("  Compiling JIT: %.3f seconds (%.1f%% of THUMB)\n", compileSecs, compPct);
+	JIT_LOG("  Executing JIT: %.3f seconds (%.1f%% of THUMB)\n", jitSecs, execPct);
+	JIT_LOG("  Interpreter:   %.3f seconds (%.1f%% of THUMB)\n", fallSecs, interpPct);
+
+	JIT_LOG("\nARM Execution:   %.3f seconds (%.1f%% of Total)\n", armSecs, armPct);
+	JIT_LOG("Other / Core:    %.3f seconds (%.1f%% of Total)\n", otherSecs, otherPct);
+	JIT_LOG("---------------------------------------------\n");
+
+    // 4. Print Instruction & Hop Data
 	u64 totalInstr = jitInstructionsExecuted + fallbackInstructionsExecuted;
-	double jitPct = (double)jitInstructionsExecuted / totalInstr * 100.0;
-
-	u64 totalTime = timeSpentCompiling + timeSpentJIT + timeSpentFallback;
-	double timeCompilePct = totalTime > 0 ? ((double)timeSpentCompiling / totalTime * 100.0) : 0.0;
-	double timeJitPct = totalTime > 0 ? ((double)timeSpentJIT / totalTime * 100.0) : 0.0;
-	double timeFallbackPct = totalTime > 0 ? ((double)timeSpentFallback / totalTime * 100.0) : 0.0;
-
+	double jitInstrPct = totalInstr > 0 ? ((double)jitInstructionsExecuted / totalInstr * 100.0) : 0.0;
 	double avgBlockSize = jitInvocations > 0 ? ((double)jitInstructionsExecuted / jitInvocations) : 0.0;
-	double compilePerBlock = blocksCompiled > 0 ? ((double)timeSpentCompiling / blocksCompiled) : 0.0;
 
-	JIT_LOG("\n========== JIT PROFILING STATS ==========\n");
-
-	JIT_LOG("--- TIME DISTRIBUTION ---\n");
-	JIT_LOG("Time in Compiler: %.2f%%\n", timeCompilePct);
-	JIT_LOG("Time in JIT Exec: %.2f%%\n", timeJitPct);
-	JIT_LOG("Time in Fallback: %.2f%%\n", timeFallbackPct);
-	JIT_LOG("Avg Ticks to Compile 1 Block: %.2f\n", compilePerBlock);
-	JIT_LOG("-----------------------------------------\n");
+	double jitIPS  = jitSecs > 0  ? ((double)jitInstructionsExecuted / jitSecs) : 0.0;
+	double fallIPS = fallSecs > 0 ? ((double)fallbackInstructionsExecuted / fallSecs) : 0.0;
 
 	JIT_LOG("--- EXECUTION & HOPPING ---\n");
-	JIT_LOG("JIT Invocations (Hops in): %llu\n", jitInvocations);
-	JIT_LOG("Fallback Invocations:      %llu\n", fallbackInvocations);
-	JIT_LOG("Total Instructions:        %llu\n", totalInstr);
-	JIT_LOG("JIT Handled:               %llu (%.2f%%)\n", jitInstructionsExecuted, jitPct);
-	JIT_LOG("Fallback (Interp):         %llu (%.2f%%)\n", fallbackInstructionsExecuted, 100.0 - jitPct);
-	JIT_LOG("Average JIT Block Size:    %.2f instructions\n", avgBlockSize);
+	JIT_LOG("Total Instructions: %llu\n", totalInstr);
+	JIT_LOG("JIT Handled:        %llu (%.2f%%)\n", jitInstructionsExecuted, jitInstrPct);
+	JIT_LOG("Fallback (Interp):  %llu (%.2f%%)\n", fallbackInstructionsExecuted, 100.0 - jitInstrPct);
+	JIT_LOG("JIT Hops In:        %llu\n", jitInvocations);
+	JIT_LOG("Fallback Hops:      %llu\n", fallbackInvocations);
+	JIT_LOG("Avg JIT Block Size: %.2f instructions\n", avgBlockSize);
+	JIT_LOG("JIT Exec Speed:     %.0f instr/sec (%.2f MIPS)\n", jitIPS, jitIPS / 1000000.0);
+	JIT_LOG("Interpreter Speed:  %.0f instr/sec (%.2f MIPS)\n", fallIPS, fallIPS / 1000000.0);
 	JIT_LOG("-----------------------------------------\n");
 
+    // 5. Print Block Distribution
 	JIT_LOG("--- BLOCK SIZE DISTRIBUTION ---\n");
 	JIT_LOG("Blocks Compiled: %u\n", blocksCompiled);
 	JIT_LOG("  1 to 4   Insns: %u\n", blockLengthBins[0]);
@@ -70,6 +99,7 @@ void JITStats::print() {
 	JIT_LOG(" 65+       Insns: %u\n", blockLengthBins[5]);
 	JIT_LOG("-----------------------------------------\n");
 
+    // 6. Print Bailouts
 	JIT_LOG("Bailout Reasons:\n");
 	JIT_LOG("  Unsupported opcode:               %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_OPCODE]);
 	JIT_LOG("  Buffer Overflow:                  %u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
@@ -86,7 +116,7 @@ void JITStats::print() {
 	JIT_LOG("  No LDMIA/STMIA Regs:              %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
 	JIT_LOG("-----------------------------------------\n");
 
-	// Top 10 Fallback Executions
+	// 7. Top 10 Fallbacks
 	struct Stat { u16 bucket; u64 count; };
 	Stat topFallback[1024];
 	for (int i = 0; i < 1024; i++) {

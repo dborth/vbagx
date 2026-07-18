@@ -26,13 +26,19 @@ enum BailoutReason {
 };
 
 struct JITStats {
-	u64 jitInstructionsExecuted;
-	u64 fallbackInstructionsExecuted;
-	u32 blocksCompiled;
+    u64 timeTotalStart;
+    u64 timeTotalElapsed;
+    u64 timeSpentThumb;
+    u64 timeSpentARM;
 
 	u64 timeSpentCompiling;
 	u64 timeSpentJIT;
 	u64 timeSpentFallback;
+
+	u64 jitInstructionsExecuted;
+	u64 fallbackInstructionsExecuted;
+	u32 blocksCompiled;
+
 	u64 jitInvocations;
 	u64 fallbackInvocations;
 	u32 blockLengthBins[6];
