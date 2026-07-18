@@ -29,9 +29,6 @@
 #define PPC_REG_N PPC_R8
 #define PPC_REG_Z PPC_R9
 
-// Map GBA R0..R15 cleanly to PowerPC R14..R29
-inline int MapGBARegister(int gbaReg) { return PPC_R14 + gbaReg; }
-
 // ALU Operations
 #define PPC_ADD(rD, rA, rB)    ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (266 << 1))
 #define PPC_SUBF(rD, rA, rB)   ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (40 << 1))

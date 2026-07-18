@@ -9,6 +9,9 @@
 #include <string.h>
 #include "../common/Port.h"
 
+#define JIT_ARENA_SIZE					(1024 * 1024 * 1) // 1 MB
+#define HASH_TABLE_SIZE					8192
+
 extern "C" void ExecuteJITTrace_Return();
 
 // -------------------------------------------------------------------------
@@ -31,11 +34,9 @@ struct __attribute__((aligned(16))) BasicBlock {
 
 class JITCache {
 	private:
-		static constexpr size_t JIT_ARENA_SIZE = 512 * 1024; // 512 KB
 		u32* jitArena;
 		size_t arenaOffset;
 
-		static constexpr size_t HASH_TABLE_SIZE = 8192;
 		alignas(32) BasicBlock blockTable[HASH_TABLE_SIZE];
 
 	public:
