@@ -78,7 +78,11 @@ void JITCache::flushCache() {
 		*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R4, 1);
 		*emitPtr++ = PPC_SRWI(PPC_R12, PPC_R4, 13);
 		*emitPtr++ = PPC_XOR(PPC_R11, PPC_R11, PPC_R12);
-		*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 4, 15, 27);
+		// Dynamically calculate the Native Mask boundaries based on HASH_TABLE_SIZE
+		u32 hashBits = __builtin_ctz(HASH_TABLE_SIZE); // 8192 = 13, 32768 = 15, 65536 = 16
+		u32 maskBegin = 27 - hashBits + 1;
+
+		*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 4, maskBegin, 27);
 		*emitPtr++ = PPC_ADD(PPC_R11, PPC_R10, PPC_R11);
 
 		// 3. Miss Guard 1: PC Collision Check

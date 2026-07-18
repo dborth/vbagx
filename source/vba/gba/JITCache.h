@@ -9,8 +9,8 @@
 #include <string.h>
 #include "../common/Port.h"
 
-#define JIT_ARENA_SIZE					(1024 * 1024 * 1) // 1 MB
-#define HASH_TABLE_SIZE					8192
+#define JIT_ARENA_SIZE					(1024 * 1024 * 4) // 1 MB
+#define HASH_TABLE_SIZE					65536
 
 extern "C" void ExecuteJITTrace_Return();
 
