@@ -1,7 +1,6 @@
 #ifndef NO_JIT_COMPILER
 #ifndef JIT_PROFILER_H
 #define JIT_PROFILER_H
-#include "JITDebug.h"
 #include "../common/Port.h"
 
 static const int MAX_JIT_TRACE_CALLS = 100;

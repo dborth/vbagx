@@ -1,8 +1,8 @@
-#ifndef JIT_DEBUGLOG_H
-#define JIT_DEBUGLOG_H
+#ifndef JIT_DEBUG_H
+#define JIT_DEBUG_H
 
 #ifndef NO_JIT_COMPILER
-	#define JIT_PROFILING 1
+	//#define JIT_PROFILING 1
 	//#define JIT_CACHE_AND_ARENA_LOG 1
 	//#define JIT_COMPILER_DIFFERENTIAL_TESTING 1
 	//#define JIT_DEBUGSTATELOG 1
@@ -33,6 +33,8 @@
 	void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCycles, bool bailedOut, u32 bailoutReason);
 
 	#if JIT_PROFILING
+		#define JIT_LOG(fmt, ...) LogJIT(fmt, ##__VA_ARGS__)
+
 		#define PROFILER_START_TIMER(name) u64 name = gettime()
 		#define PROFILER_ADD_TIME(stat, name) jitStats.stat += (gettime() - (name))
 		#define PROFILER_INC(stat) jitStats.stat++
@@ -47,6 +49,8 @@
 		} while(0)
 		#define PROFILER_TRACK_FALLBACK(opcode) jitStats.fallbackOpcodeFreq[(opcode) >> 6]++
 
+		#define JIT_REGION_ALLOWED(opcode) JITRegionAllowed(opcode)
+
 		#define JIT_RESET_LOGS() do { \
 			JIT_RESET_STATS(); \
 			JIT_LOG_STATE_INIT(); \
@@ -55,11 +59,28 @@
 			JIT_PRINT_STATS(); \
 			JIT_LOG_STATE_WRITE_TO_FILE(); \
 		} while(0)
-		#define JIT_REGION_ALLOWED(opcode) JITRegionAllowed(opcode)
 
-		#define JIT_LOG(fmt, ...) \
-			LogJIT(fmt, ##__VA_ARGS__)
+		#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
+			jitStats.blocksCompiled++; \
+			JIT_LOG_BLOCK_COMPILED_DETAILS((startPC)); \
+		} while(0)
+
+		#define JIT_LOG_BAILOUT(pc, opcode, reason) do { \
+			jitStats.compileBailoutFreq[(opcode) >> 6]++; \
+			jitStats.bailoutReasons[reason]++; \
+			JIT_LOG_BAILOUT_DETAILS((pc), (opcode), #reason); \
+		} while(0)
+
+		#define JIT_LOG_EXEC(count) do { \
+			jitStats.jitInstructionsExecuted += (count); \
+		} while(0)
+
+		#define JIT_LOG_FALLBACK(opcode) do { \
+			jitStats.fallbackInstructionsExecuted++; \
+			jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
+		} while(0)
 	#endif // JIT_PROFILING
+
 
 	#if JIT_CACHE_AND_ARENA_LOG
 		#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter) do { \
@@ -116,32 +137,6 @@
 	#if JIT_COMPILER_DIFFERENTIAL_TESTING
 		#define JIT_LOG_MISMATCH(msg)														LogJITMismatch(msg)
 	#endif
-
-	#if JIT_PROFILING
-		#define JIT_RESET_STATS() jitStats.reset()
-		#define JIT_PRINT_STATS() jitStats.print()
-
-		#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
-			jitStats.blocksCompiled++; \
-			JIT_LOG_BLOCK_COMPILED_DETAILS((startPC)); \
-		} while(0)
-
-		#define JIT_LOG_BAILOUT(pc, opcode, reason) do { \
-			jitStats.compileBailoutFreq[(opcode) >> 6]++; \
-			jitStats.bailoutReasons[reason]++; \
-			JIT_LOG_BAILOUT_DETAILS((pc), (opcode), #reason); \
-		} while(0)
-
-		#define JIT_LOG_EXEC(count) do { \
-			jitStats.jitInstructionsExecuted += (count); \
-		} while(0)
-
-		#define JIT_LOG_FALLBACK(opcode) do { \
-			jitStats.fallbackInstructionsExecuted++; \
-			jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
-		} while(0)
-	#endif // JIT_PROFILING
-
 #endif // !NO_JIT_COMPILER
 
 #ifndef PROFILER_START_TIMER
@@ -187,4 +182,4 @@
 #define JIT_LOG_FALLBACK(opcode)					((void)0)
 #endif
 
-#endif // JIT_DEBUGLOG_H
+#endif // JIT_DEBUG_H

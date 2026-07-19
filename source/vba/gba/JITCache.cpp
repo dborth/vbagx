@@ -1,7 +1,5 @@
 #ifndef NO_JIT_COMPILER
 #include "JITCache.h"
-#include "JITDebug.h"
-#include "JITPPCEmitter.h"
 
 JITCache jitCache;
 

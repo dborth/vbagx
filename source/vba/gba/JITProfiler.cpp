@@ -1,10 +1,9 @@
 #ifndef NO_JIT_COMPILER
-#include "JITProfiler.h"
 #include <stdio.h>
 #include <algorithm>
 #include <ogc/system.h>
 #include <ogc/lwp_watchdog.h>
-#include "JITDebug.h"
+#include "JITCache.h"
 
 JITStats jitStats;
 

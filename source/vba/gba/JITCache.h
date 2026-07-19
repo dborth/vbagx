@@ -1,6 +1,5 @@
 #ifndef JIT_CACHE_H
 #define JIT_CACHE_H
-
 #include "JITDebug.h"
 
 #ifndef NO_JIT_COMPILER
@@ -8,6 +7,7 @@
 #include <malloc.h>
 #include <string.h>
 #include "../common/Port.h"
+#include "JITPPCEmitter.h"
 
 #define JIT_ARENA_SIZE					(1024 * 1024 * 4) // 1 MB
 #define HASH_TABLE_SIZE					65536

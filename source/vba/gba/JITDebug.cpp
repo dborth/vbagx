@@ -1,8 +1,6 @@
 #ifndef NO_JIT_COMPILER
 #include "JITDebug.h"
 
-#include "JITProfiler.h"
-
 #include <time.h>
 #include <ogc/system.h>
 #include <string>

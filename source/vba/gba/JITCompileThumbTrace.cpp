@@ -1,9 +1,7 @@
 #ifndef NO_JIT_COMPILER
 #include "JITCache.h"
-#include "JITPPCEmitter.h"
 #include "GBAinline.h"
 #include "GBAcpu.h"
-#include "JITDebug.h"
 
 #define MAX_WORDS 2048
 #define YIELD_NUMBER 512
