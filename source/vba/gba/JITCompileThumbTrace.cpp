@@ -20,6 +20,7 @@ struct RegisterState {
 	bool allocated;
 	bool dirty;
 	u8 hostReg;
+	u32 age; // Monotonic counter for LRU eviction
 } regCache[15];
 
 // --- DEFERRED BAILOUT ARCHITECTURE ---
@@ -80,14 +81,19 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		bailoutCount++;
 	};
 
-	// Initialize all GBA R0-R14 as unallocated
-	for (int i = 0; i < 15; i++) regCache[i] = {false, false, 0};
+	// Initialize all GBA R0-R14 as unallocated (with 0 age)
+	for (int i = 0; i < 15; i++) regCache[i] = {false, false, 0, 0};
 
-	// O(1) Allocation Math utilizing Broadway Hardware Intrinsic
+	u32 currentAge = 0; // Tracks register access sequence for LRU spilling
+
+	// O(1) Allocation Math utilizing Broadway Hardware Intrinsic with LRU Spilling
 	auto FindOrAllocateHostReg = [&](u8 gbaReg, u32*& ptr, bool loadFromMem) -> u8 {
 		if (gbaReg == 15) return 29;
 
-		if (regCache[gbaReg].allocated) return regCache[gbaReg].hostReg;
+		if (regCache[gbaReg].allocated) {
+			regCache[gbaReg].age = ++currentAge; // Update age on Cache Hit
+			return regCache[gbaReg].hostReg;
+		}
 
 		u32 inUseMask = 0;
 		for (int i = 0; i < 15; i++) {
@@ -101,23 +107,32 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		if (freeMask != 0) {
 			freeReg = 31 - __builtin_clz(freeMask); // O(1) hardware evaluation
 		} else {
-			// Register Spilling Protocol
+			// LRU Register Spilling Protocol
+			u32 oldestAge = 0xFFFFFFFF;
+			int spillTarget = -1;
+
+			// Scan for the Least Recently Used register
 			for (int i = 0; i < 15; i++) {
-				if (regCache[i].allocated) {
-					if (regCache[i].dirty) {
-						*ptr++ = PPC_STW(regCache[i].hostReg, 14, i * 4);
-					}
-					regCache[i].allocated = false;
-					regCache[i].dirty = false;
-					freeReg = regCache[i].hostReg;
-					break;
+				if (regCache[i].allocated && regCache[i].age < oldestAge) {
+					oldestAge = regCache[i].age;
+					spillTarget = i;
 				}
 			}
+
+			// Evict the LRU register
+			if (regCache[spillTarget].dirty) {
+				*ptr++ = PPC_STW(regCache[spillTarget].hostReg, 14, spillTarget * 4);
+			}
+			regCache[spillTarget].allocated = false;
+			regCache[spillTarget].dirty = false;
+			freeReg = regCache[spillTarget].hostReg;
 		}
 
+		// Claim the free (or freshly evicted) host register
 		regCache[gbaReg].allocated = true;
 		regCache[gbaReg].dirty = false;
 		regCache[gbaReg].hostReg = freeReg;
+		regCache[gbaReg].age = ++currentAge; // Update age on Allocation
 
 		if (loadFromMem) *ptr++ = PPC_LWZ(freeReg, 14, gbaReg * 4);
 
