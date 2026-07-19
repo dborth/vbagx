@@ -1567,7 +1567,7 @@ int thumbExecute() {
 						appendToMsg("  [NOTE] Interpreter entered ARM mode during catch-up - this comparison reflects a shadow-harness blind spot (Thumb-only catch-up can't follow a real mode switch), not a JIT bug. The JIT itself bails cleanly at the BX in this case.\n");
 					}
 
-					JIT_LOG_MISMATCH(assembledMsg.c_str());
+					JIT_LOG_MISMATCH(assembledMsg);
 				}
 
 				if(cppLocalTicks < 0) {
