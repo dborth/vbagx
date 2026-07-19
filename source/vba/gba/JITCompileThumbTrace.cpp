@@ -5,6 +5,7 @@
 
 #define MAX_WORDS 2048
 #define YIELD_NUMBER 512
+#define MAX_BAILOUTS 256
 #define MAX_BAILOUT_STUB_WORDS 19   // COMP_REVERT_SP(1) + up to 14 STWs + 4-word return
 #define EPILOGUE_RESERVE_WORDS 16   // default epilogue + quota-shield stub
 
@@ -51,7 +52,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		return cache.registerBlock(startPC, 0, nullptr);
 	}
 
-	DeferredBailout bailouts[64];
+	DeferredBailout bailouts[MAX_BAILOUTS];
 	u32 bailoutCount = 0;
 
 	u32 arenaOffsetStart = 0;
@@ -68,7 +69,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	bool endBlock = false;
 
 	auto RegisterBailout = [&](u32* bPtr, BailoutCond cond, u32 bPC, u32 bCycles, CompType comp = COMP_NONE, u32 compArg = 0) {
-		if (bailoutCount >= 64) return; // Buffer overflow safety
+		if (bailoutCount >= 256) { // Buffer overflow safety
+			// Patch the uninitialized hole with a trap to prevent the CPU from executing random memory
+			*bPtr = 0x7FE00008; // PPC 'trap' instruction
+			endBlock = true;
+			return;
+		}
 		bailouts[bailoutCount].branchPtr = bPtr;
 		bailouts[bailoutCount].cond = cond;
 		bailouts[bailoutCount].pc = bPC;
@@ -1160,7 +1166,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			// 5. Update SP (POP only)
 			if (isPop) {
-				*emitPtr++ = PPC_ADDI(hostSp, hostSp, numRegs * 4);
+				// Safely re-fetch the current physical location of SP in case the LRU evicted it mid-loop
+				u32 currentHostSp = WriteGBAReg(13, emitPtr, false);
+				*emitPtr++ = PPC_ADDI(currentHostSp, currentHostSp, numRegs * 4);
 			}
 
 			// 6. Branch out
@@ -1490,6 +1498,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			if (bailouts[i].snapshot[13].allocated) {
 				u8 snapSp = bailouts[i].snapshot[13].hostReg;
 				*emitPtr++ = PPC_ADDI(snapSp, snapSp, bailouts[i].compArg);
+
+				// DEFENSIVE SHIELD: Force serialization to memory since we just modified it natively
+				bailouts[i].snapshot[13].dirty = true;
 			}
 		}
 
