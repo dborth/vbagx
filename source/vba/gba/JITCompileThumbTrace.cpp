@@ -3,9 +3,10 @@
 #include "GBAinline.h"
 #include "GBAcpu.h"
 
+#define MAX_INSTRUCTIONS 32
 #define MAX_WORDS 2048
-#define YIELD_NUMBER 512
-#define MAX_BAILOUTS 256
+#define YIELD_NUMBER 256
+#define MAX_BAILOUTS 128
 #define MAX_BAILOUT_STUB_WORDS 26   // 1 (comp) + 5 (lazy flags) + 15 (registers) + 5 (return sequence)
 #define EPILOGUE_RESERVE_WORDS 64   // Heavy prefetch sync + full lazy register/flag flushes + quota guard stubs
 
@@ -359,7 +360,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*branchSkip = PPC_B((u32)((ptr - branchSkip) * 4));
 	};
 
-    while (!endBlock && instrCount < 64) {
+    while (!endBlock && instrCount < MAX_INSTRUCTIONS) {
     	// BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
     	if (arenaAllocated && (emitPtr - blockStart) > (s32)(MAX_WORDS - EPILOGUE_RESERVE_WORDS - bailoutCount * MAX_BAILOUT_STUB_WORDS)) {
     	    endBlock = true;
