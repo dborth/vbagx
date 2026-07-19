@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string>
 #include <wiiuse/wpad.h>
 #include <sys/dir.h>
 #include <malloc.h>
@@ -790,9 +789,20 @@ bool AutoloadGame(char* filepath, char* filename) {
 	ResetBrowser();
 
 	selectLoadedFile = 1;
-	std::string dir(filepath);
-	dir.assign(&dir[dir.find_last_of(":") + 2]);
-	strncpy(GCSettings.LoadFolder, dir.c_str(), sizeof(GCSettings.LoadFolder));
+	char *colon = strrchr(filepath, ':');
+	if (!colon) {
+		return false;
+	}
+
+	size_t colon_offset = (size_t)(colon - filepath);
+	size_t total_len = strlen(filepath);
+	if (colon_offset + 2 > total_len) {
+		return false;
+	}
+
+	const char *dirPtr = colon + 2;
+	snprintf(GCSettings.LoadFolder, sizeof(GCSettings.LoadFolder), "%s", dirPtr);
+
 	OpenGameList();
 
 	for(int i = 0; i < browser.numEntries; i++) {
@@ -809,8 +819,5 @@ bool AutoloadGame(char* filepath, char* filename) {
 			break;
 		}
 	}
-	if(BrowserLoadFile() > 0) {
-		return true;
-	}
-	return false;
+	return (BrowserLoadFile() > 0);
 }

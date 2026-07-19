@@ -1515,22 +1515,34 @@ int thumbExecute() {
 					};
 					u16 startOpcode = CPUReadHalfWord(pc);
 
-					static std::string assembledMsg;
-					static char tempBuf[1024];
-					assembledMsg.clear();
+					static char assembledMsg[4096];
+					char *ptr = assembledMsg;
+					size_t remaining = sizeof(assembledMsg);
+					assembledMsg[0] = '\0';
 
 					auto appendToMsg = [&](const char* format, ...) {
 						va_list args;
 						va_start(args, format);
-						vsnprintf(tempBuf, sizeof(tempBuf), format, args);
+						int written = vsnprintf(ptr, remaining, format, args);
 						va_end(args);
-						assembledMsg.append(tempBuf);
+
+						if (written > 0) {
+							if ((size_t)written >= remaining) {
+								// Buffer filled; clamp pointer to the end and halt further writes
+								ptr += remaining - 1;
+								remaining = 1;
+							} else {
+								// Success; advance tracking states safely
+								ptr += written;
+								remaining -= (size_t)written;
+							}
+						}
 					};
 
 					appendToMsg("StartPC: 0x%08X | Trace Length: %u | Opcode: 0x%04X\n", pc, block->length, startOpcode);
-					appendToMsg("Initial Flags: N=%u Z=%u C=%u V=%u\n", savedN, savedZ, savedC, savedV);
+					appendToMsg("Initial Flags: N=%u Z=%u C=%u V=%u\n", savedFlags.N, savedFlags.Z, savedFlags.C, savedFlags.V);
 					appendToMsg("JIT Result:  NextPC=0x%08X | Cycles=%u | Flags=(N:%u Z:%u C:%u V:%u)\n",
-						jitResult.nextPC, jitResult.cycles, jitN, jitZ, jitC, jitV);
+						jitResult.nextPC, jitResult.cycles, jitFlags.N, jitFlags.Z, jitFlags.C, jitFlags.V);
 					appendToMsg("C++ Result:  NextPC=0x%08X | Cycles=%d | Flags=(N:%u Z:%u C:%u V:%u)\n",
 							armNextPC, cppCycles, gbaFlags.N, gbaFlags.Z, gbaFlags.C, gbaFlags.V);
 
