@@ -1276,11 +1276,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			if (isPop && Rbit) {
 				// POP PC: We must exit the block dynamically
 
+				// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
+				// Extract PC into R4 BEFORE flushing, as FlushDirtyFlags clobbers R12
+				*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
+
 				FlushDirtyFlags(emitPtr);
 				FlushDirtyRegisters(emitPtr);
-
-				// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
-				*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
 
 				u32 takenPenalty = numRegs + STATIC_CODE_TICKS_16(currentPC) * 2 + 3;
 				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + takenPenalty, chunkStartPC);
