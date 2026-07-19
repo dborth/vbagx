@@ -52,11 +52,11 @@
 		#define JIT_REGION_ALLOWED(opcode) JITRegionAllowed(opcode)
 
 		#define JIT_RESET_LOGS() do { \
-			JIT_RESET_STATS(); \
+			jitStats.reset(); \
 			JIT_LOG_STATE_INIT(); \
 		} while(0)
 		#define JIT_OUTPUT_LOGS() do { \
-			JIT_PRINT_STATS(); \
+			jitStats.print(); \
 			JIT_LOG_STATE_WRITE_TO_FILE(); \
 		} while(0)
 
