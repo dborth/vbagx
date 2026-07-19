@@ -6,8 +6,8 @@
 #define MAX_WORDS 2048
 #define YIELD_NUMBER 512
 #define MAX_BAILOUTS 256
-#define MAX_BAILOUT_STUB_WORDS 19   // COMP_REVERT_SP(1) + up to 14 STWs + 4-word return
-#define EPILOGUE_RESERVE_WORDS 16   // default epilogue + quota-shield stub
+#define MAX_BAILOUT_STUB_WORDS 26   // 1 (comp) + 5 (lazy flags) + 15 (registers) + 5 (return sequence)
+#define EPILOGUE_RESERVE_WORDS 64   // Heavy prefetch sync + full lazy register/flag flushes + quota guard stubs
 
 // STATIC TIMING MACROS
 // Prevents the JIT compiler from mutating the busPrefetchCount state during trace compilation.
@@ -15,6 +15,18 @@
 #define STATIC_CODE_TICKS_16(addr)    memoryWait[((addr) >> 24) & 15]
 #define STATIC_DATA_TICKS_32(addr)    memoryWait32[((addr) >> 24) & 15]
 #define STATIC_DATA_TICKS_16(addr)    memoryWait[((addr) >> 24) & 15]
+
+// --- LAZY FLAG TRACKER STATE ---
+#define FLAG_N 0
+#define FLAG_Z 1
+#define FLAG_C 2
+#define FLAG_V 3
+
+struct FlagState {
+	bool allocated;
+	bool dirty;
+	u8 hostReg;
+} flagCache[4];
 
 // --- LAZY REGISTER TRACKER STATE ---
 struct RegisterState {
@@ -33,7 +45,8 @@ struct DeferredBailout {
 	BailoutCond cond;
 	u32 pc;
 	u32 cycles;
-	RegisterState snapshot[15];
+	RegisterState registerSnapshot[15];
+	FlagState flagSnapshot[4];
 	CompType comp;
 	u32 compArg;
 };
@@ -82,9 +95,60 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		bailouts[bailoutCount].comp = comp;
 		bailouts[bailoutCount].compArg = compArg;
 
+		for (int i = 0; i < 4; i++) bailouts[bailoutCount].flagSnapshot[i] = flagCache[i];
 		// Snapshot the register state BEFORE any subsequent execution modifies it
-		for (int i = 0; i < 15; i++) bailouts[bailoutCount].snapshot[i] = regCache[i];
+		for (int i = 0; i < 15; i++) bailouts[bailoutCount].registerSnapshot[i] = regCache[i];
 		bailoutCount++;
+	};
+
+	// Initialize flag cache natively mapped to their dedicated GPRs
+	flagCache[FLAG_N] = {false, false, PPC_REG_N};
+	flagCache[FLAG_Z] = {false, false, PPC_REG_Z};
+	flagCache[FLAG_C] = {false, false, PPC_REG_C};
+	flagCache[FLAG_V] = {false, false, PPC_REG_V};
+
+	auto ReadFlag = [&](u8 flagIdx, u32*& ptr) -> u8 {
+		if (flagCache[flagIdx].allocated) return flagCache[flagIdx].hostReg;
+
+		// Lazy load: Stack frame offset 84(r1) securely holds the flags array pointer
+		*ptr++ = PPC_LWZ(PPC_R12, 1, 84);
+		*ptr++ = PPC_LWZ(flagCache[flagIdx].hostReg, PPC_R12, flagIdx * 4);
+		flagCache[flagIdx].allocated = true;
+
+		return flagCache[flagIdx].hostReg;
+	};
+
+	auto WriteFlag = [&](u8 flagIdx) -> u8 {
+		flagCache[flagIdx].allocated = true;
+		flagCache[flagIdx].dirty = true;
+		return flagCache[flagIdx].hostReg;
+	};
+
+	auto FlushDirtyFlags = [&](u32*& ptr) {
+		bool ptrLoaded = false;
+		for (int i = 0; i < 4; i++) {
+			if (flagCache[i].allocated && flagCache[i].dirty) {
+				if (!ptrLoaded) {
+					*ptr++ = PPC_LWZ(PPC_R12, 1, 84);
+					ptrLoaded = true;
+				}
+				*ptr++ = PPC_STW(flagCache[i].hostReg, PPC_R12, i * 4);
+				flagCache[i].dirty = false;
+			}
+		}
+	};
+
+	auto EmitDirtyFlagFlush = [&](u32*& ptr) {
+		bool ptrLoaded = false;
+		for (int i = 0; i < 4; i++) {
+			if (flagCache[i].allocated && flagCache[i].dirty) {
+				if (!ptrLoaded) {
+					*ptr++ = PPC_LWZ(PPC_R12, 1, 84);
+					ptrLoaded = true;
+				}
+				*ptr++ = PPC_STW(flagCache[i].hostReg, PPC_R12, i * 4);
+			}
+		}
 	};
 
 	// Initialize all GBA R0-R14 as unallocated (with 0 age)
@@ -295,8 +359,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*branchSkip = PPC_B((u32)((ptr - branchSkip) * 4));
 	};
 
-    JIT_LOG_BLOCK_COMPILED(startPC);
-
     while (!endBlock && instrCount < 64) {
     	// BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
     	if (arenaAllocated && (emitPtr - blockStart) > (s32)(MAX_WORDS - EPILOGUE_RESERVE_WORDS - bailoutCount * MAX_BAILOUT_STUB_WORDS)) {
@@ -307,7 +369,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
     	u16 opcode = CPUReadHalfWord(currentPC);
 
-
     	// THUMB Formats 1, 2, 3, 4 - Native ALU (Shifts, Add, Sub, Mov, Cmp)
 		if ((opcode & 0xC000) == 0x0000 || (opcode & 0xFC00) == 0x4000) {
 			// Format 3: Move, Compare, Add, Subtract Immediate
@@ -316,19 +377,22 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			    u8 rd = (opcode >> 8) & 0x07;
 			    u8 imm = opcode & 0xFF;
 			    
-			    static const char* fmt[] = { "MOV", "CMP", "ADD", "SUB" };
-				JIT_LOG_INSN_COMPILED(currentPC, opcode, "%s R%u, #0x%02X", fmt[op], rd, imm);
+			    //static const char* fmt[] = { "MOV", "CMP", "ADD", "SUB" };
+				//JIT_LOG_INSN_COMPILED(currentPC, opcode, "%s R%u, #0x%02X", fmt[op], rd, imm);
 
 			    EnsureArenaAllocated();
 
 			    if (op == 0) { // MOV
-			        // Optimization: Full overwrite skips the underlying LWZ fetch
-			        u32 hostRd = WriteGBAReg(rd, emitPtr, true);
+					// Optimization: Full overwrite skips the underlying LWZ fetch
+					u32 hostRd = WriteGBAReg(rd, emitPtr, true);
 
-			        *emitPtr++ = PPC_LI(hostRd, imm);
-			        *emitPtr++ = PPC_LI(PPC_REG_N, 0);
-			        *emitPtr++ = PPC_LI(PPC_REG_Z, (imm == 0) ? 1 : 0);
-			    } else {
+					u8 fN = WriteFlag(FLAG_N);
+					u8 fZ = WriteFlag(FLAG_Z);
+
+					*emitPtr++ = PPC_LI(hostRd, imm);
+					*emitPtr++ = PPC_LI(fN, 0);
+					*emitPtr++ = PPC_LI(fZ, (imm == 0) ? 1 : 0);
+				} else {
 			        u32 hostRd = ReadGBAReg(rd, emitPtr);
 			        *emitPtr++ = PPC_LI(PPC_R12, imm);
 
@@ -343,16 +407,20 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			        }
 
 			        // Extract Hardware C and V Flags from XER natively
+			        u8 fC = WriteFlag(FLAG_C);
+					u8 fV = WriteFlag(FLAG_V);
 			        *emitPtr++ = PPC_MFXER(PPC_R10);
-			        *emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R10, 3, 31, 31);
-			        *emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R10, 2, 31, 31);
+			        *emitPtr++ = PPC_RLWINM(fC, PPC_R10, 3, 31, 31);
+			        *emitPtr++ = PPC_RLWINM(fV, PPC_R10, 2, 31, 31);
 
 			        // Extract N and Z Flags
+			        u8 fN = WriteFlag(FLAG_N);
+					u8 fZ = WriteFlag(FLAG_Z);
 			        u32 flagSrc = (op == 1) ? PPC_R11 : hostRd;
-			        *emitPtr++ = PPC_SRWI(PPC_REG_N, flagSrc, 31);
-			        *emitPtr++ = PPC_CNTLZW(PPC_REG_Z, flagSrc);
+			        *emitPtr++ = PPC_SRWI(fN, flagSrc, 31);
+			        *emitPtr++ = PPC_CNTLZW(fZ, flagSrc);
 					// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
-			        *emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+			        *emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 			    }
 			    chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
@@ -382,15 +450,19 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				else                        *emitPtr++ = PPC_SUBFCO(hostRd, PPC_R12, hostRs); // SUB (Rs - R12)
 
 				// Extract Hardware C and V Flags from XER (Branchless)
+				u8 fC = WriteFlag(FLAG_C);
+				u8 fV = WriteFlag(FLAG_V);
 				*emitPtr++ = PPC_MFXER(PPC_R11);
-				*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31); // IBM Bit 2 (CA) -> Bit 31
-				*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31); // IBM Bit 1 (OV) -> Bit 31
+				*emitPtr++ = PPC_RLWINM(fC, PPC_R11, 3, 31, 31); // IBM Bit 2 (CA) -> Bit 31
+				*emitPtr++ = PPC_RLWINM(fV, PPC_R11, 2, 31, 31); // IBM Bit 1 (OV) -> Bit 31
 
 				// Extract N and Z Flags
-				*emitPtr++ = PPC_SRWI(PPC_REG_N, hostRd, 31);
-				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, hostRd);
+				u8 fN = WriteFlag(FLAG_N);
+				u8 fZ = WriteFlag(FLAG_Z);
+				*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
+				*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
 				// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
-				*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+				*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
@@ -411,32 +483,37 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_OR(hostRd, hostRs, hostRs); // MOV
 					} else {
 						// Correct IBM Bit-Math: Rotate Left by (offset)
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, hostRs, offset, 31, 31);
+						u8 fC = WriteFlag(FLAG_C);
+						*emitPtr++ = PPC_RLWINM(fC, hostRs, offset, 31, 31);
 						*emitPtr++ = PPC_RLWINM(hostRd, hostRs, offset, 0, 31 - offset);
 					}
 				}
 				else if (op == 1) { // LSR
 					if (offset == 0) {
 						// LSR #32: ARM bit 31 (IBM bit 0) goes to carry. Rotate Left by 1.
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, hostRs, 1, 31, 31);
+						u8 fC = WriteFlag(FLAG_C);
+						*emitPtr++ = PPC_RLWINM(fC, hostRs, 1, 31, 31);
 						*emitPtr++ = PPC_LI(hostRd, 0);
 					} else {
 						// Correct IBM Bit-Math: Rotate Left by (33 - offset) & 31
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, hostRs, (33 - offset) & 31, 31, 31);
+						u8 fC = WriteFlag(FLAG_C);
+						*emitPtr++ = PPC_RLWINM(fC, hostRs, (33 - offset) & 31, 31, 31);
 						*emitPtr++ = PPC_SRWI(hostRd, hostRs, offset);
 					}
 				}
 				else if (op == 2) { // ASR
 					if (offset == 0) {
 						// ASR #32: ARM bit 31 (IBM bit 0) goes to carry. Rotate Left by 1.
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, hostRs, 1, 31, 31);
+						u8 fC = WriteFlag(FLAG_C);
+						*emitPtr++ = PPC_RLWINM(fC, hostRs, 1, 31, 31);
 
 						// Protect host XER CA flag from being clobbered by srawi
 						*emitPtr++ = PPC_MFXER(PPC_R10);
 						*emitPtr++ = PPC_SRAWI(hostRd, hostRs, 31);
 						*emitPtr++ = PPC_MTXER(PPC_R10);
 					} else {
-						*emitPtr++ = PPC_RLWINM(PPC_REG_C, hostRs, (33 - offset) & 31, 31, 31);
+						u8 fC = WriteFlag(FLAG_C);
+						*emitPtr++ = PPC_RLWINM(fC, hostRs, (33 - offset) & 31, 31, 31);
 
 						// Protect host XER CA flag from being clobbered by srawi
 						*emitPtr++ = PPC_MFXER(PPC_R10);
@@ -446,10 +523,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 
 				// Extract N and Z Flags natively from the host register
-				*emitPtr++ = PPC_SRWI(PPC_REG_N, hostRd, 31);
-				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, hostRd);
+				u8 fN = WriteFlag(FLAG_N);
+				u8 fZ = WriteFlag(FLAG_Z);
+				*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
+				*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
 				// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
-				*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+				*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 				
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
@@ -466,13 +545,17 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					*emitPtr++ = PPC_SUBFCO(PPC_R12, hostRs, hostRd); // R12 = Rd - Rs
 
+					u8 fC = WriteFlag(FLAG_C);
+					u8 fV = WriteFlag(FLAG_V);
 					*emitPtr++ = PPC_MFXER(PPC_R11);
-					*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31);
-					*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31);
+					*emitPtr++ = PPC_RLWINM(fC, PPC_R11, 3, 31, 31);
+					*emitPtr++ = PPC_RLWINM(fV, PPC_R11, 2, 31, 31);
 
-					*emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
-					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
-					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+					u8 fN = WriteFlag(FLAG_N);
+					u8 fZ = WriteFlag(FLAG_Z);
+					*emitPtr++ = PPC_SRWI(fN, PPC_R12, 31);
+					*emitPtr++ = PPC_CNTLZW(fZ, PPC_R12);
+					*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
@@ -487,9 +570,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					if (op == 14) *emitPtr++ = PPC_ANDC(hostRd, hostRd, hostRs); // BIC
 
 					// Extract N and Z Flags
-					*emitPtr++ = PPC_SRWI(PPC_REG_N, hostRd, 31);
-					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, hostRd);
-					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+					u8 fN = WriteFlag(FLAG_N);
+					u8 fZ = WriteFlag(FLAG_Z);
+					*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
+					*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
+					*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				} else if (op == 9) { // NEG (Rd = 0 - Rs)
@@ -501,14 +586,18 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_SUBFCO(hostRd, hostRs, PPC_R12); // Rd = R12 (0) - Rs
 
 					// Extract Hardware C and V Flags natively from XER
+					u8 fC = WriteFlag(FLAG_C);
+					u8 fV = WriteFlag(FLAG_V);
 					*emitPtr++ = PPC_MFXER(PPC_R11);
-					*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R11, 3, 31, 31);
-					*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R11, 2, 31, 31);
+					*emitPtr++ = PPC_RLWINM(fC, PPC_R11, 3, 31, 31);
+					*emitPtr++ = PPC_RLWINM(fV, PPC_R11, 2, 31, 31);
 
 					// Extract N and Z Flags
-					*emitPtr++ = PPC_SRWI(PPC_REG_N, hostRd, 31);
-					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, hostRd);
-					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+					u8 fN = WriteFlag(FLAG_N);
+					u8 fZ = WriteFlag(FLAG_Z);
+					*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
+					*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
+					*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
@@ -520,9 +609,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_NOR(hostRd, hostRs, hostRs);
 
 					// MVN only updates N and Z
-					*emitPtr++ = PPC_SRWI(PPC_REG_N, hostRd, 31);
-					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, hostRd);
-					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+					u8 fN = WriteFlag(FLAG_N);
+					u8 fZ = WriteFlag(FLAG_Z);
+					*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
+					*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
+					*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
@@ -533,9 +624,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					*emitPtr++ = PPC_AND(PPC_R12, hostRd, hostRs); // R12 = Rd & Rs
 
-					*emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
-					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
-					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+					u8 fN = WriteFlag(FLAG_N);
+					u8 fZ = WriteFlag(FLAG_Z);
+					*emitPtr++ = PPC_SRWI(fN, PPC_R12, 31);
+					*emitPtr++ = PPC_CNTLZW(fZ, PPC_R12);
+					*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
@@ -568,9 +661,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R12);
 
 					// MUL only updates N and Z in Thumb
-					*emitPtr++ = PPC_SRWI(PPC_REG_N, hostRd, 31);
-					*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, hostRd);
-					*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+					u8 fN = WriteFlag(FLAG_N);
+					u8 fZ = WriteFlag(FLAG_Z);
+					*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
+					*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
+					*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 
 					// Non-sequential code-fetch table - thumb43_1 uses codeTicksAccess16
 					// (non-seq) even though MUL isn't a guest memory access; that's just
@@ -624,16 +719,20 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// PPC_SUBFCO(rD, rA, rB) computes rB - rA[cite: 2]. So R12 = regRd - regRs.
 				*emitPtr++ = PPC_SUBFCO(PPC_R12, regRs, regRd);
 
-				// Extract Hardware C and V Flags from XER (Branchless)[cite: 2]
+				// Extract Hardware C and V Flags from XER (Branchless)
+				u8 fC = WriteFlag(FLAG_C);
+				u8 fV = WriteFlag(FLAG_V);
 				*emitPtr++ = PPC_MFXER(PPC_R10);
-				*emitPtr++ = PPC_RLWINM(PPC_REG_C, PPC_R10, 3, 31, 31); // IBM Bit 2 (CA) -> Bit 31[cite: 2]
-				*emitPtr++ = PPC_RLWINM(PPC_REG_V, PPC_R10, 2, 31, 31); // IBM Bit 1 (OV) -> Bit 31[cite: 2]
+				*emitPtr++ = PPC_RLWINM(fC, PPC_R10, 3, 31, 31); // IBM Bit 2 (CA) -> Bit 31
+				*emitPtr++ = PPC_RLWINM(fV, PPC_R10, 2, 31, 31); // IBM Bit 1 (OV) -> Bit 31
 
-				// Extract N and Z Flags from the Result (PPC_R12)[cite: 2]
-				*emitPtr++ = PPC_SRWI(PPC_REG_N, PPC_R12, 31);
-				*emitPtr++ = PPC_CNTLZW(PPC_REG_Z, PPC_R12);
+				// Extract N and Z Flags from the Result (PPC_R12)
+				u8 fN = WriteFlag(FLAG_N);
+				u8 fZ = WriteFlag(FLAG_Z);
+				*emitPtr++ = PPC_SRWI(fN, PPC_R12, 31);
+				*emitPtr++ = PPC_CNTLZW(fZ, PPC_R12);
 				// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
-				*emitPtr++ = PPC_RLWINM(PPC_REG_Z, PPC_REG_Z, 27, 31, 31);
+				*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
@@ -648,7 +747,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				} else {
 					*emitPtr++ = PPC_OR(regRd, regRs, regRs);
 				}
-				
+
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
 			else if (op == 0) { // ADD
@@ -663,7 +762,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				} else {
 					*emitPtr++ = PPC_ADD(regRd, regRd, regRs);
 				}
-				
+
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 			}
 		}
@@ -673,7 +772,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			u8 rs = (opcode >> 3) & 0x0F;
 
-			// FLUSH DIRTY REGISTERS: Crucial sync before a dynamic block exit
+			// FLUSH DIRTY FLAGS AND REGISTERS: Crucial sync before a dynamic block exit
+			FlushDirtyFlags(emitPtr);
 			FlushDirtyRegisters(emitPtr);
 
 			// Protect against dynamic reads of R15 causing a stale PC desync
@@ -698,7 +798,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 			*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 			*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
-			
+
 			// Do NOT call linkerStubAddress. Return to C++ host instead.
 			s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
 			*emitPtr++ = PPC_B(returnOffset);
@@ -712,7 +812,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			u8 imm = opcode & 0xFF;
 			u32 targetAddr = ((currentPC + 4) & ~3) + (imm << 2);
 
-			JIT_LOG_INSN_COMPILED(currentPC, opcode, "LDR R%u, [PC, #0x%X] ; (0x%08X)", rd, imm, targetAddr);
+			//JIT_LOG_INSN_COMPILED(currentPC, opcode, "LDR R%u, [PC, #0x%X] ; (0x%08X)", rd, imm, targetAddr);
 
 			u8 bank = targetAddr >> 24;
 			// ONLY statically bake BIOS (0x00) and ROM (0x08-0x0D).
@@ -928,7 +1028,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					else if (accessType == 2) *emitPtr++ = PPC_STHBRX(hostRd, PPC_R10, PPC_R12);
 					else *emitPtr++ = PPC_STBZX(hostRd, PPC_R10, PPC_R12);
 				}
-				
+
 				// Non-sequential table for the code-fetch component: a data-bus access
 				// disrupts the prefetch pipeline, so the interpreter's real formula
 				// (thumb68 etc: `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2/3`)
@@ -948,7 +1048,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_TMB9_10_11_INSTR_COUNT_ZERO);
 				break;
 			}
-			
+
 			EnsureArenaAllocated();
 
 			// SP-relative loads/stores also break the prefetch stream!
@@ -1007,7 +1107,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32 hostRd = ReadGBAReg(rd, emitPtr);
 				*emitPtr++ = PPC_STWBRX(hostRd, PPC_R10, PPC_R12);
 			}
-			
+
 			// thumb90 (STR): `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2`
 			// thumb98 (LDR): `3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)`
 			// Non-sequential code-fetch table (a memory access breaks the sequential
@@ -1174,13 +1274,17 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// 6. Branch out
 			if (isPop && Rbit) {
 				// POP PC: We must exit the block dynamically
+
+				FlushDirtyFlags(emitPtr);
+				FlushDirtyRegisters(emitPtr);
+
 				// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
 				*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
 
 				u32 takenPenalty = numRegs + STATIC_CODE_TICKS_16(currentPC) * 2 + 3;
 				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
-				
+
 				// Do NOT call linkerStubAddress. Return to C++ host instead.
 				s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
 				*emitPtr++ = PPC_B(returnOffset);
@@ -1319,19 +1423,20 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			bool supported = false;
 			bool isComposite = false;
-			u32 flagReg = 0;
 			bool branchIfSet = false;
+			u32 flagReg = 0;
+			u8 fN, fZ, fC, fV;
 
 			// Map native PowerPC hardware registers to GBA condition flags
 			switch (cond) {
-				case 0x0: flagReg = PPC_REG_Z; branchIfSet = true;  supported = true; break; // EQ (Z==1)
-				case 0x1: flagReg = PPC_REG_Z; branchIfSet = false; supported = true; break; // NE (Z==0)
-				case 0x2: flagReg = PPC_REG_C; branchIfSet = true;  supported = true; break; // CS (C==1)
-				case 0x3: flagReg = PPC_REG_C; branchIfSet = false; supported = true; break; // CC (C==0)
-				case 0x4: flagReg = PPC_REG_N; branchIfSet = true;  supported = true; break; // MI (N==1)
-				case 0x5: flagReg = PPC_REG_N; branchIfSet = false; supported = true; break; // PL (N==0)
-				case 0x6: flagReg = PPC_REG_V; branchIfSet = true;  supported = true; break; // VS (V==1)
-				case 0x7: flagReg = PPC_REG_V; branchIfSet = false; supported = true; break; // VC (V==0)
+				case 0x0: flagReg = ReadFlag(FLAG_Z, emitPtr); branchIfSet = true;  supported = true; break; // EQ (Z==1)
+				case 0x1: flagReg = ReadFlag(FLAG_Z, emitPtr); branchIfSet = false; supported = true; break; // NE (Z==0)
+				case 0x2: flagReg = ReadFlag(FLAG_C, emitPtr); branchIfSet = true;  supported = true; break; // CS (C==1)
+				case 0x3: flagReg = ReadFlag(FLAG_C, emitPtr); branchIfSet = false; supported = true; break; // CC (C==0)
+				case 0x4: flagReg = ReadFlag(FLAG_N, emitPtr); branchIfSet = true;  supported = true; break; // MI (N==1)
+				case 0x5: flagReg = ReadFlag(FLAG_N, emitPtr); branchIfSet = false; supported = true; break; // PL (N==0)
+				case 0x6: flagReg = ReadFlag(FLAG_V, emitPtr); branchIfSet = true;  supported = true; break; // VS (V==1)
+				case 0x7: flagReg = ReadFlag(FLAG_V, emitPtr); branchIfSet = false; supported = true; break; // VC (V==0)
 				case 0x8: isComposite = true; branchIfSet = true;  supported = true; break;  // HI (C==1 & Z==0)
 				case 0x9: isComposite = true; branchIfSet = false; supported = true; break;  // LS (C==0 | Z==1)
 				case 0xA: isComposite = true; branchIfSet = true;  supported = true; break;  // GE (N==V)
@@ -1339,7 +1444,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				case 0xC: isComposite = true; branchIfSet = true;  supported = true; break;  // GT (Z==0 & N==V)
 				case 0xD: isComposite = true; branchIfSet = false; supported = true; break;  // LE (Z==1 | N!=V)
 			}
-			
+
 			if (supported) {
 				EnsureArenaAllocated();
 
@@ -1356,16 +1461,23 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				} else {
 					if (cond == 0x8 || cond == 0x9) {
 						// HI takes branch if (C & ~Z) == 1. LS takes branch if (C & ~Z) == 0.
-						*emitPtr++ = PPC_ANDC(PPC_R11, PPC_REG_C, PPC_REG_Z);
+						fC = ReadFlag(FLAG_C, emitPtr);
+						fZ = ReadFlag(FLAG_Z, emitPtr);
+						*emitPtr++ = PPC_ANDC(PPC_R11, fC, fZ);
 						branchIfZero = (cond == 0x9); // LS
 					} else if (cond == 0xA || cond == 0xB) {
 						// GE takes branch if (N ^ V) == 0. LT takes branch if (N ^ V) != 0.
-						*emitPtr++ = PPC_XOR(PPC_R11, PPC_REG_N, PPC_REG_V);
+						fN = ReadFlag(FLAG_N, emitPtr);
+						fV = ReadFlag(FLAG_V, emitPtr);
+						*emitPtr++ = PPC_XOR(PPC_R11, fN, fV);
 						branchIfZero = (cond == 0xA); // GE
 					} else if (cond == 0xC || cond == 0xD) {
 						// GT takes branch if Z | (N ^ V) == 0. LE takes branch if Z | (N ^ V) != 0.
-						*emitPtr++ = PPC_XOR(PPC_R11, PPC_REG_N, PPC_REG_V);
-						*emitPtr++ = PPC_OR(PPC_R11, PPC_R11, PPC_REG_Z);
+						fN = ReadFlag(FLAG_N, emitPtr);
+						fV = ReadFlag(FLAG_V, emitPtr);
+						fZ = ReadFlag(FLAG_Z, emitPtr);
+						*emitPtr++ = PPC_XOR(PPC_R11, fN, fV);
+						*emitPtr++ = PPC_OR(PPC_R11, PPC_R11, fZ);
 						branchIfZero = (cond == 0xC); // GT
 					}
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
@@ -1380,14 +1492,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
-				
-				// Emit the dirty registers WITHOUT clearing the compiler's tracking state
+
+				// Emit the dirty flags and registers WITHOUT clearing the compiler's tracking state
+				EmitDirtyFlagFlush(emitPtr);
 				EmitDirtyRegisterFlush(emitPtr);
 
 				// Synchronize Pipeline PC
 				*emitPtr++ = PPC_LIS(PPC_R29, (targetPC + 4) >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R29, PPC_R29, (targetPC + 4) & 0xFFFF);
-				
+
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
 				s32 takenStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
@@ -1436,19 +1549,20 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
-				
-				// Flush dirty registers before dynamic block exit
+
+				// Flush dirty flags and registers before dynamic block exit
+				FlushDirtyFlags(emitPtr);
 				FlushDirtyRegisters(emitPtr);
 
 				// Synchronize Pipeline PC
 				*emitPtr++ = PPC_LIS(PPC_R29, (targetPC + 4) >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R29, PPC_R29, (targetPC + 4) & 0xFFFF);
-				
+
 				*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
 				s32 takenStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
 				*emitPtr++ = PPC_BL(takenStubOffset);
-				
+
 				// BL is two THUMB halfwords (prefix + suffix), not one.
 				instrCount += 2;
 				currentPC += 4;
@@ -1495,23 +1609,35 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 		// 2. Inject compensation instructions if required (e.g., PUSH guard failure)
 		if (bailouts[i].comp == COMP_REVERT_SP) {
-			if (bailouts[i].snapshot[13].allocated) {
-				u8 snapSp = bailouts[i].snapshot[13].hostReg;
+			if (bailouts[i].registerSnapshot[13].allocated) {
+				u8 snapSp = bailouts[i].registerSnapshot[13].hostReg;
 				*emitPtr++ = PPC_ADDI(snapSp, snapSp, bailouts[i].compArg);
 
 				// DEFENSIVE SHIELD: Force serialization to memory since we just modified it natively
-				bailouts[i].snapshot[13].dirty = true;
+				bailouts[i].registerSnapshot[13].dirty = true;
 			}
 		}
 
-		// 3. Serialize the Register State strictly from the point of failure
+		// 3. Serialize the Flag State strictly from the point of failure
+		bool flagPtrLoaded = false;
+		for (int r = 0; r < 4; r++) {
+			if (bailouts[i].flagSnapshot[r].allocated && bailouts[i].flagSnapshot[r].dirty) {
+				if (!flagPtrLoaded) {
+					*emitPtr++ = PPC_LWZ(PPC_R12, 1, 84);
+					flagPtrLoaded = true;
+				}
+				*emitPtr++ = PPC_STW(bailouts[i].flagSnapshot[r].hostReg, PPC_R12, r * 4);
+			}
+		}
+
+		// 4. Serialize the Register State strictly from the point of failure
 		for (int r = 0; r < 15; r++) {
-			if (bailouts[i].snapshot[r].allocated && bailouts[i].snapshot[r].dirty) {
-				*emitPtr++ = PPC_STW(bailouts[i].snapshot[r].hostReg, 14, r * 4);
+			if (bailouts[i].registerSnapshot[r].allocated && bailouts[i].registerSnapshot[r].dirty) {
+				*emitPtr++ = PPC_STW(bailouts[i].registerSnapshot[r].hostReg, 14, r * 4);
 			}
 		}
 
-		// 4. Return to C++ Interpreter
+		// 5. Return to C++ Interpreter
 		*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, bailouts[i].cycles);
 		*emitPtr++ = PPC_LIS(PPC_R4, bailouts[i].pc >> 16);
 		*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, bailouts[i].pc & 0xFFFF);
@@ -1522,7 +1648,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	// Default Epilogue
 	EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 
-	// 1. Synchronize all modified Lazy Registers back to memory
+	// 1. Synchronize all modified Lazy Flags and Registers back to memory
+	FlushDirtyFlags(emitPtr);
 	FlushDirtyRegisters(emitPtr);
 
 	// 2. Synchronize R29 (GBA R15) so the incoming chained block inherits the correct pipeline PC

@@ -1616,6 +1616,7 @@ int thumbExecute() {
             PROFILER_START_TIMER(compileStart);
 
             block = JITCompileThumbTrace(pc, jitCache);
+            JIT_LOG_BLOCK_COMPILED(pc);
 
             PROFILER_ADD_TIME(timeSpentCompiling, compileStart);
             PROFILER_INC(blocksCompiled);

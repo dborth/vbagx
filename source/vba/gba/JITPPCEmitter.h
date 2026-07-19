@@ -17,8 +17,6 @@
 #define PPC_R11  11  // Scratch: Bank / Mask / Condition
 #define PPC_R12  12  // Scratch: Target Address / Operand
 
-#define PPC_R14  14  // Base GBA Register (GBA R0 -> PPC R14 ... GBA R15 -> PPC R29)
-
 #define PPC_R29  29
 
 #define PPC_R30_PAGES 30  // readPages Base Pointer Array (Non-volatile, no overlap with GBA registers)
