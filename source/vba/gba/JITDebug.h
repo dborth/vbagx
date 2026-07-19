@@ -23,6 +23,7 @@
 	};
 
 	bool JITRegionAllowed(u32 opcode);
+	void InitJITLog();
 	void LogJIT(const char* format, ...);
 	void WriteJITLogToFile();
 	void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags[4], u32 cycles);
@@ -52,6 +53,7 @@
 		#define JIT_REGION_ALLOWED(opcode) JITRegionAllowed(opcode)
 
 		#define JIT_RESET_LOGS() do { \
+			InitJITLog(); \
 			jitStats.reset(); \
 			JIT_LOG_STATE_INIT(); \
 		} while(0)

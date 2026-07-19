@@ -1,11 +1,11 @@
 #ifndef NO_JIT_COMPILER
 #include "JITDebug.h"
 
+#include <stdio.h>
 #include <time.h>
 #include <ogc/system.h>
-#include <string>
-#include <cstdarg>
-#include <cstdio>
+
+#include "mem2.h"
 
 static JITRegionConfig jitRegions = {
 	true,  // enableBIOS
@@ -34,13 +34,41 @@ bool JITRegionAllowed(u32 opcode) {
 // -----------------------------------------------------------------------------
 // JIT Trace Logger Buffer & Utility Method
 // -----------------------------------------------------------------------------
-static std::string g_jitLogBuffer;
-static char tmpBuffer[2048];
+static char*  jitLogBuffer   = NULL;
+static size_t jitLogCapacity = 0;
+static size_t jitLogSize     = 0;
+
+void InitJITLog() {
+	if (!jitLogBuffer) {
+		jitLogCapacity = 2 * 1024 * 1024;
+		jitLogBuffer = (char*)mem2_malloc(jitLogCapacity);
+
+		if(!jitLogBuffer) {
+			SYS_Report("no jit buffer\n");
+		}
+	}
+	
+	jitLogSize = 0;
+	if (jitLogBuffer) {
+		jitLogBuffer[0] = '\0';
+	}
+}
 
 static void vLogJITInternal(const char* format, va_list args) {
-	int written = vsnprintf(tmpBuffer, sizeof(tmpBuffer), format, args);
+	if (!jitLogBuffer || (jitLogCapacity - jitLogSize) <= 1) {
+		return;
+	}
+
+	size_t remaining = jitLogCapacity - jitLogSize;
+	int written = vsnprintf(jitLogBuffer + jitLogSize, remaining, format, args);
+
 	if (written > 0) {
-		g_jitLogBuffer.append(tmpBuffer, written);
+		if ((size_t)written >= remaining) {
+			// Buffer filled completely up to the safe bounds limit
+			jitLogSize = jitLogCapacity;
+		} else {
+			jitLogSize += written;
+		}
 	}
 }
 
@@ -52,14 +80,14 @@ void LogJIT(const char* format, ...) {
 }
 
 void LogJITMismatch(const char* message) {
-	jitStats.mismatchCount++;
-	int written = snprintf(tmpBuffer, sizeof(tmpBuffer),
-						   "==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n",
-						   jitStats.mismatchCount);
+	if (!jitLogBuffer || !message || (jitLogCapacity - jitLogSize) <= 1) {
+		return;
+	}
 
-	g_jitLogBuffer.append(tmpBuffer, written);
-	g_jitLogBuffer.append(message);
-	g_jitLogBuffer.append("========================================================================\n");
+	jitStats.mismatchCount++;
+	LogJIT("==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n", jitStats.mismatchCount);
+	LogJIT("%s", message);
+	LogJIT("========================================================================\n");
 }
 
 void LogJITBlockCompileStart(u32 startPC) {
@@ -67,13 +95,18 @@ void LogJITBlockCompileStart(u32 startPC) {
 }
 
 void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...) {
-	int written = snprintf(tmpBuffer, sizeof(tmpBuffer), "  [0x%08X] Opcode: 0x%04X | ", pc, opcode);
-    g_jitLogBuffer.append(tmpBuffer, written);
-    va_list args;
-    va_start(args, format);
-    vLogJITInternal(format, args);
-    va_end(args);
-    g_jitLogBuffer.append("\n");
+	if (!jitLogBuffer || (jitLogCapacity - jitLogSize) <= 1) {
+		return;
+	}
+
+	LogJIT("  [0x%08X] Opcode: 0x%04X | ", pc, opcode);
+
+	va_list args;
+	va_start(args, format);
+	vLogJITInternal(format, args);
+	va_end(args);
+
+	LogJIT("\n");
 }
 
 void LogJITBailout(u32 pc, u32 opcode, const char* reasonName) {
@@ -116,13 +149,17 @@ void WriteJITLogToFile() {
     FILE* logFile = fopen(logPath, "w");
     if (logFile != nullptr) {
         fprintf(logFile, "--- JIT LOG START ---\n\n");
-        fputs(g_jitLogBuffer.c_str(), logFile);
+        fputs(jitLogBuffer, logFile);
         fprintf(logFile, "--- JIT LOG END ---\n");
         fclose(logFile);
     }
 
-    // Clear buffer after writing
-    g_jitLogBuffer.clear();
-    g_jitLogBuffer.shrink_to_fit();
+	// Clear buffer after writing
+	if (jitLogBuffer) {
+		mem2_free(jitLogBuffer);
+		jitLogBuffer = NULL;
+	}
+	jitLogSize = 0;
+	jitLogCapacity = 0;
 }
 #endif
