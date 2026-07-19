@@ -345,7 +345,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*branchClamp = PPC_BLE((u32)((ptr - branchClamp) * 4));
 
 		// 3. Shift existing hits in R5 by the total wait cycles FIRST
-		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, dataWaitStateReg);
+		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, scratchReg);
 
 		// 4. Create bitmask: (1 << hits) - 1
 		// We use dataWaitStateReg as a secondary scratch to absolutely avoid the PPC_ADDI R0 trap.
