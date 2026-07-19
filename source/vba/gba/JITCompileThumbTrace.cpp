@@ -6,7 +6,7 @@
 #define MAX_INSTRUCTIONS 32
 #define MAX_WORDS 2048
 #define YIELD_NUMBER 256
-#define MAX_BAILOUTS 128
+#define MAX_BAILOUTS 256
 #define MAX_BAILOUT_STUB_WORDS 26   // 1 (comp) + 5 (lazy flags) + 15 (registers) + 5 (return sequence)
 #define EPILOGUE_RESERVE_WORDS 64   // Heavy prefetch sync + full lazy register/flag flushes + quota guard stubs
 
@@ -83,7 +83,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	bool endBlock = false;
 
 	auto RegisterBailout = [&](u32* bPtr, BailoutCond cond, u32 bPC, u32 bCycles, CompType comp = COMP_NONE, u32 compArg = 0) {
-		if (bailoutCount >= 256) { // Buffer overflow safety
+		if (bailoutCount >= MAX_BAILOUTS) { // Buffer overflow safety
 			// Patch the uninitialized hole with a trap to prevent the CPU from executing random memory
 			*bPtr = 0x7FE00008; // PPC 'trap' instruction
 			endBlock = true;
