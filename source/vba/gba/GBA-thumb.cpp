@@ -1605,6 +1605,7 @@ int instrCount = 0;
 #endif
 
 int thumbExecute() {
+	PROFILER_INC(thumbInvocations);
     PROFILER_START_TIMER(thumbTimeStart);
 
     do {

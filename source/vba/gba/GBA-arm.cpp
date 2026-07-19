@@ -2201,6 +2201,7 @@ static void tester(void) {
 
 int armExecute()
 {
+	PROFILER_INC(armInvocations);
 	PROFILER_START_TIMER(armTimeStart);
 	do {
 		if( cheatsEnabled ) {

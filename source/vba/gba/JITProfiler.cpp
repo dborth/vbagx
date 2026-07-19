@@ -20,6 +20,9 @@ void JITStats::reset() {
     jitInstructionsExecuted = 0;
     fallbackInstructionsExecuted = 0;
     blocksCompiled = 0;
+    thumbInvocations = 0;
+	armInvocations = 0;
+	swiInvocations = 0;
 	jitInvocations = 0;
 	fallbackInvocations = 0;
 
@@ -46,6 +49,11 @@ void JITStats::print() {
     double fallSecs    = ticks_to_microsecs(timeSpentFallback) / 1000000.0;
     double otherSecs   = totalSecs - (thumbSecs + armSecs);
 
+    // Calculate Invocations Per Second rates
+	double thumbInvPerSec = totalSecs > 0 ? ((double)thumbInvocations / totalSecs) : 0.0;
+	double armInvPerSec   = totalSecs > 0 ? ((double)armInvocations / totalSecs) : 0.0;
+	double swiInvPerSec   = totalSecs > 0 ? ((double)swiInvocations / totalSecs) : 0.0;
+
     // 2. Calculate Percentages
     double thumbPct  = totalSecs > 0 ? (thumbSecs / totalSecs * 100.0) : 0.0;
     double armPct    = totalSecs > 0 ? (armSecs / totalSecs * 100.0) : 0.0;
@@ -58,6 +66,11 @@ void JITStats::print() {
     // 3. Print the Hierarchical Time Breakdown
 	JIT_LOG("\n========== JIT REAL-TIME PROFILING ==========\n");
 	JIT_LOG("Total Wall-Clock Time: %.3f seconds\n\n", totalSecs);
+
+	JIT_LOG("--- MODE INVOCATIONS PER SECOND ---\n");
+	JIT_LOG("THUMB Invocations:  %llu (~%.2f/sec)\n", thumbInvocations, thumbInvPerSec);
+	JIT_LOG("ARM Invocations:    %llu (~%.2f/sec)\n", armInvocations, armInvPerSec);
+	JIT_LOG("SWI Invocations:    %llu (~%.2f/sec)\n", swiInvocations, swiInvPerSec);
 
 	JIT_LOG("THUMB Execution: %.3f seconds (%.1f%% of Total)\n", thumbSecs, thumbPct);
 	JIT_LOG("  Compiling JIT: %.3f seconds (%.1f%% of THUMB)\n", compileSecs, compPct);

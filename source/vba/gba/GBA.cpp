@@ -1280,6 +1280,7 @@ static const SWIHandler SWITable[43] = {
 // -------------------------------------------------------------------------
 void CPUSoftwareInterrupt(int comment)
 {
+	PROFILER_INC(swiInvocations);
   if (armState) comment >>= 16;
 
   if (comment == 0xfa) return;

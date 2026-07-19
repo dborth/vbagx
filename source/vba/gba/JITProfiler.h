@@ -38,6 +38,10 @@ struct JITStats {
 	u64 fallbackInstructionsExecuted;
 	u32 blocksCompiled;
 
+	u64 thumbInvocations;
+	u64 armInvocations;
+	u64 swiInvocations;
+
 	u64 jitInvocations;
 	u64 fallbackInvocations;
 	u32 blockLengthBins[6];
