@@ -42,14 +42,26 @@ typedef union {
   volatile u32 I;
 } reg_pair;
 
+struct CPUFlags {
+    u32 N;
+    u32 Z;
+    u32 C;
+    u32 V;
+};
+
+// used strictly for load/save statesave
+struct BoolCPUFlags {
+	bool N;
+	bool Z;
+	bool C;
+	bool V;
+};
+
 extern memoryMap map[256];
 extern reg_pair reg[45];
 extern u8 biosProtected[4];
 
-extern bool N_FLAG;
-extern bool Z_FLAG;
-extern bool C_FLAG;
-extern bool V_FLAG;
+extern CPUFlags gbaFlags;
 extern bool armIrqEnable;
 extern bool armState;
 extern int armMode;

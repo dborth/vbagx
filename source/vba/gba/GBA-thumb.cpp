@@ -40,37 +40,37 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
 #define POS(i) ((~(i)) >> 31)
 
 #define ADDCARRY(a, b, c) \
-  C_FLAG = (((a) & (b)) | ((a) & ~(c)) | ((b) & ~(c))) >> 31;
+  gbaFlags.C = (((a) & (b)) | ((a) & ~(c)) | ((b) & ~(c))) >> 31;
 
 #define ADDOVERFLOW(a, b, c) \
-  V_FLAG = (((a) & (b) & ~(c)) | (~(a) & ~(b) & (c))) >> 31;
+  gbaFlags.V = (((a) & (b) & ~(c)) | (~(a) & ~(b) & (c))) >> 31;
 
 #define SUBCARRY(a, b, c) \
-  C_FLAG = (((a) & ~(b)) | ((a) & ~(c)) | (~(b) & ~(c))) >> 31;
+  gbaFlags.C = (((a) & ~(b)) | ((a) & ~(c)) | (~(b) & ~(c))) >> 31;
 
 #define SUBOVERFLOW(a, b, c)\
-  V_FLAG = (((a) & ~(b) & ~(c)) | (~(a) & (b) & (c))) >> 31;
+  gbaFlags.V = (((a) & ~(b) & ~(c)) | (~(a) & (b) & (c))) >> 31;
 
-#define ADD_RD_RS_RN(N) \
+#define ADD_RD_RS_RN(num) \
    {\
      u32 lhs = reg[source].I;\
-     u32 rhs = reg[N].I;\
+     u32 rhs = reg[num].I;\
      u32 res = lhs + rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
 #ifndef ADD_RD_RS_O3
-#define ADD_RD_RS_O3(N) \
+#define ADD_RD_RS_O3(num) \
    {\
      u32 lhs = reg[source].I;\
-     u32 rhs = N;\
+     u32 rhs = num;\
      u32 res = lhs + rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
@@ -82,8 +82,8 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
      u32 rhs = (opcode & 255);\
      u32 res = lhs + rhs;\
      reg[(d)].I = res;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
@@ -92,8 +92,8 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
      u32 lhs = reg[dest].I;\
      u32 rhs = value;\
      u32 res = lhs + rhs;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
@@ -101,32 +101,32 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
    {\
      u32 lhs = reg[dest].I;\
      u32 rhs = value;\
-     u32 res = lhs + rhs + (u32)C_FLAG;\
+     u32 res = lhs + rhs + gbaFlags.C;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      ADDCARRY(lhs, rhs, res);\
      ADDOVERFLOW(lhs, rhs, res);\
    }
-#define SUB_RD_RS_RN(N) \
+#define SUB_RD_RS_RN(num) \
    {\
      u32 lhs = reg[source].I;\
-     u32 rhs = reg[N].I;\
+     u32 rhs = reg[num].I;\
      u32 res = lhs - rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
-#define SUB_RD_RS_O3(N) \
+#define SUB_RD_RS_O3(num) \
    {\
      u32 lhs = reg[source].I;\
-     u32 rhs = N;\
+     u32 rhs = num;\
      u32 res = lhs - rhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
@@ -137,24 +137,24 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
      u32 rhs = (opcode & 255);\
      u32 res = lhs - rhs;\
      reg[(d)].I = res;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
 #define MOV_RN_O8(d) \
    {\
      reg[(d)].I = opcode & 255;\
-     N_FLAG = 0;\
-     Z_FLAG = (reg[(d)].I == 0);\
+     gbaFlags.N = 0;\
+     gbaFlags.Z = (reg[(d)].I == 0);\
    }
 #define CMP_RN_O8(d) \
    {\
      u32 lhs = reg[(d)].I;\
      u32 rhs = (opcode & 255);\
      u32 res = lhs - rhs;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
@@ -162,47 +162,47 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
    {\
      u32 lhs = reg[dest].I;\
      u32 rhs = value;\
-     /* Branchless NOT for C_FLAG since it is strictly 0 or 1 */ \
-     u32 res = lhs - rhs - (C_FLAG ^ 1);\
+     /* Branchless NOT for gbaFlags.C since it is strictly 0 or 1 */ \
+     u32 res = lhs - rhs - (gbaFlags.C ^ 1);\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
 #define LSL_RD_RM_I5 \
    {\
-     C_FLAG = (reg[source].I >> (32 - shift)) & 1;\
+     gbaFlags.C = (reg[source].I >> (32 - shift)) & 1;\
      value = reg[source].I << shift;\
    }
 #define LSL_RD_RS \
    {\
-     C_FLAG = (reg[dest].I >> (32 - value)) & 1;\
+     gbaFlags.C = (reg[dest].I >> (32 - value)) & 1;\
      value = reg[dest].I << value;\
    }
 #define LSR_RD_RM_I5 \
    {\
-     C_FLAG = (reg[source].I >> (shift - 1)) & 1;\
+     gbaFlags.C = (reg[source].I >> (shift - 1)) & 1;\
      value = reg[source].I >> shift;\
    }
 #define LSR_RD_RS \
    {\
-     C_FLAG = (reg[dest].I >> (value - 1)) & 1;\
+     gbaFlags.C = (reg[dest].I >> (value - 1)) & 1;\
      value = reg[dest].I >> value;\
    }
 #define ASR_RD_RM_I5 \
    {\
-     C_FLAG = ((u32)((s32)reg[source].I >> (int)(shift - 1))) & 1;\
+     gbaFlags.C = ((u32)((s32)reg[source].I >> (int)(shift - 1))) & 1;\
      value = (u32)((s32)reg[source].I >> (int)shift);\
    }
 #define ASR_RD_RS \
    {\
-     C_FLAG = ((u32)((s32)reg[dest].I >> (int)(value - 1))) & 1;\
+     gbaFlags.C = ((u32)((s32)reg[dest].I >> (int)(value - 1))) & 1;\
      value = (u32)((s32)reg[dest].I >> (int)value);\
    }
 #define ROR_RD_RS \
    {\
-     C_FLAG = (reg[dest].I >> (value - 1)) & 1;\
+     gbaFlags.C = (reg[dest].I >> (value - 1)) & 1;\
      value = ((reg[dest].I << (32 - value)) |\
               (reg[dest].I >> value));\
    }
@@ -212,8 +212,8 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
      u32 rhs = 0;\
      u32 res = rhs - lhs;\
      reg[dest].I = res;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      SUBCARRY(rhs, lhs, res);\
      SUBOVERFLOW(rhs, lhs, res);\
    }
@@ -222,27 +222,27 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
      u32 lhs = reg[dest].I;\
      u32 rhs = value;\
      u32 res = lhs - rhs;\
-     Z_FLAG = (res == 0);\
-     N_FLAG = (res >> 31);\
+     gbaFlags.Z = (res == 0);\
+     gbaFlags.N = (res >> 31);\
      SUBCARRY(lhs, rhs, res);\
      SUBOVERFLOW(lhs, rhs, res);\
    }
-#define IMM5_INSN(OP,N) \
+#define IMM5_INSN(OP,num) \
   int dest = opcode & 0x07;\
   int source = (opcode >> 3) & 0x07;\
   u32 value;\
-  OP(N);\
+  OP(num);\
   reg[dest].I = value;\
-  N_FLAG = (value >> 31);\
-  Z_FLAG = (value == 0);
+  gbaFlags.N = (value >> 31);\
+  gbaFlags.Z = (value == 0);
 #define IMM5_INSN_0(OP) \
   int dest = opcode & 0x07;\
   int source = (opcode >> 3) & 0x07;\
   u32 value;\
   OP;\
   reg[dest].I = value;\
-  N_FLAG = (value >> 31);\
-  Z_FLAG = (value == 0);
+  gbaFlags.N = (value >> 31);\
+  gbaFlags.Z = (value == 0);
 #define IMM5_LSL(N) \
   int shift = N;\
   LSL_RD_RM_I5;
@@ -252,13 +252,13 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
   int shift = N;\
   LSR_RD_RM_I5;
 #define IMM5_LSR_0 \
-  C_FLAG = (reg[source].I >> 31);\
+  gbaFlags.C = (reg[source].I >> 31);\
   value = 0;
 #define IMM5_ASR(N) \
   int shift = N;\
   ASR_RD_RM_I5;
 #define IMM5_ASR_0 \
-  C_FLAG = (reg[source].I >> 31);\
+  gbaFlags.C = (reg[source].I >> 31);\
   value = (u32)((s32)reg[source].I >> 31);
 #ifndef THREEARG_INSN
  #define THREEARG_INSN(OP,N) \
@@ -418,8 +418,8 @@ static INSN_REGPARM void thumb40_0(u32 opcode)
 {
   int dest = opcode & 7;
   reg[dest].I &= reg[(opcode >> 3)&7].I;
-  N_FLAG = (reg[dest].I >> 31);
-  Z_FLAG = (reg[dest].I == 0);
+  gbaFlags.N = (reg[dest].I >> 31);
+  gbaFlags.Z = (reg[dest].I == 0);
 }
 
 // EOR Rd, Rs
@@ -427,8 +427,8 @@ static INSN_REGPARM void thumb40_1(u32 opcode)
 {
   int dest = opcode & 7;
   reg[dest].I ^= reg[(opcode >> 3)&7].I;
-  N_FLAG = (reg[dest].I >> 31);
-  Z_FLAG = (reg[dest].I == 0);
+  gbaFlags.N = (reg[dest].I >> 31);
+  gbaFlags.Z = (reg[dest].I == 0);
 }
 
 // LSL Rd, Rs
@@ -442,13 +442,13 @@ static INSN_REGPARM void thumb40_2(u32 opcode)
     u32 isUnder32 = (value < 32);
 
     // Branchless flag and shift evaluation using Broadway's dual IUs
-    C_FLAG = (is32 & (reg[dest].I & 1)) | (isUnder32 & ((reg[dest].I >> (32 - (value & 31))) & 1));
+    gbaFlags.C = (is32 & (reg[dest].I & 1)) | (isUnder32 & ((reg[dest].I >> (32 - (value & 31))) & 1));
     value = isUnder32 * (reg[dest].I << (value & 31));
 
     reg[dest].I = value;
   }
-  N_FLAG = (reg[dest].I >> 31);
-  Z_FLAG = (reg[dest].I == 0);
+  gbaFlags.N = (reg[dest].I >> 31);
+  gbaFlags.Z = (reg[dest].I == 0);
   clockTicks = codeTicksAccess16(armNextPC)+2;
 }
 
@@ -467,15 +467,15 @@ static INSN_REGPARM void thumb40_3(u32 opcode)
     u32 res_shifted = (val >> (shift & 0x1F)) & mask_less_32;
     reg[dest].I = (res_shifted & mask_not_0) | (val & ~mask_not_0);
 
-    // C_FLAG logic (shift == 32 yields bit 31; shift > 32 yields 0)
+    // gbaFlags.C logic (shift == 32 yields bit 31; shift > 32 yields 0)
     u32 c_shift = shift - 1;
     u32 mask_c_valid = -(u32)(c_shift < 32);
     u32 new_c = ((val >> (c_shift & 0x1F)) & 1) & mask_c_valid;
 
-    C_FLAG = (new_c & mask_not_0) | (C_FLAG & ~mask_not_0);
+    gbaFlags.C = (new_c & mask_not_0) | (gbaFlags.C & ~mask_not_0);
 
-    N_FLAG = (reg[dest].I >> 31);
-    Z_FLAG = (reg[dest].I == 0);
+    gbaFlags.N = (reg[dest].I >> 31);
+    gbaFlags.Z = (reg[dest].I == 0);
     clockTicks = codeTicksAccess16(armNextPC) + 2;
 }
 
@@ -495,15 +495,15 @@ static INSN_REGPARM void thumb41_0(u32 opcode)
 
     reg[dest].I = (res_shifted & mask_not_0) | ((u32)val & ~mask_not_0);
 
-    // C_FLAG logic: bit 31 if shift >= 32
+    // gbaFlags.C logic: bit 31 if shift >= 32
     u32 c_shift = shift - 1;
     u32 c_shift_clamped = (c_shift & mask_less_32) | (31 & ~mask_less_32);
     u32 new_c = ((u32)val >> c_shift_clamped) & 1;
 
-    C_FLAG = (new_c & mask_not_0) | (C_FLAG & ~mask_not_0);
+    gbaFlags.C = (new_c & mask_not_0) | (gbaFlags.C & ~mask_not_0);
 
-    N_FLAG = (reg[dest].I >> 31);
-    Z_FLAG = (reg[dest].I == 0);
+    gbaFlags.N = (reg[dest].I >> 31);
+    gbaFlags.Z = (reg[dest].I == 0);
     clockTicks = codeTicksAccess16(armNextPC) + 2;
 }
 
@@ -539,12 +539,12 @@ static INSN_REGPARM void thumb41_3(u32 opcode)
 
     reg[dest].I = (res_shifted & mask_not_0) | (val & ~mask_not_0);
 
-    // C_FLAG logic: for ROR, C_FLAG is always bit 31 of the result if shift != 0
+    // gbaFlags.C logic: for ROR, gbaFlags.C is always bit 31 of the result if shift != 0
     u32 new_c = (res_shifted >> 31) & 1;
-    C_FLAG = (new_c & mask_not_0) | (C_FLAG & ~mask_not_0);
+    gbaFlags.C = (new_c & mask_not_0) | (gbaFlags.C & ~mask_not_0);
 
-    N_FLAG = (reg[dest].I >> 31);
-    Z_FLAG = (reg[dest].I == 0);
+    gbaFlags.N = (reg[dest].I >> 31);
+    gbaFlags.Z = (reg[dest].I == 0);
     clockTicks = codeTicksAccess16(armNextPC) + 2;
 }
 
@@ -552,8 +552,8 @@ static INSN_REGPARM void thumb41_3(u32 opcode)
 static INSN_REGPARM void thumb42_0(u32 opcode)
 {
   u32 value = reg[opcode & 7].I & reg[(opcode >> 3) & 7].I;
-  N_FLAG = (value >> 31);
-  Z_FLAG = (value == 0);
+  gbaFlags.N = (value >> 31);
+  gbaFlags.Z = (value == 0);
 }
 
 // NEG Rd, Rs
@@ -585,8 +585,8 @@ static INSN_REGPARM void thumb43_0(u32 opcode)
 {
   int dest = opcode & 7;
   reg[dest].I |= reg[(opcode >> 3) & 7].I;
-  Z_FLAG = (reg[dest].I == 0);
-  N_FLAG = (reg[dest].I >> 31);
+  gbaFlags.Z = (reg[dest].I == 0);
+  gbaFlags.N = (reg[dest].I >> 31);
 }
 
 // MUL Rd, Rs
@@ -611,8 +611,8 @@ static INSN_REGPARM void thumb43_1(u32 opcode)
 
   busPrefetchCount = (busPrefetchCount<<clockTicks) | (0xFF>>(8-clockTicks));
   clockTicks += codeTicksAccess16(armNextPC) + 1;
-  Z_FLAG = (reg[dest].I == 0);
-  N_FLAG = (reg[dest].I >> 31);
+  gbaFlags.Z = (reg[dest].I == 0);
+  gbaFlags.N = (reg[dest].I >> 31);
 }
 
 // BIC Rd, Rs
@@ -620,8 +620,8 @@ static INSN_REGPARM void thumb43_2(u32 opcode)
 {
   int dest = opcode & 7;
   reg[dest].I &= (~reg[(opcode >> 3) & 7].I);
-  Z_FLAG = (reg[dest].I == 0);
-  N_FLAG = (reg[dest].I >> 31);
+  gbaFlags.Z = (reg[dest].I == 0);
+  gbaFlags.N = (reg[dest].I >> 31);
 }
 
 // MVN Rd, Rs
@@ -629,8 +629,8 @@ static INSN_REGPARM void thumb43_3(u32 opcode)
 {
   int dest = opcode & 7;
   reg[dest].I = ~reg[(opcode >> 3) & 7].I;
-  Z_FLAG = (reg[dest].I == 0);
-  N_FLAG = (reg[dest].I >> 31);
+  gbaFlags.Z = (reg[dest].I == 0);
+  gbaFlags.N = (reg[dest].I >> 31);
 }
 
 // High-register instructions and BX //////////////////////////////////////
@@ -1143,33 +1143,33 @@ static INSN_REGPARM void thumbC8(u32 opcode)
   }
 
 // BEQ offset
-static INSN_REGPARM void thumbD0(u32 opcode) { THUMB_BRANCH_EXEC(Z_FLAG); }
+static INSN_REGPARM void thumbD0(u32 opcode) { THUMB_BRANCH_EXEC(gbaFlags.Z); }
 // BNE offset
-static INSN_REGPARM void thumbD1(u32 opcode) { THUMB_BRANCH_EXEC(!Z_FLAG); }
+static INSN_REGPARM void thumbD1(u32 opcode) { THUMB_BRANCH_EXEC(!gbaFlags.Z); }
 // BCS offset
-static INSN_REGPARM void thumbD2(u32 opcode) { THUMB_BRANCH_EXEC(C_FLAG); }
+static INSN_REGPARM void thumbD2(u32 opcode) { THUMB_BRANCH_EXEC(gbaFlags.C); }
 // BCC offset
-static INSN_REGPARM void thumbD3(u32 opcode) { THUMB_BRANCH_EXEC(!C_FLAG); }
+static INSN_REGPARM void thumbD3(u32 opcode) { THUMB_BRANCH_EXEC(!gbaFlags.C); }
 // BMI offset
-static INSN_REGPARM void thumbD4(u32 opcode) { THUMB_BRANCH_EXEC(N_FLAG); }
+static INSN_REGPARM void thumbD4(u32 opcode) { THUMB_BRANCH_EXEC(gbaFlags.N); }
 // BPL offset
-static INSN_REGPARM void thumbD5(u32 opcode) { THUMB_BRANCH_EXEC(!N_FLAG); }
+static INSN_REGPARM void thumbD5(u32 opcode) { THUMB_BRANCH_EXEC(!gbaFlags.N); }
 // BVS offset
-static INSN_REGPARM void thumbD6(u32 opcode) { THUMB_BRANCH_EXEC(V_FLAG); }
+static INSN_REGPARM void thumbD6(u32 opcode) { THUMB_BRANCH_EXEC(gbaFlags.V); }
 // BVC offset
-static INSN_REGPARM void thumbD7(u32 opcode) { THUMB_BRANCH_EXEC(!V_FLAG); }
+static INSN_REGPARM void thumbD7(u32 opcode) { THUMB_BRANCH_EXEC(!gbaFlags.V); }
 // BHI offset
-static INSN_REGPARM void thumbD8(u32 opcode) { THUMB_BRANCH_EXEC(C_FLAG && !Z_FLAG); }
+static INSN_REGPARM void thumbD8(u32 opcode) { THUMB_BRANCH_EXEC(gbaFlags.C && !gbaFlags.Z); }
 // BLS offset
-static INSN_REGPARM void thumbD9(u32 opcode) { THUMB_BRANCH_EXEC(!C_FLAG || Z_FLAG); }
+static INSN_REGPARM void thumbD9(u32 opcode) { THUMB_BRANCH_EXEC(!gbaFlags.C || gbaFlags.Z); }
 // BGE offset
-static INSN_REGPARM void thumbDA(u32 opcode) { THUMB_BRANCH_EXEC(N_FLAG == V_FLAG); }
+static INSN_REGPARM void thumbDA(u32 opcode) { THUMB_BRANCH_EXEC(gbaFlags.N == gbaFlags.V); }
 // BLT offset
-static INSN_REGPARM void thumbDB(u32 opcode) { THUMB_BRANCH_EXEC(N_FLAG != V_FLAG); }
+static INSN_REGPARM void thumbDB(u32 opcode) { THUMB_BRANCH_EXEC(gbaFlags.N != gbaFlags.V); }
 // BGT offset
-static INSN_REGPARM void thumbDC(u32 opcode) { THUMB_BRANCH_EXEC(!Z_FLAG && (N_FLAG == V_FLAG)); }
+static INSN_REGPARM void thumbDC(u32 opcode) { THUMB_BRANCH_EXEC(!gbaFlags.Z && (gbaFlags.N == gbaFlags.V)); }
 // BLE offset
-static INSN_REGPARM void thumbDD(u32 opcode) { THUMB_BRANCH_EXEC(Z_FLAG || (N_FLAG != V_FLAG)); }
+static INSN_REGPARM void thumbDD(u32 opcode) { THUMB_BRANCH_EXEC(gbaFlags.Z || (gbaFlags.N != gbaFlags.V)); }
 
 // SWI #comment
 static INSN_REGPARM void thumbDF(u32 opcode)
@@ -1383,28 +1383,27 @@ int thumbExecute() {
                 // 1. SAVE CPU STATE BEFORE JIT TRACE
                 u32 savedRegs[16];
                 for (size_t i = 0; i < 16; i++) savedRegs[i] = reg[i].I;
-                u32 savedN = N_FLAG, savedZ = Z_FLAG, savedC = C_FLAG, savedV = V_FLAG;
+                CPUFlags savedFlags = gbaFlags;
                 u32 savedArmNextPC = armNextPC;
 				u32 savedTotalTicks = cpuTotalTicks;
 				u32 savedPrefetch[2] = { cpuPrefetch[0], cpuPrefetch[1] };
 				u32 savedBusPrefetchCount = busPrefetchCount;
 
                 // 2. RUN JIT EXECUTION
-                u32 jitFlags[4] = { (u32)N_FLAG, (u32)Z_FLAG, (u32)C_FLAG, (u32)V_FLAG };
                 JITResult jitResult;
 
                 reg[15].I = pc + 4;
-                ExecuteJITTrace(block->execute, (u32*)(void*)&reg[0].I, jitFlags, &jitResult, gbaReadPagePtrs, gbaReadPageMasks, &busPrefetchCount);
+                ExecuteJITTrace(block->execute, (u32*)(void*)&reg[0].I, (u32*)&gbaFlags, &jitResult, gbaReadPagePtrs, gbaReadPageMasks, &busPrefetchCount);
 
                 JIT_LOG_EXEC(block->length);
 
                 u32 jitRegs[16];
                 for (size_t i = 0; i < 16; i++) jitRegs[i] = reg[i].I;
-                u32 jitN = jitFlags[0], jitZ = jitFlags[1], jitC = jitFlags[2], jitV = jitFlags[3];
+                CPUFlags jitFlags = gbaFlags;
 
                 // 3. REWIND CPU STATE FOR C++ INTERPRETER
                 for (size_t i = 0; i < 16; i++) reg[i].I = savedRegs[i];
-                N_FLAG = savedN; Z_FLAG = savedZ; C_FLAG = savedC; V_FLAG = savedV;
+                gbaFlags = savedFlags;
                 armNextPC = savedArmNextPC;
 				cpuTotalTicks = savedTotalTicks;
 				cpuPrefetch[0] = savedPrefetch[0];
@@ -1497,7 +1496,7 @@ int thumbExecute() {
 				}
 
                 // Compare N, Z, C, V Flags
-				if (jitN != N_FLAG || jitZ != Z_FLAG || jitC != C_FLAG || jitV != V_FLAG) {
+				if (jitFlags.N != gbaFlags.N || jitFlags.Z != gbaFlags.Z || jitFlags.C != gbaFlags.C || jitFlags.V != gbaFlags.V) {
 					flagMismatch = true;
 					mismatch = true;
 				}
@@ -1533,7 +1532,7 @@ int thumbExecute() {
 					appendToMsg("JIT Result:  NextPC=0x%08X | Cycles=%u | Flags=(N:%u Z:%u C:%u V:%u)\n",
 						jitResult.nextPC, jitResult.cycles, jitN, jitZ, jitC, jitV);
 					appendToMsg("C++ Result:  NextPC=0x%08X | Cycles=%d | Flags=(N:%u Z:%u C:%u V:%u)\n",
-							armNextPC, cppCycles, N_FLAG, Z_FLAG, C_FLAG, V_FLAG);
+							armNextPC, cppCycles, gbaFlags.N, gbaFlags.Z, gbaFlags.C, gbaFlags.V);
 
 					appendToMsg("--- MISMATCH DETAILS ---\n");
 					for (int i = 0; i < 15; i++) {
@@ -1547,7 +1546,7 @@ int thumbExecute() {
 					}
 					if (flagMismatch) {
 						appendToMsg("  [FLAGS]   JIT=(N:%u Z:%u C:%u V:%u) vs C++=(N:%u Z:%u C:%u V:%u)\n",
-							jitN, jitZ, jitC, jitV, N_FLAG, Z_FLAG, C_FLAG, V_FLAG);
+							jitFlags.N, jitFlags.Z, jitFlags.C, jitFlags.V, gbaFlags.N, gbaFlags.Z, gbaFlags.C, gbaFlags.V);
 					}
 					if (cycleMismatch) {
 						appendToMsg("  [CYCLES]  JIT=%u vs C++=%d\n", jitResult.cycles, cppCycles);
@@ -1633,7 +1632,6 @@ int thumbExecute() {
             PROFILER_START_TIMER(execJitStart);
             PROFILER_INC(jitInvocations);
 
-            u32 flagBuffer[4] = { (u32)N_FLAG, (u32)Z_FLAG, (u32)C_FLAG, (u32)V_FLAG };
             JITResult result;
 
 			// Align reg[15].I to pc + 4 so that PC-relative reads
@@ -1643,16 +1641,10 @@ int thumbExecute() {
             JIT_LOG_TRACE_ENTRY(pc, flagBuffer);
 
 			// Execute Native Trace with flat memory maps
-            ExecuteJITTrace(block->execute, (u32*)&reg[0].I, flagBuffer, &result, gbaReadPagePtrs, gbaReadPageMasks, &busPrefetchCount);
+            ExecuteJITTrace(block->execute, (u32*)&reg[0].I, (u32*)&gbaFlags, &result, gbaReadPagePtrs, gbaReadPageMasks, &busPrefetchCount);
 
             JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
             JIT_LOG_EXEC(block->length);
-
-			// Restore updated status flags
-            N_FLAG = flagBuffer[0];
-            Z_FLAG = flagBuffer[1];
-            C_FLAG = flagBuffer[2];
-            V_FLAG = flagBuffer[3];
 
 			// Account for execution cycles accumulated by the trace block
             cpuTotalTicks += result.cycles;
@@ -1781,15 +1773,15 @@ int thumbExecute()
 				// Branchless mask: 0xFFFFFFFF if shift > 0, 0x00000000 if shift == 0
                 u32 shift_mask = -(u32)(shift != 0);
 
-				// If shift==0, C_FLAG is untouched. If shift>0, C_FLAG = bit (32-shift).
+				// If shift==0, gbaFlags.C is untouched. If shift>0, gbaFlags.C = bit (32-shift).
                 u32 new_c = (src_val >> ((32 - shift) & 0x1F)) & 1;
-                C_FLAG = (new_c & shift_mask) | (C_FLAG & ~shift_mask);
+                gbaFlags.C = (new_c & shift_mask) | (gbaFlags.C & ~shift_mask);
 
 				// Branchless value calculation
                 u32 value = ((src_val << shift) & shift_mask) | (src_val & ~shift_mask);
                 reg[dest].I = value;
-				N_FLAG = (value >> 31);
-				Z_FLAG = (value == 0);
+				gbaFlags.N = (value >> 31);
+				gbaFlags.Z = (value == 0);
                 localTicks = codeTicksAccessSeq16(armNextPC) + 1;
                 handledInline = true;
             }
@@ -1804,13 +1796,13 @@ int thumbExecute()
 				// If shift != 0, C is bit (shift-1). If shift == 0, C is bit 31.
                 u32 c_shift_nz = (shift - 1) & 0x1F;
                 u32 new_c = ((src_val >> c_shift_nz) & shift_mask) | ((src_val >> 31) & ~shift_mask);
-                C_FLAG = new_c & 1;
+                gbaFlags.C = new_c & 1;
 
 				// If shift==0, value is 0.
                 u32 value = (src_val >> shift) & shift_mask;
                 reg[dest].I = value;
-				N_FLAG = (value >> 31);
-				Z_FLAG = (value == 0);
+				gbaFlags.N = (value >> 31);
+				gbaFlags.Z = (value == 0);
                 localTicks = codeTicksAccessSeq16(armNextPC) + 1;
                 handledInline = true;
             }
@@ -1823,13 +1815,13 @@ int thumbExecute()
                 u32 shift_mask = -(u32)(shift != 0);
                 u32 c_shift_nz = (shift - 1) & 0x1F;
                 u32 new_c = (((u32)src_val >> c_shift_nz) & shift_mask) | (((u32)src_val >> 31) & ~shift_mask);
-                C_FLAG = new_c & 1;
+                gbaFlags.C = new_c & 1;
 
                 u32 sign_ext = -((u32)((u32)src_val >> 31));
                 u32 value = (((u32)(src_val >> shift)) & shift_mask) | (sign_ext & ~shift_mask);
                 reg[dest].I = value;
-				N_FLAG = (value >> 31);
-				Z_FLAG = (value == 0);
+				gbaFlags.N = (value >> 31);
+				gbaFlags.Z = (value == 0);
                 localTicks = codeTicksAccessSeq16(armNextPC) + 1;
                 handledInline = true;
             }
@@ -1853,8 +1845,8 @@ int thumbExecute()
 					ADDOVERFLOW(lhs, rhs, res);
                 }
                 reg[dest].I = res;
-				Z_FLAG = (res == 0);
-				N_FLAG = (res >> 31);
+				gbaFlags.Z = (res == 0);
+				gbaFlags.N = (res >> 31);
                 localTicks = codeTicksAccessSeq16(armNextPC) + 1;
                 handledInline = true;
             }
@@ -1862,8 +1854,8 @@ int thumbExecute()
                 int dest = (opcode >> 8) & 0x07;
                 u32 value = opcode & 0xFF;
                 reg[dest].I = value;
-				N_FLAG = 0;
-				Z_FLAG = (value == 0);
+				gbaFlags.N = 0;
+				gbaFlags.Z = (value == 0);
                 localTicks = codeTicksAccessSeq16(armNextPC) + 1;
                 handledInline = true;
             }
@@ -1872,8 +1864,8 @@ int thumbExecute()
                 u32 lhs = reg[dest].I;
                 u32 rhs = opcode & 0xFF;
                 u32 res = lhs - rhs;
-				Z_FLAG = (res == 0);
-				N_FLAG = (res >> 31);
+				gbaFlags.Z = (res == 0);
+				gbaFlags.N = (res >> 31);
 				SUBCARRY(lhs, rhs, res);
 				SUBOVERFLOW(lhs, rhs, res);
                 localTicks = codeTicksAccessSeq16(armNextPC) + 1;
@@ -1885,8 +1877,8 @@ int thumbExecute()
                 u32 rhs = opcode & 0xFF;
                 u32 res = lhs + rhs;
                 reg[dest].I = res;
-				Z_FLAG = (res == 0);
-				N_FLAG = (res >> 31);
+				gbaFlags.Z = (res == 0);
+				gbaFlags.N = (res >> 31);
 				ADDCARRY(lhs, rhs, res);
 				ADDOVERFLOW(lhs, rhs, res);
                 localTicks = codeTicksAccessSeq16(armNextPC) + 1;
@@ -1898,8 +1890,8 @@ int thumbExecute()
                 u32 rhs = opcode & 0xFF;
                 u32 res = lhs - rhs;
                 reg[dest].I = res;
-				Z_FLAG = (res == 0);
-				N_FLAG = (res >> 31);
+				gbaFlags.Z = (res == 0);
+				gbaFlags.N = (res >> 31);
 				SUBCARRY(lhs, rhs, res);
 				SUBOVERFLOW(lhs, rhs, res);
                 localTicks = codeTicksAccessSeq16(armNextPC) + 1;
@@ -2020,20 +2012,20 @@ int thumbExecute()
         else if ((opcode >> 12) == 0xD && ((opcode >> 8) & 0xF) < 0xE) {
             int cond = 0;
             switch ((opcode >> 8) & 0xF) {
-                case 0x0: cond = Z_FLAG; break;
-                case 0x1: cond = !Z_FLAG; break;
-                case 0x2: cond = C_FLAG; break;
-                case 0x3: cond = !C_FLAG; break;
-                case 0x4: cond = N_FLAG; break;
-                case 0x5: cond = !N_FLAG; break;
-                case 0x6: cond = V_FLAG; break;
-                case 0x7: cond = !V_FLAG; break;
-                case 0x8: cond = C_FLAG && !Z_FLAG; break;
-                case 0x9: cond = !C_FLAG || Z_FLAG; break;
-                case 0xA: cond = N_FLAG == V_FLAG; break;
-                case 0xB: cond = N_FLAG != V_FLAG; break;
-                case 0xC: cond = !Z_FLAG && (N_FLAG == V_FLAG); break;
-                case 0xD: cond = Z_FLAG || (N_FLAG != V_FLAG); break;
+                case 0x0: cond = gbaFlags.Z; break;
+                case 0x1: cond = !gbaFlags.Z; break;
+                case 0x2: cond = gbaFlags.C; break;
+                case 0x3: cond = !gbaFlags.C; break;
+                case 0x4: cond = gbaFlags.N; break;
+                case 0x5: cond = !gbaFlags.N; break;
+                case 0x6: cond = gbaFlags.V; break;
+                case 0x7: cond = !gbaFlags.V; break;
+                case 0x8: cond = gbaFlags.C && !gbaFlags.Z; break;
+                case 0x9: cond = !gbaFlags.C || gbaFlags.Z; break;
+                case 0xA: cond = gbaFlags.N == gbaFlags.V; break;
+                case 0xB: cond = gbaFlags.N != gbaFlags.V; break;
+                case 0xC: cond = !gbaFlags.Z && (gbaFlags.N == gbaFlags.V); break;
+                case 0xD: cond = gbaFlags.Z || (gbaFlags.N != gbaFlags.V); break;
             }
 
             localTicks = codeTicksAccessSeq16(armNextPC) + 1;

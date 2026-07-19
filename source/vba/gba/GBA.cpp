@@ -113,9 +113,6 @@ const u8 gamepakWaitState[4] =  { 4, 3, 2, 8 };
 const u8 gamepakWaitState0[2] = { 2, 1 };
 const u8 gamepakWaitState1[2] = { 4, 1 };
 const u8 gamepakWaitState2[2] = { 8, 1 };
-const bool isInRom [16]=
-  { false, false, false, false, false, false, false, false,
-    true, true, true, true, true, true, false, false };
 
 u8 memoryWait[16] =
   { 0, 0, 2, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 0 };
@@ -133,6 +130,8 @@ u8 memoryWaitSeq32[16] =
 //const u8 videoMemoryWait[16] =
 //  {0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+// needed during state save/load because we don't want to change the structure of saveGameStruct
+static BoolCPUFlags saveGameFlags = {false,false,false,false};
 
 u8 biosProtected[4];
 
@@ -421,10 +420,10 @@ variable_desc saveGameStruct[] = {
   { &dma3Dest , sizeof(u32) },
   { &fxOn, sizeof(bool) },
   { &windowOn, sizeof(bool) },
-  { &N_FLAG , sizeof(bool) },
-  { &C_FLAG , sizeof(bool) },
-  { &Z_FLAG , sizeof(bool) },
-  { &V_FLAG , sizeof(bool) },
+  { &saveGameFlags.N , sizeof(bool) },
+  { &saveGameFlags.C , sizeof(bool) },
+  { &saveGameFlags.Z , sizeof(bool) },
+  { &saveGameFlags.V , sizeof(bool) },
   { &armState , sizeof(bool) },
   { &armIrqEnable , sizeof(bool) },
   { &armNextPC , sizeof(u32) },
@@ -545,6 +544,13 @@ static bool CPUWriteState(gzFile gzFile)
 
   utilGzWrite(gzFile, &reg[0], sizeof(reg));
 
+  // copy flags into saveGameFlags first
+  saveGameFlags.C = gbaFlags.C & 1;
+  saveGameFlags.N = gbaFlags.N & 1;
+  saveGameFlags.V = gbaFlags.V & 1;
+  saveGameFlags.Z = gbaFlags.Z & 1;
+
+  // populate
   utilWriteData(gzFile, saveGameStruct);
 
   // new to version 0.7.1
@@ -631,6 +637,12 @@ static bool CPUReadState(gzFile gzFile)
   utilGzRead(gzFile, &reg[0], sizeof(reg));
 
   utilReadData(gzFile, saveGameStruct);
+
+  // copy saved flags into real flags
+  gbaFlags.C = (u32)saveGameFlags.C;
+  gbaFlags.N = (u32)saveGameFlags.N;
+  gbaFlags.V = (u32)saveGameFlags.V;
+  gbaFlags.Z = (u32)saveGameFlags.Z;
 
   if(version < SAVE_GAME_VERSION_3)
     stopState = false;
@@ -909,12 +921,12 @@ void CPUUpdateCPSR()
 {
   u32 CPSR = reg[16].I & 0x40;
 
-  CPSR |= (N_FLAG ? 0x80000000 : 0);
-  CPSR |= (Z_FLAG ? 0x40000000 : 0);
-  CPSR |= (C_FLAG ? 0x20000000 : 0);
-  CPSR |= (V_FLAG ? 0x10000000 : 0);
-  CPSR |= (armState ? 0 : 0x20);
-  CPSR |= (armIrqEnable ? 0 : 0x80);
+  CPSR |= (gbaFlags.N << 31);
+  CPSR |= (gbaFlags.Z << 30);
+  CPSR |= (gbaFlags.C << 29);
+  CPSR |= (gbaFlags.V << 28);
+  CPSR |= ((armState ^ 1) << 5);      // If armState is 1 -> 0, if 0 -> 0x20
+  CPSR |= ((armIrqEnable ^ 1) << 7);   // If armIrqEnable is 1 -> 0, if 0 -> 0x80
   CPSR |= (armMode & 0x1F);
 
   reg[16].I = CPSR;
@@ -925,10 +937,10 @@ void CPUUpdateFlags(bool breakLoop)
   u32 CPSR = reg[16].I;
 
   // --- WII OPTIMIZATION: BRANCHLESS FLAG EXTRACTION ---
-  N_FLAG = (CPSR >> 31) & 1;
-  Z_FLAG = (CPSR >> 30) & 1;
-  C_FLAG = (CPSR >> 29) & 1;
-  V_FLAG = (CPSR >> 28) & 1;
+  gbaFlags.N = (CPSR >> 31) & 1;
+  gbaFlags.Z = (CPSR >> 30) & 1;
+  gbaFlags.C = (CPSR >> 29) & 1;
+  gbaFlags.V = (CPSR >> 28) & 1;
   armState = ((~CPSR) >> 5) & 1;
   armIrqEnable = ((~CPSR) >> 7) & 1;
 
@@ -2393,7 +2405,7 @@ void CPUReset()
     }
   }
   armState = true;
-  C_FLAG = V_FLAG = N_FLAG = Z_FLAG = false;
+  gbaFlags.C = gbaFlags.V = gbaFlags.N = gbaFlags.Z = 0;
   WriteReg16(0x00, DISPCNT);
   WriteReg16(0x06, VCOUNT);
   WriteReg16(0x20, BG2PA);

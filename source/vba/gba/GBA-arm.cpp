@@ -53,30 +53,30 @@ static INSN_REGPARM void armUnknownInsn(u32 opcode)
 //                STR instructions.
 
 #define C_SETCOND_LOGICAL \
-    N_FLAG = (res >> 31); \
-    Z_FLAG = (res == 0);  \
-    C_FLAG = C_OUT;
+    gbaFlags.N = (res >> 31); \
+    gbaFlags.Z = (res == 0);  \
+    gbaFlags.C = C_OUT;
 #define C_SETCOND_ADD \
-    N_FLAG = (res >> 31); \
-    Z_FLAG = (res == 0);  \
-    V_FLAG = ((NEG(lhs) & NEG(rhs) & POS(res)) | \
+    gbaFlags.N = (res >> 31); \
+    gbaFlags.Z = (res == 0);  \
+    gbaFlags.V = ((NEG(lhs) & NEG(rhs) & POS(res)) | \
               (POS(lhs) & POS(rhs) & NEG(res))); \
-    C_FLAG = ((NEG(lhs) & NEG(rhs)) | \
+    gbaFlags.C = ((NEG(lhs) & NEG(rhs)) | \
               (NEG(lhs) & POS(res)) | \
               (NEG(rhs) & POS(res)));
 #define C_SETCOND_SUB \
-    N_FLAG = (res >> 31); \
-    Z_FLAG = (res == 0);  \
-    V_FLAG = ((NEG(lhs) & POS(rhs) & POS(res)) | \
+    gbaFlags.N = (res >> 31); \
+    gbaFlags.Z = (res == 0);  \
+    gbaFlags.V = ((NEG(lhs) & POS(rhs) & POS(res)) | \
               (POS(lhs) & NEG(rhs) & NEG(res))); \
-    C_FLAG = ((NEG(lhs) & POS(rhs)) | \
+    gbaFlags.C = ((NEG(lhs) & POS(rhs)) | \
               (NEG(lhs) & POS(res)) | \
               (POS(rhs) & POS(res)));
 
 #ifndef ALU_INIT_C
  #define ALU_INIT_C \
     int dest = (opcode>>12) & 15;                       \
-    bool C_OUT = C_FLAG;                                \
+    bool C_OUT = (gbaFlags.C != 0);                                \
     u32 value;
 #endif
 // OP Rd,Rb,Rm LSL #
@@ -196,7 +196,7 @@ static INSN_REGPARM void armUnknownInsn(u32 opcode)
         u32 v = reg[opcode & 0x0F].I;                   \
         C_OUT = v & 1;                                  \
         value = ((v >> 1) |                             \
-                 ((u32)C_FLAG << 31));                  \
+                 (gbaFlags.C << 31));                  \
     }
 // OP Rd,Rb,Rm ROR Rs
 #define VALUE_ROR_REG_C \
@@ -311,7 +311,7 @@ static INSN_REGPARM void armUnknownInsn(u32 opcode)
  #define OP_ADC \
     u32 lhs = reg[(opcode>>16)&15].I;                   \
     u32 rhs = value;                                    \
-    u32 res = lhs + rhs + (u32)C_FLAG;                  \
+    u32 res = lhs + rhs + gbaFlags.C;                  \
     reg[dest].I = res;
 #endif
 #ifndef OP_ADCS
@@ -321,7 +321,7 @@ static INSN_REGPARM void armUnknownInsn(u32 opcode)
  #define OP_SBC \
     u32 lhs = reg[(opcode>>16)&15].I;                   \
     u32 rhs = value;                                    \
-    u32 res = lhs - rhs - !((u32)C_FLAG);               \
+    u32 res = lhs - rhs - (gbaFlags.C ^ 1);               \
     reg[dest].I = res;
 #endif
 #ifndef OP_SBCS
@@ -331,7 +331,7 @@ static INSN_REGPARM void armUnknownInsn(u32 opcode)
  #define OP_RSC \
     u32 lhs = value;                                    \
     u32 rhs = reg[(opcode>>16)&15].I;                   \
-    u32 res = lhs - rhs - !((u32)C_FLAG);               \
+    u32 res = lhs - rhs - (gbaFlags.C ^ 1);               \
     reg[dest].I = res;
 #endif
 #ifndef OP_RSCS
@@ -398,11 +398,11 @@ static INSN_REGPARM void armUnknownInsn(u32 opcode)
  #define SETCOND_NONE /*nothing*/
 #endif
 #define SETCOND_MUL \
-     N_FLAG = (reg[dest].I >> 31);                      \
-     Z_FLAG = (reg[dest].I == 0);
+     gbaFlags.N = (reg[dest].I >> 31);                      \
+     gbaFlags.Z = (reg[dest].I == 0);
 #define SETCOND_MULL \
-     N_FLAG = (reg[dest].I >> 31);                      \
-     Z_FLAG = ((reg[dest].I | reg[acc].I) == 0);
+     gbaFlags.N = (reg[dest].I >> 31);                      \
+     gbaFlags.Z = ((reg[dest].I | reg[acc].I) == 0);
 
 #ifndef ALU_FINISH
  #define ALU_FINISH /*nothing*/
@@ -418,7 +418,7 @@ static INSN_REGPARM void armUnknownInsn(u32 opcode)
     offset = ((offset << (32 - shift)) | (offset >> shift));
 #endif
 #define RRX_OFFSET \
-    offset = ((offset >> 1) | ((u32)C_FLAG << 31));
+    offset = ((offset >> 1) | (gbaFlags.C << 31));
 
 // ALU ops (except multiply) //////////////////////////////////////////////
 
@@ -853,7 +853,7 @@ static INSN_REGPARM void arm121(u32 opcode)
     u32 val = reg[opcode & 15].I;                       \
     s32 mask = (s32)(shift - 1) >> 31;                  \
     u32 ror_shift = (val >> shift) | (val << ((32 - shift) & 31)); \
-    u32 rrx_shift = (val >> 1) | ((u32)C_FLAG << 31);   \
+    u32 rrx_shift = (val >> 1) | (gbaFlags.C << 31);   \
     int offset = (ror_shift & ~mask) | (rrx_shift & mask);
 
 #define ADDRESS_POST (reg[base].I)
@@ -2252,7 +2252,7 @@ int armExecute()
 			};
 
 			// Pack flags into a 4-bit index: [N : Z : C : V]
-			u32 flags = ((u32)N_FLAG << 3) | ((u32)Z_FLAG << 2) | ((u32)C_FLAG << 1) | (u32)V_FLAG;
+			u32 flags = (gbaFlags.N << 3) | (gbaFlags.Z << 2) | (gbaFlags.C << 1) | gbaFlags.V;
 
 			// Shift the condition mask by the flag index to extract the pass/fail bit
 			cond_res = (condTable[cond] >> flags) & 1;
@@ -2293,7 +2293,7 @@ int armExecute()
             // ========================================================
             if (top8 >= 0x20 && top8 <= 0x3F && (opcode & 0x0F000000) == 0x02000000) {
                 u32 value;
-                bool C_OUT = C_FLAG;
+                bool C_OUT = gbaFlags.C;
                 int shift = (opcode & 0xF00) >> 7;
 
                 // Decode Immediate
@@ -2316,10 +2316,10 @@ int armExecute()
                         u32 res = lhs + value;
                         reg[dest].I = res;
                         if (LIKELY(dest != 15)) {
-                            N_FLAG = (res >> 31);
-                            Z_FLAG = (res == 0);
-                            V_FLAG = ((NEG(lhs) & NEG(value) & POS(res)) | (POS(lhs) & POS(value) & NEG(res)));
-                            C_FLAG = ((NEG(lhs) & NEG(value)) | (NEG(lhs) & POS(res)) | (NEG(value) & POS(res)));
+                            gbaFlags.N = (res >> 31);
+                            gbaFlags.Z = (res == 0);
+                            gbaFlags.V = ((NEG(lhs) & NEG(value) & POS(res)) | (POS(lhs) & POS(value) & NEG(res)));
+                            gbaFlags.C = ((NEG(lhs) & NEG(value)) | (NEG(lhs) & POS(res)) | (NEG(value) & POS(res)));
                         }
                         INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
                         handledInline = true; break;
@@ -2334,10 +2334,10 @@ int armExecute()
                         u32 res = lhs - value;
                         reg[dest].I = res;
                         if (LIKELY(dest != 15)) {
-                            N_FLAG = (res >> 31);
-                            Z_FLAG = (res == 0);
-                            V_FLAG = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
-                            C_FLAG = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
+                            gbaFlags.N = (res >> 31);
+                            gbaFlags.Z = (res == 0);
+                            gbaFlags.V = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
+                            gbaFlags.C = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
                         }
                         INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
                         handledInline = true; break;
@@ -2346,10 +2346,10 @@ int armExecute()
                     {
                         u32 lhs = reg[(opcode>>16)&15].I;
                         u32 res = lhs - value;
-                        N_FLAG = (res >> 31);
-                        Z_FLAG = (res == 0);
-                        V_FLAG = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
-                        C_FLAG = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
+                        gbaFlags.N = (res >> 31);
+                        gbaFlags.Z = (res == 0);
+                        gbaFlags.V = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
+                        gbaFlags.C = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
                         localTicks = 1 + codeTicksAccessSeq32(armNextPC);
                         handledInline = true; break;
                     }
@@ -2360,9 +2360,9 @@ int armExecute()
                     case 0x3B: // MOVS imm
                         reg[dest].I = value;
                         if (LIKELY(dest != 15)) {
-                            N_FLAG = (value >> 31);
-                            Z_FLAG = (value == 0);
-                            C_FLAG = C_OUT;
+                            gbaFlags.N = (value >> 31);
+                            gbaFlags.Z = (value == 0);
+                            gbaFlags.C = C_OUT;
                         }
                         INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
                         handledInline = true; break;
@@ -2373,7 +2373,7 @@ int armExecute()
             // ========================================================
             else if (top8 < 0x20 && (opcode & 0x00000FF0) == 0) {
                 u32 value = reg[opcode & 0x0F].I;
-                bool C_OUT = C_FLAG; // LSL #0 retains current carry
+                bool C_OUT = (gbaFlags.C != 0); // LSL #0 retains current carry
 
                 switch (top8) {
                     case 0x08: // ADD reg
@@ -2386,10 +2386,10 @@ int armExecute()
                         u32 res = lhs + value;
                         reg[dest].I = res;
                         if (LIKELY(dest != 15)) {
-                            N_FLAG = (res >> 31);
-                            Z_FLAG = (res == 0);
-                            V_FLAG = ((NEG(lhs) & NEG(value) & POS(res)) | (POS(lhs) & POS(value) & NEG(res)));
-                            C_FLAG = ((NEG(lhs) & NEG(value)) | (NEG(lhs) & POS(res)) | (NEG(value) & POS(res)));
+                            gbaFlags.N = (res >> 31);
+                            gbaFlags.Z = (res == 0);
+                            gbaFlags.V = ((NEG(lhs) & NEG(value) & POS(res)) | (POS(lhs) & POS(value) & NEG(res)));
+                            gbaFlags.C = ((NEG(lhs) & NEG(value)) | (NEG(lhs) & POS(res)) | (NEG(value) & POS(res)));
                         }
                         INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
                         handledInline = true; break;
@@ -2404,10 +2404,10 @@ int armExecute()
                         u32 res = lhs - value;
                         reg[dest].I = res;
                         if (LIKELY(dest != 15)) {
-                            N_FLAG = (res >> 31);
-                            Z_FLAG = (res == 0);
-                            V_FLAG = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
-                            C_FLAG = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
+                            gbaFlags.N = (res >> 31);
+                            gbaFlags.Z = (res == 0);
+                            gbaFlags.V = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
+                            gbaFlags.C = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
                         }
                         INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
                         handledInline = true; break;
@@ -2416,10 +2416,10 @@ int armExecute()
                     {
                         u32 lhs = reg[(opcode>>16)&15].I;
                         u32 res = lhs - value;
-                        N_FLAG = (res >> 31);
-                        Z_FLAG = (res == 0);
-                        V_FLAG = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
-                        C_FLAG = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
+                        gbaFlags.N = (res >> 31);
+                        gbaFlags.Z = (res == 0);
+                        gbaFlags.V = ((NEG(lhs) & POS(value) & POS(res)) | (POS(lhs) & NEG(value) & NEG(res)));
+                        gbaFlags.C = ((NEG(lhs) & POS(value)) | (NEG(lhs) & POS(res)) | (POS(value) & POS(res)));
                         localTicks = 1 + codeTicksAccessSeq32(armNextPC);
                         handledInline = true; break;
                     }
@@ -2430,9 +2430,9 @@ int armExecute()
                     case 0x1B: // MOVS reg
                         reg[dest].I = value;
                         if (LIKELY(dest != 15)) {
-                            N_FLAG = (value >> 31);
-                            Z_FLAG = (value == 0);
-                            C_FLAG = C_OUT;
+                            gbaFlags.N = (value >> 31);
+                            gbaFlags.Z = (value == 0);
+                            gbaFlags.C = C_OUT;
                         }
                         INLINE_PC_CHECK(CPUSwitchMode(reg[17].I & 0x1f, false));
                         handledInline = true; break;
