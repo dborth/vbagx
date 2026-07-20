@@ -157,16 +157,17 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 	u32 currentAge = 0; // Tracks register access sequence for LRU spilling
 
-	// O(1) Allocation Math utilizing Broadway Hardware Intrinsic with LRU Spilling
-	auto FindOrAllocateHostReg = [&](u8 gbaReg, u32*& ptr, bool loadFromMem) -> u8 {
+	// O(1) Allocation Math supporting pinned instruction-local masks to prevent active operand eviction
+	auto FindOrAllocateHostReg = [&](u8 gbaReg, u32*& ptr, bool loadFromMem, u32& lockedMask) -> u8 {
 		if (gbaReg == 15) return 29;
 
 		if (regCache[gbaReg].allocated) {
 			regCache[gbaReg].age = ++currentAge; // Update age on Cache Hit
+			lockedMask |= (1 << regCache[gbaReg].hostReg);
 			return regCache[gbaReg].hostReg;
 		}
 
-		u32 inUseMask = 0;
+		u32 inUseMask = lockedMask;
 		for (int i = 0; i < 15; i++) {
 			if (regCache[i].allocated) inUseMask |= (1 << regCache[i].hostReg);
 		}
@@ -184,7 +185,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			// Scan for the Least Recently Used register
 			for (int i = 0; i < 15; i++) {
-				if (regCache[i].allocated && regCache[i].age < oldestAge) {
+				if (regCache[i].allocated && ((lockedMask & (1 << regCache[i].hostReg)) == 0) && regCache[i].age < oldestAge) {
 					oldestAge = regCache[i].age;
 					spillTarget = i;
 				}
@@ -204,6 +205,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		regCache[gbaReg].dirty = false;
 		regCache[gbaReg].hostReg = freeReg;
 		regCache[gbaReg].age = ++currentAge; // Update age on Allocation
+		lockedMask |= (1 << freeReg);
 
 		if (loadFromMem) *ptr++ = PPC_LWZ(freeReg, 14, gbaReg * 4);
 
@@ -211,13 +213,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	};
 
 	// Wrappers for explicit Intent
-	auto ReadGBAReg = [&](u8 gbaReg, u32*& ptr) -> u8 {
-	    return FindOrAllocateHostReg(gbaReg, ptr, true);
+	auto ReadGBAReg = [&](u8 gbaReg, u32*& ptr, u32& lockedMask) -> u8 {
+	    return FindOrAllocateHostReg(gbaReg, ptr, true, lockedMask);
 	};
 
-	auto WriteGBAReg = [&](u8 gbaReg, u32*& ptr, bool fullOverwrite) -> u8 {
+	auto WriteGBAReg = [&](u8 gbaReg, u32*& ptr, bool fullOverwrite, u32& lockedMask) -> u8 {
 	    // If it's a complete 32-bit overwrite (like MOV), skip the LWZ memory fetch!
-	    u8 hReg = FindOrAllocateHostReg(gbaReg, ptr, !fullOverwrite);
+	    u8 hReg = FindOrAllocateHostReg(gbaReg, ptr, !fullOverwrite, lockedMask);
 	    if (gbaReg < 15) regCache[gbaReg].dirty = true;
 	    return hReg;
 	};
@@ -361,7 +363,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	};
 
     while (!endBlock && instrCount < MAX_INSTRUCTIONS) {
-    	// BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
+		u32 lockedMask = 0; // Reset locked tracking pins per guest execution step
+
+		// BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
     	if (arenaAllocated && (emitPtr - blockStart) > (s32)(MAX_WORDS - EPILOGUE_RESERVE_WORDS - bailoutCount * MAX_BAILOUT_STUB_WORDS)) {
     	    endBlock = true;
     	    JIT_LOG_BAILOUT(currentPC, 0, BAILOUT_BUFFER_OVERFLOW);
@@ -384,9 +388,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			    EnsureArenaAllocated();
 
 			    if (op == 0) { // MOV
-					// Optimization: Full overwrite skips the underlying LWZ fetch
-					u32 hostRd = WriteGBAReg(rd, emitPtr, true);
-
+			    	// Optimization: Full overwrite skips the underlying LWZ fetch
+					u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask);
 					u8 fN = WriteFlag(FLAG_N);
 					u8 fZ = WriteFlag(FLAG_Z);
 
@@ -394,16 +397,16 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_LI(fN, 0);
 					*emitPtr++ = PPC_LI(fZ, (imm == 0) ? 1 : 0);
 				} else {
-			        u32 hostRd = ReadGBAReg(rd, emitPtr);
+			        u32 hostRd = ReadGBAReg(rd, emitPtr, lockedMask);
 			        *emitPtr++ = PPC_LI(PPC_R12, imm);
 
 			        if (op == 1) { // CMP (Rd - Imm, result discarded)
 			            *emitPtr++ = PPC_SUBFCO(PPC_R11, PPC_R12, hostRd);
 			        } else if (op == 2) { // ADD
-			            hostRd = WriteGBAReg(rd, emitPtr, false); // Mark Dirty
+			            hostRd = WriteGBAReg(rd, emitPtr, false, lockedMask); // Mark Dirty
 			            *emitPtr++ = PPC_ADDCO(hostRd, hostRd, PPC_R12);
 			        } else if (op == 3) { // SUB
-			            hostRd = WriteGBAReg(rd, emitPtr, false); // Mark Dirty
+			            hostRd = WriteGBAReg(rd, emitPtr, false, lockedMask); // Mark Dirty
 			            *emitPtr++ = PPC_SUBFCO(hostRd, PPC_R12, hostRd);
 			        }
 
@@ -434,10 +437,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u8 type = (opcode >> 9) & 0x03; // 0=ADD reg, 1=SUB reg, 2=ADD imm, 3=SUB imm
 				u8 rn_imm = (opcode >> 6) & 0x07;
 
-				u32 hostRs = ReadGBAReg(rs, emitPtr);
+				u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
 				u32 hostRn = 0;
-				if (type == 0 || type == 1) hostRn = ReadGBAReg(rn_imm, emitPtr); // read BEFORE write
-				u32 hostRd = WriteGBAReg(rd, emitPtr, true);
+				if (type == 0 || type == 1) hostRn = ReadGBAReg(rn_imm, emitPtr, lockedMask); // read BEFORE write
+				u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask);
 
 				// Stage the right-hand operand natively into R12
 				if (type == 0 || type == 1) {
@@ -476,8 +479,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u8 offset = (opcode >> 6) & 0x1F;
 				u8 op = (opcode >> 11) & 0x03; // 0=LSL, 1=LSR, 2=ASR
 
-				u32 hostRs = ReadGBAReg(rs, emitPtr);
-				u32 hostRd = WriteGBAReg(rd, emitPtr, true); // True: Rd is completely overwritten
+				u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+				u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask); // True: Rd is completely overwritten
 
 				if (op == 0) { // LSL
 					if (offset == 0) {
@@ -541,8 +544,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				if (op == 10) { // CMP (Compare)
 					EnsureArenaAllocated();
-					u32 hostRs = ReadGBAReg(rs, emitPtr);
-					u32 hostRd = ReadGBAReg(rd, emitPtr); // CMP does not modify Rd
+					u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+					u32 hostRd = ReadGBAReg(rd, emitPtr, lockedMask); // CMP does not modify Rd
 
 					*emitPtr++ = PPC_SUBFCO(PPC_R12, hostRs, hostRd); // R12 = Rd - Rs
 
@@ -562,8 +565,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 				else if (op == 0 || op == 1 || op == 12 || op == 14) { // AND, EOR, ORR, BIC
 					EnsureArenaAllocated();
-					u32 hostRs = ReadGBAReg(rs, emitPtr);
-					u32 hostRd = WriteGBAReg(rd, emitPtr, false); // Reads Rd, then modifies it
+					u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+					u32 hostRd = WriteGBAReg(rd, emitPtr, false, lockedMask); // Reads Rd, then modifies it
 
 					if (op == 0)  *emitPtr++ = PPC_AND(hostRd, hostRd, hostRs);
 					if (op == 1)  *emitPtr++ = PPC_XOR(hostRd, hostRd, hostRs);
@@ -580,8 +583,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				} else if (op == 9) { // NEG (Rd = 0 - Rs)
 					EnsureArenaAllocated();
-					u32 hostRs = ReadGBAReg(rs, emitPtr);
-					u32 hostRd = WriteGBAReg(rd, emitPtr, true); // Fully overwrites Rd
+					u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+					u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask); // Fully overwrites Rd
 
 					*emitPtr++ = PPC_LI(PPC_R12, 0); // Load 0 into scratch
 					*emitPtr++ = PPC_SUBFCO(hostRd, hostRs, PPC_R12); // Rd = R12 (0) - Rs
@@ -604,8 +607,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 				else if (op == 15) { // MVN (Bitwise NOT: Rd = ~Rs)
 					EnsureArenaAllocated();
-					u32 hostRs = ReadGBAReg(rs, emitPtr);
-					u32 hostRd = WriteGBAReg(rd, emitPtr, true); // Fully overwrites Rd
+					u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+					u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask); // Fully overwrites Rd
 
 					*emitPtr++ = PPC_NOR(hostRd, hostRs, hostRs);
 
@@ -620,8 +623,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 				else if (op == 8) { // TST (AND flags only, discard result)
 					EnsureArenaAllocated();
-					u32 hostRs = ReadGBAReg(rs, emitPtr);
-					u32 hostRd = ReadGBAReg(rd, emitPtr); // TST does not modify Rd
+					u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+					u32 hostRd = ReadGBAReg(rd, emitPtr, lockedMask); // TST does not modify Rd
 
 					*emitPtr++ = PPC_AND(PPC_R12, hostRd, hostRs); // R12 = Rd & Rs
 
@@ -635,8 +638,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 				else if (op == 13) { // MUL (Rd = Rd * Rs)
 					EnsureArenaAllocated();
-					u32 hostRs = ReadGBAReg(rs, emitPtr);
-					u32 hostRd = WriteGBAReg(rd, emitPtr, false); // Reads Rd, then modifies it
+					u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+					u32 hostRd = WriteGBAReg(rd, emitPtr, false, lockedMask); // Reads Rd, then modifies it
 
 					// thumb43_1's real cost depends on the ORIGINAL Rd's magnitude
 					// (ARM7TDMI multiply early-termination): rm = |original Rd|-ish
@@ -703,8 +706,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			EnsureArenaAllocated();
 
 			if (op == 1) { // CMP
-				u32 regRd = (actualRd == 15) ? PPC_R11 : ReadGBAReg(actualRd, emitPtr);
-				u32 regRs = (actualRs == 15) ? PPC_R10 : ReadGBAReg(actualRs, emitPtr);
+				u32 regRd = (actualRd == 15) ? PPC_R11 : ReadGBAReg(actualRd, emitPtr, lockedMask);
+				u32 regRs = (actualRs == 15) ? PPC_R10 : ReadGBAReg(actualRs, emitPtr, lockedMask);
 
 				// Stage PC natively into scratch registers if it is used as an operand
 				if (actualRd == 15) {
@@ -739,8 +742,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			}
 			else if (op == 2) { // MOV
 				u32 regRs = 0;
-				if (actualRs != 15) regRs = ReadGBAReg(actualRs, emitPtr); // read before write
-				u32 regRd = WriteGBAReg(actualRd, emitPtr, true); // Rd != 15 due to bailout
+				if (actualRs != 15) regRs = ReadGBAReg(actualRs, emitPtr, lockedMask); // read before write
+				u32 regRd = WriteGBAReg(actualRd, emitPtr, true, lockedMask); // Rd != 15 due to bailout
 
 				if (actualRs == 15) {
 					*emitPtr++ = PPC_LIS(regRd, (currentPC + 4) >> 16);
@@ -753,8 +756,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			}
 			else if (op == 0) { // ADD
 				u32 regRs = 0;
-				if (actualRs != 15) regRs = ReadGBAReg(actualRs, emitPtr); // read before write
-				u32 regRd = WriteGBAReg(actualRd, emitPtr, false); // Rd != 15 due to bailout
+				if (actualRs != 15) regRs = ReadGBAReg(actualRs, emitPtr, lockedMask); // read before write
+				u32 regRd = WriteGBAReg(actualRd, emitPtr, false, lockedMask); // Rd != 15 due to bailout
 
 				if (actualRs == 15) {
 					*emitPtr++ = PPC_LIS(PPC_R12, (currentPC + 4) >> 16);
@@ -782,7 +785,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_LIS(PPC_R12, (currentPC + 4) >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R12, PPC_R12, (currentPC + 4) & 0xFFFF);
 			} else {
-				u32 hostRs = ReadGBAReg(rs, emitPtr);
+				u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
 				*emitPtr++ = PPC_OR(PPC_R12, hostRs, hostRs);
 			}
 
@@ -831,7 +834,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32 loadedValue = CPUReadMemory(targetAddr);
 
 				// LAZY REGISTERS: Full overwrite bypasses the memory fetch
-				u32 hostRd = WriteGBAReg(rd, emitPtr, true);
+				u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask);
 
 				if ((loadedValue & ~0x7FFF) == 0) {
 					*emitPtr++ = PPC_LI(hostRd, loadedValue);
@@ -924,10 +927,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				EnsureArenaAllocated();
 
 				// Emit the deferred Effective Address calculation natively into R12
-				u32 hostRb = ReadGBAReg(rb, emitPtr);
+				u32 hostRb = ReadGBAReg(rb, emitPtr, lockedMask);
 
 				if (useRegisterOffset) {
-					u32 hostRo = ReadGBAReg(ro, emitPtr);
+					u32 hostRo = ReadGBAReg(ro, emitPtr, lockedMask);
 					*emitPtr++ = PPC_ADD(PPC_R12, hostRb, hostRo);
 				} else {
 					*emitPtr++ = PPC_ADDI(PPC_R12, hostRb, immediateOffset);
@@ -1019,12 +1022,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// 5. Execute Memory Load or Store Instruction
 				if (isMemLoad) {
-					u32 hostRd = WriteGBAReg(rd, emitPtr, true);
+					u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask);
 					if (accessType == 4) *emitPtr++ = PPC_LWBRX(hostRd, PPC_R10, PPC_R12);
 					else if (accessType == 2) *emitPtr++ = PPC_LHBRX(hostRd, PPC_R10, PPC_R12);
 					else *emitPtr++ = PPC_LBZX(hostRd, PPC_R10, PPC_R12);
 				} else {
-					u32 hostRd = ReadGBAReg(rd, emitPtr);
+					u32 hostRd = ReadGBAReg(rd, emitPtr, lockedMask);
 					if (accessType == 4) *emitPtr++ = PPC_STWBRX(hostRd, PPC_R10, PPC_R12);
 					else if (accessType == 2) *emitPtr++ = PPC_STHBRX(hostRd, PPC_R10, PPC_R12);
 					else *emitPtr++ = PPC_STBZX(hostRd, PPC_R10, PPC_R12);
@@ -1063,7 +1066,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			u32 offset = (opcode & 0xFF) << 2;
 
 			// 1. Lazily allocate SP (GBA R13) and Calculate Target Address in PPC_R12
-			u32 hostSp = ReadGBAReg(13, emitPtr);
+			u32 hostSp = ReadGBAReg(13, emitPtr, lockedMask);
 			if (offset == 0) {
 				*emitPtr++ = PPC_OR(PPC_R12, hostSp, hostSp);
 			} else {
@@ -1102,10 +1105,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			// 4. Endian-Correct Load or Store (Lazy Register Execution)
 			if (isLoad) {
-				u32 hostRd = WriteGBAReg(rd, emitPtr, true); // Full overwrite bypasses read
+				u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask); // Full overwrite bypasses read
 				*emitPtr++ = PPC_LWBRX(hostRd, PPC_R10, PPC_R12);
 			} else {
-				u32 hostRd = ReadGBAReg(rd, emitPtr);
+				u32 hostRd = ReadGBAReg(rd, emitPtr, lockedMask);
 				*emitPtr++ = PPC_STWBRX(hostRd, PPC_R10, PPC_R12);
 			}
 
@@ -1146,7 +1149,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			chunkStartPC = currentPC + 2;
 
 			// LAZY REGISTERS: Stage SP natively into R12
-			u32 hostSp = WriteGBAReg(13, emitPtr, false); // Reads and marks dirty
+			u32 hostSp = WriteGBAReg(13, emitPtr, false, lockedMask); // Reads and marks dirty
 
 			if (!isPop) {
 				// PUSH: Decrement SP first. PPC_ADDI handles negative offsets.
@@ -1163,10 +1166,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// tracker before we get a chance to look up the data-access cost.
 			*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R11, 0, 28, 31); // R4 = R11 & 15
 			bool pushPopAccumulateDataTicks = !(isPop && !Rbit);
-
-			u32* branchGuard1 = nullptr;
-			u32* branchGuard2 = nullptr;
-			u32* branchGuard3 = nullptr;
 
 			if (!isPop) {
 				// STORE STRICT GUARD: Only Banks 2 & 3
@@ -1246,10 +1245,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				if (regList & (1 << i)) {
 					*emitPtr++ = PPC_AND(PPC_R4, PPC_R12, PPC_R11); // Apply Mask
 					if (isPop) {
-						u32 hostRd = WriteGBAReg(i, emitPtr, true);
+						u32 hostRd = WriteGBAReg(i, emitPtr, true, lockedMask);
 						*emitPtr++ = PPC_LWBRX(hostRd, PPC_R10, PPC_R4);
 					} else {
-						u32 hostRs = ReadGBAReg(i, emitPtr);
+						u32 hostRs = ReadGBAReg(i, emitPtr, lockedMask);
 						*emitPtr++ = PPC_STWBRX(hostRs, PPC_R10, PPC_R4);
 					}
 					*emitPtr++ = PPC_ADDI(PPC_R12, PPC_R12, 4); // Advance 4 bytes
@@ -1260,7 +1259,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				if (isPop) {
 					*emitPtr++ = PPC_LWBRX(PPC_R12, PPC_R10, PPC_R4); // POP PC into R12 scratch
 				} else {
-					u32 hostLr = ReadGBAReg(14, emitPtr);
+					u32 hostLr = ReadGBAReg(14, emitPtr, lockedMask);
 					*emitPtr++ = PPC_STWBRX(hostLr, PPC_R10, PPC_R4); // PUSH LR (GBA R14)
 				}
 			}
@@ -1268,7 +1267,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// 5. Update SP (POP only)
 			if (isPop) {
 				// Safely re-fetch the current physical location of SP in case the LRU evicted it mid-loop
-				u32 currentHostSp = WriteGBAReg(13, emitPtr, false);
+				u32 currentHostSp = WriteGBAReg(13, emitPtr, false, lockedMask);
 				*emitPtr++ = PPC_ADDI(currentHostSp, currentHostSp, numRegs * 4);
 			}
 
@@ -1339,15 +1338,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			chunkStartPC = currentPC + 2;
 
 			// Stage Base Address natively into R12
-			u32 hostRb = ReadGBAReg(rb, emitPtr);
+			u32 hostRb = ReadGBAReg(rb, emitPtr, lockedMask);
 			*emitPtr++ = PPC_OR(PPC_R12, hostRb, hostRb);
 
 			// 1. Extract Memory Bank (R12 >> 24)
 			*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
-
-			u32* branchGuard1 = nullptr;
-			u32* branchGuard2 = nullptr;
-			u32* branchGuard3 = nullptr;
 
 			if (!isLoad) {
 				// STMIA GUARD: Only Banks 2 & 3
@@ -1386,10 +1381,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				if (regList & (1 << i)) {
 					*emitPtr++ = PPC_AND(PPC_R4, PPC_R12, PPC_R11); // Apply Mask
 					if (isLoad) {
-						u32 hostRd = WriteGBAReg(i, emitPtr, true);
+						u32 hostRd = WriteGBAReg(i, emitPtr, true, lockedMask);
 						*emitPtr++ = PPC_LWBRX(hostRd, PPC_R10, PPC_R4);
 					} else {
-						u32 hostRs = ReadGBAReg(i, emitPtr);
+						u32 hostRs = ReadGBAReg(i, emitPtr, lockedMask);
 						*emitPtr++ = PPC_STWBRX(hostRs, PPC_R10, PPC_R4);
 					}
 					*emitPtr++ = PPC_ADDI(PPC_R12, PPC_R12, 4); // ADVANCE R12 DIRECTLY
@@ -1402,7 +1397,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			if (isLoad && (regList & (1 << rb))) writeback = false;
 
 			if (writeback) {
-				u32 hostRbWB = WriteGBAReg(rb, emitPtr, false);
+				u32 hostRbWB = WriteGBAReg(rb, emitPtr, false, lockedMask);
 				*emitPtr++ = PPC_ADDI(hostRbWB, hostRbWB, numRegs * 4);
 			}
 
@@ -1538,7 +1533,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// 1. Update LR (GBA R14) with the return address: (currentPC + 4) | 1
 				u32 returnPC = (currentPC + 4) | 1;
-				u32 hostLr = WriteGBAReg(14, emitPtr, true); // Overwrite completely
+				u32 hostLr = WriteGBAReg(14, emitPtr, true, lockedMask); // Overwrite completely
 				*emitPtr++ = PPC_LIS(hostLr, returnPC >> 16);
 				*emitPtr++ = PPC_ORI(hostLr, hostLr, returnPC & 0xFFFF);
 
@@ -1614,17 +1609,19 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 
 		// 2. Inject compensation instructions if required (e.g., PUSH guard failure)
+		// Explicitly handle memory reversion and correct compile-time/runtime synchronization
 		if (bailouts[i].comp == COMP_REVERT_SP) {
 			if (bailouts[i].registerSnapshot[13].allocated) {
 				u8 snapSp = bailouts[i].registerSnapshot[13].hostReg;
 				*emitPtr++ = PPC_ADDI(snapSp, snapSp, bailouts[i].compArg);
-
-				// DEFENSIVE SHIELD: Force serialization to memory since we just modified it natively
-				bailouts[i].registerSnapshot[13].dirty = true;
+				*emitPtr++ = PPC_STW(snapSp, 14, 13 * 4);
+			} else {
+				*emitPtr++ = PPC_LWZ(PPC_R12, 14, 13 * 4);
+				*emitPtr++ = PPC_ADDI(PPC_R12, PPC_R12, bailouts[i].compArg);
+				*emitPtr++ = PPC_STW(PPC_R12, 14, 13 * 4);
 			}
 		}
 
-		// 3. Serialize the Flag State strictly from the point of failure
 		bool flagPtrLoaded = false;
 		for (int r = 0; r < 4; r++) {
 			if (bailouts[i].flagSnapshot[r].allocated && bailouts[i].flagSnapshot[r].dirty) {
@@ -1638,6 +1635,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 		// 4. Serialize the Register State strictly from the point of failure
 		for (int r = 0; r < 15; r++) {
+			// Skip SP if it was already updated by the compensation code above
+			if (r == 13 && bailouts[i].comp == COMP_REVERT_SP) continue;
+
 			if (bailouts[i].registerSnapshot[r].allocated && bailouts[i].registerSnapshot[r].dirty) {
 				*emitPtr++ = PPC_STW(bailouts[i].registerSnapshot[r].hostReg, 14, r * 4);
 			}
