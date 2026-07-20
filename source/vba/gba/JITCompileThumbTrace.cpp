@@ -1,5 +1,5 @@
 #ifndef NO_JIT_COMPILER
-#include "JITCache.h"
+#include "JIT.h"
 #include "GBAinline.h"
 #include "GBAcpu.h"
 

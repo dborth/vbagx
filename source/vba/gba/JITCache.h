@@ -1,6 +1,5 @@
 #ifndef JIT_CACHE_H
 #define JIT_CACHE_H
-#include "JITDebug.h"
 
 #ifndef NO_JIT_COMPILER
 #include <stddef.h>

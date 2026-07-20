@@ -5,7 +5,7 @@
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
-#include "JITCache.h"
+#include "JIT.h"
 #include "Globals.h"
 #include "GBAGfx.h"
 #include "EEprom.h"

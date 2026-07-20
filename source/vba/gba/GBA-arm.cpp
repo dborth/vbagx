@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "GBA.h"
-#include "JITCache.h"
+#include "JIT.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
 #include "Globals.h"

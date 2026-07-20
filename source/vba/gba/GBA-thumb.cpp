@@ -7,7 +7,7 @@
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
-#include "JITCache.h"
+#include "JIT.h"
 #include "Globals.h"
 #include "EEprom.h"
 #include "Flash.h"
@@ -1651,6 +1651,7 @@ int thumbExecute() {
             reg[15].I = pc + 4;
 
             JIT_LOG_TRACE_ENTRY(pc, flagBuffer);
+            JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block);
 
 			// Execute Native Trace with flat memory maps
             ExecuteJITTrace(block->execute, (u32*)&reg[0].I, (u32*)&gbaFlags, &result, gbaReadPagePtrs, gbaReadPageMasks, &busPrefetchCount);

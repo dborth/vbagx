@@ -1,9 +1,9 @@
 #ifndef NO_JIT_COMPILER
-#include "JITDebug.h"
+#include "JIT.h"
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <time.h>
-#include <ogc/system.h>
 
 #include "mem2.h"
 
@@ -37,21 +37,19 @@ bool JITRegionAllowed(u32 opcode) {
 static char*  jitLogBuffer   = NULL;
 static size_t jitLogCapacity = 0;
 static size_t jitLogSize     = 0;
+static bool JITBlockDumped = false;
 
 void InitJITLog() {
 	if (!jitLogBuffer) {
 		jitLogCapacity = 2 * 1024 * 1024;
 		jitLogBuffer = (char*)mem2_malloc(jitLogCapacity);
-
-		if(!jitLogBuffer) {
-			SYS_Report("no jit buffer\n");
-		}
 	}
 	
 	jitLogSize = 0;
 	if (jitLogBuffer) {
 		jitLogBuffer[0] = '\0';
 	}
+	JITBlockDumped = false;
 }
 
 static void vLogJITInternal(const char* format, va_list args) {
@@ -161,5 +159,47 @@ void WriteJITLogToFile() {
 	}
 	jitLogSize = 0;
 	jitLogCapacity = 0;
+}
+
+void DebugDumpFirstJITBlock(BasicBlock* block) {
+	if (__builtin_expect(block == nullptr || block->execute == nullptr || block->length == 0, 0)) {
+		return;
+	}
+
+	if (__builtin_expect(!JITBlockDumped, 0)) {
+		JITBlockDumped = true;
+
+		time_t now = time(NULL);
+		struct tm *t = localtime(&now);
+		char logPath[128];
+
+		if (t != NULL) {
+			strftime(logPath, sizeof(logPath), "sd:/jit-trace-dump-%Y%m%d-%H%M%S.bin", t);
+		} else {
+			snprintf(logPath, sizeof(logPath), "sd:/jit-trace-dump.bin");
+		}
+
+		FILE* dumpFile = fopen(logPath, "wb");
+		if (dumpFile != nullptr) {
+			// Allocate a generous threshold of native instructions per guest instruction
+			size_t maxWords = block->length * 32;
+			if (maxWords > 2048) maxWords = 2048; // Cap at 8KB to prevent memory bleed
+
+			size_t dumpWords = maxWords;
+			u32* nativeCode = (u32*)block->execute;
+
+			// Scan code space for native PowerPC exit branches
+			for (size_t i = 0; i < maxWords; i++) {
+				// 0x4E800020 = PPC_BLR() | 0x4E800420 = PPC_BCTR()
+				if (nativeCode[i] == 0x4E800020 || nativeCode[i] == 0x4E800420) {
+					dumpWords = i + 1; // Snip right after the terminator instruction
+					break;
+				}
+			}
+
+			fwrite((u32*)block->execute, sizeof(u32), dumpWords, dumpFile);
+			fclose(dumpFile);
+		}
+	}
 }
 #endif

@@ -3,6 +3,7 @@
 
 #ifndef NO_JIT_COMPILER
 	//#define JIT_PROFILING 1
+	//#define JIT_DEBUG_BLOCK_DUMP 1
 	//#define JIT_CACHE_AND_ARENA_LOG 1
 	//#define JIT_COMPILER_DIFFERENTIAL_TESTING 1
 	//#define JIT_DEBUGSTATELOG 1
@@ -32,6 +33,7 @@
 	void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...);
 	void LogJITBailout(u32 pc, u32 opcode, const char* reasonName);
 	void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCycles, bool bailedOut, u32 bailoutReason);
+	void DebugDumpFirstJITBlock(BasicBlock* block);
 
 	#if JIT_PROFILING
 		#define JIT_LOG(fmt, ...) LogJIT(fmt, ##__VA_ARGS__)
@@ -83,6 +85,9 @@
 		} while(0)
 	#endif // JIT_PROFILING
 
+	#if JIT_DEBUG_BLOCK_DUMP
+		#define JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block) DebugDumpFirstJITBlock((block))
+	#endif
 
 	#if JIT_CACHE_AND_ARENA_LOG
 		#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter) do { \
@@ -182,6 +187,9 @@
 #endif
 #ifndef JIT_LOG_FALLBACK
 #define JIT_LOG_FALLBACK(opcode)					((void)0)
+#endif
+#ifndef JIT_DEBUG_DUMP_FIRST_JIT_BLOCK
+#define JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block)		((void)0)
 #endif
 
 #endif // JIT_DEBUG_H

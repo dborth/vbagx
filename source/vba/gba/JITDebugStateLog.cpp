@@ -7,8 +7,8 @@
 #include "JITDebugStateLog.h"
 #include "Globals.h"
 
-#define BUFFER_SIZE				(4 * 1024 * 1024)
-#define MAX_INSTRUCTIONS		10000
+#define BUFFER_SIZE				(2 * 1024 * 1024)
+#define MAX_INSTRUCTIONS		5000
 
 JITDebugStateLog jitDebugStateLog;
 

@@ -24,7 +24,7 @@
 
 #include "vba/gba/Globals.h"
 #include "vba/gba/Sound.h"
-#include "vba/gba/JITCache.h"
+#include "vba/gba/JIT.h"
 
 extern int emulating;
 void StopColorizing();
