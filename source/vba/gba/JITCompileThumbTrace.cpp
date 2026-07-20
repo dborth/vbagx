@@ -1593,6 +1593,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		return cache.registerBlock(startPC, 0, nullptr);
 	}
 
+	// 1. Allocate space to jump over the bailouts for ANY fall-through path
+	u32* branchSkipBailouts = nullptr;
+	if (bailoutCount > 0) {
+		branchSkipBailouts = emitPtr++;
+	}
+
 	// =========================================================================
 	// DEFERRED BAILOUT GENERATION
 	// =========================================================================
@@ -1645,6 +1651,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, bailouts[i].pc & 0xFFFF);
 		s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
 		*emitPtr++ = PPC_B(returnOffset);
+	}
+
+	// 2. Back-patch the fall-through jump to land exactly at the Epilogue
+	if (branchSkipBailouts) {
+		*branchSkipBailouts = PPC_B((u32)((emitPtr - branchSkipBailouts) * 4));
 	}
 
 	// Default Epilogue
