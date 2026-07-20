@@ -1,6 +1,6 @@
 #include "GBA.h"
 
-reg_pair reg[45];
+reg_pair reg[45] __attribute__((aligned(32)));
 memoryMap map[256];
 bool ioReadable[0x400];
 CPUFlags gbaFlags = {0, 0, 0, 0};

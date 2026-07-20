@@ -114,13 +114,13 @@ const u8 gamepakWaitState0[2] = { 2, 1 };
 const u8 gamepakWaitState1[2] = { 4, 1 };
 const u8 gamepakWaitState2[2] = { 8, 1 };
 
-u8 memoryWait[16] =
+u8 memoryWait[16] __attribute__((aligned(32))) =
   { 0, 0, 2, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 0 };
-u8 memoryWait32[16] =
+u8 memoryWait32[16] __attribute__((aligned(32))) =
   { 0, 0, 5, 0, 0, 1, 1, 0, 7, 7, 9, 9, 13, 13, 4, 0 };
-u8 memoryWaitSeq[16] =
+u8 memoryWaitSeq[16] __attribute__((aligned(32))) =
   { 0, 0, 2, 0, 0, 0, 0, 0, 2, 2, 4, 4, 8, 8, 4, 0 };
-u8 memoryWaitSeq32[16] =
+u8 memoryWaitSeq32[16] __attribute__((aligned(32))) =
   { 0, 0, 5, 0, 0, 1, 1, 0, 5, 5, 9, 9, 17, 17, 4, 0 };
 
 // The videoMemoryWait constants are used to add some waitstates
@@ -2146,9 +2146,9 @@ void applyTimer ()
 u8 cpuBitsSet[256];
 u8 cpuLowestBitSet[256];
 
-u8* gbaReadPagePtrs[256];
-u32 gbaReadPageMasks[256];
-u8* gbaWritePagePtrs[256];
+u8* gbaReadPagePtrs[256] __attribute__((aligned(32)));
+u32 gbaReadPageMasks[256] __attribute__((aligned(32)));
+u8* gbaWritePagePtrs[256] __attribute__((aligned(32)));
 
 static inline void GBA_InitMemoryPages() {
     for (int i = 0; i < 256; i++) {

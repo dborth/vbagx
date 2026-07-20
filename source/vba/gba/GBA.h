@@ -47,7 +47,7 @@ struct CPUFlags {
     u32 Z;
     u32 C;
     u32 V;
-};
+}; __attribute__((aligned(32)))
 
 // used strictly for load/save statesave
 struct BoolCPUFlags {

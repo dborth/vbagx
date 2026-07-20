@@ -161,6 +161,7 @@ void WriteJITLogToFile() {
 	jitLogCapacity = 0;
 }
 
+// run with powerpc-eabi-objdump -D -b binary -m powerpc -EB jit-trace-dump.bin > dump.txt
 void DebugDumpFirstJITBlock(BasicBlock* block) {
 	if (__builtin_expect(block == nullptr || block->execute == nullptr || block->length == 0, 0)) {
 		return;
