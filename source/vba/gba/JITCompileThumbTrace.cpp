@@ -974,7 +974,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					RegisterBailout(branchGuard2, COND_BGE, currentPC, chunkStaticCycles);
 
 					// 4. REAL-TIME CLOCK (RTC) GUARD (Bank 0x08, Offsets 0xC4-0xC8)
-					// Prevent Pokémon games from fetching raw ROM data instead of the clock response.
+					// Prevent Pokï¿½mon games from fetching raw ROM data instead of the clock response.
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 8);
 					u32* branchSkipRTC = emitPtr++;
 
@@ -994,7 +994,14 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// 2. Load Page Pointer and Memory Mask
 				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);
-				*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
+
+				if (isMemStore) {
+					// Use R28 (writePages) to completely prevent Host OS Overwrites
+					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R28_WRITE_PAGES, PPC_R11);
+				} else {
+					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
+				}
+
 				*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
 
 				// 3. UNIVERSAL NULL POINTER GUARD
@@ -1003,6 +1010,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				RegisterBailout(branchNullToBailout, COND_BEQ, currentPC, chunkStaticCycles);
 
 				*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);
+
+				// Alignment Fix - Prevent Broadway Alignment Exception Storms by masking the EA natively
+				if (accessType == 4) {
+					*emitPtr++ = PPC_RLWINM(PPC_R12, PPC_R12, 0, 0, 29); // Clear bits 30-31 (Word align)
+				} else if (accessType == 2) {
+					*emitPtr++ = PPC_RLWINM(PPC_R12, PPC_R12, 0, 0, 30); // Clear bit 31 (Halfword align)
+				}
 
 				// 4.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only - every guard
 				// above has already passed by this point, so R3 is correctly left
@@ -1092,6 +1106,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11); // R11 = readMasks[bank]
 			*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);       // R12 = EA & mask
 
+			// Alignment Fix - SP-relative ops are always Word (32-bit) accesses
+			*emitPtr++ = PPC_RLWINM(PPC_R12, PPC_R12, 0, 0, 29);   // Clear bits 30-31
+
 			// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only - the guard
 			// above has already passed by this point). Always a 32-bit access,
 			// so always memoryWait32[] - matches thumb90/thumb98's
@@ -1159,6 +1176,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// POP: Use SP as base address directly.
 				*emitPtr++ = PPC_OR(PPC_R12, hostSp, hostSp);
 			}
+
+			// Alignment Fix - Base execution alignment (Enforce 32-bit word alignment for the memory loop)
+			*emitPtr++ = PPC_RLWINM(PPC_R12, PPC_R12, 0, 0, 29);
+
 			// 1. Extract Memory Bank (R12 >> 24)
 			*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
 			// Stash the bank in R4 (free until the per-register loop below starts
@@ -1340,6 +1361,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// Stage Base Address natively into R12
 			u32 hostRb = ReadGBAReg(rb, emitPtr, lockedMask);
 			*emitPtr++ = PPC_OR(PPC_R12, hostRb, hostRb);
+
+			// Alignment Fix
+			*emitPtr++ = PPC_RLWINM(PPC_R12, PPC_R12, 0, 0, 29); // Enforce 32-bit word alignment on base
 
 			// 1. Extract Memory Bank (R12 >> 24)
 			*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);

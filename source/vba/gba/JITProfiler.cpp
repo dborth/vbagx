@@ -1,7 +1,6 @@
 #ifndef NO_JIT_COMPILER
 #include <stdio.h>
 #include <algorithm>
-#include <ogc/lwp_watchdog.h>
 #include "JIT.h"
 
 JITStats jitStats;

@@ -11,17 +11,10 @@
 #define JIT_ARENA_SIZE					(1024 * 1024 * 4) // 1 MB
 #define HASH_TABLE_SIZE					65536
 
-extern "C" void ExecuteJITTrace_Return();
-
 // -------------------------------------------------------------------------
 // ENGINE DEFINITIONS
 // -------------------------------------------------------------------------
 typedef void (*JITBlockFunc)();
-
-struct JITResult {
-    u32 cycles;
-    u32 nextPC;
-};
 
 // Force 16-byte alignment to allow fast PowerPC bit-shifting
 struct __attribute__((aligned(16))) BasicBlock {
@@ -61,10 +54,5 @@ class JITCache {
 		}
 };
 
-extern JITCache jitCache;
-
-extern "C" void ExecuteJITTrace(JITBlockFunc execute, u32* gbaRegs, u32* flags, JITResult* outResult, u8** readPages, u32* readMasks, u32* busPrefetchCount);
-
-BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache);
 #endif
 #endif // JIT_CACHE_H

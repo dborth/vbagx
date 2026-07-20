@@ -21,6 +21,7 @@
 
 #define PPC_R30_PAGES 30  // readPages Base Pointer Array (Non-volatile, no overlap with GBA registers)
 #define PPC_R31_MASKS 31  // readMasks Base Pointer Array (Non-volatile, no overlap with GBA registers)
+#define PPC_R28_WRITE_PAGES 28  // writePages Base Pointer Array (Non-volatile, no overlap with GBA registers)
 
 #define PPC_REG_C PPC_R6
 #define PPC_REG_V PPC_R7
