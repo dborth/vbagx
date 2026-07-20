@@ -1292,10 +1292,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_B(returnOffset);
 
 				endBlock = true;
-				break;
 			}
-
-			if (isPop && !Rbit) {
+			else if (isPop && !Rbit) {
 				// POP {Rlist}: thumbBC ends with `clockTicks = 2 + codeTicksAccess16(...)`
 				// - a plain assignment, not +=, which discards every +1-per-register
 				// AND every per-register data-tick that POP_REG built up. Verified
