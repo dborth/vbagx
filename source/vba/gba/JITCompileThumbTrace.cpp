@@ -1131,6 +1131,29 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// this previously used +2 for both, which under-counts every LDR by 1.
 			chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + (isLoad ? 3 : 2);
 		}
+		// THUMB Format 13: SP-relative Add / Subtract (ADD/SUB SP, #Imm)
+		else if ((opcode & 0xFF00) == 0xB000) {
+			EnsureArenaAllocated();
+
+			u32 offset = (opcode & 0x7F) << 2;
+			bool isSub = (opcode & 0x0080) != 0;
+
+			// LAZY REGISTERS: Load SP natively, mark as modified for the write-back
+			// 'false' means we need the current value before overwriting
+			u32 hostSp = WriteGBAReg(13, emitPtr, false, lockedMask);
+
+			// Safely execute math using Broadway's immediate addition
+			// (hostSp is guaranteed by our allocator to be R15-R28, avoiding the R0 literal trap)
+			if (isSub) {
+				*emitPtr++ = PPC_ADDI(hostSp, hostSp, -offset);
+			} else {
+				*emitPtr++ = PPC_ADDI(hostSp, hostSp, offset);
+			}
+
+			// Format 13 does NOT update condition flags.
+			// Pure register math costs standard sequential cycles.
+			chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+		}
     	// THUMB Format 14 - PUSH / POP
 		else if ((opcode & 0xF600) == 0xB400) {
 			bool isPop = (opcode & 0x0800) != 0;
