@@ -50,7 +50,6 @@
 			else if ((len) <= 64) jitStats.blockLengthBins[4]++; \
 			else jitStats.blockLengthBins[5]++; \
 		} while(0)
-		#define PROFILER_TRACK_FALLBACK(opcode) jitStats.fallbackOpcodeFreq[(opcode) >> 6]++
 
 		#define JIT_REGION_ALLOWED(opcode) JITRegionAllowed(opcode)
 
@@ -80,6 +79,7 @@
 		} while(0)
 
 		#define JIT_LOG_FALLBACK(opcode) do { \
+			jitStats.fallbackInvocations++; \
 			jitStats.fallbackInstructionsExecuted++; \
 			jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
 		} while(0)
@@ -160,9 +160,6 @@
 #endif
 #ifndef PROFILER_BIN_BLOCK
 #define PROFILER_BIN_BLOCK(len)						((void)0)
-#endif
-#ifndef PROFILER_TRACK_FALLBACK
-#define PROFILER_TRACK_FALLBACK(opcode)				((void)0)
 #endif
 #ifndef JIT_LOG
 #define JIT_LOG(fmt, ...) 							((void)0)

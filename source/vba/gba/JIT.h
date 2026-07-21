@@ -7,6 +7,8 @@
 struct JITResult {
     u32 cycles;
     u32 nextPC;
+    u32 instructions;
+    u32 bailedOut; // 1 if guard failed, 0 if clean exit/yield
 } __attribute__((aligned(32)));
 
 extern JITCache jitCache;

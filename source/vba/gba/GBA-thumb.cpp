@@ -1390,12 +1390,12 @@ int thumbExecute() {
 				u32 savedBusPrefetchCount = busPrefetchCount;
 
                 // 2. RUN JIT EXECUTION
-                JITResult jitResult;
+				JITResult result = {0, 0, 0, 0};
 
                 reg[15].I = pc + 4;
                 ExecuteJITTrace(block->execute, &jitResult, &busPrefetchCount, &reg[0].I, &gbaFlags, gbaReadPagePtrs, &gbaReadPageMasks);
 
-                JIT_LOG_EXEC(block->length);
+                JIT_LOG_EXEC(jitResult.instructions);
 
                 u32 jitRegs[16];
                 for (size_t i = 0; i < 16; i++) jitRegs[i] = reg[i].I;
@@ -1541,7 +1541,7 @@ int thumbExecute() {
 						}
 					};
 
-					appendToMsg("StartPC: 0x%08X | Trace Length: %u | Opcode: 0x%04X\n", pc, block->length, startOpcode);
+					appendToMsg("StartPC: 0x%08X | Trace Length: %u | Opcode: 0x%04X\n", pc, jitResult.instructions, startOpcode);
 					appendToMsg("Initial Flags: N=%u Z=%u C=%u V=%u\n", savedFlags.N, savedFlags.Z, savedFlags.C, savedFlags.V);
 					appendToMsg("JIT Result:  NextPC=0x%08X | Cycles=%u | Flags=(N:%u Z:%u C:%u V:%u)\n",
 						jitResult.nextPC, jitResult.cycles, jitFlags.N, jitFlags.Z, jitFlags.C, jitFlags.V);
@@ -1610,13 +1610,10 @@ int thumbExecute() {
     return 1;
 }
 #elif JIT_COMPILER
+
 // -------------------------------------------------------------------------
 // HYBRID TRACE-JIT / C++ EXECUTION ENGINE
 // -------------------------------------------------------------------------
-#ifdef JIT_DETAILED_LOG
-int instrCount = 0;
-#endif
-
 int thumbExecute() {
 	PROFILER_INC(thumbInvocations);
     PROFILER_START_TIMER(thumbTimeStart);
@@ -1632,7 +1629,6 @@ int thumbExecute() {
             JIT_LOG_BLOCK_COMPILED(pc);
 
             PROFILER_ADD_TIME(timeSpentCompiling, compileStart);
-            PROFILER_INC(blocksCompiled);
 
             if (block != nullptr) {
                 PROFILER_BIN_BLOCK(block->length);
@@ -1646,7 +1642,7 @@ int thumbExecute() {
             PROFILER_START_TIMER(execJitStart);
             PROFILER_INC(jitInvocations);
 
-            JITResult result;
+            JITResult result = {0, 0, 0, 0};
 
 			// Align reg[15].I to pc + 4 so that PC-relative reads
 			// inside the compiled JIT trace match authentic GBA pipeline values.
@@ -1658,37 +1654,37 @@ int thumbExecute() {
 			// Execute Native Trace with flat memory maps
             ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, &gbaFlags, gbaReadPagePtrs, gbaReadPageMasks);
 
-            if(result.cycles > 0) {
-            	JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
-            	JIT_LOG_EXEC(block->length);
-            	
-				// Account for execution cycles accumulated by the trace block
-				cpuTotalTicks += result.cycles;
+			JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
+            JIT_LOG_EXEC(result.instructions);
+			JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, result.instructions);
 
-				PROFILER_ADD(jitInstructionsExecuted, block->length);
+			PROFILER_ADD_TIME(timeSpentJIT, execJitStart);
 
+			cpuTotalTicks += result.cycles; // Account for execution cycles accumulated by the trace block
+
+            if (result.instructions > 0 || result.bailedOut) {
 				// Pipeline re-prime
 				armNextPC = result.nextPC;
 				reg[15].I = armNextPC + 2;
 				cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
 				cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+            }
 
-				#ifdef JIT_DETAILED_LOG
-				instrCount += block->length;
-				JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, instrCount);
-				#endif
-
-				PROFILER_ADD_TIME(timeSpentJIT, execJitStart);
+            if (!result.bailedOut) {
+            	// Clean exit or yield via Quota. Let the loop restart to grab the next block
 				continue;
             }
+
+			// We bailed natively
+			// armNextPC is exactly pointing at the failing opcode
+			// DO NOT CONTINUE THE LOOP
+			// Fall straight through into the C++ switch(opcode) so it can execute this instruction
         }
 
         // ========================================================================
         // LEGACY C++ FALLBACK PATH
         // ========================================================================
         PROFILER_START_TIMER(execFallbackStart);
-        PROFILER_INC(fallbackInvocations);
-        PROFILER_INC(fallbackInstructionsExecuted);
 
         if (cheatsEnabled) cpuMasterCodeCheck();
 
@@ -1696,7 +1692,6 @@ int thumbExecute() {
         cpuPrefetch[0] = cpuPrefetch[1];
 
         JIT_LOG_FALLBACK(opcode);
-        PROFILER_TRACK_FALLBACK(opcode);
 
         busPrefetch = false;
         if (busPrefetchCount & 0xFFFFFF00)
@@ -1721,10 +1716,7 @@ int thumbExecute() {
         if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
         cpuTotalTicks += localTicks;
-        #ifdef JIT_DETAILED_LOG
-        JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, localTicks, ++instrCount);
-		#endif
-		
+        JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, localTicks);
         PROFILER_ADD_TIME(timeSpentFallback, execFallbackStart);
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
@@ -1740,10 +1732,6 @@ int thumbExecute() {
 // Eliminates Function Call ABI overhead and CTR indirect branch stalling.
 // Localizes the clockTicks state to prevent global register spilling.
 // ========================================================================
-#ifdef JIT_DETAILED_LOG
-int instrCount = 0;
-#endif
-
 int thumbExecute()
 {
     do {
@@ -2077,9 +2065,7 @@ int thumbExecute()
         	localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
 
         cpuTotalTicks += localTicks;
-		#ifdef JIT_DETAILED_LOG
-        JIT_LOG_STATE_CPP(oldArmNextPC, armNextPC, cpuTotalTicks, localTicks, ++instrCount);
-		#endif
+        JIT_LOG_STATE_CPP(oldArmNextPC, armNextPC, cpuTotalTicks, localTicks);
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     return 1;

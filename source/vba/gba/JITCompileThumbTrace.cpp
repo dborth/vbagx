@@ -46,6 +46,7 @@ struct DeferredBailout {
 	BailoutCond cond;
 	u32 pc;
 	u32 cycles;
+	u32 instructions;
 	RegisterState registerSnapshot[15];
 	FlagState flagSnapshot[4];
 	CompType comp;
@@ -93,6 +94,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		bailouts[bailoutCount].cond = cond;
 		bailouts[bailoutCount].pc = bPC;
 		bailouts[bailoutCount].cycles = bCycles;
+		bailouts[bailoutCount].instructions = instrCount;
 		bailouts[bailoutCount].comp = comp;
 		bailouts[bailoutCount].compArg = compArg;
 
@@ -241,6 +243,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*ptr++ = PPC_STW(regCache[i].hostReg, 14, i * 4);
 			}
 		}
+	};
+
+	auto EmitResultMetadata = [&](u32*& ptr, u32 count, u32 bailedOut) {
+	    *ptr++ = PPC_LWZ(PPC_R10, 1, 88);			// Load outResult ptr
+	    *ptr++ = PPC_LWZ(PPC_R11, PPC_R10, 8);		// Load outResult->instructions
+	    *ptr++ = PPC_ADDI(PPC_R11, PPC_R11, count);	// Accumulate count
+	    *ptr++ = PPC_STW(PPC_R11, PPC_R10, 8);		// Store instructions
+	    *ptr++ = PPC_LI(PPC_R11, bailedOut);		// Set bailedOut boolean
+	    *ptr++ = PPC_STW(PPC_R11, PPC_R10, 12);		// Store bailedOut
 	};
 
 	// Lazily claims arena space (and emits the prologue) the FIRST time we're
@@ -780,6 +791,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			FlushDirtyFlags(emitPtr);
 			FlushDirtyRegisters(emitPtr);
 
+			// Synchronize outResult metadata before dynamic exit
+			EmitResultMetadata(emitPtr, instrCount + 1, 0);
+
 			// Protect against dynamic reads of R15 causing a stale PC desync
 			if (rs == 15) {
 				*emitPtr++ = PPC_LIS(PPC_R12, (currentPC + 4) >> 16);
@@ -918,12 +932,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			}
 
 			if (isMemLoad || isMemStore) {
-				if (instrCount == 0) {
-					endBlock = true;
-					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_TMB9_10_11_INSTR_COUNT_ZERO);
-					break;
-				}
-
 				EnsureArenaAllocated();
 
 				// Emit the deferred Effective Address calculation natively into R12
@@ -1284,6 +1292,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				FlushDirtyFlags(emitPtr);
 				FlushDirtyRegisters(emitPtr);
 
+				// Synchronize outResult metadata before returning to C++ host
+				EmitResultMetadata(emitPtr, instrCount + 1, 0);
+
 				u32 takenPenalty = numRegs + STATIC_CODE_TICKS_16(currentPC) * 2 + 3;
 				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
@@ -1316,12 +1327,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			bool isLoad = (opcode & 0x0800) != 0;
 			u8 rb = (opcode >> 8) & 0x07;
 			u8 regList = opcode & 0xFF;
-
-			if (instrCount == 0) {
-				endBlock = true;
-				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_THB15_INSTR_COUNT_ZERO);
-				break;
-			}
 
 			int numRegs = 0;
 			for (int i = 0; i < 8; i++) if (regList & (1 << i)) numRegs++;
@@ -1497,6 +1502,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// Emit the dirty flags and registers WITHOUT clearing the compiler's tracking state
 				EmitDirtyFlagFlush(emitPtr);
 				EmitDirtyRegisterFlush(emitPtr);
+				
+				// Synchronize outResult metadata before exiting block
+				EmitResultMetadata(emitPtr, instrCount + 1, 0);
 
 				// Synchronize Pipeline PC
 				*emitPtr++ = PPC_LIS(PPC_R29, (targetPC + 4) >> 16);
@@ -1554,6 +1562,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// Flush dirty flags and registers before dynamic block exit
 				FlushDirtyFlags(emitPtr);
 				FlushDirtyRegisters(emitPtr);
+
+				// Populate result metadata directly to memory
+				EmitResultMetadata(emitPtr, instrCount + 2, 0);
 
 				// Synchronize Pipeline PC
 				*emitPtr++ = PPC_LIS(PPC_R29, (targetPC + 4) >> 16);
@@ -1651,6 +1662,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 		// 5. Return to C++ Interpreter
 		*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, bailouts[i].cycles);
+
+		// Populate result metadata directly to memory
+		EmitResultMetadata(emitPtr, bailouts[i].instructions, 1);
+
 		*emitPtr++ = PPC_LIS(PPC_R4, bailouts[i].pc >> 16);
 		*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, bailouts[i].pc & 0xFFFF);
 		s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
@@ -1669,6 +1684,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	FlushDirtyFlags(emitPtr);
 	FlushDirtyRegisters(emitPtr);
 
+	// Populate result metadata directly to memory
+	EmitResultMetadata(emitPtr, instrCount, 0);
+
 	// 2. Synchronize R29 (GBA R15) so the incoming chained block inherits the correct pipeline PC
 	*emitPtr++ = PPC_LIS(PPC_R29, (currentPC + 4) >> 16);
 	*emitPtr++ = PPC_ORI(PPC_R29, PPC_R29, (currentPC + 4) & 0xFFFF);
@@ -1680,6 +1698,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 	// --- QUOTA SHIELD BAILOUT STUB ---
 	u32* yieldTarget = emitPtr;
+
+	// Synchronize metadata (0 instructions executed, bailedOut = 1)
+	EmitResultMetadata(emitPtr, 0, 1);
+
 	*emitPtr++ = PPC_LIS(PPC_R4, startPC >> 16);
 	*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, startPC & 0xFFFF);
 	s32 yieldOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);

@@ -34,12 +34,12 @@ extern JITDebugStateLog jitDebugStateLog;
 	#else
 	#define JIT_LOG_STATE_INIT()													jitDebugStateLog.Init("interp")
 	#endif
-	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles, instrCount)		jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), (instrCount))
-    #define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)		jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), (instrCount))
+	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)					jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), 1, jitStats.fallbackInstructionsExecuted)
+    #define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)		jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), (instrCount), jitStats.jitInstructionsExecuted)
 	#define JIT_LOG_STATE_WRITE_TO_FILE()											jitDebugStateLog.WriteToFile()
 #else
 	#define JIT_LOG_STATE_INIT()        											((void)0)
-	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles, instrCount)        ((void)0)
+	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)       				((void)0)
     #define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)        ((void)0)
 	#define JIT_LOG_STATE_WRITE_TO_FILE()											((void)0)
 #endif
