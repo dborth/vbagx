@@ -1435,9 +1435,11 @@ int thumbExecute() {
                 const u32 kMaxSteps = 8192; // loops can iterate many times
                 u32 steps = 0;
                 int cppLocalTicks = 0;
+                bool preventDeadlock = jitResult->cycles == 0; // make sure we run at least one instruction!
 
-                while (cppCycles < (int)jitResult.cycles && steps < kMaxSteps &&
-                       cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks) {
+                while (preventDeadlock || (cppCycles < (int)jitResult.cycles && steps < kMaxSteps &&
+                       cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks)) {
+                	preventDeadlock = false;
 					u32 opcode = cpuPrefetch[0];
 					cpuPrefetch[0] = cpuPrefetch[1];
 
@@ -1656,27 +1658,29 @@ int thumbExecute() {
 			// Execute Native Trace with flat memory maps
             ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, &gbaFlags, gbaReadPagePtrs, gbaReadPageMasks);
 
-            JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
-            JIT_LOG_EXEC(block->length);
+            if(result.cycles > 0) {
+            	JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
+            	JIT_LOG_EXEC(block->length);
+            	
+				// Account for execution cycles accumulated by the trace block
+				cpuTotalTicks += result.cycles;
 
-			// Account for execution cycles accumulated by the trace block
-            cpuTotalTicks += result.cycles;
+				PROFILER_ADD(jitInstructionsExecuted, block->length);
 
-            PROFILER_ADD(jitInstructionsExecuted, block->length);
+				// Pipeline re-prime
+				armNextPC = result.nextPC;
+				reg[15].I = armNextPC + 2;
+				cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
+				cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
 
-			// Pipeline re-prime
-            armNextPC = result.nextPC;
-            reg[15].I = armNextPC + 2;
-            cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
-            cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+				#ifdef JIT_DETAILED_LOG
+				instrCount += block->length;
+				JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, instrCount);
+				#endif
 
-			#ifdef JIT_DETAILED_LOG
-			instrCount += block->length;
-            JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, instrCount);
-			#endif
-			
-            PROFILER_ADD_TIME(timeSpentJIT, execJitStart);
-            continue;
+				PROFILER_ADD_TIME(timeSpentJIT, execJitStart);
+				continue;
+            }
         }
 
         // ========================================================================

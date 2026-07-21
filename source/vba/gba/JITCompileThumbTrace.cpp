@@ -1054,12 +1054,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 		// THUMB Format 11: SP-relative Load/Store (LDR/STR Rd, [SP, #imm])
 		else if ((opcode & 0xF000) == 0x9000) {
-			if (instrCount == 0) {
-				endBlock = true;
-				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_TMB9_10_11_INSTR_COUNT_ZERO);
-				break;
-			}
-
 			EnsureArenaAllocated();
 
 			// SP-relative loads/stores also break the prefetch stream!
@@ -1134,12 +1128,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			bool isPop = (opcode & 0x0800) != 0;
 			bool Rbit = (opcode & 0x0100) != 0;
 			u8 regList = opcode & 0xFF;
-
-			if (instrCount == 0) {
-				endBlock = true;
-				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_THB14_INSTR_COUNT_ZERO);
-				break;
-			}
 
 			int numRegs = 0;
 			for (int i = 0; i < 8; i++) if (regList & (1 << i)) numRegs++;
