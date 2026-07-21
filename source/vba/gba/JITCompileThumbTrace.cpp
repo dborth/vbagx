@@ -994,14 +994,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// 2. Load Page Pointer and Memory Mask
 				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);
-
-				if (isMemStore) {
-					// Use R28 (writePages) to completely prevent Host OS Overwrites
-					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R28_WRITE_PAGES, PPC_R11);
-				} else {
-					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
-				}
-
+				*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
 				*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
 
 				// 3. UNIVERSAL NULL POINTER GUARD

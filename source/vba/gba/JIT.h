@@ -9,8 +9,9 @@ struct JITResult {
 } __attribute__((aligned(32)));
 
 extern JITCache jitCache;
+struct CPUFlags;
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache);
-extern "C" void ExecuteJITTrace(JITBlockFunc execute, JITResult* outResult, u32* busPrefetchCount, volatile u32* gbaRegs, u32* flags, u8** readPages, u32* readMasks, u8** writePages);
+extern "C" void ExecuteJITTrace(JITBlockFunc execute, JITResult* outResult, u32* busPrefetchCount, u32* gbaRegs, CPUFlags* flags, u8** readPages, u32* readMasks);
 extern "C" void ExecuteJITTrace_Return();
 
 #endif // JIT_H

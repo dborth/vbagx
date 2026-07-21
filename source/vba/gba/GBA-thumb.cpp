@@ -1393,7 +1393,7 @@ int thumbExecute() {
                 JITResult jitResult;
 
                 reg[15].I = pc + 4;
-                ExecuteJITTrace(block->execute, &jitResult, &busPrefetchCount, &reg[0].I, (u32*)&gbaFlags, gbaReadPagePtrs, &gbaReadPageMasks, gbaWritePagePtrs);
+                ExecuteJITTrace(block->execute, &jitResult, &busPrefetchCount, &reg[0].I, &gbaFlags, gbaReadPagePtrs, &gbaReadPageMasks);
 
                 JIT_LOG_EXEC(block->length);
 
@@ -1654,7 +1654,7 @@ int thumbExecute() {
             JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block);
 
 			// Execute Native Trace with flat memory maps
-            ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, (u32*)&gbaFlags, gbaReadPagePtrs, gbaReadPageMasks, gbaWritePagePtrs);
+            ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, &gbaFlags, gbaReadPagePtrs, gbaReadPageMasks);
 
             JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
             JIT_LOG_EXEC(block->length);

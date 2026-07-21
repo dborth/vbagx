@@ -39,7 +39,7 @@ typedef union {
     u16 W1;
     u16 W0;
   } W;
-  volatile u32 I;
+  u32 I;
 } reg_pair;
 
 struct CPUFlags {
@@ -47,7 +47,7 @@ struct CPUFlags {
     u32 Z;
     u32 C;
     u32 V;
-}; __attribute__((aligned(32)))
+} __attribute__((aligned(32)));
 
 // used strictly for load/save statesave
 struct BoolCPUFlags {
