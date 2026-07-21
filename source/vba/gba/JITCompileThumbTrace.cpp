@@ -1529,6 +1529,45 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				break;
 			}
 		}
+		// THUMB Format 18 - Unconditional Branch (B)
+		else if ((opcode & 0xF800) == 0xE000) {
+			EnsureArenaAllocated();
+
+			// 1. Calculate Target PC
+			// Extract 11-bit offset, shift left 21 bits to align sign bit,
+			// then arithmetic shift right 20 bits (sign extends and multiplies by 2).
+			s32 sOffset = (s32)((opcode & 0x07FF) << 21);
+			sOffset >>= 20;
+			u32 targetPC = currentPC + 4 + sOffset;
+
+			// 2. Calculate Pipeline Penalty
+			// Unconditional branch breaks prefetch and forces a full N+S cycle refill
+			u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 1 +
+							   STATIC_CODE_TICKS_SEQ16(targetPC) + STATIC_CODE_TICKS_16(targetPC) + 2;
+
+			EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
+			*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
+
+			// 3. JIT EXIT: Flush State
+			FlushDirtyFlags(emitPtr);
+			FlushDirtyRegisters(emitPtr);
+
+			// Synchronize outResult metadata before exiting block
+			EmitResultMetadata(emitPtr, instrCount + 1, 0);
+
+			// 4. Synchronize Pipeline PC & Linker Stub Address
+			*emitPtr++ = PPC_LIS(PPC_R29, (targetPC + 4) >> 16);
+			*emitPtr++ = PPC_ORI(PPC_R29, PPC_R29, (targetPC + 4) & 0xFFFF);
+
+			*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
+			*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
+			s32 takenStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
+			*emitPtr++ = PPC_BL(takenStubOffset);
+
+			// Unconditional branch ends the block naturally
+			endBlock = true;
+			break;
+		}
 		// THUMB Formats 18 & 19 - Branch with Link (BL)
 		else if ((opcode & 0xF800) == 0xF000) {
 			u16 nextOpcode = CPUReadHalfWord(currentPC + 2);
