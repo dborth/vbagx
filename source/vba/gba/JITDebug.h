@@ -13,6 +13,8 @@
 	#include "JITProfiler.h"
 	#include "../common/Types.h"
 
+	struct BasicBlock;
+
 	struct JITRegionConfig {
 		bool enableBIOS;   // 0x00 (16KB System ROM)
 		bool enableEWRAM;  // 0x02 (256KB External WRAM)
@@ -49,6 +51,19 @@
 			else if ((len) <= 32) jitStats.blockLengthBins[3]++; \
 			else if ((len) <= 64) jitStats.blockLengthBins[4]++; \
 			else jitStats.blockLengthBins[5]++; \
+		} while(0)
+
+		#define PROFILER_CACHE_HIT() jitStats.cacheHits++
+		#define PROFILER_CACHE_MISS() jitStats.cacheMisses++
+		#define PROFILER_CACHE_EVICT(evicted, pc) do { \
+			if ((evicted) != 0 && (evicted) != (pc)) { \
+				jitStats.cacheEvictions++; \
+			} \
+		} while(0)
+		#define PROFILER_CACHE_FLUSH_START() u64 __flushTimer = gettime()
+		#define PROFILER_CACHE_FLUSH_END() do { \
+			jitStats.cacheFlushes++; \
+			jitStats.timeSpentFlushing += (gettime() - __flushTimer); \
 		} while(0)
 
 		#define JIT_REGION_ALLOWED(opcode) JITRegionAllowed(opcode)
@@ -195,6 +210,23 @@
 #ifndef PROFILER_MARK_FRAME
 #define PROFILER_MARK_FRAME()                       ((void)0)
 #endif
+
+#ifndef PROFILER_CACHE_HIT
+#define PROFILER_CACHE_HIT()                        ((void)0)
+#endif
+#ifndef PROFILER_CACHE_MISS
+#define PROFILER_CACHE_MISS()                       ((void)0)
+#endif
+#ifndef PROFILER_CACHE_EVICT
+#define PROFILER_CACHE_EVICT(evicted, pc)           ((void)0)
+#endif
+#ifndef PROFILER_CACHE_FLUSH_START
+#define PROFILER_CACHE_FLUSH_START()                ((void)0)
+#endif
+#ifndef PROFILER_CACHE_FLUSH_END
+#define PROFILER_CACHE_FLUSH_END()                  ((void)0)
+#endif
+
 #ifndef JIT_LOG_STATE_INIT
 	#define JIT_LOG_STATE_INIT()        											((void)0)
 #endif

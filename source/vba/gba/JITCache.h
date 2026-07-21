@@ -7,8 +7,9 @@
 #include <string.h>
 #include "../common/Port.h"
 #include "JITPPCEmitter.h"
+#include "JITDebug.h"
 
-#define JIT_ARENA_SIZE					(1024 * 1024 * 4) // 1 MB
+#define JIT_ARENA_SIZE					(1024 * 1024 * 4) // 4 MB
 #define HASH_TABLE_SIZE					65536
 
 // -------------------------------------------------------------------------
@@ -48,8 +49,10 @@ class JITCache {
 			u32 index = ((pc >> 1) ^ (pc >> 13)) & (HASH_TABLE_SIZE - 1);
 			BasicBlock* block = &blockTable[index];
 			if (block->startPC == pc) {
+				PROFILER_CACHE_HIT();
 				return block;
 			}
+			PROFILER_CACHE_MISS();
 			return nullptr;
 		}
 };

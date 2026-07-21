@@ -49,6 +49,7 @@ BasicBlock* JITCache::registerBlock(u32 pc, u32 length, JITBlockFunc execute) {
     u32 index = ((pc >> 1) ^ (pc >> 13)) & (HASH_TABLE_SIZE - 1);
 
     u32 evictedPC = blockTable[index].startPC;
+    PROFILER_CACHE_EVICT(evictedPC, pc);
 
     blockTable[index].startPC = pc;
     blockTable[index].length = length;
@@ -59,6 +60,7 @@ BasicBlock* JITCache::registerBlock(u32 pc, u32 length, JITBlockFunc execute) {
 }
 
 void JITCache::flushCache() {
+	PROFILER_CACHE_FLUSH_START();
 	JIT_LOG_CACHE_FLUSH();
 
     arenaOffset = 0;
@@ -140,5 +142,7 @@ void JITCache::flushCache() {
         for (u32 i = start; i < end; i += 32) asm volatile("icbi 0, %0" : : "r" (i) : "memory");
         asm volatile("sync \n isync" : : : "memory");
     }
+
+	PROFILER_CACHE_FLUSH_END();
 }
 #endif

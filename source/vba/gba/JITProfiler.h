@@ -29,12 +29,18 @@ struct JITStats {
 	u64 timeSpentCompiling;
 	u64 timeSpentJIT;
 	u64 timeSpentFallback;
+	u64 timeSpentFlushing;
 
 	u64 jitInstructionsExecuted;
 	u64 fallbackInstructionsExecuted;
 	u32 blocksCompiled;
 	u32 blacklistedBlocks;
 	u32 blockLengthBins[6];
+
+	u32 cacheFlushes;
+	u32 cacheHits;
+	u32 cacheMisses;
+	u32 cacheEvictions;
 
 	u64 thumbInvocations;
 	u64 armInvocations;

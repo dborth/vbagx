@@ -14,11 +14,18 @@ void JITStats::reset() {
     timeSpentCompiling = 0;
 	timeSpentJIT = 0;
 	timeSpentFallback = 0;
+	timeSpentFlushing = 0;
 
     jitInstructionsExecuted = 0;
     fallbackInstructionsExecuted = 0;
     blocksCompiled = 0;
     blacklistedBlocks = 0;
+
+	cacheFlushes = 0;
+	cacheHits = 0;
+	cacheMisses = 0;
+	cacheEvictions = 0;
+
     thumbInvocations = 0;
 	armInvocations = 0;
 	swiInvocations = 0;
@@ -46,6 +53,7 @@ void JITStats::print() {
     double compileSecs = ticks_to_microsecs(timeSpentCompiling) / 1000000.0;
     double jitSecs     = ticks_to_microsecs(timeSpentJIT) / 1000000.0;
     double fallSecs    = ticks_to_microsecs(timeSpentFallback) / 1000000.0;
+    double flushSecs   = ticks_to_microsecs(timeSpentFlushing) / 1000000.0;
     double otherSecs   = totalSecs - (thumbSecs + armSecs);
 
     // Calculate Invocations Per Second rates
@@ -113,7 +121,19 @@ void JITStats::print() {
 	JIT_LOG(" 65+       Insns: %u\n", blockLengthBins[5]);
 	JIT_LOG("-----------------------------------------\n");
 
-    // 6. Print Bailouts
+	// 6. Print Cache Statistics
+	JIT_LOG("--- CACHE STATISTICS ---\n");
+	JIT_LOG("Cache Flushes:      %u\n", cacheFlushes);
+	JIT_LOG("Time Flushing:      %.3f seconds\n", flushSecs);
+	JIT_LOG("Cache Hits:         %u\n", cacheHits);
+	JIT_LOG("Cache Misses:       %u\n", cacheMisses);
+	JIT_LOG("Cache Evictions:    %u\n", cacheEvictions);
+	u32 totalLookups = cacheHits + cacheMisses;
+	double hitRate = totalLookups > 0 ? ((double)cacheHits / totalLookups * 100.0) : 0.0;
+	JIT_LOG("Hit Rate:           %.2f%%\n", hitRate);
+	JIT_LOG("-----------------------------------------\n");
+
+    // 7. Print Bailouts
 	JIT_LOG("Bailout Reasons:\n");
 	JIT_LOG("  Unsupported opcode:               %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_OPCODE]);
 	JIT_LOG("  Buffer Overflow:                  %u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
@@ -126,7 +146,7 @@ void JITStats::print() {
 	JIT_LOG("  No LDMIA/STMIA Regs:              %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
 	JIT_LOG("-----------------------------------------\n");
 
-	// 7. Top 10 Fallbacks
+	// 8. Top 10 Fallbacks
 	struct Stat { u16 bucket; u64 count; };
 	Stat topFallback[1024];
 	for (int i = 0; i < 1024; i++) {
