@@ -879,6 +879,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		else if (((opcode & 0xE000) == 0x6000) || ((opcode & 0xF000) == 0x5000) || ((opcode & 0xF000) == 0x8000)) {
 			bool isMemLoad = false;
 			bool isMemStore = false;
+			bool isSignExtended = false;
 			u8 rd = 0, rb = 0, ro = 0, imm = 0;
 			u32 accessType = 0; // 4=Word, 2=Halfword, 1=Byte
 
@@ -916,19 +917,20 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				isMemLoad = (opcode & 0x0800) != 0;
 				isMemStore = !isMemLoad;
 			}
-			// Format 10: Register Offset Loads & Stores (LDR, LDRH, LDRB, STR, STRH, STRB)
+			// Format 10: Register Offset Loads & Stores (LDR, LDRH, LDRB, STR, STRH, STRB, LDRSB, LDRSH)
 			else if ((opcode & 0xF000) == 0x5000) {
 				rd = opcode & 0x07; rb = (opcode >> 3) & 0x07; ro = (opcode >> 6) & 0x07;
 				u16 subOp = opcode & 0x0E00;
-				if (subOp <= 0x0C00 && subOp != 0x0600) {
-					useRegisterOffset = true;
-					if (subOp == 0x0800) { isMemLoad = true; accessType = 4; }
-					else if (subOp == 0x0A00) { isMemLoad = true; accessType = 2; }
-					else if (subOp == 0x0C00) { isMemLoad = true; accessType = 1; }
-					else if (subOp == 0x0000) { isMemStore = true; accessType = 4; }
-					else if (subOp == 0x0200) { isMemStore = true; accessType = 2; }
-					else if (subOp == 0x0400) { isMemStore = true; accessType = 1; }
-				}
+				useRegisterOffset = true;
+
+				if (subOp == 0x0800) { isMemLoad = true; accessType = 4; }
+				else if (subOp == 0x0A00) { isMemLoad = true; accessType = 2; }
+				else if (subOp == 0x0C00) { isMemLoad = true; accessType = 1; }
+				else if (subOp == 0x0000) { isMemStore = true; accessType = 4; }
+				else if (subOp == 0x0200) { isMemStore = true; accessType = 2; }
+				else if (subOp == 0x0400) { isMemStore = true; accessType = 1; }
+				else if (subOp == 0x0600) { isMemLoad = true; accessType = 1; isSignExtended = true; } // LDRSB
+				else if (subOp == 0x0E00) { isMemLoad = true; accessType = 2; isSignExtended = true; } // LDRSH
 			}
 
 			if (isMemLoad || isMemStore) {
@@ -1038,9 +1040,17 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// 5. Execute Memory Load or Store Instruction
 				if (isMemLoad) {
 					u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask);
-					if (accessType == 4) *emitPtr++ = PPC_LWBRX(hostRd, PPC_R10, PPC_R12);
-					else if (accessType == 2) *emitPtr++ = PPC_LHBRX(hostRd, PPC_R10, PPC_R12);
-					else *emitPtr++ = PPC_LBZX(hostRd, PPC_R10, PPC_R12);
+					if (accessType == 4) {
+						*emitPtr++ = PPC_LWBRX(hostRd, PPC_R10, PPC_R12);
+					}
+					else if (accessType == 2) {
+						*emitPtr++ = PPC_LHBRX(hostRd, PPC_R10, PPC_R12);
+						if (isSignExtended) *emitPtr++ = PPC_EXTSH(hostRd, hostRd);
+					}
+					else {
+						*emitPtr++ = PPC_LBZX(hostRd, PPC_R10, PPC_R12);
+						if (isSignExtended) *emitPtr++ = PPC_EXTSB(hostRd, hostRd);
+					}
 				} else {
 					u32 hostRd = ReadGBAReg(rd, emitPtr, lockedMask);
 					if (accessType == 4) *emitPtr++ = PPC_STWBRX(hostRd, PPC_R10, PPC_R12);
