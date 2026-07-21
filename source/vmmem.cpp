@@ -128,14 +128,14 @@ void VMClose()
 ****************************************************************************/
 static void VMAllocGBA( void )
 {
-	workRAM = (u8 *)calloc(1, 0x40000);
-	bios = (u8 *)calloc(1,0x4000);
-	internalRAM = (u8 *)calloc(1,0x8000);
-	paletteRAM = (u8 *)calloc(1,0x400);
-	vram = (u8 *)calloc(1, 0x20000);
-	oam = (u8 *)calloc(1, 0x400);
-	pix = (u8 *)calloc(1, 4 * 241 * 162);
-	ioMem = (u8 *)calloc(1, 0x400);
+	workRAM = (u8 *)memalign(32, 0x40000);
+	bios = (u8 *)memalign(32,0x4000);
+	internalRAM = (u8 *)memalign(32,0x8000);
+	paletteRAM = (u8 *)memalign(32,0x400);
+	vram = (u8 *)memalign(32, 0x20000);
+	oam = (u8 *)memalign(32, 0x400);
+	pix = (u8 *)memalign(32, 4 * 241 * 162);
+	ioMem = (u8 *)memalign(32, 0x400);
 
 	if(workRAM == NULL || bios == NULL || internalRAM == NULL ||
 		paletteRAM == NULL || vram == NULL || oam == NULL ||

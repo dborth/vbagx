@@ -1,9 +1,9 @@
 #include "GBA.h"
 
 reg_pair reg[45] __attribute__((aligned(32)));
-memoryMap map[256];
+memoryMap map[256] __attribute__((aligned(32)));
 bool ioReadable[0x400];
-CPUFlags gbaFlags = {0, 0, 0, 0};
+CPUFlags gbaFlags __attribute__((aligned(32))) = {0, 0, 0, 0};
 bool armState = true;
 bool armIrqEnable = true;
 u32 armNextPC = 0x00000000;
