@@ -2823,6 +2823,7 @@ static void CPULoop_T(int ticks) {
               CPUCheckDMA(1, 0x0f);
 
               if(frameCount >= framesToSkip) {
+            	PROFILER_MARK_FRAME();
                 systemDrawScreen();
                 frameCount = 0;
               } else {

@@ -1,7 +1,7 @@
-#ifndef NO_JIT_COMPILER
 #ifndef JIT_DEBUGSTATELOG_H
 #define JIT_DEBUGSTATELOG_H
 
+#ifndef NO_JIT_COMPILER
 #include "../common/Types.h"
 
 class JITDebugStateLog {
@@ -37,12 +37,20 @@ extern JITDebugStateLog jitDebugStateLog;
 	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)					jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), 1, jitStats.fallbackInstructionsExecuted)
     #define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)		jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), (instrCount), jitStats.jitInstructionsExecuted)
 	#define JIT_LOG_STATE_WRITE_TO_FILE()											jitDebugStateLog.WriteToFile()
-#else
+#endif
+#endif // NO_JIT_COMPILER
+
+#ifndef JIT_LOG_STATE_INIT
 	#define JIT_LOG_STATE_INIT()        											((void)0)
+#endif
+#ifndef JIT_LOG_STATE_CPP
 	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)       				((void)0)
+#endif
+#ifndef JIT_LOG_STATE_JIT
     #define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)        ((void)0)
+#endif
+#ifndef JIT_LOG_STATE_WRITE_TO_FILE
 	#define JIT_LOG_STATE_WRITE_TO_FILE()											((void)0)
 #endif
 
-#endif // JIT_DEBUGLOG_H
-#endif
+#endif // JIT_DEBUGSTATELOG_H

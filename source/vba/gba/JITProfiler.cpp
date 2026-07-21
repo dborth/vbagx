@@ -18,6 +18,7 @@ void JITStats::reset() {
     jitInstructionsExecuted = 0;
     fallbackInstructionsExecuted = 0;
     blocksCompiled = 0;
+    blacklistedBlocks = 0;
     thumbInvocations = 0;
 	armInvocations = 0;
 	swiInvocations = 0;
@@ -48,6 +49,7 @@ void JITStats::print() {
     double otherSecs   = totalSecs - (thumbSecs + armSecs);
 
     // Calculate Invocations Per Second rates
+    double avgFPS = totalSecs > 0 ? ((double)framesRendered / totalSecs) : 0.0;
 	double thumbInvPerSec = totalSecs > 0 ? ((double)thumbInvocations / totalSecs) : 0.0;
 	double armInvPerSec   = totalSecs > 0 ? ((double)armInvocations / totalSecs) : 0.0;
 	double swiInvPerSec   = totalSecs > 0 ? ((double)swiInvocations / totalSecs) : 0.0;
@@ -64,6 +66,7 @@ void JITStats::print() {
     // 3. Print the Hierarchical Time Breakdown
 	JIT_LOG("\n========== JIT REAL-TIME PROFILING ==========\n");
 	JIT_LOG("Total Wall-Clock Time: %.3f seconds\n\n", totalSecs);
+	JIT_LOG("Average Framerate:     %.2f FPS\n\n", avgFPS);
 
 	JIT_LOG("--- MODE INVOCATIONS PER SECOND ---\n");
 	JIT_LOG("THUMB Invocations:  %llu (~%.2f/sec)\n", thumbInvocations, thumbInvPerSec);
@@ -99,7 +102,8 @@ void JITStats::print() {
 	JIT_LOG("-----------------------------------------\n");
 
     // 5. Print Block Distribution
-	JIT_LOG("--- BLOCK SIZE DISTRIBUTION ---\n");
+	JIT_LOG("--- BLOCK DISTRIBUTION ---\n");
+	JIT_LOG("Blacklisted: %u\n", blacklistedBlocks);
 	JIT_LOG("Blocks Compiled: %u\n", blocksCompiled);
 	JIT_LOG("  1 to 4   Insns: %u\n", blockLengthBins[0]);
 	JIT_LOG("  5 to 8   Insns: %u\n", blockLengthBins[1]);

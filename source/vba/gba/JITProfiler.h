@@ -33,6 +33,8 @@ struct JITStats {
 	u64 jitInstructionsExecuted;
 	u64 fallbackInstructionsExecuted;
 	u32 blocksCompiled;
+	u32 blacklistedBlocks;
+	u32 blockLengthBins[6];
 
 	u64 thumbInvocations;
 	u64 armInvocations;
@@ -40,7 +42,6 @@ struct JITStats {
 
 	u64 jitInvocations;
 	u64 fallbackInvocations;
-	u32 blockLengthBins[6];
 
 	u64 fallbackOpcodeFreq[1024];
 	u32 compileBailoutFreq[1024];
@@ -48,6 +49,7 @@ struct JITStats {
 
 	int mismatchCount = 0;
 	int traceLogCount = 0;
+	u32 framesRendered = 0;
 
 	void reset();
 	void print();

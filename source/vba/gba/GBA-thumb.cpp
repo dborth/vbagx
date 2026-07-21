@@ -1624,15 +1624,9 @@ int thumbExecute() {
 
         if (__builtin_expect(block == nullptr, 0)) {
             PROFILER_START_TIMER(compileStart);
-
             block = JITCompileThumbTrace(pc, jitCache);
-            JIT_LOG_BLOCK_COMPILED(pc);
-
+            JIT_LOG_BLOCK_COMPILED(pc, block);
             PROFILER_ADD_TIME(timeSpentCompiling, compileStart);
-
-            if (block != nullptr) {
-                PROFILER_BIN_BLOCK(block->length);
-            }
         }
 
         // ========================================================================

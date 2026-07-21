@@ -43,7 +43,8 @@
 		#define PROFILER_INC(stat) jitStats.stat++
 		#define PROFILER_ADD(stat, val) jitStats.stat += (val)
 		#define PROFILER_BIN_BLOCK(len) do { \
-			if ((len) <= 4) jitStats.blockLengthBins[0]++; \
+			if ((len) == 0) jitStats.blacklistedBlocks++; \
+			else if ((len) <= 4) jitStats.blockLengthBins[0]++; \
 			else if ((len) <= 8) jitStats.blockLengthBins[1]++; \
 			else if ((len) <= 16) jitStats.blockLengthBins[2]++; \
 			else if ((len) <= 32) jitStats.blockLengthBins[3]++; \
@@ -52,6 +53,7 @@
 		} while(0)
 
 		#define JIT_REGION_ALLOWED(opcode) JITRegionAllowed(opcode)
+		#define PROFILER_MARK_FRAME() jitStats.framesRendered++
 
 		#define JIT_RESET_LOGS() do { \
 			InitJITLog(); \
@@ -63,9 +65,12 @@
 			JIT_LOG_STATE_WRITE_TO_FILE(); \
 		} while(0)
 
-		#define JIT_LOG_BLOCK_COMPILED(startPC) do { \
-			jitStats.blocksCompiled++; \
-			JIT_LOG_BLOCK_COMPILED_DETAILS((startPC)); \
+		#define JIT_LOG_BLOCK_COMPILED(startPC, block) do { \
+			if (block != nullptr) { \
+				jitStats.blocksCompiled++; \
+				PROFILER_BIN_BLOCK(block->length); \
+				JIT_LOG_BLOCK_COMPILED_DETAILS((startPC)); \
+			} \
 		} while(0)
 
 		#define JIT_LOG_BAILOUT(pc, opcode, reason) do { \
@@ -174,7 +179,7 @@
 #define JIT_REGION_ALLOWED(opcode)					((void)(opcode), true)
 #endif
 #ifndef JIT_LOG_BLOCK_COMPILED
-#define JIT_LOG_BLOCK_COMPILED(startPC)				((void)0)
+#define JIT_LOG_BLOCK_COMPILED(startPC, block)		((void)0)
 #endif
 #ifndef JIT_LOG_BAILOUT
 #define JIT_LOG_BAILOUT(pc, opcode, reason)			((void)0)
@@ -188,5 +193,7 @@
 #ifndef JIT_DEBUG_DUMP_FIRST_JIT_BLOCK
 #define JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block)		((void)0)
 #endif
-
+#ifndef PROFILER_MARK_FRAME
+#define PROFILER_MARK_FRAME()                       ((void)0)
+#endif
 #endif // JIT_DEBUG_H
