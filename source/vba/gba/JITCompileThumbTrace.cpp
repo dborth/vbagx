@@ -1439,6 +1439,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			u32 flagReg = 0;
 			u8 fN, fZ, fC, fV;
 
+			// Ensure the arena is mapped BEFORE requesting lazy flags!
+			EnsureArenaAllocated();
+
 			// Map native PowerPC hardware registers to GBA condition flags
 			switch (cond) {
 				case 0x0: flagReg = ReadFlag(FLAG_Z, emitPtr); branchIfSet = true;  supported = true; break; // EQ (Z==1)
@@ -1458,8 +1461,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			}
 
 			if (supported) {
-				EnsureArenaAllocated();
-
 				u32* branchSkipTruePath = nullptr;
 				bool branchIfZero = false;
 
