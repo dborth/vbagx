@@ -10,7 +10,6 @@
 	//#define JIT_DETAILED_LOG 1
 
 	#include <ogc/timesupp.h>
-	#include "JITDebugStateLog.h"
 	#include "JITProfiler.h"
 	#include "../common/Types.h"
 
@@ -195,5 +194,17 @@
 #endif
 #ifndef PROFILER_MARK_FRAME
 #define PROFILER_MARK_FRAME()                       ((void)0)
+#endif
+#ifndef JIT_LOG_STATE_INIT
+	#define JIT_LOG_STATE_INIT()        											((void)0)
+#endif
+#ifndef JIT_LOG_STATE_CPP
+	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)       				((void)0)
+#endif
+#ifndef JIT_LOG_STATE_JIT
+    #define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)        ((void)0)
+#endif
+#ifndef JIT_LOG_STATE_WRITE_TO_FILE
+	#define JIT_LOG_STATE_WRITE_TO_FILE()											((void)0)
 #endif
 #endif // JIT_DEBUG_H

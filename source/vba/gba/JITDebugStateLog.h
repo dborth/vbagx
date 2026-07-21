@@ -40,17 +40,4 @@ extern JITDebugStateLog jitDebugStateLog;
 #endif
 #endif // NO_JIT_COMPILER
 
-#ifndef JIT_LOG_STATE_INIT
-	#define JIT_LOG_STATE_INIT()        											((void)0)
-#endif
-#ifndef JIT_LOG_STATE_CPP
-	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)       				((void)0)
-#endif
-#ifndef JIT_LOG_STATE_JIT
-    #define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)        ((void)0)
-#endif
-#ifndef JIT_LOG_STATE_WRITE_TO_FILE
-	#define JIT_LOG_STATE_WRITE_TO_FILE()											((void)0)
-#endif
-
 #endif // JIT_DEBUGSTATELOG_H
