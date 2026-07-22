@@ -1615,71 +1615,85 @@ int thumbExecute() {
 // HYBRID TRACE-JIT / C++ EXECUTION ENGINE
 // -------------------------------------------------------------------------
 int thumbExecute() {
-	PROFILER_INC(thumbInvocations);
+    PROFILER_INC(thumbInvocations);
     PROFILER_START_TIMER(thumbTimeStart);
     PROFILER_DECLARE_BAILOUT_FLAG();
 
+    // Default to true upon entering the loop. This ensures that if the
+    // scheduler previously yielded for an interrupt, the interrupt handler
+    // (a valid Trace Header) is allowed to be JIT compiled.
+    bool isTraceHeader = true;
+
     do {
         u32 pc = armNextPC;
-        BasicBlock* block = jitCache.getBlock(pc);
-
-        if (__builtin_expect(block == nullptr, 0)) {
-            PROFILER_START_TIMER(compileStart);
-            PROFILER_CHECK_MID_BLOCK_RECOMPILE(pc, jitCache);
-            block = JITCompileThumbTrace(pc, jitCache);
-            JIT_LOG_BLOCK_COMPILED(pc, block);
-            PROFILER_ADD_TIME(timeSpentCompiling, compileStart);
-        }
 
         // ========================================================================
-        // JIT EXECUTION PATH
+        // TRACE HEADER GATE
         // ========================================================================
-        if (block != nullptr && block->execute != nullptr) {
-        	PROFILER_CHECK_BAILOUT_TRANSITION();
-            PROFILER_START_TIMER(execJitStart);
-            PROFILER_INC(jitInvocations);
+        if (isTraceHeader) {
+            BasicBlock* block = jitCache.getBlock(pc);
 
-            JITResult result = {0, 0, 0, 0};
-
-			// Align reg[15].I to pc + 4 so that PC-relative reads
-			// inside the compiled JIT trace match authentic GBA pipeline values.
-            reg[15].I = pc + 4;
-
-            JIT_LOG_TRACE_ENTRY(pc, flagBuffer);
-            JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block);
-
-			// Execute Native Trace with flat memory maps
-            ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, &gbaFlags, gbaReadPagePtrs, gbaReadPageMasks);
-
-			JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
-            JIT_LOG_EXEC(result.instructions, block->length, result.bailedOut);
-			JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, result.instructions);
-
-			PROFILER_ADD_TIME(timeSpentJIT, execJitStart);
-
-			cpuTotalTicks += result.cycles; // Account for execution cycles accumulated by the trace block
-
-            if (result.instructions > 0 || result.bailedOut) {
-				// Pipeline re-prime
-				armNextPC = result.nextPC;
-				reg[15].I = armNextPC + 2;
-				cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
-				cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+            if (__builtin_expect(block == nullptr, 0)) {
+                PROFILER_START_TIMER(compileStart);
+                PROFILER_CHECK_MID_BLOCK_RECOMPILE(pc, jitCache);
+                block = JITCompileThumbTrace(pc, jitCache);
+                JIT_LOG_BLOCK_COMPILED(pc, block);
+                PROFILER_ADD_TIME(timeSpentCompiling, compileStart);
             }
 
-            if (!result.bailedOut) {
-            	// Clean exit or yield via Quota. Let the loop restart to grab the next block
-				continue;
-            }
+            // ====================================================================
+            // JIT EXECUTION PATH
+            // ====================================================================
+            if (block != nullptr && block->execute != nullptr) {
+                PROFILER_CHECK_BAILOUT_TRANSITION();
+                PROFILER_START_TIMER(execJitStart);
+                PROFILER_INC(jitInvocations);
 
-			// We bailed natively
-			// armNextPC is exactly pointing at the failing opcode
-			// DO NOT CONTINUE THE LOOP
-			// Fall straight through into the C++ switch(opcode) so it can execute this instruction
-            PROFILER_SET_BAILOUT_FLAG();
-        }
-        else {
-        	PROFILER_CLEAR_BAILOUT_FLAG();
+                JITResult result = {0, 0, 0, 0};
+
+                // Align reg[15].I to pc + 4 so that PC-relative reads
+                // inside the compiled JIT trace match authentic GBA pipeline values.
+                reg[15].I = pc + 4;
+
+                JIT_LOG_TRACE_ENTRY(pc, flagBuffer);
+                JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block);
+
+                // Execute Native Trace with flat memory maps
+                ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, &gbaFlags, gbaReadPagePtrs, gbaReadPageMasks);
+
+                JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
+                JIT_LOG_EXEC(result.instructions, block->length, result.bailedOut);
+                JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, result.instructions);
+
+                PROFILER_ADD_TIME(timeSpentJIT, execJitStart);
+
+                cpuTotalTicks += result.cycles;
+
+                if (result.instructions > 0 || result.bailedOut) {
+                    // Pipeline re-prime
+                    armNextPC = result.nextPC;
+                    reg[15].I = armNextPC + 2;
+                    cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
+                    cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+                }
+
+                if (!result.bailedOut) {
+                    // Clean exit (e.g., quota shield). The next instruction is
+                    // mathematically guaranteed to be a valid entry point.
+                    isTraceHeader = true;
+                    continue;
+                }
+
+                // We bailed natively mid-trace. Lock the JIT out so the C++
+                // interpreter can eat the rest of the shattered block natively.
+                PROFILER_SET_BAILOUT_FLAG();
+                isTraceHeader = false;
+            }
+            else {
+                PROFILER_CLEAR_BAILOUT_FLAG();
+            }
+        } else {
+            PROFILER_CLEAR_BAILOUT_FLAG();
         }
 
         // ========================================================================
@@ -1698,7 +1712,6 @@ int thumbExecute() {
         if (busPrefetchCount & 0xFFFFFF00)
             busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
 
-        clockTicks = 0;
         u32 oldArmNextPC = armNextPC;
         armNextPC = reg[15].I;
         reg[15].I += 2;
@@ -1719,6 +1732,16 @@ int thumbExecute() {
         cpuTotalTicks += localTicks;
         JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, localTicks);
         PROFILER_ADD_TIME(timeSpentFallback, execFallbackStart);
+
+        // ========================================================================
+        // THE DISCONTINUITY CHECK
+        // ========================================================================
+        // If the instruction modified the PC non-linearly, a branch occurred.
+        // This marks the beginning of a new logical block boundary.
+        if (armNextPC != oldArmNextPC + 2) {
+            isTraceHeader = true;
+        }
+
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart);
