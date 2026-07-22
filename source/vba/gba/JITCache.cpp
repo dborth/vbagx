@@ -1,4 +1,5 @@
 #ifndef NO_JIT_COMPILER
+#include <ogc/cache.h>
 #include "JIT.h"
 
 JITCache jitCache;
@@ -134,15 +135,11 @@ void JITCache::flushCache() {
 
 		arenaOffset = ((emitPtr - jitArena) * sizeof(u32) + 31) & ~31;
 
-        // Flush the newly generated Linker Stub from D-Cache to I-Cache
-        u32 start = (u32)jitArena & ~31;
-        u32 end   = ((u32)emitPtr + 31) & ~31;
-        for (u32 i = start; i < end; i += 32) asm volatile("dcbst 0, %0" : : "r" (i) : "memory");
-        asm volatile("sync" : : : "memory");
-        for (u32 i = start; i < end; i += 32) asm volatile("icbi 0, %0" : : "r" (i) : "memory");
-        asm volatile("sync \n isync" : : : "memory");
+		// Flush the newly generated Linker Stub from D-Cache to I-Cache
+		u32 stubSize = (u8*)emitPtr - (u8*)jitArena;
+		DCStoreRange((void*)jitArena, stubSize);
+		ICInvalidateRange((void*)jitArena, stubSize);
     }
-
 	PROFILER_CACHE_FLUSH_END();
 }
 #endif

@@ -1,4 +1,5 @@
 #ifndef NO_JIT_COMPILER
+#include <ogc/cache.h>
 #include "JIT.h"
 #include "GBAinline.h"
 #include "GBAcpu.h"
@@ -47,15 +48,6 @@ struct DeferredBailout {
 	u32 cycles;
 	u32 instructions;
 };
-
-static inline void FlushJITCache(void* addr, u32 size) {
-    u32 start = (u32)addr & ~31;
-    u32 end   = ((u32)addr + size + 31) & ~31;
-    for (u32 i = start; i < end; i += 32) asm volatile("dcbst 0, %0" : : "r" (i) : "memory");
-    asm volatile("sync" : : : "memory");
-    for (u32 i = start; i < end; i += 32) asm volatile("icbi 0, %0" : : "r" (i) : "memory");
-    asm volatile("sync \n isync" : : : "memory");
-}
 
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	if (!JIT_REGION_ALLOWED(startPC)) {
@@ -1953,7 +1945,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, emittedWords, rewindAmount);
 
 	cache.rewindJITMemory((MAX_WORDS - emittedWords) * sizeof(u32));
-	FlushJITCache(blockStart, actualBytes);
+	DCStoreRange(blockStart, actualBytes);
+	ICInvalidateRange(blockStart, actualBytes);
 
 	return cache.registerBlock(startPC, instrCount, (JITBlockFunc)blockStart);
 }
