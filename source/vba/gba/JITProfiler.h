@@ -53,6 +53,13 @@ struct JITStats {
 	u32 compileBailoutFreq[1024];
 	u32 bailoutReasons[BAILOUT_REASON_COUNT];
 
+	u32 fullBlockCompletions;
+	u32 partialBlockExecutions;
+	u32 blockExecutionRatioBins[5];
+	u32 midBlockRecompilations;
+	u32 bailoutOffsetBins[6];
+	u32 bailoutToJitTransitions;
+
 	int mismatchCount = 0;
 	int traceLogCount = 0;
 	u32 framesRendered = 0;

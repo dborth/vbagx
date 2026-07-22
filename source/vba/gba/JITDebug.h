@@ -3,6 +3,7 @@
 
 #ifndef NO_JIT_COMPILER
 	//#define JIT_PROFILING 1
+	//#define JIT_BLOCK_FRAGMENTATION_STATS 1
 	//#define JIT_DEBUG_BLOCK_DUMP 1
 	//#define JIT_CACHE_AND_ARENA_LOG 1
 	//#define JIT_COMPILER_DIFFERENTIAL_TESTING 1
@@ -93,10 +94,41 @@
 			JIT_LOG_BAILOUT_DETAILS((pc), (opcode), #reason); \
 		} while(0)
 
-		#define JIT_LOG_EXEC(count) do { \
-			jitStats.jitInstructionsExecuted += (count); \
-		} while(0)
+		#if JIT_BLOCK_FRAGMENTATION_STATS
+			#define PROFILER_FRAG_STATS(count, blockLen, bailed) do { \
+				if (bailed) { \
+					jitStats.partialBlockExecutions++; \
+					if ((count) == 0) jitStats.bailoutOffsetBins[0]++; \
+					else if ((count) <= 3) jitStats.bailoutOffsetBins[1]++; \
+					else if ((count) <= 7) jitStats.bailoutOffsetBins[2]++; \
+					else if ((count) <= 15) jitStats.bailoutOffsetBins[3]++; \
+					else if ((count) <= 31) jitStats.bailoutOffsetBins[4]++; \
+					else jitStats.bailoutOffsetBins[5]++; \
+				} else { \
+					jitStats.fullBlockCompletions++; \
+				} \
+				if ((blockLen) > 0) { \
+					u32 pct = ((count) * 100) / (blockLen); \
+					if (pct < 25) jitStats.blockExecutionRatioBins[0]++; \
+					else if (pct < 50) jitStats.blockExecutionRatioBins[1]++; \
+					else if (pct < 75) jitStats.blockExecutionRatioBins[2]++; \
+					else if (pct < 100) jitStats.blockExecutionRatioBins[3]++; \
+					else jitStats.blockExecutionRatioBins[4]++; \
+				} \
+			} while(0)
+			#define PROFILER_DECLARE_BAILOUT_FLAG()       bool lastStepWasBailout = false
+			#define PROFILER_CHECK_BAILOUT_TRANSITION()   do { if (lastStepWasBailout) { jitStats.bailoutToJitTransitions++; lastStepWasBailout = false; } } while(0)
+			#define PROFILER_SET_BAILOUT_FLAG()           do { lastStepWasBailout = true; } while(0)
+			#define PROFILER_CLEAR_BAILOUT_FLAG()         do { lastStepWasBailout = false; } while(0)
+			#define PROFILER_CHECK_MID_BLOCK_RECOMPILE(pc, cache) do { if ((cache).isMidBlockRecompile(pc)) jitStats.midBlockRecompilations++; } while(0)
+		#else
+			#define PROFILER_FRAG_STATS(count, blockLen, bailed)		((void)0)
+		#endif
 
+		#define JIT_LOG_EXEC(count, blockLen, bailed) do { \
+			jitStats.jitInstructionsExecuted += (count); \
+			PROFILER_FRAG_STATS((count), (blockLen), (bailed)); \
+		} while(0)
 		#define JIT_LOG_FALLBACK(opcode) do { \
 			jitStats.fallbackInvocations++; \
 			jitStats.fallbackInstructionsExecuted++; \
@@ -199,7 +231,22 @@
 #define JIT_LOG_BAILOUT(pc, opcode, reason)			((void)0)
 #endif
 #ifndef JIT_LOG_EXEC
-#define JIT_LOG_EXEC(count)							((void)0)
+#define JIT_LOG_EXEC(count, blockLen, bailed)			((void)0)
+#endif
+#ifndef PROFILER_DECLARE_BAILOUT_FLAG
+#define PROFILER_DECLARE_BAILOUT_FLAG()       			((void)0)
+#endif
+#ifndef PROFILER_CHECK_BAILOUT_TRANSITION
+#define PROFILER_CHECK_BAILOUT_TRANSITION()   			((void)0)
+#endif
+#ifndef PROFILER_SET_BAILOUT_FLAG
+#define PROFILER_SET_BAILOUT_FLAG()           			((void)0)
+#endif
+#ifndef PROFILER_CLEAR_BAILOUT_FLAG
+#define PROFILER_CLEAR_BAILOUT_FLAG()         			((void)0)
+#endif
+#ifndef PROFILER_CHECK_MID_BLOCK_RECOMPILE
+#define PROFILER_CHECK_MID_BLOCK_RECOMPILE(pc, cache)	((void)0)
 #endif
 #ifndef JIT_LOG_FALLBACK
 #define JIT_LOG_FALLBACK(opcode)					((void)0)

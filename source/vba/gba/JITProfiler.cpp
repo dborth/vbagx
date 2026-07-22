@@ -39,6 +39,13 @@ void JITStats::reset() {
     }
     for (int i = 0; i < BAILOUT_REASON_COUNT; i++) bailoutReasons[i] = 0;
 
+    fullBlockCompletions = 0;
+	partialBlockExecutions = 0;
+	midBlockRecompilations = 0;
+	bailoutToJitTransitions = 0;
+	for (int i = 0; i < 5; i++) blockExecutionRatioBins[i] = 0;
+	for (int i = 0; i < 6; i++) bailoutOffsetBins[i] = 0;
+
     mismatchCount = 0;
     traceLogCount = 0;
 }
@@ -145,7 +152,33 @@ void JITStats::print() {
 	JIT_LOG("  No Push/Pop Regs:                 %u\n", bailoutReasons[BAILOUT_PUSH_POP_REGS]);
 	JIT_LOG("  No LDMIA/STMIA Regs:              %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
 	JIT_LOG("-----------------------------------------\n");
+#if JIT_BLOCK_FRAGMENTATION_STATS
+	JIT_LOG("--- JIT BLOCK LIFECYCLE & FRAGMENTATION STATS ---\n");	
+	u32 totalExecs = fullBlockCompletions + partialBlockExecutions;
+	double fullPct = totalExecs > 0 ? ((double)fullBlockCompletions / totalExecs * 100.0) : 0.0;
+	double partPct = totalExecs > 0 ? ((double)partialBlockExecutions / totalExecs * 100.0) : 0.0;
 
+	JIT_LOG("Block Execution Completions: %u (%.1f%%)\n", fullBlockCompletions, fullPct);
+	JIT_LOG("Mid-Block Bailouts (Partial): %u (%.1f%%)\n", partialBlockExecutions, partPct);
+	JIT_LOG("Mid-Block Recompilations:    %u\n", midBlockRecompilations);
+	JIT_LOG("Bailout-to-JIT Transitions:  %u\n", bailoutToJitTransitions);
+
+	JIT_LOG("\nExecution Coverage Ratio:\n");
+	JIT_LOG(" [0%% - 25%%]   Executed: %u\n", blockExecutionRatioBins[0]);
+	JIT_LOG(" [25%% - 50%%]  Executed: %u\n", blockExecutionRatioBins[1]);
+	JIT_LOG(" [50%% - 75%%]  Executed: %u\n", blockExecutionRatioBins[2]);
+	JIT_LOG(" [75%% - 100%%] Executed: %u\n", blockExecutionRatioBins[3]);
+	JIT_LOG(" [100%%]                : %u\n", blockExecutionRatioBins[4]);
+
+	JIT_LOG("\nBailout Offset Distribution (Instructions Executed):\n");
+	JIT_LOG("  Inst 0 (Immediate): %u\n", bailoutOffsetBins[0]);
+	JIT_LOG("  Inst 1-3:           %u\n", bailoutOffsetBins[1]);
+	JIT_LOG("  Inst 4-7:           %u\n", bailoutOffsetBins[2]);
+	JIT_LOG("  Inst 8-15:          %u\n", bailoutOffsetBins[3]);
+	JIT_LOG("  Inst 16-31:         %u\n", bailoutOffsetBins[4]);
+	JIT_LOG("  Inst 32+:           %u\n", bailoutOffsetBins[5]);
+	JIT_LOG("----------------------------------------------------------\n");
+#endif
 	// 8. Top 10 Fallbacks
 	struct Stat { u16 bucket; u64 count; };
 	Stat topFallback[1024];

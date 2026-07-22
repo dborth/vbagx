@@ -55,6 +55,21 @@ class JITCache {
 			PROFILER_CACHE_MISS();
 			return nullptr;
 		}
+
+#if JIT_BLOCK_FRAGMENTATION_STATS
+		inline bool isMidBlockRecompile(u32 pc) const {
+			for (u32 i = 0; i < HASH_TABLE_SIZE; i++) {
+				const BasicBlock& b = blockTable[i];
+				if (b.execute != nullptr && b.startPC != pc) {
+					u32 endPC = b.startPC + (b.length * 2);
+					if (pc > b.startPC && pc < endPC) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+#endif
 };
 
 #endif

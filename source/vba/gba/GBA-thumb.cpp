@@ -1395,7 +1395,7 @@ int thumbExecute() {
                 reg[15].I = pc + 4;
                 ExecuteJITTrace(block->execute, &jitResult, &busPrefetchCount, &reg[0].I, &gbaFlags, gbaReadPagePtrs, &gbaReadPageMasks);
 
-                JIT_LOG_EXEC(jitResult.instructions);
+                JIT_LOG_EXEC(jitResult.instructions, block->length, result.bailedOut);
 
                 u32 jitRegs[16];
                 for (size_t i = 0; i < 16; i++) jitRegs[i] = reg[i].I;
@@ -1617,6 +1617,7 @@ int thumbExecute() {
 int thumbExecute() {
 	PROFILER_INC(thumbInvocations);
     PROFILER_START_TIMER(thumbTimeStart);
+    PROFILER_DECLARE_BAILOUT_FLAG();
 
     do {
         u32 pc = armNextPC;
@@ -1624,6 +1625,7 @@ int thumbExecute() {
 
         if (__builtin_expect(block == nullptr, 0)) {
             PROFILER_START_TIMER(compileStart);
+            PROFILER_CHECK_MID_BLOCK_RECOMPILE(pc, jitCache);
             block = JITCompileThumbTrace(pc, jitCache);
             JIT_LOG_BLOCK_COMPILED(pc, block);
             PROFILER_ADD_TIME(timeSpentCompiling, compileStart);
@@ -1633,6 +1635,7 @@ int thumbExecute() {
         // JIT EXECUTION PATH
         // ========================================================================
         if (block != nullptr && block->execute != nullptr) {
+        	PROFILER_CHECK_BAILOUT_TRANSITION();
             PROFILER_START_TIMER(execJitStart);
             PROFILER_INC(jitInvocations);
 
@@ -1649,7 +1652,7 @@ int thumbExecute() {
             ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, &gbaFlags, gbaReadPagePtrs, gbaReadPageMasks);
 
 			JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
-            JIT_LOG_EXEC(result.instructions);
+            JIT_LOG_EXEC(result.instructions, block->length, result.bailedOut);
 			JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, result.instructions);
 
 			PROFILER_ADD_TIME(timeSpentJIT, execJitStart);
@@ -1673,6 +1676,10 @@ int thumbExecute() {
 			// armNextPC is exactly pointing at the failing opcode
 			// DO NOT CONTINUE THE LOOP
 			// Fall straight through into the C++ switch(opcode) so it can execute this instruction
+            PROFILER_SET_BAILOUT_FLAG();
+        }
+        else {
+        	PROFILER_CLEAR_BAILOUT_FLAG();
         }
 
         // ========================================================================
