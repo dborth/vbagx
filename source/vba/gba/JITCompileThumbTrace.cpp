@@ -135,6 +135,22 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 	};
 
+	auto EmitNZFlags = [&](u32 sourceReg) {
+		u8 fN = WriteFlag(FLAG_N);
+		u8 fZ = WriteFlag(FLAG_Z);
+		*emitPtr++ = PPC_SRWI(fN, sourceReg, 31);
+		*emitPtr++ = PPC_CNTLZW(fZ, sourceReg);
+		*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+	};
+
+	auto EmitCVFlagsFromXER = [&](u32 scratchReg) {
+		u8 fC = WriteFlag(FLAG_C);
+		u8 fV = WriteFlag(FLAG_V);
+		*emitPtr++ = PPC_MFXER(scratchReg);
+		*emitPtr++ = PPC_RLWINM(fC, scratchReg, 3, 31, 31);
+		*emitPtr++ = PPC_RLWINM(fV, scratchReg, 2, 31, 31);
+	};
+
 	// Initialize all GBA R0-R14 as unallocated (with 0 age)
 	u32 allocatedHostRegsMask = 0; // Live bitmask tracking allocated PPC registers (R15–R28)
 	for (int i = 0; i < 15; i++) regCache[i] = {false, false, 0, 0};
@@ -442,12 +458,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 
 				// Extract N and Z Flags natively from the host register
-				u8 fN = WriteFlag(FLAG_N);
-				u8 fZ = WriteFlag(FLAG_Z);
-				*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
-				*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
-				// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
-				*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+				EmitNZFlags(hostRd);
 
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				break;
@@ -482,19 +493,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				else                        *emitPtr++ = PPC_SUBFCO(hostRd, PPC_R12, hostRs); // SUB (Rs - R12)
 
 				// Extract Hardware C and V Flags from XER (Branchless)
-				u8 fC = WriteFlag(FLAG_C);
-				u8 fV = WriteFlag(FLAG_V);
-				*emitPtr++ = PPC_MFXER(PPC_R11);
-				*emitPtr++ = PPC_RLWINM(fC, PPC_R11, 3, 31, 31); // IBM Bit 2 (CA) -> Bit 31
-				*emitPtr++ = PPC_RLWINM(fV, PPC_R11, 2, 31, 31); // IBM Bit 1 (OV) -> Bit 31
+				EmitCVFlagsFromXER(PPC_R11);
 
 				// Extract N and Z Flags
-				u8 fN = WriteFlag(FLAG_N);
-				u8 fZ = WriteFlag(FLAG_Z);
-				*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
-				*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
-				// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
-				*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+				EmitNZFlags(hostRd);
 
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				break;
@@ -533,21 +535,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_SUBFCO(hostRd, PPC_R12, hostRd);
 					}
 
-					// Extract Hardware C and V Flags from XER natively
-					u8 fC = WriteFlag(FLAG_C);
-					u8 fV = WriteFlag(FLAG_V);
-					*emitPtr++ = PPC_MFXER(PPC_R10);
-					*emitPtr++ = PPC_RLWINM(fC, PPC_R10, 3, 31, 31);
-					*emitPtr++ = PPC_RLWINM(fV, PPC_R10, 2, 31, 31);
+					EmitCVFlagsFromXER(PPC_R10);
 
 					// Extract N and Z Flags
-					u8 fN = WriteFlag(FLAG_N);
-					u8 fZ = WriteFlag(FLAG_Z);
 					u32 flagSrc = (op == 1) ? PPC_R11 : hostRd;
-					*emitPtr++ = PPC_SRWI(fN, flagSrc, 31);
-					*emitPtr++ = PPC_CNTLZW(fZ, flagSrc);
-					// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
-					*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+					EmitNZFlags(flagSrc);
 				}
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				break;
@@ -570,17 +562,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 						*emitPtr++ = PPC_SUBFCO(PPC_R12, hostRs, hostRd); // R12 = Rd - Rs
 
-						u8 fC = WriteFlag(FLAG_C);
-						u8 fV = WriteFlag(FLAG_V);
-						*emitPtr++ = PPC_MFXER(PPC_R11);
-						*emitPtr++ = PPC_RLWINM(fC, PPC_R11, 3, 31, 31);
-						*emitPtr++ = PPC_RLWINM(fV, PPC_R11, 2, 31, 31);
-
-						u8 fN = WriteFlag(FLAG_N);
-						u8 fZ = WriteFlag(FLAG_Z);
-						*emitPtr++ = PPC_SRWI(fN, PPC_R12, 31);
-						*emitPtr++ = PPC_CNTLZW(fZ, PPC_R12);
-						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+						EmitCVFlagsFromXER(PPC_R11);
+						EmitNZFlags(PPC_R12);
 
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
@@ -595,11 +578,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						if (op == 14) *emitPtr++ = PPC_ANDC(hostRd, hostRd, hostRs); // BIC
 
 						// Extract N and Z Flags
-						u8 fN = WriteFlag(FLAG_N);
-						u8 fZ = WriteFlag(FLAG_Z);
-						*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
-						*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
-						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+						EmitNZFlags(hostRd);
 
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
@@ -625,19 +604,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						}
 
 						// Extract Hardware C and V Flags from XER natively
-						u8 fC = WriteFlag(FLAG_C);
-						u8 fV = WriteFlag(FLAG_V);
-						*emitPtr++ = PPC_MFXER(PPC_R11);
-						*emitPtr++ = PPC_RLWINM(fC, PPC_R11, 3, 31, 31);
-						*emitPtr++ = PPC_RLWINM(fV, PPC_R11, 2, 31, 31);
+						EmitCVFlagsFromXER(PPC_R11);
 
 						// Extract N and Z Flags natively from the host register
-						u8 fN = WriteFlag(FLAG_N);
-						u8 fZ = WriteFlag(FLAG_Z);
-						*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
-						*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
-						// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
-						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+						EmitNZFlags(hostRd);
 
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
@@ -650,18 +620,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_SUBFCO(hostRd, hostRs, PPC_R12); // Rd = R12 (0) - Rs
 
 						// Extract Hardware C and V Flags natively from XER
-						u8 fC = WriteFlag(FLAG_C);
-						u8 fV = WriteFlag(FLAG_V);
-						*emitPtr++ = PPC_MFXER(PPC_R11);
-						*emitPtr++ = PPC_RLWINM(fC, PPC_R11, 3, 31, 31);
-						*emitPtr++ = PPC_RLWINM(fV, PPC_R11, 2, 31, 31);
+						EmitCVFlagsFromXER(PPC_R11);
 
 						// Extract N and Z Flags
-						u8 fN = WriteFlag(FLAG_N);
-						u8 fZ = WriteFlag(FLAG_Z);
-						*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
-						*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
-						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+						EmitNZFlags(hostRd);
 
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
@@ -672,12 +634,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 						*emitPtr++ = PPC_NOR(hostRd, hostRs, hostRs);
 
-						// MVN only updates N and Z
-						u8 fN = WriteFlag(FLAG_N);
-						u8 fZ = WriteFlag(FLAG_Z);
-						*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
-						*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
-						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+						EmitNZFlags(hostRd); // MVN only updates N and Z
 
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
@@ -688,11 +645,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 						*emitPtr++ = PPC_AND(PPC_R12, hostRd, hostRs); // R12 = Rd & Rs
 
-						u8 fN = WriteFlag(FLAG_N);
-						u8 fZ = WriteFlag(FLAG_Z);
-						*emitPtr++ = PPC_SRWI(fN, PPC_R12, 31);
-						*emitPtr++ = PPC_CNTLZW(fZ, PPC_R12);
-						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+						EmitNZFlags(PPC_R12);
 
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
@@ -725,11 +678,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R12);
 
 						// MUL only updates N and Z in Thumb
-						u8 fN = WriteFlag(FLAG_N);
-						u8 fZ = WriteFlag(FLAG_Z);
-						*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
-						*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
-						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+						EmitNZFlags(hostRd);
 
 						// Non-sequential code-fetch table - thumb43_1 uses codeTicksAccess16
 						// (non-seq) even though MUL isn't a guest memory access; that's just
@@ -745,18 +694,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_ADDCO(PPC_R12, hostRd, hostRs); // R12 = Rd + Rs
 
 						// Extract Hardware C and V Flags from XER (Branchless)
-						u8 fC = WriteFlag(FLAG_C);
-						u8 fV = WriteFlag(FLAG_V);
-						*emitPtr++ = PPC_MFXER(PPC_R11);
-						*emitPtr++ = PPC_RLWINM(fC, PPC_R11, 3, 31, 31);
-						*emitPtr++ = PPC_RLWINM(fV, PPC_R11, 2, 31, 31);
+						EmitCVFlagsFromXER(PPC_R11);
 
 						// Extract N and Z Flags natively
-						u8 fN = WriteFlag(FLAG_N);
-						u8 fZ = WriteFlag(FLAG_Z);
-						*emitPtr++ = PPC_SRWI(fN, PPC_R12, 31);
-						*emitPtr++ = PPC_CNTLZW(fZ, PPC_R12);
-						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+						EmitNZFlags(PPC_R12);
 
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
@@ -786,11 +727,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						}
 
 						// Extract N and Z Flags natively
-						u8 fN = WriteFlag(FLAG_N);
-						u8 fZ = WriteFlag(FLAG_Z);
-						*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
-						*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
-						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+						EmitNZFlags(hostRd);
 
 						// Back-patch the skip branch
 						*branchSkip = PPC_BEQ((u32)((emitPtr - branchSkip) * 4));
@@ -839,19 +776,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_SUBFCO(PPC_R12, regRs, regRd);
 
 						// Extract Hardware C and V Flags from XER (Branchless)
-						u8 fC = WriteFlag(FLAG_C);
-						u8 fV = WriteFlag(FLAG_V);
-						*emitPtr++ = PPC_MFXER(PPC_R10);
-						*emitPtr++ = PPC_RLWINM(fC, PPC_R10, 3, 31, 31); // IBM Bit 2 (CA) -> Bit 31
-						*emitPtr++ = PPC_RLWINM(fV, PPC_R10, 2, 31, 31); // IBM Bit 1 (OV) -> Bit 31
+						EmitCVFlagsFromXER(PPC_R10);
 
 						// Extract N and Z Flags from the Result (PPC_R12)
-						u8 fN = WriteFlag(FLAG_N);
-						u8 fZ = WriteFlag(FLAG_Z);
-						*emitPtr++ = PPC_SRWI(fN, PPC_R12, 31);
-						*emitPtr++ = PPC_CNTLZW(fZ, PPC_R12);
-						// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
-						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+						EmitNZFlags(PPC_R12);
 
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
