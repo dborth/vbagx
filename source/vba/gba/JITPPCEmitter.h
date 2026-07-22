@@ -77,7 +77,9 @@
 #define PPC_STBZX(rS, rA, rB)           ((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (215 << 1)) // Store Byte Zero
 
 #define PPC_RLWINM(rA, rS, sh, mb, me)	((21 << 26) | ((rS) << 21) | ((rA) << 16) | ((sh) << 11) | ((mb) << 6) | ((me) << 1))
+#define PPC_RLWNM(rA, rS, rB, mb, me)	((23 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | ((mb) << 6) | ((me) << 1))
 #define PPC_SRWI(rA, rS, sh)			PPC_RLWINM(rA, rS, (32 - (sh)) & 31, sh, 31)
+#define PPC_SRAW(rA, rS, rB)			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (792 << 1))
 #define PPC_SRAWI(rA, rS, sh)			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((sh) << 11) | (824 << 1))
 #define PPC_SRW(rA, rS, rB)    			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (536 << 1))
 #define PPC_SLW(rA, rS, rB)    			((31 << 26) | ((rS) << 21) | ((rA) << 16) | ((rB) << 11) | (24 << 1))

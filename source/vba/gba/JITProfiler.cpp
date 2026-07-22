@@ -143,14 +143,14 @@ void JITStats::print() {
     // 7. Print Bailouts
 	JIT_LOG("Bailout Reasons:\n");
 	JIT_LOG("  Unsupported opcode:               %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_OPCODE]);
+	JIT_LOG("  Unsupported FMT 14 opcode:        %u\n", bailoutReasons[BAILOUT_FMT14_UNSUPPORTED_OPCODE]);
 	JIT_LOG("  Buffer Overflow:                  %u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
-	JIT_LOG("  Unsupported ALU:                  %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_ALU]);
-	JIT_LOG("  Unsupported Mem Bank:             %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
+	JIT_LOG("  SWI opcode:                       %u\n", bailoutReasons[BAILOUT_SWI_OPCODE]);
 	JIT_LOG("  Conditional Branch:               %u\n", bailoutReasons[BAILOUT_CONDITIONAL_BRANCH]);
 	JIT_LOG("  Branch with Link:                 %u\n", bailoutReasons[BAILOUT_BRANCH_WITH_LINK]);
-	JIT_LOG("  Unknown MEM Op:                   %u\n", bailoutReasons[BAILOUT_UNKNOWN_MEM_OP]);
 	JIT_LOG("  No Push/Pop Regs:                 %u\n", bailoutReasons[BAILOUT_PUSH_POP_REGS]);
 	JIT_LOG("  No LDMIA/STMIA Regs:              %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
+	JIT_LOG("  Unsupported Mem Bank:             %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
 	JIT_LOG("-----------------------------------------\n");
 #if JIT_BLOCK_FRAGMENTATION_STATS
 	JIT_LOG("--- JIT BLOCK LIFECYCLE & FRAGMENTATION STATS ---\n");	

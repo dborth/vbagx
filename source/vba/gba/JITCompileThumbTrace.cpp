@@ -739,10 +739,66 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// what the real multiplier timing quirk calls. Flat "+2" (was "+1",
 						// missing thumb43_1's separate "clockTicks = 1" base plus its final "+ 1").
 						chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 2;
-					} else {
-						endBlock = true;
-						JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_ALU);
-						break;
+					}
+					else if (op == 11) { // CMN (Compare Negative: Rd + Rs)
+						EnsureArenaAllocated();
+						u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+						u32 hostRd = ReadGBAReg(rd, emitPtr, lockedMask); // CMN does not modify Rd
+
+						*emitPtr++ = PPC_ADDCO(PPC_R12, hostRd, hostRs); // R12 = Rd + Rs
+
+						// Extract Hardware C and V Flags from XER (Branchless)
+						u8 fC = WriteFlag(FLAG_C);
+						u8 fV = WriteFlag(FLAG_V);
+						*emitPtr++ = PPC_MFXER(PPC_R11);
+						*emitPtr++ = PPC_RLWINM(fC, PPC_R11, 3, 31, 31);
+						*emitPtr++ = PPC_RLWINM(fV, PPC_R11, 2, 31, 31);
+
+						// Extract N and Z Flags natively
+						u8 fN = WriteFlag(FLAG_N);
+						u8 fZ = WriteFlag(FLAG_Z);
+						*emitPtr++ = PPC_SRWI(fN, PPC_R12, 31);
+						*emitPtr++ = PPC_CNTLZW(fZ, PPC_R12);
+						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+
+						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+					}
+					else if (op == 2 || op == 3 || op == 4 || op == 7) {
+						// Dynamic Shifts: LSL, LSR, ASR, ROR (by register)
+						EnsureArenaAllocated();
+						u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+						u32 hostRd = WriteGBAReg(rd, emitPtr, false, lockedMask); // Reads, then modifies Rd
+
+						// ARM restricts shift amount to bottom 8 bits for register shifts
+						*emitPtr++ = PPC_RLWINM(PPC_R12, hostRs, 0, 24, 31); // R12 = Rs & 0xFF
+
+						// Skip the shift operation entirely if the shift amount is 0 (Rd and C are unchanged)
+						*emitPtr++ = PPC_CMPWI(0, PPC_R12, 0);
+						u32* branchSkip = emitPtr++;
+
+						if (op == 2) { // LSL
+							*emitPtr++ = PPC_SLW(hostRd, hostRd, PPC_R12);
+						} else if (op == 3) { // LSR
+							*emitPtr++ = PPC_SRW(hostRd, hostRd, PPC_R12);
+						} else if (op == 4) { // ASR
+							*emitPtr++ = PPC_SRAW(hostRd, hostRd, PPC_R12);
+						} else if (op == 7) { // ROR
+							*emitPtr++ = PPC_LI(PPC_R11, 32);
+							*emitPtr++ = PPC_SUBF(PPC_R11, PPC_R12, PPC_R11);       // R11 = 32 - Shift
+							*emitPtr++ = PPC_RLWNM(hostRd, hostRd, PPC_R11, 0, 31); // Rotate Left by (32 - Rs)
+						}
+
+						// Extract N and Z Flags natively
+						u8 fN = WriteFlag(FLAG_N);
+						u8 fZ = WriteFlag(FLAG_Z);
+						*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
+						*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
+						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+
+						// Back-patch the skip branch
+						*branchSkip = PPC_BEQ((u32)((emitPtr - branchSkip) * 4));
+
+						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
 				}
 				else if (((opcode >> 8) & 0x03) != 3) {
@@ -871,11 +927,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_B(returnOffset);
 
 					endBlock = true;
-					break;
-				}
-				else {
-					endBlock = true;
-					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_OPCODE);
 				}
 				break;
 			}
@@ -1124,10 +1175,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// always pays the non-sequential cost for the instruction after a memory op.
 					// C++ Boolean promotion removes pipeline-stalling ternary
 					chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + (2 + isMemLoad);
-				} else {
-					endBlock = true;
-					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNKNOWN_MEM_OP);
-					break;
 				}
 				break;
 			}
@@ -1472,7 +1519,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 				else {
 					endBlock = true;
-					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_OPCODE);
+					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_FMT14_UNSUPPORTED_OPCODE);
 				}
 				break;
 			}
@@ -1696,7 +1743,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 				else {
 					endBlock = true;
-					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_OPCODE); // SWI Unsupported
+					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_SWI_OPCODE); // SWI Unsupported
 				}
 				break;
 			}
