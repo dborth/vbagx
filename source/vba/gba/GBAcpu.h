@@ -9,41 +9,31 @@ extern int thumbExecute();
 # define UNLIKELY(x) __builtin_expect(!!(x),0)
 
 // Hardware Prefetch helper (pulls host address into L1 D-Cache asynchronously)
-// Safely resolves the O(1) pointer to prevent Data Storage Interrupts (DSI) on unmapped banks.
 #define GBA_DCBT(addr) \
-    do { \
-        u8 _bank = (addr) >> 24; \
-        u8* _page = gbaReadPagePtrs[_bank]; \
-        if (LIKELY(_page != NULL)) { \
-            __builtin_prefetch(_page + ((addr) & gbaReadPageMasks[_bank]), 0, 0); \
-        } \
-    } while(0)
+    __builtin_prefetch(&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask], 0, 0)
 
 #define ARM_PREFETCH \
-    do { \
-        cpuPrefetch[0] = CPUReadMemory(armNextPC);\
-        cpuPrefetch[1] = CPUReadMemory(armNextPC+4);\
-        GBA_DCBT(armNextPC + 32);\
-    } while(0)
+  {\
+    cpuPrefetch[0] = CPUReadMemoryQuick(armNextPC);\
+    cpuPrefetch[1] = CPUReadMemoryQuick(armNextPC+4);\
+    GBA_DCBT(armNextPC + 32);\
+  }
 
 #define THUMB_PREFETCH \
-    do { \
-        cpuPrefetch[0] = CPUReadHalfWord(armNextPC);\
-        cpuPrefetch[1] = CPUReadHalfWord(armNextPC+2);\
-        GBA_DCBT(armNextPC + 32);\
-    } while(0)
+  {\
+    cpuPrefetch[0] = CPUReadHalfWordQuick(armNextPC);\
+    cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);\
+    GBA_DCBT(armNextPC + 32);\
+  }
 
 #define ARM_PREFETCH_NEXT \
-    do { \
-        cpuPrefetch[1] = CPUReadMemory(armNextPC+4);\
-        GBA_DCBT(armNextPC + 32);\
-    } while(0)
+  cpuPrefetch[1] = CPUReadMemoryQuick(armNextPC+4);\
+  GBA_DCBT(armNextPC + 32);
 
-#define THUMB_PREFETCH_NEXT \
-    do { \
-        cpuPrefetch[1] = CPUReadHalfWord(armNextPC+2);\
-        GBA_DCBT(armNextPC + 32);\
-    } while(0)
+#define THUMB_PREFETCH_NEXT\
+  cpuPrefetch[1] = CPUReadHalfWordQuick(armNextPC+2);\
+  GBA_DCBT(armNextPC + 32);
+
 
 extern int SWITicks;
 extern u32 mastercode;
