@@ -3,7 +3,7 @@
 #include "GBAinline.h"
 #include "GBAcpu.h"
 
-#define MAX_INSTRUCTIONS 32
+#define MAX_INSTRUCTIONS 48
 #define MAX_WORDS 2048
 #define YIELD_NUMBER 256
 #define MAX_BAILOUTS 256

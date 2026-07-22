@@ -9,7 +9,7 @@
 #include "JITPPCEmitter.h"
 #include "JITDebug.h"
 
-#define JIT_ARENA_SIZE					(1024 * 1024 * 4) // 4 MB
+#define JIT_ARENA_SIZE					(1024 * 1024 * 8) // 8 MB
 #define HASH_TABLE_SIZE					65536
 
 // -------------------------------------------------------------------------
