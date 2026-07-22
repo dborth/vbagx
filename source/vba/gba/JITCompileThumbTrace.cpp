@@ -144,37 +144,36 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	};
 
 	// Initialize all GBA R0-R14 as unallocated (with 0 age)
+	u32 allocatedHostRegsMask = 0; // Live bitmask tracking allocated PPC registers (R15–R28)
 	for (int i = 0; i < 15; i++) regCache[i] = {false, false, 0, 0};
 
 	u32 currentAge = 0; // Tracks register access sequence for LRU spilling
 
-	// O(1) Allocation Math supporting pinned instruction-local masks to prevent active operand eviction
+	// True O(1) Host Register Allocator with persistent bitmask tracking
 	auto FindOrAllocateHostReg = [&](u8 gbaReg, u32*& ptr, bool loadFromMem, u32& lockedMask) -> u8 {
-		if (gbaReg == 15) return 29;
+		if (gbaReg == 15) return 29; // GBA R15 (PC) is hardwired to host PPC_R29
 
 		if (regCache[gbaReg].allocated) {
-			regCache[gbaReg].age = ++currentAge; // Update age on Cache Hit
+			regCache[gbaReg].age = ++currentAge; // Update LRU age on Cache Hit
 			lockedMask |= (1 << regCache[gbaReg].hostReg);
 			return regCache[gbaReg].hostReg;
 		}
 
-		u32 inUseMask = lockedMask;
-		for (int i = 0; i < 15; i++) {
-			if (regCache[i].allocated) inUseMask |= (1 << regCache[i].hostReg);
-		}
+		// O(1) Mask Construction: Combine live global allocations with instruction-locked registers
+		u32 inUseMask = allocatedHostRegsMask | lockedMask;
 
-		// R15 to R28 boundaries = Bits 15 to 28
+		// PPC host registers R15 to R28 -> Bits 15 to 28 (0x1FFF8000)
 		u32 freeMask = (~inUseMask) & 0x1FFF8000;
 		u8 freeReg = 0;
 
 		if (freeMask != 0) {
-			freeReg = 31 - __builtin_clz(freeMask); // O(1) hardware evaluation
+			freeReg = 31 - __builtin_clz(freeMask); // O(1) hardware count leading zeros
 		} else {
 			// LRU Register Spilling Protocol
 			u32 oldestAge = 0xFFFFFFFF;
 			int spillTarget = -1;
 
-			// Scan for the Least Recently Used register
+			// Scan for the Least Recently Used register not locked by the current instruction
 			for (int i = 0; i < 15; i++) {
 				if (regCache[i].allocated && ((lockedMask & (1 << regCache[i].hostReg)) == 0) && regCache[i].age < oldestAge) {
 					oldestAge = regCache[i].age;
@@ -182,12 +181,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 			}
 
-			// Evict the LRU register
+			// Evict the LRU register to GBA CPU state in RAM
 			if (regCache[spillTarget].dirty) {
 				*ptr++ = PPC_STW(regCache[spillTarget].hostReg, 14, spillTarget * 4);
 			}
 			regCache[spillTarget].allocated = false;
 			regCache[spillTarget].dirty = false;
+
+			// EVICTION: Remove host register from live mask
+			allocatedHostRegsMask &= ~(1 << regCache[spillTarget].hostReg);
 			freeReg = regCache[spillTarget].hostReg;
 		}
 
@@ -195,7 +197,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		regCache[gbaReg].allocated = true;
 		regCache[gbaReg].dirty = false;
 		regCache[gbaReg].hostReg = freeReg;
-		regCache[gbaReg].age = ++currentAge; // Update age on Allocation
+		regCache[gbaReg].age = ++currentAge;
+
+		// ALLOCATION: Mark host register as live in persistent mask & lock for current instruction
+		allocatedHostRegsMask |= (1 << freeReg);
 		lockedMask |= (1 << freeReg);
 
 		if (loadFromMem) *ptr++ = PPC_LWZ(freeReg, 14, gbaReg * 4);
