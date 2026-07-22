@@ -4,7 +4,7 @@
 #include "GBAcpu.h"
 
 #define MAX_INSTRUCTIONS 48
-#define MAX_WORDS 2048
+#define MAX_WORDS 3072
 #define YIELD_NUMBER 256
 #define MAX_BAILOUTS 256
 #define MAX_BAILOUT_STUB_WORDS 12   // 1 (add cycles) + 6 (metadata) + 3 (return sequence) + padding
@@ -385,7 +385,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		// Right-shifting by 11 groups the 16-bit opcode space into exactly 32 buckets.
 		// =====================================================================
 		switch (opcode >> 11) {
-
 			// -----------------------------------------------------------------
 			// THUMB Format 1: LSL / LSR / ASR
 			// Covers: 0x0000 - 0x17FF
