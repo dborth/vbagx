@@ -7,7 +7,7 @@
 #define MAX_WORDS 2048
 #define YIELD_NUMBER 256
 #define MAX_BAILOUTS 256
-#define MAX_BAILOUT_STUB_WORDS 26   // 1 (comp) + 5 (lazy flags) + 15 (registers) + 5 (return sequence)
+#define MAX_BAILOUT_STUB_WORDS 12   // 1 (add cycles) + 6 (metadata) + 3 (return sequence) + padding
 #define EPILOGUE_RESERVE_WORDS 64   // Heavy prefetch sync + full lazy register/flag flushes + quota guard stubs
 
 // STATIC TIMING MACROS
@@ -39,7 +39,6 @@ struct RegisterState {
 
 // --- DEFERRED BAILOUT ARCHITECTURE ---
 enum BailoutCond { COND_BEQ, COND_BNE, COND_BGE, COND_BLT, COND_BLE };
-enum CompType { COMP_NONE, COMP_REVERT_SP };
 
 struct DeferredBailout {
 	u32* branchPtr;
@@ -47,10 +46,6 @@ struct DeferredBailout {
 	u32 pc;
 	u32 cycles;
 	u32 instructions;
-	RegisterState registerSnapshot[15];
-	FlagState flagSnapshot[4];
-	CompType comp;
-	u32 compArg;
 };
 
 static inline void FlushJITCache(void* addr, u32 size) {
@@ -83,7 +78,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	u32 chunkStaticCycles = 0;
 	bool endBlock = false;
 
-	auto RegisterBailout = [&](u32* bPtr, BailoutCond cond, u32 bPC, u32 bCycles, CompType comp = COMP_NONE, u32 compArg = 0) {
+	auto RegisterBailout = [&](u32* bPtr, BailoutCond cond, u32 bPC, u32 bCycles) {
 		if (bailoutCount >= MAX_BAILOUTS) { // Buffer overflow safety
 			// Patch the uninitialized hole with a trap to prevent the CPU from executing random memory
 			*bPtr = 0x7FE00008; // PPC 'trap' instruction
@@ -95,12 +90,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		bailouts[bailoutCount].pc = bPC;
 		bailouts[bailoutCount].cycles = bCycles;
 		bailouts[bailoutCount].instructions = instrCount;
-		bailouts[bailoutCount].comp = comp;
-		bailouts[bailoutCount].compArg = compArg;
-
-		for (int i = 0; i < 4; i++) bailouts[bailoutCount].flagSnapshot[i] = flagCache[i];
-		// Snapshot the register state BEFORE any subsequent execution modifies it
-		for (int i = 0; i < 15; i++) bailouts[bailoutCount].registerSnapshot[i] = regCache[i];
 		bailoutCount++;
 	};
 
@@ -234,6 +223,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	            regCache[i].dirty = false; // Mark clean to prevent double-stores on branching
 	        }
 	    }
+	};
+
+	// Universal Eager Flush
+	auto EmitEagerStateFlush = [&]() {
+		FlushDirtyFlags(emitPtr);
+		FlushDirtyRegisters(emitPtr);
 	};
 
 	// Global Flush Protocol (State-Preserving for Branches)
@@ -788,8 +783,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			u8 rs = (opcode >> 3) & 0x0F;
 
 			// FLUSH DIRTY FLAGS AND REGISTERS: Crucial sync before a dynamic block exit
-			FlushDirtyFlags(emitPtr);
-			FlushDirtyRegisters(emitPtr);
+			EmitEagerStateFlush();
 
 			// Synchronize outResult metadata before dynamic exit
 			EmitResultMetadata(emitPtr, instrCount + 1, 0);
@@ -936,6 +930,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			if (isMemLoad || isMemStore) {
 				EnsureArenaAllocated();
 
+				EmitEagerStateFlush();
+
 				// Emit the deferred Effective Address calculation natively into R12
 				u32 hostRb = ReadGBAReg(rb, emitPtr, lockedMask);
 
@@ -1074,6 +1070,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		else if ((opcode & 0xF000) == 0x9000) {
 			EnsureArenaAllocated();
 
+			EmitEagerStateFlush();
+
 			// SP-relative loads/stores also break the prefetch stream!
 			EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 			chunkInstrCount = 0;
@@ -1182,6 +1180,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 			EnsureArenaAllocated();
 
+			EmitEagerStateFlush();
+
 			EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 			chunkInstrCount = 0;
 			chunkStaticCycles = 0;
@@ -1216,7 +1216,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_BEQ(12);
 				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
 				u32* branchGuard1 = emitPtr++;
-				RegisterBailout(branchGuard1, COND_BNE, currentPC, chunkStaticCycles, COMP_REVERT_SP, numRegs * 4);
+				RegisterBailout(branchGuard1, COND_BNE, currentPC, chunkStaticCycles);
 			} else {
 				// LOAD GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
 				*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
@@ -1240,7 +1240,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// 3. Null Pointer Guard
 			*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
 			u32* branchNullToBailout = emitPtr++;
-			RegisterBailout(branchNullToBailout, COND_BEQ, currentPC, chunkStaticCycles, (!isPop) ? COMP_REVERT_SP : COMP_NONE, (!isPop) ? numRegs * 4 : 0);
+			RegisterBailout(branchNullToBailout, COND_BEQ, currentPC, chunkStaticCycles);
 
 			// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only).
 			// PUSH_REG/POP_REG charge dataTicksAccess32 (non-seq) for the first
@@ -1371,6 +1371,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			}
 
 			EnsureArenaAllocated();
+
+			EmitEagerStateFlush();
 
 			EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 			chunkInstrCount = 0;
@@ -1697,42 +1699,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			case COND_BLE: *bailouts[i].branchPtr = PPC_BLE(offset); break;
 		}
 
-		// 2. Inject compensation instructions if required (e.g., PUSH guard failure)
-		// Explicitly handle memory reversion and correct compile-time/runtime synchronization
-		if (bailouts[i].comp == COMP_REVERT_SP) {
-			if (bailouts[i].registerSnapshot[13].allocated) {
-				u8 snapSp = bailouts[i].registerSnapshot[13].hostReg;
-				*emitPtr++ = PPC_ADDI(snapSp, snapSp, bailouts[i].compArg);
-				*emitPtr++ = PPC_STW(snapSp, 14, 13 * 4);
-			} else {
-				*emitPtr++ = PPC_LWZ(PPC_R12, 14, 13 * 4);
-				*emitPtr++ = PPC_ADDI(PPC_R12, PPC_R12, bailouts[i].compArg);
-				*emitPtr++ = PPC_STW(PPC_R12, 14, 13 * 4);
-			}
-		}
-
-		bool flagPtrLoaded = false;
-		for (int r = 0; r < 4; r++) {
-			if (bailouts[i].flagSnapshot[r].allocated && bailouts[i].flagSnapshot[r].dirty) {
-				if (!flagPtrLoaded) {
-					*emitPtr++ = PPC_LWZ(PPC_R12, 1, 84);
-					flagPtrLoaded = true;
-				}
-				*emitPtr++ = PPC_STW(bailouts[i].flagSnapshot[r].hostReg, PPC_R12, r * 4);
-			}
-		}
-
-		// 4. Serialize the Register State strictly from the point of failure
-		for (int r = 0; r < 15; r++) {
-			// Skip SP if it was already updated by the compensation code above
-			if (r == 13 && bailouts[i].comp == COMP_REVERT_SP) continue;
-
-			if (bailouts[i].registerSnapshot[r].allocated && bailouts[i].registerSnapshot[r].dirty) {
-				*emitPtr++ = PPC_STW(bailouts[i].registerSnapshot[r].hostReg, 14, r * 4);
-			}
-		}
-
-		// 5. Return to C++ Interpreter
+		// 2. Return to C++ Interpreter
+		// Since registers were eagerly flushed prior to the guard, state is perfect.
 		*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, bailouts[i].cycles);
 
 		// Populate result metadata directly to memory
