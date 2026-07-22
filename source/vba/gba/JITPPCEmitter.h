@@ -41,6 +41,8 @@
 // Hardware Flag Math (XER & Zero Checks)
 #define PPC_ADDCO(rD, rA, rB)	((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (1 << 10) | (10 << 1))
 #define PPC_SUBFCO(rD, rA, rB)	((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (1 << 10) | (8 << 1))
+#define PPC_ADDEO(rD, rA, rB)   ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (1 << 10) | (138 << 1))
+#define PPC_SUBFEO(rD, rA, rB)  ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (1 << 10) | (136 << 1))
 #define PPC_MFXER(rD)			((31 << 26) | ((rD) << 21) | (1 << 16) | (339 << 1))
 #define PPC_MTSPR(spr, rS)		((31 << 26) | ((rS) << 21) | ((((spr) & 0x1F) << 16) | (((spr) >> 5) & 0x1F) << 11) | (467 << 1))
 #define PPC_MTXER(rt)			PPC_MTSPR(1, (rt))
@@ -51,6 +53,7 @@
 #define PPC_LI(rD, val)        PPC_ADDI(rD, 0, val)
 #define PPC_LIS(rD, val)       ((15 << 26) | ((rD) << 21) | (0 << 16) | ((val) & 0xFFFF))
 #define PPC_ORI(rA, rS, val)   ((24 << 26) | ((rS) << 21) | ((rA) << 16) | ((val) & 0xFFFF))
+#define PPC_ADDIC(rD, rA, imm)  ((13 << 26) | ((rD) << 21) | ((rA) << 16) | ((imm) & 0xFFFF))
 
 // Branches
 #define PPC_CMPWI(cr, rA, imm) ((11 << 26) | ((cr) << 23) | ((rA) << 16) | ((imm) & 0xFFFF))

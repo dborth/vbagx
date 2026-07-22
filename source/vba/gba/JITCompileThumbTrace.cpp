@@ -606,7 +606,46 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
 
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
-					} else if (op == 9) { // NEG (Rd = 0 - Rs)
+					}
+					else if (op == 5 || op == 6) { // ADC / SBC
+						EnsureArenaAllocated();
+						u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+						u32 hostRd = WriteGBAReg(rd, emitPtr, false, lockedMask); // Reads Rd, then modifies it
+
+						// Read the GBA Carry Flag dynamically
+						u8 fC_in = ReadFlag(FLAG_C, emitPtr);
+
+						// Magic 1-cycle trick to push the GPR Carry flag natively into the XER CA bit
+						// If fC_in == 0: 0 + (-1) generates NO carry (CA = 0)
+						// If fC_in == 1: 1 + (-1) generates a carry out (CA = 1)
+						*emitPtr++ = PPC_ADDIC(PPC_R12, fC_in, -1);
+
+						if (op == 5) { // ADC (Rd = Rd + Rs + C)
+							*emitPtr++ = PPC_ADDEO(hostRd, hostRd, hostRs);
+						} else { // SBC (Rd = Rd - Rs - !C) -> (Rd + ~Rs + C)
+							// PPC_SUBFEO computes: rD = rB + ~rA + CA
+							// To match ARM, rB must be Rd, and rA must be Rs.
+							*emitPtr++ = PPC_SUBFEO(hostRd, hostRs, hostRd);
+						}
+
+						// Extract Hardware C and V Flags from XER natively
+						u8 fC = WriteFlag(FLAG_C);
+						u8 fV = WriteFlag(FLAG_V);
+						*emitPtr++ = PPC_MFXER(PPC_R11);
+						*emitPtr++ = PPC_RLWINM(fC, PPC_R11, 3, 31, 31);
+						*emitPtr++ = PPC_RLWINM(fV, PPC_R11, 2, 31, 31);
+
+						// Extract N and Z Flags natively from the host register
+						u8 fN = WriteFlag(FLAG_N);
+						u8 fZ = WriteFlag(FLAG_Z);
+						*emitPtr++ = PPC_SRWI(fN, hostRd, 31);
+						*emitPtr++ = PPC_CNTLZW(fZ, hostRd);
+						// STRICT Z-FLAG CLAMP: Rotate IBM Bit 26 (value 32) to Bit 31, and mask ONLY Bit 31.
+						*emitPtr++ = PPC_RLWINM(fZ, fZ, 27, 31, 31);
+
+						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+					}
+					else if (op == 9) { // NEG (Rd = 0 - Rs)
 						EnsureArenaAllocated();
 						u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
 						u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask); // Fully overwrites Rd
@@ -1170,14 +1209,48 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				break;
 			}
 			// -----------------------------------------------------------------
-			// UNSUPPORTED FORMAT 12: Add to PC/SP (0xA000 - 0xAFFF)
+			// THUMB Format 12: Add to PC/SP (ADD Rd, PC, #Imm / ADD Rd, SP, #Imm)
+			// Covers: 0xA000 - 0xAFFF
 			// -----------------------------------------------------------------
 			case 20: case 21: {
-				endBlock = true;
-				JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_OPCODE);
+				EnsureArenaAllocated();
+
+				u8 rd = (opcode >> 8) & 0x07;
+				u32 imm = (opcode & 0xFF) << 2;
+				bool useSP = (opcode & 0x0800) != 0;
+				u32 hostSp = 0;
+				if (useSP) {
+					hostSp = ReadGBAReg(13, emitPtr, lockedMask); // always read before write
+				}
+
+				// LAZY REGISTERS: Fully overwrites Rd, bypassing the memory read
+				u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask);
+
+				if (useSP) {
+					// ADD Rd, SP, #Imm
+					*emitPtr++ = PPC_ADDI(hostRd, hostSp, imm);
+				} else {
+					// ADD Rd, PC, #Imm
+					// ARM dictates the PC is (currentPC + 4) forced to word alignment (clear lower 2 bits)
+					u32 pcVal = (currentPC + 4) & ~3;
+					u32 targetVal = pcVal + imm;
+
+					// Bake the static PC-relative calculation directly into native instructions
+					if ((targetVal & 0xFFFF0000) == 0) {
+						*emitPtr++ = PPC_LI(hostRd, targetVal);
+					} else {
+						*emitPtr++ = PPC_LIS(hostRd, targetVal >> 16);
+						if (targetVal & 0xFFFF) {
+							*emitPtr++ = PPC_ORI(hostRd, hostRd, targetVal & 0xFFFF);
+						}
+					}
+				}
+
+				// Format 12 does not modify condition flags.
+				// Pure register math costs standard sequential cycles.
+				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				break;
 			}
-
 			// -----------------------------------------------------------------
 			// THUMB Formats 13 & 14: SP-relative Add / Subtract AND PUSH/POP
 			// Covers: 0xB000 - 0xBFFF
