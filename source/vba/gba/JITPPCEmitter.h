@@ -86,24 +86,25 @@
 #define PPC_MFXER(rD)			((31 << 26) | ((rD) << 21) | (1 << 16) | (339 << 1))
 #define PPC_MTSPR(spr, rS)		((31 << 26) | ((rS) << 21) | ((((spr) & 0x1F) << 16) | (((spr) >> 5) & 0x1F) << 11) | (467 << 1))
 #define PPC_MTXER(rt)			PPC_MTSPR(1, (rt))
-#define PPC_CNTLZW(rA, rS)     ((31 << 26) | ((rS) << 21) | ((rA) << 16) | (26 << 1))
+#define PPC_CNTLZW(rA, rS)		((31 << 26) | ((rS) << 21) | ((rA) << 16) | (26 << 1))
 
 // Immediate Operations
-#define PPC_ADDI(rD, rA, val)  ((14 << 26) | ((rD) << 21) | ((rA) << 16) | ((val) & 0xFFFF))
-#define PPC_LI(rD, val)        PPC_ADDI(rD, 0, val)
-#define PPC_LIS(rD, val)       ((15 << 26) | ((rD) << 21) | (0 << 16) | ((val) & 0xFFFF))
-#define PPC_ORI(rA, rS, val)   ((24 << 26) | ((rS) << 21) | ((rA) << 16) | ((val) & 0xFFFF))
-#define PPC_ADDIC(rD, rA, imm)  ((13 << 26) | ((rD) << 21) | ((rA) << 16) | ((imm) & 0xFFFF))
+#define PPC_ADDI(rD, rA, val)	((14 << 26) | ((rD) << 21) | ((rA) << 16) | ((val) & 0xFFFF))
+#define PPC_LI(rD, val)			PPC_ADDI(rD, 0, val)
+#define PPC_LIS(rD, val)		((15 << 26) | ((rD) << 21) | (0 << 16) | ((val) & 0xFFFF))
+#define PPC_ORI(rA, rS, val)	((24 << 26) | ((rS) << 21) | ((rA) << 16) | ((val) & 0xFFFF))
+#define PPC_ORIS(rA, rS, val)	((25 << 26) | ((rS) << 21) | ((rA) << 16) | ((val) & 0xFFFF))
+#define PPC_ADDIC(rD, rA, imm)	((13 << 26) | ((rD) << 21) | ((rA) << 16) | ((imm) & 0xFFFF))
 
 // Branches
-#define PPC_CMPWI(cr, rA, imm) ((11 << 26) | ((cr) << 23) | ((rA) << 16) | ((imm) & 0xFFFF))
-#define PPC_BNE(offset)        ((16 << 26) | (4 << 21) | (2 << 16) | ((offset) & 0xFFFC))
-#define PPC_BEQ(offset)        ((16 << 26) | (12 << 21) | (2 << 16) | ((offset) & 0xFFFC))
-#define PPC_BGE(offset)        ((16 << 26) | (4 << 21) | (0 << 16) | ((offset) & 0xFFFC))
-#define PPC_B(offset)          ((18 << 26) | ((offset) & 0x3FFFFFC))
-#define PPC_BLE(offset)        ((16 << 26) | (4 << 21) | (1 << 16) | ((offset) & 0xFFFC))
-#define PPC_BLT(offset)        ((16 << 26) | (12 << 21) | (0 << 16) | ((offset) & 0xFFFC))
-#define PPC_BLR()              0x4E800020
+#define PPC_CMPWI(cr, rA, imm)	((11 << 26) | ((cr) << 23) | ((rA) << 16) | ((imm) & 0xFFFF))
+#define PPC_BNE(offset)			((16 << 26) | (4 << 21) | (2 << 16) | ((offset) & 0xFFFC))
+#define PPC_BEQ(offset)			((16 << 26) | (12 << 21) | (2 << 16) | ((offset) & 0xFFFC))
+#define PPC_BGE(offset)			((16 << 26) | (4 << 21) | (0 << 16) | ((offset) & 0xFFFC))
+#define PPC_B(offset)			((18 << 26) | ((offset) & 0x3FFFFFC))
+#define PPC_BLE(offset)			((16 << 26) | (4 << 21) | (1 << 16) | ((offset) & 0xFFFC))
+#define PPC_BLT(offset)			((16 << 26) | (12 << 21) | (0 << 16) | ((offset) & 0xFFFC))
+#define PPC_BLR()				0x4E800020
 
 // Advanced Memory & Bitwise
 // Endian-Correct Memory Loads & Stores (GBA is Little-Endian, Wii is Big-Endian)

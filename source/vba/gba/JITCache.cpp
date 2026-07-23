@@ -150,8 +150,7 @@ void JITCache::flushCache() {
 		*emitPtr++ = PPC_ADDI(PPC_R10, PPC_R10, -4);
 		*emitPtr++ = PPC_SUBF(PPC_R11, PPC_R10, PPC_R12);
 		*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 0, 6, 29);
-		*emitPtr++ = PPC_LIS(PPC_R0, 0x4800);
-		*emitPtr++ = PPC_OR(PPC_R11, PPC_R11, PPC_R0);
+		*emitPtr++ = PPC_ORIS(PPC_R11, PPC_R11, 0x4800);
 		*emitPtr++ = PPC_STW(PPC_R11, PPC_R10, 0);
 
 		// 7. Flush Broadway CPU Cache
