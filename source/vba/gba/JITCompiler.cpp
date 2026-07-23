@@ -429,7 +429,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, scratchReg);
 
 		// 4. Create bitmask: (1 << hits) - 1
-		// We use dataWaitStateReg as a secondary scratch to absolutely avoid the PPC_ADDI R0 trap.
+		// We use dataWaitStateReg as a secondary scratch
 		*ptr++ = PPC_LI(dataWaitStateReg, 1);
 		*ptr++ = PPC_SLW(scratchReg, dataWaitStateReg, scratchReg);  // scratchReg = 1 << hits
 		*ptr++ = PPC_SUBF(scratchReg, dataWaitStateReg, scratchReg); // scratchReg = scratchReg - 1
@@ -1142,7 +1142,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // EA = R4 + R11
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
 
-					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R0, currentPC); // Use R0 as scratch
+					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R4, currentPC); // Use R4 as scratch
 
 					// 5. Execute Memory Load or Store Instruction
 					if (isMemLoad) {
@@ -1236,7 +1236,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
 				*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // Safe: rA=R4
 				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-				EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R0, currentPC); // Recharge prefetch buffer
+				EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R4, currentPC); // Recharge prefetch buffer
 
 				// 4. Endian-Correct Load or Store (Lazy Register Execution)
 				if (isLoad) {
@@ -1314,7 +1314,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					u32 hostSp = WriteGBAReg(13, emitPtr, false, lockedMask);
 
 					// Safely execute math using Broadway's immediate addition
-					// (hostSp is guaranteed by our allocator to be R15-R28, avoiding the R0 literal trap)
+					// (hostSp is guaranteed by our allocator to be R15-R28)
 					if (isSub) {
 						*emitPtr++ = PPC_ADDI(hostSp, hostSp, -offset);
 					} else {
@@ -1415,7 +1415,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// Dynamic Cycle Calculation & Prefetcher Recharge
 					if (pushPopAccumulateDataTicks) {
 						// We must do a runtime lookup because bank is dynamic (SP). R4 holds the bank.
-						// We use R11 as our safe scratch instead of R0 to absolutely avoid literal zero traps.
+						// We use R11 as our safe scratch
 
 						// 1. First register is non-sequential (memoryWait32)
 						*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWait32) >> 16);

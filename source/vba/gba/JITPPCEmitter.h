@@ -45,7 +45,6 @@
 // R30 : PPC_R30_PAGES (readPages Base Pointer Array).
 // R31 : PPC_R31_MASKS (readMasks Base Pointer Array).
 // -------------------------------------------------------------------------
-#define PPC_R0   0
 #define PPC_R3   3
 #define PPC_R4   4
 #define PPC_R5   5
