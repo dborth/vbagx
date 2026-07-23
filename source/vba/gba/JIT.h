@@ -4,6 +4,8 @@
 #include "JITDebug.h"
 
 #ifndef NO_JIT_COMPILER
+#define JIT_TRACE_MAX_INSTRUCTIONS 42
+
 struct JITResult {
     u32 cycles;
     u32 nextPC;

@@ -189,56 +189,56 @@ void JITCache::flushCache() {
 
 // SMC eviction handler
 void JITCache::invalidateSMCTarget(u32 targetEA) {
-    // Maximum trace length is 96 bytes. Maximum write size is 36 bytes.
-    // To find all overlapping blocks, we must check the page of the write itself,
-    // and the page up to 96 bytes behind it where a spanning block could have started.
-    u32 startEA = targetEA >= 96 ? targetEA - 96 : 0;
-    u32 endEA = targetEA + 36;
+	// Maximum trace length is (JIT_TRACE_MAX_INSTRUCTIONS+1)*2 bytes. Maximum write size is 36 bytes.
+	// Branchless minimum boundary clamping at 0
+	s32 offsetDiff = (s32)(targetEA - ((JIT_TRACE_MAX_INSTRUCTIONS + 1) * 2));
+	u32 startEA = offsetDiff & ~(offsetDiff >> 31);
+	u32 endEA = targetEA + 36;
 
-    u32 startPage = (startEA >> 10) & 0xFFFF;
-    u32 endPage = (endEA >> 10) & 0xFFFF;
+	u32 startPage = (startEA >> 10) & 0xFFFF;
+	u32 endPage = (endEA >> 10) & 0xFFFF;
 
-    for (u32 page = startPage; page <= endPage; page++) {
-        BasicBlock* curr = smcRegistry[page];
-        BasicBlock* prev = nullptr;
+	for (u32 page = startPage; page <= endPage; page++) {
+		BasicBlock* curr = smcRegistry[page];
+		BasicBlock* prev = nullptr;
 
-        while (curr) {
-            u32 blockStartPC = curr->startPC;
-            u32 blockEndPC = blockStartPC + (curr->length * 2);
+		while (curr) {
+			u32 blockStartPC = curr->startPC;
+			u32 blockEndPC = blockStartPC + (curr->length * 2);
 
-            // Overlap Detection: Write Range vs Block Range
-            if (targetEA < blockEndPC && endEA > blockStartPC) {
-                if (curr->execute) {
-                	// Surgical Trampoline Patch: Overwrite first instruction with PPC_B to exit handler
-                    u32* codePtr = (u32*)curr->execute;
-                    s32 branchOffset = (s32)((u8*)linkerReturnAddress - (u8*)codePtr);
-                    *codePtr = PPC_B(branchOffset);
+			// Overlap Detection: Write Range vs Block Range
+			if (targetEA < blockEndPC && endEA > blockStartPC) {
+				if (curr->execute) {
+					// Surgical Trampoline Patch: Overwrite first instruction with PPC_B to exit handler
+					u32* codePtr = (u32*)curr->execute;
+					s32 branchOffset = (s32)((u8*)linkerReturnAddress - (u8*)codePtr);
+					*codePtr = PPC_B(branchOffset);
 
-                    // Hardware Cache Sync on 4-byte patched instruction
-                    DCStoreRange(codePtr, 4);
-                    ICInvalidateRange(codePtr, 4);
-                    curr->execute = nullptr; // Mark execute as null to force cache miss on next lookup
-                }
+					// Hardware Cache Sync on 4-byte patched instruction
+					DCStoreRange(codePtr, 4);
+					ICInvalidateRange(codePtr, 4);
+					curr->execute = nullptr; // Mark execute as null to force cache miss on next lookup
+				}
 
-                // Remove block from the SMC bucket linked list
-                BasicBlock* next = curr->nextSMC;
-                if (prev) {
-                    prev->nextSMC = next;
-                } else {
-                    smcRegistry[page] = next;
-                }
-                curr = next;
-            } else {
-                prev = curr;
-                curr = curr->nextSMC;
-            }
-        }
+				// Remove block from the SMC bucket linked list
+				BasicBlock* next = curr->nextSMC;
+				if (prev) {
+					prev->nextSMC = next;
+				} else {
+					smcRegistry[page] = next;
+				}
+				curr = next;
+			} else {
+				prev = curr;
+				curr = curr->nextSMC;
+			}
+		}
 
-        // Clear smcPageFlags byte if bucket list is now completely empty
-        if (smcRegistry[page] == nullptr) {
-            smcPageFlags[page] = 0;
-        }
-    }
+		// Clear smcPageFlags byte if bucket list is now completely empty
+		if (smcRegistry[page] == nullptr) {
+			smcPageFlags[page] = 0;
+		}
+	}
 }
 
 #endif

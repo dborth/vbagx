@@ -7,13 +7,13 @@
 #include "JITDebugStateLog.h"
 #include "Globals.h"
 
-#define BUFFER_SIZE				(2 * 1024 * 1024)
-#define MAX_INSTRUCTIONS		5000
+#define DEBUG_STATE_LOG_BUFFER_SIZE		(2 * 1024 * 1024)
+#define MAX_DEBUG_INSTRUCTIONS			5000
 
 JITDebugStateLog jitDebugStateLog;
 
 void JITDebugStateLog::Init(char * logType) {
-	logBuffer = (char *)malloc(BUFFER_SIZE);
+	logBuffer = (char *)malloc(DEBUG_STATE_LOG_BUFFER_SIZE);
 	time_t now = time(NULL);
 	struct tm *t = localtime(&now);
 
@@ -31,12 +31,12 @@ void JITDebugStateLog::LogState(const char* source, u32 executedPC, u32 nextPC, 
 		return;
 	}
 
-	if (instrCount >= MAX_INSTRUCTIONS) {
+	if (instrCount >= MAX_DEBUG_INSTRUCTIONS) {
 		WriteToFile();
 		return;
 	}
 
-	int written = snprintf(logBuffer + currentOffset, BUFFER_SIZE - currentOffset,
+	int written = snprintf(logBuffer + currentOffset, DEBUG_STATE_LOG_BUFFER_SIZE - currentOffset,
 			"%s Ticks: %08u | Cycles: %04d | InstrCount: %04d | PC: 0x%08X | NextPC: 0x%08X | "
 		"Flags: N%d Z%d C%d V%d | "
 		"R0: 0x%08X | R1: 0x%08X | R2: 0x%08X | R3: 0x%08X | "

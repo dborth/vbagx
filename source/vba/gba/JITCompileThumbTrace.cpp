@@ -4,7 +4,6 @@
 #include "GBAinline.h"
 #include "GBAcpu.h"
 
-#define MAX_INSTRUCTIONS 42
 #define MAX_WORDS 3072
 #define YIELD_NUMBER 256
 #define MAX_BAILOUTS 256
@@ -138,16 +137,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				flagCache[i].dirty = false;
 			}
 		}
-	};
-	
-	auto RegisterSMCBailout = [&](u32* branchPtr, u32 pc, u32 eaReg, u32 instructions, u32 cycles) {
-		// Placeholder BNE (patched at the end of the trace compilation)
-	    *branchPtr = PPC_BNE(0);
-
-	    // Direct stack record push
-	    if (smcBailoutCount < MAX_SMC_BAILOUTS) {
-	        smcBailoutList[smcBailoutCount++] = { branchPtr, pc, eaReg, instructions, cycles };
-	    }
 	};
 
 	// Emit an SMC page-flag guard check for memory write operations
@@ -452,7 +441,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*branchSkip = PPC_B((u32)((ptr - branchSkip) * 4));
 	};
 
-    while (!endBlock && instrCount < MAX_INSTRUCTIONS) {
+    while (!endBlock && instrCount < JIT_TRACE_MAX_INSTRUCTIONS) {
 		u32 lockedMask = 0; // Reset locked tracking pins per guest execution step
 
 		// BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
@@ -2027,8 +2016,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	// Round UP actualBytes to the nearest 32-byte cache line
 	u32 committedBytes = (actualBytes + 31) & ~31;
 	
-	// Prevent catastrophic unsigned underflow
-	u32 rewindAmount = (committedBytes < allocatedBytes) ? (allocatedBytes - committedBytes) : 0;
+	// Branchless 32-byte aligned rewind (protects against unsigned underflow natively)
+	s32 diff = (s32)(allocatedBytes - committedBytes);
+	u32 rewindAmount = diff & ~(diff >> 31);
 
 	JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, emittedWords, rewindAmount / sizeof(u32));
 
