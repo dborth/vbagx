@@ -580,7 +580,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					*emitPtr++ = PPC_LI(hostRd, imm);
 					*emitPtr++ = PPC_LI(fN, 0);
-					*emitPtr++ = PPC_LI(fZ, (imm == 0) ? 1 : 0);
+					*emitPtr++ = PPC_LI(fZ, imm == 0); // Implicit boolean cast avoids ternary branch
 				} else {
 					u32 hostRd = ReadGBAReg(rd, emitPtr, lockedMask);
 					*emitPtr++ = PPC_LI(PPC_R12, imm);
@@ -597,8 +597,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					EmitCVFlagsFromXER(PPC_R10);
 
-					// Extract N and Z Flags
-					u32 flagSrc = (op == 1) ? PPC_R11 : hostRd;
+					// Extract N and Z Flags branchlessly
+					u32 flagSrc = hostRd;
+					if (op == 1) flagSrc = PPC_R11;
 					EmitNZFlags(flagSrc);
 				}
 				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
@@ -818,8 +819,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					EnsureArenaAllocated();
 
 					if (op == 1) { // CMP
-						u32 regRd = (actualRd == 15) ? PPC_R11 : ReadGBAReg(actualRd, emitPtr, lockedMask);
-						u32 regRs = (actualRs == 15) ? PPC_R10 : ReadGBAReg(actualRs, emitPtr, lockedMask);
+						u32 regRd = PPC_R11;
+						if (actualRd != 15) regRd = ReadGBAReg(actualRd, emitPtr, lockedMask);
+						
+						u32 regRs = PPC_R10;
+						if (actualRs != 15) regRs = ReadGBAReg(actualRs, emitPtr, lockedMask);
 
 						// Stage PC natively into scratch registers if it is used as an operand
 						if (actualRd == 15) {
@@ -1130,7 +1134,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// PC-relative case), so this has to be an emitted table lookup
 					// rather than a compile-time constant.
 
-					u8* dataTicksTable = (accessType == 4) ? memoryWait32 : memoryWait;
+					u8* dataTicksTable = memoryWait;
+					if (accessType == 4) dataTicksTable = memoryWait32;
+					
 					*emitPtr++ = PPC_LIS(PPC_R11, ((u32)dataTicksTable) >> 16);
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // EA = R4 + R11
@@ -1246,7 +1252,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// Non-sequential code-fetch table (a memory access breaks the sequential
 				// prefetch stream), and the flat constant depends on load vs store -
 				// this previously used +2 for both, which under-counts every LDR by 1.
-				chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + (isLoad ? 3 : 2);
+				chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 2 + isLoad;
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -1639,7 +1645,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// The real cost is just this flat constant + one code-fetch lookup;
 				// `numRegs` never survives to be observable, so it's deliberately
 				// excluded here rather than added (as it was before this fix).
-				chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + (isLoad ? 2 : 1);
+				chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 1 + isLoad;
 				break;
 			}
 
@@ -1749,8 +1755,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Back-patch the guard branch to skip exactly the stub we just emitted
 						u32* truePathEnd = emitPtr;
 						u32 skipOffset = (u32)((truePathEnd - branchSkipTruePath) * 4);
-						bool guardBranchIsBEQ = isComposite ? !branchIfZero : branchIfSet;
-						*branchSkipTruePath = guardBranchIsBEQ ? PPC_BEQ(skipOffset) : PPC_BNE(skipOffset);
+
+						bool guardBranchIsBEQ = branchIfSet;
+						if (isComposite) guardBranchIsBEQ = !branchIfZero;
+
+						if (guardBranchIsBEQ) {
+							*branchSkipTruePath = PPC_BEQ(skipOffset);
+						} else {
+							*branchSkipTruePath = PPC_BNE(skipOffset);
+						}
 
 						// FALSE PATH (Branch Not Taken)
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
