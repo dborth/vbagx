@@ -1676,7 +1676,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// THUMB Format 18: Unconditional Branch (B)
 			// Covers: 0xE000 - 0xEFFF
 			// -----------------------------------------------------------------
-			case 28: case 29: {
+			case 28: {
 				EnsureArenaAllocated();
 
 				// 1. Calculate Target PC
@@ -1718,7 +1718,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// THUMB Formats 18 & 19: Branch with Link (BL)
 			// Covers: 0xF000 - 0xFFFF
 			// -----------------------------------------------------------------
-			case 30: case 31: {
+			case 30: {
 				u16 nextOpcode = CPUReadHalfWord(currentPC + 2);
 				if ((nextOpcode & 0xF800) == 0xF800) {
 					EnsureArenaAllocated();
