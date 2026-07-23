@@ -523,17 +523,20 @@ void gfxDrawRotScreen256(u16 control,
   int realY = currentY;
 
   if(control & 0x40) {
-      int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-      int y = (VCOUNT % mosaicY);
-      realX -= y*dmx;
-      realY -= y*dmy;
+    int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
+    // OPTIMIZATION: Avoid division penalty when mosaic is disabled/1
+    if (mosaicY > 1) {
+        int y = (VCOUNT % mosaicY);
+        realX -= y*dmx;
+        realY -= y*dmy;
     }
+  }
 
   int xxx = (realX >> 8);
   int yyy = (realY >> 8);
 
   for(int x = 0; x < 240; x++) {
-    if(xxx < 0 || yyy < 0 || xxx >= sizeX || yyy >= sizeY) {
+    if((u32)xxx >= (u32)sizeX || (u32)yyy >= (u32)sizeY) {
       line[x] = 0x80000000;
     } else {
       u8 color = screenBase[yyy * 240 + xxx];
