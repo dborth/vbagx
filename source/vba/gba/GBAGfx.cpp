@@ -172,9 +172,9 @@ static void gfxDrawTextScreen(u16 control, u16 hofs, u16 vofs, u32 *line)
    int mosaicY = ((MOSAIC & 0x00F0) >> 4) + 1;
 
    if (mosaicOn && mosaicY > 1) {
-       yyy -= ((vofs + VCOUNT) % mosaicY);
-       yyy &= maskY;
-   }
+	  int flooredVCount = VCOUNT - (VCOUNT % mosaicY);
+	  yyy = (vofs + flooredVCount) & maskY;
+  }
 
    if (yyy > 255 && sizeY > 256) {
       yyy &= 255;
@@ -336,13 +336,17 @@ void gfxDrawRotScreen(u16 control,
 	    for(int x = 0; x < 240; x++) {
 	      // OPTIMIZATION: Unsigned cast instantly collapses negative values via underflow.
 	      // Broadway completes this check in 2 cycles instead of 4+.
-	      if((u32)xxx >= (u32)sizeX || (u32)yyy >= (u32)sizeY) {
-	        line[x] = 0x80000000;
-	      } else {
-	        u8 color = screenBase[yyy * 240 + xxx];
-	        u32 mask = -(color != 0);
-	        line[x] = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
-	      }
+	    	if((u32)xxx >= (u32)sizeX || (u32)yyy >= (u32)sizeY) {
+				line[x] = 0x80000000;
+			  } else {
+				int tile = screenBase[(xxx>>3) + ((yyy>>3)<<yshift)];
+				int tileX = (xxx & 7);
+				int tileY = yyy & 7;
+
+				u8 color = charBase[(tile<<6) + (tileY<<3) + tileX];
+				u32 mask = -(color != 0);
+				line[x] = ((READ16LE(&palette[color]) | prio) & mask) | (0x80000000 & ~mask);
+			  }
 	      realX += dx;
 	      realY += dy;
 
@@ -519,17 +523,11 @@ void gfxDrawRotScreen256(u16 control,
   int realY = currentY;
 
   if(control & 0x40) {
-    int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
-    int y = VCOUNT;
-
-    // OPTIMIZATION: Avoid 30-cycle divw penalty if mosaicY is 1 (Standard rendering)
-    if (mosaicY > 1) {
-        y -= (VCOUNT % mosaicY);
+      int mosaicY = ((MOSAIC & 0xF0)>>4) + 1;
+      int y = (VCOUNT % mosaicY);
+      realX -= y*dmx;
+      realY -= y*dmy;
     }
-
-    realX = startX + y*dmx;
-    realY = startY + y*dmy;
-  }
 
   int xxx = (realX >> 8);
   int yyy = (realY >> 8);
