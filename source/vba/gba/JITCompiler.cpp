@@ -1395,10 +1395,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						RegisterBailout(branchGuard2, COND_BGE, currentPC, chunkStaticCycles);
 					}
 
-					// 2. Load Page Pointer and Mask
+					// 2. Load Page Pointer ONLY (Delay loading Mask to free R11 as a scratch register)
 					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
 					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
-					*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
 
 					// 3. Null Pointer Guard
 					*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
@@ -1416,14 +1415,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// Dynamic Cycle Calculation & Prefetcher Recharge
 					if (pushPopAccumulateDataTicks) {
 						// We must do a runtime lookup because bank is dynamic (SP). R4 holds the bank.
+						// We use R11 as our safe scratch instead of R0 to absolutely avoid literal zero traps.
 
 						// 1. First register is non-sequential (memoryWait32)
-						*emitPtr++ = PPC_LIS(PPC_R0, ((u32)memoryWait32) >> 16);
-						*emitPtr++ = PPC_ORI(PPC_R0, PPC_R0, ((u32)memoryWait32) & 0xFFFF);
-						*emitPtr++ = PPC_LBZX(PPC_R0, PPC_R4, PPC_R0); // R0 = nWait
+						*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWait32) >> 16);
+						*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
+						*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // R11 = nWait
 
-						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R0);
-						EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R0, PPC_R4, currentPC); // Recharge using R4 as scratch
+						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+						EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R4, currentPC); // Recharge using R4 as scratch
 
 						// R4 was clobbered by the lambda. Safely restore it from R12 base address.
 						*emitPtr++ = PPC_SRWI(PPC_R4, PPC_R12, 24);
@@ -1431,21 +1431,25 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 						if (numRegs > 1) {
 							// 2. Sequential cycles for remaining registers (memoryWaitSeq)
-							*emitPtr++ = PPC_LIS(PPC_R0, ((u32)memoryWaitSeq) >> 16);
-							*emitPtr++ = PPC_ORI(PPC_R0, PPC_R0, ((u32)memoryWaitSeq) & 0xFFFF);
-							*emitPtr++ = PPC_LBZX(PPC_R0, PPC_R4, PPC_R0); // R0 = sWait
+							*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWaitSeq) >> 16);
+							*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWaitSeq) & 0xFFFF);
+							*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // R11 = sWait
 
 							if ((numRegs - 1) > 1) {
-								*emitPtr++ = PPC_MULLI(PPC_R0, PPC_R0, numRegs - 1); // R0 = sWait * (numRegs - 1)
+								*emitPtr++ = PPC_MULLI(PPC_R11, PPC_R11, numRegs - 1); // R11 = sWait * (numRegs - 1)
 							}
 
-							*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R0);
-							EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R0, PPC_R4, currentPC); // Recharge total seq wait
-							// R4 is clobbered again, but it's safe as it's immediately
-							// overwritten by PPC_AND in the memory loop below.
+							*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+							EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R4, currentPC); // Recharge total seq wait
 						}
 					}
 					
+					// Restore R4 and construct R11 as the Mask before moving onto SMC checks and the memory loop
+					*emitPtr++ = PPC_SRWI(PPC_R4, PPC_R12, 24);
+					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R4, 0, 28, 31); // R4 = Bank
+					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R4, 2, 0, 29); // R11 = Bank * 4
+					*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11); // R11 = readMasks[bank]
+
 					if (!isPop) {
 						EmitSMCWriteCheck(PPC_R12, PPC_R12); // Check PUSH writes against compiled page flags
 						// PUSH can span across 1KB page boundaries. Check the end address too
