@@ -5,6 +5,46 @@
 // -------------------------------------------------------------------------
 // POWERPC BROADWAY EMITTER MACROS & REGISTER MAPPINGS
 // -------------------------------------------------------------------------
+// COMPLETE PPC REGISTER MAP (R0 - R31)
+// -------------------------------------------------------------------------
+// ABI & SYSTEM RESERVED (DO NOT USE AS GENERAL SCRATCH)
+// R0  : Hardware constant '0' in base-addressing and immediate math. NOT a usable scratch register!
+// R1  : Host Stack Pointer (used natively by GCC/ABI, e.g., for stack frame offsets like 84(r1)).
+// R2  : Host System Table / SDA2 (System ABI reserved, do not touch).
+// R13 : Host Small Data Area (SDA) pointer (System ABI reserved, do not touch).
+//
+// VOLATILE REGISTERS (Host ABI - Clobbered across C++ calls)
+// R3  : `execute` arg in / Block epilogue return value (cycles out).
+// R4  : `gbaRegs` arg in / Block epilogue return value (next PC out) / instruction-local scratch.
+// R5  : `flags` arg in / Live `busPrefetchCount` accumulator.
+// R6  : Dedicated C_FLAG register (Lazily allocated).
+// R7  : Dedicated V_FLAG register (Lazily allocated).
+// R8  : Dedicated N_FLAG register (Lazily allocated).
+// R9  : Dedicated Z_FLAG register (Lazily allocated).
+// R10 : Scratch: Base Page Pointer / General Math.
+// R11 : Scratch: Bank / Mask / Condition / General Math.
+// R12 : Scratch: Target Address / Operand / General Math.
+//
+// NON-VOLATILE REGISTERS (Host ABI - Preserved across C++ calls)
+// R14 : PPC_REG_GBA_REGS_PTR (Base pointer to the C++ gbaRegs array).
+// R15 : Lazily allocated host pool for GBA R0-R14.
+// R16 : Lazily allocated host pool for GBA R0-R14.
+// R17 : Lazily allocated host pool for GBA R0-R14.
+// R18 : Lazily allocated host pool for GBA R0-R14.
+// R19 : Lazily allocated host pool for GBA R0-R14.
+// R20 : Lazily allocated host pool for GBA R0-R14.
+// R21 : Lazily allocated host pool for GBA R0-R14.
+// R22 : Lazily allocated host pool for GBA R0-R14.
+// R23 : Lazily allocated host pool for GBA R0-R14.
+// R24 : Lazily allocated host pool for GBA R0-R14.
+// R25 : Lazily allocated host pool for GBA R0-R14.
+// R26 : Lazily allocated host pool for GBA R0-R14.
+// R27 : Lazily allocated host pool for GBA R0-R14.
+// R28 : Lazily allocated host pool for GBA R0-R14.
+// R29 : PPC_REG_PC (GBA R15 / Pipeline PC).
+// R30 : PPC_R30_PAGES (readPages Base Pointer Array).
+// R31 : PPC_R31_MASKS (readMasks Base Pointer Array).
+// -------------------------------------------------------------------------
 #define PPC_R0   0
 #define PPC_R3   3
 #define PPC_R4   4
