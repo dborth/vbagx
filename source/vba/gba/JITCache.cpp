@@ -4,40 +4,40 @@
 
 JITCache jitCache;
 
+alignas(32) u8 smcPageFlags[SMC_MAP_SIZE] = {0};
+BasicBlock* smcRegistry[SMC_MAP_SIZE] = {nullptr};
+
 JITCache::JITCache() {
 	memset(blockTable, 0, sizeof(blockTable));
-    arenaOffset = 0;
-    jitArena = (u32*)memalign(32, JIT_ARENA_SIZE);
-    flushCache();
+	arenaOffset = 0;
+	jitArena = (u32*)memalign(32, JIT_ARENA_SIZE);
+	flushCache();
 }
 
 JITCache::~JITCache() {
-    flushCache();
-    if (jitArena) {
-        free(jitArena);
-        jitArena = nullptr;
-    }
+	flushCache();
+	if (jitArena) {
+		free(jitArena);
+		jitArena = nullptr;
+	}
 }
 
 u32* JITCache::allocateJITMemory(size_t numBytes) {
-    numBytes = (numBytes + 31) & ~31;
+	numBytes = (numBytes + 31) & ~31;
 
-    // If this allocation exceeds our 512KB arena, flush the cache
-    if (arenaOffset + numBytes > JIT_ARENA_SIZE) {
-        flushCache();
-    }
+	// If this allocation exceeds our 512KB arena, flush the cache
+	if (arenaOffset + numBytes > JIT_ARENA_SIZE) {
+		flushCache();
+	}
 
-    // Grab the current pointer and bump the offset
-    u32* allocatedPtr = (u32*)((u8*)jitArena + arenaOffset);
-    arenaOffset += numBytes;
-    return allocatedPtr;
+	// Grab the current pointer and bump the offset
+	u32* allocatedPtr = (u32*)((u8*)jitArena + arenaOffset);
+	arenaOffset += numBytes;
+	return allocatedPtr;
 }
 
 void JITCache::rewindJITMemory(size_t numBytes) {
-	// Round DOWN the reclaimed bytes so we don't pull the arena offset
-	// backward into the instructions we actually emitted!
-	numBytes = numBytes & ~31;
-
+	// The caller strictly calculates a 32-byte aligned rewind size
 	// Wind back the offset to recover unused memory (e.g., from bailing out)
 	if (arenaOffset >= numBytes) {
 		arenaOffset -= numBytes;
@@ -47,27 +47,72 @@ void JITCache::rewindJITMemory(size_t numBytes) {
 }
 
 BasicBlock* JITCache::registerBlock(u32 pc, u32 length, JITBlockFunc execute) {
-    u32 index = ((pc >> 1) ^ (pc >> 13)) & (HASH_TABLE_SIZE - 1);
+	u32 index = ((pc >> 1) ^ (pc >> 13)) & (HASH_TABLE_SIZE - 1);
 
-    u32 evictedPC = blockTable[index].startPC;
-    PROFILER_CACHE_EVICT(evictedPC, pc);
+	u32 evictedPC = blockTable[index].startPC;
+	PROFILER_CACHE_EVICT(evictedPC, pc);
 
-    blockTable[index].startPC = pc;
-    blockTable[index].length = length;
-    blockTable[index].execute = execute;
+	BasicBlock* block = &blockTable[index];
 
-    JIT_LOG_CACHE_EVENT(index, pc, evictedPC, arenaOffset, arenaOffset);
-    return &blockTable[index];
+	// Unlink evicted block from the SMC bucket to prevent dangling pointers
+	if (block->execute != nullptr && block->length > 0) {
+		u8 oldBank = (evictedPC >> 24) & 0xFF;
+		if (oldBank == 2 || oldBank == 3) { // EWRAM or IWRAM
+			u32 oldPage = (evictedPC >> 10) & 0xFFFF;
+			BasicBlock* curr = smcRegistry[oldPage];
+			BasicBlock* prev = nullptr;
+
+			while (curr) {
+				if (curr == block) {
+					if (prev) {
+						prev->nextSMC = curr->nextSMC;
+					} else {
+						smcRegistry[oldPage] = curr->nextSMC;
+					}
+					break;
+				}
+				prev = curr;
+				curr = curr->nextSMC;
+			}
+
+			// If the bucket is now empty, clear the global page flag
+			if (smcRegistry[oldPage] == nullptr) {
+				smcPageFlags[oldPage] = 0;
+			}
+		}
+	}
+
+	block->startPC = pc;
+	block->length = length;
+	block->execute = execute;
+	block->nextSMC = nullptr;
+
+	// Register with SMC tracker
+	if (execute != nullptr && length > 0) {
+		u8 bank = (pc >> 24) & 0xFF;
+		if (bank == 2 || bank == 3) { // EWRAM or IWRAM
+			u32 startPage = (pc >> 10) & 0xFFFF;
+			smcPageFlags[startPage] = 1;
+			// Intrusively push block to registry head
+			block->nextSMC = smcRegistry[startPage];
+			smcRegistry[startPage] = block;
+		}
+	}
+
+	JIT_LOG_CACHE_EVENT(index, pc, evictedPC, arenaOffset, arenaOffset);
+	return block;
 }
 
 void JITCache::flushCache() {
 	PROFILER_CACHE_FLUSH_START();
 	JIT_LOG_CACHE_FLUSH();
 
-    arenaOffset = 0;
-    memset(blockTable, 0, sizeof(blockTable));
+	arenaOffset = 0;
+	memset(blockTable, 0, sizeof(blockTable));
+	memset(smcPageFlags, 0, sizeof(smcPageFlags));
+	memset(smcRegistry, 0, sizeof(smcRegistry));
 
-    if (jitArena) {
+	if (jitArena) {
 		u32* emitPtr = jitArena;
 		linkerStubAddress = emitPtr;
 
@@ -139,7 +184,62 @@ void JITCache::flushCache() {
 		u32 stubSize = (u8*)emitPtr - (u8*)jitArena;
 		DCStoreRange((void*)jitArena, stubSize);
 		ICInvalidateRange((void*)jitArena, stubSize);
-    }
+	}
 	PROFILER_CACHE_FLUSH_END();
 }
+
+// SMC eviction handler
+void JITCache::invalidateSMCTarget(u32 targetEA) {
+    // Maximum trace length is 96 bytes. Maximum write size is 36 bytes.
+    // To find all overlapping blocks, we must check the page of the write itself,
+    // and the page up to 96 bytes behind it where a spanning block could have started.
+    u32 startEA = targetEA >= 96 ? targetEA - 96 : 0;
+    u32 endEA = targetEA + 36;
+
+    u32 startPage = (startEA >> 10) & 0xFFFF;
+    u32 endPage = (endEA >> 10) & 0xFFFF;
+
+    for (u32 page = startPage; page <= endPage; page++) {
+        BasicBlock* curr = smcRegistry[page];
+        BasicBlock* prev = nullptr;
+
+        while (curr) {
+            u32 blockStartPC = curr->startPC;
+            u32 blockEndPC = blockStartPC + (curr->length * 2);
+
+            // Overlap Detection: Write Range vs Block Range
+            if (targetEA < blockEndPC && endEA > blockStartPC) {
+                if (curr->execute) {
+                	// Surgical Trampoline Patch: Overwrite first instruction with PPC_B to exit handler
+                    u32* codePtr = (u32*)curr->execute;
+                    s32 branchOffset = (s32)((u8*)linkerReturnAddress - (u8*)codePtr);
+                    *codePtr = PPC_B(branchOffset);
+
+                    // Hardware Cache Sync on 4-byte patched instruction
+                    DCStoreRange(codePtr, 4);
+                    ICInvalidateRange(codePtr, 4);
+                    curr->execute = nullptr; // Mark execute as null to force cache miss on next lookup
+                }
+
+                // Remove block from the SMC bucket linked list
+                BasicBlock* next = curr->nextSMC;
+                if (prev) {
+                    prev->nextSMC = next;
+                } else {
+                    smcRegistry[page] = next;
+                }
+                curr = next;
+            } else {
+                prev = curr;
+                curr = curr->nextSMC;
+            }
+        }
+
+        // Clear smcPageFlags byte if bucket list is now completely empty
+        if (smcRegistry[page] == nullptr) {
+            smcPageFlags[page] = 0;
+        }
+    }
+}
+
 #endif

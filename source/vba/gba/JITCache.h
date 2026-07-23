@@ -11,6 +11,7 @@
 
 #define JIT_ARENA_SIZE					(1024 * 1024 * 8) // 8 MB
 #define HASH_TABLE_SIZE					65536
+#define SMC_MAP_SIZE                    65536 // 64K pages (1KB page granularity across 64MB)
 
 // -------------------------------------------------------------------------
 // ENGINE DEFINITIONS
@@ -22,8 +23,12 @@ struct __attribute__((aligned(16))) BasicBlock {
     u32 startPC;
     u32 length;
     JITBlockFunc execute;
-    u32 padding;
+    BasicBlock* nextSMC; // Intrusive pointer for SMC bucket chain
 };
+
+// Global SMC tracking structures
+extern u8 smcPageFlags[SMC_MAP_SIZE];
+extern BasicBlock* smcRegistry[SMC_MAP_SIZE];
 
 class JITCache {
 	private:
@@ -44,6 +49,7 @@ class JITCache {
         BasicBlock* registerBlock(u32 pc, u32 length, JITBlockFunc execute);
         inline size_t getArenaOffset() const { return arenaOffset; }
 		void flushCache();
+        void invalidateSMCTarget(u32 targetEA);
 
 		inline BasicBlock* getBlock(u32 pc) {
 			u32 index = ((pc >> 1) ^ (pc >> 13)) & (HASH_TABLE_SIZE - 1);
@@ -55,21 +61,6 @@ class JITCache {
 			PROFILER_CACHE_MISS();
 			return nullptr;
 		}
-
-#if JIT_BLOCK_FRAGMENTATION_STATS
-		inline bool isMidBlockRecompile(u32 pc) const {
-			for (u32 i = 0; i < HASH_TABLE_SIZE; i++) {
-				const BasicBlock& b = blockTable[i];
-				if (b.execute != nullptr && b.startPC != pc) {
-					u32 endPC = b.startPC + (b.length * 2);
-					if (pc > b.startPC && pc < endPC) {
-						return true;
-					}
-				}
-			}
-			return false;
-		}
-#endif
 };
 
 #endif

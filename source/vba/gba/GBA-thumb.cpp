@@ -1610,7 +1610,6 @@ int thumbExecute() {
     return 1;
 }
 #elif JIT_COMPILER
-
 // -------------------------------------------------------------------------
 // HYBRID TRACE-JIT / C++ EXECUTION ENGINE
 // -------------------------------------------------------------------------
@@ -1635,7 +1634,6 @@ int thumbExecute() {
 
             if (__builtin_expect(block == nullptr, 0)) {
                 PROFILER_START_TIMER(compileStart);
-                PROFILER_CHECK_MID_BLOCK_RECOMPILE(pc, jitCache);
                 block = JITCompileThumbTrace(pc, jitCache);
                 JIT_LOG_BLOCK_COMPILED(pc, block);
                 PROFILER_ADD_TIME(timeSpentCompiling, compileStart);
@@ -1677,7 +1675,12 @@ int thumbExecute() {
                     cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
                 }
 
-                if (!result.bailedOut) {
+                if (result.bailedOut) {
+                	if (result.smcHit) {
+                		jitCache.invalidateSMCTarget(result.smcAddress);
+                	}
+                }
+                else {
                     // Clean exit (e.g., quota shield). The next instruction is
                     // mathematically guaranteed to be a valid entry point.
                     isTraceHeader = true;

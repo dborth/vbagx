@@ -120,7 +120,6 @@
 			#define PROFILER_CHECK_BAILOUT_TRANSITION()   do { if (lastStepWasBailout) { jitStats.bailoutToJitTransitions++; lastStepWasBailout = false; } } while(0)
 			#define PROFILER_SET_BAILOUT_FLAG()           do { lastStepWasBailout = true; } while(0)
 			#define PROFILER_CLEAR_BAILOUT_FLAG()         do { lastStepWasBailout = false; } while(0)
-			#define PROFILER_CHECK_MID_BLOCK_RECOMPILE(pc, cache) do { if ((cache).isMidBlockRecompile(pc)) jitStats.midBlockRecompilations++; } while(0)
 		#else
 			#define PROFILER_FRAG_STATS(count, blockLen, bailed)		((void)0)
 		#endif
@@ -244,9 +243,6 @@
 #endif
 #ifndef PROFILER_CLEAR_BAILOUT_FLAG
 #define PROFILER_CLEAR_BAILOUT_FLAG()         			((void)0)
-#endif
-#ifndef PROFILER_CHECK_MID_BLOCK_RECOMPILE
-#define PROFILER_CHECK_MID_BLOCK_RECOMPILE(pc, cache)	((void)0)
 #endif
 #ifndef JIT_LOG_FALLBACK
 #define JIT_LOG_FALLBACK(opcode)					((void)0)

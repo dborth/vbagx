@@ -9,6 +9,8 @@ struct JITResult {
     u32 nextPC;
     u32 instructions;
     u32 bailedOut; // 1 if guard failed, 0 if clean exit/yield
+    u32 smcHit;      // Set to 1 if SMC guard triggered
+	u32 smcAddress;  // Written EA (optional)
 } __attribute__((aligned(32)));
 
 extern JITCache jitCache;

@@ -4,12 +4,14 @@
 #include "GBAinline.h"
 #include "GBAcpu.h"
 
-#define MAX_INSTRUCTIONS 48
+#define MAX_INSTRUCTIONS 42
 #define MAX_WORDS 3072
 #define YIELD_NUMBER 256
 #define MAX_BAILOUTS 256
 #define MAX_BAILOUT_STUB_WORDS 12   // 1 (add cycles) + 6 (metadata) + 3 (return sequence) + padding
 #define EPILOGUE_RESERVE_WORDS 64   // Heavy prefetch sync + full lazy register/flag flushes + quota guard stubs
+#define MAX_SMC_BAILOUTS 32
+#define MAX_SMC_BAILOUT_STUB_WORDS 14 // Max words per SMC bailout
 
 // STATIC TIMING MACROS
 // Prevents the JIT compiler from mutating the busPrefetchCount state during trace compilation.
@@ -49,6 +51,14 @@ struct DeferredBailout {
 	u32 instructions;
 };
 
+struct SMCBailoutPatch {
+	u32* branchLocation;
+	u32  pc;
+	u32  eaReg;
+	u32  instructions;
+	u32  cycles;
+};
+
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	if (!JIT_REGION_ALLOWED(startPC)) {
 		return cache.registerBlock(startPC, 0, nullptr);
@@ -56,6 +66,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 	DeferredBailout bailouts[MAX_BAILOUTS];
 	u32 bailoutCount = 0;
+	SMCBailoutPatch smcBailoutList[MAX_SMC_BAILOUTS];
+	u32 smcBailoutCount = 0;
 
 	u32 arenaOffsetStart = 0;
 	u32* emitPtr = nullptr;
@@ -69,6 +81,18 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	u32 chunkInstrCount = 0;
 	u32 chunkStaticCycles = 0;
 	bool endBlock = false;
+
+	// Initialize flag cache natively mapped to their dedicated GPRs
+	flagCache[FLAG_N] = {false, false, PPC_REG_N};
+	flagCache[FLAG_Z] = {false, false, PPC_REG_Z};
+	flagCache[FLAG_C] = {false, false, PPC_REG_C};
+	flagCache[FLAG_V] = {false, false, PPC_REG_V};
+
+	// Initialize all GBA R0-R14 as unallocated (with 0 age)
+	u32 allocatedHostRegsMask = 0; // Live bitmask tracking allocated PPC registers (R15–R28)
+	for (int i = 0; i < 15; i++) regCache[i] = {false, false, 0, 0};
+
+	u32 currentAge = 0; // Tracks register access sequence for LRU spilling
 
 	auto RegisterBailout = [&](u32* bPtr, BailoutCond cond, u32 bPC, u32 bCycles) {
 		if (bailoutCount >= MAX_BAILOUTS) { // Buffer overflow safety
@@ -84,12 +108,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		bailouts[bailoutCount].instructions = instrCount;
 		bailoutCount++;
 	};
-
-	// Initialize flag cache natively mapped to their dedicated GPRs
-	flagCache[FLAG_N] = {false, false, PPC_REG_N};
-	flagCache[FLAG_Z] = {false, false, PPC_REG_Z};
-	flagCache[FLAG_C] = {false, false, PPC_REG_C};
-	flagCache[FLAG_V] = {false, false, PPC_REG_V};
 
 	auto ReadFlag = [&](u8 flagIdx, u32*& ptr) -> u8 {
 		if (flagCache[flagIdx].allocated) return flagCache[flagIdx].hostReg;
@@ -121,6 +139,56 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			}
 		}
 	};
+	
+	auto RegisterSMCBailout = [&](u32* branchPtr, u32 pc, u32 eaReg, u32 instructions, u32 cycles) {
+		// Placeholder BNE (patched at the end of the trace compilation)
+	    *branchPtr = PPC_BNE(0);
+
+	    // Direct stack record push
+	    if (smcBailoutCount < MAX_SMC_BAILOUTS) {
+	        smcBailoutList[smcBailoutCount++] = { branchPtr, pc, eaReg, instructions, cycles };
+	    }
+	};
+
+	// Emit an SMC page-flag guard check for memory write operations
+	auto EmitSMCWriteCheck = [&](u32 checkReg, u32 reportReg) {
+		// 1. Ensure R4 holds the canonical Bank from the reportReg (base EA)
+		*emitPtr++ = PPC_SRWI(PPC_R4, reportReg, 24);
+		*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R4, 0, 28, 31); // R4 = Bank
+
+		// 2. Canonicalize EA into R10: R10 = checkReg & R11 (mask)
+		*emitPtr++ = PPC_AND(PPC_R10, checkReg, PPC_R11);
+
+		// 3. Insert Bank (R4) into high 8 bits of R10
+		*emitPtr++ = PPC_RLWIMI(PPC_R10, PPC_R4, 24, 0, 7);
+
+		// 4. Shift right by 10 to extract page index (R10 >> 10)
+		*emitPtr++ = PPC_RLWINM(PPC_R10, PPC_R10, 22, 16, 31);
+
+		// 5. Load smcPageFlags base into R11 (Scratch)
+		*emitPtr++ = PPC_LIS(PPC_R11, ((u32)smcPageFlags) >> 16);
+		*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)smcPageFlags) & 0xFFFF);
+
+		// 6. Load the SMC flag byte
+		*emitPtr++ = PPC_LBZX(PPC_R10, PPC_R11, PPC_R10); // Safe: rA=R11, rB=R10
+
+		// 7. Check if flag != 0
+		*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
+		u32* branchSMC = emitPtr++;
+
+		if (smcBailoutCount < MAX_SMC_BAILOUTS) {
+			*branchSMC = PPC_BNE(0);
+			smcBailoutList[smcBailoutCount++] = {branchSMC, currentPC, reportReg, instrCount, chunkStaticCycles};
+		} else {
+			*branchSMC = 0x7FE00008; // Trap on buffer overflow
+			endBlock = true;
+		}
+
+		// 8. RELOAD R10 (Page Ptr) and R11 (Mask) utilizing the Bank in R4
+		*emitPtr++ = PPC_RLWINM(PPC_R10, PPC_R4, 2, 0, 29);     // R10 = Bank * 4
+		*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R10); // Reload Mask
+		*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R10); // Reload Page Ptr
+	};
 
 	auto EmitDirtyFlagFlush = [&](u32*& ptr) {
 		bool ptrLoaded = false;
@@ -150,12 +218,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*emitPtr++ = PPC_RLWINM(fC, scratchReg, 3, 31, 31);
 		*emitPtr++ = PPC_RLWINM(fV, scratchReg, 2, 31, 31);
 	};
-
-	// Initialize all GBA R0-R14 as unallocated (with 0 age)
-	u32 allocatedHostRegsMask = 0; // Live bitmask tracking allocated PPC registers (R15–R28)
-	for (int i = 0; i < 15; i++) regCache[i] = {false, false, 0, 0};
-
-	u32 currentAge = 0; // Tracks register access sequence for LRU spilling
 
 	// True O(1) Host Register Allocator with persistent bitmask tracking
 	auto FindOrAllocateHostReg = [&](u8 gbaReg, u32*& ptr, bool loadFromMem, u32& lockedMask) -> u8 {
@@ -253,13 +315,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 	};
 
-	auto EmitResultMetadata = [&](u32*& ptr, u32 count, u32 bailedOut) {
-	    *ptr++ = PPC_LWZ(PPC_R10, 1, 88);			// Load outResult ptr
-	    *ptr++ = PPC_LWZ(PPC_R11, PPC_R10, 8);		// Load outResult->instructions
-	    *ptr++ = PPC_ADDI(PPC_R11, PPC_R11, count);	// Accumulate count
-	    *ptr++ = PPC_STW(PPC_R11, PPC_R10, 8);		// Store instructions
-	    *ptr++ = PPC_LI(PPC_R11, bailedOut);		// Set bailedOut boolean
-	    *ptr++ = PPC_STW(PPC_R11, PPC_R10, 12);		// Store bailedOut
+	auto EmitResultMetadata = [&](u32*& ptr, u32 count, u32 bailedOut, u32 smcHit = 0) {
+		*ptr++ = PPC_LWZ(PPC_R10, 1, 88);			// Load outResult ptr
+		*ptr++ = PPC_LWZ(PPC_R11, PPC_R10, 8);		// Load outResult->instructions
+		*ptr++ = PPC_ADDI(PPC_R11, PPC_R11, count);	// Accumulate count
+		*ptr++ = PPC_STW(PPC_R11, PPC_R10, 8);		// Store instructions
+		*ptr++ = PPC_LI(PPC_R11, bailedOut);		// Set bailedOut boolean
+		*ptr++ = PPC_STW(PPC_R11, PPC_R10, 12);		// Store bailedOut
+		*ptr++ = PPC_LI(PPC_R11, smcHit);			// Set smcHit boolean
+		*ptr++ = PPC_STW(PPC_R11, PPC_R10, 16);     // Store smcHit
 	};
 
 	// Lazily claims arena space (and emits the prologue) the FIRST time we're
@@ -385,7 +449,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		u32 lockedMask = 0; // Reset locked tracking pins per guest execution step
 
 		// BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
-    	if (arenaAllocated && (emitPtr - blockStart) > (s32)(MAX_WORDS - EPILOGUE_RESERVE_WORDS - bailoutCount * MAX_BAILOUT_STUB_WORDS)) {
+		if (arenaAllocated && (emitPtr - blockStart) > (s32)(MAX_WORDS - EPILOGUE_RESERVE_WORDS - bailoutCount * MAX_BAILOUT_STUB_WORDS - smcBailoutCount * MAX_SMC_BAILOUT_STUB_WORDS)) {
     	    endBlock = true;
     	    JIT_LOG_BAILOUT(currentPC, 0, BAILOUT_BUFFER_OVERFLOW);
     	    break;
@@ -970,7 +1034,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				if (isMemLoad || isMemStore) {
 					EnsureArenaAllocated();
-
 					EmitEagerStateFlush();
 
 					// Emit the deferred Effective Address calculation natively into R12
@@ -1048,6 +1111,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
 					u32* branchNullToBailout = emitPtr++;
 					RegisterBailout(branchNullToBailout, COND_BEQ, currentPC, chunkStaticCycles);
+
+					// Evaluate SMC Guard on UNMASKED Effective Address
+					if (isMemStore) {
+						EmitSMCWriteCheck(PPC_R12, PPC_R12);
+					}
 
 					*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);
 
@@ -1146,6 +1214,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);  // R11 = bank * 4
 				*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11); // R10 = readPages[bank]
 				*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11); // R11 = readMasks[bank]
+
+				// Evaluate SMC Guard on UNMASKED Effective Address
+				if (!isLoad) {
+					EmitSMCWriteCheck(PPC_R12, PPC_R12);
+				}
+
 				*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);       // R12 = EA & mask
 
 				// Alignment Fix - SP-relative ops are always Word (32-bit) accesses
@@ -1369,6 +1443,17 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 							// overwritten by PPC_AND in the memory loop below.
 						}
 					}
+					
+					if (!isPop) {
+						EmitSMCWriteCheck(PPC_R12, PPC_R12); // Check PUSH writes against compiled page flags
+						// PUSH can span across 1KB page boundaries. Check the end address too
+						u32 endOffset = (numRegs - 1) * 4;
+						if (endOffset > 0) {
+							*emitPtr++ = PPC_ADDI(PPC_R12, PPC_R12, endOffset);  // Temporarily advance EA
+							EmitSMCWriteCheck(PPC_R12, PPC_R12);                 // Check end bound
+							*emitPtr++ = PPC_ADDI(PPC_R12, PPC_R12, -endOffset); // Restore EA
+						}
+					}
 
 					// 4. Memory Operations Loop
 					for (int i = 0; i < 8; i++) {
@@ -1517,6 +1602,17 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32* branchNullToBailout = emitPtr++;
 				RegisterBailout(branchNullToBailout, COND_BEQ, currentPC, chunkStaticCycles);
 
+				if (!isLoad) {
+					EmitSMCWriteCheck(PPC_R12, PPC_R12); // SMC WRITE CHECK: STMIA writes multiple registers to memory
+					// STMIA can span across 1KB page boundaries. Check the end address too
+					u32 endOffset = (numRegs - 1) * 4;
+					if (endOffset > 0) {
+						*emitPtr++ = PPC_ADDI(PPC_R12, PPC_R12, endOffset);  // Temporarily advance EA
+						EmitSMCWriteCheck(PPC_R12, PPC_R12);                 // Check end bound
+						*emitPtr++ = PPC_ADDI(PPC_R12, PPC_R12, -endOffset); // Restore EA
+					}
+				}
+
 				// 4. Memory Operations Loop
 				for (int i = 0; i < 8; i++) {
 					if (regList & (1 << i)) {
@@ -1652,6 +1748,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						s32 takenStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
 						*emitPtr++ = PPC_BL(takenStubOffset);
 
+						// Prevent fall-through into block remainder
+						s32 branchReturnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+						*emitPtr++ = PPC_B(branchReturnOffset);
+
 						// Back-patch the guard branch to skip exactly the stub we just emitted
 						u32* truePathEnd = emitPtr;
 						u32 skipOffset = (u32)((truePathEnd - branchSkipTruePath) * 4);
@@ -1710,6 +1810,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				s32 takenStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
 				*emitPtr++ = PPC_BL(takenStubOffset);
 
+				// Prevent fall-through into block remainder
+				s32 branchReturnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+				*emitPtr++ = PPC_B(branchReturnOffset);
+
 				// Unconditional branch ends the block naturally
 				endBlock = true;
 				break;
@@ -1719,6 +1823,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			// Covers: 0xF000 - 0xFFFF
 			// -----------------------------------------------------------------
 			case 30: {
+				// Prevent the 4-byte BL instruction from spanning a page boundary
+				if ((currentPC >> 10) != ((currentPC + 2) >> 10)) {
+					endBlock = true;
+					break;
+				}
 				u16 nextOpcode = CPUReadHalfWord(currentPC + 2);
 				if ((nextOpcode & 0xF800) == 0xF800) {
 					EnsureArenaAllocated();
@@ -1762,6 +1871,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
 					s32 takenStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
 					*emitPtr++ = PPC_BL(takenStubOffset);
+
+					// Prevent fall-through into block remainder / deferred bailouts
+					s32 branchReturnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+					*emitPtr++ = PPC_B(branchReturnOffset);
 
 					// BL is two THUMB halfwords (prefix + suffix), not one.
 					instrCount += 2;
@@ -1852,6 +1965,42 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	s32 defaultStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
 	*emitPtr++ = PPC_BL(defaultStubOffset);
 
+	// Prevent fall-through into SMC Bailouts
+	s32 epilogueReturnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+	*emitPtr++ = PPC_B(epilogueReturnOffset);
+
+	// =========================================================================
+	// SMC BAILOUTS
+	// =========================================================================
+	for (u32 i = 0; i < smcBailoutCount; i++) {
+		const SMCBailoutPatch& patch = smcBailoutList[i];
+
+		 // Patch placeholder PPC_BNE branch to point HERE
+		s32 branchOffset = (s32)(emitPtr - patch.branchLocation);
+		*patch.branchLocation = PPC_BNE(branchOffset * 4);
+
+		 // Add cycle penalty accumulated so far in the chunk
+		if (patch.cycles > 0) {
+			*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, patch.cycles);
+		}
+
+		// State is already flushed by EmitEagerStateFlush() in the memory handlers.
+		// Simply write the SMC metadata and branch back to C++
+		EmitResultMetadata(emitPtr, patch.instructions, 1, 1); // count, bailedOut=1, smcHit=1
+
+		// Set smcAddress
+		*emitPtr++ = PPC_LWZ(PPC_R10, 1, 88);
+		*emitPtr++ = PPC_STW(patch.eaReg, PPC_R10, 20);
+
+		// Record resume PC (we bail BEFORE executing, so resume at current instruction)
+		*emitPtr++ = PPC_LIS(PPC_R4, patch.pc >> 16);
+		*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, patch.pc & 0xFFFF);
+		
+		// Jump directly to the C++ linker return address
+		s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+		*emitPtr++ = PPC_B(returnOffset);
+	}
+
 	// --- QUOTA SHIELD BAILOUT STUB ---
 	u32* yieldTarget = emitPtr;
 
@@ -1868,11 +2017,17 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 	u32 emittedWords = (u32)(emitPtr - blockStart);
 	u32 actualBytes = emittedWords * sizeof(u32);
-	u32 rewindAmount = MAX_WORDS - emittedWords;
+	u32 allocatedBytes = MAX_WORDS * sizeof(u32);
+	
+	// Round UP actualBytes to the nearest 32-byte cache line
+	u32 committedBytes = (actualBytes + 31) & ~31;
+	
+	// Prevent catastrophic unsigned underflow
+	u32 rewindAmount = (committedBytes < allocatedBytes) ? (allocatedBytes - committedBytes) : 0;
 
-	JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, emittedWords, rewindAmount);
+	JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, emittedWords, rewindAmount / sizeof(u32));
 
-	cache.rewindJITMemory((MAX_WORDS - emittedWords) * sizeof(u32));
+	cache.rewindJITMemory(rewindAmount);
 	DCStoreRange(blockStart, actualBytes);
 	ICInvalidateRange(blockStart, actualBytes);
 
