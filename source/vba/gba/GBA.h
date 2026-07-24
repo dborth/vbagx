@@ -20,12 +20,12 @@ typedef struct {
   u32 mask;
 } memoryMap;
 
-// -------------------------------------------------------------------------
-// OPTIMIZATION: Parallel Arrays (SoA) completely eliminate mullw penalties.
-// GCC natively maps array offsets to 1-cycle 'idx << 2' shifts.
-// -------------------------------------------------------------------------
-extern u8* gbaReadPagePtrs[256];
-extern u32 gbaReadPageMasks[256];
+typedef struct __attribute__((aligned(32))) {
+    u8*  readPages[256];
+    u32  readMasks[256];
+} GBAReadPageTable;
+
+extern GBAReadPageTable gbaReadTable;
 extern u8* gbaWritePagePtrs[256];
 
 typedef union {

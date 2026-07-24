@@ -1384,8 +1384,8 @@ static void doDMA_T(u32 &s, u32 &d, u32 si, u32 di, u32 c)
       while (c >= 4) {
         // Asynchronously prefetch the next unrolled block (16 bytes ahead) securely from the host memory map
         u8 page = (s + (si << 2)) >> 24;
-        u8* ptr = gbaReadPagePtrs[page];
-        if (ptr) __builtin_prefetch(ptr + ((s + (si << 2)) & gbaReadPageMasks[page]), 0, 0);
+        u8* ptr = gbaReadTable.readPages[page];
+        if (ptr) __builtin_prefetch(ptr + ((s + (si << 2)) & gbaReadTable.readMasks[page]), 0, 0);
 
         localDmaLast = CPUReadMemory(s); CPUWriteMemory(d, localDmaLast); s += si; d += di;
         localDmaLast = CPUReadMemory(s); CPUWriteMemory(d, localDmaLast); s += si; d += di;
@@ -1419,8 +1419,8 @@ static void doDMA_T(u32 &s, u32 &d, u32 si, u32 di, u32 c)
       while (c >= 4) {
         // Asynchronously prefetch the next unrolled block (8 bytes ahead) securely from the host memory map
         u8 page = (s + (si << 2)) >> 24;
-        u8* ptr = gbaReadPagePtrs[page];
-        if (ptr) __builtin_prefetch(ptr + ((s + (si << 2)) & gbaReadPageMasks[page]), 0, 0);
+        u8* ptr = gbaReadTable.readPages[page];
+        if (ptr) __builtin_prefetch(ptr + ((s + (si << 2)) & gbaReadTable.readMasks[page]), 0, 0);
 
         localDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, localDmaLast); localDmaLast |= (localDmaLast << 16); s += si; d += di;
         localDmaLast = CPUReadHalfWord(s); CPUWriteHalfWord(d, localDmaLast); localDmaLast |= (localDmaLast << 16); s += si; d += di;
@@ -2146,44 +2146,43 @@ void applyTimer ()
 u8 cpuBitsSet[256];
 u8 cpuLowestBitSet[256];
 
-u8* gbaReadPagePtrs[256] __attribute__((aligned(32)));
-u32 gbaReadPageMasks[256] __attribute__((aligned(32)));
+GBAReadPageTable gbaReadTable;
 u8* gbaWritePagePtrs[256] __attribute__((aligned(32)));
 
 static inline void GBA_InitMemoryPages() {
     for (int i = 0; i < 256; i++) {
-        gbaReadPagePtrs[i]  = NULL;
-        gbaReadPageMasks[i] = 0;
-        gbaWritePagePtrs[i] = NULL;
+        gbaReadTable.readPages[i] = NULL;
+        gbaReadTable.readMasks[i] = 0;
+        gbaWritePagePtrs[i]       = NULL;
     }
 
     // 0x02: WRAM
-    gbaReadPagePtrs[0x02]  = workRAM;
-    gbaReadPageMasks[0x02] = 0x3FFFF;
-    gbaWritePagePtrs[0x02] = workRAM;
+    gbaReadTable.readPages[0x02] = workRAM;
+    gbaReadTable.readMasks[0x02] = 0x3FFFF;
+    gbaWritePagePtrs[0x02]       = workRAM;
 
     // 0x03: IRAM
-    gbaReadPagePtrs[0x03]  = internalRAM;
-    gbaReadPageMasks[0x03] = 0x7FFF;
-    gbaWritePagePtrs[0x03] = internalRAM;
+    gbaReadTable.readPages[0x03] = internalRAM;
+    gbaReadTable.readMasks[0x03] = 0x7FFF;
+    gbaWritePagePtrs[0x03]       = internalRAM;
 
     // 0x05: PaletteRAM
     // Write array is intentionally left NULL to force Corvette hack checks via slow-path.
-    gbaReadPagePtrs[0x05]  = paletteRAM;
-    gbaReadPageMasks[0x05] = 0x3FF;
+    gbaReadTable.readPages[0x05] = paletteRAM;
+    gbaReadTable.readMasks[0x05] = 0x3FF;
 
     // 0x07: OAM
-    gbaReadPagePtrs[0x07]  = oam;
-    gbaReadPageMasks[0x07] = 0x3FF;
-    gbaWritePagePtrs[0x07] = oam;
+    gbaReadTable.readPages[0x07] = oam;
+    gbaReadTable.readMasks[0x07] = 0x3FF;
+    gbaWritePagePtrs[0x07]       = oam;
 
     // 0x09 - 0x0C: ROM (Wait States 1 & 2)
     // 0x08 is intentionally left NULL to force RTC checks via slow-path.
     // Only populate physical ROM pointers if GC Virtual Memory is disabled
 #ifndef USE_VM
     for (int i = 0x09; i <= 0x0C; i++) {
-        gbaReadPagePtrs[i]  = rom;
-        gbaReadPageMasks[i] = 0x1FFFFFF;
+        gbaReadTable.readPages[i] = rom;
+        gbaReadTable.readMasks[i] = 0x1FFFFFF;
     }
 #endif
 }

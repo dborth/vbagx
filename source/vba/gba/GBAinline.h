@@ -150,11 +150,11 @@ static inline u32 CPUReadMemory(u32 address)
 	// This avoids a costly 2-3 cycle conditional branch if it were an if-statement.
 	u32 alignedAddress = address & ~0x03;
 	u8 pageIdx = alignedAddress >> 24;
-	u8* base = gbaReadPagePtrs[pageIdx];
+	u8* base = gbaReadTable.readPages[pageIdx];
 
 	// FAST PATH: Branchless, 1-cycle array offset execution
 	if (LIKELY(base != NULL)) {
-		u32 value = READ32LE((u32*)(base + (alignedAddress & gbaReadPageMasks[pageIdx])));
+		u32 value = READ32LE((u32*)(base + (alignedAddress & gbaReadTable.readMasks[pageIdx])));
 		if(UNLIKELY(address & 3)) {
 			u32 shift = (address & 3) << 3;
 			value = (value >> shift) | (value << (32 - shift));
@@ -270,11 +270,11 @@ static inline u32 CPUReadHalfWord(u32 address)
 	// OPTIMIZATION: Unconditional rlwinm mask
 	u32 alignedAddress = address & ~0x01;
 	u8 pageIdx = alignedAddress >> 24;
-	u8* base = gbaReadPagePtrs[pageIdx];
+	u8* base = gbaReadTable.readPages[pageIdx];
 
 	// FAST PATH
 	if (LIKELY(base != NULL)) {
-		u32 value = READ16LE((u16*)(base + (alignedAddress & gbaReadPageMasks[pageIdx])));
+		u32 value = READ16LE((u16*)(base + (alignedAddress & gbaReadTable.readMasks[pageIdx])));
 		if(UNLIKELY(address & 1)) {
 			value = (value >> 8) | (value << 24);
 		}
@@ -405,11 +405,11 @@ static inline s16 CPUReadHalfWordSigned(u32 address)
 static inline u8 CPUReadByte(u32 address)
 {
 	u8 pageIdx = address >> 24;
-	u8* base = gbaReadPagePtrs[pageIdx];
+	u8* base = gbaReadTable.readPages[pageIdx];
 
 	// FAST PATH
 	if (LIKELY(base != NULL)) {
-		return base[address & gbaReadPageMasks[pageIdx]];
+		return base[address & gbaReadTable.readMasks[pageIdx]];
 	}
 
 	// SLOW PATH
@@ -486,7 +486,7 @@ static inline void CPUWriteMemory(u32 address, u32 value)
 
   // FAST PATH
   if (LIKELY(base != NULL)) {
-      WRITE32LE(((u32 *)(base + (address & gbaReadPageMasks[pageIdx]))), value);
+      WRITE32LE(((u32 *)(base + (address & gbaReadTable.readMasks[pageIdx]))), value);
       return;
   }
 
@@ -555,7 +555,7 @@ static inline void CPUWriteHalfWord(u32 address, u16 value)
 
   // FAST PATH
   if (LIKELY(base != NULL)) {
-      WRITE16LE(((u16 *)(base + (address & gbaReadPageMasks[pageIdx]))), value);
+      WRITE16LE(((u16 *)(base + (address & gbaReadTable.readMasks[pageIdx]))), value);
       return;
   }
 
@@ -629,7 +629,7 @@ static inline void CPUWriteByte(u32 address, u8 b)
 
   // FAST PATH
   if (LIKELY(base != NULL)) {
-      base[address & gbaReadPageMasks[pageIdx]] = b;
+      base[address & gbaReadTable.readMasks[pageIdx]] = b;
       return;
   }
 
