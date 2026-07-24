@@ -1081,9 +1081,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					if (isMemStore) {
 						// STORE STRICT GUARD: Only Banks 2 & 3 (WRAM) allowed
-						*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
-						*emitPtr++ = PPC_BEQ(12);
-						*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
+						// Branchless check: (Bank & ~1) == 2
+						*emitPtr++ = PPC_RLWINM(PPC_R8, PPC_R11, 0, 0, 30); // R8 = Bank & 0xFFFFFFFE
+						*emitPtr++ = PPC_CMPWI(0, PPC_R8, 2);
 						u32* branchGuard1 = emitPtr++;
 						RegisterBailout(branchGuard1, COND_BNE, currentPC, chunkStaticCycles);
 					} else {
@@ -1392,10 +1392,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					bool pushPopAccumulateDataTicks = !(isPop && !Rbit);
 
 					if (!isPop) {
-						// STORE STRICT GUARD: Only Banks 2 & 3
-						*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
-						*emitPtr++ = PPC_BEQ(12);
-						*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
+						// STORE STRICT GUARD: Only Banks 2 & 3 (WRAM) allowed
+						// Branchless check: (Bank & ~1) == 2
+						*emitPtr++ = PPC_RLWINM(PPC_R8, PPC_R11, 0, 0, 30); // R8 = Bank & 0xFFFFFFFE
+						*emitPtr++ = PPC_CMPWI(0, PPC_R8, 2);
 						u32* branchGuard1 = emitPtr++;
 						RegisterBailout(branchGuard1, COND_BNE, currentPC, chunkStaticCycles);
 					} else {
@@ -1413,9 +1413,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						RegisterBailout(branchGuard2, COND_BGE, currentPC, chunkStaticCycles);
 					}
 
-					// 2. Load Page Pointer ONLY (Delay loading Mask to free R11 as a scratch register)
-					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
-					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_TABLE, PPC_R11);
+					// 2. Load Page Pointer AND Mask immediately (R8 and R9 are now free scratches)
+					*emitPtr++ = PPC_RLWINM(PPC_R8, PPC_R7, 2, 0, 29);      // R8 = Bank * 4
+					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_TABLE, PPC_R8);  // R10 = readPages[bank]
+					*emitPtr++ = PPC_ADDI(PPC_R8, PPC_R8, 1024);            // R8 = Offset to masks array
+					*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R30_TABLE, PPC_R8);  // R11 = readMasks[bank]
 
 					// 3. Null Pointer Guard
 					*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
@@ -1423,37 +1425,26 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					RegisterBailout(branchNullToBailout, COND_BEQ, currentPC, chunkStaticCycles);
 
 					// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only).
-					// PUSH_REG/POP_REG charge dataTicksAccess32 (non-seq) for the first
-					// register and dataTicksAccessSeq32 (seq) for every register after
-					// that, all in the same bank (SP never crosses a bank mid-instruction).
-					// numRegs is compile-time-known, so the repeat count is unrolled here
-					// (avoids mullw per Broadway convention) - only the two table values
-					// themselves need a runtime lookup. Skipped entirely for POP{Rlist}
-					// (see pushPopAccumulateDataTicks above).
-					// Dynamic Cycle Calculation & Prefetcher Recharge
-					// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only).
 					if (pushPopAccumulateDataTicks) {
-						// 1. First register is non-sequential (memoryWait32)
-						*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWait32) >> 16);
-						*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
-						*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // R11 = nWait
+					    *emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWait32) >> 16);
+					    *emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait32) & 0xFFFF);
+					    *emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
 
-						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R11, PPC_R8, currentPC); // Recharge using R8
+					    *emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
+					    EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC); // Recharge using R8
 
-						if (numRegs > 1) {
-							// 2. Sequential cycles for remaining registers (memoryWaitSeq)
-							*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWaitSeq) >> 16);
-							*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWaitSeq) & 0xFFFF);
-							*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // R11 = sWait
+					    if (numRegs > 1) {
+					        *emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
+					        *emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+					        *emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait
 
-							if ((numRegs - 1) > 1) {
-								*emitPtr++ = PPC_MULLI(PPC_R11, PPC_R11, numRegs - 1); // R11 = sWait * (numRegs - 1)
-							}
+					        if ((numRegs - 1) > 1) {
+					            *emitPtr++ = PPC_MULLI(PPC_R9, PPC_R9, numRegs - 1); // R9 = sWait * (numRegs - 1)
+					        }
 
-							*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-							EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R11, PPC_R8, currentPC);
-						}
+					        *emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
+					        EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC);
+					    }
 					}
 					
 					// Construct R11 as the Mask before moving onto SMC checks
@@ -1585,10 +1576,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
 
 				if (!isLoad) {
-					// STMIA GUARD: Only Banks 2 & 3
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 2);
-					*emitPtr++ = PPC_BEQ(12);
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 3);
+					// STORE STRICT GUARD: Only Banks 2 & 3 (WRAM) allowed
+					// Branchless check: (Bank & ~1) == 2
+					*emitPtr++ = PPC_RLWINM(PPC_R8, PPC_R11, 0, 0, 30); // R8 = Bank & 0xFFFFFFFE
+					*emitPtr++ = PPC_CMPWI(0, PPC_R8, 2);
 					u32* branchGuard1 = emitPtr++;
 					RegisterBailout(branchGuard1, COND_BNE, currentPC, chunkStaticCycles);
 				} else {
