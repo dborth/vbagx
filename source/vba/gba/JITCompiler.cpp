@@ -1083,11 +1083,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					// 1. Extract Memory Bank (R12 >> 24)
 					*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
-					// Stash the bank in R4 (instruction-local scratch only - nothing here
-					// needs it to survive to the next instruction) since R11 gets
-					// overwritten by the page/mask lookup below, and we need the bank
-					// again afterward for the data-access cycle-cost lookup.
-					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R11, 0, 28, 31); // R4 = R11 & 15
+					// Stash the bank in R7 (dedicated scratch) since R11 gets
+					// overwritten by the page/mask lookup below.
+					*emitPtr++ = PPC_RLWINM(PPC_R7, PPC_R11, 0, 28, 31); // R7 = R11 & 15
 
 					if (isMemStore) {
 						// STORE STRICT GUARD: Only Banks 2 & 3 (WRAM) allowed
@@ -1170,10 +1168,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					
 					*emitPtr++ = PPC_LIS(PPC_R11, ((u32)dataTicksTable) >> 16);
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
-					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // EA = R4 + R11
+					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // EA = R7 + R11
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
 
-					EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R4, currentPC); // Use R4 as scratch
+					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R11, PPC_R8, currentPC);
 
 					// 5. Execute Memory Load or Store Instruction
 					if (isMemLoad) {
@@ -1240,10 +1238,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// 3. Host Address Translation
 				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R12, 8, 24, 31); // R11 = bank (EA >> 24)
-				// Stash the bank in R4 (unused elsewhere in this handler) before R11
-				// gets turned into a table index below - needed for the data-tick
-				// lookup once the guard has passed.
-				*emitPtr++ = PPC_OR(PPC_R4, PPC_R11, PPC_R11);
+				// Stash the bank in R7 before R11 gets turned into a table index
+				*emitPtr++ = PPC_OR(PPC_R7, PPC_R11, PPC_R11);
 				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);    // R11 = bank * 4
 				*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_TABLE, PPC_R11); // R10 = readPages[bank]
 				*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R11, 1024);          // Offset to masks array
@@ -1266,9 +1262,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// guard, but not known at compile time (SP is a runtime value).
 				*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWait32) >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
-				*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // Safe: rA=R4
+				*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // Safe: rA=R7
 				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-				EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R4, currentPC); // Recharge prefetch buffer
+				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R11, PPC_R8, currentPC); // Recharge prefetch buffer using R8 as scratch
 
 				// 4. Endian-Correct Load or Store (Lazy Register Execution)
 				if (isLoad) {
@@ -1399,10 +1395,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					// 1. Extract Memory Bank (R12 >> 24)
 					*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
-					// Stash the bank in R4 (free until the per-register loop below starts
-					// using it) since R11 becomes the mask and R5 becomes the address
-					// tracker before we get a chance to look up the data-access cost.
-					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R11, 0, 28, 31); // R4 = R11 & 15
+					// Stash the bank safely in R7
+					*emitPtr++ = PPC_RLWINM(PPC_R7, PPC_R11, 0, 28, 31); // R7 = R11 & 15
 					bool pushPopAccumulateDataTicks = !(isPop && !Rbit);
 
 					if (!isPop) {
@@ -1445,41 +1439,33 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// themselves need a runtime lookup. Skipped entirely for POP{Rlist}
 					// (see pushPopAccumulateDataTicks above).
 					// Dynamic Cycle Calculation & Prefetcher Recharge
+					// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only).
 					if (pushPopAccumulateDataTicks) {
-						// We must do a runtime lookup because bank is dynamic (SP). R4 holds the bank.
-						// We use R11 as our safe scratch
-
 						// 1. First register is non-sequential (memoryWait32)
 						*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWait32) >> 16);
 						*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
-						*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // R11 = nWait
+						*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // R11 = nWait
 
 						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-						EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R4, currentPC); // Recharge using R4 as scratch
-
-						// R4 was clobbered by the lambda. Safely restore it from R12 base address.
-						*emitPtr++ = PPC_SRWI(PPC_R4, PPC_R12, 24);
-						*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R4, 0, 28, 31); // R4 = Bank
+						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R11, PPC_R8, currentPC); // Recharge using R8
 
 						if (numRegs > 1) {
 							// 2. Sequential cycles for remaining registers (memoryWaitSeq)
 							*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWaitSeq) >> 16);
 							*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWaitSeq) & 0xFFFF);
-							*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R4, PPC_R11); // R11 = sWait
+							*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // R11 = sWait
 
 							if ((numRegs - 1) > 1) {
 								*emitPtr++ = PPC_MULLI(PPC_R11, PPC_R11, numRegs - 1); // R11 = sWait * (numRegs - 1)
 							}
 
 							*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-							EmitPrefetchDataWait(emitPtr, PPC_R4, PPC_R11, PPC_R4, currentPC); // Recharge total seq wait
+							EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R11, PPC_R8, currentPC);
 						}
 					}
 					
-					// Restore R4 and construct R11 as the Mask before moving onto SMC checks and the memory loop
-					*emitPtr++ = PPC_SRWI(PPC_R4, PPC_R12, 24);
-					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R4, 0, 28, 31);     // R4 = Bank
-					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R4, 2, 0, 29);     // R11 = Bank * 4
+					// Construct R11 as the Mask before moving onto SMC checks
+					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R7, 2, 0, 29);     // R11 = Bank * 4
 					*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R11, 1024);          // Offset to masks array
 					*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R30_TABLE, PPC_R11); // R11 = readMasks[bank]
 
@@ -1496,24 +1482,24 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// 4. Memory Operations Loop
 					for (int i = 0; i < 8; i++) {
 						if (regList & (1 << i)) {
-							*emitPtr++ = PPC_AND(PPC_R4, PPC_R12, PPC_R11); // Apply Mask
+							*emitPtr++ = PPC_AND(PPC_R7, PPC_R12, PPC_R11); // Apply Mask to R7
 							if (isPop) {
 								u32 hostRd = WriteGBAReg(i, emitPtr, true, lockedMask);
-								*emitPtr++ = PPC_LWBRX(hostRd, PPC_R10, PPC_R4);
+								*emitPtr++ = PPC_LWBRX(hostRd, PPC_R10, PPC_R7);
 							} else {
 								u32 hostRs = ReadGBAReg(i, emitPtr, lockedMask);
-								*emitPtr++ = PPC_STWBRX(hostRs, PPC_R10, PPC_R4);
+								*emitPtr++ = PPC_STWBRX(hostRs, PPC_R10, PPC_R7);
 							}
 							*emitPtr++ = PPC_ADDI(PPC_R12, PPC_R12, 4); // Advance 4 bytes
 						}
 					}
 					if (Rbit) {
-						*emitPtr++ = PPC_AND(PPC_R4, PPC_R12, PPC_R11);
+						*emitPtr++ = PPC_AND(PPC_R7, PPC_R12, PPC_R11);
 						if (isPop) {
-							*emitPtr++ = PPC_LWBRX(PPC_R12, PPC_R10, PPC_R4); // POP PC into R12 scratch
+							*emitPtr++ = PPC_LWBRX(PPC_R12, PPC_R10, PPC_R7); // POP PC into R12 scratch
 						} else {
 							u32 hostLr = ReadGBAReg(14, emitPtr, lockedMask);
-							*emitPtr++ = PPC_STWBRX(hostLr, PPC_R10, PPC_R4); // PUSH LR (GBA R14)
+							*emitPtr++ = PPC_STWBRX(hostLr, PPC_R10, PPC_R7); // PUSH LR (GBA R14)
 						}
 					}
 
