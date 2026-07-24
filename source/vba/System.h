@@ -53,7 +53,8 @@ extern int  systemGetSensorX();
 extern int  systemGetSensorY();
 extern bool systemCanChangeSoundQuality();
 extern void systemShowSpeed(int);
-extern void system10Frames(int);
+extern float systemGetDisplayFPS(void);
+extern float systemGetCoreFPS(void);
 extern void systemFrame();
 extern void systemGbBorderOn();
 

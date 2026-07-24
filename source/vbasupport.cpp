@@ -96,15 +96,12 @@ struct EmulatedSystem emulator =
 *
 * Returns number of milliseconds since program start
 ****************************************************************************/
-static u64 lastTime = 0;
-
 u32 systemGetClock(void)
 {
     const u64 now = gettime();
     return (u32)(ticks_to_microsecs(now - start) / 1000);
 }
 
-void systemFrame() {}
 void systemScreenCapture(int a) {}
 void systemShowSpeed(int speed) {}
 void systemGbBorderOn() {}
@@ -115,95 +112,179 @@ bool systemPauseOnFrame()
 }
 
 /* *****************************************************************************
- * Frame-rate synchronisation
+ * Frame pacing & FPS instrumentation
  *
- * VBA-M calls system10Frames() once per 10 emulated frames. We use it to:
- * 1. Throttle to the target rate by sleeping when we're running ahead.
- * 2. Adapt the GBA frame-skip level when the core can't keep up.
+ *   systemGetDisplayFPS() - real, vsync-gated frames actually put on screen.
+ *                           This is what the OSD in video.cpp shows, and by
+ *                           construction it can never exceed the TV's real
+ *                           refresh rate.
+ *   systemGetCoreFPS()    - "theoretical" throughput of the emulation core
+ *                           itself, with our own deliberate throttle sleep
+ *                           AND the display's vsync wait subtracted out.
+ *                           This is the number to watch while tuning the
+ *                           JIT or anything else perf-related: nothing
+ *                           artificially caps it, so a build that's really
+ *                           2x faster reads ~2x higher here even though
+ *                           displayFPS stays pinned at ~60 the whole time.
+ *
+ * Throttling and frame-skipping are unified into one continuous "timing
+ * debt" accumulator, in real microseconds rather than a frame-count step
+ * table, updated every frame instead of every 10:
+ *   - debt > 0  we're behind real time. Ask GBA.cpp to skip some draws
+ *               (never emulation - that always stays full-rate and correct)
+ *               so the GX_Render + vsync-wait time it frees up goes back
+ *               into catching the core up.
+ *   - debt < 0  we're ahead of real time. Sleep off exactly that much,
+ *               capped to one frame period so a long real-world pause
+ *               (loading, menu, debugger) can never turn into a "sprint to
+ *               catch up" once we return.
+ * Because debt is measured from wall-clock reality - which already
+ * includes whatever time GX_Render()'s vsync wait consumed - a game that's
+ * keeping up naturally settles at ~0 debt and ~0 extra sleep: the vsync
+ * wait *is* the throttle in that case, instead of a second, independent
+ * one fighting it every 10 frames.
  *****************************************************************************/
 
-#define USEC_PER_SEC      1000000
-#define FRAMES_PER_BATCH  10
-#define MAX_FRAME_SKIP    20
-#define SPEED_TOO_SLOW    98 // % of real time: below this -> skip more
-#define SPEED_TOO_FAST    125 // % of real time: above this -> skip less
+#define FRAMES_PER_SECOND  60
+#define USEC_PER_SEC       1000000
+#define MAX_FRAME_SKIP     20
+#define DEBT_CAP_FRAMES    MAX_FRAME_SKIP // clamp "how behind", in frame-periods
+#define CREDIT_CAP_FRAMES  1               // never bank more than 1 frame ahead
+#define FPS_EMA_ALPHA      0.10f           // smoothing factor for both FPS readouts
 
-// Map a measured speed (% of real time) to a frame-skip delta.
-// Positive => behind, skip more; negative => ahead, skip less.
-// The gap between SPEED_TOO_SLOW and SPEED_TOO_FAST is a deliberate dead-band
-// that stops the controller oscillating on every batch.
-static int frameSkipDelta(int speed)
+// -- Continuous pacing state --------------------------------------------
+static u64 pacerLastUs         = 0; // wall time snapshot, taken right after any sleep
+static s64 pacerDebtUs         = 0; // >0 behind schedule, <0 ahead (capped, see above)
+static u64 pacerLastDrawCostUs = 0; // cost of the most recent actual draw, consumed once
+
+// -- FPS metrics ----------------------------------------------------------
+static float displayFPS       = 0.0f;
+static u64   displayFpsLastUs = 0;
+static float coreFPS          = 0.0f;
+
+// Clears all pacing/FPS state. Called whenever a ROM (re)loads, so a stale
+// frameskip or debt value from a previously-loaded ROM - possibly of a
+// different system - can never leak into the next session.
+static void systemResetPacer(void)
 {
-	if (speed < 60)
-		return +4;
-	if (speed < 70)
-		return +3;
-	if (speed < 80)
-		return +2;
-	if (speed < SPEED_TOO_SLOW)
-		return +1;
-
-	if (speed > 185)
-		return -3;
-	if (speed > 145)
-		return -2;
-	if (speed > SPEED_TOO_FAST)
-		return -1;
-
-	return 0; // inside the dead-band
+	pacerLastUs         = ticks_to_microsecs(gettime());
+	pacerDebtUs          = 0;
+	pacerLastDrawCostUs  = 0;
+	displayFpsLastUs     = 0;
+	displayFPS           = 0.0f;
+	coreFPS              = 0.0f;
+	systemFrameSkip      = 0;
 }
 
-void system10Frames(int rate)
+// Called from systemDrawScreen(), once per *actual* draw (i.e. after
+// frameskip has already decided this frame is a keeper). This is the only
+// place that needs to know about drawing at all, so it measures real,
+// on-screen frame delivery correctly no matter which core - GBA or
+// GB/GBC - ends up calling systemDrawScreen().
+void systemNoteDisplayedFrame(u64 drawCostUs)
 {
 	const u64 nowUs = ticks_to_microsecs(gettime());
 
-	// Prime the reference on the first call (lastTime == 0) so we never sync
-	// against zero. The now <= lastTime case is a defensive re-anchor.
-	if (lastTime == 0 || nowUs <= lastTime)
+	if (displayFpsLastUs != 0)
 	{
-		lastTime = nowUs;
+		const u64 deltaUs = nowUs - displayFpsLastUs;
+		if (deltaUs > 0)
+		{
+			const float instFps = (float)USEC_PER_SEC / (float)deltaUs;
+			displayFPS += (instFps - displayFPS) * FPS_EMA_ALPHA;
+		}
+	}
+
+	displayFpsLastUs    = nowUs;
+	pacerLastDrawCostUs = drawCostUs; // consumed once, by the next systemPaceFrame() call
+}
+
+float systemGetDisplayFPS(void) { return displayFPS; }
+float systemGetCoreFPS(void)    { return coreFPS; }
+
+// Core pacing logic. Called once per emulated frame from GBA.cpp's
+// CPULoop_T. Only ever looks at real elapsed wall time between calls -
+// it never assumes any fixed number of frames occurred
+void systemFrame()
+{
+	const u64 nowUs = ticks_to_microsecs(gettime());
+	const s64 rawFrameUs = (s64)(nowUs - pacerLastUs);
+
+	const s64 framePeriodUs = (s64)USEC_PER_SEC / FRAMES_PER_SECOND;
+
+	// First call, a clock oddity, or a long real-world pause (menu, disk
+	// access, debugger break) - resync silently instead of reporting a
+	// mountain of fake "behind schedule" debt on the next real frame.
+	if (pacerLastUs == 0 || rawFrameUs <= 0 || rawFrameUs > framePeriodUs * 30)
+	{
+		pacerLastUs         = nowUs;
+		pacerDebtUs         = 0;
+		pacerLastDrawCostUs = 0;
 		return;
 	}
 
-	// Derive the target from the rate the core asks for, so 50 Hz / PAL
-	// titles are throttled correctly instead of always assuming 60 Hz.
-	const int safeRate = (rate > 0) ? rate : 60;
-	const s64 targetPeriod = (s64)FRAMES_PER_BATCH * USEC_PER_SEC / safeRate;
+	// "Theoretical" core cost: total real time for this frame, minus
+	// whatever part of it was spent inside the actual draw call (which
+	// includes GX_Render's internal wait for real vsync, when a draw
+	// happened at all). What's left is pure GBA-core-plus-support work,
+	// uncapped by our own throttle or by the display.
+	s64 coreOnlyUs = rawFrameUs - (s64)pacerLastDrawCostUs;
+	pacerLastDrawCostUs = 0; // consume once
+	if (coreOnlyUs < 1)
+		coreOnlyUs = 1; // guard against clock/measurement noise
 
-	const s64 elapsed = (s64)(nowUs - lastTime); // core time for 10 frames
-	const s64 timeOff = targetPeriod - elapsed; // signed: > 0 => ahead
+	const float instCoreFps = (float)USEC_PER_SEC / (float)coreOnlyUs;
+	coreFPS += (instCoreFps - coreFPS) * FPS_EMA_ALPHA;
 
-	// Sleep when ahead, but never longer than one whole period (caps, rather
-	// than discards, a large lead - prevents light cores from running too fast).
-	if (timeOff > 0)
-		usleep((u32)(timeOff < targetPeriod ? timeOff : targetPeriod));
+	// Continuous timing debt, in real microseconds.
+	pacerDebtUs += rawFrameUs - framePeriodUs;
 
-	// Speed as a % of real time. elapsed > 0 is guaranteed above, so no /0.
-	const int speed = (int)(targetPeriod * 100 / elapsed);
+	const s64 debtCapUs   =  framePeriodUs * DEBT_CAP_FRAMES;
+	const s64 creditCapUs = -framePeriodUs * CREDIT_CAP_FRAMES;
+	if (pacerDebtUs > debtCapUs)
+		pacerDebtUs = debtCapUs;
+	else if (pacerDebtUs < creditCapUs)
+		pacerDebtUs = creditCapUs;
 
-	if (cartridgeType == CARTRIDGE_GBA) // only GBA is heavy enough to need it
+	if (cartridgeType == CARTRIDGE_GBA && GCSettings.gbaFrameskip && !speedup)
 	{
-		if (!GCSettings.gbaFrameskip)
-		{
-			systemFrameSkip = 0;
-		}
-		else
-		{
-			systemFrameSkip += frameSkipDelta(speed);
+		// How many whole frame-periods behind are we? That's a direct,
+		// measured answer instead of a hand-tuned step table, and it's
+		// re-evaluated every frame rather than once per 10.
+		int target = (int)(pacerDebtUs / framePeriodUs);
+		if (target < 0)
+			target = 0;
+		else if (target > MAX_FRAME_SKIP)
+			target = MAX_FRAME_SKIP;
 
-			if (systemFrameSkip > MAX_FRAME_SKIP)
-				systemFrameSkip = MAX_FRAME_SKIP;
-			else if (systemFrameSkip < 0)
-				systemFrameSkip = 0;
-		}
+		// Slew by at most one step per frame so a single hitch can't
+		// cause a visible "jump cut" in the skip pattern - still reacts
+		// within one frame instead of the old up-to-10-frame delay.
+		if (target > systemFrameSkip)
+			++systemFrameSkip;
+		else if (target < systemFrameSkip)
+			--systemFrameSkip;
+	}
+	else
+	{
+		// GB/GBC never needs frameskip - it's cheap enough to always draw.
+		// The menu setting can disable adaptive skip outright. And turbo
+		// (speedup) drives its own fixed 9-skip pattern in GBA.cpp -
+		// piling adaptive skip on top of manual turbo would just fight it.
+		systemFrameSkip = 0;
 	}
 
-	// Advance the reference drift-free:
-	// ahead -> next reference is the intended wake time (now + timeOff), so
-	//          usleep() rounding error can't accumulate across batches.
-	// behind -> re-anchor to now (timeOff <= 0), so we never fast-forward to
-	//           "catch up" after a stall
-	lastTime = nowUs + (timeOff > 0 ? timeOff : 0);
+	// Sleep off genuine credit only - and never during turbo. Turbo means
+	// "as fast as possible"; without this check, the forced 9-skip pattern
+	// would look like we're way ahead of schedule, and this pacer would
+	// sleep it right back down to 1x, defeating the point of turbo.
+	if (!speedup && pacerDebtUs < 0)
+	{
+		usleep((u32)(-pacerDebtUs));
+		pacerDebtUs = 0; // slept exactly the credit away, drift-free
+	}
+
+	pacerLastUs = ticks_to_microsecs(gettime()); // snapshot *after* any sleep
 }
 
 /****************************************************************************
@@ -745,11 +826,15 @@ static int srcHeight = 0;
 
 void systemDrawScreen()
 {
+	const u64 drawStartUs = ticks_to_microsecs(gettime());
+
 	GX_Render(
 		srcWidth,
 		srcHeight,
 		pix
 	);
+
+	systemNoteDisplayedFrame(ticks_to_microsecs(gettime()) - drawStartUs);
 }
 
 static bool ValidGameId(u32 id)
@@ -1301,8 +1386,10 @@ bool LoadVBAROM()
 
 		emulating = 1;
 
-		// reset frameskip variables
-		lastTime = systemFrameSkip = 0;
+		// reset frame-pacing & FPS state (also clears any stale frameskip
+		// or timing-debt value left over from a previously-loaded ROM,
+		// including one of a different system)
+		systemResetPacer();
 
 		// Start system clock
 		start = gettime();

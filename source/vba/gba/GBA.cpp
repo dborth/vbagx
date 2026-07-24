@@ -2772,8 +2772,6 @@ static void CPULoop_T(int ticks) {
             if(VCOUNT == 160) {
               ++count;
               systemFrame();
-
-              if((count % 10) == 0) system10Frames(60);
               if(count == 60) count = 0;
 
               u32 joy = 0;

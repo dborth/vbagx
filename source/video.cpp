@@ -184,7 +184,7 @@ copy_to_xfb (u32 arg)
 static void InitFPSFontData() {
 	int w, h;
 	DecodePNG((u8 *)fps_font_png, &w, &h, fps_font_texture_data, FPS_FONT_TEX_WIDTH, FPS_FONT_TEX_HEIGHT);
-}
+    }
 
 static void InitFPSFontTexture() {
 	DCStoreRange(fps_font_texture_data, sizeof(fps_font_texture_data));
@@ -1323,18 +1323,17 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 
 	if(GCSettings.DisplayFrameRate) {
 		static u32 lastFpsTime = 0;
-		static int frameCount = 0;
 		static char fpsStr[16] = "FPS: 60.0";
 
-		frameCount++;
 		u32 currentTime = ticks_to_millisecs(gettime());
 
 		// Only calculate and format the string once per second
 		if (currentTime - lastFpsTime >= 1000) {
-			float currentFPS = (frameCount * 1000.0f) / (float)(currentTime - lastFpsTime);
-			sprintf(fpsStr, "FPS: %.1f", currentFPS);
+			if(GCSettings.DisplayFrameRate == FRAMERATE_CORE)
+				sprintf(fpsStr, "FPS: %.1f", systemGetCoreFPS());
+			else
+				sprintf(fpsStr, "FPS: %.1f", systemGetDisplayFPS());
 
-			frameCount = 0;
 			lastFpsTime = currentTime;
 		}
 		draw_fps(fpsStr, 160.0f, -180.0f);

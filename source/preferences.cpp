@@ -204,7 +204,7 @@ preparePrefsData ()
 	createXMLSetting("xshift", "Horizontal Video Shift", toStr(GCSettings.xshift));
 	createXMLSetting("yshift", "Vertical Video Shift", toStr(GCSettings.yshift));
 	createXMLSetting("colorize", "Colorize Mono Gameboy", BtoStr(GCSettings.colorize));
-	createXMLSetting("DisplayFrameRate", "Show Framerate", BtoStr(GCSettings.DisplayFrameRate));
+	createXMLSetting("DisplayFrameRate", "Show Framerate", toStr(GCSettings.DisplayFrameRate));
 	createXMLSetting("gbaFrameskip", "GBA Frameskip", BtoStr(GCSettings.gbaFrameskip));
 	createXMLSetting("TurboModeEnabled", "Turbo Mode Enabled", BtoStr(GCSettings.TurboModeEnabled));
 
@@ -626,6 +626,8 @@ void FixInvalidSettings()
 		GCSettings.FilterMethod = FILTER_NONE;
 	if(!(GCSettings.videomode >= VIDEOMODE_AUTO && GCSettings.videomode < VIDEOMODE_LENGTH))
 		GCSettings.videomode = VIDEOMODE_AUTO;
+	if(!(GCSettings.DisplayFrameRate >= FRAMERATE_OFF && GCSettings.DisplayFrameRate < FRAMERATE_LENGTH))
+		GCSettings.DisplayFrameRate = FRAMERATE_OFF;
 }
 
 /****************************************************************************
@@ -670,7 +672,7 @@ DefaultSettings ()
 #ifdef HW_RVL
 	GCSettings.DynamicRecompilation = true;
 #endif
-	GCSettings.DisplayFrameRate = false;
+	GCSettings.DisplayFrameRate = FRAMERATE_OFF;
 	GCSettings.gbaFrameskip = true; // Turn auto-frameskip on for GBA games
 	GCSettings.TurboModeEnabled = true; // Enabled by default
 

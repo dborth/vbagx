@@ -102,6 +102,13 @@ enum {
 };
 
 enum {
+	FRAMERATE_OFF = 0,
+	FRAMERATE_ACTUAL,
+	FRAMERATE_CORE,
+	FRAMERATE_LENGTH
+};
+
+enum {
 	RENDER_FILTERED = 1,
 	RENDER_UNFILTERED,
 	RENDER_FILTERED_SOFT,
@@ -197,7 +204,7 @@ struct SGCSettings
 	int		yshift;
 	bool	colorize;      // colorize Mono Gameboy games
 	bool	DynamicRecompilation;
-	bool	DisplayFrameRate;
+	int		DisplayFrameRate;
 	bool	gbaFrameskip;  // turn on auto-frameskip for GBA games
 	bool	WiiControls;   // Match Wii Game
 	int		WiimoteOrientation;

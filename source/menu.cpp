@@ -3145,7 +3145,7 @@ static int MenuSettingsVideo()
 		options.name[8][0] = 0; // disable GB Palette
 	}
 	else {
-		options.name[9][0] = 0; // disable GBA Frameskip
+		options.name[10][0] = 0; // disable GBA Frameskip
 	}
 
 	GuiText titleTxt("Game Settings - Video", 26, (GXColor){255, 255, 255, 255});
@@ -3250,7 +3250,9 @@ static int MenuSettingsVideo()
 				menu = MENU_GAMESETTINGS_PALETTE;
 				break;
 			case 9:
-				GCSettings.DisplayFrameRate = !GCSettings.DisplayFrameRate;
+				GCSettings.DisplayFrameRate++;
+				if(GCSettings.DisplayFrameRate >= FRAMERATE_LENGTH)
+					GCSettings.DisplayFrameRate = FRAMERATE_OFF;
 				break;
 			case 10:
 				GCSettings.gbaFrameskip = !GCSettings.gbaFrameskip;
@@ -3335,7 +3337,13 @@ static int MenuSettingsVideo()
 			else
 				sprintf(options.value[8], "Default");
 
-			sprintf (options.value[9], "%s", GCSettings.DisplayFrameRate ? "On" : "Off");
+			if (GCSettings.DisplayFrameRate == FRAMERATE_OFF)
+				sprintf (options.value[9], "Off");
+			else if (GCSettings.DisplayFrameRate == FRAMERATE_ACTUAL)
+				sprintf (options.value[9], "Actual");
+			else if (GCSettings.DisplayFrameRate == FRAMERATE_CORE)
+				sprintf (options.value[9], "Core (Unbound)");
+
 			sprintf (options.value[10], "%s", GCSettings.gbaFrameskip ? "On" : "Off");
 			sprintf (options.value[11], "%s", GCSettings.TurboModeEnabled ? "On" : "Off");
 
@@ -3362,7 +3370,7 @@ static int MenuSettingsEmulation()
 	bool firstRun = true;
 	OptionList options;
 
-	sprintf(options.name[i++], "GBA Dynamic Recompilation (JIT)");
+	sprintf(options.name[i++], "GBA Dynamic Recompilation");
 	sprintf(options.name[i++], "Offset from UTC (hours)");
 	sprintf(options.name[i++], "Hardware (GB/GBC)");
 	sprintf(options.name[i++], "Super Game Boy border");

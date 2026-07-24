@@ -187,13 +187,9 @@ int gbHdmaBytes = 0x0000;
 int gbHdmaOn = 0;
 int gbSpeed = 0;
 // frame counting
-int gbFrameCount = 0;
 int gbFrameSkip = 0;
 int gbFrameSkipCount = 0;
 // timing
-u32 gbLastTime = 0;
-u32 gbElapsedTime = 0;
-u32 gbTimeNow = 0;
 int gbSynchronizeTicks = GBSYNCHRONIZE_CLOCK_TICKS;
 // emulator features
 int gbBattery = 0;
@@ -2629,9 +2625,6 @@ void gbReset()
 
   systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-  gbLastTime = systemGetClock();
-  gbFrameCount = 0;
-
   gbScreenOn = true;
   gbSystemMessage = false;
 
@@ -4539,22 +4532,6 @@ void gbEmulate(int ticksToStop)
                 gbLcdTicksDelayed += GBLCD_MODE_1_CLOCK_TICKS;
                 gbLcdModeDelayed = 1;
 
-                gbFrameCount++;
-                systemFrame();
-
-                if((gbFrameCount % 10) == 0)
-                  system10Frames(60);
-
-                if(gbFrameCount >= 60) {
-                  u32 currentTime = systemGetClock();
-                  if(currentTime != gbLastTime)
-                    systemShowSpeed(100000/(currentTime - gbLastTime));
-                  else
-                    systemShowSpeed(0);
-                  gbLastTime = currentTime;
-                  gbFrameCount = 0;
-                }
-
                 if(systemReadJoypads()) {
                   // read joystick
                   if(gbSgbMode && gbSgbMultiplayer) {
@@ -4803,22 +4780,8 @@ void gbEmulate(int ticksToStop)
                 gbJoymask[0] = systemReadJoypad(-1);
               }
             }
-            gbFrameCount++;
 
             systemFrame();
-
-            if((gbFrameCount % 10) == 0)
-              system10Frames(60);
-
-            if(gbFrameCount >= 60) {
-              u32 currentTime = systemGetClock();
-              if(currentTime != gbLastTime)
-                systemShowSpeed(100000/(currentTime - gbLastTime));
-              else
-                systemShowSpeed(0);
-              gbLastTime = currentTime;
-              gbFrameCount = 0;
-            }
           }
         }
       }
