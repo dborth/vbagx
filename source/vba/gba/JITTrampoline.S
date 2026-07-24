@@ -4,7 +4,7 @@
 # -----------------------------------------------------------------------------
 # ExecuteJITTrace(JITBlockFunc execute, JITResult* outResult,
 #                 u32* busPrefetchCount, u32* gbaRegs, u32* flags,
-#                 u8** readPages, u32* readMasks)
+#                 GBAReadPageTable readTable)
 #
 # Register Allocations on Entry (PowerPC Standard EABI):
 #   R3: execute (Function pointer to JIT block)
@@ -12,15 +12,13 @@
 #   R5: busPrefetchCount (Pointer to the live hardware-prefetch-buffer state)
 #   R6: gbaRegs (Pointer to GBA registers array, reg[0..15])
 #   R7: flags (Pointer to flag buffer array)
-#   R8: readPages (Pointer to gbaReadPagePtrs)
-#   R9: readMasks (Pointer to gbaReadPageMasks)
+#   R8: gbaReadTable (Pointer to gbaReadTable)
 #
 # JIT Execution Register Mapping (Lazy Register Paradigm):
 #   R14      : PPC_REG_GBA_REGS_PTR (Preserved pointer to the C++ gbaRegs array)
 #   R15..R28 : Lazily allocated/cached GBA Registers R0..R14
 #   R29      : PPC_REG_PC (GBA R15 / Pipeline PC - synchronized across boundaries)
-#   R30      : PPC_R30_PAGES (readPages base array pointer)
-#   R31      : PPC_R31_MASKS (readMasks base array pointer)
+#   R30      : PPC_R30_TABLE (readTable base pointer)
 #   R8       : PPC_REG_N (N_FLAG) - Lazily Allocated
 #   R9       : PPC_REG_Z (Z_FLAG) - Lazily Allocated
 #   R6       : PPC_REG_C (C_FLAG) - Lazily Allocated
@@ -47,9 +45,8 @@ ExecuteJITTrace:
     mr 14, 6         # R14 = PPC_REG_GBA_REGS_PTR (Keep base pointer alive for lazy loads/stores)
     lwz 29, 60(6)    # R29 = GBA R15 (PC) is loaded eagerly to maintain block branch pipeline tracking
 
-    # Load Global Page/Mask Pointers safely into Non-Volatile R30 / R31
-    mr 30, 8         # R30 = readPages (PPC_R30_PAGES)
-    mr 31, 9         # R31 = readMasks (PPC_R31_MASKS)
+    # Load Global gbaReadTable Pointer safely into Non-Volatile R30
+    mr 30, 8         # R30 = gbaReadTable (PPC_R30_TABLE)
 
     # Load live busPrefetchCount into R5 (safely fetched from the pointer)
     lwz 10, 92(1)    # R10 = busPrefetchCount pointer

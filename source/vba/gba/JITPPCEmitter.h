@@ -46,8 +46,8 @@
 // R27 : Lazily allocated host pool for GBA R0-R14.
 // R28 : Lazily allocated host pool for GBA R0-R14.
 // R29 : PPC_REG_PC (GBA R15 / Pipeline PC).
-// R30 : PPC_R30_PAGES (readPages Base Pointer Array).
-// R31 : PPC_R31_MASKS (readMasks Base Pointer Array).
+// R30 : PPC_R30_PAGES (gbaReadTable Base Pointer)
+// R31 : Scratch
 // -------------------------------------------------------------------------
 #define PPC_R3   3
 #define PPC_R4   4
@@ -60,10 +60,10 @@
 #define PPC_R11  11  // Scratch: Bank / Mask / Condition
 #define PPC_R12  12  // Scratch: Target Address / Operand
 
-#define PPC_R29  29
+#define PPC_R29  29  // GBA PC
 
-#define PPC_R30_PAGES 30  // readPages Base Pointer Array (Non-volatile, no overlap with GBA registers)
-#define PPC_R31_MASKS 31  // readMasks Base Pointer Array (Non-volatile, no overlap with GBA registers)
+#define PPC_R30_TABLE 30  // gbaReadTable Base Pointer (Non-volatile, no overlap with GBA registers)
+#define PPC_R31 31  // General scratch
 
 // -------------------------------------------------------------------------
 // PACKED FLAGS

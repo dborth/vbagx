@@ -305,7 +305,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 		// 2. Fetch Mask for checkBank into R11
 		*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R10, 2, 0, 29);     // R11 = checkBank * 4
-		*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11); // R11 = checkMask
+		*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R11, 1024);           // Offset to readMasks (256 * 4)
+		*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R30_TABLE, PPC_R11);  // R11 = checkMask
 
 		// 3. Canonicalize checkReg EA into R10: R10 = (checkReg & checkMask)
 		*emitPtr++ = PPC_AND(PPC_R10, checkReg, PPC_R11);
@@ -340,8 +341,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*emitPtr++ = PPC_SRWI(PPC_R4, reportReg, 24);
 		*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R4, 0, 28, 31);     // R4 = baseBank
 		*emitPtr++ = PPC_RLWINM(PPC_R10, PPC_R4, 2, 0, 29);     // R10 = baseBank * 4
-		*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R10); // R11 = baseMask
-		*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R10); // R10 = basePagePtr
+		*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R10, 1024);          // R11 = baseBank * 4 + 1024
+		*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R30_TABLE, PPC_R11); // R11 = baseMask
+		*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_TABLE, PPC_R10); // R10 = basePagePtr
 	};
 
 	auto EmitResultMetadata = [&](u32*& ptr, u32 count, u32 bailedOut, u32 smcHit = 0) {
@@ -1131,9 +1133,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					}
 
 					// 2. Load Page Pointer and Memory Mask
-					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);
-					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
-					*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
+					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);    // R11 = Bank * 4
+					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_TABLE, PPC_R11); // R10 = readPages[bank]
+					*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R11, 1024);          // R11 = Bank * 4 + 1024
+					*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R30_TABLE, PPC_R11); // R11 = readMasks[bank]
 
 					// 3. UNIVERSAL NULL POINTER GUARD
 					*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
@@ -1241,9 +1244,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// gets turned into a table index below - needed for the data-tick
 				// lookup once the guard has passed.
 				*emitPtr++ = PPC_OR(PPC_R4, PPC_R11, PPC_R11);
-				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);  // R11 = bank * 4
-				*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11); // R10 = readPages[bank]
-				*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11); // R11 = readMasks[bank]
+				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);    // R11 = bank * 4
+				*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_TABLE, PPC_R11); // R10 = readPages[bank]
+				*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R11, 1024);          // Offset to masks array
+				*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R30_TABLE, PPC_R11); // R11 = readMasks[bank]
 
 				// Evaluate SMC Guard on UNMASKED Effective Address
 				if (!isLoad) {
@@ -1425,7 +1429,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					// 2. Load Page Pointer ONLY (Delay loading Mask to free R11 as a scratch register)
 					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29); // R11 = Bank * 4
-					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
+					*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_TABLE, PPC_R11);
 
 					// 3. Null Pointer Guard
 					*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
@@ -1474,9 +1478,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					
 					// Restore R4 and construct R11 as the Mask before moving onto SMC checks and the memory loop
 					*emitPtr++ = PPC_SRWI(PPC_R4, PPC_R12, 24);
-					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R4, 0, 28, 31); // R4 = Bank
-					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R4, 2, 0, 29); // R11 = Bank * 4
-					*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11); // R11 = readMasks[bank]
+					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R4, 0, 28, 31);     // R4 = Bank
+					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R4, 2, 0, 29);     // R11 = Bank * 4
+					*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R11, 1024);          // Offset to masks array
+					*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R30_TABLE, PPC_R11); // R11 = readMasks[bank]
 
 					if (!isPop) {
 						EmitSMCWriteCheck(PPC_R12, PPC_R12); // Check PUSH writes against compiled page flags
@@ -1585,9 +1590,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 
 				EnsureArenaAllocated();
-
 				EmitEagerStateFlush();
-
 				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 				chunkInstrCount = 0;
 				chunkStaticCycles = 0;
@@ -1626,9 +1629,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 
 				// 2. Load Page Pointer and Mask
-				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);
-				*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_PAGES, PPC_R11);
-				*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R31_MASKS, PPC_R11);
+				*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R11, 2, 0, 29);    // R11 = Bank * 4
+				*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_TABLE, PPC_R11); // R10 = readPages[bank]
+				*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R11, 1024);          // Offset to masks array
+				*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R30_TABLE, PPC_R11); // R11 = readMasks[bank]
 
 				// 3. Null Pointer Guard
 				*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
