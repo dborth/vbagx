@@ -59,10 +59,6 @@ struct SMCBailoutPatch {
 };
 
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
-	if (!JIT_REGION_ALLOWED(startPC)) {
-		return cache.registerBlock(startPC, 0, nullptr);
-	}
-
 	DeferredBailout bailouts[MAX_BAILOUTS];
 	u32 bailoutCount = 0;
 	SMCBailoutPatch smcBailoutList[MAX_SMC_BAILOUTS];
