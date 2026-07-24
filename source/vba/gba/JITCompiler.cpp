@@ -299,34 +299,34 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 	// Emit an SMC page-flag guard check for memory write operations
 	auto EmitSMCWriteCheck = [&](u32 checkReg, u32 reportReg) {
-		// 1. Extract Bank from checkReg into R10: R10 = (checkReg >> 24) & 15
-		*emitPtr++ = PPC_SRWI(PPC_R10, checkReg, 24);
-		*emitPtr++ = PPC_RLWINM(PPC_R10, PPC_R10, 0, 28, 31); // R10 = checkBank
+		// 1. Extract Bank from checkReg into R8: R8 = (checkReg >> 24) & 15
+		// Rotate left 8 puts bits 4-7 into 28-31, masking isolates the bank perfectly.
+		*emitPtr++ = PPC_RLWINM(PPC_R8, checkReg, 8, 28, 31);
 
-		// 2. Fetch Mask for checkBank into R11
-		*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R10, 2, 0, 29);     // R11 = checkBank * 4
-		*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R11, 1024);           // Offset to readMasks (256 * 4)
-		*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R30_TABLE, PPC_R11);  // R11 = checkMask
+		// 2. Fetch Mask for checkBank into R9
+		*emitPtr++ = PPC_RLWINM(PPC_R9, PPC_R8, 2, 0, 29);     // R9 = checkBank * 4
+		*emitPtr++ = PPC_ADDI(PPC_R9, PPC_R9, 1024);           // Offset to readMasks (256 * 4)
+		*emitPtr++ = PPC_LWZX(PPC_R9, PPC_R30_TABLE, PPC_R9);  // R9 = checkMask
 
-		// 3. Canonicalize checkReg EA into R10: R10 = (checkReg & checkMask)
-		*emitPtr++ = PPC_AND(PPC_R10, checkReg, PPC_R11);
+		// 3. Canonicalize checkReg EA into R9: R9 = (checkReg & checkMask)
+		*emitPtr++ = PPC_AND(PPC_R9, checkReg, PPC_R9);
 
-		// 4. Insert checkBank into high 8 bits of R10: R10 = (checkBank << 24) | maskedOffset
-		*emitPtr++ = PPC_SRWI(PPC_R11, checkReg, 24);
-		*emitPtr++ = PPC_RLWIMI(PPC_R10, PPC_R11, 24, 0, 7);
+		// 4. Insert checkBank into high 8 bits of R9: R9 = (checkBank << 24) | maskedOffset
+		// checkReg natively has the bank in bits 0-7, so we insert them directly.
+		*emitPtr++ = PPC_RLWIMI(PPC_R9, checkReg, 0, 0, 7);
 
-		// 5. Extract 1KB Page Index (R10 >> 10) preserving full 22-bit page index space
-		*emitPtr++ = PPC_RLWINM(PPC_R10, PPC_R10, 22, 10, 31);
+		// 5. Extract 1KB Page Index (R9 >> 10) preserving full 22-bit page index space
+		*emitPtr++ = PPC_RLWINM(PPC_R9, PPC_R9, 22, 10, 31);
 
-		// 6. Load smcPageFlags base pointer into R11
-		*emitPtr++ = PPC_LIS(PPC_R11, ((u32)smcPageFlags) >> 16);
-		*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)smcPageFlags) & 0xFFFF);
+		// 6. Load smcPageFlags base pointer into R8
+		*emitPtr++ = PPC_LIS(PPC_R8, ((u32)smcPageFlags) >> 16);
+		*emitPtr++ = PPC_ORI(PPC_R8, PPC_R8, ((u32)smcPageFlags) & 0xFFFF);
 
 		// 7. Load the SMC flag byte
-		*emitPtr++ = PPC_LBZX(PPC_R10, PPC_R11, PPC_R10); // R10 = smcPageFlags[pageIndex]
+		*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R8, PPC_R9); // R9 = smcPageFlags[pageIndex]
 
 		// 8. Check if flag != 0
-		*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
+		*emitPtr++ = PPC_CMPWI(0, PPC_R9, 0);
 		u32* branchSMC = emitPtr++;
 
 		if (smcBailoutCount < MAX_SMC_BAILOUTS) {
@@ -336,14 +336,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*branchSMC = 0x7FE00008; // Trap on buffer overflow
 			endBlock = true;
 		}
-
-		// 9. ALWAYS RESTORE canonical pipeline state for reportReg (base EA) on fallthrough:
-		*emitPtr++ = PPC_SRWI(PPC_R4, reportReg, 24);
-		*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R4, 0, 28, 31);     // R4 = baseBank
-		*emitPtr++ = PPC_RLWINM(PPC_R10, PPC_R4, 2, 0, 29);     // R10 = baseBank * 4
-		*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R10, 1024);          // R11 = baseBank * 4 + 1024
-		*emitPtr++ = PPC_LWZX(PPC_R11, PPC_R30_TABLE, PPC_R11); // R11 = baseMask
-		*emitPtr++ = PPC_LWZX(PPC_R10, PPC_R30_TABLE, PPC_R10); // R10 = basePagePtr
 	};
 
 	auto EmitResultMetadata = [&](u32*& ptr, u32 count, u32 bailedOut, u32 smcHit = 0) {
@@ -1474,8 +1466,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// PUSH can span across 1KB page boundaries. Check the end address too
 						u32 endOffset = (numRegs - 1) * 4;
 						if (endOffset > 0) {
-							*emitPtr++ = PPC_ADDI(PPC_R10, PPC_R12, endOffset); // R10 = end EA
-							EmitSMCWriteCheck(PPC_R10, PPC_R12); // Check end EA, report base R12
+							*emitPtr++ = PPC_ADDI(PPC_R31, PPC_R12, endOffset); // R31 = end EA
+							EmitSMCWriteCheck(PPC_R31, PPC_R12); // Check end EA, report base R12
 						}
 					}
 
@@ -1630,8 +1622,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// STMIA can span across 1KB page boundaries. Check the end address too
 					u32 endOffset = (numRegs - 1) * 4;
 					if (endOffset > 0) {
-						*emitPtr++ = PPC_ADDI(PPC_R10, PPC_R12, endOffset); // R10 = end EA
-						EmitSMCWriteCheck(PPC_R10, PPC_R12); // Check end EA, report base R12
+						*emitPtr++ = PPC_ADDI(PPC_R31, PPC_R12, endOffset); // R31 = end EA
+						EmitSMCWriteCheck(PPC_R31, PPC_R12); // Check end EA, report base R12
 					}
 				}
 
