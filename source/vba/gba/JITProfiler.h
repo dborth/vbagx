@@ -1,6 +1,8 @@
 #ifndef NO_JIT_COMPILER
 #ifndef JIT_PROFILER_H
 #define JIT_PROFILER_H
+
+#if JIT_PROFILING
 #include "../common/Port.h"
 
 static const int MAX_JIT_TRACE_CALLS = 100;
@@ -71,4 +73,5 @@ struct JITStats {
 extern JITStats jitStats;
 
 #endif // JIT_PROFILER_H
+#endif
 #endif

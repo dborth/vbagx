@@ -9,19 +9,20 @@
  * Video routines
  ***************************************************************************/
 
-#include <gccore.h>
-#include <ogcsys.h>
-#include <ogc/machine/processor.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ogc/timesupp.h>
+#include <ogc/machine/processor.h>
+#include <gccore.h>
 
 #include "vbagx.h"
 #include "videofilters.h"
 #include "menu.h"
 #include "input.h"
 #include "vbasupport.h"
+#include "fps_font_png.h"
 
 s32 CursorX, CursorY;
 bool CursorVisible;
@@ -60,12 +61,19 @@ static volatile unsigned int copynow = GX_FALSE;
 #define TEX_WIDTH 640
 #define TEX_HEIGHT 480
 #define TEXTUREMEM_SIZE 	TEX_WIDTH*TEX_HEIGHT*2
+// FPS - 256x20 RGBA8 texture
+#define FPS_FONT_TEX_WIDTH  256
+#define FPS_FONT_TEX_HEIGHT 20
+#define FPS_FONT_TEX_SIZE   (FPS_FONT_TEX_WIDTH * FPS_FONT_TEX_HEIGHT * 4)
+
 static u8 texturemem[TEXTUREMEM_SIZE] ATTRIBUTE_ALIGN (32);
+static u8 fps_font_texture_data[FPS_FONT_TEX_SIZE] ATTRIBUTE_ALIGN(32);
 static unsigned char scanline_tex_data[32] ATTRIBUTE_ALIGN (32);
 
 static GXTexObj texobj;
 static GXTexObj cursorObj;
 static GXTexObj scanlineTexObj;
+static GXTexObj fpsFontTexObj;
 static Mtx view;
 static int vwidth, vheight;
 static int fscale = 1;
@@ -101,6 +109,14 @@ static s16 cursor_square[] ATTRIBUTE_ALIGN(32) = {
 	 48,  48, 0,	// 1: Top Right
 	 48, -48, 0,	// 2: Bottom Right
 	-48, -48, 0 	// 3: Bottom Left
+};
+
+// 16x20 static quad for font characters
+static s16 fps_char_square[] ATTRIBUTE_ALIGN(32) = {
+	0,     0, 0,	// Top-Left
+	16,    0, 0,	// Top-Right
+	16,  -20, 0,	// Bottom-Right
+	0,   -20, 0 	// Bottom-Left
 };
 
 static camera cam = { {0.0F, 0.0F, 0.0F},
@@ -163,6 +179,17 @@ copy_to_xfb (u32 arg)
 		LWP_ThreadSignal(render_queue); // Wake up the main thread if it is waiting for the copy
 	}
 	++FrameTimer;
+}
+
+static void InitFPSFontData() {
+	int w, h;
+	DecodePNG((u8 *)fps_font_png, &w, &h, fps_font_texture_data, FPS_FONT_TEX_WIDTH, FPS_FONT_TEX_HEIGHT);
+}
+
+static void InitFPSFontTexture() {
+	DCStoreRange(fps_font_texture_data, sizeof(fps_font_texture_data));
+	GX_InitTexObj(&fpsFontTexObj, fps_font_texture_data, FPS_FONT_TEX_WIDTH, FPS_FONT_TEX_HEIGHT, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
+	GX_InitTexObjFilterMode(&fpsFontTexObj, GX_NEAR, GX_NEAR);
 }
 
 /****************************************************************************
@@ -412,6 +439,70 @@ static inline void draw_cursor()
 }
 #endif
 
+static void draw_fps(const char* str, f32 x, f32 y) {
+	if (!str) return;
+
+	DCFlushRange(fps_char_square, 32);
+	GX_SetArray(GX_VA_POS, fps_char_square, 3 * sizeof(s16));
+
+	// Disable TEX1 (Crucial if scanlines were active)
+	GX_SetVtxDesc(GX_VA_TEX1, GX_NONE);
+
+	// Configure TEV for pure UI rendering
+	GX_SetNumTexGens(1);
+	GX_SetNumTevStages(1);
+	GX_SetNumChans(0);
+	GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+
+	GX_SetTevOp(GX_TEVSTAGE0, GX_REPLACE);
+	GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
+
+	GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
+	GX_LoadTexObj(&fpsFontTexObj, GX_TEXMAP0);
+
+	f32 cursorX = x;
+
+	for (int i = 0; str[i] != '\0'; i++) {
+		char c = str[i];
+		int texIdx = 15; // Default to space 
+
+		// Map character to the 16x20 grid index
+		if (c >= '0' && c <= '9') texIdx = c - '0';
+		else if (c == '.') texIdx = 10;
+		else if (c == 'F' || c == 'f') texIdx = 11;
+		else if (c == 'P' || c == 'p') texIdx = 12;
+		else if (c == 'S' || c == 's') texIdx = 13;
+		else if (c == ':') texIdx = 14;
+		else if (c == ' ') texIdx = 15;
+
+		// Calculate UV coordinates based on 16px character width out of 256px total
+		f32 u0 = (texIdx * 16.0f) / 256.0f;
+		f32 u1 = ((texIdx + 1) * 16.0f) / 256.0f;
+
+		Mtx m, mv;
+		guMtxIdentity(m);
+		guMtxTransApply(m, m, cursorX, y, -100.0f);
+		guMtxConcat(view, m, mv);
+		GX_LoadPosMtxImm(mv, GX_PNMTX0);
+
+		GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+			draw_vert(0, u0, 0.0f);
+			draw_vert(1, u1, 0.0f);
+			draw_vert(2, u1, 1.0f);
+			draw_vert(3, u0, 1.0f);
+		GX_End();
+
+		// Advance cursor X by 14 pixels for tight visual kerning
+		cursorX += 14.0f;
+	}
+
+	// State restoration
+	GX_SetArray(GX_VA_POS, square, 3 * sizeof(s16));
+	GX_LoadTexObj(&texobj, GX_TEXMAP0);
+	GX_SetBlendMode(GX_BM_NONE, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
+	configure_tev_pipeline();
+}
+
 /****************************************************************************
  * StopGX
  *
@@ -591,6 +682,8 @@ if (CONF_GetAspectRatio() == CONF_ASPECT_16_9 && (*(u32*)(0xCD8005A0) >> 16) == 
 	GX_SetCopyClear (background, GX_MAX_Z24);
 	GX_SetDispCopyGamma (GX_GM_1_0);
 	GX_SetCullMode (GX_CULL_NONE);
+
+	InitFPSFontData();
 }
 
 static inline void UpdateScaling()
@@ -1201,6 +1294,9 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 		if(GCSettings.FilterMethod == FILTER_SCANLINES)
 			InitScanlineTexture();
 
+		if(GCSettings.DisplayFrameRate)
+			InitFPSFontTexture();
+
 		#ifdef HW_RVL
 		GX_InitTexObj(&cursorObj, pointer[0]->GetImage(), 96, 96, GX_TF_RGBA8,GX_CLAMP, GX_CLAMP,GX_FALSE);
 		#endif
@@ -1224,6 +1320,25 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 	GX_InvalidateTexAll();
 
 	draw_square(view); // render textured quad
+
+	if(GCSettings.DisplayFrameRate) {
+		static u32 lastFpsTime = 0;
+		static int frameCount = 0;
+		static char fpsStr[16] = "FPS: 60.0";
+
+		frameCount++;
+		u32 currentTime = ticks_to_millisecs(gettime());
+
+		// Only calculate and format the string once per second
+		if (currentTime - lastFpsTime >= 1000) {
+			float currentFPS = (frameCount * 1000.0f) / (float)(currentTime - lastFpsTime);
+			sprintf(fpsStr, "FPS: %.1f", currentFPS);
+
+			frameCount = 0;
+			lastFpsTime = currentTime;
+		}
+		draw_fps(fpsStr, 160.0f, -180.0f);
+	}
 
 	#ifdef HW_RVL
 	draw_cursor(); // render cursor

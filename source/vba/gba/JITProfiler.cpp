@@ -1,4 +1,6 @@
 #ifndef NO_JIT_COMPILER
+
+#if JIT_PROFILING
 #include <stdio.h>
 #include <algorithm>
 #include "JIT.h"
@@ -41,7 +43,6 @@ void JITStats::reset() {
 
     fullBlockCompletions = 0;
 	partialBlockExecutions = 0;
-	midBlockRecompilations = 0;
 	bailoutToJitTransitions = 0;
 	for (int i = 0; i < 5; i++) blockExecutionRatioBins[i] = 0;
 	for (int i = 0; i < 6; i++) bailoutOffsetBins[i] = 0;
@@ -160,7 +161,6 @@ void JITStats::print() {
 
 	JIT_LOG("Block Execution Completions: %u (%.1f%%)\n", fullBlockCompletions, fullPct);
 	JIT_LOG("Mid-Block Bailouts (Partial): %u (%.1f%%)\n", partialBlockExecutions, partPct);
-	JIT_LOG("Mid-Block Recompilations:    %u\n", midBlockRecompilations);
 	JIT_LOG("Bailout-to-JIT Transitions:  %u\n", bailoutToJitTransitions);
 
 	JIT_LOG("\nExecution Coverage Ratio:\n");
@@ -201,4 +201,5 @@ void JITStats::print() {
 	JIT_LOG("=========================================\n\n");
 	WriteJITLogToFile();
 }
+#endif
 #endif
