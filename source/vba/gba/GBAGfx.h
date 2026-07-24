@@ -104,14 +104,17 @@ static inline void gfxIncreaseBrightness(u32 *line, int coeff)
 {
   for(int x = 0; x < 240; x++) {
     u32 color = *line;
-    // SWAR: Unpack RGB565 into 32-bit with padding
-    u32 c1 = ((color << 16) | color) & 0x03E07C1F;
+
+    // Isolate the 16-bit pixel first to prevent high-word data bleed
+    // from destroying the SWAR Green channel.
+    u32 pixel = color & 0xFFFF;
+    u32 c1 = ((pixel << 16) | pixel) & 0x03E07C1F;
 
     // Process all 3 channels in parallel
     u32 blended = c1 + (((0x03E07C1F - c1) * coeff) >> 4);
     blended &= 0x03E07C1F;
 
-    // Repack and assign
+    // Repack and assign (preserving the original top 16 bits)
     *line++ = (color & 0xFFFF0000) | (blended >> 16) | blended;
   }
 }
@@ -130,8 +133,10 @@ static inline void gfxDecreaseBrightness(u32 *line, int coeff)
 {
   for(int x = 0; x < 240; x++) {
     u32 color = *line;
-    // SWAR: Unpack RGB565 into 32-bit with padding
-    u32 c1 = ((color << 16) | color) & 0x03E07C1F;
+
+    // Isolate the 16-bit pixel first
+    u32 pixel = color & 0xFFFF;
+    u32 c1 = ((pixel << 16) | pixel) & 0x03E07C1F;
 
     // Process all 3 channels in parallel
     u32 blended = c1 - (((c1 * coeff) >> 4) & 0x03E07C1F);
@@ -144,6 +149,10 @@ static inline void gfxDecreaseBrightness(u32 *line, int coeff)
 static inline u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
 {
   if(color < 0x80000000) {
+    // Mask out upper bits before SWAR unpacking to prevent data bleed
+    color &= 0xffff;
+    color2 &= 0xffff;
+
     // SWAR: Unpack and align channels
     u32 c1 = ((color << 16) | color) & 0x03E07C1F;
     u32 c2 = ((color2 << 16) | color2) & 0x03E07C1F;
@@ -151,13 +160,13 @@ static inline u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
     // Unified 32-bit mask multiplier for R, G, B concurrently
     u32 blended = ((c1 * ca) + (c2 * cb)) >> 4;
 
-    // Branchless SWAR clamping
-    // 0x04008020 identifies the specific overflow bits for the 5-bit RGB boundaries
-    u32 overflow = blended & 0x04008020;
-
-    // Subtracting the shifted overflow bit generates a perfect clamp mask
-    u32 clamp_mask = overflow - (overflow >> 5);
-    blended |= clamp_mask;
+    // Only apply the branchless SWAR clamp when mathematically needed
+    if ((ca + cb) > 16) {
+      // Branchless SWAR clamping
+      u32 overflow = blended & 0x04008020;
+      u32 clamp_mask = overflow - (overflow >> 5);
+      blended |= clamp_mask;
+    }
 
     blended &= 0x03E07C1F;
     color = (blended >> 16) | blended;
@@ -167,6 +176,9 @@ static inline u32 gfxAlphaBlend(u32 color, u32 color2, int ca, int cb)
 
 static inline void gfxAlphaBlend(u32 *ta, u32 *tb, int ca, int cb)
 {
+  // Hoist the loop-invariant clamp condition to save cycles
+  bool do_clamp = (ca + cb) > 16;
+
   // Flattened for GCC auto-vectorization and dual-issue ALU execution
   for(int x = 0; x < 240; x++) {
     u32 color = *ta;
@@ -178,9 +190,11 @@ static inline void gfxAlphaBlend(u32 *ta, u32 *tb, int ca, int cb)
 
       u32 blended = ((c1 * ca) + (c2 * cb)) >> 4;
 
-      u32 overflow = blended & 0x04008020;
-      u32 clamp_mask = overflow - (overflow >> 5);
-      blended |= clamp_mask;
+      if (do_clamp) {
+        u32 overflow = blended & 0x04008020;
+        u32 clamp_mask = overflow - (overflow >> 5);
+        blended |= clamp_mask;
+      }
 
       blended &= 0x03E07C1F;
       *ta = (color & 0xFFFF0000) | (blended >> 16) | blended;
