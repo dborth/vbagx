@@ -7,30 +7,6 @@
 
 #include "mem2.h"
 
-static JITRegionConfig jitRegions = {
-	true,  // enableBIOS
-	true,  // enableEWRAM
-	true,  // enableIWRAM
-	true,  // enableROM0
-    true,  // enableROM1
-	true   // enableROM2
-};
-
-bool JITRegionAllowed(u32 opcode) {
-	u8 bank = opcode >> 24;
-
-	bool allowed = false;
-
-	if (bank == 0x00) allowed = jitRegions.enableBIOS;
-	else if (bank == 0x02) allowed = jitRegions.enableEWRAM;
-	else if (bank == 0x03) allowed = jitRegions.enableIWRAM;
-	else if (bank == 0x08 || bank == 0x09) allowed = jitRegions.enableROM0;
-	else if (bank == 0x0A || bank == 0x0B) allowed = jitRegions.enableROM1;
-	else if (bank == 0x0C || bank == 0x0D) allowed = jitRegions.enableROM2;
-
-	return allowed;
-}
-
 // -----------------------------------------------------------------------------
 // JIT Trace Logger Buffer & Utility Method
 // -----------------------------------------------------------------------------
