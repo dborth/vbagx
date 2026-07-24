@@ -204,6 +204,7 @@ preparePrefsData ()
 	createXMLSetting("xshift", "Horizontal Video Shift", toStr(GCSettings.xshift));
 	createXMLSetting("yshift", "Vertical Video Shift", toStr(GCSettings.yshift));
 	createXMLSetting("colorize", "Colorize Mono Gameboy", BtoStr(GCSettings.colorize));
+	createXMLSetting("DisplayFrameRate", "Show Framerate", BtoStr(GCSettings.DisplayFrameRate));
 	createXMLSetting("gbaFrameskip", "GBA Frameskip", BtoStr(GCSettings.gbaFrameskip));
 	createXMLSetting("TurboModeEnabled", "Turbo Mode Enabled", BtoStr(GCSettings.TurboModeEnabled));
 
@@ -221,6 +222,12 @@ preparePrefsData ()
 
 	createXMLSection("Emulation", "Emulation Settings");
 
+#ifdef HW_RVL
+	createXMLSetting("DynamicRecompilation", "Dynamic Recompilation (JIT)", BtoStr(GCSettings.DynamicRecompilation));
+#endif
+	createXMLSetting("OffsetMinutesUTC", "Offset from UTC (minutes)", toStr(GCSettings.OffsetMinutesUTC));
+	createXMLSetting("GBHardware", "Hardware (GB/GBC)", toStr(GCSettings.GBHardware));
+	createXMLSetting("SGBBorder", "Border (GB/GBC)", toStr(GCSettings.SGBBorder));
 	createXMLSetting("BasicPalette", "Basic Color Palette for GB", toStr(GCSettings.BasicPalette));
 	
 	createXMLSection("Controller", "Controller Settings");
@@ -232,12 +239,6 @@ preparePrefsData ()
 	createXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap", "Nunchuk");
 	createXMLController(btnmap[CTRLR_WUPC], "wupcpadmap", "Wii U Pro Controller");
 	createXMLController(btnmap[CTRLR_WIIDRC], "drcpadmap", "Wii U Gamepad");
-
-	createXMLSection("Emulation", "Emulation Settings");
-
-	createXMLSetting("OffsetMinutesUTC", "Offset from UTC (minutes)", toStr(GCSettings.OffsetMinutesUTC));
-	createXMLSetting("GBHardware", "Hardware (GB/GBC)", toStr(GCSettings.GBHardware));
-	createXMLSetting("SGBBorder", "Border (GB/GBC)", toStr(GCSettings.SGBBorder));
 
 	int datasize = mxmlSaveString(xml, (char *)savebuffer, SAVEBUFFERSIZE, XMLSaveCallback);
 
@@ -471,7 +472,6 @@ decodePrefsData ()
 	if(xml)
 	{
 		// File Settings
-
 		loadXMLSetting(&GCSettings.AutoLoad, "AutoLoad");
 		loadXMLSetting(&GCSettings.AutoSave, "AutoSave");
 		loadXMLSetting(&GCSettings.LoadMethod, "LoadMethod");
@@ -487,14 +487,12 @@ decodePrefsData ()
 		loadXMLSetting(GCSettings.ArtworkFolder, "ArtworkFolder", sizeof(GCSettings.ArtworkFolder));
 
 		// Network Settings
-
 		loadXMLSetting(GCSettings.smbip, "smbip", sizeof(GCSettings.smbip));
 		loadXMLSetting(GCSettings.smbshare, "smbshare", sizeof(GCSettings.smbshare));
 		loadXMLSetting(GCSettings.smbuser, "smbuser", sizeof(GCSettings.smbuser));
 		loadXMLSetting(GCSettings.smbpwd, "smbpwd", sizeof(GCSettings.smbpwd));
 
 		// Video Settings
-
 		loadXMLSetting(&GCSettings.videomode, "videomode");
 		loadXMLSetting(&GCSettings.gbaZoomHor, "gbaZoomHor");
 		loadXMLSetting(&GCSettings.gbaZoomVert, "gbaZoomVert");
@@ -508,12 +506,17 @@ decodePrefsData ()
 		loadXMLSetting(&GCSettings.xshift, "xshift");
 		loadXMLSetting(&GCSettings.yshift, "yshift");
 		loadXMLSetting(&GCSettings.colorize, "colorize");
+#ifdef HW_RVL
+		loadXMLSetting(&GCSettings.DynamicRecompilation, "DynamicRecompilation");
+#endif
+		loadXMLSetting(&GCSettings.DisplayFrameRate, "DisplayFrameRate");
 		loadXMLSetting(&GCSettings.gbaFrameskip, "gbaFrameskip");
 		loadXMLSetting(&GCSettings.TurboModeEnabled, "TurboModeEnabled");
 
 		// Menu Settings
-
+#ifdef HW_RVL
 		loadXMLSetting(&GCSettings.WiimoteOrientation, "WiimoteOrientation");
+#endif
 		loadXMLSetting(&GCSettings.ExitAction, "ExitAction");
 		loadXMLSetting(&GCSettings.MusicVolume, "MusicVolume");
 		loadXMLSetting(&GCSettings.SFXVolume, "SFXVolume");
@@ -529,8 +532,8 @@ decodePrefsData ()
 		loadXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap");
 		loadXMLController(btnmap[CTRLR_WUPC], "wupcpadmap");
 		loadXMLController(btnmap[CTRLR_WIIDRC], "drcpadmap");
-		// Emulation Settings
 
+		// Emulation Settings
 		loadXMLSetting(&GCSettings.OffsetMinutesUTC, "OffsetMinutesUTC");
 		loadXMLSetting(&GCSettings.GBHardware, "GBHardware");
 		loadXMLSetting(&GCSettings.SGBBorder, "SGBBorder");
@@ -664,6 +667,10 @@ DefaultSettings ()
 	GCSettings.xshift = 0; // horizontal video shift
 	GCSettings.yshift = 0; // vertical video shift
 	GCSettings.colorize = false; // Colorize mono gameboy games
+#ifdef HW_RVL
+	GCSettings.DynamicRecompilation = true;
+#endif
+	GCSettings.DisplayFrameRate = false;
 	GCSettings.gbaFrameskip = true; // Turn auto-frameskip on for GBA games
 	GCSettings.TurboModeEnabled = true; // Enabled by default
 

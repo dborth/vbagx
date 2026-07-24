@@ -196,6 +196,8 @@ struct SGCSettings
 	int		xshift;		   // video output shift
 	int		yshift;
 	bool	colorize;      // colorize Mono Gameboy games
+	bool	DynamicRecompilation;
+	bool	DisplayFrameRate;
 	bool	gbaFrameskip;  // turn on auto-frameskip for GBA games
 	bool	WiiControls;   // Match Wii Game
 	int		WiimoteOrientation;

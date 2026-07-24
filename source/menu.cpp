@@ -3132,6 +3132,7 @@ static int MenuSettingsVideo()
 	sprintf(options.name[i++], "Video Mode");
 	sprintf(options.name[i++], "GB Mono Colorization");
 	sprintf(options.name[i++], "GB Palette");
+	sprintf(options.name[i++], "Show Framerate");
 	sprintf(options.name[i++], "GBA Frameskip");
 	sprintf(options.name[i++], "Enable Turbo Mode");
 	options.length = i;
@@ -3248,11 +3249,13 @@ static int MenuSettingsVideo()
 			case 8:
 				menu = MENU_GAMESETTINGS_PALETTE;
 				break;
-
 			case 9:
-				GCSettings.gbaFrameskip = !GCSettings.gbaFrameskip;
+				GCSettings.DisplayFrameRate = !GCSettings.DisplayFrameRate;
 				break;
 			case 10:
+				GCSettings.gbaFrameskip = !GCSettings.gbaFrameskip;
+				break;
+			case 11:
 				GCSettings.TurboModeEnabled = !GCSettings.TurboModeEnabled;
 				break;
 		}
@@ -3332,12 +3335,9 @@ static int MenuSettingsVideo()
 			else
 				sprintf(options.value[8], "Default");
 
-			if (GCSettings.gbaFrameskip)
-				sprintf (options.value[9], "On");
-			else
-				sprintf (options.value[9], "Off");
-
-			sprintf (options.value[10], "%s", GCSettings.TurboModeEnabled ? "On" : "Off");
+			sprintf (options.value[9], "%s", GCSettings.DisplayFrameRate ? "On" : "Off");
+			sprintf (options.value[10], "%s", GCSettings.gbaFrameskip ? "On" : "Off");
+			sprintf (options.value[11], "%s", GCSettings.TurboModeEnabled ? "On" : "Off");
 
 			optionBrowser.TriggerUpdate();
 		}
@@ -3362,11 +3362,16 @@ static int MenuSettingsEmulation()
 	bool firstRun = true;
 	OptionList options;
 
+	sprintf(options.name[i++], "GBA Dynamic Recompilation (JIT)");
+	sprintf(options.name[i++], "Offset from UTC (hours)");
 	sprintf(options.name[i++], "Hardware (GB/GBC)");
 	sprintf(options.name[i++], "Super Game Boy border");
-	sprintf(options.name[i++], "Offset from UTC (hours)");
 	sprintf(options.name[i++], "GB Screen Palette");
 	options.length = i;
+
+	#ifdef HW_DOL
+	options.name[0][0] = 0; // disable GBA Dynamic Recompilation on GameCube
+	#endif
 
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
@@ -3417,24 +3422,27 @@ static int MenuSettingsEmulation()
 		switch (ret)
 		{
 			case 0:
-				GCSettings.GBHardware++;
-				if (GCSettings.GBHardware >= GBHARDWARE_LENGTH)
-					GCSettings.GBHardware = GBHARDWARE_AUTO;
+				GCSettings.DynamicRecompilation ^= 1;
 				break;
-			
 			case 1:
-				GCSettings.SGBBorder++;
-				if (GCSettings.SGBBorder >= SGBBORDER_LENGTH)
-					GCSettings.SGBBorder = SGBBORDER_OFF;
-				break;
-			
-			case 2:
 				GCSettings.OffsetMinutesUTC += 15;
 				if (GCSettings.OffsetMinutesUTC > 60*14) {
 					GCSettings.OffsetMinutesUTC = -60*12;
 				}
 				break;
+			case 2:
+				GCSettings.GBHardware++;
+				if (GCSettings.GBHardware >= GBHARDWARE_LENGTH)
+					GCSettings.GBHardware = GBHARDWARE_AUTO;
+				break;
+			
 			case 3:
+				GCSettings.SGBBorder++;
+				if (GCSettings.SGBBorder >= SGBBORDER_LENGTH)
+					GCSettings.SGBBorder = SGBBORDER_OFF;
+				break;
+			
+			case 4:
 				GCSettings.BasicPalette ^= 1;
 				break;
 		}
@@ -3443,32 +3451,33 @@ static int MenuSettingsEmulation()
 		{
 			firstRun = false;
 
+			sprintf (options.value[0], "%s", GCSettings.DynamicRecompilation ? "On" : "Off");
+			sprintf (options.value[1], "%+.2f", GCSettings.OffsetMinutesUTC / 60.0);
+
 			if (GCSettings.GBHardware == GBHARDWARE_AUTO)
-				sprintf (options.value[0], "Auto");
+				sprintf (options.value[2], "Auto");
 			else if (GCSettings.GBHardware == GBHARDWARE_GBC)
-				sprintf (options.value[0], "Game Boy Color");
+				sprintf (options.value[2], "Game Boy Color");
 			else if (GCSettings.GBHardware == GBHARDWARE_SGB)
-				sprintf (options.value[0], "Super Game Boy");
+				sprintf (options.value[2], "Super Game Boy");
 			else if (GCSettings.GBHardware == GBHARDWARE_GB)
-				sprintf (options.value[0], "Game Boy");
+				sprintf (options.value[2], "Game Boy");
 			else if (GCSettings.GBHardware == GBHARDWARE_GBA)
-				sprintf (options.value[0], "Game Boy Advance");
+				sprintf (options.value[2], "Game Boy Advance");
 			else if (GCSettings.GBHardware == GBHARDWARE_SGB2)
-				sprintf (options.value[0], "Super Game Boy 2");
+				sprintf (options.value[2], "Super Game Boy 2");
 			
 			if (GCSettings.SGBBorder == SGBBORDER_OFF)
-				sprintf (options.value[1], "Off");
+				sprintf (options.value[3], "Off");
 			else if (GCSettings.SGBBorder == SGBBORDER_FROMGAME)
-				sprintf (options.value[1], "From game (SGB only)");
+				sprintf (options.value[3], "From game (SGB only)");
 			else if (GCSettings.SGBBorder == SGBBORDER_FROMPNG)
-				sprintf (options.value[1], "From .png file");
-			
-			sprintf (options.value[2], "%+.2f", GCSettings.OffsetMinutesUTC / 60.0);
+				sprintf (options.value[3], "From .png file");
 
 			if (GCSettings.BasicPalette == BASICPALETTE_GREEN)
-				sprintf (options.value[3], "Green Screen");
+				sprintf (options.value[4], "Green Screen");
 			else
-				sprintf (options.value[3], "Monochrome Screen");
+				sprintf (options.value[4], "Monochrome Screen");
 			
 			
 			optionBrowser.TriggerUpdate();
