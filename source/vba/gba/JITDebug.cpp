@@ -1,6 +1,6 @@
 #ifndef NO_JIT_COMPILER
 #include "JIT.h"
-
+#if JIT_PROFILING
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
@@ -179,4 +179,5 @@ void DebugDumpFirstJITBlock(BasicBlock* block) {
 		}
 	}
 }
+#endif
 #endif

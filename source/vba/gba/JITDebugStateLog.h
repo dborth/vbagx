@@ -2,6 +2,7 @@
 #define JIT_DEBUGSTATELOG_H
 
 #ifndef NO_JIT_COMPILER
+#if JIT_DEBUGSTATELOG
 #include "../common/Types.h"
 
 class JITDebugStateLog {
@@ -28,7 +29,6 @@ class JITDebugStateLog {
 
 extern JITDebugStateLog jitDebugStateLog;
 
-#if JIT_DEBUGSTATELOG
 	#if JIT_COMPILER
 	#define JIT_LOG_STATE_INIT()													jitDebugStateLog.Init("jit")
 	#else

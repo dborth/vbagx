@@ -1,4 +1,5 @@
 #ifndef NO_JIT_COMPILER
+#if JIT_DEBUGSTATELOG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,4 +76,5 @@ void JITDebugStateLog::WriteToFile() {
 	free(logBuffer);
 	logBuffer = nullptr;
 }
+#endif
 #endif
