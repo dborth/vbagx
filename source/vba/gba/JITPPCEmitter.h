@@ -17,10 +17,14 @@
 // R3  : `execute` arg in / Block epilogue return value (cycles out).
 // R4  : `gbaRegs` arg in / Block epilogue return value (next PC out) / instruction-local scratch.
 // R5  : `flags` arg in / Live `busPrefetchCount` accumulator.
-// R6  : Dedicated C_FLAG register (Lazily allocated).
-// R7  : Dedicated V_FLAG register (Lazily allocated).
-// R8  : Dedicated N_FLAG register (Lazily allocated).
-// R9  : Dedicated Z_FLAG register (Lazily allocated).
+// R6  : PPC_REG_FLAGS -- all four GBA condition flags (N/Z/C/V) packed into one register
+//       (lazily loaded, whole-register dirty-tracked). Bits 0-3 in IBM/rlwinm numbering
+//       (i.e. the top nibble, conventional bits 31-28) hold N,Z,C,V respectively; the
+//       low 28 bits are unused don't-care space and are never read. See "PACKED FLAGS"
+//       below for the insertion/extraction convention shared by the emitter.
+// R7  : General scratch
+// R8  : General scratch
+// R9  : General scratch
 // R10 : Scratch: Base Page Pointer / General Math.
 // R11 : Scratch: Bank / Mask / Condition / General Math.
 // R12 : Scratch: Target Address / Operand / General Math.
@@ -48,10 +52,10 @@
 #define PPC_R3   3
 #define PPC_R4   4
 #define PPC_R5   5
-#define PPC_R6   6   // Dedicated C_FLAG register
-#define PPC_R7   7   // Dedicated V_FLAG register
-#define PPC_R8   8   // Dedicated N_FLAG register
-#define PPC_R9   9   // Dedicated Z_FLAG register
+#define PPC_R6   6   // PPC_REG_FLAGS -- packed N/Z/C/V (see below)
+#define PPC_R7   7   // General scratch
+#define PPC_R8   8   // General scratch
+#define PPC_R9   9   // General scratch
 #define PPC_R10  10  // Scratch: Base Page Pointer
 #define PPC_R11  11  // Scratch: Bank / Mask / Condition
 #define PPC_R12  12  // Scratch: Target Address / Operand
@@ -61,10 +65,45 @@
 #define PPC_R30_PAGES 30  // readPages Base Pointer Array (Non-volatile, no overlap with GBA registers)
 #define PPC_R31_MASKS 31  // readMasks Base Pointer Array (Non-volatile, no overlap with GBA registers)
 
-#define PPC_REG_C PPC_R6
-#define PPC_REG_V PPC_R7
-#define PPC_REG_N PPC_R8
-#define PPC_REG_Z PPC_R9
+// -------------------------------------------------------------------------
+// PACKED FLAGS
+// -------------------------------------------------------------------------
+// All four GBA condition flags live packed together in one dedicated register,
+// PPC_REG_FLAGS (R6), instead of one dedicated register apiece. This frees R7/R8/R9
+// back into the general scratch pool at the cost of a couple of extra rlwimi/rlwinm
+// ops around each flag access (never around the surrounding ALU math itself).
+//
+// Layout (rlwinm/rlwimi "IBM" bit numbering, bit 0 = MSB): bits 0,1,2,3 hold N,Z,C,V
+// respectively (i.e. conventional bits 31,30,29,28 -- the top nibble). The remaining
+// 28 low bits are unused scratch space; nothing ever reads them, so they're left as
+// whatever garbage rotate/insert leaves behind.
+//
+// Every flag-bearing instruction in the JIT already computes each flag as a plain
+// 0-or-1 value sitting in a scratch register's bit 31 (LSB) -- that's the natural
+// output of the usual rlwinm/cntlzw/mfxer extraction idioms used throughout the
+// emitter. The three macros below are the ONLY place that ever needs to know the
+// packed bit layout; every call site just names the flag and reuses the exact shift
+// amount it would have used for a classic "extract to bit 31" single-bit rlwinm.
+#define FLAG_BIT_N 0
+#define FLAG_BIT_Z 1
+#define FLAG_BIT_C 2
+#define FLAG_BIT_V 3
+
+#define PPC_REG_FLAGS PPC_R6
+
+// Merge a flag bit directly into PPC_REG_FLAGS, in one instruction, without disturbing
+// the other three packed flags. `srcReg`/`sh` are exactly the register and rotate amount
+// you'd pass to a classic single-bit extraction `PPC_RLWINM(dst, srcReg, sh, 31, 31)` --
+// this redirects that same extraction to land in `targetBit` of the packed register
+// instead of bit 31 of a scratch/dedicated register.
+#define PPC_MERGE_FLAG_BIT(targetBit, srcReg, sh) \
+	PPC_RLWIMI(PPC_REG_FLAGS, (srcReg), (((sh) + 31 - (targetBit)) & 31), (targetBit), (targetBit))
+
+// Extract flag `targetBit` out of PPC_REG_FLAGS into `dstReg` as a plain 0/1 integer
+// (bit 31 / LSB of dstReg), ready for CMPWI-against-zero or arithmetic use (e.g. the
+// ADC/SBC carry-in trick).
+#define PPC_EXTRACT_FLAG_BIT(dstReg, targetBit) \
+	PPC_RLWINM((dstReg), PPC_REG_FLAGS, (((targetBit) + 1) & 31), 31, 31)
 
 // ALU Operations
 #define PPC_ADD(rD, rA, rB)    ((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (266 << 1))
