@@ -1279,6 +1279,10 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 	}
 	_CPU_ISR_Restore(level);
 
+	// Guarantee the GPU has fully finished rendering the PREVIOUS frame
+	// before we begin swizzling new data into texturemem.
+	GX_DrawDone();
+
 	whichfb ^= 1;
 
 	if (updateScaling) {
@@ -1342,10 +1346,12 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 	#ifdef HW_RVL
 	draw_cursor(); // render cursor
 	#endif
-	GX_DrawDone();
 
 	if(ScreenshotRequested)
 	{
+		// Wait for the GPU to finish the CURRENT frame before reading from the EFB to encode the PNG
+		GX_DrawDone();
+		
 		ScreenshotRequested = 0;
 		TakeScreenshot();
 		ConfigRequested = 1;
