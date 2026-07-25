@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ogc/timesupp.h>
 
+#include "vbagx.h"
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
@@ -1361,7 +1362,150 @@ static insnfunc_t thumbInsnTable[1024] = {
   thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,
   thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,thumbF8,
 };
-#if JIT_COMPILER_DIFFERENTIAL_TESTING
+
+#ifndef JIT_COMPILER_DIFFERENTIAL_TESTING
+// -------------------------------------------------------------------------
+// HYBRID TRACE-JIT / C++ EXECUTION ENGINE
+// -------------------------------------------------------------------------
+int thumbExecute() {
+    PROFILER_INC(thumbInvocations);
+    PROFILER_START_TIMER(thumbTimeStart);
+    PROFILER_DECLARE_BAILOUT_FLAG();
+
+    bool useJIT = false;
+
+    if(GCSettings.DynamicRecompilation) {
+    	// Default to true upon entering the loop. This ensures that if the
+    	// scheduler previously yielded for an interrupt, the interrupt handler
+    	// (a valid Trace Header) is allowed to be JIT compiled.
+    	useJIT = true;
+    }
+
+    do {
+		u32 pc = armNextPC;
+
+		if (useJIT) {
+			BasicBlock* block = jitCache.getBlock(pc);
+
+			if (__builtin_expect(block == nullptr, 0)) {
+				PROFILER_START_TIMER(compileStart);
+				block = JITCompileThumbTrace(pc, jitCache);
+				JIT_LOG_BLOCK_COMPILED(pc, block);
+				PROFILER_ADD_TIME(timeSpentCompiling, compileStart);
+			}
+
+			// ====================================================================
+			// JIT EXECUTION PATH
+			// ====================================================================
+			if (block != nullptr && block->execute != nullptr) {
+				PROFILER_CHECK_BAILOUT_TRANSITION();
+				PROFILER_START_TIMER(execJitStart);
+				PROFILER_INC(jitInvocations);
+
+				JITResult result = {0, 0, 0, 0};
+
+				// Align reg[15].I to pc + 4 so that PC-relative reads
+				// inside the compiled JIT trace match authentic GBA pipeline values.
+				reg[15].I = pc + 4;
+
+				JIT_LOG_TRACE_ENTRY(pc, flagBuffer);
+				JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block);
+
+				// Execute Native Trace with flat memory maps
+				ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, &gbaFlags, &gbaReadTable);
+
+				JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
+				JIT_LOG_EXEC(result.instructions, block->length, result.bailedOut);
+				JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, result.instructions);
+
+				PROFILER_ADD_TIME(timeSpentJIT, execJitStart);
+
+				cpuTotalTicks += result.cycles;
+
+				if (result.instructions > 0 || result.bailedOut) {
+					// Pipeline re-prime
+					armNextPC = result.nextPC;
+					reg[15].I = armNextPC + 2;
+					cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
+					cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+				}
+
+				if (result.bailedOut) {
+					if (result.smcHit) {
+						jitCache.invalidateSMCTarget(result.smcAddress);
+					}
+				}
+				else {
+					// Clean exit (e.g., quota shield). The next instruction is
+					// mathematically guaranteed to be a valid entry point.
+					useJIT = true;
+					continue;
+				}
+
+				// We bailed natively mid-trace. Lock the JIT out so the C++
+				// interpreter can eat the rest of the shattered block natively.
+				PROFILER_SET_BAILOUT_FLAG();
+				useJIT = false;
+			}
+			else {
+				PROFILER_CLEAR_BAILOUT_FLAG();
+			}
+		} else {
+			PROFILER_CLEAR_BAILOUT_FLAG();
+		}
+
+		// ========================================================================
+		// LEGACY C++ FALLBACK PATH
+		// ========================================================================
+		PROFILER_START_TIMER(execFallbackStart);
+
+		if (cheatsEnabled) cpuMasterCodeCheck();
+
+		u16 opcode = cpuPrefetch[0];
+		cpuPrefetch[0] = cpuPrefetch[1];
+
+		JIT_LOG_FALLBACK(opcode);
+
+		busPrefetch = false;
+		if (busPrefetchCount & 0xFFFFFF00)
+			busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
+
+		u32 oldArmNextPC = armNextPC;
+		armNextPC = reg[15].I;
+		reg[15].I += 2;
+
+		THUMB_PREFETCH_NEXT;
+
+		clockTicks = 0;
+		(*thumbInsnTable[opcode>>6])(opcode);
+		int localTicks = clockTicks;
+
+		if (localTicks < 0) {
+			PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart);
+			return 0;
+		}
+
+		if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+
+		cpuTotalTicks += localTicks;
+		JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, localTicks);
+		PROFILER_ADD_TIME(timeSpentFallback, execFallbackStart);
+
+		if(GCSettings.DynamicRecompilation) {
+			// Discontinuity Check
+			// If the instruction modified the PC non-linearly, a branch occurred.
+			// This marks the beginning of a new logical block boundary.
+			if (armNextPC != oldArmNextPC + 2) {
+				useJIT = true;
+			}
+		}
+    } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
+
+    PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart);
+    return 1;
+}
+#else
+#ifndef JIT_COMPILER_DIFFERENTIAL_TESTING
 
 // -------------------------------------------------------------------------
 // HYBRID TRACE-JIT / C++ EXECUTION ENGINE DIFFERENTIAL TESTING
@@ -1607,494 +1751,6 @@ int thumbExecute() {
 
 		cpuTotalTicks += localTicks;
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
-    return 1;
-}
-#elif JIT_COMPILER
-// -------------------------------------------------------------------------
-// HYBRID TRACE-JIT / C++ EXECUTION ENGINE
-// -------------------------------------------------------------------------
-int thumbExecute() {
-    PROFILER_INC(thumbInvocations);
-    PROFILER_START_TIMER(thumbTimeStart);
-    PROFILER_DECLARE_BAILOUT_FLAG();
-
-    // Default to true upon entering the loop. This ensures that if the
-    // scheduler previously yielded for an interrupt, the interrupt handler
-    // (a valid Trace Header) is allowed to be JIT compiled.
-    bool isTraceHeader = true;
-
-    do {
-        u32 pc = armNextPC;
-
-        // ========================================================================
-        // TRACE HEADER GATE
-        // ========================================================================
-        if (isTraceHeader) {
-            BasicBlock* block = jitCache.getBlock(pc);
-
-            if (__builtin_expect(block == nullptr, 0)) {
-                PROFILER_START_TIMER(compileStart);
-                block = JITCompileThumbTrace(pc, jitCache);
-                JIT_LOG_BLOCK_COMPILED(pc, block);
-                PROFILER_ADD_TIME(timeSpentCompiling, compileStart);
-            }
-
-            // ====================================================================
-            // JIT EXECUTION PATH
-            // ====================================================================
-            if (block != nullptr && block->execute != nullptr) {
-                PROFILER_CHECK_BAILOUT_TRANSITION();
-                PROFILER_START_TIMER(execJitStart);
-                PROFILER_INC(jitInvocations);
-
-                JITResult result = {0, 0, 0, 0};
-
-                // Align reg[15].I to pc + 4 so that PC-relative reads
-                // inside the compiled JIT trace match authentic GBA pipeline values.
-                reg[15].I = pc + 4;
-
-                JIT_LOG_TRACE_ENTRY(pc, flagBuffer);
-                JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block);
-
-                // Execute Native Trace with flat memory maps
-                ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, &gbaFlags, &gbaReadTable);
-
-                JIT_LOG_TRACE_EXIT(pc, result.nextPC, flagBuffer, result.cycles);
-                JIT_LOG_EXEC(result.instructions, block->length, result.bailedOut);
-                JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, result.instructions);
-
-                PROFILER_ADD_TIME(timeSpentJIT, execJitStart);
-
-                cpuTotalTicks += result.cycles;
-
-                if (result.instructions > 0 || result.bailedOut) {
-                    // Pipeline re-prime
-                    armNextPC = result.nextPC;
-                    reg[15].I = armNextPC + 2;
-                    cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
-                    cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
-                }
-
-                if (result.bailedOut) {
-                	if (result.smcHit) {
-                		jitCache.invalidateSMCTarget(result.smcAddress);
-                	}
-                }
-                else {
-                    // Clean exit (e.g., quota shield). The next instruction is
-                    // mathematically guaranteed to be a valid entry point.
-                    isTraceHeader = true;
-                    continue;
-                }
-
-                // We bailed natively mid-trace. Lock the JIT out so the C++
-                // interpreter can eat the rest of the shattered block natively.
-                PROFILER_SET_BAILOUT_FLAG();
-                isTraceHeader = false;
-            }
-            else {
-                PROFILER_CLEAR_BAILOUT_FLAG();
-            }
-        } else {
-            PROFILER_CLEAR_BAILOUT_FLAG();
-        }
-
-        // ========================================================================
-        // LEGACY C++ FALLBACK PATH
-        // ========================================================================
-        PROFILER_START_TIMER(execFallbackStart);
-
-        if (cheatsEnabled) cpuMasterCodeCheck();
-
-        u16 opcode = cpuPrefetch[0];
-        cpuPrefetch[0] = cpuPrefetch[1];
-
-        JIT_LOG_FALLBACK(opcode);
-
-        busPrefetch = false;
-        if (busPrefetchCount & 0xFFFFFF00)
-            busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
-
-        u32 oldArmNextPC = armNextPC;
-        armNextPC = reg[15].I;
-        reg[15].I += 2;
-
-        THUMB_PREFETCH_NEXT;
-
-        clockTicks = 0;
-        (*thumbInsnTable[opcode>>6])(opcode);
-        int localTicks = clockTicks;
-
-        if (localTicks < 0) {
-            PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart);
-            return 0;
-        }
-
-        if (localTicks == 0) localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-
-        cpuTotalTicks += localTicks;
-        JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, localTicks);
-        PROFILER_ADD_TIME(timeSpentFallback, execFallbackStart);
-
-        // ========================================================================
-        // THE DISCONTINUITY CHECK
-        // ========================================================================
-        // If the instruction modified the PC non-linearly, a branch occurred.
-        // This marks the beginning of a new logical block boundary.
-        if (armNextPC != oldArmNextPC + 2) {
-            isTraceHeader = true;
-        }
-
-    } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
-
-    PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart);
-    return 1;
-}
-#else
-// Wrapper routine (execution loop) ///////////////////////////////////////
-
-// ========================================================================
-// OPTIMIZED THUMB EXECUTION LOOP (FAST-PATH DISPATCHER)
-// Replaces jump-table 'switch' with predictable 'if/else' range cascades.
-// Eliminates Function Call ABI overhead and CTR indirect branch stalling.
-// Localizes the clockTicks state to prevent global register spilling.
-// ========================================================================
-int thumbExecute()
-{
-    do {
-        if( cheatsEnabled ) {
-            cpuMasterCodeCheck();
-        }
-
-        u32 opcode = cpuPrefetch[0];
-        cpuPrefetch[0] = cpuPrefetch[1];
-
-        // Branchless bus prefetch boundary check
-        busPrefetch = false;
-        if (busPrefetchCount & 0xFFFFFF00)
-            busPrefetchCount = 0x100 | (busPrefetchCount & 0xFF);
-
-        u32 oldArmNextPC = armNextPC;
-        armNextPC = reg[15].I;
-        reg[15].I += 2;
-
-		// --- STREAMLINED O(1) INSTRUCTION PREFETCH ---
-		// Automatically handles the +2 pipeline offset and issues the native L1 dcbt
-        THUMB_PREFETCH_NEXT;
-
-		// --- OPTIONAL FAST-PATH DISPATCHER ---
-		// Handle the most common opcodes inline to avoid the thumbInsnTable overhead
-        int localTicks = 0;
-        bool handledInline = false;
-
-		// FAST-PATH DISPATCHER
-		// Extract top 5 bits (opcode >> 11) to intercept ALU/Shift/Immediate ops
-        int top5 = opcode >> 11;
-
-        // ========================================================================
-        // FAST-PATH 1: ALU, SHIFTS, AND IMMEDIATES (Opcodes 0x0000 - 0x3FFF)
-        // Grouped to force a single 'cmpwi' branch evaluation.
-        // ========================================================================
-        if (top5 <= 7) {
-            if (top5 == 0) { // LSL Rd, Rm, #Imm5 (thumb00)
-                int dest = opcode & 0x07;
-                int source = (opcode >> 3) & 0x07;
-                int shift = (opcode >> 6) & 0x1F;
-                u32 src_val = reg[source].I;
-
-				// Branchless mask: 0xFFFFFFFF if shift > 0, 0x00000000 if shift == 0
-                u32 shift_mask = -(u32)(shift != 0);
-
-				// If shift==0, gbaFlags.C is untouched. If shift>0, gbaFlags.C = bit (32-shift).
-                u32 new_c = (src_val >> ((32 - shift) & 0x1F)) & 1;
-                gbaFlags.C = (new_c & shift_mask) | (gbaFlags.C & ~shift_mask);
-
-				// Branchless value calculation
-                u32 value = ((src_val << shift) & shift_mask) | (src_val & ~shift_mask);
-                reg[dest].I = value;
-				gbaFlags.N = (value >> 31);
-				gbaFlags.Z = (value == 0);
-                localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-                handledInline = true;
-            }
-            else if (top5 == 1) { // LSR Rd, Rm, #Imm5 (thumb08)
-                int dest = opcode & 0x07;
-                int source = (opcode >> 3) & 0x07;
-                int shift = (opcode >> 6) & 0x1F;
-                u32 src_val = reg[source].I;
-
-                u32 shift_mask = -(u32)(shift != 0);
-
-				// If shift != 0, C is bit (shift-1). If shift == 0, C is bit 31.
-                u32 c_shift_nz = (shift - 1) & 0x1F;
-                u32 new_c = ((src_val >> c_shift_nz) & shift_mask) | ((src_val >> 31) & ~shift_mask);
-                gbaFlags.C = new_c & 1;
-
-				// If shift==0, value is 0.
-                u32 value = (src_val >> shift) & shift_mask;
-                reg[dest].I = value;
-				gbaFlags.N = (value >> 31);
-				gbaFlags.Z = (value == 0);
-                localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-                handledInline = true;
-            }
-            else if (top5 == 2) { // ASR Rd, Rm, #Imm5 (thumb10)
-                int dest = opcode & 0x07;
-                int source = (opcode >> 3) & 0x07;
-                int shift = (opcode >> 6) & 0x1F;
-                s32 src_val = (s32)reg[source].I;
-
-                u32 shift_mask = -(u32)(shift != 0);
-                u32 c_shift_nz = (shift - 1) & 0x1F;
-                u32 new_c = (((u32)src_val >> c_shift_nz) & shift_mask) | (((u32)src_val >> 31) & ~shift_mask);
-                gbaFlags.C = new_c & 1;
-
-                u32 sign_ext = -((u32)((u32)src_val >> 31));
-                u32 value = (((u32)(src_val >> shift)) & shift_mask) | (sign_ext & ~shift_mask);
-                reg[dest].I = value;
-				gbaFlags.N = (value >> 31);
-				gbaFlags.Z = (value == 0);
-                localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-                handledInline = true;
-            }
-            else if (top5 == 3) { // ADD/SUB Rd, Rs, Rn / #Imm3 (thumb18 - thumb1E)
-                int dest = opcode & 0x07;
-                int source = (opcode >> 3) & 0x07;
-                u32 lhs = reg[source].I;
-
-				// Bit 10 distinguishes between immediate (1) and register (0)
-                u32 rhs = (opcode & 0x0400) ? ((opcode >> 6) & 0x07) : reg[(opcode >> 6) & 0x07].I;
-                u32 res;
-
-				// Bit 9 distinguishes between SUB (1) and ADD (0)
-                if (opcode & 0x0200) {
-                    res = lhs - rhs;
-					SUBCARRY(lhs, rhs, res);
-					SUBOVERFLOW(lhs, rhs, res);
-                } else {
-                    res = lhs + rhs;
-					ADDCARRY(lhs, rhs, res);
-					ADDOVERFLOW(lhs, rhs, res);
-                }
-                reg[dest].I = res;
-				gbaFlags.Z = (res == 0);
-				gbaFlags.N = (res >> 31);
-                localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-                handledInline = true;
-            }
-            else if (top5 == 4) { // MOV Rd, #Imm8 (thumb20)
-                int dest = (opcode >> 8) & 0x07;
-                u32 value = opcode & 0xFF;
-                reg[dest].I = value;
-				gbaFlags.N = 0;
-				gbaFlags.Z = (value == 0);
-                localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-                handledInline = true;
-            }
-            else if (top5 == 5) { // CMP Rd, #Imm8 (thumb28)
-                int dest = (opcode >> 8) & 0x07;
-                u32 lhs = reg[dest].I;
-                u32 rhs = opcode & 0xFF;
-                u32 res = lhs - rhs;
-				gbaFlags.Z = (res == 0);
-				gbaFlags.N = (res >> 31);
-				SUBCARRY(lhs, rhs, res);
-				SUBOVERFLOW(lhs, rhs, res);
-                localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-                handledInline = true;
-            }
-            else if (top5 == 6) { // ADD Rd, #Imm8 (thumb30)
-                int dest = (opcode >> 8) & 0x07;
-                u32 lhs = reg[dest].I;
-                u32 rhs = opcode & 0xFF;
-                u32 res = lhs + rhs;
-                reg[dest].I = res;
-				gbaFlags.Z = (res == 0);
-				gbaFlags.N = (res >> 31);
-				ADDCARRY(lhs, rhs, res);
-				ADDOVERFLOW(lhs, rhs, res);
-                localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-                handledInline = true;
-            }
-            else if (top5 == 7) { // SUB Rd, #Imm8 (thumb38)
-                int dest = (opcode >> 8) & 0x07;
-                u32 lhs = reg[dest].I;
-                u32 rhs = opcode & 0xFF;
-                u32 res = lhs - rhs;
-                reg[dest].I = res;
-				gbaFlags.Z = (res == 0);
-				gbaFlags.N = (res >> 31);
-				SUBCARRY(lhs, rhs, res);
-				SUBOVERFLOW(lhs, rhs, res);
-                localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-                handledInline = true;
-            }
-        }
-        // ========================================================================
-        // FAST-PATH 2: MEMORY I/O (Opcodes 0x6000 - 0x9FFF)
-        // Integrates completely with our O(1) Memory Pages
-        // ========================================================================
-        else if (top5 >= 12 && top5 <= 19) {
-            busPrefetch |= (busPrefetchEnable & (busPrefetchCount == 0));
-
-            if (top5 == 12) { // STR Rd, [Rb, #Imm] (thumb60)
-                int dest = opcode & 0x07;
-                int base = (opcode >> 3) & 0x07;
-                u32 address = reg[base].I + (((opcode >> 6) & 0x1F) << 2);
-                CPUWriteMemory(address, reg[dest].I);
-                localTicks = dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2;
-                handledInline = true;
-            }
-            else if (top5 == 13) { // LDR Rd, [Rb, #Imm] (thumb68)
-                int dest = opcode & 0x07;
-                int base = (opcode >> 3) & 0x07;
-                u32 address = reg[base].I + (((opcode >> 6) & 0x1F) << 2);
-                reg[dest].I = CPUReadMemory(address);
-                localTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC);
-                handledInline = true;
-            }
-            else if (top5 == 14) { // STRB Rd, [Rb, #Imm] (thumb70)
-                int dest = opcode & 0x07;
-                int base = (opcode >> 3) & 0x07;
-                u32 address = reg[base].I + ((opcode >> 6) & 0x1F);
-                CPUWriteByte(address, reg[dest].B.B0);
-                localTicks = dataTicksAccess16(address) + codeTicksAccess16(armNextPC) + 2;
-                handledInline = true;
-            }
-            else if (top5 == 15) { // LDRB Rd, [Rb, #Imm] (thumb78)
-                int dest = opcode & 0x07;
-                int base = (opcode >> 3) & 0x07;
-                u32 address = reg[base].I + ((opcode >> 6) & 0x1F);
-                reg[dest].I = CPUReadByte(address);
-                localTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(armNextPC);
-                handledInline = true;
-            }
-            else if (top5 == 16) { // STRH Rd, [Rb, #Imm] (thumb80)
-                int dest = opcode & 0x07;
-                int base = (opcode >> 3) & 0x07;
-                u32 address = reg[base].I + (((opcode >> 6) & 0x1F) << 1);
-                CPUWriteHalfWord(address, reg[dest].W.W0);
-                localTicks = dataTicksAccess16(address) + codeTicksAccess16(armNextPC) + 2;
-                handledInline = true;
-            }
-            else if (top5 == 17) { // LDRH Rd, [Rb, #Imm] (thumb80)
-                int dest = opcode & 0x07;
-                int base = (opcode >> 3) & 0x07;
-                u32 address = reg[base].I + (((opcode >> 6) & 0x1F) << 1);
-                reg[dest].I = CPUReadHalfWord(address);
-                localTicks = 3 + dataTicksAccess16(address) + codeTicksAccess16(armNextPC);
-                handledInline = true;
-            }
-            else if (top5 == 18) { // STR R0~R7, [SP, #Imm8] (thumb90)
-                int dest = (opcode >> 8) & 0x07;
-                u32 address = reg[13].I + ((opcode & 0xFF) << 2);
-                CPUWriteMemory(address, reg[dest].I);
-                localTicks = dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2;
-                handledInline = true;
-            }
-            else if (top5 == 19) { // LDR R0~R7, [SP, #Imm8] (thumb98)
-                int dest = (opcode >> 8) & 0x07;
-                u32 address = reg[13].I + ((opcode & 0xFF) << 2);
-                reg[dest].I = CPUReadMemoryQuick(address); // Aligns perfectly to stack RAM
-                localTicks = 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC);
-                handledInline = true;
-            }
-        }
-        // ========================================================================
-        // FAST-PATH 3: UNCONDITIONAL BRANCHING (Opcodes 0xE000 - 0xFFFF)
-        // Intercepts opcodes 0xE and 0xF to bypass the 1,024-entry indirect table.
-		// Uses 1-cycle hardware arithmetic shifts to handle sign-extension branchlessly.
-        // ========================================================================
-        else if (top5 >= 28) {
-            if (top5 == 28) { // B offset (thumbE0)
-            	// Branchless 11-bit sign extension and multiply-by-two
-                s32 offset = ((s32)(opcode << 21)) >> 20;
-                reg[15].I += offset;
-                armNextPC = reg[15].I;
-                reg[15].I += 2;
-                THUMB_PREFETCH; // Evaluates natively via the updated macro
-                localTicks = codeTicksAccessSeq16(armNextPC) * 2 + codeTicksAccess16(armNextPC) + 3;
-                busPrefetchCount = 0;
-                handledInline = true;
-            }
-            else if (top5 == 30) { // BL prefix (thumbF0 and thumbF4)
-            	// Broadway Optimization: Branchless sign extension of the 11-bit offset.
-				// opcode << 21 places the 11th bit (the sign bit) directly at the MSB (bit 31).
-				// Arithmetic shift right by 9 sign-extends it and aligns it to a 12-bit left shift natively.
-				// Replaces conditional 'if (opcode & 0x0400)' entirely.
-                reg[14].I = reg[15].I + (((s32)(opcode << 21)) >> 9);
-                localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-                handledInline = true;
-            }
-            else if (top5 == 31) { // BL/BLX suffix (thumbF8)
-                u32 temp = reg[15].I - 2;
-                reg[15].I = (reg[14].I + ((opcode & 0x7FF) << 1)) & 0xFFFFFFFE;
-                armNextPC = reg[15].I;
-                reg[15].I += 2;
-                reg[14].I = temp | 1;
-                THUMB_PREFETCH;
-                localTicks = codeTicksAccessSeq16(armNextPC) * 2 + codeTicksAccess16(armNextPC) + 3;
-                busPrefetchCount = 0;
-                handledInline = true;
-            }
-        }
-        // ========================================================================
-        // FAST-PATH 4: CONDITIONAL BRANCHES (Bcc - 0xD000 - 0xDDFF)
-        // ========================================================================
-        else if ((opcode >> 12) == 0xD && ((opcode >> 8) & 0xF) < 0xE) {
-            int cond = 0;
-            switch ((opcode >> 8) & 0xF) {
-                case 0x0: cond = gbaFlags.Z; break;
-                case 0x1: cond = !gbaFlags.Z; break;
-                case 0x2: cond = gbaFlags.C; break;
-                case 0x3: cond = !gbaFlags.C; break;
-                case 0x4: cond = gbaFlags.N; break;
-                case 0x5: cond = !gbaFlags.N; break;
-                case 0x6: cond = gbaFlags.V; break;
-                case 0x7: cond = !gbaFlags.V; break;
-                case 0x8: cond = gbaFlags.C && !gbaFlags.Z; break;
-                case 0x9: cond = !gbaFlags.C || gbaFlags.Z; break;
-                case 0xA: cond = gbaFlags.N == gbaFlags.V; break;
-                case 0xB: cond = gbaFlags.N != gbaFlags.V; break;
-                case 0xC: cond = !gbaFlags.Z && (gbaFlags.N == gbaFlags.V); break;
-                case 0xD: cond = gbaFlags.Z || (gbaFlags.N != gbaFlags.V); break;
-            }
-
-            localTicks = codeTicksAccessSeq16(armNextPC) + 1;
-
-            if (cond) {
-                reg[15].I += ((s8)(opcode & 0xFF)) << 1;
-                armNextPC = reg[15].I;
-                reg[15].I += 2;
-                THUMB_PREFETCH;
-                localTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2;
-                busPrefetchCount = 0;
-            }
-            handledInline = true;
-        }
-
-        // ========================================================================
-        // FALLBACK: The original 1,024 instruction jump table
-        // ========================================================================
-        if (!handledInline) {
-            clockTicks = 0;
-            (*thumbInsnTable[opcode>>6])(opcode);
-            localTicks = clockTicks; // Extract resulting global payload
-        }
-
-		if (localTicks < 0)
-		  return 0;
-		if (localTicks == 0)
-		  localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1; // oldArmNextPC is correct here for fallbacks lacking tick assignment
-
-        // Correctly restores ticks for unhandled fallbacks lacking explicit overrides
-        if (localTicks == 0)
-        	localTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
-
-        cpuTotalTicks += localTicks;
-        JIT_LOG_STATE_CPP(oldArmNextPC, armNextPC, cpuTotalTicks, localTicks);
-    } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
-
     return 1;
 }
 #endif
