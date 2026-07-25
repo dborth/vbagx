@@ -2202,7 +2202,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
   memcpy(bios, myROM, sizeof(myROM));
 
   GBA_InitMemoryPages();
-#ifdef JIT_COMPILER
+#ifndef NO_JIT_COMPILER
   jitCache.flushCache();
 #endif
   int i = 0;
