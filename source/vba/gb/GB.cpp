@@ -25,7 +25,7 @@ void gbSetObj1Palette(u8 value, bool ColoursChanged=false);
 void gbPaletteReset();
 
 extern u8 *pix;
-extern bool speedup;
+extern bool turboMode;
 bool gbUpdateSizes();
 bool inBios = false;
 
@@ -4495,8 +4495,8 @@ void gbEmulate(int ticksToStop)
 
         if ((gbLcdTicksDelayed <= 0) && (gbLCDChangeHappened)) {
           int framesToSkip = systemFrameSkip;
-          if(speedup)
-            framesToSkip = 9; // try 6 FPS during speedup
+          if(turboMode)
+            framesToSkip = 9; // try 6 FPS during turboMode
           //gbLcdTicksDelayed = gbLcdTicks+1;
           gbLCDChangeHappened = false;
           switch(gbLcdModeDelayed) {
@@ -4562,7 +4562,7 @@ void gbEmulate(int ticksToStop)
 
                 newmask = (gbJoymask[0] >> 10);
 
-                speedup = (newmask & 1) ? true : false;
+                turboMode = (newmask & 1) ? true : false;
                 gbCapture = (newmask & 2) ? true : false;
 
                 if(gbCapture && !gbCapturePrevious) {
@@ -4749,8 +4749,8 @@ void gbEmulate(int ticksToStop)
           else if ((register_LY==144) && (!systemFrameSkip))
           {
             int framesToSkip = systemFrameSkip;
-            if(speedup)
-              framesToSkip = 9; // try 6 FPS during speedup
+            if(turboMode)
+              framesToSkip = 9; // try 6 FPS during turboMode
             if((gbFrameSkipCount >= framesToSkip) || (gbWhiteScreen == 1)) {
               gbWhiteScreen = 2;
 

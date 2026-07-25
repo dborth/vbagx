@@ -28,7 +28,7 @@ extern int saveType;
 extern bool useBios;
 extern bool skipBios;
 extern int frameSkip;
-extern bool speedup;
+extern bool turboMode;
 extern bool synchronize;
 extern bool cpuDisableSfx;
 extern bool cpuIsMultiBoot;

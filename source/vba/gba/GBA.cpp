@@ -2761,7 +2761,7 @@ static void CPULoop_T(int ticks) {
             CPUCompareVCOUNT();
           }
         } else {
-          int framesToSkip = speedup ? 9 : systemFrameSkip;
+          int framesToSkip = turboMode ? 9 : systemFrameSkip;
 
           if(DISPSTAT & 2) {
             ++VCOUNT;
@@ -2796,7 +2796,7 @@ static void CPULoop_T(int ticks) {
                 remainingTicks += cheatsCheckKeys(P1^0x3FF, ext);
               }
 
-              speedup = (ext & 1) != 0;
+              turboMode = (ext & 1) != 0;
               capture = (ext & 2) != 0;
 
               if(capture && !capturePrevious) {
@@ -2815,7 +2815,6 @@ static void CPULoop_T(int ticks) {
               CPUCheckDMA(1, 0x0f);
 
               if(frameCount >= framesToSkip) {
-            	PROFILER_MARK_FRAME();
                 systemDrawScreen();
                 frameCount = 0;
               } else {

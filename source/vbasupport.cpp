@@ -43,6 +43,7 @@
 #include "vba/gba/Sound.h"
 #include "vba/gba/Cheats.h"
 #include "vba/gba/GBA.h"
+#include "vba/gba/JIT.h"
 #include "vba/gb/gb.h"
 #include "vba/gb/gbGlobals.h"
 #include "vba/gb/gbCheats.h"
@@ -246,7 +247,7 @@ void systemFrame()
 	else if (pacerDebtUs < creditCapUs)
 		pacerDebtUs = creditCapUs;
 
-	if (cartridgeType == CARTRIDGE_GBA && GCSettings.gbaFrameskip && !speedup)
+	if (cartridgeType == CARTRIDGE_GBA && GCSettings.gbaFrameskip && !turboMode)
 	{
 		// How many whole frame-periods behind are we? That's a direct,
 		// measured answer instead of a hand-tuned step table, and it's
@@ -269,7 +270,7 @@ void systemFrame()
 	{
 		// GB/GBC never needs frameskip - it's cheap enough to always draw.
 		// The menu setting can disable adaptive skip outright. And turbo
-		// (speedup) drives its own fixed 9-skip pattern in GBA.cpp -
+		// (turboMode) drives its own fixed 9-skip pattern in GBA.cpp -
 		// piling adaptive skip on top of manual turbo would just fight it.
 		systemFrameSkip = 0;
 	}
@@ -278,7 +279,7 @@ void systemFrame()
 	// "as fast as possible"; without this check, the forced 9-skip pattern
 	// would look like we're way ahead of schedule, and this pacer would
 	// sleep it right back down to 1x, defeating the point of turbo.
-	if (!speedup && pacerDebtUs < 0)
+	if (!turboMode && pacerDebtUs < 0)
 	{
 		usleep((u32)(-pacerDebtUs));
 		pacerDebtUs = 0; // slept exactly the credit away, drift-free
@@ -833,7 +834,7 @@ void systemDrawScreen()
 		srcHeight,
 		pix
 	);
-
+	PROFILER_MARK_FRAME();
 	systemNoteDisplayedFrame(ticks_to_microsecs(gettime()) - drawStartUs);
 }
 
