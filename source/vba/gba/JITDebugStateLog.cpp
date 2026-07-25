@@ -1,11 +1,10 @@
 #ifndef NO_JIT_COMPILER
-#if JIT_DEBUGSTATELOG
+#if VBAGX_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-#include "JITDebugStateLog.h"
 #include "Globals.h"
 
 #define DEBUG_STATE_LOG_BUFFER_SIZE		(2 * 1024 * 1024)
@@ -13,8 +12,16 @@
 
 JITDebugStateLog jitDebugStateLog;
 
-void JITDebugStateLog::Init(char * logType) {
+void JITDebugStateLog::Init() {
 	logBuffer = (char *)malloc(DEBUG_STATE_LOG_BUFFER_SIZE);
+
+	char logType[10] = "";
+
+	if(GCSettings.DynamicRecompilation)
+		sprintf(logType, "jit");
+	else
+		sprintf(logType, "interp");
+
 	time_t now = time(NULL);
 	struct tm *t = localtime(&now);
 

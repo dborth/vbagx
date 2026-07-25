@@ -1,6 +1,6 @@
 #ifndef NO_JIT_COMPILER
 
-#if JIT_PROFILING
+#if VBAGX_DEBUG
 #include <stdio.h>
 #include <algorithm>
 #include "JIT.h"

@@ -1,6 +1,6 @@
 #ifndef NO_JIT_COMPILER
 #include "JIT.h"
-#if JIT_PROFILING
+#if VBAGX_DEBUG
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>

@@ -6,12 +6,13 @@
 	//#define JIT_BLOCK_FRAGMENTATION_STATS 1
 	//#define JIT_DEBUG_BLOCK_DUMP 1
 	//#define JIT_CACHE_AND_ARENA_LOG 1
-	//#define JIT_COMPILER_DIFFERENTIAL_TESTING 1
+	//#define JIT_DIFFERENTIAL_TESTING 1
 	//#define JIT_DEBUGSTATELOG 1
 	//#define JIT_DETAILED_LOG 1
 
 	#include <ogc/timesupp.h>
 	#include "JITProfiler.h"
+	#include "JITDebugStateLog.h"
 	#include "../common/Types.h"
 
 	struct BasicBlock;
@@ -180,9 +181,17 @@
 		#define JIT_LOG_INSN_DUMP(pc, phase, addr, word)									((void)0)
 	#endif // JIT_DETAILED_LOG
 
-	#if JIT_COMPILER_DIFFERENTIAL_TESTING
+	#if JIT_DIFFERENTIAL_TESTING
 		#define JIT_LOG_MISMATCH(msg)														LogJITMismatch(msg)
 	#endif
+
+	#if JIT_DEBUGSTATELOG
+		#define JIT_LOG_STATE_INIT()														jitDebugStateLog.Init()
+		#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)						jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), 1, jitStats.fallbackInstructionsExecuted)
+		#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)			jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), (instrCount), jitStats.jitInstructionsExecuted)
+		#define JIT_LOG_STATE_WRITE_TO_FILE()												jitDebugStateLog.WriteToFile()
+	#endif
+
 #endif // !NO_JIT_COMPILER
 
 #ifndef PROFILER_START_TIMER
@@ -267,5 +276,8 @@
 #endif
 #ifndef JIT_LOG_STATE_WRITE_TO_FILE
 	#define JIT_LOG_STATE_WRITE_TO_FILE()											((void)0)
+#endif
+#ifndef JIT_DIFFERENTIAL_THUMB_HOOK
+#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) ((void)0)
 #endif
 #endif // JIT_DEBUG_H

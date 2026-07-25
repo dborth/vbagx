@@ -2,7 +2,7 @@
 #define JIT_DEBUGSTATELOG_H
 
 #ifndef NO_JIT_COMPILER
-#if JIT_DEBUGSTATELOG
+
 #include "../common/Types.h"
 
 class JITDebugStateLog {
@@ -29,15 +29,6 @@ class JITDebugStateLog {
 
 extern JITDebugStateLog jitDebugStateLog;
 
-	#if JIT_COMPILER
-	#define JIT_LOG_STATE_INIT()													jitDebugStateLog.Init("jit")
-	#else
-	#define JIT_LOG_STATE_INIT()													jitDebugStateLog.Init("interp")
-	#endif
-	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)					jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), 1, jitStats.fallbackInstructionsExecuted)
-    #define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)		jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), (instrCount), jitStats.jitInstructionsExecuted)
-	#define JIT_LOG_STATE_WRITE_TO_FILE()											jitDebugStateLog.WriteToFile()
-#endif
 #endif // NO_JIT_COMPILER
 
 #endif // JIT_DEBUGSTATELOG_H

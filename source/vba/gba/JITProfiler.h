@@ -2,7 +2,7 @@
 #ifndef JIT_PROFILER_H
 #define JIT_PROFILER_H
 
-#if JIT_PROFILING
+#if VBAGX_DEBUG
 #include "../common/Port.h"
 
 static const int MAX_JIT_TRACE_CALLS = 100;
