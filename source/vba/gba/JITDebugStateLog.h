@@ -13,6 +13,7 @@ class JITDebugStateLog {
 		u32 currentOffset = 0;
 
 	public:
+		void Init();
 		/**
 		 * Logs the complete GBA core state
 		 * @param source     	"[C++]" or "[JIT]"
@@ -22,7 +23,6 @@ class JITDebugStateLog {
 		 * @param cycles     	Cycles
 		 * @param instrCount    Total instruction count
 		 */
-		void Init(char * logType);
 		void LogState(const char* source, u32 executedPC, u32 nextPC, u32 ticks, u32 cycles, u32 instrCount);
 		void WriteToFile();
 };

@@ -5,7 +5,9 @@
 #include <string.h>
 #include <time.h>
 
+#include "vbagx.h"
 #include "Globals.h"
+#include "JITDebugStateLog.h"
 
 #define DEBUG_STATE_LOG_BUFFER_SIZE		(2 * 1024 * 1024)
 #define MAX_DEBUG_INSTRUCTIONS			5000
