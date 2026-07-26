@@ -6,7 +6,7 @@
 DebugStats debugStats;
 
 void DebugStats::reset() {
-    timeTotalStart = gettime(); // Automatically drops anchor on JIT_RESET_LOGS()
+    timeTotalStart = gettime(); // Automatically drops anchor on DEBUG_RESET_LOGS()
     timeTotalElapsed = 0;
     timeSpentThumb = 0;
     timeSpentARM = 0;
@@ -78,23 +78,23 @@ void DebugStats::print() {
     double interpPct = thumbSecs > 0 ? (fallSecs / thumbSecs * 100.0) : 0.0;
 
     // 3. Print the Hierarchical Time Breakdown
-	JIT_LOG("\n========== JIT REAL-TIME PROFILING ==========\n");
-	JIT_LOG("Total Wall-Clock Time: %.3f seconds\n\n", totalSecs);
-	JIT_LOG("Average Framerate:     %.2f FPS\n\n", avgFPS);
+	DEBUG_LOG("\n========== JIT REAL-TIME PROFILING ==========\n");
+	DEBUG_LOG("Total Wall-Clock Time: %.3f seconds\n\n", totalSecs);
+	DEBUG_LOG("Average Framerate:     %.2f FPS\n\n", avgFPS);
 
-	JIT_LOG("--- MODE INVOCATIONS PER SECOND ---\n");
-	JIT_LOG("THUMB Invocations:  %llu (~%.2f/sec)\n", thumbInvocations, thumbInvPerSec);
-	JIT_LOG("ARM Invocations:    %llu (~%.2f/sec)\n", armInvocations, armInvPerSec);
-	JIT_LOG("SWI Invocations:    %llu (~%.2f/sec)\n", swiInvocations, swiInvPerSec);
+	DEBUG_LOG("--- MODE INVOCATIONS PER SECOND ---\n");
+	DEBUG_LOG("THUMB Invocations:  %llu (~%.2f/sec)\n", thumbInvocations, thumbInvPerSec);
+	DEBUG_LOG("ARM Invocations:    %llu (~%.2f/sec)\n", armInvocations, armInvPerSec);
+	DEBUG_LOG("SWI Invocations:    %llu (~%.2f/sec)\n", swiInvocations, swiInvPerSec);
 
-	JIT_LOG("THUMB Execution: %.3f seconds (%.1f%% of Total)\n", thumbSecs, thumbPct);
-	JIT_LOG("  Compiling JIT: %.3f seconds (%.1f%% of THUMB)\n", compileSecs, compPct);
-	JIT_LOG("  Executing JIT: %.3f seconds (%.1f%% of THUMB)\n", jitSecs, execPct);
-	JIT_LOG("  Interpreter:   %.3f seconds (%.1f%% of THUMB)\n", fallSecs, interpPct);
+	DEBUG_LOG("THUMB Execution: %.3f seconds (%.1f%% of Total)\n", thumbSecs, thumbPct);
+	DEBUG_LOG("  Compiling JIT: %.3f seconds (%.1f%% of THUMB)\n", compileSecs, compPct);
+	DEBUG_LOG("  Executing JIT: %.3f seconds (%.1f%% of THUMB)\n", jitSecs, execPct);
+	DEBUG_LOG("  Interpreter:   %.3f seconds (%.1f%% of THUMB)\n", fallSecs, interpPct);
 
-	JIT_LOG("\nARM Execution:   %.3f seconds (%.1f%% of Total)\n", armSecs, armPct);
-	JIT_LOG("Other / Core:    %.3f seconds (%.1f%% of Total)\n", otherSecs, otherPct);
-	JIT_LOG("---------------------------------------------\n");
+	DEBUG_LOG("\nARM Execution:   %.3f seconds (%.1f%% of Total)\n", armSecs, armPct);
+	DEBUG_LOG("Other / Core:    %.3f seconds (%.1f%% of Total)\n", otherSecs, otherPct);
+	DEBUG_LOG("---------------------------------------------\n");
 
     // 4. Print Instruction & Hop Data
 	u64 totalInstr = jitInstructionsExecuted + fallbackInstructionsExecuted;
@@ -104,78 +104,78 @@ void DebugStats::print() {
 	double jitIPS  = jitSecs > 0  ? ((double)jitInstructionsExecuted / jitSecs) : 0.0;
 	double fallIPS = fallSecs > 0 ? ((double)fallbackInstructionsExecuted / fallSecs) : 0.0;
 
-	JIT_LOG("--- EXECUTION & HOPPING ---\n");
-	JIT_LOG("Total Instructions: %llu\n", totalInstr);
-	JIT_LOG("JIT Handled:        %llu (%.2f%%)\n", jitInstructionsExecuted, jitInstrPct);
-	JIT_LOG("Fallback (Interp):  %llu (%.2f%%)\n", fallbackInstructionsExecuted, 100.0 - jitInstrPct);
-	JIT_LOG("JIT Hops In:        %llu\n", jitInvocations);
-	JIT_LOG("Fallback Hops:      %llu\n", fallbackInvocations);
-	JIT_LOG("Avg JIT Block Size: %.2f instructions\n", avgBlockSize);
-	JIT_LOG("JIT Exec Speed:     %.0f instr/sec (%.2f MIPS)\n", jitIPS, jitIPS / 1000000.0);
-	JIT_LOG("Interpreter Speed:  %.0f instr/sec (%.2f MIPS)\n", fallIPS, fallIPS / 1000000.0);
-	JIT_LOG("-----------------------------------------\n");
+	DEBUG_LOG("--- EXECUTION & HOPPING ---\n");
+	DEBUG_LOG("Total Instructions: %llu\n", totalInstr);
+	DEBUG_LOG("JIT Handled:        %llu (%.2f%%)\n", jitInstructionsExecuted, jitInstrPct);
+	DEBUG_LOG("Fallback (Interp):  %llu (%.2f%%)\n", fallbackInstructionsExecuted, 100.0 - jitInstrPct);
+	DEBUG_LOG("JIT Hops In:        %llu\n", jitInvocations);
+	DEBUG_LOG("Fallback Hops:      %llu\n", fallbackInvocations);
+	DEBUG_LOG("Avg JIT Block Size: %.2f instructions\n", avgBlockSize);
+	DEBUG_LOG("JIT Exec Speed:     %.0f instr/sec (%.2f MIPS)\n", jitIPS, jitIPS / 1000000.0);
+	DEBUG_LOG("Interpreter Speed:  %.0f instr/sec (%.2f MIPS)\n", fallIPS, fallIPS / 1000000.0);
+	DEBUG_LOG("-----------------------------------------\n");
 
     // 5. Print Block Distribution
-	JIT_LOG("--- BLOCK DISTRIBUTION ---\n");
-	JIT_LOG("Blacklisted: %u\n", blacklistedBlocks);
-	JIT_LOG("Blocks Compiled: %u\n", blocksCompiled);
-	JIT_LOG("  1 to 4   Insns: %u\n", blockLengthBins[0]);
-	JIT_LOG("  5 to 8   Insns: %u\n", blockLengthBins[1]);
-	JIT_LOG("  9 to 16  Insns: %u\n", blockLengthBins[2]);
-	JIT_LOG(" 17 to 32  Insns: %u\n", blockLengthBins[3]);
-	JIT_LOG(" 33 to 64  Insns: %u\n", blockLengthBins[4]);
-	JIT_LOG(" 65+       Insns: %u\n", blockLengthBins[5]);
-	JIT_LOG("-----------------------------------------\n");
+	DEBUG_LOG("--- BLOCK DISTRIBUTION ---\n");
+	DEBUG_LOG("Blacklisted: %u\n", blacklistedBlocks);
+	DEBUG_LOG("Blocks Compiled: %u\n", blocksCompiled);
+	DEBUG_LOG("  1 to 4   Insns: %u\n", blockLengthBins[0]);
+	DEBUG_LOG("  5 to 8   Insns: %u\n", blockLengthBins[1]);
+	DEBUG_LOG("  9 to 16  Insns: %u\n", blockLengthBins[2]);
+	DEBUG_LOG(" 17 to 32  Insns: %u\n", blockLengthBins[3]);
+	DEBUG_LOG(" 33 to 64  Insns: %u\n", blockLengthBins[4]);
+	DEBUG_LOG(" 65+       Insns: %u\n", blockLengthBins[5]);
+	DEBUG_LOG("-----------------------------------------\n");
 
 	// 6. Print Cache Statistics
-	JIT_LOG("--- CACHE STATISTICS ---\n");
-	JIT_LOG("Cache Flushes:      %u\n", cacheFlushes);
-	JIT_LOG("Time Flushing:      %.3f seconds\n", flushSecs);
-	JIT_LOG("Cache Hits:         %u\n", cacheHits);
-	JIT_LOG("Cache Misses:       %u\n", cacheMisses);
-	JIT_LOG("Cache Evictions:    %u\n", cacheEvictions);
+	DEBUG_LOG("--- CACHE STATISTICS ---\n");
+	DEBUG_LOG("Cache Flushes:      %u\n", cacheFlushes);
+	DEBUG_LOG("Time Flushing:      %.3f seconds\n", flushSecs);
+	DEBUG_LOG("Cache Hits:         %u\n", cacheHits);
+	DEBUG_LOG("Cache Misses:       %u\n", cacheMisses);
+	DEBUG_LOG("Cache Evictions:    %u\n", cacheEvictions);
 	u32 totalLookups = cacheHits + cacheMisses;
 	double hitRate = totalLookups > 0 ? ((double)cacheHits / totalLookups * 100.0) : 0.0;
-	JIT_LOG("Hit Rate:           %.2f%%\n", hitRate);
-	JIT_LOG("-----------------------------------------\n");
+	DEBUG_LOG("Hit Rate:           %.2f%%\n", hitRate);
+	DEBUG_LOG("-----------------------------------------\n");
 
     // 7. Print Bailouts
-	JIT_LOG("Bailout Reasons:\n");
-	JIT_LOG("  Unsupported opcode:               %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_OPCODE]);
-	JIT_LOG("  Unsupported FMT 14 opcode:        %u\n", bailoutReasons[BAILOUT_FMT14_UNSUPPORTED_OPCODE]);
-	JIT_LOG("  Buffer Overflow:                  %u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
-	JIT_LOG("  SWI opcode:                       %u\n", bailoutReasons[BAILOUT_SWI_OPCODE]);
-	JIT_LOG("  Conditional Branch:               %u\n", bailoutReasons[BAILOUT_CONDITIONAL_BRANCH]);
-	JIT_LOG("  Branch with Link:                 %u\n", bailoutReasons[BAILOUT_BRANCH_WITH_LINK]);
-	JIT_LOG("  No Push/Pop Regs:                 %u\n", bailoutReasons[BAILOUT_PUSH_POP_REGS]);
-	JIT_LOG("  No LDMIA/STMIA Regs:              %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
-	JIT_LOG("  Unsupported Mem Bank:             %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
-	JIT_LOG("-----------------------------------------\n");
+	DEBUG_LOG("Bailout Reasons:\n");
+	DEBUG_LOG("  Unsupported opcode:               %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_OPCODE]);
+	DEBUG_LOG("  Unsupported FMT 14 opcode:        %u\n", bailoutReasons[BAILOUT_FMT14_UNSUPPORTED_OPCODE]);
+	DEBUG_LOG("  Buffer Overflow:                  %u\n", bailoutReasons[BAILOUT_BUFFER_OVERFLOW]);
+	DEBUG_LOG("  SWI opcode:                       %u\n", bailoutReasons[BAILOUT_SWI_OPCODE]);
+	DEBUG_LOG("  Conditional Branch:               %u\n", bailoutReasons[BAILOUT_CONDITIONAL_BRANCH]);
+	DEBUG_LOG("  Branch with Link:                 %u\n", bailoutReasons[BAILOUT_BRANCH_WITH_LINK]);
+	DEBUG_LOG("  No Push/Pop Regs:                 %u\n", bailoutReasons[BAILOUT_PUSH_POP_REGS]);
+	DEBUG_LOG("  No LDMIA/STMIA Regs:              %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
+	DEBUG_LOG("  Unsupported Mem Bank:             %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
+	DEBUG_LOG("-----------------------------------------\n");
 #if JIT_BLOCK_FRAGMENTATION_STATS
-	JIT_LOG("--- JIT BLOCK LIFECYCLE & FRAGMENTATION STATS ---\n");	
+	DEBUG_LOG("--- JIT BLOCK LIFECYCLE & FRAGMENTATION STATS ---\n");	
 	u32 totalExecs = fullBlockCompletions + partialBlockExecutions;
 	double fullPct = totalExecs > 0 ? ((double)fullBlockCompletions / totalExecs * 100.0) : 0.0;
 	double partPct = totalExecs > 0 ? ((double)partialBlockExecutions / totalExecs * 100.0) : 0.0;
 
-	JIT_LOG("Block Execution Completions: %u (%.1f%%)\n", fullBlockCompletions, fullPct);
-	JIT_LOG("Mid-Block Bailouts (Partial): %u (%.1f%%)\n", partialBlockExecutions, partPct);
-	JIT_LOG("Bailout-to-JIT Transitions:  %u\n", bailoutToJitTransitions);
+	DEBUG_LOG("Block Execution Completions: %u (%.1f%%)\n", fullBlockCompletions, fullPct);
+	DEBUG_LOG("Mid-Block Bailouts (Partial): %u (%.1f%%)\n", partialBlockExecutions, partPct);
+	DEBUG_LOG("Bailout-to-JIT Transitions:  %u\n", bailoutToJitTransitions);
 
-	JIT_LOG("\nExecution Coverage Ratio:\n");
-	JIT_LOG(" [0%% - 25%%]   Executed: %u\n", blockExecutionRatioBins[0]);
-	JIT_LOG(" [25%% - 50%%]  Executed: %u\n", blockExecutionRatioBins[1]);
-	JIT_LOG(" [50%% - 75%%]  Executed: %u\n", blockExecutionRatioBins[2]);
-	JIT_LOG(" [75%% - 100%%] Executed: %u\n", blockExecutionRatioBins[3]);
-	JIT_LOG(" [100%%]                : %u\n", blockExecutionRatioBins[4]);
+	DEBUG_LOG("\nExecution Coverage Ratio:\n");
+	DEBUG_LOG(" [0%% - 25%%]   Executed: %u\n", blockExecutionRatioBins[0]);
+	DEBUG_LOG(" [25%% - 50%%]  Executed: %u\n", blockExecutionRatioBins[1]);
+	DEBUG_LOG(" [50%% - 75%%]  Executed: %u\n", blockExecutionRatioBins[2]);
+	DEBUG_LOG(" [75%% - 100%%] Executed: %u\n", blockExecutionRatioBins[3]);
+	DEBUG_LOG(" [100%%]                : %u\n", blockExecutionRatioBins[4]);
 
-	JIT_LOG("\nBailout Offset Distribution (Instructions Executed):\n");
-	JIT_LOG("  Inst 0 (Immediate): %u\n", bailoutOffsetBins[0]);
-	JIT_LOG("  Inst 1-3:           %u\n", bailoutOffsetBins[1]);
-	JIT_LOG("  Inst 4-7:           %u\n", bailoutOffsetBins[2]);
-	JIT_LOG("  Inst 8-15:          %u\n", bailoutOffsetBins[3]);
-	JIT_LOG("  Inst 16-31:         %u\n", bailoutOffsetBins[4]);
-	JIT_LOG("  Inst 32+:           %u\n", bailoutOffsetBins[5]);
-	JIT_LOG("----------------------------------------------------------\n");
+	DEBUG_LOG("\nBailout Offset Distribution (Instructions Executed):\n");
+	DEBUG_LOG("  Inst 0 (Immediate): %u\n", bailoutOffsetBins[0]);
+	DEBUG_LOG("  Inst 1-3:           %u\n", bailoutOffsetBins[1]);
+	DEBUG_LOG("  Inst 4-7:           %u\n", bailoutOffsetBins[2]);
+	DEBUG_LOG("  Inst 8-15:          %u\n", bailoutOffsetBins[3]);
+	DEBUG_LOG("  Inst 16-31:         %u\n", bailoutOffsetBins[4]);
+	DEBUG_LOG("  Inst 32+:           %u\n", bailoutOffsetBins[5]);
+	DEBUG_LOG("----------------------------------------------------------\n");
 #endif
 	// 8. Top 10 Fallbacks
 	struct Stat { u16 bucket; u64 count; };
@@ -189,14 +189,14 @@ void DebugStats::print() {
 		return a.count > b.count;
 	});
 
-	JIT_LOG("Top 10 Fallback Executions (Interpreter):\n");
+	DEBUG_LOG("Top 10 Fallback Executions (Interpreter):\n");
 	for (int i = 0; i < 10; i++) {
 		if (topFallback[i].count == 0)
 			continue;
-		JIT_LOG("  #%d: Opcode Prefix ~0x%04X (Bucket %4d) - %llu times\n",
+		DEBUG_LOG("  #%d: Opcode Prefix ~0x%04X (Bucket %4d) - %llu times\n",
 			   i + 1, topFallback[i].bucket << 6, topFallback[i].bucket, topFallback[i].count);
 	}
-	JIT_LOG("=========================================\n\n");
-	WriteJITLogToFile();
+	DEBUG_LOG("=========================================\n\n");
+	WriteDebugLogToFile();
 }
 #endif

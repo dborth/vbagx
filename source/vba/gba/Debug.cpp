@@ -7,33 +7,33 @@
 #include "mem2.h"
 
 // -----------------------------------------------------------------------------
-// JIT Trace Logger Buffer & Utility Method
+// Debug Logger Buffer & Utility Method
 // -----------------------------------------------------------------------------
-static char*  jitLogBuffer   = NULL;
+static char*  debugLogBuffer   = NULL;
 static size_t jitLogCapacity = 0;
 static size_t jitLogSize     = 0;
 static bool JITBlockDumped = false;
 
-void InitJITLog() {
-	if (!jitLogBuffer) {
+void InitDebugLog() {
+	if (!debugLogBuffer) {
 		jitLogCapacity = 2 * 1024 * 1024;
-		jitLogBuffer = (char*)mem2_malloc(jitLogCapacity);
+		debugLogBuffer = (char*)mem2_malloc(jitLogCapacity);
 	}
 	
 	jitLogSize = 0;
-	if (jitLogBuffer) {
-		jitLogBuffer[0] = '\0';
+	if (debugLogBuffer) {
+		debugLogBuffer[0] = '\0';
 	}
 	JITBlockDumped = false;
 }
 
-static void vLogJITInternal(const char* format, va_list args) {
-	if (!jitLogBuffer || (jitLogCapacity - jitLogSize) <= 1) {
+static void vLogDebugInternal(const char* format, va_list args) {
+	if (!debugLogBuffer || (jitLogCapacity - jitLogSize) <= 1) {
 		return;
 	}
 
 	size_t remaining = jitLogCapacity - jitLogSize;
-	int written = vsnprintf(jitLogBuffer + jitLogSize, remaining, format, args);
+	int written = vsnprintf(debugLogBuffer + jitLogSize, remaining, format, args);
 
 	if (written > 0) {
 		if ((size_t)written >= remaining) {
@@ -45,52 +45,52 @@ static void vLogJITInternal(const char* format, va_list args) {
 	}
 }
 
-void LogJIT(const char* format, ...) {
+void LogDebug(const char* format, ...) {
 	va_list args;
 	va_start(args, format);
-	vLogJITInternal(format, args);
+	vLogDebugInternal(format, args);
 	va_end(args);
 }
 
 void LogJITMismatch(const char* message) {
-	if (!jitLogBuffer || !message || (jitLogCapacity - jitLogSize) <= 1) {
+	if (!debugLogBuffer || !message || (jitLogCapacity - jitLogSize) <= 1) {
 		return;
 	}
 
 	debugStats.mismatchCount++;
-	LogJIT("==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n", debugStats.mismatchCount);
-	LogJIT("%s", message);
-	LogJIT("========================================================================\n");
+	LogDebug("==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n", debugStats.mismatchCount);
+	LogDebug("%s", message);
+	LogDebug("========================================================================\n");
 }
 
 void LogJITBlockCompileStart(u32 startPC) {
-    LogJIT("=== COMPILING JIT BLOCK @ 0x%08X ===\n", startPC);
+    LogDebug("=== COMPILING JIT BLOCK @ 0x%08X ===\n", startPC);
 }
 
 void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...) {
-	if (!jitLogBuffer || (jitLogCapacity - jitLogSize) <= 1) {
+	if (!debugLogBuffer || (jitLogCapacity - jitLogSize) <= 1) {
 		return;
 	}
 
-	LogJIT("  [0x%08X] Opcode: 0x%04X | ", pc, opcode);
+	LogDebug("  [0x%08X] Opcode: 0x%04X | ", pc, opcode);
 
 	va_list args;
 	va_start(args, format);
-	vLogJITInternal(format, args);
+	vLogDebugInternal(format, args);
 	va_end(args);
 
-	LogJIT("\n");
+	LogDebug("\n");
 }
 
 void LogJITBailout(u32 pc, u32 opcode, const char* reasonName) {
-    LogJIT("[JIT BAILOUT] PC: 0x%08X | Opcode: 0x%04X | Reason: %s\n", pc, opcode, reasonName);
+    LogDebug("[JIT BAILOUT] PC: 0x%08X | Opcode: 0x%04X | Reason: %s\n", pc, opcode, reasonName);
 }
 
 void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCycles, bool bailedOut, u32 bailoutReason) {
     if (bailedOut) {
-        LogJIT("=== BLOCK COMPILE FAILED @ 0x%08X (Reason Code: %u) ===\n", startPC, bailoutReason);
+        LogDebug("=== BLOCK COMPILE FAILED @ 0x%08X (Reason Code: %u) ===\n", startPC, bailoutReason);
     } else {
-        LogJIT("=== BLOCK COMPILED @ 0x%08X -> 0x%08X | Insns: %u | Cycles: %u ===\n", startPC, endPC, instrCount, staticCycles);
+        LogDebug("=== BLOCK COMPILED @ 0x%08X -> 0x%08X | Insns: %u | Cycles: %u ===\n", startPC, endPC, instrCount, staticCycles);
     }
 }
 
@@ -98,39 +98,39 @@ void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, CPUFlags flags,
     if (debugStats.traceLogCount >= MAX_JIT_TRACE_CALLS) return;
 
     if (isEntry) {
-       LogJIT("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
+       LogDebug("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
     		   debugStats.traceLogCount, entryPC, flags.N, flags.Z, flags.C, flags.V);
     } else {
-        LogJIT("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
+        LogDebug("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
         		debugStats.traceLogCount, entryPC, nextPC, flags.N, flags.Z, flags.C, flags.V, cycles);
     	debugStats.traceLogCount++;
     }
 }
 
 // Flushes the accumulated string buffer out to the SD card log file
-void WriteJITLogToFile() {
+void WriteDebugLogToFile() {
     time_t now = time(NULL);
     struct tm *t = localtime(&now);
     char logPath[128];
 
     if (t != NULL) {
-        strftime(logPath, sizeof(logPath), "sd:/jit-log-trace-%Y%m%d-%H%M%S.txt", t);
+        strftime(logPath, sizeof(logPath), "sd:/vbagx-debug-log-%Y%m%d-%H%M%S.txt", t);
     } else {
-        snprintf(logPath, sizeof(logPath), "sd:/jit-log-trace.txt");
+        snprintf(logPath, sizeof(logPath), "sd:/vbagx-debug-log.txt");
     }
 
     FILE* logFile = fopen(logPath, "w");
     if (logFile != nullptr) {
-        fprintf(logFile, "--- JIT LOG START ---\n\n");
-        fputs(jitLogBuffer, logFile);
-        fprintf(logFile, "--- JIT LOG END ---\n");
+        fprintf(logFile, "--- DEBUG LOG START ---\n\n");
+        fputs(debugLogBuffer, logFile);
+        fprintf(logFile, "--- DEBUG LOG END ---\n");
         fclose(logFile);
     }
 
 	// Clear buffer after writing
-	if (jitLogBuffer) {
-		mem2_free(jitLogBuffer);
-		jitLogBuffer = NULL;
+	if (debugLogBuffer) {
+		mem2_free(debugLogBuffer);
+		debugLogBuffer = NULL;
 	}
 	jitLogSize = 0;
 	jitLogCapacity = 0;

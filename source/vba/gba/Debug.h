@@ -11,7 +11,7 @@
 #define DEBUG_H
 
 #ifdef VBAGX_DEBUG
-	//#define PROFILING 1
+	#define PROFILING 1
 	//#define JIT_BLOCK_FRAGMENTATION_STATS 1
 	//#define JIT_DEBUG_BLOCK_DUMP 1
 	//#define JIT_CACHE_AND_ARENA_LOG 1
@@ -27,9 +27,9 @@
 
 	struct BasicBlock;
 
-	void InitJITLog();
-	void LogJIT(const char* format, ...);
-	void WriteJITLogToFile();
+	void InitDebugLog();
+	void LogDebug(const char* format, ...);
+	void WriteDebugLogToFile();
 	void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, CPUFlags flags, u32 cycles);
 	void LogJITMismatch(const char* msg);
 	void LogJITBlockCompileStart(u32 startPC);
@@ -39,7 +39,7 @@
 	void DebugDumpFirstJITBlock(BasicBlock* block);
 
 	#if PROFILING
-		#define JIT_LOG(fmt, ...) LogJIT(fmt, ##__VA_ARGS__)
+		#define DEBUG_LOG(fmt, ...) LogDebug(fmt, ##__VA_ARGS__)
 
 		#define PROFILER_START_TIMER(name) u64 name = gettime()
 		#define PROFILER_ADD_TIME(stat, name) debugStats.stat += (gettime() - (name))
@@ -70,12 +70,12 @@
 
 		#define PROFILER_MARK_FRAME() debugStats.framesRendered++
 
-		#define JIT_RESET_LOGS() do { \
-			InitJITLog(); \
+		#define DEBUG_RESET_LOGS() do { \
+			InitDebugLog(); \
 			debugStats.reset(); \
 			JIT_LOG_STATE_INIT(); \
 		} while(0)
-		#define JIT_OUTPUT_LOGS() do { \
+		#define DEBUG_OUTPUT_LOGS() do { \
 			debugStats.print(); \
 			JIT_LOG_STATE_WRITE_TO_FILE(); \
 		} while(0)
@@ -141,15 +141,15 @@
 
 	#if JIT_CACHE_AND_ARENA_LOG
 		#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter) do { \
-			LogJIT("[CACHE] Bucket: %4u | Insert: 0x%08X | Evicted: 0x%08X | Arena: 0x%08X -> 0x%08X\n", \
+			LogDebug("[CACHE] Bucket: %4u | Insert: 0x%08X | Evicted: 0x%08X | Arena: 0x%08X -> 0x%08X\n", \
 				   (u32)(bucket), (u32)(startPC), (u32)(evictedPC), (u32)(arenaBefore), (u32)(arenaAfter)); \
 		} while(0)
 
 		#define JIT_LOG_CACHE_FLUSH() \
-			LogJIT("[CACHE] FLUSH TRIGGERED - Arena Rewound to 0\n")
+			LogDebug("[CACHE] FLUSH TRIGGERED - Arena Rewound to 0\n")
 
 		#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind) do { \
-			LogJIT("[ARENA] Block 0x%08X | Offset: 0x%08X | Res: %u | Used: %u | Rewind: %u\n", \
+			LogDebug("[ARENA] Block 0x%08X | Offset: 0x%08X | Res: %u | Used: %u | Rewind: %u\n", \
 				   (u32)(startPC), (u32)(allocOffset), (u32)(reserved), (u32)(used), (u32)(rewind)); \
 		} while(0)
 	#else
@@ -178,7 +178,7 @@
 			LogJITBailout((pc), (opcode), (reason))
 
 		#define JIT_LOG_INSN_DUMP(pc, phase, addr, word) do { \
-			LogJIT("[%s] PC: 0x%08X | Addr: 0x%p | Word: 0x%08X\n", \
+			LogDebug("[%s] PC: 0x%08X | Addr: 0x%p | Word: 0x%08X\n", \
 				   (phase), (u32)(pc), (void*)(addr), (u32)(word)); \
 		} while(0)
 	#else
@@ -220,13 +220,13 @@
 #define PROFILER_BIN_BLOCK(len)						((void)0)
 #endif
 #ifndef JIT_LOG
-#define JIT_LOG(fmt, ...) 							((void)0)
+#define DEBUG_LOG(fmt, ...) 							((void)0)
 #endif
-#ifndef JIT_RESET_LOGS
-#define JIT_RESET_LOGS()							((void)0)
+#ifndef DEBUG_RESET_LOGS
+#define DEBUG_RESET_LOGS()							((void)0)
 #endif
-#ifndef JIT_OUTPUT_LOGS
-#define JIT_OUTPUT_LOGS()							((void)0)
+#ifndef DEBUG_OUTPUT_LOGS
+#define DEBUG_OUTPUT_LOGS()							((void)0)
 #endif
 #ifndef JIT_LOG_BLOCK_COMPILED
 #define JIT_LOG_BLOCK_COMPILED(startPC, block)		((void)0)

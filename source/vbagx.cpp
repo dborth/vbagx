@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 				StopColorizing();
 		}
 		#ifndef NO_JIT_COMPILER
-		JIT_RESET_LOGS();
+		DEBUG_RESET_LOGS();
 		#endif
 
 		systemResetPacer();
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 		} // emulation loop
 
 		#ifndef NO_JIT_COMPILER
-		JIT_OUTPUT_LOGS();
+		DEBUG_OUTPUT_LOGS();
 		#endif
 	} // main loop
 	return 0;
