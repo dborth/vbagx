@@ -5,6 +5,41 @@
  *
  * JITTrampoline.S
  *
+ * Hand-written PowerPC assembly ABI bridge between the C++ emulator core
+ * and compiled JIT traces. This is the only place that translates the
+ * ExecuteJITTrace(...) C calling convention into the JIT's internal,
+ * non-standard register contract (see JITPPCEmitter.h's register map).
+ *
+ * ExecuteJITTrace:
+ *   - Saves the caller's LR and all non-volatile host registers (R14-R31)
+ *     to a fresh 128-byte stack frame, since compiled traces treat R14,
+ *     R29-R31 as long-lived state for the duration of the trace.
+ *   - Stashes the incoming pointer arguments (gbaRegs, flags, outResult,
+ *     busPrefetchCount) into the stack frame at fixed offsets, since the
+ *     JIT-emitted code reaches back into this frame (e.g. flags at 84(r1),
+ *     outResult at 88(r1)) to load/store lazily rather than carrying every
+ *     pointer in a live register for the whole trace.
+ *   - Eagerly loads GBA R15 (PC) into R29 and the live busPrefetchCount
+ *     value into R5 — the two pieces of state that must already be resident
+ *     before the very first compiled instruction runs, since they can't be
+ *     lazily faulted in the way GBA R0-R14 and the condition flags are.
+ *   - Zeroes the R3 cycle accumulator, then transfers control into the
+ *     compiled block via mtctr/bctr (never a normal call — the trace may
+ *     chain through any number of subsequent already-compiled blocks via
+ *     JITCache's self-patching linker stub before it ever comes back here).
+ *
+ * ExecuteJITTrace_Return:
+ *   - The single landing pad every JIT exit path (default epilogue, deferred
+ *     bailout, SMC bailout, quota-shield yield, or a genuine linker-stub
+ *     cache miss) ultimately branches to. Writes R3 (cycles) / R4 (nextPC)
+ *     out to outResult, flushes the live busPrefetchCount and GBA PC back
+ *     to memory, restores the saved host non-volatile registers and LR,
+ *     and returns to the C++ dispatch loop.
+ *   - Does NOT flush GBA R0-R14 or the condition flags — by contract, any
+ *     code that reaches this landing pad has already flushed whatever it
+ *     left dirty (FlushDirtyRegisters/FlushDirtyFlags in JITCompiler.cpp);
+ *     this trampoline only owns the handful of pieces of state it itself
+ *     eagerly loaded on entry.
  ***************************************************************************/
 
 .global ExecuteJITTrace

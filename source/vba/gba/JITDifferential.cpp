@@ -5,6 +5,27 @@
  *
  * JITDifferential.cpp
  *
+ * Implements the differential mismatch-detection loop (only compiled when
+ * JIT_DIFFERENTIAL_TESTING is defined). For a given block, this:
+ *   1. Snapshots the full CPU state (all 16 registers, flags, armNextPC,
+ *      cpuTotalTicks, prefetch buffer state) before anything runs.
+ *   2. Runs the compiled JIT trace via ExecuteJITTrace() and records its
+ *      reported cycles/nextPC/flags/registers.
+ *   3. Restores the *pre-JIT* snapshot, then re-executes the same guest
+ *      instructions through the plain C++ interpreter one at a time
+ *      (thumbInsnTable[]) until it has burned the same number of cycles
+ *      the JIT reported (or hits a scheduler/event boundary), as an
+ *      independent "should have happened" reference run.
+ *   4. Compares the two outcomes register-by-register, flag-by-flag, plus
+ *      next PC and total cycles. Any mismatch is written to the shared
+ *      debug log via LogJITMismatch(), with the specific field(s) that
+ *      diverged called out explicitly (not just the first one) to help
+ *      narrow down which format handler is at fault.
+ *
+ * The *first* reported mismatch in a run is the one to actually chase —
+ * once state has diverged, every mismatch after that is just noise,
+ * not an independent bug. Capped at MAX_JIT_MISMATCH_COUNT total reports
+ * per run to avoid runaway log growth once something is actually broken.
  ***************************************************************************/
 
 #ifdef JIT_DIFFERENTIAL_TESTING

@@ -5,6 +5,17 @@
  *
  * JITDebugStateLog.h
  *
+ * A "state-log alignment" differential-testing approach: two
+ * full emulation runs (one with the JIT compiler disabled, one enabled) are
+ * each logged independently to their own SD-card text file, then compared
+ * offline by align_traces.py to find the first point of divergence.
+ *
+ * A single global instance (jitDebugStateLog) is used by both the JIT-enabled
+ * and interpreter-only code paths via the JIT_LOG_STATE_CPP/JIT_LOG_STATE_JIT
+ * macros in Debug.h — the `source` string ("[C++]" vs "[JIT]") distinguishes
+ * which path produced a given line, since the JIT path logs once per
+ * compiled-block execution (not once per instruction, since a compiled block
+ * has no per-instruction interpreter hook to attach to).
  ***************************************************************************/
 
 #ifndef JIT_DEBUGSTATELOG_H

@@ -5,6 +5,36 @@
  *
  * JITCache.cpp
  *
+ * Implements the JITCache class: the 8MB bump-allocated code arena, the
+ * 65536-bucket direct-mapped (no-chaining, colliding-block-evicts) block
+ * hash table, and the self-modifying inline-cache "linker stub" that makes
+ * block chaining possible.
+ *
+ *   - allocateJITMemory()/rewindJITMemory(): the raw 32-byte-aligned bump
+ *     allocator backing the arena; rewind reclaims a block's unused
+ *     worst-case reservation after compilation finishes.
+ *   - registerBlock(): installs a freshly compiled (or intentionally
+ *     null/"don't JIT this") block into its hash bucket, evicting whatever
+ *     was there before and carefully unlinking the evicted block from the
+ *     SMC registry first so no dangling pointer is left behind (this was
+ *     the root cause of one strand of the original cold-boot bug).
+ *   - flushCache(): resets the arena and block table, and re-emits the
+ *     shared self-modifying linker stub fresh into the arena's start —
+ *     every JIT exit branches into this one stub, which re-derives the
+ *     hash bucket for the target PC and either patches the caller's branch
+ *     directly to the target block (cache hit) or falls through to
+ *     ExecuteJITTrace_Return (miss or fallback stub).
+ *   - invalidateSMCTarget(): the self-modifying-code guard. Given a write's
+ *     target address, walks the intrusive per-page SMC registry
+ *     (smcRegistry[]/smcPageFlags[]) for every 1KB page the write could
+ *     have touched, and for any block whose instruction range overlaps the
+ *     write, surgically patches that block's first native instruction into
+ *     an unconditional branch back to the C++ handler and marks it dead —
+ *     ensuring the *next* execution attempt (not the current one, which
+ *     may already be mid-flight) safely bails instead of running stale
+ *     compiled code. Every write path in the emulator (interpreter, DMA,
+ *     BIOS-HLE, and the JIT's own inline SMC guards) must route through
+ *     this to stay correct.
  ***************************************************************************/
 
 #ifndef NO_JIT_COMPILER

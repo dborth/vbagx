@@ -5,6 +5,39 @@
  *
  * JITCompiler.cpp
  *
+ * The THUMB trace compiler. JITCompileThumbTrace() is the single entry
+ * point: given a starting GBA PC, it walks THUMB instructions one at a
+ * time, matching each against the currently-supported opcode formats
+ * (LSL/LSR/ASR, ADD/SUB, MOV/CMP/ADD/SUB imm8, CMP, high-register ops,
+ * BX, PC-relative load, guarded word/byte/halfword load-store, SP-relative
+ * load/store, PUSH/POP, LDMIA/STMIA, conditional branch, and BL), emitting
+ * native PowerPC directly into the JIT arena for anything it recognizes
+ * and bailing to the C++ interpreter (silently, cheaply, never guessing)
+ * for anything it doesn't.
+ *
+ * Three pieces of block-local state are threaded through the whole
+ * compile pass via lambdas closing over local variables:
+ *   - Lazy GBA register cache (regCache[15]) — faults GBA R0-R14 into the
+ *     R15-R28 host pool on first read, spills dirty ones back to memory
+ *     only when evicted or at block exit (see EnsureFlagsLoaded-style
+ *     helpers and FindOrAllocateHostReg).
+ *   - Packed lazy condition flags (PPC_REG_FLAGS / R6) — N/Z/C/V faulted
+ *     in as a group on first touch, flushed as a group when dirty.
+ *   - Deferred bailouts — guard failures (bad bank, null page, SMC hit,
+ *     unsupported dynamic target, etc.) emit only a branch at the guard
+ *     site; the actual landing-pad code (with a snapshot of the register/
+ *     flag cache state *as of that guard*) is generated in a second pass
+ *     after the main instruction loop, keeping the hot straight-line path
+ *     dense and the cold bailout code grouped together at the block tail.
+ *
+ * Also handles: inline hardware prefetch-buffer modeling (EmitPrefetchSync /
+ * EmitPrefetchDataWait, approximating the interpreter's stateful
+ * busPrefetchCount accounting at compile time), the self-modifying block-
+ * chaining exit sequence (every block branches into JITCache's shared
+ * linker stub instead of returning to C++), SMC guard emission/registration,
+ * and final arena bookkeeping (rewinding unused reserved words, D-Cache
+ * flush + I-Cache invalidate on the freshly emitted block before it's ever
+ * executed).
  ***************************************************************************/
 
 #ifndef NO_JIT_COMPILER

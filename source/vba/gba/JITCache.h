@@ -5,6 +5,27 @@
  *
  * JITCache.h
  *
+ * Declares the JITCache class and its supporting data structures:
+ *   - BasicBlock: the 16-byte-aligned {startPC, length, execute, nextSMC}
+ *     record stored per hash bucket. `execute == nullptr` with `length == 0`
+ *     represents an as-yet-uncompiled slot; `execute == nullptr` with a
+ *     nonzero length represents a deliberately cached "don't JIT this"
+ *     fallback stub (as opposed to a genuine cache miss); `nextSMC` is an
+ *     intrusive linked-list pointer used only by the SMC registry.
+ *   - smcPageFlags[] / smcRegistry[]: the global, 1KB-page-granularity
+ *     self-modifying-code tracking tables. A set flag means "at least one
+ *     compiled block currently has code living on this page"; the registry
+ *     holds the actual intrusive per-page block lists that invalidateSMCTarget()
+ *     walks on every guest write to EWRAM/IWRAM.
+ *   - JITCache: owns the arena pointer/offset, the block hash table, and
+ *     the linker stub addresses (linkerStubAddress/linkerReturnAddress)
+ *     that JIT-emitted code branches to directly. getBlock() is the hot-path
+ *     inline lookup the interpreter's dispatch loop calls on every THUMB
+ *     fetch; the heavier registerBlock()/flushCache()/invalidateSMCTarget()
+ *     logic lives in JITCache.cpp.
+ *
+ * JIT_ARENA_SIZE (8MB), HASH_TABLE_SIZE (65536), and SMC_MAP_SIZE are the
+ * settled tuning constants
  ***************************************************************************/
 
 #ifndef JIT_CACHE_H

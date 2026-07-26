@@ -5,6 +5,38 @@
  *
  * JITPPCEmitter.h
  *
+ * The PowerPC instruction-encoding macro library and the JIT's host-register
+ * naming contract, shared between JITCompiler.cpp (the emitter), JITCache.cpp
+ * (the linker stub), and JITTrampoline.S (the ABI bridge). Nothing in here
+ * executes at runtime — every macro just folds its operands into a raw
+ * 32-bit PowerPC instruction word to be written into the arena.
+ *
+ * Two things worth understanding before touching any emitter code:
+ *   - The register map comment block at the top is the authoritative,
+ *     currently-in-force host-register contract (which PPC registers are
+ *     ABI-reserved, which are volatile scratch, which are the lazy GBA-
+ *     register pool R15-R28, and which are fixed-role: R14 gbaRegs pointer,
+ *     R29 GBA PC, R30 read-page table, R6 packed condition flags). This
+ *     must stay in sync with JITTrampoline.S and JITCompiler.cpp's own
+ *     allocator — a mismatch here is a silent correctness bug, not a
+ *     compile error.
+ *   - The "PACKED FLAGS" section documents PPC_REG_FLAGS (R6): all four
+ *     GBA condition flags (N/Z/C/V) live packed into the top nibble of one
+ *     register rather than one dedicated register apiece, freeing R7-R9
+ *     back into general scratch. PPC_MERGE_FLAG_BIT/PPC_EXTRACT_FLAG_BIT
+ *     are the only two macros that need to know the packed bit layout —
+ *     every call site elsewhere just names a flag and reuses the same
+ *     rotate amount it would have used for a classic "extract to bit 31"
+ *     single-bit rlwinm, so the bit-position arithmetic lives in exactly
+ *     one place.
+ *
+ * Otherwise this is a fairly ordinary big-endian PowerPC 750 (Broadway)
+ * instruction encoder: ALU ops, XER-derived add/subtract-with-carry flag
+ * math, immediate loads, branches (including the self-patching direct-
+ * branch encoding used by the linker stub), endian-swapping load/store
+ * variants (GBA is little-endian, Wii/Broadway is big-endian), rotate/
+ * shift/insert forms, and the cache-maintenance instructions (dcbst/icbi/
+ * sync/isync) required after emitting or patching any executable code.
  ***************************************************************************/
 
 #ifndef NO_JIT_COMPILER

@@ -5,6 +5,35 @@
  *
  * Debug.h
  *
+ * The single gating point for every JIT debug/profiling facility described
+ * in VBAGX_JIT_CONTEXT.md §6. Nothing outside this header decides whether
+ * instrumentation is compiled in — every call site elsewhere in the JIT
+ * (JITCompiler.cpp, JITCache.cpp, etc.) just calls one of the macros below
+ * unconditionally, and this header decides whether it costs anything.
+ *
+ * Structure: each independently-toggleable feature (real-time profiling
+ * stats, cache/arena event tracing, per-instruction detailed compile/exec
+ * logging, differential mismatch testing, full per-instruction state-log
+ * dumping, first-block disassembly dumping) is gated behind its own
+ * `#define` at the top (JIT_CACHE_AND_ARENA_LOG, JIT_DIFFERENTIAL_TESTING,
+ * JIT_DEBUGSTATELOG, JIT_DETAILED_LOG, etc.), with a real macro definition
+ * when the feature is enabled and a `((void)0)` no-op fallback (at the
+ * bottom of the file) when it isn't or when VBAGX_DEBUG isn't defined at
+ * all — so a release build carries exactly zero instrumentation cost.
+ *
+ * The macros here are the plumbing for:
+ *   - debugStats: real-time profiler counters (bailout reasons,
+ *     cache hit/miss/eviction/flush counts, block-length histograms,
+ *     compile-vs-execute wall-clock split, MIPS, etc.) — see Profiler.h.
+ *   - JIT_LOG_CACHE_EVENT / JIT_LOG_ARENA / JIT_LOG_CACHE_FLUSH: arena and
+ *     hash-bucket tracing for JITCache.cpp.
+ *   - JIT_LOG_*_DETAILS / LogJIT*(): the per-instruction/per-block detailed
+ *     text log (JITCompiler.cpp compile-time tracing, trace entry/exit).
+ *   - JIT_LOG_MISMATCH: routes into JITDifferential.cpp's mismatch reporter.
+ *   - JIT_LOG_STATE_*: routes into JITDebugStateLog for the full per-
+ *     instruction state dump used by align_traces.py.
+ *   - DebugDumpFirstJITBlock/JIT_DEBUG_DUMP_FIRST_JIT_BLOCK: one-shot raw
+ *     disassembly dump of the first compiled block, for objdump inspection.
  ***************************************************************************/
 
 #ifndef DEBUG_H

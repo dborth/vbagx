@@ -5,6 +5,13 @@
  *
  * JITDebugStateLog.cpp
  *
+ * LogState() appends one fixed-format line per call: tick/cycle/instruction
+ * counters, executed PC, next PC, all four condition flags, and all 16 GBA
+ * registers (R0-R12, SP, LR) — deliberately verbose and uncompressed, since
+ * this file only needs to be read by an offline aligner, not by a human in
+ * real time. Automatically triggers WriteToFile() once MAX_DEBUG_INSTRUCTIONS
+ * is reached, to keep the two runs' logs comparably sized and bounded in
+ * memory. WriteToFile() flushes the buffer to disk and releases it.
  ***************************************************************************/
 
 #ifndef NO_JIT_COMPILER

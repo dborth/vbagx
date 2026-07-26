@@ -1,3 +1,37 @@
+/****************************************************************************
+ * Visual Boy Advance GX
+ *
+ * Daryl Borth 2026
+ *
+ * Debug.cpp
+ *
+ * Implements the logging/reporting functions declared in Debug.h and gated
+ * behind VBAGX_DEBUG. Everything here writes into one shared in-memory
+ * text buffer (debugLogBuffer, allocated from MEM2 via mem2_malloc) rather
+ * than touching the SD card per call, since SD I/O during emulation would
+ * be far too slow — WriteDebugLogToFile() is the one place that actually
+ * flushes the accumulated buffer out to a timestamped file
+ * (sd:/vbagx-debug-log-<timestamp>.txt) and frees it.
+ *
+ * Notable pieces:
+ *   - InitDebugLog()/vLogDebugInternal()/LogDebug(): buffer lifecycle and
+ *     the bounds-checked vsnprintf wrapper every other logging function
+ *     funnels through.
+ *   - LogJITMismatch(): formats and counts a differential-testing mismatch
+ *     report (capped via debugStats.mismatchCount / MAX_JIT_MISMATCH_COUNT
+ *     in JITDifferential.cpp, which builds the message this just appends).
+ *   - LogJITBlockCompileStart/End, LogJITInsnCompiled, LogJITBailout: the
+ *     detailed per-instruction/per-block compile-time trace text (only
+ *     active under JIT_DETAILED_LOG).
+ *   - LogJITTraceExecution(): entry/exit trace logging for each compiled
+ *     block's execution, capped at MAX_JIT_TRACE_CALLS.
+ *   - DebugDumpFirstJITBlock(): one-time raw dump of the first successfully
+ *     compiled block's native PowerPC bytes to an SD-card .bin file,
+ *     scanning forward for a blr/bctr terminator to avoid dumping garbage
+ *     past the block's actual end — meant to be fed to
+ *     `powerpc-eabi-objdump -D -b binary -m powerpc -EB` for inspection.
+ ***************************************************************************/
+
 #if VBAGX_DEBUG
 #include <stdio.h>
 #include <stdarg.h>
