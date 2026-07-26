@@ -95,15 +95,15 @@ void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCyc
     }
 }
 
-void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags[4], u32 cycles) {
+void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, CPUFlags flags, u32 cycles) {
     if (jitStats.traceLogCount >= MAX_JIT_TRACE_CALLS) return;
 
     if (isEntry) {
        LogJIT("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
-    		   jitStats.traceLogCount, entryPC, flags[0], flags[1], flags[2], flags[3]);
+    		   jitStats.traceLogCount, entryPC, flags.N, flags.Z, flags.C, flags.V);
     } else {
         LogJIT("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
-        		jitStats.traceLogCount, entryPC, nextPC, flags[0], flags[1], flags[2], flags[3], cycles);
+        		jitStats.traceLogCount, entryPC, nextPC, flags.N, flags.Z, flags.C, flags.V, cycles);
     	jitStats.traceLogCount++;
     }
 }

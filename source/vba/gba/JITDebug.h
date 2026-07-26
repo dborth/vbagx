@@ -20,7 +20,7 @@
 	void InitJITLog();
 	void LogJIT(const char* format, ...);
 	void WriteJITLogToFile();
-	void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, const u32 flags[4], u32 cycles);
+	void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, CPUFlags flags, u32 cycles);
 	void LogJITMismatch(const char* msg);
 	void LogJITBlockCompileStart(u32 startPC);
 	void LogJITInsnCompiled(u32 pc, u16 opcode, const char* format, ...);
@@ -187,8 +187,8 @@
 
 	#if JIT_DEBUGSTATELOG
 		#define JIT_LOG_STATE_INIT()														jitDebugStateLog.Init()
-		#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)						jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), 1, jitStats.fallbackInstructionsExecuted)
-		#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)			jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), (instrCount), jitStats.jitInstructionsExecuted)
+		#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)						jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), jitStats.fallbackInstructionsExecuted)
+		#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)			jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), jitStats.jitInstructionsExecuted)
 		#define JIT_LOG_STATE_WRITE_TO_FILE()												jitDebugStateLog.WriteToFile()
 	#endif
 
