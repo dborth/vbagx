@@ -39,7 +39,7 @@ static inline void JIT_RestoreCPUState(const CPUStateBackup* b) {
 }
 
 int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode, int* diffClockTicks) {
-    if (block == nullptr || block->execute == nullptr || jitStats.mismatchCount >= MAX_JIT_MISMATCH_COUNT) {
+    if (block == nullptr || block->execute == nullptr || debugStats.mismatchCount >= MAX_JIT_MISMATCH_COUNT) {
         return 0; // Did not handle, proceed to normal fallback
     }
 

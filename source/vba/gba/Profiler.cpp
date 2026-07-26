@@ -1,13 +1,11 @@
-#ifndef NO_JIT_COMPILER
-
 #if VBAGX_DEBUG
 #include <stdio.h>
 #include <algorithm>
 #include "JIT.h"
 
-JITStats jitStats;
+DebugStats debugStats;
 
-void JITStats::reset() {
+void DebugStats::reset() {
     timeTotalStart = gettime(); // Automatically drops anchor on JIT_RESET_LOGS()
     timeTotalElapsed = 0;
     timeSpentThumb = 0;
@@ -51,7 +49,7 @@ void JITStats::reset() {
     traceLogCount = 0;
 }
 
-void JITStats::print() {
+void DebugStats::print() {
     // 1. Calculate Real-World Seconds
     timeTotalElapsed = gettime() - timeTotalStart;
 
@@ -201,5 +199,4 @@ void JITStats::print() {
 	JIT_LOG("=========================================\n\n");
 	WriteJITLogToFile();
 }
-#endif
 #endif

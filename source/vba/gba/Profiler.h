@@ -1,6 +1,5 @@
-#ifndef NO_JIT_COMPILER
-#ifndef JIT_PROFILER_H
-#define JIT_PROFILER_H
+#ifndef PROFILER_H
+#define PROFILER_H
 
 #if VBAGX_DEBUG
 #include "../common/Port.h"
@@ -22,7 +21,7 @@ enum BailoutReason {
 	BAILOUT_REASON_COUNT
 };
 
-struct JITStats {
+struct DebugStats {
     u64 timeTotalStart;
     u64 timeTotalElapsed;
     u64 timeSpentThumb;
@@ -70,8 +69,7 @@ struct JITStats {
 	void print();
 };
 
-extern JITStats jitStats;
+extern DebugStats debugStats;
 
-#endif // JIT_PROFILER_H
-#endif
+#endif // PROFILER_H
 #endif

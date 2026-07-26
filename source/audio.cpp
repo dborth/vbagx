@@ -69,12 +69,6 @@ static s16 lastL = 0;
 static s16 lastR = 0;
 static bool wasStarved = false;
 
-// Running count of DMA periods played as (full or partial) silence due to
-// genuine underrun -- i.e. the ring was empty, not just low. Exposed so the
-// frequency of real starvation during normal play can be measured rather
-// than assumed. Wrap-safe for display purposes; reset with AudioStart().
-static volatile u32 underrunFrames = 0;
-
 /** Inline Ring Buffer Helpers **/
 static inline int nextIndex(int current) {
     return (current + 1) & (BUFFERCOUNT - 1);
@@ -131,12 +125,7 @@ static void AudioPlayer()
 	int unplayed = getUnplayed();
 
 	if (unplayed == 0) {
-		// Genuine underrun: the ring is actually empty, not just low.
-		// Ramp from the last real sample down to zero instead of jumping,
-		// so this sounds like a soft dip rather than a click/pop. Only
-		// need to (re)build the ramp on the first dry period of an
-		// episode -- once it reaches zero, repeating it is just silence.
-		underrunFrames++;
+
 		if (!wasStarved) {
 			BuildFadeOutBuffer();
 			wasStarved = true;
@@ -167,18 +156,6 @@ static void AudioPlayer()
 }
 
 /****************************************************************************
- * AudioGetUnderrunCount
- *
- * Total DMA periods played as silence (full or fading) due to a genuinely
- * empty ring, since the last AudioStart(). Add a matching prototype to
- * audio.h to call this from elsewhere (e.g. an on-screen debug counter).
- ***************************************************************************/
-u32 AudioGetUnderrunCount()
-{
-	return underrunFrames;
-}
-
-/****************************************************************************
  * AudioStart
  *
  * Called to cleanly kick off the Audio Queue and reset hysteresis state
@@ -192,7 +169,6 @@ void AudioStart()
     wasStarved = false;
     lastL = 0;
     lastR = 0;
-    underrunFrames = 0;
 }
 
 /****************************************************************************

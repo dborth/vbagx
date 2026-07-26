@@ -1,8 +1,8 @@
 #ifndef JIT_H
 #define JIT_H
+#include "Debug.h"
 #include "GBA.h"
 #include "JITCache.h"
-#include "JITDebug.h"
 
 #ifndef NO_JIT_COMPILER
 #define JIT_TRACE_MAX_INSTRUCTIONS 42

@@ -7,7 +7,7 @@
 #include <string.h>
 #include "../common/Port.h"
 #include "JITPPCEmitter.h"
-#include "JITDebug.h"
+#include "Debug.h"
 
 #define JIT_ARENA_SIZE					(1024 * 1024 * 8) // 8 MB
 #define HASH_TABLE_SIZE					65536

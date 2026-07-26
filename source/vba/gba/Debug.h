@@ -1,8 +1,8 @@
-#ifndef JIT_DEBUG_H
-#define JIT_DEBUG_H
+#ifndef DEBUG_H
+#define DEBUG_H
 
-#ifndef NO_JIT_COMPILER
-	//#define JIT_PROFILING 1
+#ifdef VBAGX_DEBUG
+	//#define PROFILING 1
 	//#define JIT_BLOCK_FRAGMENTATION_STATS 1
 	//#define JIT_DEBUG_BLOCK_DUMP 1
 	//#define JIT_CACHE_AND_ARENA_LOG 1
@@ -11,7 +11,8 @@
 	//#define JIT_DETAILED_LOG 1
 
 	#include <ogc/timesupp.h>
-	#include "JITProfiler.h"
+	#include "GBA.h"
+	#include "Profiler.h"
 	#include "JITDebugStateLog.h"
 	#include "../common/Types.h"
 
@@ -28,86 +29,86 @@
 	void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCycles, bool bailedOut, u32 bailoutReason);
 	void DebugDumpFirstJITBlock(BasicBlock* block);
 
-	#if JIT_PROFILING
+	#if PROFILING
 		#define JIT_LOG(fmt, ...) LogJIT(fmt, ##__VA_ARGS__)
 
 		#define PROFILER_START_TIMER(name) u64 name = gettime()
-		#define PROFILER_ADD_TIME(stat, name) jitStats.stat += (gettime() - (name))
-		#define PROFILER_INC(stat) jitStats.stat++
-		#define PROFILER_ADD(stat, val) jitStats.stat += (val)
+		#define PROFILER_ADD_TIME(stat, name) debugStats.stat += (gettime() - (name))
+		#define PROFILER_INC(stat) debugStats.stat++
+		#define PROFILER_ADD(stat, val) debugStats.stat += (val)
 		#define PROFILER_BIN_BLOCK(len) do { \
-			if ((len) == 0) jitStats.blacklistedBlocks++; \
-			else if ((len) <= 4) jitStats.blockLengthBins[0]++; \
-			else if ((len) <= 8) jitStats.blockLengthBins[1]++; \
-			else if ((len) <= 16) jitStats.blockLengthBins[2]++; \
-			else if ((len) <= 32) jitStats.blockLengthBins[3]++; \
-			else if ((len) <= 64) jitStats.blockLengthBins[4]++; \
-			else jitStats.blockLengthBins[5]++; \
+			if ((len) == 0) debugStats.blacklistedBlocks++; \
+			else if ((len) <= 4) debugStats.blockLengthBins[0]++; \
+			else if ((len) <= 8) debugStats.blockLengthBins[1]++; \
+			else if ((len) <= 16) debugStats.blockLengthBins[2]++; \
+			else if ((len) <= 32) debugStats.blockLengthBins[3]++; \
+			else if ((len) <= 64) debugStats.blockLengthBins[4]++; \
+			else debugStats.blockLengthBins[5]++; \
 		} while(0)
 
-		#define PROFILER_CACHE_HIT() jitStats.cacheHits++
-		#define PROFILER_CACHE_MISS() jitStats.cacheMisses++
+		#define PROFILER_CACHE_HIT() debugStats.cacheHits++
+		#define PROFILER_CACHE_MISS() debugStats.cacheMisses++
 		#define PROFILER_CACHE_EVICT(evicted, pc) do { \
 			if ((evicted) != 0 && (evicted) != (pc)) { \
-				jitStats.cacheEvictions++; \
+				debugStats.cacheEvictions++; \
 			} \
 		} while(0)
 		#define PROFILER_CACHE_FLUSH_START() u64 __flushTimer = gettime()
 		#define PROFILER_CACHE_FLUSH_END() do { \
-			jitStats.cacheFlushes++; \
-			jitStats.timeSpentFlushing += (gettime() - __flushTimer); \
+			debugStats.cacheFlushes++; \
+			debugStats.timeSpentFlushing += (gettime() - __flushTimer); \
 		} while(0)
 
-		#define PROFILER_MARK_FRAME() jitStats.framesRendered++
+		#define PROFILER_MARK_FRAME() debugStats.framesRendered++
 
 		#define JIT_RESET_LOGS() do { \
 			InitJITLog(); \
-			jitStats.reset(); \
+			debugStats.reset(); \
 			JIT_LOG_STATE_INIT(); \
 		} while(0)
 		#define JIT_OUTPUT_LOGS() do { \
-			jitStats.print(); \
+			debugStats.print(); \
 			JIT_LOG_STATE_WRITE_TO_FILE(); \
 		} while(0)
 
 		#define JIT_LOG_BLOCK_COMPILED(startPC, block) do { \
 			if (block != nullptr) { \
-				jitStats.blocksCompiled++; \
+				debugStats.blocksCompiled++; \
 				PROFILER_BIN_BLOCK(block->length); \
 				JIT_LOG_BLOCK_COMPILED_DETAILS((startPC)); \
 			} \
 		} while(0)
 
 		#define JIT_LOG_BAILOUT(pc, opcode, reason) do { \
-			jitStats.compileBailoutFreq[(opcode) >> 6]++; \
-			jitStats.bailoutReasons[reason]++; \
+			debugStats.compileBailoutFreq[(opcode) >> 6]++; \
+			debugStats.bailoutReasons[reason]++; \
 			JIT_LOG_BAILOUT_DETAILS((pc), (opcode), #reason); \
 		} while(0)
 
 		#if JIT_BLOCK_FRAGMENTATION_STATS
 			#define PROFILER_FRAG_STATS(count, blockLen, bailed) do { \
 				if (bailed) { \
-					jitStats.partialBlockExecutions++; \
-					if ((count) == 0) jitStats.bailoutOffsetBins[0]++; \
-					else if ((count) <= 3) jitStats.bailoutOffsetBins[1]++; \
-					else if ((count) <= 7) jitStats.bailoutOffsetBins[2]++; \
-					else if ((count) <= 15) jitStats.bailoutOffsetBins[3]++; \
-					else if ((count) <= 31) jitStats.bailoutOffsetBins[4]++; \
-					else jitStats.bailoutOffsetBins[5]++; \
+					debugStats.partialBlockExecutions++; \
+					if ((count) == 0) debugStats.bailoutOffsetBins[0]++; \
+					else if ((count) <= 3) debugStats.bailoutOffsetBins[1]++; \
+					else if ((count) <= 7) debugStats.bailoutOffsetBins[2]++; \
+					else if ((count) <= 15) debugStats.bailoutOffsetBins[3]++; \
+					else if ((count) <= 31) debugStats.bailoutOffsetBins[4]++; \
+					else debugStats.bailoutOffsetBins[5]++; \
 				} else { \
-					jitStats.fullBlockCompletions++; \
+					debugStats.fullBlockCompletions++; \
 				} \
 				if ((blockLen) > 0) { \
 					u32 pct = ((count) * 100) / (blockLen); \
-					if (pct < 25) jitStats.blockExecutionRatioBins[0]++; \
-					else if (pct < 50) jitStats.blockExecutionRatioBins[1]++; \
-					else if (pct < 75) jitStats.blockExecutionRatioBins[2]++; \
-					else if (pct < 100) jitStats.blockExecutionRatioBins[3]++; \
-					else jitStats.blockExecutionRatioBins[4]++; \
+					if (pct < 25) debugStats.blockExecutionRatioBins[0]++; \
+					else if (pct < 50) debugStats.blockExecutionRatioBins[1]++; \
+					else if (pct < 75) debugStats.blockExecutionRatioBins[2]++; \
+					else if (pct < 100) debugStats.blockExecutionRatioBins[3]++; \
+					else debugStats.blockExecutionRatioBins[4]++; \
 				} \
 			} while(0)
 			#define PROFILER_DECLARE_BAILOUT_FLAG()       bool lastStepWasBailout = false
-			#define PROFILER_CHECK_BAILOUT_TRANSITION()   do { if (lastStepWasBailout) { jitStats.bailoutToJitTransitions++; lastStepWasBailout = false; } } while(0)
+			#define PROFILER_CHECK_BAILOUT_TRANSITION()   do { if (lastStepWasBailout) { debugStats.bailoutToJitTransitions++; lastStepWasBailout = false; } } while(0)
 			#define PROFILER_SET_BAILOUT_FLAG()           do { lastStepWasBailout = true; } while(0)
 			#define PROFILER_CLEAR_BAILOUT_FLAG()         do { lastStepWasBailout = false; } while(0)
 		#else
@@ -115,15 +116,15 @@
 		#endif
 
 		#define JIT_LOG_EXEC(count, blockLen, bailed) do { \
-			jitStats.jitInstructionsExecuted += (count); \
+			debugStats.jitInstructionsExecuted += (count); \
 			PROFILER_FRAG_STATS((count), (blockLen), (bailed)); \
 		} while(0)
 		#define JIT_LOG_FALLBACK(opcode) do { \
-			jitStats.fallbackInvocations++; \
-			jitStats.fallbackInstructionsExecuted++; \
-			jitStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
+			debugStats.fallbackInvocations++; \
+			debugStats.fallbackInstructionsExecuted++; \
+			debugStats.fallbackOpcodeFreq[(opcode) >> 6]++; \
 		} while(0)
-	#endif // JIT_PROFILING
+	#endif // PROFILING
 
 	#if JIT_DEBUG_BLOCK_DUMP
 		#define JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block) DebugDumpFirstJITBlock((block))
@@ -187,8 +188,8 @@
 
 	#if JIT_DEBUGSTATELOG
 		#define JIT_LOG_STATE_INIT()														jitDebugStateLog.Init()
-		#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)						jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), jitStats.fallbackInstructionsExecuted)
-		#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)			jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), jitStats.jitInstructionsExecuted)
+		#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)						jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), debugStats.fallbackInstructionsExecuted)
+		#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)			jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), debugStats.jitInstructionsExecuted)
 		#define JIT_LOG_STATE_WRITE_TO_FILE()												jitDebugStateLog.WriteToFile()
 	#endif
 
@@ -280,4 +281,4 @@
 #ifndef JIT_DIFFERENTIAL_THUMB_HOOK
 #define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) ((void)0)
 #endif
-#endif // JIT_DEBUG_H
+#endif // DEBUG_H

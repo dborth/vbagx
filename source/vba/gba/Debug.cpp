@@ -1,10 +1,9 @@
-#ifndef NO_JIT_COMPILER
-#include "JIT.h"
 #if VBAGX_DEBUG
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
 
+#include "JIT.h"
 #include "mem2.h"
 
 // -----------------------------------------------------------------------------
@@ -58,8 +57,8 @@ void LogJITMismatch(const char* message) {
 		return;
 	}
 
-	jitStats.mismatchCount++;
-	LogJIT("==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n", jitStats.mismatchCount);
+	debugStats.mismatchCount++;
+	LogJIT("==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n", debugStats.mismatchCount);
 	LogJIT("%s", message);
 	LogJIT("========================================================================\n");
 }
@@ -96,15 +95,15 @@ void LogJITBlockCompileEnd(u32 startPC, u32 endPC, u32 instrCount, u32 staticCyc
 }
 
 void LogJITTraceExecution(bool isEntry, u32 entryPC, u32 nextPC, CPUFlags flags, u32 cycles) {
-    if (jitStats.traceLogCount >= MAX_JIT_TRACE_CALLS) return;
+    if (debugStats.traceLogCount >= MAX_JIT_TRACE_CALLS) return;
 
     if (isEntry) {
        LogJIT("\n[JIT IN  #%2d] Entry PC: 0x%08X | Flags (N Z C V): %u %u %u %u\n",
-    		   jitStats.traceLogCount, entryPC, flags.N, flags.Z, flags.C, flags.V);
+    		   debugStats.traceLogCount, entryPC, flags.N, flags.Z, flags.C, flags.V);
     } else {
         LogJIT("[JIT OUT #%2d] Entry PC: 0x%08X -> NextPC: 0x%08X | Flags (N Z C V): %u %u %u %u | Cycles: %u\n\n",
-        		jitStats.traceLogCount, entryPC, nextPC, flags.N, flags.Z, flags.C, flags.V, cycles);
-    	jitStats.traceLogCount++;
+        		debugStats.traceLogCount, entryPC, nextPC, flags.N, flags.Z, flags.C, flags.V, cycles);
+    	debugStats.traceLogCount++;
     }
 }
 
@@ -179,5 +178,4 @@ void DebugDumpFirstJITBlock(BasicBlock* block) {
 		}
 	}
 }
-#endif
 #endif
