@@ -22,7 +22,7 @@
  * http://code.google.com/p/libwiigui/
 
  * \section Credits
- * This library was wholly designed and written by Tantric. Thanks to the
+ * This library was wholly designed and written by Daryl Borth. Thanks to the
  * authors of PNGU and FreeTypeGX, of which this library makes use. Thanks
  * also to the authors of GRRLIB and libwiisprite for laying the foundations.
  *

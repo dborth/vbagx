@@ -1,3 +1,12 @@
+/****************************************************************************
+ * Visual Boy Advance GX
+ *
+ * Daryl Borth 2026
+ *
+ * JITDifferential.cpp
+ *
+ ***************************************************************************/
+
 #ifdef JIT_DIFFERENTIAL_TESTING
 
 #include "JIT.h"

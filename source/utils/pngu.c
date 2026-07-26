@@ -3,7 +3,7 @@
  * PNGU
  * 
  * Original author: frontier (http://frontier-dev.net)
- * This is Tantric's modified/condensed version + RGB565 decoder from original
+ * This is Daryl Borth's modified/condensed version + RGB565 decoder from original
  *
  ***************************************************************************/
 

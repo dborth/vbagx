@@ -2,7 +2,7 @@
  * FreeTypeGX is a wrapper class for libFreeType which renders a compiled
  * FreeType parsable font into a GX texture for Wii homebrew development.
  * Copyright (C) 2008 Armin Tamzarian
- * Modified by Tantric, 2009
+ * Modified by Daryl Borth, 2009
  *
  * This file is part of FreeTypeGX.
  *

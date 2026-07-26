@@ -1,7 +1,7 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric September 2008
+ * Daryl Borth September 2008
  *
  * vmmem.h
  *

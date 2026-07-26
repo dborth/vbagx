@@ -308,7 +308,6 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 		// Must use Wiimote for these buttons
 		CheatButton = wp->btns_d & WPAD_BUTTON_2;
 	}
-	CheatButton = CheatButton;
 #endif
 	// Gamecube controls are based on Twilight Princess for the Gamecube
 	{
@@ -638,7 +637,6 @@ static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
 		// Must use Wiimote for these buttons
 		CheatButton = wp->btns_d & WPAD_BUTTON_2;
 	}
-	CheatButton = CheatButton;
 #endif
 	// Gamecube controls are based on Twilight Princess for the Gamecube
 	{
@@ -1234,7 +1232,6 @@ u32 MinishCapInput(unsigned short pad)
 		// Must use Wiimote for these buttons
 		CheatButton = wp->btns_h & WPAD_BUTTON_2;
 	}
-	CheatButton = CheatButton;
 #endif
 	// Gamecube controls are based on Twilight Princess for the Gamecube
 	{

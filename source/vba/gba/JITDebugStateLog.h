@@ -1,3 +1,12 @@
+/****************************************************************************
+ * Visual Boy Advance GX
+ *
+ * Daryl Borth 2026
+ *
+ * JITDebugStateLog.h
+ *
+ ***************************************************************************/
+
 #ifndef JIT_DEBUGSTATELOG_H
 #define JIT_DEBUGSTATELOG_H
 

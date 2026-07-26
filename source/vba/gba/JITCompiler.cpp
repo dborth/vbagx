@@ -1,3 +1,12 @@
+/****************************************************************************
+ * Visual Boy Advance GX
+ *
+ * Daryl Borth 2026
+ *
+ * JITCompiler.cpp
+ *
+ ***************************************************************************/
+
 #ifndef NO_JIT_COMPILER
 #include <ogc/cache.h>
 #include "JIT.h"

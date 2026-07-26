@@ -1,7 +1,7 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric 2008-2023
+ * Daryl Borth 2008-2026
  *
  * vbasupport.cpp
  *
@@ -32,7 +32,6 @@
 #include "gcunzip.h"
 #include "gamesettings.h"
 #include "preferences.h"
-#include "fastmath.h"
 #include "utils/pngu.h"
 
 #include "vba/Util.h"
@@ -749,6 +748,12 @@ void systemUpdateSolarSensor()
 	sun = int(float(int(sun)) * f);
 #endif
 	sensorDarkness = 0xE8 - sun;
+}
+
+static inline float absf(float f) {
+	volatile float tmp = f;
+	asm("fabs %0, %0 " : "=f" (tmp) : "f" (tmp));
+	return tmp;
 }
 
 void systemUpdateMotionSensor()

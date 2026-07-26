@@ -1,3 +1,12 @@
+/****************************************************************************
+ * Visual Boy Advance GX
+ *
+ * Daryl Borth 2026
+ *
+ * JITDifferential.h
+ *
+ ***************************************************************************/
+
 #ifndef JIT_DIFFERENTIAL_H
 #define JIT_DIFFERENTIAL_H
 

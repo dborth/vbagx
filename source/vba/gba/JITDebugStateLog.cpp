@@ -1,3 +1,12 @@
+/****************************************************************************
+ * Visual Boy Advance GX
+ *
+ * Daryl Borth 2026
+ *
+ * JITDebugStateLog.cpp
+ *
+ ***************************************************************************/
+
 #ifndef NO_JIT_COMPILER
 #if VBAGX_DEBUG
 #include <stdio.h>

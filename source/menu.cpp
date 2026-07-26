@@ -1,7 +1,7 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric 2008-2023
+ * Daryl Borth 2008-2026
  *
  * menu.cpp
  *
@@ -854,7 +854,7 @@ static void WindowCredits(void * ptr)
 
 	txt[i] = new GuiText("Main developer");
 	txt[i]->SetPosition(40,y); i++;
-	txt[i] = new GuiText("Tantric");
+	txt[i] = new GuiText("Daryl Borth");
 	txt[i]->SetPosition(250,y); i++; y+=48;
 
 	txt[i] = new GuiText("Additional coding");

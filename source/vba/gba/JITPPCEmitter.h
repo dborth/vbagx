@@ -1,3 +1,12 @@
+/****************************************************************************
+ * Visual Boy Advance GX
+ *
+ * Daryl Borth 2026
+ *
+ * JITPPCEmitter.h
+ *
+ ***************************************************************************/
+
 #ifndef NO_JIT_COMPILER
 #ifndef JIT_PPC_EMITTER_H
 #define JIT_PPC_EMITTER_H

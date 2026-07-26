@@ -1,3 +1,12 @@
+/****************************************************************************
+ * Visual Boy Advance GX
+ *
+ * Daryl Borth 2026
+ *
+ * JITTrampoline.S
+ *
+ ***************************************************************************/
+
 .global ExecuteJITTrace
 .type ExecuteJITTrace, @function
 

@@ -1,7 +1,7 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric 2008-2023
+ * Daryl Borth 2008-2026
  *
  * input.cpp
  *
@@ -24,7 +24,6 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "fastmath.h"
 #include "gui/gui.h"
 
 #include "vba/gba/GBA.h"

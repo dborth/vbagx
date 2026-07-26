@@ -43,7 +43,7 @@ extern u32 RomIdCode;
 
 /*****************************************************************************
  * Nintendo GameCube Virtual Memory function override (not for Wii)
- * Tantric September 2008
+ * Daryl Borth September 2008
  ****************************************************************************/
 
 #define CPUReadByteQuickDef(addr) \

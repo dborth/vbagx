@@ -5005,7 +5005,7 @@ struct EmulatedSystem GBSystem = {
  * Duplicate versions of save functions above, using memory
  * I want to kill whoever wrote so many stupid functions, and did so without
  * doing it memory-based
- * Tantric - October 2008
+ * Daryl Borth - October 2008
  ***************************************************************************/
  
 void swap_endian_32(void* ptr, int length) {

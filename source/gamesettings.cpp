@@ -1,7 +1,7 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric 2008-2023
+ * Daryl Borth 2008-2026
  * Carl Kenner April 2009
  *
  * gamesettings.cpp
