@@ -106,10 +106,6 @@ void gbSetBGPalette(u8 value, bool ColoursChanged=false) {
   bool dup = false;
   int dupDarkness = -1;
   if (value!=oldBgp) {
-#ifdef CARLLOG
-	  const char DN[5] = "3210";
-      log("Bg Pal: %c %c %c %c", DN[gbObp0[0]], DN[gbObp0[1]], DN[gbObp0[2]], DN[gbObp0[3]]);
-#endif
 	  // check for duplicates
 	  for (int i=0; i<=2; i++)
 		for (int j=i+1; j<=3; j++)
@@ -236,10 +232,6 @@ void gbSetObj0Palette(u8 value, bool ColoursChanged = false) {
   bool dup = false;
   int dupDarkness = -1;
   if (value!=oldObp0) {
-#ifdef CARLLOG
-	  const char DN[5] = "3210";
-      log("Obj0 Pal:         %c %c %c", DN[gbObp0[1]], DN[gbObp0[2]], DN[gbObp0[3]]);
-#endif
 	  // check for duplicates
 	  for (int i=1; i<=2; i++)
 		for (int j=i+1; j<=3; j++)
@@ -348,10 +340,6 @@ void gbSetObj1Palette(u8 value, bool ColoursChanged = false) {
   bool dup = false;
   int dupDarkness = -1;
   if (value!=oldObp1) {
-#ifdef CARLLOG
-	  const char DN[5] = "3210";
-      log("Obj1 Pal:                 %c %c %c", DN[gbObp1[1]], DN[gbObp1[2]], DN[gbObp1[3]]);
-#endif
 	  // check for duplicates
 	  for (int i=1; i<=2; i++)
 		for (int j=i+1; j<=3; j++)
