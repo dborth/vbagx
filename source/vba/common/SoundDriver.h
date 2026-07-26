@@ -53,13 +53,13 @@ public:
 	 * Tell the driver that the sound stream has resumed
 	 */
 	virtual void resume() = 0;
-
-	/**
-	 * Write length bytes of data from the finalWave buffer to the driver output buffer.
-	 */
-	virtual void write(u16 * finalWave, int length) = 0;
-
+	
 	virtual void setThrottle(unsigned short throttle) { };
+
+	virtual double getDynamicRate() = 0;
+	virtual bool canWrite() = 0;
+	virtual u16* getWriteBuffer() = 0;
+	virtual void commitWrite() = 0;
 };
 
 #endif // __VBA_SOUND_DRIVER_H__

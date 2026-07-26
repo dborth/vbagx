@@ -124,6 +124,8 @@ int main(int argc, char *argv[])
 		JIT_RESET_LOGS();
 		#endif
 
+		systemResetPacer();
+
 		while (emulating) // emulation loop
 		{
 			emulator.emuMain(emulator.emuCount);

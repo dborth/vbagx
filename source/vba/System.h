@@ -26,8 +26,6 @@ struct EmulatedSystem {
   int emuCount;
 };
 
-extern void log(const char *,...);
-
 extern bool systemPauseOnFrame();
 extern void systemGbPrint(u8 *,int,int,int,int,int);
 extern void systemScreenCapture(int);
@@ -45,35 +43,24 @@ extern u32 systemGetClock();
 extern void systemMessage(int, const char *, ...);
 extern void systemSetTitle(const char *);
 extern SoundDriver * systemSoundInit();
-extern void systemOnWriteDataToSoundBuffer(const u16 * finalWave, int length);
-extern void systemOnSoundShutdown();
 extern void systemScreenMessage(const char *);
 extern void systemUpdateMotionSensor();
 extern int  systemGetSensorX();
 extern int  systemGetSensorY();
-extern bool systemCanChangeSoundQuality();
 extern void systemShowSpeed(int);
 extern float systemGetDisplayFPS(void);
 extern float systemGetCoreFPS(void);
 extern void systemFrame();
 extern void systemGbBorderOn();
+extern void systemPaceFrame(bool frameWasRendered);
 
-extern void Sm60FPS_Init();
-extern bool Sm60FPS_CanSkipFrame();
-extern void Sm60FPS_Sleep();
-extern void DbgMsg(const char *msg, ...);
-#define winlog log
-extern void (*dbgOutput)(const char *s, u32 addr);
-extern void (*dbgSignal)(int sig,int number);
-
+extern int emulating;
+extern bool frameToRender;
 extern u16 systemColorMap16[0x10000];
 extern u16 systemGbPalette[24];
 extern int systemRedShift;
 extern int systemGreenShift;
 extern int systemBlueShift;
-extern int systemDebug;
-extern int systemVerbose;
-extern int systemFrameSkip;
 extern int systemSaveUpdateCounter;
 extern int systemSpeed;
 

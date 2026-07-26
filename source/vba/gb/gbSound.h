@@ -7,8 +7,6 @@
 
 //// GB sound options
 
-void gbSoundSetSampleRate( long sampleRate );
-
 // Manages declicking mode. When enabled, clicks are reduced. Note that clicks
 // are normal for GB and GBC sound hardware.
 void gbSoundSetDeclicking( bool enable );

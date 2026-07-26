@@ -26,6 +26,7 @@ extern u32 RomIdCode;
 extern bool TiltSideways;
 extern char RomTitle[];
 
+void systemResetPacer();
 bool LoadVBAROM();
 void InitialisePalette();
 bool IsGameboyGame();

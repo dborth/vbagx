@@ -15,7 +15,6 @@
 
 void InitialiseSound();
 void StopAudio();
-void SetAudioRate(int type);
 void SwitchAudioMode(int mode);
 void ShutdownAudio();
 
@@ -29,7 +28,10 @@ public:
 	virtual void pause();
 	virtual void reset();
 	virtual void resume();
-	virtual void write(u16 * finalWave, int length);
+	virtual double getDynamicRate();
+	virtual bool canWrite();
+	virtual u16* getWriteBuffer();
+	virtual void commitWrite();
 };
 
 #endif

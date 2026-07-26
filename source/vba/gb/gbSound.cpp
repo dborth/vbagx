@@ -218,25 +218,6 @@ void gbSoundReset()
 	}
 }
 
-void gbSoundSetSampleRate( long sampleRate )
-{
-	if ( soundSampleRate != sampleRate )
-	{
-		if ( systemCanChangeSoundQuality() )
-		{
-			soundShutdown();
-			soundSampleRate      = sampleRate;
-			soundInit();
-		}
-		else
-		{
-			soundSampleRate      = sampleRate;
-		}
-
-		remake_stereo_buffer();
-	}
-}
-
 static struct {
 	int version;
 	gb_apu_state_t apu;
@@ -366,8 +347,6 @@ static void gbSoundReadGameOld(int version,gzFile gzFile)
 	int quality = 1;
 	if ( version >= 7 )
 		quality = utilReadInt( gzFile );
-
-	gbSoundSetSampleRate( 44100 / quality );
 
 	// Convert to format Gb_Apu uses
 	gb_apu_state_t& s = state.apu;

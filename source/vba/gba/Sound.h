@@ -36,11 +36,6 @@ extern bool soundPaused; // current paused state
 // Cleans up sound. Afterwards, soundInit() can be called again.
 void soundShutdown();
 
-//// GBA sound options
-
-long soundGetSampleRate();
-void soundSetSampleRate(long sampleRate);
-
 // Sound settings
 extern bool soundInterpolation; // 1 if PCM should have low-pass filtering
 extern float soundFiltering;    // 0.0 = none, 1.0 = max

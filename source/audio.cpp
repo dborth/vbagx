@@ -1,13 +1,12 @@
 /****************************************************************************
  * Visual Boy Advance GX
  *
- * Tantric 2008-2023
+ * Tantric 2008-2026
  *
  * audio.cpp
  *
- * Head and tail audio mixer
+ * Direct-Queued Audio Driver with Dynamic Rate Control
  ***************************************************************************/
-
 #include <gccore.h>
 #include <ogcsys.h>
 #include <stdio.h>
@@ -17,107 +16,192 @@
 #include <asndlib.h>
 #endif
 #include "audio.h"
+#include "system.h"
 
+extern bool turboMode;
 extern int ConfigRequested;
 
-/** Locals **/
-// head is written by the emulator thread (write) and read by the DMA
-// callback (interrupt context); tail is the reverse. They MUST be volatile
-// so the compiler does not cache them in registers across the thread/ISR
-// boundary, otherwise the consumer never observes the producer's updates.
-static volatile int head = 0;
-static volatile int tail = 0;
-static int gameType = 0;
-
-#define MIXBUFFSIZE 0x10000
-// Accessed as u32 below, and (indirectly) feeds DMA, so require 32-byte
-// alignment. Without this the u32 casts rely on undefined alignment.
-static u8 mixerdata[MIXBUFFSIZE] ATTRIBUTE_ALIGN(32);
-#define MIXERMASK ((MIXBUFFSIZE >> 2) - 1)
-#define SWAP(x) (((x)>>16) | ((x)<<16)) // for reversing stereo channels
-
-// One DMA frame is 3200 bytes (800 stereo 16-bit frames). The hardware
-// buffer is sized to 3840 with 32-byte-aligned length headroom.
+// One DMA frame is 3200 bytes (800 stereo 16-bit frames).
 #define DMA_BYTES 3200
 
-static u8 soundbuffer[2][3840] ATTRIBUTE_ALIGN(32);
-static int whichab = 0;
-// Read by the emulator thread (write) and written by the DMA callback.
-static volatile int IsPlaying = 0;
+// BUFFERCOUNT must be a power of two so the ring index can advance with a cheap bitwise mask
+#define BUFFERCOUNT 16
+#define MAX_QUEUED_BUFFERS 12 // Leave a 4-buffer safety zone to prevent input lag
 
-/****************************************************************************
- * MIXER_GetSamples
- *
- * Drains up to maxlen bytes from the ring buffer into dstbuffer. Any space
- * not filled (a buffer underrun) is left as silence by the initial memset.
- * Returns the number of bytes the caller should hand to the DMA engine,
- * which is always a fixed-size, 32-byte-aligned frame.
- ***************************************************************************/
-static int MIXER_GetSamples(u8 *dstbuffer, int maxlen)
-{
-	u32 *src = (u32 *)mixerdata;
-	u32 *dst = (u32 *)dstbuffer;
-	u32 intlen = maxlen >> 2;
+/** Dynamic Rate Control (Hysteresis Pitch Bending) **/
+#define UNPLAYED_HIGH_WATER 8       // Above this we are building latency, slow down
+#define UNPLAYED_HIGH_RELEASE 6     // Stay slow until the queue drains back to here
+#define UNPLAYED_LOW_RELEASE 6      // Stay fast until the queue fills back to here
+#define UNPLAYED_LOW_WATER 4        // Below this we risk an underrun, speed up
+#define UNPLAYED_START_LEVEL 4      // Queue at least this many buffers before starting DMA
+#define RATE_SLOW_DOWN 1.005        // Emit samples slightly slower to drain the queue
+#define RATE_SPEED_UP 0.995         // Emit samples slightly faster to fill the queue
+#define RATE_NEUTRAL 1.0
 
-	// Pre-pack the block with silence (handles all underrun scenarios natively)
-	memset(dstbuffer, 0, maxlen);
+enum RateState {
+    RATE_STATE_NEUTRAL,
+    RATE_STATE_DRAINING,  // running slow to shrink an over-full queue
+    RATE_STATE_FILLING,   // running fast to grow an under-full queue
+};
 
-	// Snapshot indices once to keep the volatile hardware bus quiet
-	int localTail = tail;
-	int producer = head;
+// Number of stereo frames over which we ramp to/from zero when the ring
+// runs genuinely dry. Long enough to remove the audible click of a hard
+// jump to silence, short enough (~2ms) to add no perceptible latency.
+#define FADE_FRAMES 96
 
-	for(u32 i = 0; i < intlen; i++)
-	{
-		// If consumer catches producer, ring buffer is dry.
-		// Break instantly; the memset above already padded the remainder with silence.
-		if(localTail == producer)
-			break;
+/** Globals **/
+static u8 soundbuffer[BUFFERCOUNT][DMA_BYTES] ATTRIBUTE_ALIGN(32);
+static u8 silence[DMA_BYTES] ATTRIBUTE_ALIGN(32);
+static u8 fadeBuffer[DMA_BYTES] ATTRIBUTE_ALIGN(32);
 
-		*dst++ = src[localTail];
-		localTail = (localTail + 1) & MIXERMASK;
-	}
+// Volatile indices crossing thread/ISR boundaries (MUST bypass registers)
+static volatile int playab = 0;
+static volatile int nextab = 0;
 
-	// Atomically publish the final index back to the emulator core
-	tail = localTail;
+// Main thread variables (No volatile overhead needed)
+static bool dma_started = false;
+static RateState rateState = RATE_STATE_NEUTRAL;
 
-	return maxlen;
+// Declick state -- tracks the tail of the last real audio actually queued,
+// so a starvation event can ramp down from where the waveform really was
+// instead of snapping to zero, and ramp back in the same way on recovery.
+static s16 lastL = 0;
+static s16 lastR = 0;
+static bool wasStarved = false;
+
+// Running count of DMA periods played as (full or partial) silence due to
+// genuine underrun -- i.e. the ring was empty, not just low. Exposed so the
+// frequency of real starvation during normal play can be measured rather
+// than assumed. Wrap-safe for display purposes; reset with AudioStart().
+static volatile u32 underrunFrames = 0;
+
+/** Inline Ring Buffer Helpers **/
+static inline int nextIndex(int current) {
+    return (current + 1) & (BUFFERCOUNT - 1);
+}
+
+static inline int getUnplayed() {
+    return (nextab - playab + BUFFERCOUNT) & (BUFFERCOUNT - 1);
 }
 
 /****************************************************************************
- * AudioPlayer
+ * BuildFadeOutBuffer / ApplyFadeIn
+ *
+ * Turn a hard jump to/from zero into a short linear ramp. Both run in
+ * interrupt context; the work is a ~96-sample loop, cheap relative to a
+ * DMA period.
  ***************************************************************************/
+static void BuildFadeOutBuffer()
+{
+	s16* out = (s16*)fadeBuffer;
+	int const frames = DMA_BYTES / 4; // stereo 16-bit frames per DMA period
+	int const n = (frames < FADE_FRAMES) ? frames : FADE_FRAMES;
 
+	for (int i = 0; i < n; i++) {
+		out[i * 2]     = (s16)(((s32)lastL * (n - i)) / n);
+		out[i * 2 + 1] = (s16)(((s32)lastR * (n - i)) / n);
+	}
+	for (int i = n; i < frames; i++) {
+		out[i * 2] = 0;
+		out[i * 2 + 1] = 0;
+	}
+	DCFlushRange(fadeBuffer, DMA_BYTES);
+}
+
+static void ApplyFadeIn(u8* buf)
+{
+	s16* s = (s16*)buf;
+	int const frames = DMA_BYTES / 4;
+	int const n = (frames < FADE_FRAMES) ? frames : FADE_FRAMES;
+
+	for (int i = 0; i < n; i++) {
+		s[i * 2]     = (s16)(((s32)s[i * 2]     * i) / n);
+		s[i * 2 + 1] = (s16)(((s32)s[i * 2 + 1] * i) / n);
+	}
+	DCFlushRange(buf, DMA_BYTES);
+}
+
+/****************************************************************************
+ * AudioPlayer (ISR)
+ *
+ * Hardware DMA callback. Executes entirely in interrupt context.
+ ***************************************************************************/
 static void AudioPlayer()
 {
-	if (!ConfigRequested)
-	{
-		whichab ^= 1;
-		int len = MIXER_GetSamples(soundbuffer[whichab], DMA_BYTES);
-		DCFlushRange(soundbuffer[whichab],len);
-		AUDIO_InitDMA((u32)soundbuffer[whichab],len);
-		IsPlaying = 1;
+	int unplayed = getUnplayed();
+
+	if (unplayed == 0) {
+		// Genuine underrun: the ring is actually empty, not just low.
+		// Ramp from the last real sample down to zero instead of jumping,
+		// so this sounds like a soft dip rather than a click/pop. Only
+		// need to (re)build the ramp on the first dry period of an
+		// episode -- once it reaches zero, repeating it is just silence.
+		underrunFrames++;
+		if (!wasStarved) {
+			BuildFadeOutBuffer();
+			wasStarved = true;
+		}
+		AUDIO_InitDMA((u32)fadeBuffer, DMA_BYTES);
 	}
-	else
-		IsPlaying = 0;
+	else {
+		u8* buf = soundbuffer[playab];
+
+		if (wasStarved) {
+			// Coming back from a dry spell: fade the front of this real
+			// buffer up from zero instead of snapping straight to it.
+			ApplyFadeIn(buf);
+			wasStarved = false;
+		}
+
+		AUDIO_InitDMA((u32)buf, DMA_BYTES);
+
+		// Remember the tail of what we just queued, in case the *next*
+		// callback finds the ring empty and needs to fade from here.
+		s16* s = (s16*)buf;
+		int const frames = DMA_BYTES / 4;
+		lastL = s[(frames - 1) * 2];
+		lastR = s[(frames - 1) * 2 + 1];
+
+		playab = nextIndex(playab);
+	}
+}
+
+/****************************************************************************
+ * AudioGetUnderrunCount
+ *
+ * Total DMA periods played as silence (full or fading) due to a genuinely
+ * empty ring, since the last AudioStart(). Add a matching prototype to
+ * audio.h to call this from elsewhere (e.g. an on-screen debug counter).
+ ***************************************************************************/
+u32 AudioGetUnderrunCount()
+{
+	return underrunFrames;
+}
+
+/****************************************************************************
+ * AudioStart
+ *
+ * Called to cleanly kick off the Audio Queue and reset hysteresis state
+ ***************************************************************************/
+void AudioStart()
+{
+    nextab = 0;
+    playab = 0;
+    dma_started = false;
+    rateState = RATE_STATE_NEUTRAL;
+    wasStarved = false;
+    lastL = 0;
+    lastR = 0;
+    underrunFrames = 0;
 }
 
 /****************************************************************************
  * StopAudio
  ***************************************************************************/
-
 void StopAudio()
 {
-	AUDIO_StopDMA();
-	IsPlaying = 0;
-}
-
-/****************************************************************************
- * SetAudioRate
- ***************************************************************************/
-
-void SetAudioRate(int type)
-{
-	gameType = type;
+    AUDIO_StopDMA();
+    dma_started = false;
 }
 
 /****************************************************************************
@@ -125,52 +209,46 @@ void SetAudioRate(int type)
  *
  * Switches between menu sound and emulator sound
  ***************************************************************************/
-void
-SwitchAudioMode(int mode)
+void SwitchAudioMode(int mode)
 {
-	if(mode == 0) // emulator
-	{
-		#ifndef NO_SOUND
-		ASND_Pause(1);
-		ASND_End();
-		AUDIO_StopDMA();
-		AUDIO_RegisterDMACallback(NULL);
-		DSP_Halt();
-		AUDIO_RegisterDMACallback(AudioPlayer);
-		#endif
-		memset(soundbuffer[0],0,3840);
-		memset(soundbuffer[1],0,3840);
-		DCFlushRange(soundbuffer[0],3840);
-		DCFlushRange(soundbuffer[1],3840);
-		AUDIO_InitDMA((u32)soundbuffer[whichab],3200);
-		AUDIO_StartDMA();
-	}
-	else // menu
-	{
-		IsPlaying = 0;
-		#ifndef NO_SOUND
-		DSP_Unhalt();
-		ASND_Init();
-		ASND_Pause(0);
-		#else
-		AUDIO_StopDMA();
-		#endif
-	}
+    if(mode == 0) // emulator
+    {
+        #ifndef NO_SOUND
+        ASND_Pause(1);
+        ASND_End();
+        AUDIO_StopDMA();
+        AUDIO_RegisterDMACallback(NULL);
+        DSP_Halt();
+        AUDIO_RegisterDMACallback(AudioPlayer);
+        #endif
+
+        // Reset the ring so playback re-primes cleanly
+        AudioStart();
+    }
+    else // menu
+    {
+        #ifndef NO_SOUND
+        DSP_Unhalt();
+        ASND_Init();
+        ASND_Pause(0);
+        #else
+        AUDIO_StopDMA();
+        #endif
+    }
 }
 
 /****************************************************************************
  * InitialiseSound
  ***************************************************************************/
-
 void InitialiseSound()
 {
-	#ifdef NO_SOUND
-	AUDIO_Init (NULL);
-	AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ);
-	AUDIO_RegisterDMACallback(AudioPlayer);
-	#else
-	ASND_Init();
-	#endif
+    #ifdef NO_SOUND
+    AUDIO_Init(NULL);
+    AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ);
+    AUDIO_RegisterDMACallback(AudioPlayer);
+    #else
+    ASND_Init();
+    #endif
 }
 
 /****************************************************************************
@@ -181,77 +259,91 @@ void InitialiseSound()
  ***************************************************************************/
 void ShutdownAudio()
 {
-	AUDIO_StopDMA();
+    AUDIO_StopDMA();
 }
 
 /****************************************************************************
  * SoundDriver
  ***************************************************************************/
-
 SoundWii::SoundWii()
 {
-	memset(soundbuffer, 0, 3840*2);
-	memset(mixerdata, 0, MIXBUFFSIZE);
+    memset(soundbuffer, 0, sizeof(soundbuffer));
+	memset(silence, 0, sizeof(silence));
+	DCFlushRange(soundbuffer, sizeof(soundbuffer));
+	DCFlushRange(silence, sizeof(silence));
 }
 
-/****************************************************************************
-* SoundWii::write
-*
-* Upsample from 11025 to 48000
-* 11025 == 15052
-* 22050 == 30106
-* 44100 == 60211
-*
-* Audio officianados should look away now !
-****************************************************************************/
-
-void SoundWii::write(u16 * finalWave, int length)
+bool SoundWii::canWrite()
 {
-	u32 *src = (u32 *)finalWave;
-	u32 *dst = (u32 *)mixerdata;
-	u32 intlen = (DMA_BYTES >> 2);
-	u32 fixofs = 0;
-	u32 fixinc = 60211; // length = 2940 - GB
+    if (ConfigRequested)
+    {
+        AUDIO_StopDMA();
+        AudioStart();
+        return false;
+    }
 
-	if (gameType == 2) // length = 1468 - GBA
-		fixinc = 30065;
+    // Pure capacity query, no side effects: is there room in the ring for
+    // one more buffer right now?
+    return getUnplayed() < MAX_QUEUED_BUFFERS;
+}
 
-	// length is given in bytes; the source is read as u32 (one 4-byte packed
-	// stereo frame), so clamp the highest index we may read.
-	u32 maxSrcIndex = (length > 3) ? (u32)((length >> 2) - 1) : 0;
+double SoundWii::getDynamicRate()
+{
+    // Fast-forward: don't pitch-bend. Turbo audio isn't expected to sound
+    // "correct" -- Sound.cpp's own turbo-aware policy in flush_samples()
+    // handles keeping the backlog bounded instead.
+    if (turboMode) {
+        rateState = RATE_STATE_NEUTRAL;
+        return RATE_NEUTRAL;
+    }
 
-	// Work on a local copy of the volatile producer index and publish it once
-	// at the end. This avoids a memory round-trip on every loop iteration and
-	// lets us bounds-check against the consumer to prevent overrunning audio
-	// that has not been played yet.
-	int localHead = head;
-	int consumer = tail;
+    int unplayed = getUnplayed();
 
-	do
-	{
-		u32 srcIndex = fixofs >> 16;
-		if (srcIndex > maxSrcIndex)
-			srcIndex = maxSrcIndex;
+    // Process Hysteresis Release
+    if(rateState == RATE_STATE_DRAINING && unplayed <= UNPLAYED_HIGH_RELEASE) {
+        rateState = RATE_STATE_NEUTRAL;
+    }
+    else if(rateState == RATE_STATE_FILLING && unplayed >= UNPLAYED_LOW_RELEASE) {
+        rateState = RATE_STATE_NEUTRAL;
+    }
 
-		int next = (localHead + 1) & MIXERMASK;
-		if (next == consumer)
-			break; // ring buffer full: drop rather than clobber unplayed data
+    // Process Hysteresis Activation
+    if(unplayed > UNPLAYED_HIGH_WATER) {
+        rateState = RATE_STATE_DRAINING;
+    }
+    else if(unplayed < UNPLAYED_LOW_WATER) {
+        rateState = RATE_STATE_FILLING;
+    }
 
-		// Do simple linear interpolate, and swap channels from L-R to R-L
-		dst[localHead] = SWAP(src[srcIndex]);
-		localHead = next;
-		fixofs += fixinc;
-	}
-	while( --intlen );
+    // Return the float multiplier
+    // Draining means we need FEWER samples generated per frame.
+    // Filling means we need MORE samples generated per frame.
+    if(rateState == RATE_STATE_DRAINING) return RATE_SLOW_DOWN;
+    if(rateState == RATE_STATE_FILLING) return RATE_SPEED_UP;
 
-	head = localHead; // publish to the DMA callback
+    return RATE_NEUTRAL;
+}
 
-	// Restart Sound Processing if stopped
-	if (IsPlaying == 0)
-	{
-		ConfigRequested = 0;
-		AudioPlayer();
-	}
+u16* SoundWii::getWriteBuffer()
+{
+    // Pass the actual DMA-aligned ring buffer address
+    return (u16*)soundbuffer[nextab];
+}
+
+void SoundWii::commitWrite()
+{
+    // Publish buffer to the ISR
+    DCFlushRange(soundbuffer[nextab], DMA_BYTES);
+    nextab = nextIndex(nextab);
+
+    // Handle initial DMA pre-roll and starvation recovery
+    if (!dma_started && getUnplayed() >= UNPLAYED_START_LEVEL)
+    {
+        AUDIO_InitDMA((u32)soundbuffer[playab], DMA_BYTES);
+        playab = nextIndex(playab);
+        AUDIO_StartDMA();
+        dma_started = true;
+    }
 }
 
 bool SoundWii::init(long sampleRate)

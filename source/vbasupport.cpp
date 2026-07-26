@@ -66,12 +66,7 @@ bool TiltSideways = false;
 
 int systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
-int systemDebug = 0;
 int emulating = 0;
-
-int systemFrameSkip = 0;
-int systemVerbose = 0;
-
 int systemRedShift = 0;
 int systemBlueShift = 0;
 int systemGreenShift = 0;
@@ -113,179 +108,177 @@ bool systemPauseOnFrame()
 }
 
 /* *****************************************************************************
- * Frame pacing & FPS instrumentation
- *
- *   systemGetDisplayFPS() - real, vsync-gated frames actually put on screen.
- *                           This is what the OSD in video.cpp shows, and by
- *                           construction it can never exceed the TV's real
- *                           refresh rate.
- *   systemGetCoreFPS()    - "theoretical" throughput of the emulation core
- *                           itself, with our own deliberate throttle sleep
- *                           AND the display's vsync wait subtracted out.
- *                           This is the number to watch while tuning the
- *                           JIT or anything else perf-related: nothing
- *                           artificially caps it, so a build that's really
- *                           2x faster reads ~2x higher here even though
- *                           displayFPS stays pinned at ~60 the whole time.
- *
- * Throttling and frame-skipping are unified into one continuous "timing
- * debt" accumulator, in real microseconds rather than a frame-count step
- * table, updated every frame instead of every 10:
- *   - debt > 0  we're behind real time. Ask GBA.cpp to skip some draws
- *               (never emulation - that always stays full-rate and correct)
- *               so the GX_Render + vsync-wait time it frees up goes back
- *               into catching the core up.
- *   - debt < 0  we're ahead of real time. Sleep off exactly that much,
- *               capped to one frame period so a long real-world pause
- *               (loading, menu, debugger) can never turn into a "sprint to
- *               catch up" once we return.
- * Because debt is measured from wall-clock reality - which already
- * includes whatever time GX_Render()'s vsync wait consumed - a game that's
- * keeping up naturally settles at ~0 debt and ~0 extra sleep: the vsync
- * wait *is* the throttle in that case, instead of a second, independent
- * one fighting it every 10 frames.
+ * Frame pacing, frameskip, & FPS instrumentation
  *****************************************************************************/
 
+/* *****************************************************************************
+ * GBA hardware runs at 16.78 MHz, 280,896 cycles per frame = ~59.7275 Hz
+ * Ideal frame period is ~16742 microseconds.
+ *****************************************************************************/
 #define FRAMES_PER_SECOND  60
 #define USEC_PER_SEC       1000000
-#define MAX_FRAME_SKIP     20
-#define DEBT_CAP_FRAMES    MAX_FRAME_SKIP // clamp "how behind", in frame-periods
-#define CREDIT_CAP_FRAMES  1               // never bank more than 1 frame ahead
-#define FPS_EMA_ALPHA      0.10f           // smoothing factor for both FPS readouts
+#define FRAME_PERIOD_US    (USEC_PER_SEC / FRAMES_PER_SECOND) // 16666.67 us
+#define MAX_FRAME_SKIP        4   // non-turbo consecutive-skip cap (== old MAX_FRAME_SKIP)
+#define TURBO_MAX_FRAME_SKIP  9   // turbo consecutive-skip cap
 
-// -- Continuous pacing state --------------------------------------------
-static u64 pacerLastUs         = 0; // wall time snapshot, taken right after any sleep
-static s64 pacerDebtUs         = 0; // >0 behind schedule, <0 ahead (capped, see above)
-static u64 pacerLastDrawCostUs = 0; // cost of the most recent actual draw, consumed once
+int timerstyle = 1;
+static u64 prev = 0;
+static u64 now  = 0;
 
-// -- FPS metrics ----------------------------------------------------------
-static float displayFPS       = 0.0f;
-static u64   displayFpsLastUs = 0;
-static float coreFPS          = 0.0f;
+// -- Render decision --
+// Read directly by GBA.cpp: this single flag gates both this frame's
+// systemDrawScreen() call and -- until the next VCOUNT==160 -- the
+// following frame's per-scanline CPURenderLine_Wii() calls
+bool frameToRender = true;
+static int skippedFrames = 0;
 
-// Clears all pacing/FPS state. Called whenever a ROM (re)loads, so a stale
-// frameskip or debt value from a previously-loaded ROM - possibly of a
-// different system - can never leak into the next session.
-static void systemResetPacer(void)
+// -- FPS display counters -- purely cosmetic, fully decoupled from pacing. --
+static u64  windowStart       = 0;
+static int   fpsFrameCount     = 0;
+static int   displayFrameCount = 0;
+static float displayFPS        = 0.0f;
+static float coreFPS           = 0.0f;
+
+/*
+ * Clears all pacing/frameskip/FPS state. Called whenever returning from the menu
+ */
+void systemResetPacer()
 {
-	pacerLastUs         = ticks_to_microsecs(gettime());
-	pacerDebtUs          = 0;
-	pacerLastDrawCostUs  = 0;
-	displayFpsLastUs     = 0;
-	displayFPS           = 0.0f;
-	coreFPS              = 0.0f;
-	systemFrameSkip      = 0;
+	prev  = gettime();
+	now   = prev;
+	windowStart = prev;
+	FrameTimer = 0;
+	frameToRender   = true;
+	skippedFrames   = 0;
+
+	fpsFrameCount     = 0;
+	displayFrameCount = 0;
+	displayFPS        = 0.0f;
+	coreFPS           = 0.0f;
 }
 
-// Called from systemDrawScreen(), once per *actual* draw (i.e. after
-// frameskip has already decided this frame is a keeper). This is the only
-// place that needs to know about drawing at all, so it measures real,
-// on-screen frame delivery correctly no matter which core - GBA or
-// GB/GBC - ends up calling systemDrawScreen().
-void systemNoteDisplayedFrame(u64 drawCostUs)
+// Called from systemDrawScreen(), once per *actual* draw.
+void systemNoteDisplayedFrame()
 {
-	const u64 nowUs = ticks_to_microsecs(gettime());
-
-	if (displayFpsLastUs != 0)
-	{
-		const u64 deltaUs = nowUs - displayFpsLastUs;
-		if (deltaUs > 0)
-		{
-			const float instFps = (float)USEC_PER_SEC / (float)deltaUs;
-			displayFPS += (instFps - displayFPS) * FPS_EMA_ALPHA;
-		}
-	}
-
-	displayFpsLastUs    = nowUs;
-	pacerLastDrawCostUs = drawCostUs; // consumed once, by the next systemPaceFrame() call
+	displayFrameCount++;
 }
 
 float systemGetDisplayFPS(void) { return displayFPS; }
 float systemGetCoreFPS(void)    { return coreFPS; }
 
-// Core pacing logic. Called once per emulated frame from GBA.cpp's
-// CPULoop_T. Only ever looks at real elapsed wall time between calls -
-// it never assumes any fixed number of frames occurred
+/*
+ * Called once per emulated GBA frame (VCOUNT==160), BEFORE the render-or-
+ * skip decision is acted on in GBA.cpp. Sets frameToRender for this frame.
+ */
 void systemFrame()
 {
-	const u64 nowUs = ticks_to_microsecs(gettime());
-	const s64 rawFrameUs = (s64)(nowUs - pacerLastUs);
-
-	const s64 framePeriodUs = (s64)USEC_PER_SEC / FRAMES_PER_SECOND;
-
-	// First call, a clock oddity, or a long real-world pause (menu, disk
-	// access, debugger break) - resync silently instead of reporting a
-	// mountain of fake "behind schedule" debt on the next real frame.
-	if (pacerLastUs == 0 || rawFrameUs <= 0 || rawFrameUs > framePeriodUs * 30)
+	// FPS bookkeeping
+	fpsFrameCount++;
+	if (fpsFrameCount >= 60)
 	{
-		pacerLastUs         = nowUs;
-		pacerDebtUs         = 0;
-		pacerLastDrawCostUs = 0;
-		return;
+		u64 nowTicks  = gettime();
+		u32 elapsedUs = diff_usec(windowStart, nowTicks);
+
+		if (elapsedUs > 0)
+		{
+			coreFPS    = (60.0f * (float)USEC_PER_SEC) / (float)elapsedUs;
+			displayFPS = ((float)displayFrameCount * (float)USEC_PER_SEC) / (float)elapsedUs;
+		}
+
+		windowStart       = nowTicks;
+		fpsFrameCount     = 0;
+		displayFrameCount = 0;
 	}
 
-	// "Theoretical" core cost: total real time for this frame, minus
-	// whatever part of it was spent inside the actual draw call (which
-	// includes GX_Render's internal wait for real vsync, when a draw
-	// happened at all). What's left is pure GBA-core-plus-support work,
-	// uncapped by our own throttle or by the display.
-	s64 coreOnlyUs = rawFrameUs - (s64)pacerLastDrawCostUs;
-	pacerLastDrawCostUs = 0; // consume once
-	if (coreOnlyUs < 1)
-		coreOnlyUs = 1; // guard against clock/measurement noise
+	bool frameskipAllowed = turboMode || (cartridgeType == CARTRIDGE_GBA && GCSettings.gbaFrameskip);
+	int skipFrms = turboMode ? TURBO_MAX_FRAME_SKIP : MAX_FRAME_SKIP;
 
-	const float instCoreFps = (float)USEC_PER_SEC / (float)coreOnlyUs;
-	coreFPS += (instCoreFps - coreFPS) * FPS_EMA_ALPHA;
-
-	// Continuous timing debt, in real microseconds.
-	pacerDebtUs += rawFrameUs - framePeriodUs;
-
-	const s64 debtCapUs   =  framePeriodUs * DEBT_CAP_FRAMES;
-	const s64 creditCapUs = -framePeriodUs * CREDIT_CAP_FRAMES;
-	if (pacerDebtUs > debtCapUs)
-		pacerDebtUs = debtCapUs;
-	else if (pacerDebtUs < creditCapUs)
-		pacerDebtUs = creditCapUs;
-
-	if (cartridgeType == CARTRIDGE_GBA && GCSettings.gbaFrameskip && !turboMode)
+	if (!frameskipAllowed)
 	{
-		// How many whole frame-periods behind are we? That's a direct,
-		// measured answer instead of a hand-tuned step table, and it's
-		// re-evaluated every frame rather than once per 10.
-		int target = (int)(pacerDebtUs / framePeriodUs);
-		if (target < 0)
-			target = 0;
-		else if (target > MAX_FRAME_SKIP)
-			target = MAX_FRAME_SKIP;
+		frameToRender = true;
+		skippedFrames = 0;
+		prev = gettime();
 
-		// Slew by at most one step per frame so a single hitch can't
-		// cause a visible "jump cut" in the skip pattern - still reacts
-		// within one frame instead of the old up-to-10-frame delay.
-		if (target > systemFrameSkip)
-			++systemFrameSkip;
-		else if (target < systemFrameSkip)
-			--systemFrameSkip;
+		// Prevent VBlank debt from silently piling up while frameskip is disabled
+		FrameTimer = 0;
 	}
 	else
 	{
-		// GB/GBC never needs frameskip - it's cheap enough to always draw.
-		// The menu setting can disable adaptive skip outright. And turbo
-		// (turboMode) drives its own fixed 9-skip pattern in GBA.cpp -
-		// piling adaptive skip on top of manual turbo would just fight it.
-		systemFrameSkip = 0;
-	}
+		if (timerstyle == 0)
+		{
+			// V-sync-driven pacing
+			u32 pendingFrames = FrameTimer;
 
-	// Sleep off genuine credit only - and never during turbo. Turbo means
-	// "as fast as possible"; without this check, the forced 9-skip pattern
-	// would look like we're way ahead of schedule, and this pacer would
-	// sleep it right back down to 1x, defeating the point of turbo.
-	if (!turboMode && pacerDebtUs < 0)
-	{
-		usleep((u32)(-pacerDebtUs));
-		pacerDebtUs = 0; // slept exactly the credit away, drift-free
-	}
+			// JITTER FIX: Absorb 1 missed VBlank (e.g., a JIT compile spike).
+			// Only panic and drop a frame if we are 2 or more VBlanks behind.
+			bool behindSchedule = (pendingFrames > 2);
 
-	pacerLastUs = ticks_to_microsecs(gettime()); // snapshot *after* any sleep
+			if (pendingFrames > skipFrms)
+			{
+				FrameTimer = skipFrms;
+				pendingFrames = skipFrms;
+			}
+
+			if (behindSchedule && (skippedFrames < skipFrms))
+			{
+				skippedFrames++;
+				frameToRender = false;
+			}
+			else
+			{
+				// If we were behind but hit the skip cap, the CPU is fundamentally saturated.
+				// We force a render, but we MUST clear the VBlank debt. If we don't, FrameTimer stays
+				// at max, and the very next frame will instantly skip again, locking us to ~10 FPS.
+				if (behindSchedule) {
+					FrameTimer = 1; // Forgive debt to find a smooth equilibrium (e.g. 1 Render / 1 Skip)
+				}
+
+				skippedFrames = 0;
+				frameToRender = true;
+			}
+
+			if (!turboMode && FrameTimer > 0)
+				FrameTimer--;
+		}
+		else
+		{
+			// Time-driven pacing
+			u32 timediffallowed = turboMode ? 0 : FRAME_PERIOD_US;
+			now = gettime();
+
+			if (diff_usec(prev, now) < timediffallowed)
+			{
+				// Ahead of schedule -- LWP-safe micro-sleep loop.
+				while (diff_usec(prev, now) < timediffallowed)
+				{
+					if ((timediffallowed - diff_usec(prev, now)) > 50) {
+						usleep(50);
+					}
+					now = gettime();
+				}
+
+				frameToRender = true;
+				skippedFrames = 0;
+			}
+			else
+			{
+				// Behind schedule
+				if (skippedFrames < skipFrms)
+				{
+					skippedFrames++;
+					frameToRender = false;
+				}
+				else
+				{
+					skippedFrames = 0;
+					frameToRender = true;
+				}
+			}
+
+			// Snap prev to now universally (prevents rubber-band fast-forwarding after a lag spike)
+			prev = now;
+		}
+	}
 }
 
 /****************************************************************************
@@ -632,19 +625,6 @@ SoundDriver * systemSoundInit()
 	return new SoundWii();
 }
 
-bool systemCanChangeSoundQuality()
-{
-	return true;
-}
-
-void systemOnWriteDataToSoundBuffer(const u16 * finalWave, int length)
-{
-}
-
-void systemOnSoundShutdown()
-{
-}
-
 /****************************************************************************
 * systemReadJoypads
 ****************************************************************************/
@@ -827,15 +807,13 @@ static int srcHeight = 0;
 
 void systemDrawScreen()
 {
-	const u64 drawStartUs = ticks_to_microsecs(gettime());
-
 	GX_Render(
 		srcWidth,
 		srcHeight,
 		pix
 	);
 	PROFILER_MARK_FRAME();
-	systemNoteDisplayedFrame(ticks_to_microsecs(gettime()) - drawStartUs);
+	systemNoteDisplayedFrame();
 }
 
 static bool ValidGameId(u32 id)
@@ -1179,7 +1157,7 @@ bool LoadGBROM()
 	gbEmulatorType = GCSettings.GBHardware;
 
 	gbRom = (u8 *)malloc(1024*1024*8);
-	if (!gbRom) 
+	if (!gbRom)
 	{
 		InfoPrompt("Unable to allocate 8 MB of memory");
 		return false;
@@ -1307,7 +1285,6 @@ bool LoadVBAROM()
 		srcWidth = 240;
 		srcHeight = 160;
 		loaded = VMCPULoadROM();
-		soundSetSampleRate(22050); //44100 / 2
 		cpuSaveType = 0;
 		if (loaded == 2) {
 			loaded = 0;
@@ -1340,10 +1317,11 @@ bool LoadVBAROM()
 		}
 
 		loaded = LoadGBROM();
-		soundSetSampleRate(44100);
 	}
 
 	if(loaded) {
+		soundInit();
+
 		// Setup GX
 		if (InitialBorder) {
 			GX_Render_Init(InitialBorderWidth, InitialBorderHeight);
@@ -1382,15 +1360,9 @@ bool LoadVBAROM()
 			CPUReset();
 		}
 
-		SetAudioRate(cartridgeType);
 		soundInit();
 
 		emulating = 1;
-
-		// reset frame-pacing & FPS state (also clears any stale frameskip
-		// or timing-debt value left over from a previously-loaded ROM,
-		// including one of a different system)
-		systemResetPacer();
 
 		// Start system clock
 		start = gettime();

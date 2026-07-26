@@ -36,12 +36,9 @@
 
 SoundDriver * soundDriver = 0;
 
-extern bool stopState;      // TODO: silence sound when true
-
 int const SOUND_CLOCK_TICKS_ = 167772; // 1/100 second
 
-static u16   soundFinalWave [1600];
-long  soundSampleRate    = 44100;
+long  soundSampleRate    = 48000;
 bool  soundInterpolation = true;
 bool  soundPaused        = true;
 float soundFiltering     = 0.5f;
@@ -360,30 +357,91 @@ static void end_frame( blip_time_t time )
 	stereo_buffer->end_frame( time );
 }
 
+// Static buffer sized to accommodate the maximum "RATE_SLOW_DOWN" over-read.
+// 800 frames * 1.005 = 804 frames (1608 samples). Padded for safety.
+static blip_sample_t temp_buf[1632];
+
 void flush_samples(Multi_Buffer * buffer)
 {
-	// We want to write the data frame by frame to support legacy audio drivers
-	// that don't use the length parameter of the write method.
-	// TODO: Update the Win32 audio drivers (DS, OAL, XA2), and flush all the
-	// samples at once to help reducing the audio delay on all platforms.
-	int soundBufferLen = ( soundSampleRate / 60 ) << 2;
+	if (!soundDriver) return;
 
-	// soundBufferLen should have a whole number of sample pairs
-	assert( soundBufferLen % ((sizeof *soundFinalWave)<<1) == 0 );
+	// Calculate Wii DMA boundaries (3200 bytes = 1600 samples = 800 stereo frames)
+	int const soundBufferLen = (soundSampleRate / 60) << 2;
+	int const out_samples = soundBufferLen / sizeof(u16);
+	int const out_frames = out_samples / 2; // 800 stereo frames
 
-	// number of samples in output buffer
-	int const out_buf_size = soundBufferLen / sizeof *soundFinalWave;
+	// Determine initial rate requirement and target input sample count
+	int read_frames = (int)(out_frames * soundDriver->getDynamicRate());
+	int read_samples = read_frames * 2;
 
-	// Keep filling and writing soundFinalWave until it can't be fully filled
-	while ( buffer->samples_avail() >= out_buf_size )
+	// Explicit exit condition: run only while Blip_Buffer holds enough samples
+	while (buffer->samples_avail() >= read_samples)
 	{
-		buffer->read_samples( (blip_sample_t*) soundFinalWave, out_buf_size );
-		if(soundPaused)
-			soundResume();
+		if (soundDriver->canWrite())
+		{
+			u16* target_buf = soundDriver->getWriteBuffer();
 
-		soundDriver->write(soundFinalWave, soundBufferLen);
-		systemOnWriteDataToSoundBuffer(soundFinalWave, soundBufferLen);
+			// Extract required input frames from Blip_Buffer
+			buffer->read_samples(temp_buf, read_samples);
+
+			// Resampling Loop (16.16 Fixed Point DDA)
+			u32 step = (read_frames << 16) / out_frames;
+			u32 pos = 0;
+			s16* out = (s16*)target_buf;
+
+			for (int i = 0; i < out_frames; i++)
+			{
+				u32 idx = pos >> 16;
+				u32 frac = pos & 0xFFFF; // Fractional phase
+
+				if (frac == 0)
+				{
+					// Exact hit
+					out[i * 2]     = temp_buf[idx * 2];
+					out[i * 2 + 1] = temp_buf[idx * 2 + 1];
+				}
+				else
+				{
+					// Linear interpolation
+					int idx2 = idx + 1;
+					if (idx2 >= read_frames) idx2 = idx; // Clamp safely
+
+					// Left Channel
+					s32 L1 = temp_buf[idx * 2];
+					s32 L2 = temp_buf[idx2 * 2];
+					out[i * 2] = L1 + ((frac * (L2 - L1)) >> 16);
+
+					// Right Channel
+					s32 R1 = temp_buf[idx * 2 + 1];
+					s32 R2 = temp_buf[idx2 * 2 + 1];
+					out[i * 2 + 1] = R1 + ((frac * (R2 - R1)) >> 16);
+				}
+				pos += step;
+			}
+
+			// Align & Swap L/R Channels via 32-bit packed frame operations
+			u32* wave32 = (u32*)target_buf;
+			for (int i = 0; i < out_frames; i++)
+			{
+				u32 frame = wave32[i];
+				wave32[i] = (frame << 16) | (frame >> 16);
+			}
+
+			soundDriver->commitWrite();
+		}
+		else
+		{
+			// DMA Ring is full. Read into temp_buf to drop samples cleanly and prevent latency buildup.
+			buffer->read_samples(temp_buf, read_samples);
+		}
+
+		// Re-evaluate required samples for the next loop iteration check
+		read_frames = (int)(out_frames * soundDriver->getDynamicRate());
+		read_samples = read_frames * 2;
 	}
+
+	if (soundPaused)
+		soundResume();
 }
 
 static void apply_filtering()
@@ -493,8 +551,6 @@ void soundShutdown()
 		delete soundDriver;
 		soundDriver = 0;
 	}
-
-	systemOnSoundShutdown();
 }
 
 void soundPause()
@@ -548,6 +604,7 @@ void soundReset()
 
 bool soundInit()
 {
+	soundShutdown();
 	soundDriver = systemSoundInit();
 	if ( !soundDriver )
 		return false;
@@ -564,30 +621,6 @@ void soundSetThrottle(unsigned short throttle)
 	if(!soundDriver)
 		return;
 	soundDriver->setThrottle(throttle);
-}
-
-long soundGetSampleRate()
-{
-	return soundSampleRate;
-}
-
-void soundSetSampleRate(long sampleRate)
-{
-	if ( soundSampleRate != sampleRate )
-	{
-		if ( systemCanChangeSoundQuality() )
-		{
-			soundShutdown();
-			soundSampleRate      = sampleRate;
-			soundInit();
-		}
-		else
-		{
-			soundSampleRate      = sampleRate;
-		}
-
-		remake_stereo_buffer();
-	}
 }
 
 static int dummy_state [16];

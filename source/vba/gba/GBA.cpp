@@ -21,8 +21,6 @@
 
 #define strcasecmp strcasecmp
 
-extern int emulating;
-
 int SWITicks = 0;
 int IRQTicks = 0;
 
@@ -2627,6 +2625,7 @@ static __attribute__((noinline)) void CPURenderLine_Wii() {
 	*dest++ = 0;
 }
 
+
 // -------------------------------------------------------------------------
 // WII OPTIMIZATION: Template unrolled Timer Updates
 // Eliminates I-Cache bloat and converts cascade checks into 1-cycle bitwise math.
@@ -2761,8 +2760,6 @@ static void CPULoop_T(int ticks) {
             CPUCompareVCOUNT();
           }
         } else {
-          int framesToSkip = turboMode ? 9 : systemFrameSkip;
-
           if(DISPSTAT & 2) {
             ++VCOUNT;
             WriteReg16(0x06, VCOUNT);
@@ -2814,11 +2811,8 @@ static void CPULoop_T(int ticks) {
               }
               CPUCheckDMA(1, 0x0f);
 
-              if(frameCount >= framesToSkip) {
+              if(frameToRender) {
                 systemDrawScreen();
-                frameCount = 0;
-              } else {
-                ++frameCount;
               }
 
               if(systemPauseOnFrame()) ticks = 0;
@@ -2828,7 +2822,7 @@ static void CPULoop_T(int ticks) {
             CPUCompareVCOUNT();
 
           } else {
-            if(frameCount >= framesToSkip) {
+            if(frameToRender) {
                 CPURenderLine_Wii(); // Execute decoupled render loop
             }
             DISPSTAT |= 2;
