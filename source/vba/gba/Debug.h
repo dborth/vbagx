@@ -11,7 +11,7 @@
 #define DEBUG_H
 
 #ifdef VBAGX_DEBUG
-	#define PROFILING 1
+	//#define PROFILING 1
 	//#define JIT_BLOCK_FRAGMENTATION_STATS 1
 	//#define JIT_DEBUG_BLOCK_DUMP 1
 	//#define JIT_CACHE_AND_ARENA_LOG 1
@@ -219,7 +219,7 @@
 #ifndef PROFILER_BIN_BLOCK
 #define PROFILER_BIN_BLOCK(len)						((void)0)
 #endif
-#ifndef JIT_LOG
+#ifndef DEBUG_LOG
 #define DEBUG_LOG(fmt, ...) 							((void)0)
 #endif
 #ifndef DEBUG_RESET_LOGS
