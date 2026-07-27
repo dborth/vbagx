@@ -15,6 +15,7 @@ void DebugStats::reset() {
 	for (int i = 0; i < 5; i++) { coreFpsBins[i] = 0; displayFpsBins[i] = 0; }
 
 	audioStarvationEvents = 0;
+	audioOverflowDrops = 0;
 	for (int i = 0; i < 13; i++) audioBufferFullnessBins[i] = 0;
 	for (int i = 0; i < 3; i++) drcStateTicks[i] = 0;
 	drcTransitions = 0;
@@ -90,6 +91,7 @@ void DebugStats::print() {
 
 	DEBUG_LOG("\nAudio Buffer & DRC Health:\n");
 	DEBUG_LOG("  Absolute Starvation Events (Audio Dropouts): %u\n", audioStarvationEvents);
+	DEBUG_LOG("  Overflow Drops (DMA ring full, chunk discarded): %u\n", audioOverflowDrops);
 	DEBUG_LOG("  DRC State Ticks - Neutral: %u | Draining: %u | Filling: %u\n", drcStateTicks[0], drcStateTicks[1], drcStateTicks[2]);
 	DEBUG_LOG("  DRC State Transitions: %u\n", drcTransitions);
 	DEBUG_LOG("  Buffer Fullness Histogram (Target is 4-8):\n");

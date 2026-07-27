@@ -4,6 +4,7 @@
 
 #include "GBA.h"
 #include "Globals.h"
+#include "Debug.h"
 #include "../Util.h"
 #include "../common/Port.h"
 
@@ -433,6 +434,7 @@ void flush_samples(Multi_Buffer * buffer)
 		{
 			// DMA Ring is full. Read into temp_buf to drop samples cleanly and prevent latency buildup.
 			buffer->read_samples(temp_buf, read_samples);
+			PROFILER_LOG_AUDIO_OVERFLOW();
 		}
 
 		// Re-evaluate required samples for the next loop iteration check

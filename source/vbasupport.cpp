@@ -262,6 +262,7 @@ void systemFrame()
 
 				frameToRender = true;
 				skippedFrames = 0;
+				PROFILER_COMMIT_FRAMESKIP();
 			}
 			else
 			{

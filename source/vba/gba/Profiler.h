@@ -34,6 +34,7 @@ struct DebugStats {
 
 	// Audio & DRC Stats
 	u32 audioStarvationEvents;
+	u32 audioOverflowDrops; // DMA ring was full; a chunk was decoded then discarded
 	u32 audioBufferFullnessBins[13];
 	u32 drcStateTicks[3]; // 0: Neutral, 1: Draining, 2: Filling
 	u32 drcTransitions;

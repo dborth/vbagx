@@ -5,11 +5,11 @@
  *
  * Debug.h
  *
- * The single gating point for every JIT debug/profiling facility described
- * in VBAGX_JIT_CONTEXT.md §6. Nothing outside this header decides whether
- * instrumentation is compiled in — every call site elsewhere in the JIT
- * (JITCompiler.cpp, JITCache.cpp, etc.) just calls one of the macros below
- * unconditionally, and this header decides whether it costs anything.
+ * The single gating point for every JIT debug/profiling facility.
+ * Nothing outside this header decides whether instrumentation is compiled
+ * in - every call site elsewhere in the JIT (JITCompiler.cpp, JITCache.cpp,
+ * etc.) just calls one of the macros below unconditionally, and this header
+ * decides whether it costs anything.
  *
  * Structure: each independently-toggleable feature (real-time profiling
  * stats, cache/arena event tracing, per-instruction detailed compile/exec
@@ -19,7 +19,7 @@
  * JIT_DEBUGSTATELOG, JIT_DETAILED_LOG, etc.), with a real macro definition
  * when the feature is enabled and a `((void)0)` no-op fallback (at the
  * bottom of the file) when it isn't or when VBAGX_DEBUG isn't defined at
- * all — so a release build carries exactly zero instrumentation cost.
+ * all - so a release build carries exactly zero instrumentation cost.
  *
  * The macros here are the plumbing for:
  *   - debugStats: real-time profiler counters (bailout reasons,
@@ -74,6 +74,7 @@
 		#define PROFILER_COMMIT_FRAMESKIP()           debugStats.commitFrameskip()
 
 		#define PROFILER_LOG_AUDIO_STARVATION()       debugStats.audioStarvationEvents++
+		#define PROFILER_LOG_AUDIO_OVERFLOW()         debugStats.audioOverflowDrops++
 		#define PROFILER_LOG_DRC(unplayed, newState)  debugStats.updateDRC(unplayed, (int)newState)
 
 		#define PROFILER_START_TIMER(name) u64 name = gettime()
@@ -243,6 +244,9 @@
 #endif
 #ifndef PROFILER_LOG_AUDIO_STARVATION
 #define PROFILER_LOG_AUDIO_STARVATION()				((void)0)
+#endif
+#ifndef PROFILER_LOG_AUDIO_OVERFLOW
+#define PROFILER_LOG_AUDIO_OVERFLOW()				((void)0)
 #endif
 #ifndef PROFILER_LOG_DRC
 #define PROFILER_LOG_DRC(unplayed, newState)		((void)0)

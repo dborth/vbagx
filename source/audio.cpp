@@ -34,9 +34,11 @@ extern int ConfigRequested;
 #define UNPLAYED_HIGH_RELEASE 6     // Stay slow until the queue drains back to here
 #define UNPLAYED_LOW_RELEASE 6      // Stay fast until the queue fills back to here
 #define UNPLAYED_LOW_WATER 4        // Below this we risk an underrun, speed up
-#define UNPLAYED_START_LEVEL 4      // Queue at least this many buffers before starting DMA
+#define UNPLAYED_CRITICAL 1         // At/below this we are one stall away from an audible dropout
+#define UNPLAYED_START_LEVEL 6      // Queue at least this many buffers before starting DMA
 #define RATE_SLOW_DOWN 1.005        // Emit samples slightly slower to drain the queue
 #define RATE_SPEED_UP 0.995         // Emit samples slightly faster to fill the queue
+#define RATE_EMERGENCY_SPEED_UP 0.985 // Harder pull-back only when we're on the brink (see getDynamicRate)
 #define RATE_NEUTRAL 1.0
 
 enum RateState {
@@ -299,7 +301,12 @@ double SoundWii::getDynamicRate()
     // Draining means we need FEWER samples generated per frame.
     // Filling means we need MORE samples generated per frame.
     if(rateState == RATE_STATE_DRAINING) return RATE_SLOW_DOWN;
-    if(rateState == RATE_STATE_FILLING) return RATE_SPEED_UP;
+    if(rateState == RATE_STATE_FILLING) {
+        // Rather than making the everyday 0.5% nudge stronger (and more likely to be
+        // audible as pitch wobble during normal play), pull harder only in
+        // the narrow window where we're actually about to starve.
+        return (unplayed <= UNPLAYED_CRITICAL) ? RATE_EMERGENCY_SPEED_UP : RATE_SPEED_UP;
+    }
 
     return RATE_NEUTRAL;
 }
