@@ -213,14 +213,6 @@
 			LogDebug("[%s] PC: 0x%08X | Addr: 0x%p | Word: 0x%08X\n", \
 				   (phase), (u32)(pc), (void*)(addr), (u32)(word)); \
 		} while(0)
-	#else
-		#define JIT_LOG_BLOCK_COMPILED_DETAILS(startPC)										((void)0)
-		#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, count, cycles, bailed, rsn)		((void)0)
-		#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     						((void)0)
-		#define JIT_LOG_TRACE_ENTRY(pc, flags) 												((void)0)
-		#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) 								((void)0)
-		#define JIT_LOG_BAILOUT_DETAILS(pc, opcode, reason)									((void)0)
-		#define JIT_LOG_INSN_DUMP(pc, phase, addr, word)									((void)0)
 	#endif // JIT_DETAILED_LOG
 
 	#if JIT_DIFFERENTIAL_TESTING
@@ -304,6 +296,28 @@
 #endif
 #ifndef PROFILER_MARK_FRAME
 #define PROFILER_MARK_FRAME()                       ((void)0)
+#endif
+
+#ifndef JIT_LOG_BLOCK_COMPILED_DETAILS
+#define JIT_LOG_BLOCK_COMPILED_DETAILS(startPC)										((void)0)
+#endif
+#ifndef JIT_LOG_BLOCK_COMPILE_END
+#define JIT_LOG_BLOCK_COMPILE_END(startPC, endPC, count, cycles, bailed, rsn)		((void)0)
+#endif
+#ifndef JIT_LOG_INSN_COMPILED
+#define JIT_LOG_INSN_COMPILED(pc, opcode, details, ...)     						((void)0)
+#endif
+#ifndef JIT_LOG_TRACE_ENTRY
+#define JIT_LOG_TRACE_ENTRY(pc, flags) 												((void)0)
+#endif
+#ifndef JIT_LOG_TRACE_EXIT
+#define JIT_LOG_TRACE_EXIT(pc, nextPC, flags, cycles) 								((void)0)
+#endif
+#ifndef JIT_LOG_BAILOUT_DETAILS
+#define JIT_LOG_BAILOUT_DETAILS(pc, opcode, reason)									((void)0)
+#endif
+#ifndef JIT_LOG_INSN_DUMP
+#define JIT_LOG_INSN_DUMP(pc, phase, addr, word)									((void)0)
 #endif
 
 #ifndef PROFILER_CACHE_HIT
