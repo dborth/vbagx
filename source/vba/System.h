@@ -26,9 +26,7 @@ struct EmulatedSystem {
   int emuCount;
 };
 
-extern bool systemPauseOnFrame();
 extern void systemGbPrint(u8 *,int,int,int,int,int);
-extern void systemScreenCapture(int);
 extern void systemDrawScreen();
 // updates the joystick data
 extern bool systemReadJoypads();
@@ -47,7 +45,6 @@ extern void systemScreenMessage(const char *);
 extern void systemUpdateMotionSensor();
 extern int  systemGetSensorX();
 extern int  systemGetSensorY();
-extern void systemShowSpeed(int);
 extern float systemGetDisplayFPS(void);
 extern float systemGetCoreFPS(void);
 extern void systemFrame();

@@ -30,6 +30,7 @@ bool CursorValid;
 bool TiltScreen = false;
 float TiltAngle = 0;
 u32 FrameTimer = 0;
+bool vmode_60hz;
 
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/

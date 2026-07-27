@@ -112,14 +112,7 @@ u32 systemGetClock(void)
     return (u32)(ticks_to_microsecs(now - start) / 1000);
 }
 
-void systemScreenCapture(int a) {}
-void systemShowSpeed(int speed) {}
 void systemGbBorderOn() {}
-
-bool systemPauseOnFrame()
-{
-	return false;
-}
 
 /* *****************************************************************************
  * Frame pacing, frameskip, & FPS instrumentation
@@ -286,8 +279,6 @@ void systemFrame()
 ****************************************************************************/
 
 void systemGbPrint(u8 *data,int pages,int feed,int palette, int contrast) {}
-void debuggerOutput(const char *s, u32 addr) {}
-void (*dbgOutput)(const char *s, u32 addr) = debuggerOutput;
 void systemMessage(int num, const char *msg, ...) {}
 
 bool MemCPUReadBatteryFile(char * membuffer, int size)

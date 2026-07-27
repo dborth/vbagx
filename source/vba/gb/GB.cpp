@@ -4547,13 +4547,6 @@ void gbEmulate(int ticksToStop)
                 newmask = (gbJoymask[0] >> 10);
 
                 turboMode = (newmask & 1) ? true : false;
-                gbCapture = (newmask & 2) ? true : false;
-
-                if(gbCapture && !gbCapturePrevious) {
-                  gbCaptureNumber++;
-                  systemScreenCapture(gbCaptureNumber);
-                }
-                gbCapturePrevious = gbCapture;
 
           if(gbFrameSkipCount >= framesToSkip) {
 
@@ -4561,10 +4554,7 @@ void gbEmulate(int ticksToStop)
             {
               if (gbBorderOn)
                 gbSgbRenderBorder();
-
-                systemDrawScreen();
-		if(systemPauseOnFrame())
-		    ticksToStop = 0;
+              systemDrawScreen();
             }
             gbFrameSkipCount = 0;
           } else
@@ -4742,10 +4732,8 @@ void gbEmulate(int ticksToStop)
             {
               if (gbBorderOn)
                 gbSgbRenderBorder();
-                  //if (gbScreenOn)
-                systemDrawScreen();
-		if(systemPauseOnFrame())
-		    ticksToStop = 0;
+
+              systemDrawScreen();
             }
             }
             if(systemReadJoypads()) {

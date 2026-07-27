@@ -2794,13 +2794,6 @@ static void CPULoop_T(int ticks) {
               }
 
               turboMode = (ext & 1) != 0;
-              capture = (ext & 2) != 0;
-
-              if(capture && !capturePrevious) {
-                ++captureNumber;
-                systemScreenCapture(captureNumber);
-              }
-              capturePrevious = capture;
 
               DISPSTAT |= 1;
               DISPSTAT &= 0xFFFD;
@@ -2814,8 +2807,6 @@ static void CPULoop_T(int ticks) {
               if(frameToRender) {
                 systemDrawScreen();
               }
-
-              if(systemPauseOnFrame()) ticks = 0;
             }
 
             WriteReg16(0x04, DISPSTAT);
