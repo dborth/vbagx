@@ -73,12 +73,11 @@ static INSN_REGPARM void armUnknownInsn(u32 opcode)
               (NEG(lhs) & POS(res)) | \
               (POS(rhs) & POS(res)));
 
-#ifndef ALU_INIT_C
- #define ALU_INIT_C \
+#define ALU_INIT_C \
     int dest = (opcode>>12) & 15;                       \
     bool C_OUT = (gbaFlags.C != 0);                                \
     u32 value;
-#endif
+
 // OP Rd,Rb,Rm LSL #
 #define VALUE_LSL_IMM_C \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
@@ -229,174 +228,125 @@ static INSN_REGPARM void armUnknownInsn(u32 opcode)
 
 // Make the non-carry versions default to the carry versions
 // (this is fine for C--the compiler will optimize the dead code out)
-#ifndef ALU_INIT_NC
- #define ALU_INIT_NC ALU_INIT_C
-#endif
-#ifndef VALUE_LSL_IMM_NC
- #define VALUE_LSL_IMM_NC VALUE_LSL_IMM_C
-#endif
-#ifndef VALUE_LSL_REG_NC
- #define VALUE_LSL_REG_NC VALUE_LSL_REG_C
-#endif
-#ifndef VALUE_LSR_IMM_NC
- #define VALUE_LSR_IMM_NC VALUE_LSR_IMM_C
-#endif
-#ifndef VALUE_LSR_REG_NC
- #define VALUE_LSR_REG_NC VALUE_LSR_REG_C
-#endif
-#ifndef VALUE_ASR_IMM_NC
- #define VALUE_ASR_IMM_NC VALUE_ASR_IMM_C
-#endif
-#ifndef VALUE_ASR_REG_NC
- #define VALUE_ASR_REG_NC VALUE_ASR_REG_C
-#endif
-#ifndef VALUE_ROR_IMM_NC
- #define VALUE_ROR_IMM_NC VALUE_ROR_IMM_C
-#endif
-#ifndef VALUE_ROR_REG_NC
- #define VALUE_ROR_REG_NC VALUE_ROR_REG_C
-#endif
-#ifndef VALUE_IMM_NC
- #define VALUE_IMM_NC VALUE_IMM_C
-#endif
 
+#define ALU_INIT_NC ALU_INIT_C
+#define VALUE_LSL_IMM_NC VALUE_LSL_IMM_C
+#define VALUE_LSL_REG_NC VALUE_LSL_REG_C
+#define VALUE_LSR_IMM_NC VALUE_LSR_IMM_C
+#define VALUE_LSR_REG_NC VALUE_LSR_REG_C
+#define VALUE_ASR_IMM_NC VALUE_ASR_IMM_C
+#define VALUE_ASR_REG_NC VALUE_ASR_REG_C
+#define VALUE_ROR_IMM_NC VALUE_ROR_IMM_C
+#define VALUE_ROR_REG_NC VALUE_ROR_REG_C
+#define VALUE_IMM_NC VALUE_IMM_C
 #define C_CHECK_PC(SETCOND) if (LIKELY(dest != 15)) { SETCOND }
-#ifndef OP_AND
- #define OP_AND \
-    u32 res = reg[(opcode>>16)&15].I & value;           \
-    reg[dest].I = res;
-#endif
-#ifndef OP_ANDS
- #define OP_ANDS   OP_AND C_CHECK_PC(C_SETCOND_LOGICAL)
-#endif
-#ifndef OP_EOR
- #define OP_EOR \
-    u32 res = reg[(opcode>>16)&15].I ^ value;           \
-    reg[dest].I = res;
-#endif
-#ifndef OP_EORS
- #define OP_EORS   OP_EOR C_CHECK_PC(C_SETCOND_LOGICAL)
-#endif
-#ifndef OP_SUB
- #define OP_SUB \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
-    u32 rhs = value;                                    \
-    u32 res = lhs - rhs;                                \
-    reg[dest].I = res;
-#endif
-#ifndef OP_SUBS
- #define OP_SUBS   OP_SUB C_CHECK_PC(C_SETCOND_SUB)
-#endif
-#ifndef OP_RSB
- #define OP_RSB \
-    u32 lhs = value;                                    \
-    u32 rhs = reg[(opcode>>16)&15].I;                   \
-    u32 res = lhs - rhs;                                \
-    reg[dest].I = res;
-#endif
-#ifndef OP_RSBS
- #define OP_RSBS   OP_RSB C_CHECK_PC(C_SETCOND_SUB)
-#endif
-#ifndef OP_ADD
- #define OP_ADD \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
-    u32 rhs = value;                                    \
-    u32 res = lhs + rhs;                                \
-    reg[dest].I = res;
-#endif
-#ifndef OP_ADDS
- #define OP_ADDS   OP_ADD C_CHECK_PC(C_SETCOND_ADD)
-#endif
-#ifndef OP_ADC
- #define OP_ADC \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
-    u32 rhs = value;                                    \
-    u32 res = lhs + rhs + gbaFlags.C;                  \
-    reg[dest].I = res;
-#endif
-#ifndef OP_ADCS
- #define OP_ADCS   OP_ADC C_CHECK_PC(C_SETCOND_ADD)
-#endif
-#ifndef OP_SBC
- #define OP_SBC \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
-    u32 rhs = value;                                    \
-    u32 res = lhs - rhs - (gbaFlags.C ^ 1);               \
-    reg[dest].I = res;
-#endif
-#ifndef OP_SBCS
- #define OP_SBCS   OP_SBC C_CHECK_PC(C_SETCOND_SUB)
-#endif
-#ifndef OP_RSC
- #define OP_RSC \
-    u32 lhs = value;                                    \
-    u32 rhs = reg[(opcode>>16)&15].I;                   \
-    u32 res = lhs - rhs - (gbaFlags.C ^ 1);               \
-    reg[dest].I = res;
-#endif
-#ifndef OP_RSCS
- #define OP_RSCS   OP_RSC C_CHECK_PC(C_SETCOND_SUB)
-#endif
-#ifndef OP_TST
- #define OP_TST \
-    u32 res = reg[(opcode >> 16) & 0x0F].I & value;     \
-    C_SETCOND_LOGICAL;
-#endif
-#ifndef OP_TEQ
- #define OP_TEQ \
-    u32 res = reg[(opcode >> 16) & 0x0F].I ^ value;     \
-    C_SETCOND_LOGICAL;
-#endif
-#ifndef OP_CMP
- #define OP_CMP \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
-    u32 rhs = value;                                    \
-    u32 res = lhs - rhs;                                \
-    C_SETCOND_SUB;
-#endif
-#ifndef OP_CMN
- #define OP_CMN \
-    u32 lhs = reg[(opcode>>16)&15].I;                   \
-    u32 rhs = value;                                    \
-    u32 res = lhs + rhs;                                \
-    C_SETCOND_ADD;
-#endif
-#ifndef OP_ORR
- #define OP_ORR \
-    u32 res = reg[(opcode >> 16) & 0x0F].I | value;     \
-    reg[dest].I = res;
-#endif
-#ifndef OP_ORRS
- #define OP_ORRS   OP_ORR C_CHECK_PC(C_SETCOND_LOGICAL)
-#endif
-#ifndef OP_MOV
- #define OP_MOV \
-    u32 res = value;                                    \
-    reg[dest].I = res;
-#endif
-#ifndef OP_MOVS
- #define OP_MOVS   OP_MOV C_CHECK_PC(C_SETCOND_LOGICAL)
-#endif
-#ifndef OP_BIC
- #define OP_BIC \
-    u32 res = reg[(opcode >> 16) & 0x0F].I & (~value);  \
-    reg[dest].I = res;
-#endif
-#ifndef OP_BICS
- #define OP_BICS   OP_BIC C_CHECK_PC(C_SETCOND_LOGICAL)
-#endif
-#ifndef OP_MVN
- #define OP_MVN \
-    u32 res = ~value;                                   \
-    reg[dest].I = res;
-#endif
-#ifndef OP_MVNS
- #define OP_MVNS   OP_MVN C_CHECK_PC(C_SETCOND_LOGICAL)
-#endif
 
-#ifndef SETCOND_NONE
- #define SETCOND_NONE /*nothing*/
-#endif
+#define OP_AND \
+u32 res = reg[(opcode>>16)&15].I & value;           \
+reg[dest].I = res;
+
+#define OP_ANDS   OP_AND C_CHECK_PC(C_SETCOND_LOGICAL)
+
+#define OP_EOR \
+u32 res = reg[(opcode>>16)&15].I ^ value;           \
+reg[dest].I = res;
+
+#define OP_EORS   OP_EOR C_CHECK_PC(C_SETCOND_LOGICAL)
+
+#define OP_SUB \
+u32 lhs = reg[(opcode>>16)&15].I;                   \
+u32 rhs = value;                                    \
+u32 res = lhs - rhs;                                \
+reg[dest].I = res;
+
+#define OP_SUBS   OP_SUB C_CHECK_PC(C_SETCOND_SUB)
+
+#define OP_RSB \
+u32 lhs = value;                                    \
+u32 rhs = reg[(opcode>>16)&15].I;                   \
+u32 res = lhs - rhs;                                \
+reg[dest].I = res;
+
+#define OP_RSBS   OP_RSB C_CHECK_PC(C_SETCOND_SUB)
+
+#define OP_ADD \
+u32 lhs = reg[(opcode>>16)&15].I;                   \
+u32 rhs = value;                                    \
+u32 res = lhs + rhs;                                \
+reg[dest].I = res;
+
+#define OP_ADDS   OP_ADD C_CHECK_PC(C_SETCOND_ADD)
+
+#define OP_ADC \
+u32 lhs = reg[(opcode>>16)&15].I;                   \
+u32 rhs = value;                                    \
+u32 res = lhs + rhs + gbaFlags.C;                  \
+reg[dest].I = res;
+
+#define OP_ADCS   OP_ADC C_CHECK_PC(C_SETCOND_ADD)
+
+#define OP_SBC \
+u32 lhs = reg[(opcode>>16)&15].I;                   \
+u32 rhs = value;                                    \
+u32 res = lhs - rhs - (gbaFlags.C ^ 1);               \
+reg[dest].I = res;
+
+#define OP_SBCS   OP_SBC C_CHECK_PC(C_SETCOND_SUB)
+
+#define OP_RSC \
+u32 lhs = value;                                    \
+u32 rhs = reg[(opcode>>16)&15].I;                   \
+u32 res = lhs - rhs - (gbaFlags.C ^ 1);               \
+reg[dest].I = res;
+
+#define OP_RSCS   OP_RSC C_CHECK_PC(C_SETCOND_SUB)
+
+#define OP_TST \
+u32 res = reg[(opcode >> 16) & 0x0F].I & value;     \
+C_SETCOND_LOGICAL;
+
+#define OP_TEQ \
+u32 res = reg[(opcode >> 16) & 0x0F].I ^ value;     \
+C_SETCOND_LOGICAL;
+
+#define OP_CMP \
+u32 lhs = reg[(opcode>>16)&15].I;                   \
+u32 rhs = value;                                    \
+u32 res = lhs - rhs;                                \
+C_SETCOND_SUB;
+
+#define OP_CMN \
+u32 lhs = reg[(opcode>>16)&15].I;                   \
+u32 rhs = value;                                    \
+u32 res = lhs + rhs;                                \
+C_SETCOND_ADD;
+
+#define OP_ORR \
+u32 res = reg[(opcode >> 16) & 0x0F].I | value;     \
+reg[dest].I = res;
+
+#define OP_ORRS   OP_ORR C_CHECK_PC(C_SETCOND_LOGICAL)
+
+#define OP_MOV \
+u32 res = value;                                    \
+reg[dest].I = res;
+
+#define OP_MOVS   OP_MOV C_CHECK_PC(C_SETCOND_LOGICAL)
+
+#define OP_BIC \
+u32 res = reg[(opcode >> 16) & 0x0F].I & (~value);  \
+reg[dest].I = res;
+
+#define OP_BICS   OP_BIC C_CHECK_PC(C_SETCOND_LOGICAL)
+
+#define OP_MVN \
+u32 res = ~value;                                   \
+reg[dest].I = res;
+
+#define OP_MVNS   OP_MVN C_CHECK_PC(C_SETCOND_LOGICAL)
+
+#define SETCOND_NONE /*nothing*/
+
 #define SETCOND_MUL \
      gbaFlags.N = (reg[dest].I >> 31);                      \
      gbaFlags.Z = (reg[dest].I == 0);
@@ -404,19 +354,15 @@ static INSN_REGPARM void armUnknownInsn(u32 opcode)
      gbaFlags.N = (reg[dest].I >> 31);                      \
      gbaFlags.Z = ((reg[dest].I | reg[acc].I) == 0);
 
-#ifndef ALU_FINISH
  #define ALU_FINISH /*nothing*/
-#endif
 
-#ifndef ROR_IMM_MSR
  #define ROR_IMM_MSR \
     u32 v = opcode & 0xff;                              \
     value = ((v << (32 - shift)) | (v >> shift));
-#endif
-#ifndef ROR_OFFSET
+
  #define ROR_OFFSET \
     offset = ((offset << (32 - shift)) | (offset >> shift));
-#endif
+
 #define RRX_OFFSET \
     offset = ((offset >> 1) | (gbaFlags.C << 31));
 
@@ -1964,16 +1910,7 @@ static INSN_REGPARM void armB00(u32 opcode)
     busPrefetchCount = 0;
 }
 
-
-#ifdef GP_SUPPORT
-// MRC
-static INSN_REGPARM void armE01(u32 opcode)
-{
-}
-#else
- #define armE01 armUnknownInsn
-#endif
-
+#define armE01 armUnknownInsn
 
 // SWI <comment>
 static INSN_REGPARM void armF00(u32 opcode)
@@ -2176,20 +2113,6 @@ static insnfunc_t armInsnTable[4096] = {
 };
 
 // Wrapper routine (execution loop) ///////////////////////////////////////
-
-#if 0
-#include<time.h>
-static void tester(void) {
-  static int ran=0;if(ran)return;ran=1;
-  FILE*f=fopen("p:\\timing.txt","w");if(!f)return;
-  for (int op=/*0*/9; op</*0xF00*/10;op++){if(armInsnTable[op]==arm_UI)continue;
-    int i;for(i=0;i<op;i++)if(armInsnTable[op]==armInsnTable[i])break;if(i<op)continue;
-    for(i=0;i<16;i++)reg[i].I=0x3100000;
-    clock_t s=clock();for(i=0;i<10000000;i++)armInsnTable[op](0);clock_t e=clock();
-    fprintf(f,"arm%03X %6ld\n",op,e-s);fflush(f);
-  }fclose(f);
-}
-#endif
 
 // ========================================================================
 // OPTIMIZED EXECUTION LOOP (FAST-PATH DISPATCHER)

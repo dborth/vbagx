@@ -181,10 +181,6 @@
 			LogDebug("[ARENA] Block 0x%08X | Offset: 0x%08X | Res: %u | Used: %u | Rewind: %u\n", \
 				   (u32)(startPC), (u32)(allocOffset), (u32)(reserved), (u32)(used), (u32)(rewind)); \
 		} while(0)
-	#else
-		#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter)	((void)0)
-		#define JIT_LOG_CACHE_FLUSH()														((void)0)
-		#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind)					((void)0)
 	#endif //JIT_CACHE_AND_ARENA_LOG
 
 	#if JIT_DETAILED_LOG
@@ -303,18 +299,26 @@
 #ifndef PROFILER_CACHE_FLUSH_END
 #define PROFILER_CACHE_FLUSH_END()                  ((void)0)
 #endif
-
+#ifndef JIT_LOG_CACHE_EVENT
+#define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter)	((void)0)
+#endif
+#ifndef JIT_LOG_CACHE_FLUSH
+#define JIT_LOG_CACHE_FLUSH()													((void)0)
+#endif
+#ifndef JIT_LOG_ARENA
+#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind)				((void)0)
+#endif
 #ifndef JIT_LOG_STATE_INIT
-	#define JIT_LOG_STATE_INIT()        											((void)0)
+#define JIT_LOG_STATE_INIT()        											((void)0)
 #endif
 #ifndef JIT_LOG_STATE_CPP
-	#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)       				((void)0)
+#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)       				((void)0)
 #endif
 #ifndef JIT_LOG_STATE_JIT
-    #define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)        ((void)0)
+#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)        ((void)0)
 #endif
 #ifndef JIT_LOG_STATE_WRITE_TO_FILE
-	#define JIT_LOG_STATE_WRITE_TO_FILE()											((void)0)
+#define JIT_LOG_STATE_WRITE_TO_FILE()											((void)0)
 #endif
 #ifndef JIT_DIFFERENTIAL_THUMB_HOOK
 #define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) ((void)0)
