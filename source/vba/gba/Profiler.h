@@ -24,6 +24,26 @@ enum BailoutReason {
 struct DebugStats {
     u64 timeTotalStart;
     u64 timeTotalElapsed;
+
+	// Framerate Stats (Core vs Display)
+	float minCoreFps, maxCoreFps, minDisplayFps, maxDisplayFps;
+	double accumCoreFps, accumDisplayFps;
+	u32 fpsSamples;
+	u32 coreFpsBins[5];    // <50, 50-55, 55-59, 59-61, >61
+	u32 displayFpsBins[5]; // <50, 50-55, 55-59, 59-61, >61
+
+	// Audio & DRC Stats
+	u32 audioStarvationEvents;
+	u32 audioBufferFullnessBins[13];
+	u32 drcStateTicks[3]; // 0: Neutral, 1: Draining, 2: Filling
+	u32 drcTransitions;
+	int currentDrcState;  // Internal tracker to avoid polluting audio.cpp
+
+	// Frameskip Stats
+	u32 framesSkippedTotal;
+	u32 consecutiveSkips; // Tracked directly via PROFILER_INC
+	u32 consecutiveFrameskipBins[6]; // 1, 2, 3, 4, 5, 6+ skips
+
     u64 timeSpentThumb;
     u64 timeSpentARM;
 
@@ -67,6 +87,9 @@ struct DebugStats {
 
 	void reset();
 	void print();
+	void recordFPS(float coreFPS, float displayFPS);
+	void commitFrameskip();
+	void updateDRC(int unplayed, int newState);
 };
 
 extern DebugStats debugStats;

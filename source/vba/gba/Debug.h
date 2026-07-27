@@ -70,6 +70,12 @@
 	#if PROFILING
 		#define DEBUG_LOG(fmt, ...) LogDebug(fmt, ##__VA_ARGS__)
 
+		#define PROFILER_LOG_FPS(coreFPS, displayFPS) debugStats.recordFPS(coreFPS, displayFPS)
+		#define PROFILER_COMMIT_FRAMESKIP()           debugStats.commitFrameskip()
+
+		#define PROFILER_LOG_AUDIO_STARVATION()       debugStats.audioStarvationEvents++
+		#define PROFILER_LOG_DRC(unplayed, newState)  debugStats.updateDRC(unplayed, (int)newState)
+
 		#define PROFILER_START_TIMER(name) u64 name = gettime()
 		#define PROFILER_ADD_TIME(stat, name) debugStats.stat += (gettime() - (name))
 		#define PROFILER_INC(stat) debugStats.stat++
@@ -227,8 +233,20 @@
 		#define JIT_LOG_STATE_WRITE_TO_FILE()												jitDebugStateLog.WriteToFile()
 	#endif
 
-#endif // !NO_JIT_COMPILER
+#endif // VBAGX_DEBUG
 
+#ifndef PROFILER_LOG_FPS
+#define PROFILER_LOG_FPS(coreFPS, displayFPS)		((void)0)
+#endif
+#ifndef PROFILER_COMMIT_FRAMESKIP
+#define PROFILER_COMMIT_FRAMESKIP()					((void)0)
+#endif
+#ifndef PROFILER_LOG_AUDIO_STARVATION
+#define PROFILER_LOG_AUDIO_STARVATION()				((void)0)
+#endif
+#ifndef PROFILER_LOG_DRC
+#define PROFILER_LOG_DRC(unplayed, newState)		((void)0)
+#endif
 #ifndef PROFILER_START_TIMER
 #define PROFILER_START_TIMER(name)					((void)0)
 #endif
@@ -245,7 +263,7 @@
 #define PROFILER_BIN_BLOCK(len)						((void)0)
 #endif
 #ifndef DEBUG_LOG
-#define DEBUG_LOG(fmt, ...) 							((void)0)
+#define DEBUG_LOG(fmt, ...) 						((void)0)
 #endif
 #ifndef DEBUG_RESET_LOGS
 #define DEBUG_RESET_LOGS()							((void)0)
@@ -260,19 +278,19 @@
 #define JIT_LOG_BAILOUT(pc, opcode, reason)			((void)0)
 #endif
 #ifndef JIT_LOG_EXEC
-#define JIT_LOG_EXEC(count, blockLen, bailed)			((void)0)
+#define JIT_LOG_EXEC(count, blockLen, bailed)		((void)0)
 #endif
 #ifndef PROFILER_DECLARE_BAILOUT_FLAG
-#define PROFILER_DECLARE_BAILOUT_FLAG()       			((void)0)
+#define PROFILER_DECLARE_BAILOUT_FLAG()       		((void)0)
 #endif
 #ifndef PROFILER_CHECK_BAILOUT_TRANSITION
-#define PROFILER_CHECK_BAILOUT_TRANSITION()   			((void)0)
+#define PROFILER_CHECK_BAILOUT_TRANSITION()   		((void)0)
 #endif
 #ifndef PROFILER_SET_BAILOUT_FLAG
-#define PROFILER_SET_BAILOUT_FLAG()           			((void)0)
+#define PROFILER_SET_BAILOUT_FLAG()           		((void)0)
 #endif
 #ifndef PROFILER_CLEAR_BAILOUT_FLAG
-#define PROFILER_CLEAR_BAILOUT_FLAG()         			((void)0)
+#define PROFILER_CLEAR_BAILOUT_FLAG()         		((void)0)
 #endif
 #ifndef JIT_LOG_FALLBACK
 #define JIT_LOG_FALLBACK(opcode)					((void)0)
@@ -303,24 +321,24 @@
 #define JIT_LOG_CACHE_EVENT(bucket, startPC, evictedPC, arenaBefore, arenaAfter)	((void)0)
 #endif
 #ifndef JIT_LOG_CACHE_FLUSH
-#define JIT_LOG_CACHE_FLUSH()													((void)0)
+#define JIT_LOG_CACHE_FLUSH()														((void)0)
 #endif
 #ifndef JIT_LOG_ARENA
-#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind)				((void)0)
+#define JIT_LOG_ARENA(startPC, allocOffset, reserved, used, rewind)					((void)0)
 #endif
 #ifndef JIT_LOG_STATE_INIT
-#define JIT_LOG_STATE_INIT()        											((void)0)
+#define JIT_LOG_STATE_INIT()        												((void)0)
 #endif
 #ifndef JIT_LOG_STATE_CPP
-#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)       				((void)0)
+#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)       					((void)0)
 #endif
 #ifndef JIT_LOG_STATE_JIT
-#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)        ((void)0)
+#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)       	 	((void)0)
 #endif
 #ifndef JIT_LOG_STATE_WRITE_TO_FILE
-#define JIT_LOG_STATE_WRITE_TO_FILE()											((void)0)
+#define JIT_LOG_STATE_WRITE_TO_FILE()												((void)0)
 #endif
 #ifndef JIT_DIFFERENTIAL_THUMB_HOOK
-#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) ((void)0)
+#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) 										((void)0)
 #endif
 #endif // DEBUG_H

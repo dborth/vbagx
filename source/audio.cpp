@@ -17,6 +17,7 @@
 #endif
 #include "audio.h"
 #include "system.h"
+#include "vba/gba/Debug.h"
 
 extern bool turboMode;
 extern int ConfigRequested;
@@ -127,6 +128,7 @@ static void AudioPlayer()
 	if (unplayed == 0) {
 
 		if (!wasStarved) {
+			PROFILER_LOG_AUDIO_STARVATION();
 			BuildFadeOutBuffer();
 			wasStarved = true;
 		}
@@ -290,6 +292,8 @@ double SoundWii::getDynamicRate()
     else if(unplayed < UNPLAYED_LOW_WATER) {
         rateState = RATE_STATE_FILLING;
     }
+
+    PROFILER_LOG_DRC(unplayed, rateState);
 
     // Return the float multiplier
     // Draining means we need FEWER samples generated per frame.

@@ -182,6 +182,7 @@ void systemFrame()
 		{
 			coreFPS    = (60.0f * (float)USEC_PER_SEC) / (float)elapsedUs;
 			displayFPS = ((float)displayFrameCount * (float)USEC_PER_SEC) / (float)elapsedUs;
+			PROFILER_LOG_FPS(coreFPS, displayFPS);
 		}
 
 		windowStart       = nowTicks;
@@ -222,6 +223,8 @@ void systemFrame()
 			{
 				skippedFrames++;
 				frameToRender = false;
+				PROFILER_INC(framesSkippedTotal);
+				PROFILER_INC(consecutiveSkips);
 			}
 			else
 			{
@@ -234,6 +237,7 @@ void systemFrame()
 
 				skippedFrames = 0;
 				frameToRender = true;
+				PROFILER_COMMIT_FRAMESKIP();
 			}
 
 			if (!turboMode && FrameTimer > 0)
@@ -266,11 +270,14 @@ void systemFrame()
 				{
 					skippedFrames++;
 					frameToRender = false;
+					PROFILER_INC(framesSkippedTotal);
+					PROFILER_INC(consecutiveSkips);
 				}
 				else
 				{
 					skippedFrames = 0;
 					frameToRender = true;
+					PROFILER_COMMIT_FRAMESKIP();
 				}
 			}
 

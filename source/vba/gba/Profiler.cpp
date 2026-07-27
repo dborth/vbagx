@@ -6,10 +6,26 @@
 DebugStats debugStats;
 
 void DebugStats::reset() {
-    timeTotalStart = gettime(); // Automatically drops anchor on DEBUG_RESET_LOGS()
-    timeTotalElapsed = 0;
-    timeSpentThumb = 0;
-    timeSpentARM = 0;
+	timeTotalStart = gettime(); // Automatically drops anchor on DEBUG_RESET_LOGS()
+	timeTotalElapsed = 0;
+
+	minCoreFps = 999.0f; maxCoreFps = 0.0f; accumCoreFps = 0.0;
+	minDisplayFps = 999.0f; maxDisplayFps = 0.0f; accumDisplayFps = 0.0;
+	fpsSamples = 0;
+	for (int i = 0; i < 5; i++) { coreFpsBins[i] = 0; displayFpsBins[i] = 0; }
+
+	audioStarvationEvents = 0;
+	for (int i = 0; i < 13; i++) audioBufferFullnessBins[i] = 0;
+	for (int i = 0; i < 3; i++) drcStateTicks[i] = 0;
+	drcTransitions = 0;
+	currentDrcState = 0; // RATE_STATE_NEUTRAL
+
+	framesSkippedTotal = 0;
+	consecutiveSkips = 0;
+	for (int i = 0; i < 6; i++) consecutiveFrameskipBins[i] = 0;
+
+	timeSpentThumb = 0;
+	timeSpentARM = 0;
 
     timeSpentCompiling = 0;
 	timeSpentJIT = 0;
@@ -50,10 +66,38 @@ void DebugStats::reset() {
 }
 
 void DebugStats::print() {
-    // 1. Calculate Real-World Seconds
     timeTotalElapsed = gettime() - timeTotalStart;
-
     double totalSecs   = ticks_to_microsecs(timeTotalElapsed) / 1000000.0;
+
+	DEBUG_LOG("Total Wall-Clock Time: %.3f seconds\n\n", totalSecs);
+
+	DEBUG_LOG("--- PERFORMANCE & TIMING TUNING ---\n");
+	float avgCore = fpsSamples > 0 ? (float)(accumCoreFps / fpsSamples) : 0.0f;
+	float avgDisp = fpsSamples > 0 ? (float)(accumDisplayFps / fpsSamples) : 0.0f;
+
+	DEBUG_LOG("Core FPS:    Min: %5.1f | Max: %5.1f | Avg: %5.1f\n", minCoreFps, maxCoreFps, avgCore);
+	DEBUG_LOG("Display FPS: Min: %5.1f | Max: %5.1f | Avg: %5.1f\n", minDisplayFps, maxDisplayFps, avgDisp);
+	DEBUG_LOG("FPS Histogram (<50 | 50-55 | 55-59 | 59-61 | >61):\n");
+	DEBUG_LOG("  Core:    [%4u | %4u | %4u | %4u | %4u]\n", coreFpsBins[0], coreFpsBins[1], coreFpsBins[2], coreFpsBins[3], coreFpsBins[4]);
+	DEBUG_LOG("  Display: [%4u | %4u | %4u | %4u | %4u]\n", displayFpsBins[0], displayFpsBins[1], displayFpsBins[2], displayFpsBins[3], displayFpsBins[4]);
+
+	DEBUG_LOG("\nFrameskip Health (Micro-stutter Analysis):\n");
+	DEBUG_LOG("  Total Frames Skipped: %u\n", framesSkippedTotal);
+	DEBUG_LOG("  Consecutive Skips Histogram (1, 2, 3, 4, 5, 6+):\n");
+	DEBUG_LOG("  [%4u | %4u | %4u | %4u | %4u | %4u]\n",
+		consecutiveFrameskipBins[0], consecutiveFrameskipBins[1], consecutiveFrameskipBins[2],
+		consecutiveFrameskipBins[3], consecutiveFrameskipBins[4], consecutiveFrameskipBins[5]);
+
+	DEBUG_LOG("\nAudio Buffer & DRC Health:\n");
+	DEBUG_LOG("  Absolute Starvation Events (Audio Dropouts): %u\n", audioStarvationEvents);
+	DEBUG_LOG("  DRC State Ticks - Neutral: %u | Draining: %u | Filling: %u\n", drcStateTicks[0], drcStateTicks[1], drcStateTicks[2]);
+	DEBUG_LOG("  DRC State Transitions: %u\n", drcTransitions);
+	DEBUG_LOG("  Buffer Fullness Histogram (Target is 4-8):\n");
+	for (int i = 0; i < 13; i++) {
+		DEBUG_LOG("    [%2d] Buffers: %u\n", i, audioBufferFullnessBins[i]);
+	}
+	DEBUG_LOG("-----------------------------------------\n");
+
     double thumbSecs   = ticks_to_microsecs(timeSpentThumb) / 1000000.0;
     double armSecs     = ticks_to_microsecs(timeSpentARM) / 1000000.0;
     double compileSecs = ticks_to_microsecs(timeSpentCompiling) / 1000000.0;
@@ -79,7 +123,6 @@ void DebugStats::print() {
 
     // 3. Print the Hierarchical Time Breakdown
 	DEBUG_LOG("\n========== JIT REAL-TIME PROFILING ==========\n");
-	DEBUG_LOG("Total Wall-Clock Time: %.3f seconds\n\n", totalSecs);
 	DEBUG_LOG("Average Framerate:     %.2f FPS\n\n", avgFPS);
 
 	DEBUG_LOG("--- MODE INVOCATIONS PER SECOND ---\n");
@@ -198,5 +241,46 @@ void DebugStats::print() {
 	}
 	DEBUG_LOG("=========================================\n\n");
 	WriteDebugLogToFile();
+}
+
+void DebugStats::recordFPS(float coreFPS, float displayFPS) {
+	if (coreFPS < minCoreFps && coreFPS > 0.0f) minCoreFps = coreFPS;
+	if (coreFPS > maxCoreFps) maxCoreFps = coreFPS;
+	accumCoreFps += coreFPS;
+
+	if (displayFPS < minDisplayFps && displayFPS > 0.0f) minDisplayFps = displayFPS;
+	if (displayFPS > maxDisplayFps) maxDisplayFps = displayFPS;
+	accumDisplayFps += displayFPS;
+
+	fpsSamples++;
+
+	if (coreFPS < 50.0f) coreFpsBins[0]++;
+	else if (coreFPS < 55.0f) coreFpsBins[1]++;
+	else if (coreFPS < 59.0f) coreFpsBins[2]++;
+	else if (coreFPS <= 61.0f) coreFpsBins[3]++;
+	else coreFpsBins[4]++;
+
+	if (displayFPS < 50.0f) displayFpsBins[0]++;
+	else if (displayFPS < 55.0f) displayFpsBins[1]++;
+	else if (displayFPS < 59.0f) displayFpsBins[2]++;
+	else if (displayFPS <= 61.0f) displayFpsBins[3]++;
+	else displayFpsBins[4]++;
+}
+
+void DebugStats::commitFrameskip() {
+	if (consecutiveSkips == 0) return;
+	if (consecutiveSkips <= 5) consecutiveFrameskipBins[consecutiveSkips - 1]++;
+	else consecutiveFrameskipBins[5]++;
+	consecutiveSkips = 0; // Reset for the next run
+}
+
+void DebugStats::updateDRC(int unplayed, int newState) {
+	if (unplayed <= 12) audioBufferFullnessBins[unplayed]++;
+
+	drcStateTicks[newState]++;
+	if (currentDrcState != newState) {
+		drcTransitions++;
+		currentDrcState = newState;
+	}
 }
 #endif
