@@ -558,15 +558,11 @@ void soundShutdown()
 void soundPause()
 {
 	soundPaused = true;
-	if (soundDriver)
-		soundDriver->pause();
 }
 
 void soundResume()
 {
 	soundPaused = false;
-	if (soundDriver)
-		soundDriver->resume();
 }
 
 void soundSetVolume( float volume )
@@ -592,8 +588,6 @@ int soundGetEnable()
 
 void soundReset()
 {
-	soundDriver->reset();
-
 	remake_stereo_buffer();
 	reset_apu();
 
@@ -611,18 +605,8 @@ bool soundInit()
 	if ( !soundDriver )
 		return false;
 
-	if (!soundDriver->init(soundSampleRate))
-		return false;
-
 	soundPaused = true;
 	return true;
-}
-
-void soundSetThrottle(unsigned short throttle)
-{
-	if(!soundDriver)
-		return;
-	soundDriver->setThrottle(throttle);
 }
 
 static int dummy_state [16];

@@ -11,9 +11,6 @@
 // current value in soundQuality global.
 bool soundInit();
 
-// sets the Sound throttle
-void soundSetThrottle(unsigned short throttle);
-
 // Manages sound volume, where 1.0 is normal
 void soundSetVolume( float );
 float soundGetVolume();

@@ -332,24 +332,3 @@ void SoundWii::commitWrite()
         dma_started = true;
     }
 }
-
-bool SoundWii::init(long sampleRate)
-{
-	return true;
-}
-
-SoundWii::~SoundWii()
-{
-}
-
-void SoundWii::pause()
-{
-}
-
-void SoundWii::resume()
-{
-}
-
-void SoundWii::reset()
-{
-}

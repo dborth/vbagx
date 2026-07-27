@@ -22,12 +22,6 @@ class SoundWii: public SoundDriver
 {
 public:
 	SoundWii();
-	virtual ~SoundWii();
-
-	virtual bool init(long sampleRate);
-	virtual void pause();
-	virtual void reset();
-	virtual void resume();
 	virtual double getDynamicRate();
 	virtual bool canWrite();
 	virtual u16* getWriteBuffer();
