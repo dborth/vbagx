@@ -51,6 +51,30 @@
 #include "goomba/goombarom.h"
 #include "goomba/goombasav.h"
 
+#define FRAMES_PER_SECOND  60
+#define USEC_PER_SEC       1000000
+#define FRAME_PERIOD_US    (USEC_PER_SEC / FRAMES_PER_SECOND) // 16666.67 us
+#define MAX_FRAME_SKIP        4   // non-turbo consecutive-skip cap (== old MAX_FRAME_SKIP)
+#define TURBO_MAX_FRAME_SKIP  9   // turbo consecutive-skip cap
+
+static int timerstyle = 0;
+static u64 prev = 0;
+static u64 now  = 0;
+
+// -- Render decision --
+// Read directly by GBA.cpp: this single flag gates both this frame's
+// systemDrawScreen() call and -- until the next VCOUNT==160 -- the
+// following frame's per-scanline CPURenderLine_Wii() calls
+bool frameToRender = true;
+static int skippedFrames = 0;
+
+// -- FPS display counters -- purely cosmetic, fully decoupled from pacing. --
+static u64  windowStart       = 0;
+static int   fpsFrameCount     = 0;
+static int   displayFrameCount = 0;
+static float displayFPS        = 0.0f;
+static float coreFPS           = 0.0f;
+
 static u64 start;
 int cartridgeType = CARTRIDGE_NONE;
 u32 RomIdCode;
@@ -58,10 +82,6 @@ char RomTitle[17];
 
 int SunBars = 3;
 bool TiltSideways = false;
-
-/****************************************************************************
- * VBA Globals
- ***************************************************************************/
 
 int systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
@@ -86,11 +106,6 @@ struct EmulatedSystem emulator =
 	0
 };
 
-/****************************************************************************
-* systemGetClock
-*
-* Returns number of milliseconds since program start
-****************************************************************************/
 u32 systemGetClock(void)
 {
     const u64 now = gettime();
@@ -110,34 +125,6 @@ bool systemPauseOnFrame()
  * Frame pacing, frameskip, & FPS instrumentation
  *****************************************************************************/
 
-/* *****************************************************************************
- * GBA hardware runs at 16.78 MHz, 280,896 cycles per frame = ~59.7275 Hz
- * Ideal frame period is ~16742 microseconds.
- *****************************************************************************/
-#define FRAMES_PER_SECOND  60
-#define USEC_PER_SEC       1000000
-#define FRAME_PERIOD_US    (USEC_PER_SEC / FRAMES_PER_SECOND) // 16666.67 us
-#define MAX_FRAME_SKIP        4   // non-turbo consecutive-skip cap (== old MAX_FRAME_SKIP)
-#define TURBO_MAX_FRAME_SKIP  9   // turbo consecutive-skip cap
-
-int timerstyle = 1;
-static u64 prev = 0;
-static u64 now  = 0;
-
-// -- Render decision --
-// Read directly by GBA.cpp: this single flag gates both this frame's
-// systemDrawScreen() call and -- until the next VCOUNT==160 -- the
-// following frame's per-scanline CPURenderLine_Wii() calls
-bool frameToRender = true;
-static int skippedFrames = 0;
-
-// -- FPS display counters -- purely cosmetic, fully decoupled from pacing. --
-static u64  windowStart       = 0;
-static int   fpsFrameCount     = 0;
-static int   displayFrameCount = 0;
-static float displayFPS        = 0.0f;
-static float coreFPS           = 0.0f;
-
 /*
  * Clears all pacing/frameskip/FPS state. Called whenever returning from the menu
  */
@@ -147,6 +134,12 @@ void systemResetPacer()
 	now   = prev;
 	windowStart = prev;
 	FrameTimer = 0;
+
+	if(vmode_60hz) // Video mode matches ROM timing - use vblanks
+		timerstyle = 0;
+	else // use timing windows with usleep
+		timerstyle = 1;
+
 	frameToRender   = true;
 	skippedFrames   = 0;
 

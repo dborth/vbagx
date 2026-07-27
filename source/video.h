@@ -34,6 +34,7 @@ extern bool CursorValid;
 extern bool TiltScreen;
 extern float TiltAngle;
 extern u32 FrameTimer;
+extern bool vmode_60hz;
 
 typedef struct
 {

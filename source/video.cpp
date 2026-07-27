@@ -567,11 +567,13 @@ static GXRModeObj * FindVideoMode()
 
     if ((mode->viTVMode >> 2) == VI_PAL)
 	{
-		mode->viXOrigin = (VI_MAX_WIDTH_PAL - mode->viWidth) / 2;
+    	vmode_60hz = false;
+    	mode->viXOrigin = (VI_MAX_WIDTH_PAL - mode->viWidth) / 2;
 		mode->viYOrigin = (VI_MAX_HEIGHT_PAL - mode->viHeight) / 2;
 	}
 	else
 	{
+		vmode_60hz = true;
 		mode->viXOrigin = (VI_MAX_WIDTH_NTSC - mode->viWidth) / 2;
 		mode->viYOrigin = (VI_MAX_HEIGHT_NTSC - mode->viHeight) / 2;
 	}
