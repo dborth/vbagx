@@ -26,6 +26,8 @@ extern u32 RomIdCode;
 extern bool TiltSideways;
 extern char RomTitle[];
 
+float systemGetRenderFPS();
+float systemGetCoreFPS();
 void systemResetPacer();
 bool LoadVBAROM();
 void InitialisePalette();

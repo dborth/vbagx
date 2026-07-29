@@ -1339,7 +1339,7 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 			if(GCSettings.DisplayFrameRate == FRAMERATE_CORE)
 				sprintf(fpsStr, "FPS: %.1f", systemGetCoreFPS());
 			else
-				sprintf(fpsStr, "FPS: %.1f", systemGetDisplayFPS());
+				sprintf(fpsStr, "FPS: %.1f", systemGetRenderFPS());
 
 			lastFpsTime = currentTime;
 		}

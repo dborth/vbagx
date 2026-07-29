@@ -51,15 +51,25 @@
 #include "goomba/goombarom.h"
 #include "goomba/goombasav.h"
 
-#define FRAMES_PER_SECOND  60
-#define USEC_PER_SEC       1000000
-#define FRAME_PERIOD_US    (USEC_PER_SEC / FRAMES_PER_SECOND) // 16666.67 us
-#define MAX_FRAME_SKIP        4   // non-turbo consecutive-skip cap (== old MAX_FRAME_SKIP)
-#define TURBO_MAX_FRAME_SKIP  9   // turbo consecutive-skip cap
+#define THREAD_SLEEP			50
+#define USEC_PER_SEC			1000000
+#define FRAME_PERIOD_US			16742	// GBA hardware timing (~59.7275 Hz)
+#define MAX_FRAME_SKIP			2		// non-turbo consecutive-skip cap (== old MAX_FRAME_SKIP)
+#define TURBO_MAX_FRAME_SKIP	9		// turbo consecutive-skip cap
+#define MAX_PACE_DEBT_US		(FRAME_PERIOD_US * MAX_FRAME_SKIP) // cap on banked "behind schedule" debt after a pause/loadstate.
+
+// -- Weighted skip-pressure model --
+// Mirrors audio.cpp's UNPLAYED_LOW_RELEASE/UNPLAYED_LOW_WATER breakpoints,
+// but kept as its own constants: this is pacing policy deciding whether to
+// drop a render, not DRC policy deciding a sample rate, and the two are
+// allowed to diverge even though they agree today.
+#define AUDIO_DEFICIT_SWEET_SPOT	6		// unplayed >= this: no pressure to skip for audio's sake
+#define AUDIO_DEFICIT_LOW_WATER		4		// below this the deficit curve steepens (mirrors the DRC's own emergency tier)
+#define SKIP_AUDIO_WEIGHT			0.35f	// audio alone, even at unplayed==0, never quite reaches SKIP_PRESSURE_THRESHOLD
+#define SKIP_WALL_WEIGHT			1.0f	// wall-clock alone, fully at the skip cap, always crosses it on its own
+#define SKIP_PRESSURE_THRESHOLD		1.0f
 
 static int timerstyle = 0;
-static u64 prev = 0;
-static u64 now  = 0;
 
 // -- Render decision --
 // Read directly by GBA.cpp: this single flag gates both this frame's
@@ -68,12 +78,15 @@ static u64 now  = 0;
 bool frameToRender = true;
 static int skippedFrames = 0;
 
-// -- FPS display counters -- purely cosmetic, fully decoupled from pacing. --
-static u64  windowStart       = 0;
-static int   fpsFrameCount     = 0;
-static int   displayFrameCount = 0;
-static float displayFPS        = 0.0f;
-static float coreFPS           = 0.0f;
+// FPS display
+static int renderFrameCount = 0;
+static int coreFrameCount = 0;
+static float renderFPS = 0.0f;
+static float coreFPS = 0.0f;
+static u64 lastFPS = 0;
+
+// Frame timing
+static u64 lastRenderFrameTime = 0;
 
 static u64 start;
 int cartridgeType = CARTRIDGE_NONE;
@@ -123,9 +136,6 @@ void systemGbBorderOn() {}
  */
 void systemResetPacer()
 {
-	prev  = gettime();
-	now   = prev;
-	windowStart = prev;
 	FrameTimer = 0;
 
 	if(vmode_60hz) // Video mode matches ROM timing - use vblanks
@@ -136,20 +146,57 @@ void systemResetPacer()
 	frameToRender   = true;
 	skippedFrames   = 0;
 
-	fpsFrameCount     = 0;
-	displayFrameCount = 0;
-	displayFPS        = 0.0f;
-	coreFPS           = 0.0f;
+	coreFrameCount = 0;
+	coreFPS = 0.0f;
+
+	renderFrameCount = 0;
+	renderFPS        = 0.0f;
+	lastRenderFrameTime = gettime();
+	lastFPS = gettime();
 }
 
-// Called from systemDrawScreen(), once per *actual* draw.
-void systemNoteDisplayedFrame()
-{
-	displayFrameCount++;
-}
-
-float systemGetDisplayFPS(void) { return displayFPS; }
+float systemGetRenderFPS(void) { return renderFPS; }
 float systemGetCoreFPS(void)    { return coreFPS; }
+
+static inline float clampf(float v, float lo, float hi)
+{
+	return (v < lo) ? lo : (v > hi) ? hi : v;
+}
+
+// 0..1: how urgently audio needs this frame's CPU time, from the raw
+// unplayed-buffer count. Zero at/above the sweet spot; ramps gently
+// through [LOW_WATER, SWEET_SPOT) -- the same zone the DRC's own 0.5%
+// nudge covers -- then steepens below LOW_WATER, the same zone the DRC's
+// emergency tier watches. Two-segment piecewise-linear rather than a
+// single curve so each segment's slope can be tuned independently later.
+static float AudioDeficit(int unplayed)
+{
+	if (unplayed < 0) return 0.0f; // DMA not primed yet -- audio has no opinion
+
+	if (unplayed >= AUDIO_DEFICIT_SWEET_SPOT)
+		return 0.0f;
+
+	if (unplayed >= AUDIO_DEFICIT_LOW_WATER)
+		return 0.5f * (float)(AUDIO_DEFICIT_SWEET_SPOT - unplayed)
+		            / (float)(AUDIO_DEFICIT_SWEET_SPOT - AUDIO_DEFICIT_LOW_WATER);
+
+	return 0.5f + 0.5f * (float)(AUDIO_DEFICIT_LOW_WATER - unplayed)
+	                    / (float)AUDIO_DEFICIT_LOW_WATER;
+}
+
+// Blend audio urgency and wall-clock urgency into one skip/no-skip call.
+// By design, neither alone is normally enough to cross the line -- an
+// isolated audio dip with no wall lag, or mild wall lag with a healthy
+// buffer, both fall through -- but either a severe reading on one side, or
+// moderate corroboration from both, does. This replaces the old
+// unconditional "needsFeeding" veto that could fire on any dip below the
+// sweet spot regardless of schedule state, which is what let a fast JIT
+// core's skip bursts push the ring well past its target band.
+static bool SkipPressureCrossed(float audioDeficit, float wallDeficit)
+{
+	float pressure = (SKIP_AUDIO_WEIGHT * audioDeficit) + (SKIP_WALL_WEIGHT * wallDeficit);
+	return pressure >= SKIP_PRESSURE_THRESHOLD;
+}
 
 /*
  * Called once per emulated GBA frame (VCOUNT==160), BEFORE the render-or-
@@ -157,55 +204,103 @@ float systemGetCoreFPS(void)    { return coreFPS; }
  */
 void systemFrame()
 {
-	// FPS bookkeeping
-	fpsFrameCount++;
-	if (fpsFrameCount >= 60)
+	if (turboMode)
 	{
-		u64 nowTicks  = gettime();
-		u32 elapsedUs = diff_usec(windowStart, nowTicks);
-
-		if (elapsedUs > 0)
+		// Turbo: no real-time throttle at all -- run flat out. Frameskip's
+		// only job here is to avoid spending GX_Render()/VSync time on
+		// frames nobody's watching; it does not bound the audio backlog
+		// (Sound.cpp's own overflow-drop policy in flush_samples() does
+		// that, independently, by design -- see audio.cpp's getDynamicRate()).
+		if (skippedFrames < TURBO_MAX_FRAME_SKIP)
 		{
-			coreFPS    = (60.0f * (float)USEC_PER_SEC) / (float)elapsedUs;
-			displayFPS = ((float)displayFrameCount * (float)USEC_PER_SEC) / (float)elapsedUs;
-			PROFILER_LOG_FPS(coreFPS, displayFPS);
+			skippedFrames++;
+			frameToRender = false;
+		}
+		else
+		{
+			skippedFrames = 0;
+			frameToRender = true;
 		}
 
-		windowStart       = nowTicks;
-		fpsFrameCount     = 0;
-		displayFrameCount = 0;
+		// Keep the non-turbo clocks sane for whenever turbo lets go, so we
+		// don't inherit stale debt/VBlank-count and read as "behind" the
+		// instant turbo turns off.
+		FrameTimer = 0;
+		return;
 	}
 
-	bool frameskipAllowed = turboMode || (cartridgeType == CARTRIDGE_GBA && GCSettings.gbaFrameskip);
-	int skipFrms = turboMode ? TURBO_MAX_FRAME_SKIP : MAX_FRAME_SKIP;
+	// Non-turbo: we ALWAYS pace to true GBA hardware time (~59.7275Hz),
+	// regardless of the user's frameskip preference. "Frameskip off" only
+	// answers "may a frame's render be dropped to catch up" -- it must
+	// never mean "let a fast JIT core run ahead of real GBA time." Those
+	// used to be the same flag; a JIT-fast core with frameskip disabled
+	// could run unthrottled (e.g. ~180fps) because the old code skipped
+	// pacing entirely rather than just skipping the *render-drop* option.
+	bool mayDropRender = (cartridgeType == CARTRIDGE_GBA && GCSettings.gbaFrameskip);
+	int skipFrms = MAX_FRAME_SKIP;
 
-	if (!frameskipAllowed)
+	// Audio urgency, as a continuous 0..1 reading rather than two booleans
+	float audioDeficit = AudioDeficit(AudioGetUnplayed());
+
+	if (timerstyle == 0)
 	{
-		frameToRender = true;
-		skippedFrames = 0;
-		prev = gettime();
+		// V-sync-driven pacing. GX_Render() blocks on the real hardware
+		// VSync whenever we render, so a fast JIT core is automatically
+		// capped at the display's own refresh rate the instant every
+		// frame renders -- no separate software throttle is needed here.
+		// This naturally satisfies "never exceed true GBA rate" for
+		// scenario 2 without any extra code.
+		u32 pendingFrames = FrameTimer;
 
-		// Prevent VBlank debt from silently piling up while frameskip is disabled
-		FrameTimer = 0;
+		// SKIP PRESSURE: blend how far behind real vblanks we are with
+		// how urgently audio needs this frame's CPU time
+		float wallDeficit = clampf((float)pendingFrames / (float)skipFrms, 0.0f, 1.0f);
+		bool behindSchedule = SkipPressureCrossed(audioDeficit, wallDeficit);
+
+		if (pendingFrames > skipFrms)
+		{
+			FrameTimer = skipFrms;
+			pendingFrames = skipFrms;
+		}
+
+		if (mayDropRender && behindSchedule && (skippedFrames < skipFrms))
+		{
+			skippedFrames++;
+			frameToRender = false;
+			PROFILER_INC(framesSkippedTotal);
+			PROFILER_INC(consecutiveSkips);
+		}
+		else
+		{
+			// If we were behind but either can't or won't drop a render,
+			// forgive the VBlank debt rather than let it sit at max and
+			// bias the next frame's decision toward skipping anyway
+			if (behindSchedule)
+				FrameTimer = mayDropRender ? 1 : 0;
+
+			skippedFrames = 0;
+			frameToRender = true;
+			PROFILER_COMMIT_FRAMESKIP();
+		}
+
+		if (FrameTimer > 0)
+			FrameTimer--;
 	}
 	else
 	{
-		if (timerstyle == 0)
-		{
-			// V-sync-driven pacing
-			u32 pendingFrames = FrameTimer;
+		// Time-driven pacing. Nothing here blocks on real hardware, so
+		// this is the only thing standing between a fast JIT core and
+		// running ahead of true GBA time.
+		u32 usecSinceLastFrame = diff_usec(lastRenderFrameTime, gettime());
 
-			// JITTER FIX: Absorb 1 missed VBlank (e.g., a JIT compile spike).
-			// Only panic and drop a frame if we are 2 or more VBlanks behind.
-			bool behindSchedule = (pendingFrames > 2);
+		// SKIP PRESSURE: blend how far behind real time we are with audio urgency
+		float wallDeficit = clampf((float)usecSinceLastFrame / (float)MAX_PACE_DEBT_US, 0.0f, 1.0f);
+		bool behindSchedule = SkipPressureCrossed(audioDeficit, wallDeficit);
 
-			if (pendingFrames > skipFrms)
-			{
-				FrameTimer = skipFrms;
-				pendingFrames = skipFrms;
-			}
-
-			if (behindSchedule && (skippedFrames < skipFrms))
+		if(behindSchedule) {
+			// 1. Should we drop a render to catch up?
+			// We ONLY drop if the skip pressure crossed the threshold (behindSchedule).
+			if (mayDropRender && behindSchedule && (skippedFrames < skipFrms))
 			{
 				skippedFrames++;
 				frameToRender = false;
@@ -214,64 +309,27 @@ void systemFrame()
 			}
 			else
 			{
-				// If we were behind but hit the skip cap, the CPU is fundamentally saturated.
-				// We force a render, but we MUST clear the VBlank debt. If we don't, FrameTimer stays
-				// at max, and the very next frame will instantly skip again, locking us to ~10 FPS.
-				if (behindSchedule) {
-					FrameTimer = 1; // Forgive debt to find a smooth equilibrium (e.g. 1 Render / 1 Skip)
-				}
-
 				skippedFrames = 0;
 				frameToRender = true;
 				PROFILER_COMMIT_FRAMESKIP();
 			}
-
-			if (!turboMode && FrameTimer > 0)
-				FrameTimer--;
 		}
-		else
-		{
-			// Time-driven pacing
-			u32 timediffallowed = turboMode ? 0 : FRAME_PERIOD_US;
-			now = gettime();
-
-			if (diff_usec(prev, now) < timediffallowed)
+		else {
+			// Ahead of schedule -- LWP-safe micro-sleep loop
+			while (usecSinceLastFrame < FRAME_PERIOD_US)
 			{
-				// Ahead of schedule -- LWP-safe micro-sleep loop.
-				while (diff_usec(prev, now) < timediffallowed)
-				{
-					if ((timediffallowed - diff_usec(prev, now)) > 50) {
-						usleep(50);
-					}
-					now = gettime();
+				if (usecSinceLastFrame > THREAD_SLEEP) {
+					usleep(THREAD_SLEEP);
+					usecSinceLastFrame = diff_usec(lastRenderFrameTime, gettime());
 				}
-
-				frameToRender = true;
-				skippedFrames = 0;
-				PROFILER_COMMIT_FRAMESKIP();
-			}
-			else
-			{
-				// Behind schedule
-				if (skippedFrames < skipFrms)
-				{
-					skippedFrames++;
-					frameToRender = false;
-					PROFILER_INC(framesSkippedTotal);
-					PROFILER_INC(consecutiveSkips);
-				}
-				else
-				{
-					skippedFrames = 0;
-					frameToRender = true;
-					PROFILER_COMMIT_FRAMESKIP();
+				else {
+					break;
 				}
 			}
-
-			// Snap prev to now universally (prevents rubber-band fast-forwarding after a lag spike)
-			prev = now;
 		}
 	}
+
+	coreFrameCount++;
 }
 
 /****************************************************************************
@@ -809,8 +867,23 @@ void systemDrawScreen()
 		srcHeight,
 		pix
 	);
+
+	renderFrameCount++;
+	if (renderFrameCount >= 60)
+	{
+		u32 elapsedUs = diff_usec(lastFPS, gettime());
+		if (elapsedUs > 0) {
+			renderFPS = ((float)renderFrameCount * (float)USEC_PER_SEC) / (float)elapsedUs;
+			coreFPS    = ((float)coreFrameCount * (float)USEC_PER_SEC) / (float)elapsedUs;
+		}
+		lastFPS = gettime();
+		renderFrameCount = 0;
+		coreFrameCount = 0;
+		PROFILER_LOG_FPS(coreFPS, displayFPS);
+	}
+
+	lastRenderFrameTime = gettime();
 	PROFILER_MARK_FRAME();
-	systemNoteDisplayedFrame();
 }
 
 static bool ValidGameId(u32 id)

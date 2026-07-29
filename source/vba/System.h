@@ -45,8 +45,6 @@ extern void systemScreenMessage(const char *);
 extern void systemUpdateMotionSensor();
 extern int  systemGetSensorX();
 extern int  systemGetSensorY();
-extern float systemGetDisplayFPS(void);
-extern float systemGetCoreFPS(void);
 extern void systemFrame();
 extern void systemGbBorderOn();
 extern void systemPaceFrame(bool frameWasRendered);

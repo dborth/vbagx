@@ -118,6 +118,17 @@ static void ApplyFadeIn(u8* buf)
 	DCFlushRange(buf, DMA_BYTES);
 }
 
+// Raw unplayed-buffer count, for callers (vbasupport.cpp's weighted skip-
+// pressure model) that want to build their own continuous deficit curve
+// rather than react to a fixed threshold. Returns -1 before DMA has
+// primed -- there's nothing to starve yet, so callers should treat a
+// negative reading as "audio has no opinion right now."
+int AudioGetUnplayed()
+{
+    if (!dma_started) return -1;
+    return getUnplayed();
+}
+
 /****************************************************************************
  * AudioPlayer (ISR)
  *
