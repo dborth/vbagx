@@ -218,6 +218,14 @@
 
 	#if JIT_DIFFERENTIAL_TESTING
 		#define JIT_LOG_MISMATCH(msg)														LogJITMismatch(msg)
+
+		#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) \
+			do { \
+				int diffState = JIT_RunDifferentialThumbHook_Impl((pc), (block), CPUReadHalfWord(pc), &clockTicks, thumbInsnTable); \
+				if (diffState == -1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 0; } \
+				if (diffState == 1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 1; } \
+				if (diffState == 2) continue; \
+			} while(0)
 	#endif
 
 	#if JIT_DEBUGSTATELOG
@@ -356,6 +364,10 @@
 #endif
 #ifndef JIT_LOG_STATE_WRITE_TO_FILE
 #define JIT_LOG_STATE_WRITE_TO_FILE()												((void)0)
+#endif
+
+#ifndef JIT_DIFFERENTIAL_THUMB_HOOK
+#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) 										((void)0)
 #endif
 
 #endif // DEBUG_H

@@ -25,10 +25,6 @@
 #ifndef JIT_DIFFERENTIAL_H
 #define JIT_DIFFERENTIAL_H
 
-#include "Debug.h"
-
-#ifdef JIT_DIFFERENTIAL_TESTING
-
 struct BasicBlock; // Forward declaration
 typedef void (*insnfunc_t)(unsigned int);
 
@@ -40,21 +36,5 @@ int JIT_RunDifferentialThumbHook_Impl(
 	int* diffClockTicks,
 	insnfunc_t* thumbInsnTable
 );
-
-// The macro contains zero execution logic. It simply triggers the hook,
-// passes the local clockTicks reference, and handles control flow (bailout / continue)
-// based on the returned state.
-#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) \
-	do { \
-		int diffState = JIT_RunDifferentialThumbHook_Impl((pc), (block), CPUReadHalfWord(pc), &clockTicks, thumbInsnTable); \
-		if (diffState == -1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 0; } \
-		if (diffState == 1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 1; } \
-		if (diffState == 2) continue; \
-	} while(0)
-#endif
-
-#ifndef JIT_DIFFERENTIAL_THUMB_HOOK
-#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) 										((void)0)
-#endif
 
 #endif // JIT_DIFFERENTIAL_H

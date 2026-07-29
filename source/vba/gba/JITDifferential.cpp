@@ -28,6 +28,7 @@
  * per run to avoid runaway log growth once something is actually broken.
  ***************************************************************************/
 
+#include "Debug.h"
 #include "JITDifferential.h"
 
 #ifdef JIT_DIFFERENTIAL_TESTING
@@ -92,10 +93,10 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 
 	// 4. Run Native C++ Catch-up execution
 	int cppCycles = 0;
-	u32 steps = 0;
+	u32 instructionCount = 0;
 
 	// Execute EXACTLY the same number of instructions the JIT ran
-	while (steps < jitResult.instructions && !armState && !holdState && !SWITicks) {
+	while (instructionCount < jitResult.instructions && !armState && !holdState && !SWITicks) {
 		u16 opcode = cpuPrefetch[0];
 		cpuPrefetch[0] = cpuPrefetch[1];
 		busPrefetch = false;
@@ -118,19 +119,7 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 		cpuTotalTicks += *diffClockTicks;
 		cppCycles += *diffClockTicks;
 
-		if (busPrefetchCount & 0xFF) {
-			int prefetchWait = (busPrefetchCount & 0xFF) - *diffClockTicks;
-			if (prefetchWait <= 0) {
-				// Prefetch completed, clear wait states but keep active bit
-				busPrefetchCount = (busPrefetchCount & 0xFFFFFF00);
-				busPrefetch = true; // Mark hit available
-			} else {
-				// Update remaining wait states
-				busPrefetchCount = (busPrefetchCount & 0xFFFFFF00) | prefetchWait;
-			}
-		}
-
-		steps++;
+		instructionCount++;
 	}
 
 	// 5. Compare & Detect Divergence
