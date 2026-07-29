@@ -5,7 +5,7 @@
 #include "../common/Port.h"
 
 static const int MAX_JIT_TRACE_CALLS = 100;
-static const int MAX_JIT_MISMATCH_COUNT = 100;
+static const int MAX_JIT_MISMATCH_COUNT = 10;
 
 enum BailoutReason {
 	BAILOUT_UNKNOWN = 0,

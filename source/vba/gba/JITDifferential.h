@@ -25,34 +25,36 @@
 #ifndef JIT_DIFFERENTIAL_H
 #define JIT_DIFFERENTIAL_H
 
+#include "Debug.h"
+
 #ifdef JIT_DIFFERENTIAL_TESTING
 
 struct BasicBlock; // Forward declaration
+typedef void (*insnfunc_t)(unsigned int);
 
 // The heavy lifting and state access are fully isolated in the .cpp file.
 int JIT_RunDifferentialThumbHook_Impl(
-    unsigned int pc,
-    BasicBlock* block,
-    unsigned short startOpcode,
-    int* diffClockTicks
+	unsigned int pc,
+	BasicBlock* block,
+	unsigned short startOpcode,
+	int* diffClockTicks,
+	insnfunc_t* thumbInsnTable
 );
 
 // The macro contains zero execution logic. It simply triggers the hook,
 // passes the local clockTicks reference, and handles control flow (bailout / continue)
 // based on the returned state.
 #define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) \
-    do { \
-        int diffState = JIT_RunDifferentialThumbHook_Impl((pc), (block), CPUReadHalfWord(pc), &clockTicks); \
-        if (diffState == -1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 0; } \
-        if (diffState == 1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 1; } \
-        if (diffState == 2) continue; \
-    } while(0)
+	do { \
+		int diffState = JIT_RunDifferentialThumbHook_Impl((pc), (block), CPUReadHalfWord(pc), &clockTicks, thumbInsnTable); \
+		if (diffState == -1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 0; } \
+		if (diffState == 1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 1; } \
+		if (diffState == 2) continue; \
+	} while(0)
+#endif
 
-#else // JIT_DIFFERENTIAL_TESTING
-
-// Completely zero-cost when disabled
-#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) do {} while(0)
-
-#endif // JIT_DIFFERENTIAL_TESTING
+#ifndef JIT_DIFFERENTIAL_THUMB_HOOK
+#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) 										((void)0)
+#endif
 
 #endif // JIT_DIFFERENTIAL_H

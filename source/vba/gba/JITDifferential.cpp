@@ -28,10 +28,11 @@
  * per run to avoid runaway log growth once something is actually broken.
  ***************************************************************************/
 
+#include "JITDifferential.h"
+
 #ifdef JIT_DIFFERENTIAL_TESTING
 
 #include "JIT.h"
-#include "JITDifferential.h"
 #include "GBA.h"
 #include "GBAcpu.h"
 #include "GBAinline.h"
@@ -68,7 +69,7 @@ static inline void JIT_RestoreCPUState(const CPUStateBackup* b) {
     busPrefetchCount = b->busPrefetchCount;
 }
 
-int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode, int* diffClockTicks) {
+int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode, int* diffClockTicks, insnfunc_t* thumbInsnTable) {
     if (block == nullptr || block->execute == nullptr || debugStats.mismatchCount >= MAX_JIT_MISMATCH_COUNT) {
         return 0; // Did not handle, proceed to normal fallback
     }

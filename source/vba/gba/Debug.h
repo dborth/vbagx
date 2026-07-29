@@ -52,6 +52,7 @@
 	#include "GBA.h"
 	#include "Profiler.h"
 	#include "JITDebugStateLog.h"
+	#include "JITDifferential.h"
 	#include "../common/Types.h"
 
 	struct BasicBlock;
@@ -356,7 +357,5 @@
 #ifndef JIT_LOG_STATE_WRITE_TO_FILE
 #define JIT_LOG_STATE_WRITE_TO_FILE()												((void)0)
 #endif
-#ifndef JIT_DIFFERENTIAL_THUMB_HOOK
-#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) 										((void)0)
-#endif
+
 #endif // DEBUG_H
