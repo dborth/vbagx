@@ -41,9 +41,8 @@ class JITDebugStateLog {
 		 * @param nextPC     	The next PC value to execute
 		 * @param ticks      	Current tick accumulator state
 		 * @param cycles     	Cycles
-		 * @param instrCount    Total instruction count
 		 */
-		void LogState(const char* source, u32 executedPC, u32 nextPC, u32 ticks, u32 cycles, u32 instrCount);
+		void LogState(const char* source, u32 executedPC, u32 nextPC, u32 ticks, u32 cycles);
 		void WriteToFile();
 };
 

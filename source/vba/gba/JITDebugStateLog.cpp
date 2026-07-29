@@ -23,6 +23,7 @@
 
 #include "vbagx.h"
 #include "Globals.h"
+#include "Profiler.h"
 #include "JITDebugStateLog.h"
 
 #define DEBUG_STATE_LOG_BUFFER_SIZE		(4 * 1024 * 1024)
@@ -53,10 +54,12 @@ void JITDebugStateLog::Init() {
 	snprintf(logPath, sizeof(logPath), "sd:/jit-log-state-%s%s.txt", logType, logTime);
 }
 
-void JITDebugStateLog::LogState(const char* source, u32 executedPC, u32 nextPC, u32 ticks, u32 cycles, u32 instrCount) {
+void JITDebugStateLog::LogState(const char* source, u32 executedPC, u32 nextPC, u32 ticks, u32 cycles) {
 	if(logBuffer == nullptr) {
 		return;
 	}
+
+	u32 instrCount = debugStats.fallbackInstructionsExecuted+debugStats.jitInstructionsExecuted;
 
 	if (instrCount >= MAX_DEBUG_INSTRUCTIONS) {
 		WriteToFile();

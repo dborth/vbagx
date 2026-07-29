@@ -31,6 +31,7 @@ public:
 	virtual bool canWrite() = 0;
 	virtual u16* getWriteBuffer() = 0;
 	virtual void commitWrite() = 0;
+	virtual ~SoundDriver() = default;
 };
 
 #endif // __VBA_SOUND_DRIVER_H__
