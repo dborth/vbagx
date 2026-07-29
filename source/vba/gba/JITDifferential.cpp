@@ -22,7 +22,7 @@
  *      diverged called out explicitly (not just the first one) to help
  *      narrow down which format handler is at fault.
  *
- * The *first* reported mismatch in a run is the one to actually chase —
+ * The *first* reported mismatch in a run is the one to actually chase -
  * once state has diverged, every mismatch after that is just noise,
  * not an independent bug. Capped at MAX_JIT_MISMATCH_COUNT total reports
  * per run to avoid runaway log growth once something is actually broken.
