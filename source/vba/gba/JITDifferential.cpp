@@ -117,6 +117,19 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 
 		cpuTotalTicks += *diffClockTicks;
 		cppCycles += *diffClockTicks;
+
+		if (busPrefetchCount & 0xFF) {
+			int prefetchWait = (busPrefetchCount & 0xFF) - *diffClockTicks;
+			if (prefetchWait <= 0) {
+				// Prefetch completed, clear wait states but keep active bit
+				busPrefetchCount = (busPrefetchCount & 0xFFFFFF00);
+				busPrefetch = true; // Mark hit available
+			} else {
+				// Update remaining wait states
+				busPrefetchCount = (busPrefetchCount & 0xFFFFFF00) | prefetchWait;
+			}
+		}
+
 		steps++;
 	}
 

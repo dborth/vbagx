@@ -417,11 +417,27 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 		u32 bank = (pc >> 24) & 15;
 		u32 seqCost = memoryWaitSeq[bank];
+		if (seqCost == 0) seqCost = 1; // Fallback safety
 
 		if (cStaticCost > 0) *ptr++ = PPC_ADDI(PPC_R3, PPC_R3, cStaticCost);
 
 		// Only ROM banks have utilized prefetch buffers
 		if (bank >= 0x08 && bank <= 0x0D) {
+			// Active Recharge
+			// Natively simulate the bus prefetching ahead during the chunk's execution time.
+			// The CPU spends cInstrCount internal cycles. The 32-bit bus fetches 2 ops per seqCost cycles.
+			u32 genHits = (cInstrCount * 2) / seqCost;
+			if (genHits > 8) genHits = 8;
+
+			if (genHits > 0) {
+				// Shift R5 left by genHits to make room for new hits
+				*ptr++ = PPC_LI(PPC_R11, genHits);
+				*ptr++ = PPC_SLW(PPC_R5, PPC_R5, PPC_R11);
+				// Append the new hits (represented by 1s) and preserve the 0x100 active flag
+				u32 hitMask = (1 << genHits) - 1;
+				*ptr++ = PPC_ORI(PPC_R5, PPC_R5, hitMask | 0x100);
+			}
+
 			// 1. Calculate available prefetch hits: C = 31 - cntlzw((R5 & 0xFF) + 1)
 			*ptr++ = PPC_RLWINM(PPC_R11, PPC_R5, 0, 24, 31);
 			*ptr++ = PPC_ADDI(PPC_R11, PPC_R11, 1);
@@ -1616,6 +1632,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// 1. Extract Memory Bank (R12 >> 24)
 				*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
+				*emitPtr++ = PPC_RLWINM(PPC_R7, PPC_R11, 0, 28, 31); // R7 = R11 & 15
 
 				if (!isLoad) {
 					// STORE STRICT GUARD: Only Banks 2 & 3 (WRAM) allowed
@@ -1649,6 +1666,26 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_CMPWI(0, PPC_R10, 0);
 				u32* branchNullToBailout = emitPtr++;
 				RegisterBailout(branchNullToBailout, COND_BEQ, currentPC, chunkStaticCycles);
+
+				*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWait32) >> 16);
+				*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait32) & 0xFFFF);
+				*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
+
+				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
+				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC); // Recharge using R8
+
+				if (numRegs > 1) {
+					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+					*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait
+
+					if ((numRegs - 1) > 1) {
+						*emitPtr++ = PPC_MULLI(PPC_R9, PPC_R9, numRegs - 1); // R9 = sWait * (numRegs - 1)
+					}
+
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
+					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC);
+				}
 
 				if (!isLoad) {
 					EmitSMCWriteCheck(PPC_R12, PPC_R12); // SMC WRITE CHECK: STMIA writes multiple registers to memory
