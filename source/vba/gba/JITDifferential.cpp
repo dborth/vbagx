@@ -95,8 +95,7 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 	u32 steps = 0;
 
 	// Execute EXACTLY the same number of instructions the JIT ran
-	while (steps < jitResult.instructions &&
-           cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks) {
+	while (steps < jitResult.instructions && !armState && !holdState && !SWITicks) {
 		u16 opcode = cpuPrefetch[0];
 		cpuPrefetch[0] = cpuPrefetch[1];
 		busPrefetch = false;

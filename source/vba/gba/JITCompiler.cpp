@@ -304,24 +304,24 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 	// Wrappers for explicit Intent
 	auto ReadGBAReg = [&](u8 gbaReg, u32*& ptr, u32& lockedMask) -> u8 {
-	    return FindOrAllocateHostReg(gbaReg, ptr, true, lockedMask);
+		return FindOrAllocateHostReg(gbaReg, ptr, true, lockedMask);
 	};
 
 	auto WriteGBAReg = [&](u8 gbaReg, u32*& ptr, bool fullOverwrite, u32& lockedMask) -> u8 {
-	    // If it's a complete 32-bit overwrite (like MOV), skip the LWZ memory fetch!
-	    u8 hReg = FindOrAllocateHostReg(gbaReg, ptr, !fullOverwrite, lockedMask);
-	    if (gbaReg < 15) regCache[gbaReg].dirty = true;
-	    return hReg;
+		// If it's a complete 32-bit overwrite (like MOV), skip the LWZ memory fetch!
+		u8 hReg = FindOrAllocateHostReg(gbaReg, ptr, !fullOverwrite, lockedMask);
+		if (gbaReg < 15) regCache[gbaReg].dirty = true;
+		return hReg;
 	};
 
 	// Global Flush Protocol
 	auto FlushDirtyRegisters = [&](u32*& ptr) {
-	    for (int i = 0; i < 15; i++) {
-	        if (regCache[i].allocated && regCache[i].dirty) {
-	            *ptr++ = PPC_STW(regCache[i].hostReg, 14, i * 4);
-	            regCache[i].dirty = false; // Mark clean to prevent double-stores on branching
-	        }
-	    }
+		for (int i = 0; i < 15; i++) {
+			if (regCache[i].allocated && regCache[i].dirty) {
+				*ptr++ = PPC_STW(regCache[i].hostReg, 14, i * 4);
+				regCache[i].dirty = false; // Mark clean to prevent double-stores on branching
+			}
+		}
 	};
 
 	// Universal Eager Flush
@@ -396,20 +396,20 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	// code costs a couple of branches and nothing else: no allocate(), no rewind(),
 	// no arena traffic, no registerBlock spam beyond the one at the end.
 	auto EnsureArenaAllocated = [&]() {
-	    if (arenaAllocated) return;
-	    arenaAllocated = true;
+		if (arenaAllocated) return;
+		arenaAllocated = true;
 
-	    arenaOffsetStart = cache.getArenaOffset();
-	    emitPtr = cache.allocateJITMemory(MAX_WORDS * sizeof(u32));
-	    blockStart = emitPtr;
+		arenaOffsetStart = cache.getArenaOffset();
+		emitPtr = cache.allocateJITMemory(MAX_WORDS * sizeof(u32));
+		blockStart = emitPtr;
 
-	    // EVENT QUOTA SHIELD
-	    *emitPtr++ = PPC_CMPWI(0, PPC_R3, YIELD_NUMBER);
-	    quotaGuard = emitPtr;
-	    *emitPtr++ = PPC_BGE(0);
+		// EVENT QUOTA SHIELD
+		*emitPtr++ = PPC_CMPWI(0, PPC_R3, YIELD_NUMBER);
+		quotaGuard = emitPtr;
+		*emitPtr++ = PPC_BGE(0);
 	};
 
-    auto EmitPrefetchSync = [&](u32*& ptr, u32 cInstrCount, u32 cStaticCost, u32 pc) {
+	auto EmitPrefetchSync = [&](u32*& ptr, u32 cInstrCount, u32 cStaticCost, u32 pc) {
 		if (cInstrCount == 0) {
 			if (cStaticCost > 0) *ptr++ = PPC_ADDI(PPC_R3, PPC_R3, cStaticCost);
 			return;
@@ -460,7 +460,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 	};
 
-    auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg, u32 pc) {
+	auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg, u32 pc) {
 		u32 execBank = (pc >> 24) & 15;
 		// The hardware prefetcher only runs if the CPU is executing from ROM
 		if (execBank < 0x08 || execBank > 0x0D) return;
@@ -510,19 +510,19 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*branchSkip = PPC_B((u32)((ptr - branchSkip) * 4));
 	};
 
-    while (!endBlock && instrCount < JIT_TRACE_MAX_INSTRUCTIONS) {
+	while (!endBlock && instrCount < JIT_TRACE_MAX_INSTRUCTIONS) {
 		u32 lockedMask = 0; // Reset locked tracking pins per guest execution step
 
 		// BUFFER OVERFLOW PROTECTION: Ensure we have enough words for the worst-case instruction + Epilogue
 		if (arenaAllocated && (emitPtr - blockStart) > (s32)(MAX_WORDS - EPILOGUE_RESERVE_WORDS - bailoutCount * MAX_BAILOUT_STUB_WORDS - smcBailoutCount * MAX_SMC_BAILOUT_STUB_WORDS)) {
-    	    endBlock = true;
-    	    JIT_LOG_BAILOUT(currentPC, 0, BAILOUT_BUFFER_OVERFLOW);
-    	    break;
-    	}
+			endBlock = true;
+			JIT_LOG_BAILOUT(currentPC, 0, BAILOUT_BUFFER_OVERFLOW);
+			break;
+		}
 
-    	u16 opcode = CPUReadHalfWord(currentPC);
+		u16 opcode = CPUReadHalfWord(currentPC);
 
-    	// =====================================================================
+		// =====================================================================
 		// O(1) HARDWARE JUMP TABLE: INSTRUCTION DECODING
 		// Right-shifting by 11 groups the 16-bit opcode space into exactly 32 buckets.
 		// =====================================================================
@@ -1468,25 +1468,25 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only).
 					if (pushPopAccumulateDataTicks) {
-					    *emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWait32) >> 16);
-					    *emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait32) & 0xFFFF);
-					    *emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
+						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWait32) >> 16);
+						*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait32) & 0xFFFF);
+						*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
 
-					    *emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-					    EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC); // Recharge using R8
+						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
+						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC); // Recharge using R8
 
-					    if (numRegs > 1) {
-					        *emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
-					        *emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
-					        *emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait
+						if (numRegs > 1) {
+							*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
+							*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+							*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait
 
-					        if ((numRegs - 1) > 1) {
-					            *emitPtr++ = PPC_MULLI(PPC_R9, PPC_R9, numRegs - 1); // R9 = sWait * (numRegs - 1)
-					        }
+							if ((numRegs - 1) > 1) {
+								*emitPtr++ = PPC_MULLI(PPC_R9, PPC_R9, numRegs - 1); // R9 = sWait * (numRegs - 1)
+							}
 
-					        *emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-					        EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC);
-					    }
+							*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
+							EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC);
+						}
 					}
 					
 					// Construct R11 as the Mask before moving onto SMC checks
@@ -1955,7 +1955,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			instrCount++;
 			currentPC += 2;
 		}
-    }
+	}
 
 	if (instrCount == 0) {
 		JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, 0, MAX_WORDS);
