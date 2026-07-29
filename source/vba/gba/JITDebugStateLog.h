@@ -8,7 +8,9 @@
  * A "state-log alignment" differential-testing approach: two
  * full emulation runs (one with the JIT compiler disabled, one enabled) are
  * each logged independently to their own SD-card text file, then compared
- * offline by align_traces.py to find the first point of divergence.
+ * offline by align_traces.py to find the first point of divergence. Because
+ * JIT can do long runs, you may want to reduce JIT_TRACE_MAX_INSTRUCTIONS
+ * and YIELD_NUMBER to help you track down mismatched instructions.
  *
  * A single global instance (jitDebugStateLog) is used by both the JIT-enabled
  * and interpreter-only code paths via the JIT_LOG_STATE_CPP/JIT_LOG_STATE_JIT
