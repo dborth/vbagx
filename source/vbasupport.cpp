@@ -879,7 +879,7 @@ void systemDrawScreen()
 		lastFPS = gettime();
 		renderFrameCount = 0;
 		coreFrameCount = 0;
-		PROFILER_LOG_FPS(coreFPS, displayFPS);
+		PROFILER_LOG_FPS(coreFPS, renderFPS);
 	}
 
 	lastRenderFrameTime = gettime();

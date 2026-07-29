@@ -10,9 +10,9 @@ void DebugStats::reset() {
 	timeTotalElapsed = 0;
 
 	minCoreFps = 999.0f; maxCoreFps = 0.0f; accumCoreFps = 0.0;
-	minDisplayFps = 999.0f; maxDisplayFps = 0.0f; accumDisplayFps = 0.0;
+	minRenderFps = 999.0f; maxRenderFps = 0.0f; accumRenderFps = 0.0;
 	fpsSamples = 0;
-	for (int i = 0; i < 5; i++) { coreFpsBins[i] = 0; displayFpsBins[i] = 0; }
+	for (int i = 0; i < 5; i++) { coreFpsBins[i] = 0; renderFpsBins[i] = 0; }
 
 	audioStarvationEvents = 0;
 	audioOverflowDrops = 0;
@@ -74,13 +74,13 @@ void DebugStats::print() {
 
 	DEBUG_LOG("--- PERFORMANCE & TIMING TUNING ---\n");
 	float avgCore = fpsSamples > 0 ? (float)(accumCoreFps / fpsSamples) : 0.0f;
-	float avgDisp = fpsSamples > 0 ? (float)(accumDisplayFps / fpsSamples) : 0.0f;
+	float avgDisp = fpsSamples > 0 ? (float)(accumRenderFps / fpsSamples) : 0.0f;
 
 	DEBUG_LOG("Core FPS:    Min: %5.1f | Max: %5.1f | Avg: %5.1f\n", minCoreFps, maxCoreFps, avgCore);
-	DEBUG_LOG("Display FPS: Min: %5.1f | Max: %5.1f | Avg: %5.1f\n", minDisplayFps, maxDisplayFps, avgDisp);
+	DEBUG_LOG("Render FPS: Min: %5.1f | Max: %5.1f | Avg: %5.1f\n", minRenderFps, minRenderFps, avgDisp);
 	DEBUG_LOG("FPS Histogram (<50 | 50-55 | 55-59 | 59-61 | >61):\n");
 	DEBUG_LOG("  Core:    [%4u | %4u | %4u | %4u | %4u]\n", coreFpsBins[0], coreFpsBins[1], coreFpsBins[2], coreFpsBins[3], coreFpsBins[4]);
-	DEBUG_LOG("  Display: [%4u | %4u | %4u | %4u | %4u]\n", displayFpsBins[0], displayFpsBins[1], displayFpsBins[2], displayFpsBins[3], displayFpsBins[4]);
+	DEBUG_LOG("  Display: [%4u | %4u | %4u | %4u | %4u]\n", renderFpsBins[0], renderFpsBins[1], renderFpsBins[2], renderFpsBins[3], renderFpsBins[4]);
 
 	DEBUG_LOG("\nFrameskip Health (Micro-stutter Analysis):\n");
 	DEBUG_LOG("  Total Frames Skipped: %u\n", framesSkippedTotal);
@@ -245,14 +245,14 @@ void DebugStats::print() {
 	WriteDebugLogToFile();
 }
 
-void DebugStats::recordFPS(float coreFPS, float displayFPS) {
+void DebugStats::recordFPS(float coreFPS, float renderFPS) {
 	if (coreFPS < minCoreFps && coreFPS > 0.0f) minCoreFps = coreFPS;
 	if (coreFPS > maxCoreFps) maxCoreFps = coreFPS;
 	accumCoreFps += coreFPS;
 
-	if (displayFPS < minDisplayFps && displayFPS > 0.0f) minDisplayFps = displayFPS;
-	if (displayFPS > maxDisplayFps) maxDisplayFps = displayFPS;
-	accumDisplayFps += displayFPS;
+	if (renderFPS < minRenderFps && renderFPS > 0.0f) minRenderFps = renderFPS;
+	if (renderFPS > maxRenderFps) maxRenderFps = renderFPS;
+	accumRenderFps += renderFPS;
 
 	fpsSamples++;
 
@@ -262,11 +262,11 @@ void DebugStats::recordFPS(float coreFPS, float displayFPS) {
 	else if (coreFPS <= 61.0f) coreFpsBins[3]++;
 	else coreFpsBins[4]++;
 
-	if (displayFPS < 50.0f) displayFpsBins[0]++;
-	else if (displayFPS < 55.0f) displayFpsBins[1]++;
-	else if (displayFPS < 59.0f) displayFpsBins[2]++;
-	else if (displayFPS <= 61.0f) displayFpsBins[3]++;
-	else displayFpsBins[4]++;
+	if (renderFPS < 50.0f) renderFpsBins[0]++;
+	else if (renderFPS < 55.0f) renderFpsBins[1]++;
+	else if (renderFPS < 59.0f) renderFpsBins[2]++;
+	else if (renderFPS <= 61.0f) renderFpsBins[3]++;
+	else renderFpsBins[4]++;
 }
 
 void DebugStats::commitFrameskip() {

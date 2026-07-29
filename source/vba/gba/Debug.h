@@ -70,7 +70,7 @@
 	#if PROFILING
 		#define DEBUG_LOG(fmt, ...) LogDebug(fmt, ##__VA_ARGS__)
 
-		#define PROFILER_LOG_FPS(coreFPS, displayFPS) debugStats.recordFPS(coreFPS, displayFPS)
+		#define PROFILER_LOG_FPS(coreFPS, renderFPS) debugStats.recordFPS(coreFPS, renderFPS)
 		#define PROFILER_COMMIT_FRAMESKIP()           debugStats.commitFrameskip()
 
 		#define PROFILER_LOG_AUDIO_STARVATION()       debugStats.audioStarvationEvents++
@@ -229,7 +229,7 @@
 #endif // VBAGX_DEBUG
 
 #ifndef PROFILER_LOG_FPS
-#define PROFILER_LOG_FPS(coreFPS, displayFPS)		((void)0)
+#define PROFILER_LOG_FPS(coreFPS, renderFPS)		((void)0)
 #endif
 #ifndef PROFILER_COMMIT_FRAMESKIP
 #define PROFILER_COMMIT_FRAMESKIP()					((void)0)

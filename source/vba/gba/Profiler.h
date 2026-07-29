@@ -25,12 +25,12 @@ struct DebugStats {
     u64 timeTotalStart;
     u64 timeTotalElapsed;
 
-	// Framerate Stats (Core vs Display)
-	float minCoreFps, maxCoreFps, minDisplayFps, maxDisplayFps;
-	double accumCoreFps, accumDisplayFps;
+	// Framerate Stats (Core vs Render)
+	float minCoreFps, maxCoreFps, minRenderFps, maxRenderFps;
+	double accumCoreFps, accumRenderFps;
 	u32 fpsSamples;
 	u32 coreFpsBins[5];    // <50, 50-55, 55-59, 59-61, >61
-	u32 displayFpsBins[5]; // <50, 50-55, 55-59, 59-61, >61
+	u32 renderFpsBins[5]; // <50, 50-55, 55-59, 59-61, >61
 
 	// Audio & DRC Stats
 	u32 audioStarvationEvents;
@@ -88,7 +88,7 @@ struct DebugStats {
 
 	void reset();
 	void print();
-	void recordFPS(float coreFPS, float displayFPS);
+	void recordFPS(float coreFPS, float renderFPS);
 	void commitFrameskip();
 	void updateDRC(int unplayed, int newState);
 };
