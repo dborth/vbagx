@@ -39,6 +39,8 @@ extern int ConfigRequested;
 #define RATE_SLOW_DOWN 1.005        // Emit samples slightly slower to drain the queue
 #define RATE_SPEED_UP 0.995         // Emit samples slightly faster to fill the queue
 #define RATE_EMERGENCY_SPEED_UP 0.985 // Harder pull-back only when we're on the brink (see getDynamicRate)
+#define UNPLAYED_HIGH_CRITICAL 11      // mirrors UNPLAYED_CRITICAL's 3-buffer margin from the opposite hard limit (MAX_QUEUED_BUFFERS=12)
+#define RATE_EMERGENCY_SLOW_DOWN 1.015 // mirrors RATE_EMERGENCY_SPEED_UP's 3x-normal-correction magnitude
 #define RATE_NEUTRAL 1.0
 
 enum RateState {
@@ -280,46 +282,48 @@ bool SoundWii::canWrite()
 
 double SoundWii::getDynamicRate()
 {
-    // Fast-forward: don't pitch-bend. Turbo audio isn't expected to sound
-    // "correct" -- Sound.cpp's own turbo-aware policy in flush_samples()
-    // handles keeping the backlog bounded instead.
-    if (turboMode) {
-        rateState = RATE_STATE_NEUTRAL;
-        return RATE_NEUTRAL;
-    }
+	// Fast-forward: don't pitch-bend. Turbo audio isn't expected to sound
+	// "correct" -- Sound.cpp's own turbo-aware policy in flush_samples()
+	// handles keeping the backlog bounded instead.
+	if (turboMode) {
+		rateState = RATE_STATE_NEUTRAL;
+		return RATE_NEUTRAL;
+	}
 
-    int unplayed = getUnplayed();
+	int unplayed = getUnplayed();
 
-    // Process Hysteresis Release
-    if(rateState == RATE_STATE_DRAINING && unplayed <= UNPLAYED_HIGH_RELEASE) {
-        rateState = RATE_STATE_NEUTRAL;
-    }
-    else if(rateState == RATE_STATE_FILLING && unplayed >= UNPLAYED_LOW_RELEASE) {
-        rateState = RATE_STATE_NEUTRAL;
-    }
+	// Process Hysteresis Release
+	if(rateState == RATE_STATE_DRAINING && unplayed <= UNPLAYED_HIGH_RELEASE) {
+		rateState = RATE_STATE_NEUTRAL;
+	}
+	else if(rateState == RATE_STATE_FILLING && unplayed >= UNPLAYED_LOW_RELEASE) {
+		rateState = RATE_STATE_NEUTRAL;
+	}
 
-    // Process Hysteresis Activation
-    if(unplayed > UNPLAYED_HIGH_WATER) {
-        rateState = RATE_STATE_DRAINING;
-    }
-    else if(unplayed < UNPLAYED_LOW_WATER) {
-        rateState = RATE_STATE_FILLING;
-    }
+	// Process Hysteresis Activation
+	if(unplayed > UNPLAYED_HIGH_WATER) {
+		rateState = RATE_STATE_DRAINING;
+	}
+	else if(unplayed < UNPLAYED_LOW_WATER) {
+		rateState = RATE_STATE_FILLING;
+	}
 
-    PROFILER_LOG_DRC(unplayed, rateState);
+	PROFILER_LOG_DRC(unplayed, rateState);
 
-    // Return the float multiplier
-    // Draining means we need FEWER samples generated per frame.
-    // Filling means we need MORE samples generated per frame.
-    if(rateState == RATE_STATE_DRAINING) return RATE_SLOW_DOWN;
-    if(rateState == RATE_STATE_FILLING) {
-        // Rather than making the everyday 0.5% nudge stronger (and more likely to be
-        // audible as pitch wobble during normal play), pull harder only in
-        // the narrow window where we're actually about to starve.
-        return (unplayed <= UNPLAYED_CRITICAL) ? RATE_EMERGENCY_SPEED_UP : RATE_SPEED_UP;
-    }
+	// Return the float multiplier
+	// Draining means we need FEWER samples generated per frame.
+	// Filling means we need MORE samples generated per frame.
+	if(rateState == RATE_STATE_DRAINING) {
+		return (unplayed >= UNPLAYED_HIGH_CRITICAL) ? RATE_EMERGENCY_SLOW_DOWN : RATE_SLOW_DOWN;
+	}
+	else if(rateState == RATE_STATE_FILLING) {
+		// Rather than making the everyday 0.5% nudge stronger (and more likely to be
+		// audible as pitch wobble during normal play), pull harder only in
+		// the narrow window where we're actually about to starve.
+		return (unplayed <= UNPLAYED_CRITICAL) ? RATE_EMERGENCY_SPEED_UP : RATE_SPEED_UP;
+	}
 
-    return RATE_NEUTRAL;
+	return RATE_NEUTRAL;
 }
 
 u16* SoundWii::getWriteBuffer()
