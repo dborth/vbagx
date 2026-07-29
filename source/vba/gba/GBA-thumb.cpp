@@ -1420,7 +1420,7 @@ int thumbExecute() {
 
 				JIT_LOG_TRACE_EXIT(pc, result.nextPC, gbaFlags, result.cycles);
 				JIT_LOG_EXEC(result.instructions, block->length, result.bailedOut);
-				JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles, result.instructions);
+				JIT_LOG_STATE_JIT(pc, armNextPC, cpuTotalTicks, result.cycles);
 
 				PROFILER_ADD_TIME(timeSpentJIT, execJitStart);
 

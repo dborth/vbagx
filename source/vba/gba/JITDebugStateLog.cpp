@@ -25,12 +25,13 @@
 #include "Globals.h"
 #include "JITDebugStateLog.h"
 
-#define DEBUG_STATE_LOG_BUFFER_SIZE		(2 * 1024 * 1024)
-#define MAX_DEBUG_INSTRUCTIONS			5000
+#define DEBUG_STATE_LOG_BUFFER_SIZE		(4 * 1024 * 1024)
+#define MAX_DEBUG_INSTRUCTIONS			2000
 
 JITDebugStateLog jitDebugStateLog;
 
 void JITDebugStateLog::Init() {
+	currentOffset = 0;
 	logBuffer = (char *)malloc(DEBUG_STATE_LOG_BUFFER_SIZE);
 
 	char logType[10] = "";
@@ -53,7 +54,7 @@ void JITDebugStateLog::Init() {
 }
 
 void JITDebugStateLog::LogState(const char* source, u32 executedPC, u32 nextPC, u32 ticks, u32 cycles, u32 instrCount) {
-	if(!logBuffer) {
+	if(logBuffer == nullptr) {
 		return;
 	}
 

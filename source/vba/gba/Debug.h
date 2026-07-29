@@ -222,7 +222,7 @@
 	#if JIT_DEBUGSTATELOG
 		#define JIT_LOG_STATE_INIT()														jitDebugStateLog.Init()
 		#define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)						jitDebugStateLog.LogState("[C++]", (executedPC), (nextPC), (ticks), (cycles), debugStats.fallbackInstructionsExecuted)
-		#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)			jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), debugStats.jitInstructionsExecuted)
+		#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles)						jitDebugStateLog.LogState("[JIT]", (executedPC), (nextPC), (ticks), (cycles), debugStats.fallbackInstructionsExecuted+debugStats.jitInstructionsExecuted)
 		#define JIT_LOG_STATE_WRITE_TO_FILE()												jitDebugStateLog.WriteToFile()
 	#endif
 
@@ -351,7 +351,7 @@
 #define JIT_LOG_STATE_CPP(executedPC, nextPC, ticks, cycles)       					((void)0)
 #endif
 #ifndef JIT_LOG_STATE_JIT
-#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles, instrCount)       	 	((void)0)
+#define JIT_LOG_STATE_JIT(executedPC, nextPC, ticks, cycles)       	 	((void)0)
 #endif
 #ifndef JIT_LOG_STATE_WRITE_TO_FILE
 #define JIT_LOG_STATE_WRITE_TO_FILE()												((void)0)
