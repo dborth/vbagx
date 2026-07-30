@@ -509,7 +509,7 @@ DEFINE_ALU_INSN_C (1F, 3F, MVNS, YES)
     /* Branchless one's complement */                   \
     rs ^= ((s32)rs >> 31);                              \
     /* Map leading zeros to GBA multiplier cycles */    \
-    clockTicks += (31 - __builtin_clz(rs | 1)) >> 3;    \
+    clockTicks += CYCLES + ((31 - __builtin_clz(rs | 1)) >> 3); \
     if (busPrefetchCount == 0)                          \
         busPrefetchCount = ((busPrefetchCount+1)<<clockTicks) - 1; \
     clockTicks += 1 + codeTicksAccess32(armNextPC);
