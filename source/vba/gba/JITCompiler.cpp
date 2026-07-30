@@ -893,7 +893,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Back-patch the skip branch
 						*branchSkip = PPC_BEQ((u32)((emitPtr - branchSkip) * 4));
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						// Matches thumb40_2 / thumb40_3 / thumb41_0 / thumb41_3:
+						// clockTicks = codeTicksAccess16(armNextPC) + 2;
+						chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 2;
 					}
 				}
 				else if (((opcode >> 8) & 0x03) != 3) {
@@ -1393,8 +1395,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 
 				// Format 12 does not modify condition flags.
-				// Pure register math costs standard sequential cycles.
-				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+				// Matches thumbA0/thumbA8: clockTicks = 1 + codeTicksAccess16(armNextPC);
+				chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 1;
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -1421,8 +1423,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					}
 
 					// Format 13 does NOT update condition flags.
-					// Pure register math costs standard sequential cycles.
-					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+					// Matches thumbB0: clockTicks = 1 + codeTicksAccess16(armNextPC);
+					chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 1;
 				}
 				// THUMB Format 14 - PUSH / POP
 				else if ((opcode & 0xF600) == 0xB400) {
