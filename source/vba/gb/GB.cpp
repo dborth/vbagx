@@ -106,9 +106,6 @@ int GBSYNCHRONIZE_CLOCK_TICKS  = 52920;
 
 // state variables
 
-
-int systemFrameSkip = 0;
-
 // general
 int clockTicks = 0;
 bool gbSystemMessage = false;
@@ -1684,15 +1681,15 @@ u8 gbReadMemory(u16 address)
     if (
          (
            (gbHardware & 0xa) &&
-           (  
+           (
              (gbLcdModeDelayed != 3) ||
              (
                ((register_LY == 0) && (gbScreenOn == false) && (register_LCDC & 0x80)) &&
                (gbLcdLYIncrementTicksDelayed == (GBLY_INCREMENT_CLOCK_TICKS - GBLCD_MODE_2_CLOCK_TICKS))
              )
-           )  
+           )
          )
-         ||   
+         ||
          (
            (gbHardware & 0x5) &&
            (gbLcdModeDelayed != 3) &&
@@ -4478,7 +4475,7 @@ void gbEmulate(int ticksToStop)
 
 
         if ((gbLcdTicksDelayed <= 0) && (gbLCDChangeHappened)) {
-          int framesToSkip = systemFrameSkip;
+          int framesToSkip = 0;
           if(turboMode)
             framesToSkip = 9; // try 6 FPS during turboMode
           //gbLcdTicksDelayed = gbLcdTicks+1;
@@ -4720,9 +4717,9 @@ void gbEmulate(int ticksToStop)
             }
             gbDrawLine();
           }
-          else if ((register_LY==144) && (!systemFrameSkip))
+          else if (register_LY==144)
           {
-            int framesToSkip = systemFrameSkip;
+            int framesToSkip = 0;
             if(turboMode)
               framesToSkip = 9; // try 6 FPS during turboMode
             if((gbFrameSkipCount >= framesToSkip) || (gbWhiteScreen == 1)) {
@@ -4995,7 +4992,7 @@ struct EmulatedSystem GBSystem = {
  * doing it memory-based
  * Daryl Borth - October 2008
  ***************************************************************************/
- 
+
 void swap_endian_32(void* ptr, int length) {
 	u8* byteptr = (u8*)ptr;
 	u8 b1, b2, b3, b4;
@@ -5133,7 +5130,7 @@ bool MemgbReadSaveMBC3(char * membuffer, int read) {
 		if((uint)read < (offset + sizeof(int) * 10 + sizeof(time_t)))
 			return false;
 		memcpy(&gbDataMBC3.mapperSeconds, membuffer+offset, sizeof(int) * 10 + sizeof(time_t));
-		
+
 		bool zero = gbDataMBC3.mapperSeconds || gbDataMBC3.mapperMinutes || gbDataMBC3.mapperHours;
 		// If all values are zero, it's not possible to determine the byte order - assume little endian
 		if (!zero && gbDataMBC3.mapperSeconds <= 60 && gbDataMBC3.mapperMinutes <= 60 && gbDataMBC3.mapperHours <= 24) {
@@ -5183,9 +5180,9 @@ bool MemgbReadSaveTAMA5(char * membuffer, int read) {
 		memcpy(gbRam, membuffer, (gbRamSizeMask + 1));
 		int offset = (gbRamSizeMask + 1);
 		memcpy(&gbDataTAMA5.mapperSeconds, membuffer+offset, sizeof(int) * 14 + sizeof(time_t));
-		
+
 		swap_endian_32(&gbDataTAMA5.mapperSeconds, sizeof(int) * 14 + sizeof(time_t));
-		
+
 		bool zero = gbDataTAMA5.mapperSeconds || gbDataTAMA5.mapperMinutes || gbDataTAMA5.mapperHours;
 		// If all values are zero, it's not possible to determine the byte order - assume little endian
 		if (!zero && gbDataTAMA5.mapperSeconds <= 60 && gbDataTAMA5.mapperMinutes <= 60 && gbDataTAMA5.mapperHours <= 24) {
@@ -5198,7 +5195,7 @@ bool MemgbReadSaveTAMA5(char * membuffer, int read) {
 				memset(&gbDataMBC3.mapperSeconds, 0, sizeof(int) * 14 + sizeof(time_t));
 			}
 		}
-		
+
 		return true;
 	}
 	return false;
