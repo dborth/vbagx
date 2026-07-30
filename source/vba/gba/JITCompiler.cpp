@@ -451,14 +451,17 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*ptr++ = PPC_BLE(8); // If C <= instrCount, skip the override clamp
 			*ptr++ = PPC_LI(PPC_R11, cInstrCount);
 
-			// 3. Subtract H * seqCost from R3
+			// 3. Subtract H * (seqCost - 1) from R3
+			// A prefetch hit costs 1 cycle. We accumulated the full seqCost (assuming a miss),
+			// so we must only refund the difference: seqCost - 1.
 			if (seqCost == 1) {
-				*ptr++ = PPC_SUBF(PPC_R3, PPC_R11, PPC_R3);
+				// seqCost - 1 == 0. A hit and a miss both cost 1 cycle, so no correction is needed.
 			} else if (seqCost == 2) {
-				*ptr++ = PPC_RLWINM(PPC_R10, PPC_R11, 1, 0, 30); // R10 = H * 2
-				*ptr++ = PPC_SUBF(PPC_R3, PPC_R10, PPC_R3);
+				// seqCost - 1 == 1. The correction is exactly H (PPC_R11), so subtract it directly.
+				*ptr++ = PPC_SUBF(PPC_R3, PPC_R11, PPC_R3);
 			} else {
-				*ptr++ = PPC_MULLI(PPC_R10, PPC_R11, seqCost);
+				// General case: H * (seqCost - 1)
+				*ptr++ = PPC_MULLI(PPC_R10, PPC_R11, seqCost - 1);
 				*ptr++ = PPC_SUBF(PPC_R3, PPC_R10, PPC_R3);
 			}
 
@@ -1556,6 +1559,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_AND(PPC_R7, PPC_R12, PPC_R11);
 						if (isPop) {
 							*emitPtr++ = PPC_LWBRX(PPC_R12, PPC_R10, PPC_R7); // POP PC into R12 scratch
+
+							// Mirrors BX's ARM-mode-switch guard; POP-with-PC is architecturally the same interworking-branch case.
+							*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R12, 0, 31, 31);
+							*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+							u32* branchArmSwitch = emitPtr++;
+							RegisterBailout(branchArmSwitch, COND_BEQ, currentPC, chunkStaticCycles);
 						} else {
 							u32 hostLr = ReadGBAReg(14, emitPtr, lockedMask);
 							*emitPtr++ = PPC_STWBRX(hostLr, PPC_R10, PPC_R7); // PUSH LR (GBA R14)
