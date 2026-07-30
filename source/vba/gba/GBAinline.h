@@ -124,25 +124,25 @@ u32 inline CPUReadMemoryQuick( u32 addr )
 #endif
 
 #define FALLBACK_UNREADABLE_32() \
-    do { \
-        if(cpuDmaHack) { value = cpuDmaLast; } \
-        else if(armState) { value = SAFE_QUICK_READ32(reg[15].I); } \
-        else { value = SAFE_QUICK_READ16(reg[15].I) | (SAFE_QUICK_READ16(reg[15].I) << 16); } \
-    } while(0)
+	do { \
+		if(cpuDmaHack) { value = cpuDmaLast; } \
+		else if(armState) { value = SAFE_QUICK_READ32(reg[15].I); } \
+		else { value = SAFE_QUICK_READ16(reg[15].I) | (SAFE_QUICK_READ16(reg[15].I) << 16); } \
+	} while(0)
 
-#define FALLBACK_UNREADABLE_16() \
-    do { \
-        if(cpuDmaHack) { value = cpuDmaLast & 0xFFFF; } \
-        else if(armState) { value = SAFE_QUICK_READ16(reg[15].I + (address & 2)); } \
-        else { value = SAFE_QUICK_READ16(reg[15].I); } \
-    } while(0)
+	#define FALLBACK_UNREADABLE_16() \
+	do { \
+		if(cpuDmaHack) { value = cpuDmaLast & 0xFFFF; } \
+		else if(armState) { value = SAFE_QUICK_READ16(reg[15].I + (address & 2)); } \
+		else { value = SAFE_QUICK_READ16(reg[15].I); } \
+	} while(0)
 
-#define FALLBACK_UNREADABLE_8() \
-    do { \
-        if(cpuDmaHack) { return cpuDmaLast & 0xFF; } \
-        else if(armState) { return SAFE_QUICK_READ8(reg[15].I + (address & 3)); } \
-        else { return SAFE_QUICK_READ8(reg[15].I + (address & 1)); } \
-    } while(0)
+	#define FALLBACK_UNREADABLE_8() \
+	do { \
+		if(cpuDmaHack) { return cpuDmaLast & 0xFF; } \
+		else if(armState) { return SAFE_QUICK_READ8(reg[15].I + (address & 3)); } \
+		else { return SAFE_QUICK_READ8(reg[15].I + (address & 1)); } \
+	} while(0)
 
 static inline u32 CPUReadMemory(u32 address)
 {
@@ -469,252 +469,249 @@ static inline u8 CPUReadByte(u32 address)
 	}
 }
 
-static inline void CPUWriteMemory(u32 address, u32 value)
-{
-  // OPTIMIZATION: ~0x03 maps cleanly to a 1-cycle rlwinm mask
-  address &= ~0x03;
-  u8 pageIdx = address >> 24;
+static inline void CPUWriteMemory(u32 address, u32 value) {
+	// OPTIMIZATION: ~0x03 maps cleanly to a 1-cycle rlwinm mask
+	address &= ~0x03;
+	u8 pageIdx = address >> 24;
 #ifndef NO_JIT_COMPILER
-  if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
-      u32 page = (address >> 10) & 0xFFFF;
-      if (smcPageFlags[page]) {
-          jitCache.invalidateSMCTarget(address);
-      }
-  }
+	if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
+		u32 page = (address >> 10) & 0xFFFF;
+		if (smcPageFlags[page]) {
+			jitCache.invalidateSMCTarget(address);
+		}
+	}
 #endif
-  u8* base = gbaWritePagePtrs[pageIdx];
+	u8 *base = gbaWritePagePtrs[pageIdx];
 
-  // FAST PATH
-  if (LIKELY(base != NULL)) {
-      WRITE32LE(((u32 *)(base + (address & gbaReadTable.readMasks[pageIdx]))), value);
-      return;
-  }
+	// FAST PATH
+	if (LIKELY(base != NULL)) {
+		WRITE32LE(((u32 *)(base + (address & gbaReadTable.readMasks[pageIdx]))), value);
+		return;
+	}
 
-  // SLOW PATH
-  switch(pageIdx) {
-  case 0x02:
-    WRITE32LE(((u32 *)&workRAM[address & 0x3FFFC]), value);
-    break;
-  case 0x03:
-    WRITE32LE(((u32 *)&internalRAM[address & 0x7ffC]), value);
-    break;
-  case 0x04:
-    if(LIKELY((address & 0x00FFFFFF) < 0x400)) {
-      u32 ioAddr = address & 0x3FC;
-      CPUUpdateRegister(ioAddr, value & 0xFFFF);
-      CPUUpdateRegister(ioAddr + 2, (value >> 16));
-    } else goto unwritable;
-    break;
-  case 0x05:
-    // OPTIMIZATION: Combined validation checks bitwise to maintain pipeline fluidity.
-    if(LIKELY(((address & 0x00FFFFFF) < 0x400) | ((RomIdCode & 0xFFFFFF) != CORVETTE)))
-      WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
-    break;
-  case 0x06:
-    address &= 0x1fffc;
-    if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000)))
-      return;
-    // OPTIMIZATION: Branchless bitwise mirror masking sequence.
-    address &= ~(((address & 0x10000) >> 1) & address);
-    WRITE32LE(((u32 *)&vram[address]), value);
-    break;
-  case 0x07:
-    WRITE32LE(((u32 *)&oam[address & 0x3fc]), value);
-    break;
-  case 0x0D:
-    if(LIKELY(cpuEEPROMEnabled)) {
-      eepromWrite(address, value);
-      break;
-    }
-    goto unwritable;
-  case 0x0E:
-  case 0x0F:
-    if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled) {
-      (*cpuSaveGameFunc)(address, (u8)value);
-      break;
-    }
-  default:
-  unwritable:
-    break;
-  }
+	// SLOW PATH
+	switch (pageIdx) {
+	case 0x02:
+		WRITE32LE(((u32 *)&workRAM[address & 0x3FFFC]), value);
+		break;
+	case 0x03:
+		WRITE32LE(((u32 *)&internalRAM[address & 0x7ffC]), value);
+		break;
+	case 0x04:
+		if (LIKELY((address & 0x00FFFFFF) < 0x400)) {
+			u32 ioAddr = address & 0x3FC;
+			CPUUpdateRegister(ioAddr, value & 0xFFFF);
+			CPUUpdateRegister(ioAddr + 2, (value >> 16));
+		} else
+			goto unwritable;
+		break;
+	case 0x05:
+		// OPTIMIZATION: Combined validation checks bitwise to maintain pipeline fluidity.
+		if (LIKELY(((address & 0x00FFFFFF) < 0x400) | ((RomIdCode & 0xFFFFFF) != CORVETTE)))
+			WRITE32LE(((u32 *)&paletteRAM[address & 0x3FC]), value);
+		break;
+	case 0x06:
+		address &= 0x1fffc;
+		if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000)))
+			return;
+		// OPTIMIZATION: Branchless bitwise mirror masking sequence.
+		address &= ~(((address & 0x10000) >> 1) & address);
+		WRITE32LE(((u32 *)&vram[address]), value);
+		break;
+	case 0x07:
+		WRITE32LE(((u32 *)&oam[address & 0x3fc]), value);
+		break;
+	case 0x0D:
+		if (LIKELY(cpuEEPROMEnabled)) {
+			eepromWrite(address, value);
+			break;
+		}
+		goto unwritable;
+	case 0x0E:
+	case 0x0F:
+		if ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled) {
+			(*cpuSaveGameFunc)(address, (u8) value);
+			break;
+		}
+	default:
+		unwritable: break;
+	}
 }
 
-static inline void CPUWriteHalfWord(u32 address, u16 value)
-{
-  address &= ~0x01;
-  u8 pageIdx = address >> 24;
+static inline void CPUWriteHalfWord(u32 address, u16 value) {
+	address &= ~0x01;
+	u8 pageIdx = address >> 24;
 #ifndef NO_JIT_COMPILER
-  if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
-      u32 page = (address >> 10) & 0xFFFF;
-      if (smcPageFlags[page]) {
-          jitCache.invalidateSMCTarget(address);
-      }
-  }
+	if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
+		u32 page = (address >> 10) & 0xFFFF;
+		if (smcPageFlags[page]) {
+			jitCache.invalidateSMCTarget(address);
+		}
+	}
 #endif
-  u8* base = gbaWritePagePtrs[pageIdx];
+	u8 *base = gbaWritePagePtrs[pageIdx];
 
-  // FAST PATH
-  if (LIKELY(base != NULL)) {
-      WRITE16LE(((u16 *)(base + (address & gbaReadTable.readMasks[pageIdx]))), value);
-      return;
-  }
+	// FAST PATH
+	if (LIKELY(base != NULL)) {
+		WRITE16LE(((u16 *)(base + (address & gbaReadTable.readMasks[pageIdx]))), value);
+		return;
+	}
 
-  // SLOW PATH
-  switch(pageIdx) {
-  case 2:
-    WRITE16LE(((u16 *)&workRAM[address & 0x3FFFE]),value);
-    break;
-  case 3:
-    WRITE16LE(((u16 *)&internalRAM[address & 0x7ffe]), value);
-    break;
-  case 4:
-    if(LIKELY((address & 0x00FFFFFF) < 0x400))
-      CPUUpdateRegister(address & 0x3fe, value);
-    else goto unwritable;
-    break;
-  case 5:
-    if(LIKELY(((address & 0x00FFFFFF) < 0x400) | ((RomIdCode & 0xFFFFFF) != CORVETTE)))
-      WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
-    break;
-  case 6:
-    address &= 0x1fffe;
-    if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000)))
-      return;
-    // OPTIMIZATION: Branchless bitwise mirror masking sequence.
-    address &= ~(((address & 0x10000) >> 1) & address);
-    WRITE16LE(((u16 *)&vram[address]), value);
-    break;
-  case 7:
-    WRITE16LE(((u16 *)&oam[address & 0x3fe]), value);
-    break;
-  case 8:
-  case 9:
-    // OPTIMIZATION: Compacted multiple equality branches down into a single range execution.
-    if(UNLIKELY((u32)(address - 0x80000c4) <= 4)) {
-      if(!rtcWrite(address, value))
-        goto unwritable;
-    }
-    break;
-  case 13:
-    if(LIKELY(cpuEEPROMEnabled)) {
-      eepromWrite(address, (u8)value);
-      break;
-    }
-    goto unwritable;
-  case 14:
-  case 15:
-    if((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled) {
-      (*cpuSaveGameFunc)(address, (u8)value);
-      break;
-    }
-    goto unwritable;
-  default:
-  unwritable:
-    break;
-  }
+	// SLOW PATH
+	switch (pageIdx) {
+	case 2:
+		WRITE16LE(((u16 *)&workRAM[address & 0x3FFFE]), value);
+		break;
+	case 3:
+		WRITE16LE(((u16 *)&internalRAM[address & 0x7ffe]), value);
+		break;
+	case 4:
+		if (LIKELY((address & 0x00FFFFFF) < 0x400))
+			CPUUpdateRegister(address & 0x3fe, value);
+		else
+			goto unwritable;
+		break;
+	case 5:
+		if (LIKELY(((address & 0x00FFFFFF) < 0x400) | ((RomIdCode & 0xFFFFFF) != CORVETTE)))
+			WRITE16LE(((u16 *)&paletteRAM[address & 0x3fe]), value);
+		break;
+	case 6:
+		address &= 0x1fffe;
+		if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000)))
+			return;
+		// OPTIMIZATION: Branchless bitwise mirror masking sequence.
+		address &= ~(((address & 0x10000) >> 1) & address);
+		WRITE16LE(((u16 *)&vram[address]), value);
+		break;
+	case 7:
+		WRITE16LE(((u16 *)&oam[address & 0x3fe]), value);
+		break;
+	case 8:
+	case 9:
+		// OPTIMIZATION: Compacted multiple equality branches down into a single range execution.
+		if (UNLIKELY((u32 )(address - 0x80000c4) <= 4)) {
+			if (!rtcWrite(address, value))
+				goto unwritable;
+		}
+		break;
+	case 13:
+		if (LIKELY(cpuEEPROMEnabled)) {
+			eepromWrite(address, (u8) value);
+			break;
+		}
+		goto unwritable;
+	case 14:
+	case 15:
+		if ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled) {
+			(*cpuSaveGameFunc)(address, (u8) value);
+			break;
+		}
+		goto unwritable;
+	default:
+		unwritable: break;
+	}
 }
 
-static inline void CPUWriteByte(u32 address, u8 b)
-{
-  u8 pageIdx = address >> 24;
+static inline void CPUWriteByte(u32 address, u8 b) {
+	u8 pageIdx = address >> 24;
 #ifndef NO_JIT_COMPILER
-  if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
-      u32 page = (address >> 10) & 0xFFFF;
-      if (smcPageFlags[page]) {
-          jitCache.invalidateSMCTarget(address);
-      }
-  }
+	if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
+		u32 page = (address >> 10) & 0xFFFF;
+		if (smcPageFlags[page]) {
+			jitCache.invalidateSMCTarget(address);
+		}
+	}
 #endif
-  u8* base = gbaWritePagePtrs[pageIdx];
+	u8 *base = gbaWritePagePtrs[pageIdx];
 
-  // FAST PATH
-  if (LIKELY(base != NULL)) {
-      base[address & gbaReadTable.readMasks[pageIdx]] = b;
-      return;
-  }
+	// FAST PATH
+	if (LIKELY(base != NULL)) {
+		base[address & gbaReadTable.readMasks[pageIdx]] = b;
+		return;
+	}
 
-  // SLOW PATH
-  switch(pageIdx) {
-  case 2:
-    workRAM[address & 0x3FFFF] = b;
-    break;
-  case 3:
-    internalRAM[address & 0x7fff] = b;
-    break;
-  case 4:
-    if(LIKELY((address & 0x00FFFFFF) < 0x400)) {
-      u32 ioAddr = address & 0x3FF;
+	// SLOW PATH
+	switch (pageIdx) {
+	case 2:
+		workRAM[address & 0x3FFFF] = b;
+		break;
+	case 3:
+		internalRAM[address & 0x7fff] = b;
+		break;
+	case 4:
+		if (LIKELY((address & 0x00FFFFFF) < 0x400)) {
+			u32 ioAddr = address & 0x3FF;
 
-      // OPTIMIZATION: HALTCNT separated to fast-path default registers
-      if (UNLIKELY(ioAddr == 0x301)) {
-        if(b == 0x80) stopState = true;
-        holdState = 1;
-        holdType = -1;
-        cpuNextEvent = cpuTotalTicks;
-        break;
-      }
+			// OPTIMIZATION: HALTCNT separated to fast-path default registers
+			if (UNLIKELY(ioAddr == 0x301)) {
+				if (b == 0x80)
+					stopState = true;
+				holdState = 1;
+				holdType = -1;
+				cpuNextEvent = cpuTotalTicks;
+				break;
+			}
 
-      // OPTIMIZATION: Branchless Sound Event Validation (SWAR-lite).
-      // Eliminates the massive 40-case jump table completely.
-      // 0x333F333F matches valid bits 0x60-0x7F. 0xFFFF0033 matches 0x80-0x9F.
-      u32 sndOffset = ioAddr - 0x60;
-      if (UNLIKELY(sndOffset <= 0x3F)) {
-        // Pure arithmetic mask selection. Avoids array caching & ternary branch stalls.
-        u32 highMask = -(sndOffset >> 5); // 0x00000000 if < 32, 0xFFFFFFFF if >= 32
-        u32 validMask = (0x333F333F & ~highMask) | (0xFFFF0033 & highMask);
+			// OPTIMIZATION: Branchless Sound Event Validation (SWAR-lite).
+			// Eliminates the massive 40-case jump table completely.
+			// 0x333F333F matches valid bits 0x60-0x7F. 0xFFFF0033 matches 0x80-0x9F.
+			u32 sndOffset = ioAddr - 0x60;
+			if (UNLIKELY(sndOffset <= 0x3F)) {
+				// Pure arithmetic mask selection. Avoids array caching & ternary branch stalls.
+				u32 highMask = -(sndOffset >> 5); // 0x00000000 if < 32, 0xFFFFFFFF if >= 32
+				u32 validMask = (0x333F333F & ~highMask) | (0xFFFF0033 & highMask);
 
-        if ((validMask >> (sndOffset & 31)) & 1) {
-          soundEvent(address & 0xFF, b);
-          break;
-        }
-      }
+				if ((validMask >> (sndOffset & 31)) & 1) {
+					soundEvent(address & 0xFF, b);
+					break;
+				}
+			}
 
-      // OPTIMIZATION: Branchless IO register Byte-Write.
-      // Resolves exact shift boundaries using single-cycle shifts and adds.
-      u32 lowerBits = ioAddr & ~0x01;
-      u32 shift = (ioAddr & 1) << 3;        // Shift is 0 or 8
-      u16 ioVal = READ16LE(&ioMem[lowerBits]);
-      u16 mask = 0xFF00U >> shift;          // Mask is 0xFF00 or 0x00FF
+			// OPTIMIZATION: Branchless IO register Byte-Write.
+			// Resolves exact shift boundaries using single-cycle shifts and adds.
+			u32 lowerBits = ioAddr & ~0x01;
+			u32 shift = (ioAddr & 1) << 3;        // Shift is 0 or 8
+			u16 ioVal = READ16LE(&ioMem[lowerBits]);
+			u16 mask = 0xFF00U >> shift;          // Mask is 0xFF00 or 0x00FF
 
-      CPUUpdateRegister(lowerBits, (ioVal & mask) | (b << shift));
+			CPUUpdateRegister(lowerBits, (ioVal & mask) | (b << shift));
 
-    } else goto unwritable;
-    break;
-  case 5:
-    *((u16 *)&paletteRAM[address & 0x3FE]) = (b << 8) | b;
-    break;
-  case 6:
-    address &= 0x1fffe;
-    if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000)))
-      return;
-    // OPTIMIZATION: Branchless bitwise mirror masking sequence.
-    address &= ~(((address & 0x10000) >> 1) & address);
+		} else
+			goto unwritable;
+		break;
+	case 5:
+		*((u16*) &paletteRAM[address & 0x3FE]) = (b << 8) | b;
+		break;
+	case 6:
+		address &= 0x1fffe;
+		if (UNLIKELY(((DISPCNT & 7) > 2) & ((address & 0x1C000) == 0x18000)))
+			return;
+		// OPTIMIZATION: Branchless bitwise mirror masking sequence.
+		address &= ~(((address & 0x10000) >> 1) & address);
 
-    // Shift is used exclusively instead of division (/4)
-    if (address < objTilesAddress[((DISPCNT&7)+1)>>2])
-    {
-      *((u16 *)&vram[address]) = (b << 8) | b;
-    }
-    break;
-  case 7:
-    break;
-  case 13:
-    if(LIKELY(cpuEEPROMEnabled)) {
-      eepromWrite(address, b);
-      break;
-    }
-    goto unwritable;
-  case 14:
-  case 15:
-     // Bitwise OR preserved to avoid branch penalties
-    if ((saveType != 5) & ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)) {
-      (*cpuSaveGameFunc)(address, b);
-      break;
-    }
-  default:
-  unwritable:
-    break;
-  }
+		// Shift is used exclusively instead of division (/4)
+		if (address < objTilesAddress[((DISPCNT & 7) + 1) >> 2]) {
+			*((u16*) &vram[address]) = (b << 8) | b;
+		}
+		break;
+	case 7:
+		break;
+	case 13:
+		if (LIKELY(cpuEEPROMEnabled)) {
+			eepromWrite(address, b);
+			break;
+		}
+		goto unwritable;
+	case 14:
+	case 15:
+		// Bitwise OR preserved to avoid branch penalties
+		if ((saveType != 5) & ((!eepromInUse) | cpuSramEnabled | cpuFlashEnabled)) {
+			(*cpuSaveGameFunc)(address, b);
+			break;
+		}
+	default:
+		unwritable: break;
+	}
 }
 
 #endif // GBAINLINE_H
