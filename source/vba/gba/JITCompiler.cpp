@@ -1470,7 +1470,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
 					// Stash the bank safely in R7
 					*emitPtr++ = PPC_RLWINM(PPC_R7, PPC_R11, 0, 28, 31); // R7 = R11 & 15
-					bool pushPopAccumulateDataTicks = !(isPop && !Rbit);
 
 					if (!isPop) {
 						// STORE STRICT GUARD: Only Banks 2 & 3 (WRAM) allowed
@@ -1506,26 +1505,24 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					RegisterBailout(branchNullToBailout, COND_BEQ, currentPC, chunkStaticCycles);
 
 					// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only).
-					if (pushPopAccumulateDataTicks) {
-						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWait32) >> 16);
-						*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait32) & 0xFFFF);
-						*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
+					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWait32) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait32) & 0xFFFF);
+					*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
+
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
+					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC); // Recharge using R8
+
+					if (numRegs > 1) {
+						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
+						*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+						*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait
+
+						if ((numRegs - 1) > 1) {
+							*emitPtr++ = PPC_MULLI(PPC_R9, PPC_R9, numRegs - 1); // R9 = sWait * (numRegs - 1)
+						}
 
 						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC); // Recharge using R8
-
-						if (numRegs > 1) {
-							*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
-							*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
-							*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait
-
-							if ((numRegs - 1) > 1) {
-								*emitPtr++ = PPC_MULLI(PPC_R9, PPC_R9, numRegs - 1); // R9 = sWait * (numRegs - 1)
-							}
-
-							*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-							EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC);
-						}
+						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC);
 					}
 
 					// Construct R11 as the Mask before moving onto SMC checks
@@ -1612,13 +1609,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						endBlock = true;
 					}
 					else if (isPop && !Rbit) {
-						// POP {Rlist}: thumbBC ends with `clockTicks = 2 + codeTicksAccess16(...)`
-						// - a plain assignment, not +=, which discards every +1-per-register
-						// AND every per-register data-tick that POP_REG built up. Verified
-						// directly against GBA-thumb.cpp. Faithfully reproduce that discard
-						// (numRegs deliberately excluded here) rather than "fixing" it into
-						// something more hardware-accurate but interpreter-divergent.
-						chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 2;
+						// POP {Rlist}: thumbBC ends with `clockTicks += 2 + codeTicksAccess16(...)`.
+						// Same structure as thumbB4/B5's PUSH case below (which already keeps its
+						// "+ numRegs") -- the only real difference is PUSH's flat "+1" vs POP's "+2".
+						chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + numRegs + 2;
 					} else if (!(isPop && Rbit)) {
 						// PUSH {Rlist} / PUSH {Rlist, LR}: thumbB4/B5 use += throughout, so
 						// numRegs' +1s and their data-ticks (already accumulated into R3
