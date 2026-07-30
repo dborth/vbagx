@@ -25,10 +25,10 @@
  *     in as a group on first touch, flushed as a group when dirty.
  *   - Deferred bailouts — guard failures (bad bank, null page, SMC hit,
  *     unsupported dynamic target, etc.) emit only a branch at the guard
- *     site; the actual landing-pad code (with a snapshot of the register/
- *     flag cache state *as of that guard*) is generated in a second pass
- *     after the main instruction loop, keeping the hot straight-line path
- *     dense and the cold bailout code grouped together at the block tail.
+ *     site. Because we eagerly flush all dirty cache state *before* 
+ *     emitting the guard, the actual landing-pad code generated in the 
+ *     second pass doesn't need to restore or flush any state—it just
+ *     syncs prefetch, updates the runtime metadata, and cleanly exits.
  *
  * Also handles: inline hardware prefetch-buffer modeling (EmitPrefetchSync /
  * EmitPrefetchDataWait, approximating the interpreter's stateful
@@ -49,10 +49,10 @@
 #define MAX_WORDS 3072
 #define YIELD_NUMBER 256
 #define MAX_BAILOUTS 256
-#define MAX_BAILOUT_STUB_WORDS 12   // 1 (add cycles) + 6 (metadata) + 3 (return sequence) + padding
+#define MAX_BAILOUT_STUB_WORDS 20   // Bumped for prefetch sync + metadata bounds
 #define EPILOGUE_RESERVE_WORDS 64   // Heavy prefetch sync + full lazy register/flag flushes + quota guard stubs
 #define MAX_SMC_BAILOUTS 32
-#define MAX_SMC_BAILOUT_STUB_WORDS 14 // Max words per SMC bailout
+#define MAX_SMC_BAILOUT_STUB_WORDS 20 // Max words per SMC bailout
 
 // STATIC TIMING MACROS
 // Prevents the JIT compiler from mutating the busPrefetchCount state during trace compilation.
@@ -122,6 +122,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	u32 chunkInstrCount = 0;
 	u32 chunkStaticCycles = 0;
 	bool endBlock = false;
+	bool blockTerminatedEarly = false; // Tracks if a hard exit was natively emitted
 
 	// Initialize packed-flags tracking: nothing loaded into PPC_REG_FLAGS yet this block.
 	flagsLoaded = false;
@@ -324,13 +325,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 	};
 
-	// Universal Eager Flush
+	// Universal Eager Flush - Clears dirty flags so following guard-check bailouts have no state burden.
 	auto EmitEagerStateFlush = [&]() {
 		FlushDirtyFlags(emitPtr);
 		FlushDirtyRegisters(emitPtr);
 	};
 
-	// Global Flush Protocol (State-Preserving for Branches)
+	// Global Flush Protocol (State-Preserving for local conditional branches)
 	auto EmitDirtyRegisterFlush = [&](u32*& ptr) {
 		for (int i = 0; i < 15; i++) {
 			if (regCache[i].allocated && regCache[i].dirty) {
@@ -855,6 +856,22 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_CMPWI(0, PPC_R12, 0);
 						u32* branchSkip = emitPtr++;
 
+						// Dynamic carry flag extraction
+						// Mathematically extract the final shifted-out bit before the native shift destroys it
+						if (op == 2) {
+						    // LSL: The last shifted out bit is at position (32 - shift_amount)
+						    *emitPtr++ = PPC_LI(PPC_R11, 32);
+						    *emitPtr++ = PPC_SUBF(PPC_R11, PPC_R12, PPC_R11); // R11 = 32 - Rs
+						    *emitPtr++ = PPC_SRW(PPC_R10, hostRd, PPC_R11);   // R10 = hostRd >> (32 - Rs)
+						} else if (op == 3 || op == 4 || op == 7) {
+						    // LSR, ASR, ROR: The last shifted out bit is at position (shift_amount - 1)
+						    *emitPtr++ = PPC_ADDI(PPC_R11, PPC_R12, -1);      // R11 = Rs - 1
+						    *emitPtr++ = PPC_SRW(PPC_R10, hostRd, PPC_R11);   // R10 = hostRd >> (Rs - 1)
+						}
+
+						// Funnel the extracted LSB into the packed flag register
+						EmitFlagBit(FLAG_C, PPC_R10, 0);
+
 						if (op == 2) { // LSL
 							*emitPtr++ = PPC_SLW(hostRd, hostRd, PPC_R12);
 						} else if (op == 3) { // LSR
@@ -916,7 +933,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						}
 
 						// Execute Math utilizing Broadway's Fixed-Point Exception Register (XER)
-						// PPC_SUBFCO(rD, rA, rB) computes rB - rA[cite: 2]. So R12 = regRd - regRs.
 						*emitPtr++ = PPC_SUBFCO(PPC_R12, regRs, regRd);
 
 						// Extract Hardware C and V Flags from XER (Branchless)
@@ -990,12 +1006,14 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
+					*emitPtr++ = PPC_OR(PPC_R29, PPC_R4, PPC_R4); // Sync GBA PC (R29) with target
 
 					// Do NOT call linkerStubAddress. Return to C++ host instead.
 					s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
 					*emitPtr++ = PPC_B(returnOffset);
 
 					endBlock = true;
+					blockTerminatedEarly = true;
 				}
 				break;
 			}
@@ -1114,7 +1132,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				if (isMemLoad || isMemStore) {
 					EnsureArenaAllocated();
-					EmitEagerStateFlush();
+					EmitEagerStateFlush(); // Clean entire state BEFORE guarded checks!
 
 					// Emit the deferred Effective Address calculation natively into R12
 					u32 hostRb = ReadGBAReg(rb, emitPtr, lockedMask);
@@ -1215,7 +1233,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					u8* dataTicksTable = memoryWait;
 					if (accessType == 4) dataTicksTable = memoryWait32;
-					
+
 					*emitPtr++ = PPC_LIS(PPC_R11, ((u32)dataTicksTable) >> 16);
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // EA = R7 + R11
@@ -1504,7 +1522,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 							EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC);
 						}
 					}
-					
+
 					// Construct R11 as the Mask before moving onto SMC checks
 					*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R7, 2, 0, 29);     // R11 = Bank * 4
 					*emitPtr++ = PPC_ADDI(PPC_R11, PPC_R11, 1024);          // Offset to masks array
@@ -1559,6 +1577,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Extract PC into R4 BEFORE flushing, as FlushDirtyFlags clobbers R12
 						*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
 
+						// We're leaving the block, so perform final sync for any newly dirtied registers
 						FlushDirtyFlags(emitPtr);
 						FlushDirtyRegisters(emitPtr);
 
@@ -1732,7 +1751,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 1 + isLoad;
 				break;
 			}
-
 			// -----------------------------------------------------------------
 			// THUMB Format 16: Conditional Branches (Bcc)
 			// Covers: 0xD000 - 0xDFFF
@@ -1910,6 +1928,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// Unconditional branch ends the block naturally
 				endBlock = true;
+				blockTerminatedEarly = true;
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -1974,6 +1993,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					instrCount += 2;
 					currentPC += 4;
 					endBlock = true;
+					blockTerminatedEarly = true;
 					break;
 				} else {
 					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_BRANCH_WITH_LINK);
@@ -2002,7 +2022,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 	// 1. Allocate space to jump over the bailouts for ANY fall-through path
 	u32* branchSkipBailouts = nullptr;
-	if (bailoutCount > 0) {
+	if (bailoutCount > 0 && !blockTerminatedEarly) {
 		branchSkipBailouts = emitPtr++;
 	}
 
@@ -2040,28 +2060,30 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*branchSkipBailouts = PPC_B((u32)((emitPtr - branchSkipBailouts) * 4));
 	}
 
-	// Default Epilogue
-	EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
+	if (!blockTerminatedEarly) {
+		// Default Epilogue
+		EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 
-	// 1. Synchronize all modified Lazy Flags and Registers back to memory
-	FlushDirtyFlags(emitPtr);
-	FlushDirtyRegisters(emitPtr);
+		// 1. Synchronize all modified Lazy Flags and Registers back to memory
+		FlushDirtyFlags(emitPtr);
+		FlushDirtyRegisters(emitPtr);
 
-	// Populate result metadata directly to memory
-	EmitResultMetadata(emitPtr, instrCount, 0);
+		// Populate result metadata directly to memory
+		EmitResultMetadata(emitPtr, instrCount, 0);
 
-	// 2. Synchronize R29 (GBA R15) so the incoming chained block inherits the correct pipeline PC
-	*emitPtr++ = PPC_LIS(PPC_R29, (currentPC + 4) >> 16);
-	*emitPtr++ = PPC_ORI(PPC_R29, PPC_R29, (currentPC + 4) & 0xFFFF);
+		// 2. Synchronize R29 (GBA R15) so the incoming chained block inherits the correct pipeline PC
+		*emitPtr++ = PPC_LIS(PPC_R29, (currentPC + 4) >> 16);
+		*emitPtr++ = PPC_ORI(PPC_R29, PPC_R29, (currentPC + 4) & 0xFFFF);
 
-	*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
-	*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
-	s32 defaultStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
-	*emitPtr++ = PPC_BL(defaultStubOffset);
+		*emitPtr++ = PPC_LIS(PPC_R4, currentPC >> 16);
+		*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, currentPC & 0xFFFF);
+		s32 defaultStubOffset = (s32)((u8*)cache.linkerStubAddress - (u8*)emitPtr);
+		*emitPtr++ = PPC_BL(defaultStubOffset);
 
-	// Prevent fall-through into SMC Bailouts
-	s32 epilogueReturnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
-	*emitPtr++ = PPC_B(epilogueReturnOffset);
+		// Prevent fall-through into SMC Bailouts
+		s32 epilogueReturnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
+		*emitPtr++ = PPC_B(epilogueReturnOffset);
+	}
 
 	// =========================================================================
 	// SMC BAILOUTS
