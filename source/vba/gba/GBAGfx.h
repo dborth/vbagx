@@ -3,7 +3,9 @@
 
 #include "../common/Port.h"
 
-extern void gfxDrawTextScreen(u16, u16, u16, u32 *);
+void gfxDrawTextScreen(u16, u16, u16, u32 *);
+
+void gfxUpdateWindowY();
 
 void gfxDrawRotScreen(u16,
 			     u16, u16,
@@ -68,6 +70,8 @@ void mode5RenderLine();
 void mode5RenderLineNoWindow();
 void mode5RenderLineAll();
 
+extern bool winYActive0;
+extern bool winYActive1;
 extern int coeff[32];
 extern u32 line0[240];
 extern u32 line1[240];

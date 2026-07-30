@@ -193,13 +193,11 @@ static inline void mode0RenderLineAll_Impl() {
 
   if(layerEnable & 0x2000) {
     u8 v0 = WIN0V >> 8; u8 v1 = WIN0V & 255;
-    inWindow0 = ((v0 == v1) && (v0 >= 0xe8));
-    inWindow0 |= (v1 >= v0) ? (VCOUNT >= v0 && VCOUNT < v1) : (VCOUNT >= v0 || VCOUNT < v1);
+    inWindow0 = ((v0 == v1) && (v0 >= 0xe8)) || winYActive0;
   }
   if(layerEnable & 0x4000) {
     u8 v0 = WIN1V >> 8; u8 v1 = WIN1V & 255;
-    inWindow1 = ((v0 == v1) && (v0 >= 0xe8));
-    inWindow1 |= (v1 >= v0) ? (VCOUNT >= v0 && VCOUNT < v1) : (VCOUNT >= v0 || VCOUNT < v1);
+    inWindow1 = ((v0 == v1) && (v0 >= 0xe8)) || winYActive1;
   }
 
   if(layerEnable & 0x0100) gfxDrawTextScreen(BG0CNT, BG0HOFS, BG0VOFS, line0);

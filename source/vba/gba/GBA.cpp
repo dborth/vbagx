@@ -2739,6 +2739,7 @@ static void CPULoop_T(int ticks) {
             lcdTicks += 1008;
             ++VCOUNT;
             WriteReg16(0x06, VCOUNT);
+            gfxUpdateWindowY();
             DISPSTAT &= 0xFFFD;
             WriteReg16(0x04, DISPSTAT);
             CPUCompareVCOUNT();
@@ -2757,12 +2758,14 @@ static void CPULoop_T(int ticks) {
             WriteReg16(0x04, DISPSTAT);
             VCOUNT = 0;
             WriteReg16(0x06, VCOUNT);
+            gfxUpdateWindowY();
             CPUCompareVCOUNT();
           }
         } else {
           if(DISPSTAT & 2) {
             ++VCOUNT;
             WriteReg16(0x06, VCOUNT);
+            gfxUpdateWindowY();
             lcdTicks += 1008;
             DISPSTAT &= 0xFFFD;
 

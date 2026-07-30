@@ -4,6 +4,14 @@
 #include "../System.h"
 #include "../common/Port.h"
 
+// Per-window vertical activation state. Set true when VCOUNT reaches
+// WINxV's Y1 (top), cleared when VCOUNT reaches Y2 (bottom). Persists
+// across scanlines AND across frames -- if Y2 is offscreen (> 227) the
+// window stays active indefinitely until Y2 is finally reached on some
+// future frame. This is the "window offscreen reset" hardware quirk.
+bool winYActive0 = false;
+bool winYActive1 = false;
+
 int coeff[32] = {
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
   16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16};
@@ -27,6 +35,29 @@ int gfxBG2Y = 0;
 int gfxBG3X = 0;
 int gfxBG3Y = 0;
 int gfxLastVCOUNT = 0;
+
+// Update each window's stateful Y-activation based on the current VCOUNT.
+// Call this after every VCOUNT change so the renderer's scanline check reads
+// the same value real hardware would see. When Y2 is past the last scanline
+// (> 227), the deactivation never fires and the window remains active into
+// the next frame -- the "window offscreen reset" quirk.
+void gfxUpdateWindowY() {
+    // Skip the transient VCOUNT==228 value that appears between VCOUNT++ and
+    // the frame-wrap to 0. Real hardware scanlines only ever take values 0..227,
+    // so a window Y2 of 228 must never trigger deactivation (that's the whole
+    // point of the "window offscreen reset" quirk -- the window stays active).
+    if (VCOUNT > 227) return;
+
+    uint8_t v0_top = WIN0V >> 8;
+    uint8_t v0_bot = WIN0V & 0xFF;
+    if (VCOUNT == v0_top) winYActive0 = true;
+    if (VCOUNT == v0_bot) winYActive0 = false;
+
+    uint8_t v1_top = WIN1V >> 8;
+    uint8_t v1_bot = WIN1V & 0xFF;
+    if (VCOUNT == v1_top) winYActive1 = true;
+    if (VCOUNT == v1_bot) winYActive1 = false;
+}
 
 static inline void gfxClearArray(u32 *array)
 {
