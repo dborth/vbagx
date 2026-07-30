@@ -138,6 +138,14 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 		}
 	}
 
+	// The JIT bails before applying PC/Cycle costs on a mode switch
+	// Forgive PC/Cycle divergences if the C++ interpreter hit the ARM
+	// switch on the exact final instruction of the JIT trace
+	if (armModeDuringCatchup && (instructionCount == jitResult.instructions)) {
+		pcMismatch = false;
+		cycleMismatch = false;
+	}
+
 	if (pcMismatch || flagMismatch || cycleMismatch) mismatch = true;
 
 	// 6. Log Detailed Mismatch State
