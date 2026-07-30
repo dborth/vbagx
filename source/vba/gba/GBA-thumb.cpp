@@ -1028,7 +1028,7 @@ static INSN_REGPARM void thumbBC(u32 opcode)
   POP_REG(64, 6);
   POP_REG(128, 7);
   reg[13].I = temp;
-  clockTicks = 2 + codeTicksAccess16(armNextPC);
+  clockTicks += 2 + codeTicksAccess16(armNextPC);
 }
 
 // POP {Rlist, PC}
@@ -1103,7 +1103,7 @@ static INSN_REGPARM void thumbC0(u32 opcode)
   THUMB_STM_REG(32, 5, regist);
   THUMB_STM_REG(64, 6, regist);
   THUMB_STM_REG(128, 7, regist);
-  clockTicks = 1 + codeTicksAccess16(armNextPC);
+  clockTicks += 1 + codeTicksAccess16(armNextPC);
 }
 
 // LDM R0~R7!, {Rlist}
@@ -1123,7 +1123,7 @@ static INSN_REGPARM void thumbC8(u32 opcode)
   THUMB_LDM_REG(32, 5);
   THUMB_LDM_REG(64, 6);
   THUMB_LDM_REG(128, 7);
-  clockTicks = 2 + codeTicksAccess16(armNextPC);
+  clockTicks += 2 + codeTicksAccess16(armNextPC);
   if(!(opcode & (1<<regist)))
     reg[regist].I = temp;
 }
