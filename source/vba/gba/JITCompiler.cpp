@@ -1270,8 +1270,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// disrupts the prefetch pipeline, so the interpreter's real formula
 					// (thumb68 etc: `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2/3`)
 					// always pays the non-sequential cost for the instruction after a memory op.
-					// C++ Boolean promotion removes pipeline-stalling ternary
-					chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + (2 + isMemLoad);
+					// Mitigated by prefetch recharge
+					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + (2 + isMemLoad);
 				}
 				break;
 			}
@@ -1353,7 +1353,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// Non-sequential code-fetch table (a memory access breaks the sequential
 				// prefetch stream), and the flat constant depends on load vs store -
 				// this previously used +2 for both, which under-counts every LDR by 1.
-				chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 2 + isLoad;
+				// SP-relative ops recharge the prefetch buffer during execution
+				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 2 + isLoad;
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -1612,12 +1613,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// POP {Rlist}: thumbBC ends with `clockTicks += 2 + codeTicksAccess16(...)`.
 						// Same structure as thumbB4/B5's PUSH case below (which already keeps its
 						// "+ numRegs") -- the only real difference is PUSH's flat "+1" vs POP's "+2".
-						chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + numRegs + 2;
+						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + numRegs + 2;
 					} else if (!(isPop && Rbit)) {
 						// PUSH {Rlist} / PUSH {Rlist, LR}: thumbB4/B5 use += throughout, so
 						// numRegs' +1s and their data-ticks (already accumulated into R3
 						// above) both survive, plus each one's own flat "+1".
-						chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + numRegs + 1;
+						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + numRegs + 1;
 					}
 					// (POP {Rlist, PC} already emitted its own exit above and always ends
 					// the block there, so it never reaches this trailing accumulation.)
