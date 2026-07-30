@@ -226,6 +226,8 @@
 				if (diffState == 1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 1; } \
 				if (diffState == 2) continue; \
 			} while(0)
+
+		#define JIT_RECORD_MEMORY_WRITE(addr, value, size)									JIT_RecordMemoryWrite((addr), (value), (size))
 	#endif
 
 	#if JIT_DEBUGSTATELOG
@@ -370,4 +372,7 @@
 #define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) 										((void)0)
 #endif
 
+#ifndef JIT_RECORD_MEMORY_WRITE
+#define JIT_RECORD_MEMORY_WRITE(addr, value, size)									((void)0)
+#endif
 #endif // DEBUG_H

@@ -41,6 +41,24 @@
 #include <stdarg.h>
 #include <string.h>
 
+#define JIT_DIFFERENTIAL_MAX_CATCHUP 128
+#define JIT_DIFFERENTIAL_MAX_WRITES_PER_INSN 8
+
+struct MemoryWriteEntry {
+    u32 address;
+    u32 value;
+    u8 size; // 1 = byte, 2 = halfword, 4 = word
+};
+
+// Tracks individual instruction execution & side effects during catch-up
+struct CatchupTrace {
+    u32 pc;
+    u16 opcode;
+    int cycles;
+    u8 writeCount;
+    MemoryWriteEntry writes[JIT_DIFFERENTIAL_MAX_WRITES_PER_INSN];
+};
+
 struct CPUStateBackup {
     u32 regs[16];
     CPUFlags flags;
@@ -49,6 +67,22 @@ struct CPUStateBackup {
     u32 prefetch[2];
     u32 busPrefetchCount;
 };
+
+// Hook state for intercepting C++ memory writes during catch-up
+static bool g_diffTrackingActive = false;
+static u8 g_currentInsnWriteCount = 0;
+static MemoryWriteEntry g_currentInsnWrites[JIT_DIFFERENTIAL_MAX_WRITES_PER_INSN];
+
+void JIT_RecordMemoryWrite(unsigned int addr, unsigned int value, unsigned char size) {
+	if (!g_diffTrackingActive) return;
+
+	if (g_currentInsnWriteCount < JIT_DIFFERENTIAL_MAX_WRITES_PER_INSN) {
+		g_currentInsnWrites[g_currentInsnWriteCount].address = addr;
+		g_currentInsnWrites[g_currentInsnWriteCount].value = value;
+		g_currentInsnWrites[g_currentInsnWriteCount].size = size;
+		g_currentInsnWriteCount++;
+	}
+}
 
 static inline void JIT_SaveCPUState(CPUStateBackup* b) {
     for (int i = 0; i < 16; i++) b->regs[i] = reg[i].I;
@@ -79,7 +113,7 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 	CPUStateBackup initial;
 	JIT_SaveCPUState(&initial);
 
-	// 2. Run JIT
+	// 2. Run JIT Trace
 	JITResult jitResult = {0, 0, 0, 0};
 	reg[15].I = pc + 4;
 	ExecuteJITTrace(block->execute, &jitResult, &busPrefetchCount, &reg[0].I, &gbaFlags, &gbaReadTable);
@@ -94,9 +128,13 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 	// 4. Run Native C++ Catch-up execution
 	int cppCycles = 0;
 	u32 instructionCount = 0;
+	CatchupTrace catchupChain[JIT_DIFFERENTIAL_MAX_CATCHUP];
+
+	// Enable write tracking hook
+	g_diffTrackingActive = true;
 
 	// Execute EXACTLY the same number of instructions the JIT ran
-	while (instructionCount < jitResult.instructions && !armState && !holdState && !SWITicks) {
+	while (instructionCount < jitResult.instructions && instructionCount < JIT_DIFFERENTIAL_MAX_CATCHUP && !armState && !holdState && !SWITicks) {
 		u16 opcode = cpuPrefetch[0];
 		cpuPrefetch[0] = cpuPrefetch[1];
 		busPrefetch = false;
@@ -111,10 +149,23 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 		THUMB_PREFETCH_NEXT;
 
 		*diffClockTicks = 0;
+
+		// Reset per-instruction write hook buffer
+		g_currentInsnWriteCount = 0;
+
 		(*thumbInsnTable[opcode>>6])(opcode);
 
 		if (*diffClockTicks < 0) break;
 		if (*diffClockTicks == 0) *diffClockTicks = codeTicksAccessSeq16(oldArmNextPC) + 1;
+
+		// Snapshot execution details & writes performed by this instruction
+		catchupChain[instructionCount].pc = oldArmNextPC;
+		catchupChain[instructionCount].opcode = opcode;
+		catchupChain[instructionCount].cycles = *diffClockTicks;
+		catchupChain[instructionCount].writeCount = g_currentInsnWriteCount;
+		for (u8 w = 0; w < g_currentInsnWriteCount; w++) {
+			catchupChain[instructionCount].writes[w] = g_currentInsnWrites[w];
+		}
 
 		cpuTotalTicks += *diffClockTicks;
 		cppCycles += *diffClockTicks;
@@ -122,14 +173,19 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 		instructionCount++;
 	}
 
+	g_diffTrackingActive = false;
+
 	// 5. Compare & Detect Divergence
 	bool armModeDuringCatchup = armState;
 	bool mismatch = false;
 	bool regMismatches[15] = { false };
+
+	bool instMismatch = (jitResult.instructions != instructionCount);
 	bool pcMismatch = (jitResult.nextPC != armNextPC);
 	bool flagMismatch = (jitState.flags.N != gbaFlags.N || jitState.flags.Z != gbaFlags.Z ||
 						 jitState.flags.C != gbaFlags.C || jitState.flags.V != gbaFlags.V);
 	bool cycleMismatch = ((int)jitResult.cycles != cppCycles);
+	bool prefetchMismatch = (jitState.busPrefetchCount != busPrefetchCount);
 
 	for (int i = 0; i < 15; i++) {
 		if (jitState.regs[i] != reg[i].I) {
@@ -146,7 +202,7 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 		cycleMismatch = false;
 	}
 
-	if (pcMismatch || flagMismatch || cycleMismatch) mismatch = true;
+	if (pcMismatch || flagMismatch || cycleMismatch || instMismatch || prefetchMismatch) mismatch = true;
 
 	// 6. Log Detailed Mismatch State
 	if (mismatch) {
@@ -155,7 +211,7 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 			"R8", "R9", "R10", "R11", "R12", "SP", "LR"
 		};
 
-		static char assembledMsg[4096];
+		static char assembledMsg[8192];
 		char *ptr = assembledMsg;
 		size_t remaining = sizeof(assembledMsg);
 		assembledMsg[0] = '\0';
@@ -179,12 +235,18 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 
 		appendToMsg("StartPC: 0x%08X | Trace Length: %u | Opcode: 0x%04X\n", pc, jitResult.instructions, startOpcode);
 		appendToMsg("Initial Flags: N=%u Z=%u C=%u V=%u\n", initial.flags.N, initial.flags.Z, initial.flags.C, initial.flags.V);
-		appendToMsg("JIT Result:  NextPC=0x%08X | Cycles=%u | Flags=(N:%u Z:%u C:%u V:%u)\n",
-			jitResult.nextPC, jitResult.cycles, jitState.flags.N, jitState.flags.Z, jitState.flags.C, jitState.flags.V);
-		appendToMsg("C++ Result:  NextPC=0x%08X | Cycles=%d | Flags=(N:%u Z:%u C:%u V:%u)\n",
-			armNextPC, cppCycles, gbaFlags.N, gbaFlags.Z, gbaFlags.C, gbaFlags.V);
+		appendToMsg("JIT Result:  NextPC=0x%08X | Cycles=%u | Flags=(N:%u Z:%u C:%u V:%u) | Insns=%u\n",
+			jitResult.nextPC, jitResult.cycles, jitState.flags.N, jitState.flags.Z, jitState.flags.C, jitState.flags.V, jitResult.instructions);
+		appendToMsg("C++ Result:  NextPC=0x%08X | Cycles=%d | Flags=(N:%u Z:%u C:%u V:%u) | Insns=%u\n",
+			armNextPC, cppCycles, gbaFlags.N, gbaFlags.Z, gbaFlags.C, gbaFlags.V, instructionCount);
 
 		appendToMsg("--- MISMATCH DETAILS ---\n");
+		if (instMismatch) {
+			appendToMsg("  [INSTRUCTIONS] JIT claimed %u vs C++ ran %u\n", jitResult.instructions, instructionCount);
+		}
+		if (prefetchMismatch) {
+			appendToMsg("  [PREFETCH] JIT=0x%08X vs C++=0x%08X\n", jitState.busPrefetchCount, busPrefetchCount);
+		}
 		for (int i = 0; i < 15; i++) {
 			if (regMismatches[i]) {
 				appendToMsg("  [REG %-3s] Initial=0x%08X | JIT=0x%08X vs C++=0x%08X\n",
@@ -204,6 +266,20 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 		}
 		if (armModeDuringCatchup) {
 			appendToMsg("  [NOTE] Interpreter entered ARM mode during catch-up...\n");
+		}
+
+		// Append the actual sequence of executed instructions and their memory writes
+		appendToMsg("\n--- C++ EXECUTION TRACE (Ran %u insns) ---\n", instructionCount);
+		for (u32 i = 0; i < instructionCount; i++) {
+			const CatchupTrace& tr = catchupChain[i];
+			appendToMsg("  [%02u] PC: 0x%08X | Opcode: 0x%04X | Cycles: %d | Writes: %u\n",
+				i, tr.pc, tr.opcode, tr.cycles, tr.writeCount);
+
+			for (u8 w = 0; w < tr.writeCount; w++) {
+				const MemoryWriteEntry& write = tr.writes[w];
+				appendToMsg("       -> [WRITE %2ubit] Addr: 0x%08X | Val: 0x%08X\n",
+					write.size * 8, write.address, write.value);
+			}
 		}
 
 		JIT_LOG_MISMATCH(assembledMsg);

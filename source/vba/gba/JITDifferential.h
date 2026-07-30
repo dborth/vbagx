@@ -37,4 +37,6 @@ int JIT_RunDifferentialThumbHook_Impl(
 	insnfunc_t* thumbInsnTable
 );
 
+void JIT_RecordMemoryWrite(unsigned int addr, unsigned int value, unsigned char size);
+
 #endif // JIT_DIFFERENTIAL_H
