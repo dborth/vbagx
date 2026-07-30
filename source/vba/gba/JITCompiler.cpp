@@ -451,17 +451,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*ptr++ = PPC_BLE(8); // If C <= instrCount, skip the override clamp
 			*ptr++ = PPC_LI(PPC_R11, cInstrCount);
 
-			// 3. Subtract H * (seqCost - 1) from R3
-			// A prefetch hit costs 1 cycle. We accumulated the full seqCost (assuming a miss),
-			// so we must only refund the difference: seqCost - 1.
+			// 3. Subtract H * seqCost from R3
+			// GBATEK: A prefetch hit costs 0 bus cycles. The static base cost already prepays S + 1.
+			// Therefore, we must refund the entire seqCost (S) per hit.
 			if (seqCost == 1) {
-				// seqCost - 1 == 0. A hit and a miss both cost 1 cycle, so no correction is needed.
-			} else if (seqCost == 2) {
-				// seqCost - 1 == 1. The correction is exactly H (PPC_R11), so subtract it directly.
+				// H * 1 (R11 holds H)
 				*ptr++ = PPC_SUBF(PPC_R3, PPC_R11, PPC_R3);
 			} else {
-				// General case: H * (seqCost - 1)
-				*ptr++ = PPC_MULLI(PPC_R10, PPC_R11, seqCost - 1);
+				// General case: H * seqCost
+				*ptr++ = PPC_MULLI(PPC_R10, PPC_R11, seqCost);
 				*ptr++ = PPC_SUBF(PPC_R3, PPC_R10, PPC_R3);
 			}
 
@@ -528,6 +526,21 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100);     // Ensure active flag
 
 		*branchSkip = PPC_B((u32)((ptr - branchSkip) * 4));
+	};
+	
+	// Dynamic N-Cycle Penalty Check
+	// GBATEK: Only apply the N-cycle fetch penalty if the prefetch buffer was actually flushed.
+	auto EmitDynamicNCyclePenalty = [&](u32*& ptr, u32 pc) {
+		u32 nPenalty = STATIC_CODE_TICKS_16(pc) - STATIC_CODE_TICKS_SEQ16(pc);
+		if (nPenalty > 0) {
+			*ptr++ = PPC_RLWINM(PPC_R8, PPC_R5, 0, 24, 31); // Extract active hits from R5
+			*ptr++ = PPC_CMPWI(0, PPC_R8, 0);
+			u32* branchSkipPenalty = ptr++; // If hits > 0, skip penalty
+
+			*ptr++ = PPC_ADDI(PPC_R3, PPC_R3, nPenalty);
+
+			*branchSkipPenalty = PPC_BNE((u32)((ptr - branchSkipPenalty) * 4));
+		}
 	};
 
 	while (!endBlock && instrCount < JIT_TRACE_MAX_INSTRUCTIONS) {
@@ -1271,7 +1284,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// (thumb68 etc: `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2/3`)
 					// always pays the non-sequential cost for the instruction after a memory op.
 					// Add base execution cost + data access penalty delta (N-Cycle vs S-Cycle)
-					chunkStaticCycles += (2 + isMemLoad) + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC));
+					// Advance static cycles for the instruction execution only
+					chunkStaticCycles += (2 + isMemLoad);
+					EmitDynamicNCyclePenalty(emitPtr, currentPC);
 				}
 				break;
 			}
@@ -1354,7 +1369,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// prefetch stream), and the flat constant depends on load vs store -
 				// this previously used +2 for both, which under-counts every LDR by 1.
 				// SP-relative ops recharge the prefetch buffer during execution
-				chunkStaticCycles += (2 + isLoad) + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC));
+				chunkStaticCycles += (2 + isLoad);
+				EmitDynamicNCyclePenalty(emitPtr, currentPC);
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -1608,17 +1624,21 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_B(returnOffset);
 
 						endBlock = true;
-					}
-					else if (isPop && !Rbit) {
+					} else if (isPop && !Rbit) {
 						// POP {Rlist}: thumbBC ends with `clockTicks += 2 + codeTicksAccess16(...)`.
 						// Same structure as thumbB4/B5's PUSH case below (which already keeps its
 						// "+ numRegs") -- the only real difference is PUSH's flat "+1" vs POP's "+2".
-						chunkStaticCycles += numRegs + 2 + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC));
+						chunkStaticCycles += numRegs + 2;
 					} else if (!(isPop && Rbit)) {
 						// PUSH {Rlist} / PUSH {Rlist, LR}: thumbB4/B5 use += throughout, so
 						// numRegs' +1s and their data-ticks (already accumulated into R3
 						// above) both survive, plus each one's own flat "+1".
-						chunkStaticCycles += numRegs + 1 + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC));
+						chunkStaticCycles += numRegs + 1;
+					}
+
+					// Dynamic N-Cycle Penalty Check (Applied to all non-PC PUSH/POP)
+					if (!(isPop && Rbit)) {
+						EmitDynamicNCyclePenalty(emitPtr, currentPC);
 					}
 					// (POP {Rlist, PC} already emitted its own exit above and always ends
 					// the block there, so it never reaches this trailing accumulation.)
@@ -1760,7 +1780,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// The real cost is just this flat constant + one code-fetch lookup;
 				// `numRegs` never survives to be observable, so it's deliberately
 				// excluded here rather than added (as it was before this fix).
-				chunkStaticCycles += (1 + isLoad) + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC));
+				chunkStaticCycles += (1 + isLoad);
+				EmitDynamicNCyclePenalty(emitPtr, currentPC);
 				break;
 			}
 			// -----------------------------------------------------------------
