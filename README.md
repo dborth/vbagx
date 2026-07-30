@@ -33,6 +33,8 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## FEATURES
 
+* Custom-built dynamic recompiler (JIT) for GBA games, built from the ground up specifically for VBA-GX, with 
+  excellent accuracy and enough headroom to hold a rock-solid 60fps with room to spare (Wii only)
 * Wiimote, Nunchuk, Classic, Wii U Pro, and Gamecube controller support
 * Wii U GamePad support (requires homebrew injection into Wii U VC title)
 * Rotation sensors, Solar sensors, and Rumble support
@@ -51,8 +53,14 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Fixed pixel ratio mode (1x, 2x, and 3x)
 * Borders (from Super Game Boy games or custom from .png)
 
-
 ## UPDATE HISTORY
+
+[3.0.1]
+
+* Implemented a brand new Dynamic Recompilation (JIT) core for GBA games on Wii, built entirely from scratch, delivering
+  a major, accuracy-preserving speed boost over the standard interpreter core - real GBA titles run with plenty of
+  headroom above a full, locked 60fps. Enable it from Settings > Emulation > Dynamic GBA Recompilation
+* FPS display option
 
 [3.0.0 - July 6, 2026]
 
@@ -242,7 +250,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
   * To squish the picture so it appears correctly on a 16:9 TV, you can open
     the settings.xml file and add 10 to the gbFixed/gbaFixed value. However,
 	setting your TV to 4:3 mode will yield a better picture.
-* Real-time clock fixes for GB/GBC games, including PokÃ©mon G/S/C
+* Real-time clock fixes for GB/GBC games, including Pokémon G/S/C
   * RTC data in save file stored as little-endian
   * Option added for UTC offset in the main menu (only required if you use the
     same SRAM on other, time-zone-aware platforms)
@@ -723,6 +731,24 @@ You must also not use patched versions of WarioWare Twisted, Kirby's Tilt n
 Tumble, or Yoshi's Universal Gravitation (Topsy Turvy). The original roms
 are fully supported, and the patch will stop them from working.
 
+#### Dynamic Recompilation (JIT)
+
+VBA-GX includes a dynamic recompiler (JIT) for GBA games, built entirely from
+scratch specifically for VBA-GX. Rather than interpreting GBA code one
+instruction at a time, it translates hot game code directly into native Wii
+CPU instructions, while carefully preserving the timing accuracy of the
+original interpreter core. The result is a major speed boost with excellent
+compatibility - even demanding GBA titles run with plenty of headroom to
+spare above a full, locked 60fps, rather than merely scraping by.
+
+This option is only available on Wii, and can be turned on or off from the
+main menu under Settings > Emulation > GBA Dynamic Recompilation. It is not
+available on GameCube.
+
+Dynamic Recompilation is very stable, but if you ever notice graphical
+glitches or other unexpected behavior in a specific game, try turning it off
+to see if the issue goes away with the standard interpreter core.
+
 #### Controls
 
 See the website at http://www.wiibrew.org/wiki/VBA for better control
@@ -800,7 +826,7 @@ Game Boy (Color) and Game Boy Advance games.
 
 For both loading and saving, the PNG filename is [TITLE].png, where [TITLE]
 is the ROM title defined at 0x134 (for GB games) or 0xA0 (for GBA games). For
-example, POKEMON_SFXAAXE.png will be loaded for PokÃ©mon Silver. If no PNG file
+example, POKEMON_SFXAAXE.png will be loaded for Pokémon Silver. If no PNG file
 by that name exists, VBA-GX will try loading default.png (for GB games) or
 defaultgba.png (for GBA games) instead.
 
