@@ -1271,7 +1271,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// (thumb68 etc: `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2/3`)
 					// always pays the non-sequential cost for the instruction after a memory op.
 					// Add base execution cost + data access penalty delta (N-Cycle vs S-Cycle)
-					chunkStaticCycles += (2 + isMemLoad) + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC))
+					chunkStaticCycles += (2 + isMemLoad) + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC));
 				}
 				break;
 			}
@@ -1618,7 +1618,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// PUSH {Rlist} / PUSH {Rlist, LR}: thumbB4/B5 use += throughout, so
 						// numRegs' +1s and their data-ticks (already accumulated into R3
 						// above) both survive, plus each one's own flat "+1".
-						chunkStaticCycles += numRegs + 1 + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC))
+						chunkStaticCycles += numRegs + 1 + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC));
 					}
 					// (POP {Rlist, PC} already emitted its own exit above and always ends
 					// the block there, so it never reaches this trailing accumulation.)
