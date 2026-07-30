@@ -41,7 +41,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#define JIT_DIFFERENTIAL_MAX_CATCHUP 128
+#define JIT_DIFFERENTIAL_MAX_CATCHUP 14
 #define JIT_DIFFERENTIAL_MAX_WRITES_PER_INSN 8
 
 struct MemoryWriteEntry {
@@ -104,9 +104,9 @@ static inline void JIT_RestoreCPUState(const CPUStateBackup* b) {
     busPrefetchCount = b->busPrefetchCount;
 }
 
-int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode, int* diffClockTicks, insnfunc_t* thumbInsnTable) {
+int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode, int* diffClockTicks, insnfunc_t* thumbInsnTable, bool* useJIT) {
 	if (block == nullptr || block->execute == nullptr || debugStats.mismatchCount >= MAX_JIT_MISMATCH_COUNT) {
-		return 0; // Did not handle, proceed to normal fallback
+		return -1; // Did not handle, proceed to normal JIT execution block
 	}
 
 	// 1. Save initial emulator state
@@ -116,16 +116,47 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 	// 2. Run JIT Trace
 	JITResult jitResult = {0, 0, 0, 0};
 	reg[15].I = pc + 4;
+
+	JIT_LOG_TRACE_ENTRY(pc, gbaFlags);
 	ExecuteJITTrace(block->execute, &jitResult, &busPrefetchCount, &reg[0].I, &gbaFlags, &gbaReadTable);
 
+	// Log trace completion exactly as thumbExecute does
+	JIT_LOG_TRACE_EXIT(pc, jitResult.nextPC, gbaFlags, jitResult.cycles);
 	JIT_LOG_EXEC(jitResult.instructions, block->length, jitResult.bailedOut);
+	JIT_LOG_STATE_JIT(pc, initial.armNextPC, initial.totalTicks, jitResult.cycles);
 
-	// 3. Save JIT output & restore initial C++ state for catch-up
+	// 3. Save JIT output
 	CPUStateBackup jitState;
 	JIT_SaveCPUState(&jitState);
-	JIT_RestoreCPUState(&initial);
+
+	// Skip catchup gracefully if trace is too long
+	if (jitResult.instructions > JIT_DIFFERENTIAL_MAX_CATCHUP) {
+		JIT_RestoreCPUState(&jitState);
+		cpuTotalTicks += jitResult.cycles;
+
+		// Replicate the standard pipeline repriming
+		if (jitResult.instructions > 0 || jitResult.bailedOut) {
+			armNextPC = jitResult.nextPC;
+			reg[15].I = armNextPC + 2;
+			cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
+			cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+		}
+
+		// Replicate standard bailout and SMC invalidation
+		if (jitResult.bailedOut) {
+			if (jitResult.smcHit) {
+				jitCache.invalidateSMCTarget(jitResult.smcAddress);
+			}
+			*useJIT = false;
+			return 3; // Route to legacy fallback
+		}
+
+		*useJIT = true;
+		return 2; // Clean exit, continue loop
+	}
 
 	// 4. Run Native C++ Catch-up execution
+	JIT_RestoreCPUState(&initial);
 	int cppCycles = 0;
 	u32 instructionCount = 0;
 	CatchupTrace catchupChain[JIT_DIFFERENTIAL_MAX_CATCHUP];
@@ -285,9 +316,29 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 		JIT_LOG_MISMATCH(assembledMsg);
 	}
 
-	if (*diffClockTicks < 0) return -1;
+	// Pipeline repriming and fallback handling for caught-up state
+	if (jitResult.instructions > 0 || jitResult.bailedOut) {
+		// Enforce pipeline repriming exactly as the JIT execution block would
+		armNextPC = jitResult.nextPC;
+		reg[15].I = armNextPC + 2;
+		cpuPrefetch[0] = CPUReadHalfWord(armNextPC);
+		cpuPrefetch[1] = CPUReadHalfWord(armNextPC + 2);
+	}
+
+	if (jitResult.bailedOut) {
+		if (jitResult.smcHit) {
+			jitCache.invalidateSMCTarget(jitResult.smcAddress);
+		}
+		*useJIT = false;
+	} else {
+		*useJIT = true;
+	}
+
+	if (*diffClockTicks < 0) return 0;
 	if (cpuTotalTicks >= cpuNextEvent || armState || holdState || SWITicks) return 1;
-	return 2; // Success/Handled, continue loop
+
+	// Route based on bailout status
+	return jitResult.bailedOut ? 3 : 2;
 }
 
 #endif // JIT_DIFFERENTIAL_TESTING

@@ -221,11 +221,16 @@
 
 		#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) \
 			do { \
-				int diffState = JIT_RunDifferentialThumbHook_Impl((pc), (block), CPUReadHalfWord(pc), &clockTicks, thumbInsnTable); \
-				if (diffState == -1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 0; } \
+				int diffState = JIT_RunDifferentialThumbHook_Impl((pc), (block), CPUReadHalfWord(pc), &clockTicks, thumbInsnTable, &useJIT); \
+				if (diffState == -1) break; /* Not handled, proceed to normal JIT execution */ \
+				if (diffState == 0) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 0; } \
 				if (diffState == 1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 1; } \
-				if (diffState == 2) continue; \
-			} while(0)
+				if (diffState == 2) continue; /* Clean exit, skip to next loop iteration */ \
+				if (diffState == 3) { \
+					PROFILER_SET_BAILOUT_FLAG(); \
+					block = nullptr; /* Bypass normal JIT execution and route to legacy fallback */ \
+				} \
+		} while(0)
 
 		#define JIT_RECORD_MEMORY_WRITE(addr, value, size)									JIT_RecordMemoryWrite((addr), (value), (size))
 	#endif
