@@ -1773,14 +1773,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ADDI(hostRbWB, hostRbWB, numRegs * 4);
 				}
 
-				// thumbC0 (STMIA) / thumbC8 (LDMIA) both end with a plain assignment -
-				// `clockTicks = (1 or 2) + codeTicksAccess16(armNextPC)` - which discards
-				// every +1-per-register and per-register data-tick that THUMB_STM_REG/
-				// THUMB_LDM_REG accumulated.
-				// The real cost is just this flat constant + one code-fetch lookup;
-				// `numRegs` never survives to be observable, so it's deliberately
-				// excluded here rather than added (as it was before this fix).
-				chunkStaticCycles += (1 + isLoad);
+				// thumbC0 (STMIA) / thumbC8 (LDMIA) -- verified against the current GBA-thumb.cpp --
+				// both use `clockTicks += (1 or 2) + codeTicksAccess16(armNextPC)`. That's a +=, same
+				// as PUSH/POP: THUMB_STM_REG/THUMB_LDM_REG's per-register "+1 + dataTick" survives
+				// (data ticks already accumulated into R3 above); only "+ numRegs" was missing here,
+				// same bug as PUSH/POP before that fix. Code-fetch cost is handled the same way as
+				// PUSH/POP, via EmitDynamicNCyclePenalty below -- not baked into this constant.
+				chunkStaticCycles += numRegs + (1 + isLoad);
 				EmitDynamicNCyclePenalty(emitPtr, currentPC);
 				break;
 			}
