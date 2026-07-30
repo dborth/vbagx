@@ -35,6 +35,8 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 * Custom-built dynamic recompiler (JIT) for GBA games, built from the ground up specifically for VBA-GX, with 
   excellent accuracy and enough headroom to hold a rock-solid 60fps with room to spare (Wii only)
+* Native 48kHz audio output with no upsampling, dropout-resistant buffering, and smooth fades instead of clicks -
+  simply the best VBA-GX has ever sounded
 * Wiimote, Nunchuk, Classic, Wii U Pro, and Gamecube controller support
 * Wii U GamePad support (requires homebrew injection into Wii U VC title)
 * Rotation sensors, Solar sensors, and Rumble support
@@ -57,10 +59,21 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 [3.0.1]
 
-* Implemented a brand new Dynamic Recompilation (JIT) core for GBA games on Wii, built entirely from scratch, delivering
-  a major, accuracy-preserving speed boost over the standard interpreter core - real GBA titles run with plenty of
-  headroom above a full, locked 60fps. Enable it from Settings > Emulation > Dynamic GBA Recompilation
-* FPS display option
+* Implemented a brand new Dynamic Recompilation (JIT) core for GBA games on Wii, built entirely from scratch. This is
+  a from-the-ground-up addition, not a port - real GBA titles now run with plenty of headroom above a full, locked
+  60fps, well beyond what the interpreter core could sustain. Enable it from Settings > Emulation > Dynamic GBA Recompilation
+* GB/GBA audio is cleaner and truer to the original hardware, with one less resampling step - it is now generated natively at 
+  48kHz - instead of upsampled from 44100Hz (GBA) and 22050Hz (GB)
+* Audio samples are now written directly into the output buffer with no intermediate mixing buffer in between,
+  reducing audio latency
+* Smart dynamic audio rate control keeps playback speed correctly matched to real GBA hardware timing, with a
+  stronger correction kicking in only when actually needed to avoid a dropout - this means fewer, less noticeable
+  pitch adjustments during normal play
+* Buffer underruns (audio momentarily running dry) now fade smoothly to silence and back instead of producing a
+  hard click, and startup/resume is primed to avoid an initial stutter
+* Reworked frameskip and frame pacing so video timing is smoother and more consistent, especially when the JIT
+  core is running well above 60fps, and skipped frames are spaced more evenly instead of clumping
+* Added FPS display option
 
 [3.0.0 - July 6, 2026]
 
