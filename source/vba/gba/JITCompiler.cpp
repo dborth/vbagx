@@ -424,21 +424,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 		// Only ROM banks have utilized prefetch buffers
 		if (bank >= 0x08 && bank <= 0x0D) {
-			// Active Recharge
-			// Natively simulate the bus prefetching ahead during the chunk's execution time.
-			// The CPU spends cInstrCount internal cycles. The 32-bit bus fetches 2 ops per seqCost cycles.
-			u32 genHits = (cInstrCount * 2) / seqCost;
-			if (genHits > 8) genHits = 8;
-
-			if (genHits > 0) {
-				// Shift R5 left by genHits to make room for new hits
-				*ptr++ = PPC_LI(PPC_R11, genHits);
-				*ptr++ = PPC_SLW(PPC_R5, PPC_R5, PPC_R11);
-				// Append the new hits (represented by 1s) and preserve the 0x100 active flag
-				u32 hitMask = (1 << genHits) - 1;
-				*ptr++ = PPC_ORI(PPC_R5, PPC_R5, hitMask | 0x100);
-			}
-
 			// 1. Calculate available prefetch hits: C = 31 - cntlzw((R5 & 0xFF) + 1)
 			*ptr++ = PPC_RLWINM(PPC_R11, PPC_R5, 0, 24, 31);
 			*ptr++ = PPC_ADDI(PPC_R11, PPC_R11, 1);
@@ -468,13 +453,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*ptr++ = PPC_RLWINM(PPC_R5, PPC_R5, 0, 24, 31);
 			*ptr++ = PPC_SRW(PPC_R5, PPC_R5, PPC_R11);
 			*ptr++ = PPC_OR(PPC_R5, PPC_R5, PPC_R10);
-
-			// 5. Hardware reset quirk: If H == 0 and R5 was > 0xFF, clear R5.
-			*ptr++ = PPC_CMPWI(0, PPC_R11, 0);
-			*ptr++ = PPC_BNE(16); // Skip if H != 0 (16 bytes = 4 instructions)
-			*ptr++ = PPC_CMPWI(0, PPC_R10, 0); // Check upper bits
-			*ptr++ = PPC_BEQ(8);  // Skip if R10 == 0
-			*ptr++ = PPC_LI(PPC_R5, 0);
 		}
 	};
 

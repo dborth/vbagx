@@ -37,6 +37,24 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
 #define UPDATE_BUS_PREFETCH \
 		busPrefetch |= (busPrefetchEnable & (~((busPrefetchCount | -busPrefetchCount) >> 31) & 1));
 
+// Hardware Accurate Prefetch Recharge
+// Accumulates hits while the CPU is stalled on non-ROM data buses
+#define RECHARGE_PREFETCH(dataAddr, ticks) \
+    if (((armNextPC >> 24) & 15) >= 0x08) { \
+        if (((dataAddr) >> 24) < 0x08) { \
+            u32 sCost = memoryWaitSeq[(armNextPC >> 24) & 15]; \
+            if (sCost == 0) sCost = 1; \
+            u32 hits = (ticks) / sCost; \
+            if (hits > 8) hits = 8; \
+            if (hits > 0) { \
+                busPrefetchCount = (busPrefetchCount << hits) | ((1 << hits) - 1); \
+                busPrefetchCount |= 0x100; \
+            } \
+        } else { \
+            busPrefetchCount = 0; \
+        } \
+    }
+
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
 
@@ -898,27 +916,30 @@ static INSN_REGPARM void thumbB0(u32 opcode) {
 
 // Push and pop ///////////////////////////////////////////////////////////
 
-#define PUSH_REG(val, r)                                    \
-  if (opcode & (val)) {                                     \
-    CPUWriteMemory(address, reg[(r)].I);                    \
-    u32 c = (u32)count;                                     \
-    u32 seq = dataTicksAccessSeq32(address);                \
-    u32 non = dataTicksAccess32(address);                   \
-    /* Branchlessly select N-Cycle (count=0) or S-Cycle (count=1) */ \
-    clockTicks += 1 + ((seq & -c) | (non & (c - 1)));       \
-    count = 1;                                              \
-    address += 4;                                           \
+#define PUSH_REG(val, r) \
+  if (opcode & (val)) { \
+    CPUWriteMemory(address, reg[(r)].I); \
+    u32 c = (u32)count; \
+    u32 seq = dataTicksAccessSeq32(address); \
+    u32 non = dataTicksAccess32(address); \
+    u32 tickCost = 1 + ((seq & -c) | (non & (c - 1))); \
+    clockTicks += tickCost; \
+    RECHARGE_PREFETCH(address, tickCost); \
+    count = 1; \
+    address += 4; \
   }
 
-#define POP_REG(val, r)                                     \
-  if (opcode & (val)) {                                     \
-    reg[(r)].I = CPUReadMemory(address);                    \
-    u32 c = (u32)count;                                     \
-    u32 seq = dataTicksAccessSeq32(address);                \
-    u32 non = dataTicksAccess32(address);                   \
-    clockTicks += 1 + ((seq & -c) | (non & (c - 1)));       \
-    count = 1;                                              \
-    address += 4;                                           \
+#define POP_REG(val, r) \
+  if (opcode & (val)) { \
+    reg[(r)].I = CPUReadMemory(address); \
+    u32 c = (u32)count; \
+    u32 seq = dataTicksAccessSeq32(address); \
+    u32 non = dataTicksAccess32(address); \
+    u32 tickCost = 1 + ((seq & -c) | (non & (c - 1))); \
+    clockTicks += tickCost; \
+    RECHARGE_PREFETCH(address, tickCost); \
+    count = 1; \
+    address += 4; \
   }
 
 // PUSH {Rlist}
@@ -1008,27 +1029,31 @@ static INSN_REGPARM void thumbBD(u32 opcode) {
 
 // Load/store multiple ////////////////////////////////////////////////////
 
-#define THUMB_STM_REG(val,r,b)                              \
-  if(opcode & (val)) {                                      \
-    CPUWriteMemory(address, reg[(r)].I);                    \
-    reg[(b)].I = temp;                                      \
-    u32 c = (u32)count;                                     \
-    u32 seq = dataTicksAccessSeq32(address);                \
-    u32 non = dataTicksAccess32(address);                   \
-    clockTicks += 1 + ((seq & -c) | (non & (c - 1)));       \
-    count = 1;                                              \
-    address += 4;                                           \
+#define THUMB_STM_REG(val,r,b) \
+  if(opcode & (val)) { \
+    CPUWriteMemory(address, reg[(r)].I); \
+    reg[(b)].I = temp; \
+    u32 c = (u32)count; \
+    u32 seq = dataTicksAccessSeq32(address); \
+    u32 non = dataTicksAccess32(address); \
+    u32 tickCost = 1 + ((seq & -c) | (non & (c - 1))); \
+    clockTicks += tickCost; \
+    RECHARGE_PREFETCH(address, tickCost); \
+    count = 1; \
+    address += 4; \
   }
 
-#define THUMB_LDM_REG(val,r)                                \
-  if(opcode & (val)) {                                      \
-    reg[(r)].I = CPUReadMemory(address);                    \
-    u32 c = (u32)count;                                     \
-    u32 seq = dataTicksAccessSeq32(address);                \
-    u32 non = dataTicksAccess32(address);                   \
-    clockTicks += 1 + ((seq & -c) | (non & (c - 1)));       \
-    count = 1;                                              \
-    address += 4;                                           \
+#define THUMB_LDM_REG(val,r) \
+  if(opcode & (val)) { \
+    reg[(r)].I = CPUReadMemory(address); \
+    u32 c = (u32)count; \
+    u32 seq = dataTicksAccessSeq32(address); \
+    u32 non = dataTicksAccess32(address); \
+    u32 tickCost = 1 + ((seq & -c) | (non & (c - 1))); \
+    clockTicks += tickCost; \
+    RECHARGE_PREFETCH(address, tickCost); \
+    count = 1; \
+    address += 4; \
   }
 
 // STM R0~7!, {Rlist}
