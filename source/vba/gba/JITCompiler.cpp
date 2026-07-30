@@ -1562,11 +1562,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						if (isPop) {
 							*emitPtr++ = PPC_LWBRX(PPC_R12, PPC_R10, PPC_R7); // POP PC into R12 scratch
 
-							// Mirrors BX's ARM-mode-switch guard; POP-with-PC is architecturally the same interworking-branch case.
-							*emitPtr++ = PPC_RLWINM(PPC_R11, PPC_R12, 0, 31, 31);
-							*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
-							u32* branchArmSwitch = emitPtr++;
-							RegisterBailout(branchArmSwitch, COND_BEQ, currentPC, chunkStaticCycles);
+							// NOTE: unlike BX, POP {Rlist,PC} does NOT interwork on the GBA's ARM7TDMI
+							// (ARMv4T). thumbBD in GBA-thumb.cpp unconditionally does
+							// `reg[15].I = (CPUReadMemory(address) & 0xFFFFFFFE)` and always calls
+							// THUMB_PREFETCH -- bit 0 of the popped value is discarded, never inspected.
+							// There's no ARM-mode case to guard here
 						} else {
 							u32 hostLr = ReadGBAReg(14, emitPtr, lockedMask);
 							*emitPtr++ = PPC_STWBRX(hostLr, PPC_R10, PPC_R7); // PUSH LR (GBA R14)
