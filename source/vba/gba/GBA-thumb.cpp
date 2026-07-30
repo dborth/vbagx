@@ -593,7 +593,8 @@ static INSN_REGPARM void thumb43_1(u32 opcode) {
 	clockTicks += (active_bits >> 3); // Maps 0-8 to 0, 9-16 to 1, 17-24 to 2, 25-32 to 3.
 
 	busPrefetchCount = (busPrefetchCount << clockTicks) | (0xFF >> (8 - clockTicks));
-	clockTicks += codeTicksAccess16(armNextPC) + 1;
+	// The instruction fetch after a MUL's internal cycles is sequential (S-cycle)
+	clockTicks += codeTicksAccessSeq16(armNextPC) + 1;
 	gbaFlags.Z = (reg[dest].I == 0);
 	gbaFlags.N = (reg[dest].I >> 31);
 }
@@ -872,14 +873,16 @@ static INSN_REGPARM void thumb98(u32 opcode) {
 static INSN_REGPARM void thumbA0(u32 opcode) {
 	u8 regist = (opcode >> 8) & 7;
 	reg[regist].I = (reg[15].I & 0xFFFFFFFC) + ((opcode & 255) << 2);
-	clockTicks = 1 + codeTicksAccess16(armNextPC);
+	// Simple ALU Ops have no data transfer. The next fetch is sequential (S-Cycle).
+	clockTicks = 1 + codeTicksAccessSeq16(armNextPC);
 }
 
 // ADD R0~R7, SP, Imm
 static INSN_REGPARM void thumbA8(u32 opcode) {
 	u8 regist = (opcode >> 8) & 7;
 	reg[regist].I = reg[13].I + ((opcode & 255) << 2);
-	clockTicks = 1 + codeTicksAccess16(armNextPC);
+	// Simple ALU Ops have no data transfer. The next fetch is sequential (S-Cycle).
+	clockTicks = 1 + codeTicksAccessSeq16(armNextPC);
 }
 
 // ADD SP, Imm
@@ -889,7 +892,8 @@ static INSN_REGPARM void thumbB0(u32 opcode) {
 	u32 mask = -((opcode >> 7) & 1);
 	// 2's complement branchless negation: (val ^ mask) - mask
 	reg[13].I += (offset ^ mask) - mask;
-	clockTicks = 1 + codeTicksAccess16(armNextPC);
+	// Simple ALU Ops have no data transfer. The next fetch is sequential (S-Cycle).
+	clockTicks = 1 + codeTicksAccessSeq16(armNextPC);
 }
 
 // Push and pop ///////////////////////////////////////////////////////////
@@ -998,7 +1002,8 @@ static INSN_REGPARM void thumbBD(u32 opcode) {
 	reg[13].I = temp;
 	THUMB_PREFETCH;
 	busPrefetchCount = 0;
-	clockTicks += 3 + codeTicksAccess16(armNextPC) + codeTicksAccess16(armNextPC);
+	// Pipeline refilling after modifying PC in LDM takes 1 N-Cycle followed by 1 S-Cycle, NOT two N-Cycles
+	clockTicks += 3 + codeTicksAccess16(armNextPC) + codeTicksAccessSeq16(armNextPC);
 }
 
 // Load/store multiple ////////////////////////////////////////////////////
