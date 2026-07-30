@@ -4169,6 +4169,7 @@ void gbEmulate(int ticksToStop) {
 							} else
 								gbFrameSkipCount++;
 
+							systemFrame();
 						} else {
 							// go the the OAM being accessed mode
 							gbLcdTicksDelayed += GBLCD_MODE_2_CLOCK_TICKS;
