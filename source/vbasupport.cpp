@@ -204,6 +204,12 @@ static bool SkipPressureCrossed(float audioDeficit, float wallDeficit)
  */
 void systemFrame()
 {
+	coreFrameCount++;
+
+	if(cartridgeType == CARTRIDGE_GB) {
+		return;
+	}
+
 	if (turboMode)
 	{
 		// Turbo: no real-time throttle at all -- run flat out. Frameskip's
@@ -236,7 +242,6 @@ void systemFrame()
 	// used to be the same flag; a JIT-fast core with frameskip disabled
 	// could run unthrottled (e.g. ~180fps) because the old code skipped
 	// pacing entirely rather than just skipping the *render-drop* option.
-	bool mayDropRender = (cartridgeType == CARTRIDGE_GBA && GCSettings.gbaFrameskip);
 	int skipFrms = MAX_FRAME_SKIP;
 
 	// Audio urgency, as a continuous 0..1 reading rather than two booleans
@@ -263,7 +268,7 @@ void systemFrame()
 			pendingFrames = skipFrms;
 		}
 
-		if (mayDropRender && behindSchedule && (skippedFrames < skipFrms))
+		if (GCSettings.gbaFrameskip && behindSchedule && (skippedFrames < skipFrms))
 		{
 			skippedFrames++;
 			frameToRender = false;
@@ -276,7 +281,7 @@ void systemFrame()
 			// forgive the VBlank debt rather than let it sit at max and
 			// bias the next frame's decision toward skipping anyway
 			if (behindSchedule)
-				FrameTimer = mayDropRender ? 1 : 0;
+				FrameTimer = GCSettings.gbaFrameskip ? 1 : 0;
 
 			skippedFrames = 0;
 			frameToRender = true;
@@ -300,7 +305,7 @@ void systemFrame()
 		if(behindSchedule) {
 			// 1. Should we drop a render to catch up?
 			// We ONLY drop if the skip pressure crossed the threshold (behindSchedule).
-			if (mayDropRender && behindSchedule && (skippedFrames < skipFrms))
+			if (GCSettings.gbaFrameskip && behindSchedule && (skippedFrames < skipFrms))
 			{
 				skippedFrames++;
 				frameToRender = false;
@@ -328,8 +333,6 @@ void systemFrame()
 			}
 		}
 	}
-
-	coreFrameCount++;
 }
 
 /****************************************************************************
