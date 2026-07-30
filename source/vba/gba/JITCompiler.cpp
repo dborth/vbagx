@@ -1270,8 +1270,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// disrupts the prefetch pipeline, so the interpreter's real formula
 					// (thumb68 etc: `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2/3`)
 					// always pays the non-sequential cost for the instruction after a memory op.
-					// Mitigated by prefetch recharge
-					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + (2 + isMemLoad);
+					// Add base execution cost + data access penalty delta (N-Cycle vs S-Cycle)
+					chunkStaticCycles += (2 + isMemLoad) + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC))
 				}
 				break;
 			}
@@ -1354,7 +1354,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// prefetch stream), and the flat constant depends on load vs store -
 				// this previously used +2 for both, which under-counts every LDR by 1.
 				// SP-relative ops recharge the prefetch buffer during execution
-				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 2 + isLoad;
+				chunkStaticCycles += (2 + isLoad) + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC));
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -1613,12 +1613,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// POP {Rlist}: thumbBC ends with `clockTicks += 2 + codeTicksAccess16(...)`.
 						// Same structure as thumbB4/B5's PUSH case below (which already keeps its
 						// "+ numRegs") -- the only real difference is PUSH's flat "+1" vs POP's "+2".
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + numRegs + 2;
+						chunkStaticCycles += numRegs + 2 + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC));
 					} else if (!(isPop && Rbit)) {
 						// PUSH {Rlist} / PUSH {Rlist, LR}: thumbB4/B5 use += throughout, so
 						// numRegs' +1s and their data-ticks (already accumulated into R3
 						// above) both survive, plus each one's own flat "+1".
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + numRegs + 1;
+						chunkStaticCycles += numRegs + 1 + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC))
 					}
 					// (POP {Rlist, PC} already emitted its own exit above and always ends
 					// the block there, so it never reaches this trailing accumulation.)
@@ -1760,7 +1760,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// The real cost is just this flat constant + one code-fetch lookup;
 				// `numRegs` never survives to be observable, so it's deliberately
 				// excluded here rather than added (as it was before this fix).
-				chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 1 + isLoad;
+				chunkStaticCycles += (1 + isLoad) + (STATIC_CODE_TICKS_16(currentPC) - STATIC_CODE_TICKS_SEQ16(currentPC));
 				break;
 			}
 			// -----------------------------------------------------------------
