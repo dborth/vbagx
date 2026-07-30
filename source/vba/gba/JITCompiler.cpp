@@ -1593,7 +1593,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Synchronize outResult metadata before returning to C++ host
 						EmitResultMetadata(emitPtr, instrCount + 1, 0);
 
-						u32 takenPenalty = numRegs + STATIC_CODE_TICKS_16(currentPC) * 2 + 3;
+						// thumbBD pipeline math:
+						// POP_REG macro loop = +numRegs
+						// PC memory read = +1
+						// Branch tail penalty = +3
+						// Fetches = N-cycle(targetPC) + N-cycle(targetPC)
+						// Note: Because targetPC is a runtime value, we statically proxy the fetch cost using currentPC.
+						u32 takenPenalty = numRegs + 4 + (STATIC_CODE_TICKS_16(currentPC) * 2);
 						EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + takenPenalty, chunkStartPC);
 						*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 
