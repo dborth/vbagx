@@ -410,6 +410,24 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*emitPtr++ = PPC_BGE(0);
 	};
 
+	// Resets chunk-level cycle/prefetch tracking to start counting fresh *after* the
+	// instruction currently being compiled. chunkStartPC below is set to currentPC+2,
+	// i.e. one instruction past this one -- but the generic `chunkInstrCount++` at the
+	// bottom of the main loop still fires for THIS instruction regardless (it doesn't
+	// know a reset just happened here), so left alone the resetting instruction's own
+	// slot gets double-counted: once as its own emitted cost, and again as "1 more
+	// sequential fetch" credited to EmitPrefetchSync's recharge math at the next chunk
+	// boundary. That phantom credit re-primes R5 with hits that were never actually
+	// fetched -- which is exactly what corrupts busPrefetchCount after resets that are
+	// supposed to zero it (PC-relative loads, POP-with-PC). Pre-biasing to (u32)-1 means
+	// the bottom-of-loop increment brings the count back to a true 0, so the next
+	// chunk's instruction count starts counting only from chunkStartPC forward.
+	auto ResetChunkTracking = [&](u32 pc) {
+	    chunkInstrCount = (u32)-1;
+	    chunkStaticCycles = 0;
+	    chunkStartPC = pc + 2;
+	};
+
 	auto EmitPrefetchSync = [&](u32*& ptr, u32 cInstrCount, u32 cStaticCost, u32 pc) {
 		if (cInstrCount == 0) {
 			if (cStaticCost > 0) *ptr++ = PPC_ADDI(PPC_R3, PPC_R3, cStaticCost);
@@ -1029,9 +1047,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// Sync the pipeline BEFORE processing the load to balance the chunk ledger
 					EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
 					*emitPtr++ = PPC_LI(PPC_R5, 0);
-					chunkInstrCount = 0;
-					chunkStaticCycles = 0;
-					chunkStartPC = currentPC + 2;
+					ResetChunkTracking(currentPC);
 
 					u32 loadedValue = CPUReadMemory(targetAddr);
 
@@ -1139,9 +1155,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					}
 
 					EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
-					chunkInstrCount = 0;
-					chunkStaticCycles = 0;
-					chunkStartPC = currentPC + 2;
+					ResetChunkTracking(currentPC);
 
 					// 1. Extract Memory Bank (R12 >> 24)
 					*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R12, 24);
@@ -1276,9 +1290,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// SP-relative loads/stores also break the prefetch stream!
 				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
-				chunkInstrCount = 0;
-				chunkStaticCycles = 0;
-				chunkStartPC = currentPC + 2;
+				ResetChunkTracking(currentPC);
 
 				u8 isLoad = (opcode >> 11) & 0x01;
 				u8 rd     = (opcode >> 8) & 0x07;
@@ -1440,9 +1452,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					EmitEagerStateFlush();
 
 					EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
-					chunkInstrCount = 0;
-					chunkStaticCycles = 0;
-					chunkStartPC = currentPC + 2;
+					ResetChunkTracking(currentPC);
 
 					// LAZY REGISTERS: Stage SP natively into R12
 					u32 hostSp = WriteGBAReg(13, emitPtr, false, lockedMask); // Reads and marks dirty
@@ -1607,7 +1617,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 						// 5. Emit prefetch sync using the static base penalty (numRegs + 4)
 						u32 staticBasePenalty = numRegs + 4;
-						EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + staticBasePenalty, chunkStartPC);
+						EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + staticBasePenalty, chunkStartPC);
 						*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 
 						// Do NOT call linkerStubAddress. Return to C++ host instead.
@@ -1661,9 +1671,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				EnsureArenaAllocated();
 				EmitEagerStateFlush();
 				EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
-				chunkInstrCount = 0;
-				chunkStaticCycles = 0;
-				chunkStartPC = currentPC + 2;
+				ResetChunkTracking(currentPC);
 
 				// Stage Base Address natively into R12
 				u32 hostRb = ReadGBAReg(rb, emitPtr, lockedMask);
