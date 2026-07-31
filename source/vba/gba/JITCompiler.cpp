@@ -423,7 +423,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	// the bottom-of-loop increment brings the count back to a true 0, so the next
 	// chunk's instruction count starts counting only from chunkStartPC forward.
 	auto ResetChunkTracking = [&](u32 pc) {
-	    chunkInstrCount = (u32)-1;
+	    chunkInstrCount = 0;
 	    chunkStaticCycles = 0;
 	    chunkStartPC = pc + 2;
 	};
@@ -879,7 +879,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 						// MUL relies on internal cycles and does not disrupt the prefetch buffer.
 						// The runtime math already dynamically adds 'm' to PPC_R3.
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 2;
 					}
 					else if (op == 11) { // CMN (Compare Negative: Rd + Rs)
 						EnsureArenaAllocated();
@@ -1922,8 +1922,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						}
 
 						// TRUE PATH (Branch Taken Exit)
-						u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 1 +
-											   STATIC_CODE_TICKS_SEQ16(targetPC) + STATIC_CODE_TICKS_16(targetPC) + 2;
+						u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(targetPC) * 2 + STATIC_CODE_TICKS_16(targetPC) + 3;
 
 						EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 						*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
@@ -1990,9 +1989,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32 targetPC = currentPC + 4 + sOffset;
 
 				// 2. Calculate Pipeline Penalty
-				// Unconditional branch breaks prefetch and forces a full N+S cycle refill
-				u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 1 +
-								   STATIC_CODE_TICKS_SEQ16(targetPC) + STATIC_CODE_TICKS_16(targetPC) + 2;
+				// Unconditional branch breaks prefetch and forces a full N+S cycle refill from the Target
+				u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(targetPC) * 2 + STATIC_CODE_TICKS_16(targetPC) + 3;
 
 				EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
@@ -2053,8 +2051,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ORI(hostLr, hostLr, returnPC & 0xFFFF);
 
 					// 2. JIT EXIT: Branch Taken
-					// Base static penalty for Suffix = Fetch S + 1 internal + 1 branch cycle
-					u32 basePenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 2;
+					// Base static penalty = C++ Prefix (Seq16 + 1) + C++ Suffix (Seq16 * 2 + 3)
+					u32 basePenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1 +
+									  STATIC_CODE_TICKS_SEQ16(targetPC) * 2 + 3;
 
 					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + basePenalty, chunkStartPC);
 					
