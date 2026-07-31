@@ -474,7 +474,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 	};
 
-	auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg, u32 pc) {
+	auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg, u32 pc, u32 transferCount) {
 		u32 execBank = (pc >> 24) & 15;
 		// The hardware prefetcher only runs if the CPU is executing from ROM
 		if (execBank < 0x08 || execBank > 0x0D) return;
@@ -493,7 +493,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		// Recharge Path (Bank < 8)
 		*branchRecharge = PPC_BLT((u32)((ptr - branchRecharge) * 4));
 
-		// 1. Calculate hits (waitState / seqCost) into scratchReg
+		// RECHARGE_PREFETCH in GBA-thumb.cpp is fed `tickCost = 1 + wait` per
+		// register (PUSH_REG/POP_REG/THUMB_STM_REG/THUMB_LDM_REG) -- never the raw
+		// wait-state value alone. transferCount = how many registers this batched
+		// call represents (1 for the leading non-seq register, numRegs-1 for the
+		// trailing sequential run). Missing this under-credits the buffer by exactly
+		// 1 tick per register, which can flip a real hit into a false miss.
+		*ptr++ = PPC_ADDI(dataWaitStateReg, dataWaitStateReg, transferCount);
+
+		// 1. Calculate hits (ticks / seqCost) into scratchReg
 		if (seqCost == 1) {
 			*ptr++ = PPC_OR(scratchReg, dataWaitStateReg, dataWaitStateReg);
 		} else if (seqCost == 2) {
@@ -508,19 +516,24 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*ptr++ = PPC_LI(scratchReg, 8);
 		*branchClamp = PPC_BLE((u32)((ptr - branchClamp) * 4));
 
+		// RECHARGE_PREFETCH only touches busPrefetchCount at all `if (hits > 0)`.
+		// A zero-hit recharge must leave R5 -- active flag included -- untouched.
+		*ptr++ = PPC_CMPWI(0, scratchReg, 0);
+		u32* branchNoHits = ptr++;
+
 		// 3. Shift existing hits in R5 by the total wait cycles FIRST
 		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, scratchReg);
 
 		// 4. Create bitmask: (1 << hits) - 1
-		// We use dataWaitStateReg as a secondary scratch
 		*ptr++ = PPC_LI(dataWaitStateReg, 1);
 		*ptr++ = PPC_SLW(scratchReg, dataWaitStateReg, scratchReg);  // scratchReg = 1 << hits
 		*ptr++ = PPC_SUBF(scratchReg, dataWaitStateReg, scratchReg); // scratchReg = scratchReg - 1
 
-		// 5. Append hits
+		// 5. Append hits + mark active (now correctly gated behind hits > 0)
 		*ptr++ = PPC_OR(PPC_R5, PPC_R5, scratchReg); // Add new hits
-		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100);     // Ensure active flag
+		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100); // Ensure active flag
 
+		*branchNoHits = PPC_BEQ((u32)((ptr - branchNoHits) * 4));
 		*branchSkip = PPC_B((u32)((ptr - branchSkip) * 4));
 	};
 	
@@ -1246,8 +1259,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // EA = R7 + R11
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-
-					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R11, PPC_R8, currentPC);
+					// thumb90/thumb98 do NOT recharge the prefetch buffer
 
 					// 5. Execute Memory Load or Store Instruction
 					if (isMemLoad) {
@@ -1340,7 +1352,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
 				*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // Safe: rA=R7
 				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R11, PPC_R8, currentPC); // Recharge prefetch buffer using R8 as scratch
 
 				// 4. Endian-Correct Load or Store (Lazy Register Execution)
 				if (isLoad) {
@@ -1351,12 +1362,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_STWBRX(hostRd, PPC_R10, PPC_R12);
 				}
 
-				// thumb90 (STR): `dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2`
-				// thumb98 (LDR): `3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)`
-				// Non-sequential code-fetch table (a memory access breaks the sequential
-				// prefetch stream), and the flat constant depends on load vs store -
-				// this previously used +2 for both, which under-counts every LDR by 1.
-				// SP-relative ops recharge the prefetch buffer during execution
+				// thumb90 (STR): dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2
+				// thumb98 (LDR): 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)
+				// SP-relative ops do NOT recharge the prefetch buffer
 				chunkStaticCycles += (2 + isLoad) + STATIC_CODE_TICKS_SEQ16(currentPC);
 				EmitDynamicNCyclePenalty(emitPtr, currentPC);
 				break;
@@ -1513,7 +1521,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
 
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC); // Recharge using R8
+					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, 1); // leading register
 
 					if (numRegs > 1) {
 						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
@@ -1525,7 +1533,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						}
 
 						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC);
+						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, numRegs - 1); // trailing seq run
 					}
 
 					// Construct R11 as the Mask before moving onto SMC checks
@@ -1722,7 +1730,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
 
 				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC); // Recharge using R8
+				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, 1); // leading register
 
 				if (numRegs > 1) {
 					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
@@ -1734,7 +1742,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					}
 
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC);
+					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, numRegs - 1); // trailing seq run
 				}
 
 				if (!isLoad) {
