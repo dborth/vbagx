@@ -424,45 +424,34 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 		// Only ROM banks have utilized prefetch buffers
 		if (bank >= 0x08 && bank <= 0x0D) {
-			// 1. Extract active hits: C = R5 & 0xFF
+			// 1. Calculate available prefetch hits: C = 31 - cntlzw((R5 & 0xFF) + 1)
 			*ptr++ = PPC_RLWINM(PPC_R11, PPC_R5, 0, 24, 31);
+			*ptr++ = PPC_ADDI(PPC_R11, PPC_R11, 1);
+			*ptr++ = PPC_CNTLZW(PPC_R11, PPC_R11);
+			*ptr++ = PPC_LI(PPC_R10, 31);
+			*ptr++ = PPC_SUBF(PPC_R11, PPC_R11, PPC_R10);
 
-			// 2. Clamp consumed hits: H = min(C, instrCount)
+			// 2. Clamp hits to instructions executed: H = min(C, instrCount)
 			*ptr++ = PPC_CMPWI(0, PPC_R11, cInstrCount);
-			u32* branchClamp = ptr++;
+			*ptr++ = PPC_BLE(8); // If C <= instrCount, skip the override clamp
 			*ptr++ = PPC_LI(PPC_R11, cInstrCount);
-			*branchClamp = PPC_BLE((u32)((ptr - branchClamp) * 4));
 
-			// 3. Refund consumed hits from R3
+			// 3. Subtract H * seqCost from R3
+			// GBATEK: A prefetch hit costs 0 bus cycles. The static base cost already prepays S + 1.
+			// Therefore, we must refund the entire seqCost (S) per hit.
 			if (seqCost == 1) {
+				// H * 1 (R11 holds H)
 				*ptr++ = PPC_SUBF(PPC_R3, PPC_R11, PPC_R3);
 			} else {
+				// General case: H * seqCost
 				*ptr++ = PPC_MULLI(PPC_R10, PPC_R11, seqCost);
 				*ptr++ = PPC_SUBF(PPC_R3, PPC_R10, PPC_R3);
 			}
 
-			// 4. Update R5 with net hits
-			// Old hits remaining = C - H
-			*ptr++ = PPC_RLWINM(PPC_R10, PPC_R5, 0, 24, 31); // R10 = C
-			*ptr++ = PPC_SUBF(PPC_R10, PPC_R11, PPC_R10);    // R10 = C - H
-
-			// 5. Add newly generated hits natively
-			u32 baseFetchCost = cInstrCount * seqCost;
-			if (cStaticCost > baseFetchCost) {
-				u32 newHits = (cStaticCost - baseFetchCost) / seqCost;
-				if (newHits > 0) {
-					*ptr++ = PPC_ADDI(PPC_R10, PPC_R10, newHits);
-				}
-			}
-
-			// 6. Clamp max hits safely to 8
-			*ptr++ = PPC_CMPWI(0, PPC_R10, 8);
-			u32* branchMax = ptr++;
-			*ptr++ = PPC_LI(PPC_R10, 8);
-			*branchMax = PPC_BLE((u32)((ptr - branchMax) * 4));
-
-			// 7. Store back to R5 preserving upper 24 bits
-			*ptr++ = PPC_RLWINM(PPC_R5, PPC_R5, 0, 0, 23);
+			// 4. Consume hits from the prefetch buffer: R5 >>= H
+			*ptr++ = PPC_RLWINM(PPC_R10, PPC_R5, 0, 0, 23); // Preserve upper bits
+			*ptr++ = PPC_RLWINM(PPC_R5, PPC_R5, 0, 24, 31);
+			*ptr++ = PPC_SRW(PPC_R5, PPC_R5, PPC_R11);
 			*ptr++ = PPC_OR(PPC_R5, PPC_R5, PPC_R10);
 		}
 	};
@@ -1006,10 +995,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					RegisterBailout(branchArmSwitch, COND_BEQ, currentPC, chunkStaticCycles);
 
 					// TRUE PATH: Stay in THUMB, exit block dynamically
-					// PIPELINE SYNC: Dynamic branch forces a pipeline flush
-					u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + STATIC_CODE_TICKS_16(currentPC) + 2;
+					// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
+					u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 3;
 					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
+					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
+					*emitPtr++ = PPC_OR(PPC_R29, PPC_R4, PPC_R4); // Sync GBA PC (R29) with target
 
 					// Do NOT call linkerStubAddress. Return to C++ host instead.
 					s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
@@ -1037,7 +1028,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					// Sync the pipeline BEFORE processing the load to balance the chunk ledger
 					EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
-					*emitPtr++ = PPC_LI(PPC_R5, 0); // Data read from ROM flushes prefetch buffer
+					*emitPtr++ = PPC_LI(PPC_R5, 0);
 					chunkInstrCount = 0;
 					chunkStaticCycles = 0;
 					chunkStartPC = currentPC + 2;
@@ -1059,14 +1050,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_ORI(hostRd, hostRd, loadedValue & 0xFFFF);
 					}
 
-					// Native add of data ticks to R3, bypassing prefetch hit generation
-					u32 dataTicks = STATIC_DATA_TICKS_32(targetAddr);
-					if (dataTicks > 0) {
-						*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, dataTicks);
-					}
-
-					// Only execution + code fetch go to chunkStaticCycles
-					chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 3;
+					// Format 6 is always a 32-bit load, and its target is a compile-time
+					// constant, so (unlike Format 9/10/11) the real data-access wait-state
+					// cost folds directly into staticCycles here. Matches thumb48's
+					// `3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)`:
+					// non-sequential code table (a memory access breaks the sequential
+					// prefetch stream), +3 (load constant, not +2 which was the store one).
+					chunkStaticCycles += STATIC_DATA_TICKS_32(targetAddr) + STATIC_CODE_TICKS_16(currentPC) + 3;
 				} else {
 					endBlock = true;
 					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_MEM_BANK);
