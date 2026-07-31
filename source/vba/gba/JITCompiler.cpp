@@ -548,6 +548,40 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 	};
 
+	// Dynamic Branch Penalty Check
+	// Hardware prefetch state determines the true cost of the first fetch after a pipeline flush.
+	auto EmitDynamicBranchPenalty = [&](u32*& ptr, u32 targetPCReg) {
+		// 1. Extract Target Bank into R8: R8 = (targetPCReg >> 24) & 15
+		// PowerPC rotate left by 8 places bits 0-7 (the bank) into bits 24-31.
+		*ptr++ = PPC_RLWINM(PPC_R8, targetPCReg, 8, 28, 31);
+
+		// 2. Fetch N-Cycle (Non-Sequential) Waitstate for Target into R10
+		*ptr++ = PPC_LIS(PPC_R9, ((u32)memoryWait) >> 16);
+		*ptr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait) & 0xFFFF);
+		*ptr++ = PPC_LBZX(PPC_R10, PPC_R9, PPC_R8);
+
+		// 3. Fetch S-Cycle (Sequential) Waitstate for Target into R11
+		*ptr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
+		*ptr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+		*ptr++ = PPC_LBZX(PPC_R11, PPC_R9, PPC_R8);
+
+		// 4. Check if the Prefetch Buffer was active prior to the branch flush
+		// The active flag is 0x100 (bit 23 in IBM numbering).
+		*ptr++ = PPC_RLWINM(PPC_R12, PPC_R5, 0, 23, 23);
+		*ptr++ = PPC_CMPWI(0, PPC_R12, 0);
+
+		u32* branchInactive = ptr++;
+
+		// ACTIVE PATH: Penalty is S - 1
+		*ptr++ = PPC_ADDI(PPC_R10, PPC_R11, -1);
+
+		// INACTIVE PATH: Penalty is N (R10 remains untouched)
+		*branchInactive = PPC_BEQ((u32)((ptr - branchInactive) * 4));
+
+		// 5. Accumulate true branch refill cost into R3
+		*ptr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R10);
+	};
+
 	while (!endBlock && instrCount < JIT_TRACE_MAX_INSTRUCTIONS) {
 		u32 lockedMask = 0; // Reset locked tracking pins per guest execution step
 
@@ -1022,12 +1056,20 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					RegisterBailout(branchArmSwitch, COND_BEQ, currentPC, chunkStaticCycles);
 
 					// TRUE PATH: Stay in THUMB, exit block dynamically
-					// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
-					u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 3;
-					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
+					// Base execution penalty (Fetch paid statically + 2 internal cycles)
+					u32 basePenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 2;
+
+					// Extract Target PC into R4 (strip Thumb bit) BEFORE use
+					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30);
+
+					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + basePenalty, chunkStartPC);
+
+					// R4 now safely contains Target PC & ~1
+					EmitDynamicBranchPenalty(emitPtr, PPC_R4);
 					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
-					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
-					*emitPtr++ = PPC_OR(PPC_R29, PPC_R4, PPC_R4); // Sync GBA PC (R29) with target
+
+					// Sync GBA PC (R29) with target
+					*emitPtr++ = PPC_OR(PPC_R29, PPC_R4, PPC_R4);
 
 					// Do NOT call linkerStubAddress. Return to C++ host instead.
 					s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
@@ -2011,11 +2053,16 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ORI(hostLr, hostLr, returnPC & 0xFFFF);
 
 					// 2. JIT EXIT: Branch Taken
-					// PIPELINE SYNC: BL evaluates prefix at currentPC+2, and suffix at targetPC using N-cycle
-					u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1 +
-									   (STATIC_CODE_TICKS_SEQ16(targetPC) * 2) + STATIC_CODE_TICKS_16(targetPC) + 3;
+					// Base static penalty for Suffix = Fetch S + 1 internal + 1 branch cycle
+					u32 basePenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 2;
 
-					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
+					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + basePenalty, chunkStartPC);
+					
+					// Stage the known Target PC into R4 for the dynamic refill calculation
+					*emitPtr++ = PPC_LIS(PPC_R4, targetPC >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, targetPC & 0xFFFF);
+
+					EmitDynamicBranchPenalty(emitPtr, PPC_R4);
 					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 
 					// Flush dirty flags and registers before dynamic block exit
