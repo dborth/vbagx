@@ -816,11 +816,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// MUL only updates N and Z in Thumb
 						EmitNZFlags(hostRd);
 
-						// Non-sequential code-fetch table - thumb43_1 uses codeTicksAccess16
-						// (non-seq) even though MUL isn't a guest memory access; that's just
-						// what the real multiplier timing quirk calls. Flat "+2" (was "+1",
-						// missing thumb43_1's separate "clockTicks = 1" base plus its final "+ 1").
-						chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 2;
+						// MUL relies on internal cycles and does not disrupt the prefetch buffer.
+						// The runtime math already dynamically adds 'm' to PPC_R3.
+						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
 					else if (op == 11) { // CMN (Compare Negative: Rd + Rs)
 						EnsureArenaAllocated();
@@ -1587,14 +1585,29 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Synchronize outResult metadata before returning to C++ host
 						EmitResultMetadata(emitPtr, instrCount + 1, 0);
 
-						// thumbBD pipeline math:
-						// POP_REG macro loop = +numRegs
-						// PC memory read = +1
-						// Branch tail penalty = +3
-						// Fetches = N-cycle(targetPC) + N-cycle(targetPC)
-						// Note: Because targetPC is a runtime value, we statically proxy the fetch cost using currentPC.
-						u32 takenPenalty = numRegs + 4 + (STATIC_CODE_TICKS_16(currentPC) * 2);
-						EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + takenPenalty, chunkStartPC);
+						// Dynamically calculate the ARM7 pipeline flush (1N + 1S) using the Target PC.
+						// The Target PC is safely staged in PPC_R4.
+
+						// 1. Extract Target Bank into R8: R8 = (R4 >> 24) & 15
+						*emitPtr++ = PPC_RLWINM(PPC_R8, PPC_R4, 24, 28, 31);
+
+						// 2. Fetch N-Cycle (Non-Sequential) Waitstate for Target
+						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWait) >> 16);
+						*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait) & 0xFFFF);
+						*emitPtr++ = PPC_LBZX(PPC_R10, PPC_R9, PPC_R8); // R10 = W_Ntarget
+
+						// 3. Fetch S-Cycle (Sequential) Waitstate for Target
+						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
+						*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+						*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R9, PPC_R8); // R11 = W_Starget
+
+						// 4. Add dynamic waitstates to cycle accumulator
+						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R10);
+						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+
+						// 5. Emit prefetch sync using the static base penalty (numRegs + 4)
+						u32 staticBasePenalty = numRegs + 4;
+						EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + staticBasePenalty, chunkStartPC);
 						*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 
 						// Do NOT call linkerStubAddress. Return to C++ host instead.
