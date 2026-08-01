@@ -15,16 +15,16 @@
  * stats, cache/arena event tracing, per-instruction detailed compile/exec
  * logging, differential mismatch testing, full per-instruction state-log
  * dumping, first-block disassembly dumping) is gated behind its own
- * `#define` at the top (JIT_CACHE_AND_ARENA_LOG, JIT_DIFFERENTIAL_TESTING,
+ * #define at the top (JIT_CACHE_AND_ARENA_LOG, JIT_DIFFERENTIAL_TESTING,
  * JIT_DEBUGSTATELOG, JIT_DETAILED_LOG, etc.), with a real macro definition
- * when the feature is enabled and a `((void)0)` no-op fallback (at the
+ * when the feature is enabled and a ((void)0) no-op fallback (at the
  * bottom of the file) when it isn't or when VBAGX_DEBUG isn't defined at
  * all - so a release build carries exactly zero instrumentation cost.
  *
  * The macros here are the plumbing for:
  *   - debugStats: real-time profiler counters (bailout reasons,
  *     cache hit/miss/eviction/flush counts, block-length histograms,
- *     compile-vs-execute wall-clock split, MIPS, etc.) — see Profiler.h.
+ *     compile-vs-execute wall-clock split, MIPS, etc.) - see Profiler.h.
  *   - JIT_LOG_CACHE_EVENT / JIT_LOG_ARENA / JIT_LOG_CACHE_FLUSH: arena and
  *     hash-bucket tracing for JITCache.cpp.
  *   - JIT_LOG_*_DETAILS / LogJIT*(): the per-instruction/per-block detailed
@@ -220,17 +220,14 @@
 		#define JIT_LOG_MISMATCH(msg)														LogJITMismatch(msg)
 
 		#define JIT_DIFFERENTIAL_THUMB_HOOK(pc, block) \
-			do { \
-				int diffState = JIT_RunDifferentialThumbHook_Impl((pc), (block), CPUReadHalfWord(pc), &clockTicks, thumbInsnTable, &useJIT); \
-				if (diffState == -1) break; /* Not handled, proceed to normal JIT execution */ \
-				if (diffState == 0) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 0; } \
-				if (diffState == 1) { PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart); return 1; } \
-				if (diffState == 2) continue; /* Clean exit, skip to next loop iteration */ \
-				if (diffState == 3) { \
-					PROFILER_SET_BAILOUT_FLAG(); \
-					block = nullptr; /* Bypass normal JIT execution and route to legacy fallback */ \
-				} \
-		} while(0)
+			{ \
+				int diffState = JIT_RunDifferentialThumbHook_Impl((pc), (block), CPUReadHalfWord(pc), &clockTicks, thumbInsnTable); \
+				/* If -1, fall through block naturally to proceed to normal JIT execution */ \
+				if (diffState == 0) { return 0; } \
+				else if (diffState == 1) { return 1; } \
+				else if (diffState == 2) { useJIT = true; continue; } \
+				else if (diffState == 3) { useJIT = false; block = nullptr; } \
+			}
 
 		#define JIT_RECORD_MEMORY_WRITE(addr, value, size)									JIT_RecordMemoryWrite((addr), (value), (size))
 	#endif

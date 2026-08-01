@@ -34,8 +34,7 @@ int JIT_RunDifferentialThumbHook_Impl(
 	BasicBlock* block,
 	unsigned short startOpcode,
 	int* diffClockTicks,
-	insnfunc_t* thumbInsnTable,
-	bool* useJIT
+	insnfunc_t* thumbInsnTable
 );
 
 void JIT_RecordMemoryWrite(unsigned int addr, unsigned int value, unsigned char size);
