@@ -62,6 +62,19 @@ void DebugStats::reset() {
 	for (int i = 0; i < 5; i++) blockExecutionRatioBins[i] = 0;
 	for (int i = 0; i < 6; i++) bailoutOffsetBins[i] = 0;
 
+	diffTotalChecks = 0;
+	diffMatches = 0;
+	diffMismatches = 0;
+	diffMismatchInst = 0;
+	diffMismatchPC = 0;
+	diffMismatchFlags = 0;
+	diffMismatchCycles = 0;
+	diffMismatchPrefetch = 0;
+	diffMismatchRegs = 0;
+	for (int i = 0; i < 1024; i++) {
+		diffMatchOpcodeFreq[i] = 0;
+		diffMismatchOpcodeFreq[i] = 0;
+	}
     mismatchCount = 0;
     traceLogCount = 0;
 }
@@ -222,6 +235,53 @@ void DebugStats::print() {
 	DEBUG_LOG("  Inst 32+:           %u\n", bailoutOffsetBins[5]);
 	DEBUG_LOG("----------------------------------------------------------\n");
 #endif
+
+#ifdef JIT_DIFFERENTIAL_TESTING
+	DEBUG_LOG("--- DIFFERENTIAL TESTING STATS ---\n");
+	DEBUG_LOG("Total Execution Checks: %u\n", diffTotalChecks);
+
+	if (diffTotalChecks > 0) {
+		double matchPct = ((double)diffMatches / diffTotalChecks) * 100.0;
+		double missPct = ((double)diffMismatches / diffTotalChecks) * 100.0;
+		DEBUG_LOG("Perfect Matches: %u (%.2f%%)\n", diffMatches, matchPct);
+		DEBUG_LOG("Mismatches:      %u (%.2f%%)\n", diffMismatches, missPct);
+	}
+
+	if (diffMismatches > 0) {
+		DEBUG_LOG("\nMismatch Root-Cause Distribution (Can Overlap):\n");
+		DEBUG_LOG("  Registers Diverged:    %u (cumulative reg misses)\n", diffMismatchRegs);
+		DEBUG_LOG("  Flags Diverged:        %u\n", diffMismatchFlags);
+		DEBUG_LOG("  Timing/Cycles Drift:   %u\n", diffMismatchCycles);
+		DEBUG_LOG("  Next PC Diverged:      %u\n", diffMismatchPC);
+		DEBUG_LOG("  Instruction Count:     %u\n", diffMismatchInst);
+		DEBUG_LOG("  Prefetch Buffer Drift: %u\n", diffMismatchPrefetch);
+
+		// Top 10 Mismatching Opcodes & their failure rates
+		struct DiffStat { u16 bucket; u32 mismatches; u32 matches; };
+		DiffStat topDiff[1024];
+		for (int i = 0; i < 1024; i++) {
+			topDiff[i].bucket = i;
+			topDiff[i].mismatches = diffMismatchOpcodeFreq[i];
+			topDiff[i].matches = diffMatchOpcodeFreq[i];
+		}
+
+		std::sort(topDiff, topDiff + 1024, [](const DiffStat& a, const DiffStat& b) {
+			return a.mismatches > b.mismatches;
+		});
+
+		DEBUG_LOG("\nTop 10 Mismatching Opcode Groups:\n");
+		for (int i = 0; i < 10; i++) {
+			if (topDiff[i].mismatches == 0) break;
+			u32 totalHits = topDiff[i].mismatches + topDiff[i].matches;
+			double failRate = ((double)topDiff[i].mismatches / totalHits) * 100.0;
+
+			DEBUG_LOG("  #%d: Opcode Prefix ~0x%04X (Bucket %4d) | Mismatches: %u | Fail Rate: %5.1f%%\n",
+				i + 1, topDiff[i].bucket << 6, topDiff[i].bucket, topDiff[i].mismatches, failRate);
+		}
+	}
+	DEBUG_LOG("----------------------------------------------------------\n");
+#endif
+
 	// 8. Top 10 Fallbacks
 	struct Stat { u16 bucket; u64 count; };
 	Stat topFallback[1024];

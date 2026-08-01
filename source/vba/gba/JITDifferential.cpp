@@ -235,6 +235,27 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 
 	if (pcMismatch || flagMismatch || cycleMismatch || instMismatch || prefetchMismatch) mismatch = true;
 
+	// Differential Testing Stats
+	debugStats.diffTotalChecks++;
+
+	if (mismatch) {
+		debugStats.diffMismatches++;
+		debugStats.diffMismatchOpcodeFreq[startOpcode >> 6]++;
+
+		if (instMismatch) debugStats.diffMismatchInst++;
+		if (pcMismatch) debugStats.diffMismatchPC++;
+		if (flagMismatch) debugStats.diffMismatchFlags++;
+		if (cycleMismatch) debugStats.diffMismatchCycles++;
+		if (prefetchMismatch) debugStats.diffMismatchPrefetch++;
+
+		for (int i = 0; i < 15; i++) {
+			if (regMismatches[i]) debugStats.diffMismatchRegs++;
+		}
+	} else {
+		debugStats.diffMatches++;
+		debugStats.diffMatchOpcodeFreq[startOpcode >> 6]++;
+	}
+
 	// 6. Log Detailed Mismatch State
 	if (mismatch) {
 		static const char* regNames[15] = {

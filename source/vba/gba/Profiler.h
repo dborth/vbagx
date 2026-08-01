@@ -82,6 +82,19 @@ struct DebugStats {
 	u32 bailoutOffsetBins[6];
 	u32 bailoutToJitTransitions;
 
+	u32 diffTotalChecks;
+	u32 diffMatches;
+	u32 diffMismatches;
+	u32 diffMatchOpcodeFreq[1024];
+	u32 diffMismatchOpcodeFreq[1024];
+
+	u32 diffMismatchInst;
+	u32 diffMismatchPC;
+	u32 diffMismatchFlags;
+	u32 diffMismatchCycles;
+	u32 diffMismatchPrefetch;
+	u32 diffMismatchRegs;
+
 	int mismatchCount = 0;
 	int traceLogCount = 0;
 	u32 framesRendered = 0;
