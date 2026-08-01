@@ -619,42 +619,56 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	//                                    at THIS instruction's entry)
 	// R5==0 stands in for that per-instruction "busPrefetch" bool directly, because nothing
 	// earlier in this instruction's own emission touches R5.
-	auto EmitSingleAccessRecharge = [&](u32*& ptr, u32 bankReg, u32 dataWaitReg, u32 scratchReg) {
+	auto EmitSingleAccessRecharge = [&](u32*& ptr, u32 bankReg, u32 dataWaitReg, u32 scratch1, u32 scratch2) {
 		*ptr++ = PPC_CMPWI(0, bankReg, 2);
 		u32* branchLt2 = ptr++;                 // BLT -> outside RAM (low)
 
 		*ptr++ = PPC_CMPWI(0, bankReg, 7);
 		u32* branchGt7 = ptr++;                 // BGT -> outside RAM (high)
 
-		// Check if active hits == 0, not if the entire R5 (including active bit) == 0.
-		*ptr++ = PPC_RLWINM(scratchReg, PPC_R5, 0, 24, 31); // Extract hits from R5
-		*ptr++ = PPC_CMPWI(0, scratchReg, 0);
-		u32* branchAlreadyPrimed = ptr++;       // BNE -> hits already nonzero, leave untouched
+		// Check if the active bit is set (0x100 in R5). Extract bit 23.
+		*ptr++ = PPC_RLWINM(scratch1, PPC_R5, 0, 23, 23);
+		*ptr++ = PPC_CMPWI(0, scratch1, 0);
+		// If the buffer is already active (scratch1 != 0), jump to DONE and leave untouched.
+		u32* branchIsActive = ptr++;
 
 		// waitState = dataWaitReg ? dataWaitReg : 1
 		*ptr++ = PPC_CMPWI(0, dataWaitReg, 0);
-		u32* branchWaitNonzero = ptr++;         // BNE -> use dataWaitReg as-is
-		*ptr++ = PPC_LI(scratchReg, 1);
+		u32* branchWaitNonzero = ptr++; // BNE -> use dataWaitReg as-is
+		*ptr++ = PPC_LI(scratch1, 1);
 		u32* branchToShift = ptr++;
 
 		*branchWaitNonzero = PPC_BNE((u32)((ptr - branchWaitNonzero) * 4));
-		*ptr++ = PPC_OR(scratchReg, dataWaitReg, dataWaitReg);
+		*ptr++ = PPC_OR(scratch1, dataWaitReg, dataWaitReg);
 
 		*branchToShift = PPC_B((u32)((ptr - branchToShift) * 4));
 
-		// R5 = (1 << waitState) - 1, and ensure the active bit (0x100) is re-asserted
-		*ptr++ = PPC_LI(PPC_R5, 1);
-		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, scratchReg);
-		*ptr++ = PPC_ADDI(PPC_R5, PPC_R5, -1);
-		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100);
+		// R5 = ((R5 & 0xFF) + 1) << waitState - 1
+		// 1. Extract current hits from R5 into scratch2
+		*ptr++ = PPC_RLWINM(scratch2, PPC_R5, 0, 24, 31);
+		*ptr++ = PPC_ADDI(scratch2, scratch2, 1);
+		*ptr++ = PPC_SLW(scratch2, scratch2, scratch1);
+		*ptr++ = PPC_ADDI(scratch2, scratch2, -1);
+
+		// 2. Cap hits safely at 0xFF to prevent overflowing into the 0x100 active bit natively
+		*ptr++ = PPC_CMPWI(0, scratch2, 0xFF);
+		u32* branchClamp = ptr++;
+		*ptr++ = PPC_LI(scratch2, 0xFF);
+		// If scratch2 <= 0xFF, branch over the clamp to keep the valid value.
+		*branchClamp = PPC_BLE((u32)((ptr - branchClamp) * 4));
+
+		// 3. Merge back into R5 with the active bit re-asserted
+		*ptr++ = PPC_ORI(PPC_R5, scratch2, 0x100);
 
 		u32* branchToDone = ptr++;
 
+		// --- FLUSH PATH (outside RAM range [2,7]) ---
 		*branchLt2 = PPC_BLT((u32)((ptr - branchLt2) * 4));
 		*branchGt7 = PPC_BGT((u32)((ptr - branchGt7) * 4));
-		*ptr++ = PPC_LI(PPC_R5, 0);             // outside RAM range: flush
+		*ptr++ = PPC_LI(PPC_R5, 0); // flush prefetch buffer
 
-		*branchAlreadyPrimed = PPC_BNE((u32)((ptr - branchAlreadyPrimed) * 4));
+		// --- DONE PATH ---
+		*branchIsActive = PPC_BNE((u32)((ptr - branchIsActive) * 4)); // Jump here if buffer was already active
 		*branchToDone = PPC_B((u32)((ptr - branchToDone) * 4));
 	};
 
@@ -1396,7 +1410,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // EA = R7 + R11
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-					EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8);
+					EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8, PPC_R9);
 
 					// 5. Execute Memory Load or Store Instruction
 					if (isMemLoad) {
@@ -1488,7 +1502,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWait32) >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
 				*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // Safe: rA=R7
-				EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8);
+				EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8, PPC_R9);
 
 				// 4. Endian-Correct Load or Store (Lazy Register Execution)
 				if (isLoad) {
