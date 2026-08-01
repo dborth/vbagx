@@ -373,7 +373,6 @@ void DebugStats::print() {
 	DEBUG_LOG("  Inst 16-31:         %u\n", bailoutOffsetBins[4]);
 	DEBUG_LOG("  Inst 32+:           %u\n", bailoutOffsetBins[5]);
 	DEBUG_LOG("----------------------------------------------------------\n");
-#endif
 
 	// 8. Top 10 Fallbacks
 	struct Stat { u16 bucket; u64 count; };
@@ -395,6 +394,8 @@ void DebugStats::print() {
 			   i + 1, topFallback[i].bucket << 6, topFallback[i].bucket, topFallback[i].count);
 	}
 	DEBUG_LOG("=========================================\n\n");
+#endif
+
 	WriteDebugLogToFile();
 }
 
