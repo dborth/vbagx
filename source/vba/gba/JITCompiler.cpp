@@ -583,6 +583,49 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*branchDone2 = PPC_B((u32)((ptr - branchDone2) * 4));
 	};
 
+	// Mirrors dataTicksAccess16/32/Seq16/Seq32's side effect on busPrefetchCount for a
+	// SINGLE data access (Format 7-11 single load/store -- the ones that never call
+	// RECHARGE_PREFETCH directly, but still touch the buffer through this side channel):
+	//   bank outside RAM [2,7]        -> busPrefetchCount = 0
+	//   bank in [2,7] AND R5 == 0     -> busPrefetchCount = (1 << waitState) - 1
+	//   bank in [2,7] AND R5 != 0     -> unchanged (interpreter's "busPrefetch" bool was
+	//                                    false, since it only latches true when
+	//                                    busPrefetchCount==0 at THIS instruction's entry)
+	// R5==0 stands in for that per-instruction "busPrefetch" bool directly, because
+	// nothing earlier in this instruction's own emission touches R5.
+	auto EmitSingleAccessRecharge = [&](u32*& ptr, u32 bankReg, u32 dataWaitReg, u32 scratchReg) {
+		*ptr++ = PPC_CMPWI(0, bankReg, 2);
+		u32* branchLt2 = ptr++;                 // BLT -> outside RAM (low)
+
+		*ptr++ = PPC_CMPWI(0, bankReg, 7);
+		u32* branchGt7 = ptr++;                 // BGT -> outside RAM (high)
+
+		*ptr++ = PPC_CMPWI(0, PPC_R5, 0);
+		u32* branchAlreadyPrimed = ptr++;       // BNE -> R5 already nonzero, leave untouched
+
+		*ptr++ = PPC_CMPWI(0, dataWaitReg, 0);
+		u32* branchWaitNonzero = ptr++;         // BNE -> use dataWaitReg as-is
+		*ptr++ = PPC_LI(scratchReg, 1);
+		u32* branchToShift = ptr++;
+
+		*branchWaitNonzero = PPC_BNE((u32)((ptr - branchWaitNonzero) * 4));
+		*ptr++ = PPC_OR(scratchReg, dataWaitReg, dataWaitReg);
+
+		*branchToShift = PPC_B((u32)((ptr - branchToShift) * 4));
+		// R5 = (1 << waitState) - 1
+		*ptr++ = PPC_LI(PPC_R5, 1);
+		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, scratchReg);
+		*ptr++ = PPC_ADDI(PPC_R5, PPC_R5, -1);
+		u32* branchToDone = ptr++;
+
+		*branchLt2 = PPC_BLT((u32)((ptr - branchLt2) * 4));
+		*branchGt7 = PPC_BGT((u32)((ptr - branchGt7) * 4));
+		*ptr++ = PPC_LI(PPC_R5, 0);             // outside RAM range: flush
+
+		*branchAlreadyPrimed = PPC_BNE((u32)((ptr - branchAlreadyPrimed) * 4));
+		*branchToDone = PPC_B((u32)((ptr - branchToDone) * 4));
+	};
+
 	while (!endBlock && instrCount < JIT_TRACE_MAX_INSTRUCTIONS) {
 		u32 lockedMask = 0; // Reset locked tracking pins per guest execution step
 
@@ -1310,7 +1353,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // EA = R7 + R11
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-					// thumb90/thumb98 do NOT recharge the prefetch buffer
+					EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8);
 
 					// 5. Execute Memory Load or Store Instruction
 					if (isMemLoad) {
@@ -1403,6 +1446,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
 				*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // Safe: rA=R7
 				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+				EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8);
 
 				// 4. Endian-Correct Load or Store (Lazy Register Execution)
 				if (isLoad) {
