@@ -1030,11 +1030,31 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					RegisterBailout(branchArmSwitch, COND_BEQ, currentPC, chunkStaticCycles);
 
 					// TRUE PATH: Stay in THUMB, exit block dynamically
-					// PIPELINE SYNC: Dynamic branch forces a pipeline flush (+3 cycles)
-					u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 3;
-					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
-					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
+
+					// 1. Target PC to R4 (Must happen BEFORE dynamic math)
 					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
+
+					// 2. Extract Target Bank into R8: R8 = (R4 >> 24) & 15
+					*emitPtr++ = PPC_RLWINM(PPC_R8, PPC_R4, 24, 28, 31);
+
+					// 3. Fetch N-Cycle (Non-Sequential) Waitstate for Target
+					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWait) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait) & 0xFFFF);
+					*emitPtr++ = PPC_LBZX(PPC_R10, PPC_R9, PPC_R8); // R10 = W_Ntarget
+
+					// 4. Fetch S-Cycle (Sequential) Waitstate for Target
+					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R9, PPC_R8); // R11 = W_Starget
+
+					// 5. Add dynamic waitstates to cycle accumulator (1N + 2S)
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R10);  // + 1N
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);  // + 1S
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);  // + 1S (Pipeline filled)
+
+					// PIPELINE SYNC: Emit static prefetch sync for the chunk, plus 3 internal cycles
+					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + 3, chunkStartPC);
+					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 					*emitPtr++ = PPC_OR(PPC_R29, PPC_R4, PPC_R4); // Sync GBA PC (R29) with target
 
 					// Do NOT call linkerStubAddress. Return to C++ host instead.
