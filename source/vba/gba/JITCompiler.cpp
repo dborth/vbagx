@@ -534,26 +534,53 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	};
 	
 	// Dynamic N-Cycle Penalty Check
-	// GBATEK: Only apply the N-cycle fetch penalty if the prefetch buffer was actually flushed.
+	// Mirrors codeTicksAccess16 (GBAcpu.h) exactly, instead of assuming every hit is
+	// worth the full S8 baseline the caller already baked into chunkStaticCycles:
+	//   bit0 set, bit1 clear -> consume 1 bit,  real cost (S8-1): credit 1 off the baseline
+	//   bit0 set, bit1 set   -> consume 2 bits, real cost 0:      credit the whole S8 baseline
+	//   bit0 clear (miss)    -> R5 = 0, real cost N8: add (N8-S8) on top of the baseline
+	// R5's low byte is treated as a bit-queue (consumed via right-shift), matching
+	// EmitPrefetchSync's representation -- not a plain counter, which drifts out of
+	// sync with it (3-1=2, but 3>>1=1 -- not the same state).
 	auto EmitDynamicNCyclePenalty = [&](u32*& ptr, u32 pc) {
-	    u32 nPenalty = STATIC_CODE_TICKS_16(pc) - STATIC_CODE_TICKS_SEQ16(pc);
-	    if (nPenalty > 0) {
-	        *ptr++ = PPC_RLWINM(PPC_R8, PPC_R5, 0, 24, 31); // Extract active hits from R5
-	        *ptr++ = PPC_CMPWI(0, PPC_R8, 0);
-	        u32* branchMiss = ptr++; // Branch if hits == 0
+		u32 bank = (pc >> 24) & 15;
+		if (bank < 0x08 || bank > 0x0D) return;
+		u32 S8 = memoryWaitSeq[bank];
+		if (S8 == 0) S8 = 1;
+		u32 N8 = memoryWait[bank];
 
-	        // --- HIT PATH (Consume 1 hit, no penalty) ---
-	        *ptr++ = PPC_ADDI(PPC_R8, PPC_R8, -1);          // Decrement hit count
-	        *ptr++ = PPC_RLWINM(PPC_R10, PPC_R5, 0, 0, 23); // Preserve upper active flag
-	        *ptr++ = PPC_OR(PPC_R5, PPC_R10, PPC_R8);       // Repack into R5
-	        u32* branchEnd = ptr++;
+		*ptr++ = PPC_RLWINM(PPC_R8, PPC_R5, 0, 31, 31); // R8 = R5 & 1 (bit0: hit flag)
+		*ptr++ = PPC_CMPWI(0, PPC_R8, 0);
+		u32* branchMiss = ptr++; // BEQ -> miss
 
-	        // --- MISS PATH ---
-	        *branchMiss = PPC_BEQ((u32)((ptr - branchMiss) * 4));
-	        *ptr++ = PPC_ADDI(PPC_R3, PPC_R3, nPenalty);    // Apply N-cycle penalty
+		*ptr++ = PPC_RLWINM(PPC_R8, PPC_R5, 0, 30, 30); // R8 = R5 & 2 (bit1: shift selector)
+		*ptr++ = PPC_CMPWI(0, PPC_R8, 0);
+		u32* branchShift2 = ptr++; // BNE -> shift == 2
 
-	        *branchEnd = PPC_B((u32)((ptr - branchEnd) * 4));
-	    }
+		// shift == 1: consume 1 bit, credit (S8-1) off the baked-in S8 baseline
+		*ptr++ = PPC_RLWINM(PPC_R10, PPC_R5, 0, 0, 23);  // R10 = upper bits (preserve)
+		*ptr++ = PPC_RLWINM(PPC_R8, PPC_R5, 0, 24, 31);  // R8 = R5 & 0xFF
+		*ptr++ = PPC_SRWI(PPC_R8, PPC_R8, 1);
+		*ptr++ = PPC_OR(PPC_R5, PPC_R10, PPC_R8);
+		if (S8 >= 1) *ptr++ = PPC_ADDI(PPC_R3, PPC_R3, -1);
+		u32* branchDone1 = ptr++;
+
+		// shift == 2: consume 2 bits, credit the full S8 baseline (real cost is 0)
+		*branchShift2 = PPC_BNE((u32)((ptr - branchShift2) * 4));
+		*ptr++ = PPC_RLWINM(PPC_R10, PPC_R5, 0, 0, 23);
+		*ptr++ = PPC_RLWINM(PPC_R8, PPC_R5, 0, 24, 31);
+		*ptr++ = PPC_SRWI(PPC_R8, PPC_R8, 2);
+		*ptr++ = PPC_OR(PPC_R5, PPC_R10, PPC_R8);
+		if (S8 > 0) *ptr++ = PPC_ADDI(PPC_R3, PPC_R3, -(s32)S8);
+		u32* branchDone2 = ptr++;
+
+		// miss: full reset, upgrade the baked-in S8 baseline to N8
+		*branchMiss = PPC_BEQ((u32)((ptr - branchMiss) * 4));
+		*ptr++ = PPC_LI(PPC_R5, 0);
+		if (N8 > S8) *ptr++ = PPC_ADDI(PPC_R3, PPC_R3, (s32)(N8 - S8));
+
+		*branchDone1 = PPC_B((u32)((ptr - branchDone1) * 4));
+		*branchDone2 = PPC_B((u32)((ptr - branchDone2) * 4));
 	};
 
 	while (!endBlock && instrCount < JIT_TRACE_MAX_INSTRUCTIONS) {
