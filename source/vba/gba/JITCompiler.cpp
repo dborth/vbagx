@@ -619,54 +619,42 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	//                                    at THIS instruction's entry)
 	// R5==0 stands in for that per-instruction "busPrefetch" bool directly, because nothing
 	// earlier in this instruction's own emission touches R5.
-	auto EmitSingleAccessRecharge = [&](u32*& ptr, u32 bankReg, u32 dataWaitReg, u32 scratch1, u32 scratch2) {
+	auto EmitSingleAccessRecharge = [&](u32*& ptr, u32 bankReg, u32 dataWaitReg, u32 scratchReg) {
 		*ptr++ = PPC_CMPWI(0, bankReg, 2);
 		u32* branchLt2 = ptr++;                 // BLT -> outside RAM (low)
 
 		*ptr++ = PPC_CMPWI(0, bankReg, 7);
 		u32* branchGt7 = ptr++;                 // BGT -> outside RAM (high)
 
-		// Check if the active bit is set (0x100 in R5). Extract bit 23.
-		*ptr++ = PPC_RLWINM(scratch1, PPC_R5, 0, 23, 23);
-		*ptr++ = PPC_CMPWI(0, scratch1, 0);
-		u32* branchNotActive = ptr++; // BEQ -> busPrefetch is false, leave untouched
+		// Check if active hits == 0, not if the entire R5 (including active bit) == 0.
+		*ptr++ = PPC_RLWINM(scratchReg, PPC_R5, 0, 24, 31); // Extract hits from R5
+		*ptr++ = PPC_CMPWI(0, scratchReg, 0);
+		u32* branchAlreadyPrimed = ptr++;       // BNE -> hits already nonzero, leave untouched
 
 		// waitState = dataWaitReg ? dataWaitReg : 1
 		*ptr++ = PPC_CMPWI(0, dataWaitReg, 0);
-		u32* branchWaitNonzero = ptr++; // BNE -> use dataWaitReg as-is
-		*ptr++ = PPC_LI(scratch1, 1);
+		u32* branchWaitNonzero = ptr++;         // BNE -> use dataWaitReg as-is
+		*ptr++ = PPC_LI(scratchReg, 1);
 		u32* branchToShift = ptr++;
 
 		*branchWaitNonzero = PPC_BNE((u32)((ptr - branchWaitNonzero) * 4));
-		*ptr++ = PPC_OR(scratch1, dataWaitReg, dataWaitReg);
+		*ptr++ = PPC_OR(scratchReg, dataWaitReg, dataWaitReg);
 
 		*branchToShift = PPC_B((u32)((ptr - branchToShift) * 4));
 
-		// R5 = ((R5 & 0xFF) + 1) << waitState - 1
-		// 1. Extract current hits from R5 into scratch2
-		*ptr++ = PPC_RLWINM(scratch2, PPC_R5, 0, 24, 31);
-		*ptr++ = PPC_ADDI(scratch2, scratch2, 1);
-		*ptr++ = PPC_SLW(scratch2, scratch2, scratch1);
-		*ptr++ = PPC_ADDI(scratch2, scratch2, -1);
-
-		// 2. Cap hits safely at 0xFF to prevent overflowing into the 0x100 active bit natively
-		*ptr++ = PPC_CMPWI(0, scratch2, 0xFF);
-		u32* branchClamp = ptr++;
-		*ptr++ = PPC_LI(scratch2, 0xFF);
-		*branchClamp = PPC_BGT((u32)((ptr - branchClamp) * 4));
-
-		// 3. Merge back into R5 with the active bit re-asserted
-		*ptr++ = PPC_ORI(PPC_R5, scratch2, 0x100);
+		// R5 = (1 << waitState) - 1, and ensure the active bit (0x100) is re-asserted
+		*ptr++ = PPC_LI(PPC_R5, 1);
+		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, scratchReg);
+		*ptr++ = PPC_ADDI(PPC_R5, PPC_R5, -1);
+		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100);
 
 		u32* branchToDone = ptr++;
 
-		// --- FLUSH PATH (outside RAM range [2,7]) ---
 		*branchLt2 = PPC_BLT((u32)((ptr - branchLt2) * 4));
 		*branchGt7 = PPC_BGT((u32)((ptr - branchGt7) * 4));
-		*ptr++ = PPC_LI(PPC_R5, 0); // flush prefetch buffer
+		*ptr++ = PPC_LI(PPC_R5, 0);             // outside RAM range: flush
 
-		// --- DONE PATH ---
-		*branchNotActive = PPC_BEQ((u32)((ptr - branchNotActive) * 4));
+		*branchAlreadyPrimed = PPC_BNE((u32)((ptr - branchAlreadyPrimed) * 4));
 		*branchToDone = PPC_B((u32)((ptr - branchToDone) * 4));
 	};
 
@@ -1144,16 +1132,22 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					RegisterBailout(branchArmSwitch, COND_BEQ, currentPC, chunkStaticCycles);
 
 					// TRUE PATH: Stay in THUMB, exit block dynamically
-					// Base execution penalty (Fetch paid statically + 2 internal cycles)
-					u32 basePenalty = STATIC_CODE_TICKS_SEQ16(currentPC) + 2;
+					// Base execution penalty: 3 internal cycles (Dynamic branch penalty provides 2S + N)
+					u32 basePenalty = 3;
 
 					// Extract Target PC into R4 (strip Thumb bit) BEFORE use
 					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30);
 
 					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + basePenalty, chunkStartPC);
 
-					// R4 now safely contains Target PC & ~1
+					// R4 now safely contains Target PC & ~1. This adds the N-Cycle to R3.
 					EmitDynamicBranchPenalty(emitPtr, PPC_R4);
+
+					// EmitDynamicBranchPenalty conveniently leaves S(target) inside PPC_R11.
+					// We must add 2 * S(target) to fully satisfy the pipeline flush.
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+
 					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 
 					// Sync GBA PC (R29) with target
@@ -1205,13 +1199,30 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_ORI(hostRd, hostRd, loadedValue & 0xFFFF);
 					}
 
-					// Format 6 is always a 32-bit load, and its target is a compile-time
-					// constant, so (unlike Format 9/10/11) the real data-access wait-state
-					// cost folds directly into staticCycles here. Matches thumb48's
-					// `3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)`:
-					// non-sequential code table (a memory access breaks the sequential
-					// prefetch stream), +3 (load constant, not +2 which was the store one).
-					chunkStaticCycles += STATIC_DATA_TICKS_32(targetAddr) + STATIC_CODE_TICKS_16(currentPC) + 3;
+					// Format 6 is statically resolved. Simulate exact prefetch behavior inline
+					// to match the side-effects of dataTicksAccess32 + codeTicksAccess16.
+					u32 dataWaitState = STATIC_DATA_TICKS_32(targetAddr);
+					u32 waitState = dataWaitState ? dataWaitState : 1;
+					u32 hits = (1 << waitState) - 1;
+
+					u32 fetchCost = STATIC_CODE_TICKS_16(currentPC);
+					if (hits & 1) {
+						u32 shift = 1 + ((hits >> 1) & 1);
+						hits >>= shift;
+						fetchCost = (shift == 2) ? 0 : (STATIC_CODE_TICKS_SEQ16(currentPC) - 1);
+					}
+
+					chunkStaticCycles += dataWaitState + fetchCost + 3;
+
+					// Pass any surviving prefetch hits forward to the next instruction via R5
+					if (hits > 0) {
+						if (hits > 0xFF) hits = 0xFF; // Clamp to avoid overflowing active bit
+						u32 r5Val = (hits << 24) | 0x100;
+						*emitPtr++ = PPC_LIS(PPC_R5, r5Val >> 16);
+						*emitPtr++ = PPC_ORI(PPC_R5, PPC_R5, r5Val & 0xFFFF);
+					} else {
+						*emitPtr++ = PPC_LI(PPC_R5, 0);
+					}
 				} else {
 					endBlock = true;
 					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_MEM_BANK);
@@ -1385,7 +1396,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // EA = R7 + R11
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-					EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8, PPC_R9);
+					EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8);
 
 					// 5. Execute Memory Load or Store Instruction
 					if (isMemLoad) {
@@ -1477,7 +1488,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWait32) >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
 				*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // Safe: rA=R7
-				EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8, PPC_R9);
+				EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8);
 
 				// 4. Endian-Correct Load or Store (Lazy Register Execution)
 				if (isLoad) {
@@ -1534,7 +1545,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// Format 12 does not modify condition flags.
 				// Matches thumbA0/thumbA8: clockTicks = 1 + codeTicksAccess16(armNextPC);
-				chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 1;
+				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -1562,7 +1573,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					// Format 13 does NOT update condition flags.
 					// Matches thumbB0: clockTicks = 1 + codeTicksAccess16(armNextPC);
-					chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 1;
+					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 				}
 				// THUMB Format 14 - PUSH / POP
 				else if ((opcode & 0xF600) == 0xB400) {
@@ -2009,7 +2020,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						}
 
 						// TRUE PATH (Branch Taken Exit)
-						u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(targetPC) * 2 + STATIC_CODE_TICKS_16(targetPC) + 3;
+						// Fetch paid statically (S_current) + target S + target N + 3 internal cycles
+						u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) +
+										   STATIC_CODE_TICKS_SEQ16(targetPC) +
+										   STATIC_CODE_TICKS_16(targetPC) + 3;
 
 						EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 						*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
