@@ -238,22 +238,54 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 	// Differential Testing Stats
 	debugStats.diffTotalChecks++;
 
+	// Map instruction count to the same 6 bins used in blockLengthBins
+	int lengthBin = 0;
+	if (instructionCount <= 4) lengthBin = 0;
+	else if (instructionCount <= 8) lengthBin = 1;
+	else if (instructionCount <= 16) lengthBin = 2;
+	else if (instructionCount <= 32) lengthBin = 3;
+	else if (instructionCount <= 64) lengthBin = 4;
+	else lengthBin = 5;
+
 	if (mismatch) {
-		debugStats.diffMismatches++;
-		debugStats.diffMismatchOpcodeFreq[startOpcode >> 6]++;
+	    debugStats.diffMismatches++;
+	    debugStats.diffMismatchOpcodeFreq[startOpcode >> 6]++; // Keep legacy start-tracking
+	    debugStats.diffMismatchLengthBins[lengthBin]++;
 
-		if (instMismatch) debugStats.diffMismatchInst++;
-		if (pcMismatch) debugStats.diffMismatchPC++;
-		if (flagMismatch) debugStats.diffMismatchFlags++;
-		if (cycleMismatch) debugStats.diffMismatchCycles++;
-		if (prefetchMismatch) debugStats.diffMismatchPrefetch++;
+	    if (instMismatch) debugStats.diffMismatchInst++;
+	    if (pcMismatch) debugStats.diffMismatchPC++;
+	    if (cycleMismatch) debugStats.diffMismatchCycles++;
+	    if (prefetchMismatch) debugStats.diffMismatchPrefetch++;
 
-		for (int i = 0; i < 15; i++) {
-			if (regMismatches[i]) debugStats.diffMismatchRegs++;
-		}
+	    // Granular Flags
+	    if (flagMismatch) {
+	        debugStats.diffMismatchFlags++;
+	        if (jitState.flags.N != gbaFlags.N) debugStats.diffMismatchFlagSpecific[0]++;
+	        if (jitState.flags.Z != gbaFlags.Z) debugStats.diffMismatchFlagSpecific[1]++;
+	        if (jitState.flags.C != gbaFlags.C) debugStats.diffMismatchFlagSpecific[2]++;
+	        if (jitState.flags.V != gbaFlags.V) debugStats.diffMismatchFlagSpecific[3]++;
+	    }
+
+	    // Granular Registers
+	    for (int i = 0; i < 15; i++) {
+	        if (regMismatches[i]) {
+	            debugStats.diffMismatchRegs++;
+	            debugStats.diffMismatchRegSpecific[i]++;
+	        }
+	    }
+
+	    // Deep Opcode Profiling: Mark all instructions in this block as Suspects
+	    for (u32 i = 0; i < instructionCount; i++) {
+	        debugStats.deepOpcodeSuspectFreq[catchupChain[i].opcode >> 6]++;
+	    }
 	} else {
-		debugStats.diffMatches++;
-		debugStats.diffMatchOpcodeFreq[startOpcode >> 6]++;
+	    debugStats.diffMatches++;
+	    debugStats.diffMatchOpcodeFreq[startOpcode >> 6]++;
+
+	    // Deep Opcode Profiling: Mark all instructions in this block as Successes
+	    for (u32 i = 0; i < instructionCount; i++) {
+	        debugStats.deepOpcodeSuccessFreq[catchupChain[i].opcode >> 6]++;
+	    }
 	}
 
 	// 6. Log Detailed Mismatch State

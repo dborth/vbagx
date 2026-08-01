@@ -75,6 +75,16 @@ void DebugStats::reset() {
 		diffMatchOpcodeFreq[i] = 0;
 		diffMismatchOpcodeFreq[i] = 0;
 	}
+
+	for (int i = 0; i < 15; i++) diffMismatchRegSpecific[i] = 0;
+	for (int i = 0; i < 4; i++) diffMismatchFlagSpecific[i] = 0;
+	for (int i = 0; i < 6; i++) diffMismatchLengthBins[i] = 0;
+
+	for (int i = 0; i < 1024; i++) {
+	    deepOpcodeSuccessFreq[i] = 0;
+	    deepOpcodeSuspectFreq[i] = 0;
+	}
+
     mismatchCount = 0;
     traceLogCount = 0;
 }
@@ -123,6 +133,51 @@ void DebugStats::print() {
 			DEBUG_LOG("  #%d: Opcode Prefix ~0x%04X (Bucket %4d) | Mismatches: %u | Fail Rate: %5.1f%%\n",
 				i + 1, topDiff[i].bucket << 6, topDiff[i].bucket, topDiff[i].mismatches, failRate);
 		}
+	
+	    DEBUG_LOG("\n--- GRANULAR MISMATCH ANALYSIS ---\n");
+	    DEBUG_LOG("Flag Failures: N:%u | Z:%u | C:%u | V:%u\n",
+	        diffMismatchFlagSpecific[0], diffMismatchFlagSpecific[1],
+	        diffMismatchFlagSpecific[2], diffMismatchFlagSpecific[3]);
+
+	    DEBUG_LOG("Top Register Failures:\n");
+	    for (int i = 0; i < 15; i++) {
+	        if (diffMismatchRegSpecific[i] > 0) {
+	            DEBUG_LOG("  R%d: %u times\n", i, diffMismatchRegSpecific[i]);
+	        }
+	    }
+
+	    DEBUG_LOG("\nMismatches by Block Length (1-4 | 5-8 | 9-16 | 17-32 | 33-64 | 65+):\n");
+	    DEBUG_LOG("  [%4u | %4u | %4u | %4u | %4u | %4u]\n",
+	        diffMismatchLengthBins[0], diffMismatchLengthBins[1], diffMismatchLengthBins[2],
+	        diffMismatchLengthBins[3], diffMismatchLengthBins[4], diffMismatchLengthBins[5]);
+
+	    // Deep Opcode Analysis
+	    struct DeepStat { u16 bucket; u64 suspects; u64 successes; };
+	    DeepStat deepDiff[1024];
+	    for (int i = 0; i < 1024; i++) {
+	        deepDiff[i].bucket = i;
+	        deepDiff[i].suspects = deepOpcodeSuspectFreq[i];
+	        deepDiff[i].successes = deepOpcodeSuccessFreq[i];
+	    }
+
+	    std::sort(deepDiff, deepDiff + 1024, [](const DeepStat& a, const DeepStat& b) {
+	        // Sort by the highest ratio of suspects to overall presence
+	        double ratioA = a.suspects + a.successes > 0 ? (double)a.suspects / (a.suspects + a.successes) : 0;
+	        double ratioB = b.suspects + b.successes > 0 ? (double)b.suspects / (b.suspects + b.successes) : 0;
+	        // Tie-breaker: sheer volume of suspect hits
+	        if (ratioA == ratioB) return a.suspects > b.suspects;
+	        return ratioA > ratioB;
+	    });
+
+	    DEBUG_LOG("\nTop 10 Most Toxic Opcodes (High Suspect/Success Ratio anywhere in block):\n");
+	    for (int i = 0; i < 10; i++) {
+	        if (deepDiff[i].suspects == 0) break;
+	        u64 total = deepDiff[i].suspects + deepDiff[i].successes;
+	        double toxicity = ((double)deepDiff[i].suspects / total) * 100.0;
+
+	        DEBUG_LOG("  #%d: Prefix ~0x%04X (Bucket %4d) | Toxic Ratio: %6.2f%% (%llu suspect / %llu safe)\n",
+	            i + 1, deepDiff[i].bucket << 6, deepDiff[i].bucket, toxicity, deepDiff[i].suspects, deepDiff[i].successes);
+	    }
 	}
 	DEBUG_LOG("----------------------------------------------------------\n");
 #endif
@@ -131,7 +186,7 @@ void DebugStats::print() {
     double totalSecs   = ticks_to_microsecs(timeTotalElapsed) / 1000000.0;
 
 	DEBUG_LOG("Total Wall-Clock Time: %.3f seconds\n\n", totalSecs);
-
+#ifndef JIT_DIFFERENTIAL_TESTING
 	DEBUG_LOG("--- PERFORMANCE & TIMING TUNING ---\n");
 	float avgCore = fpsSamples > 0 ? (float)(accumCoreFps / fpsSamples) : 0.0f;
 	float avgDisp = fpsSamples > 0 ? (float)(accumRenderFps / fpsSamples) : 0.0f;
@@ -159,7 +214,7 @@ void DebugStats::print() {
 		DEBUG_LOG("    [%2d] Buffers: %u\n", i, audioBufferFullnessBins[i]);
 	}
 	DEBUG_LOG("-----------------------------------------\n");
-
+#endif
     double thumbSecs   = ticks_to_microsecs(timeSpentThumb) / 1000000.0;
     double armSecs     = ticks_to_microsecs(timeSpentARM) / 1000000.0;
     double compileSecs = ticks_to_microsecs(timeSpentCompiling) / 1000000.0;
@@ -182,7 +237,7 @@ void DebugStats::print() {
     double compPct   = thumbSecs > 0 ? (compileSecs / thumbSecs * 100.0) : 0.0;
     double execPct   = thumbSecs > 0 ? (jitSecs / thumbSecs * 100.0) : 0.0;
     double interpPct = thumbSecs > 0 ? (fallSecs / thumbSecs * 100.0) : 0.0;
-
+#ifndef JIT_DIFFERENTIAL_TESTING
     // 3. Print the Hierarchical Time Breakdown
 	DEBUG_LOG("\n========== JIT REAL-TIME PROFILING ==========\n");
 	DEBUG_LOG("Average Framerate:     %.2f FPS\n\n", avgFPS);
@@ -200,7 +255,7 @@ void DebugStats::print() {
 	DEBUG_LOG("\nARM Execution:   %.3f seconds (%.1f%% of Total)\n", armSecs, armPct);
 	DEBUG_LOG("Other / Core:    %.3f seconds (%.1f%% of Total)\n", otherSecs, otherPct);
 	DEBUG_LOG("---------------------------------------------\n");
-
+#endif
     // 4. Print Instruction & Hop Data
 	u64 totalInstr = jitInstructionsExecuted + fallbackInstructionsExecuted;
 	double jitInstrPct = totalInstr > 0 ? ((double)jitInstructionsExecuted / totalInstr * 100.0) : 0.0;
@@ -219,7 +274,7 @@ void DebugStats::print() {
 	DEBUG_LOG("JIT Exec Speed:     %.0f instr/sec (%.2f MIPS)\n", jitIPS, jitIPS / 1000000.0);
 	DEBUG_LOG("Interpreter Speed:  %.0f instr/sec (%.2f MIPS)\n", fallIPS, fallIPS / 1000000.0);
 	DEBUG_LOG("-----------------------------------------\n");
-
+#ifndef JIT_DIFFERENTIAL_TESTING
     // 5. Print Block Distribution
 	DEBUG_LOG("--- BLOCK DISTRIBUTION ---\n");
 	DEBUG_LOG("Blacklisted: %u\n", blacklistedBlocks);
@@ -256,6 +311,7 @@ void DebugStats::print() {
 	DEBUG_LOG("  No LDMIA/STMIA Regs:              %u\n", bailoutReasons[BAILOUT_LDMIA_STMIA_REGS]);
 	DEBUG_LOG("  Unsupported Mem Bank:             %u\n", bailoutReasons[BAILOUT_UNSUPPORTED_MEM_BANK]);
 	DEBUG_LOG("-----------------------------------------\n");
+#endif
 #if JIT_BLOCK_FRAGMENTATION_STATS
 	DEBUG_LOG("--- JIT BLOCK LIFECYCLE & FRAGMENTATION STATS ---\n");	
 	u32 totalExecs = fullBlockCompletions + partialBlockExecutions;

@@ -95,6 +95,13 @@ struct DebugStats {
 	u32 diffMismatchPrefetch;
 	u32 diffMismatchRegs;
 
+	u64 deepOpcodeSuccessFreq[1024];
+	u64 deepOpcodeSuspectFreq[1024];
+
+	u32 diffMismatchRegSpecific[15];
+	u32 diffMismatchFlagSpecific[4]; // 0:N, 1:Z, 2:C, 3:V
+	u32 diffMismatchLengthBins[6];   // Correlates with blockLengthBins
+
 	int mismatchCount = 0;
 	int traceLogCount = 0;
 	u32 framesRendered = 0;
