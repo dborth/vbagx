@@ -291,7 +291,7 @@ void DebugStats::print() {
 	DEBUG_LOG("\nARM Execution:   %.3f seconds (%.1f%% of Total)\n", armSecs, armPct);
 	DEBUG_LOG("Other / Core:    %.3f seconds (%.1f%% of Total)\n", otherSecs, otherPct);
 	DEBUG_LOG("---------------------------------------------\n");
-#endif
+
     // 4. Print Instruction & Hop Data
 	u64 totalInstr = jitInstructionsExecuted + fallbackInstructionsExecuted;
 	double jitInstrPct = totalInstr > 0 ? ((double)jitInstructionsExecuted / totalInstr * 100.0) : 0.0;
@@ -310,7 +310,7 @@ void DebugStats::print() {
 	DEBUG_LOG("JIT Exec Speed:     %.0f instr/sec (%.2f MIPS)\n", jitIPS, jitIPS / 1000000.0);
 	DEBUG_LOG("Interpreter Speed:  %.0f instr/sec (%.2f MIPS)\n", fallIPS, fallIPS / 1000000.0);
 	DEBUG_LOG("-----------------------------------------\n");
-#ifndef JIT_DIFFERENTIAL_TESTING
+
     // 5. Print Block Distribution
 	DEBUG_LOG("--- BLOCK DISTRIBUTION ---\n");
 	DEBUG_LOG("Blacklisted: %u\n", blacklistedBlocks);
