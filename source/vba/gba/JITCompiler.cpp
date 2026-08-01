@@ -423,7 +423,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	// the bottom-of-loop increment brings the count back to a true 0, so the next
 	// chunk's instruction count starts counting only from chunkStartPC forward.
 	auto ResetChunkTracking = [&](u32 pc) {
-	    chunkInstrCount = 0;
+	    chunkInstrCount = (u32)-1;
 	    chunkStaticCycles = 0;
 	    chunkStartPC = pc + 2;
 	};
@@ -537,14 +537,41 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	// GBATEK: Only apply the N-cycle fetch penalty if the prefetch buffer was actually flushed.
 	auto EmitDynamicNCyclePenalty = [&](u32*& ptr, u32 pc) {
 		u32 nPenalty = STATIC_CODE_TICKS_16(pc) - STATIC_CODE_TICKS_SEQ16(pc);
+		u32 sCost = STATIC_CODE_TICKS_SEQ16(pc);
+
 		if (nPenalty > 0) {
-			*ptr++ = PPC_RLWINM(PPC_R8, PPC_R5, 0, 24, 31); // Extract active hits from R5
+			*ptr++ = PPC_RLWINM(PPC_R8, PPC_R5, 0, 24, 31); // Extract active hits into R8
 			*ptr++ = PPC_CMPWI(0, PPC_R8, 0);
-			u32* branchSkipPenalty = ptr++; // If hits > 0, skip penalty
+			u32* branchHit = ptr++; // If hits > 0, skip penalty and consume hit
 
+			// --- MISS PATH (hits == 0) ---
 			*ptr++ = PPC_ADDI(PPC_R3, PPC_R3, nPenalty);
+			u32* branchEnd = ptr++;
 
-			*branchSkipPenalty = PPC_BNE((u32)((ptr - branchSkipPenalty) * 4));
+			// --- HIT PATH (hits > 0) ---
+			*branchHit = PPC_BNE((u32)((ptr - branchHit) * 4));
+
+			// 1. Calculate C++ equivalent shift: shift = 1 + ((hits >> 1) & 1)
+			// Rotate left by 1 puts bit 30 (the 2s place) cleanly into bit 31 (LSB).
+			*ptr++ = PPC_RLWINM(PPC_R9, PPC_R8, 1, 31, 31);
+			*ptr++ = PPC_ADDI(PPC_R11, PPC_R9, 1);          // R11 = shift amount (1 or 2)
+
+			// 2. Consume hits from prefetch buffer: R5 = (R5 & ~0xFF) | (hits >> shift)
+			*ptr++ = PPC_RLWINM(PPC_R10, PPC_R5, 0, 0, 23); // Preserve upper active flag
+			*ptr++ = PPC_SRW(PPC_R8, PPC_R8, PPC_R11);      // Shift active hits down
+			*ptr++ = PPC_OR(PPC_R5, PPC_R10, PPC_R8);       // Repack into R5
+
+			// 3. Refund the static overcharge
+			// C++ adds S-1 on a hit. The JIT statically added S.
+			// Refund formula: 1 + R9 * (sCost - 1)
+			if (sCost > 1) {
+				*ptr++ = PPC_MULLI(PPC_R9, PPC_R9, sCost - 1);
+				*ptr++ = PPC_ADDI(PPC_R9, PPC_R9, 1);
+				*ptr++ = PPC_SUBF(PPC_R3, PPC_R9, PPC_R3); // R3 = R3 - Refund
+			} else {
+				*ptr++ = PPC_ADDI(PPC_R3, PPC_R3, -1); // Constant 1 cycle refund
+			}
+			*branchEnd = PPC_B((u32)((ptr - branchEnd) * 4));
 		}
 	};
 
@@ -580,6 +607,55 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 		// 5. Accumulate true branch refill cost into R3
 		*ptr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R10);
+	};
+
+	// Mirrors dataTicksAccess16/32/Seq16/Seq32's side effect on busPrefetchCount for a
+	// SINGLE data access (Format 7-11 single load/store — the ones that never call
+	// RECHARGE_PREFETCH directly, but still touch the buffer through this side channel):
+	//   bank outside RAM [2,7]        -> busPrefetchCount = 0
+	//   bank in [2,7] AND R5 == 0     -> busPrefetchCount = (1 << waitState) - 1
+	//   bank in [2,7] AND R5 != 0     -> unchanged (interpreter's "busPrefetch" bool was false,
+	//                                    since it only latches true when busPrefetchCount==0
+	//                                    at THIS instruction's entry)
+	// R5==0 stands in for that per-instruction "busPrefetch" bool directly, because nothing
+	// earlier in this instruction's own emission touches R5.
+	auto EmitSingleAccessRecharge = [&](u32*& ptr, u32 bankReg, u32 dataWaitReg, u32 scratchReg) {
+		*ptr++ = PPC_CMPWI(0, bankReg, 2);
+		u32* branchLt2 = ptr++;                 // BLT -> outside RAM (low)
+
+		*ptr++ = PPC_CMPWI(0, bankReg, 7);
+		u32* branchGt7 = ptr++;                 // BGT -> outside RAM (high)
+
+		// Check if active hits == 0, not if the entire R5 (including active bit) == 0.
+		*ptr++ = PPC_RLWINM(scratchReg, PPC_R5, 0, 24, 31); // Extract hits from R5
+		*ptr++ = PPC_CMPWI(0, scratchReg, 0);
+		u32* branchAlreadyPrimed = ptr++;       // BNE -> hits already nonzero, leave untouched
+
+		// waitState = dataWaitReg ? dataWaitReg : 1
+		*ptr++ = PPC_CMPWI(0, dataWaitReg, 0);
+		u32* branchWaitNonzero = ptr++;         // BNE -> use dataWaitReg as-is
+		*ptr++ = PPC_LI(scratchReg, 1);
+		u32* branchToShift = ptr++;
+
+		*branchWaitNonzero = PPC_BNE((u32)((ptr - branchWaitNonzero) * 4));
+		*ptr++ = PPC_OR(scratchReg, dataWaitReg, dataWaitReg);
+
+		*branchToShift = PPC_B((u32)((ptr - branchToShift) * 4));
+
+		// R5 = (1 << waitState) - 1, and ensure the active bit (0x100) is re-asserted
+		*ptr++ = PPC_LI(PPC_R5, 1);
+		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, scratchReg);
+		*ptr++ = PPC_ADDI(PPC_R5, PPC_R5, -1);
+		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100);
+
+		u32* branchToDone = ptr++;
+
+		*branchLt2 = PPC_BLT((u32)((ptr - branchLt2) * 4));
+		*branchGt7 = PPC_BGT((u32)((ptr - branchGt7) * 4));
+		*ptr++ = PPC_LI(PPC_R5, 0);             // outside RAM range: flush
+
+		*branchAlreadyPrimed = PPC_BNE((u32)((ptr - branchAlreadyPrimed) * 4));
+		*branchToDone = PPC_B((u32)((ptr - branchToDone) * 4));
 	};
 
 	while (!endBlock && instrCount < JIT_TRACE_MAX_INSTRUCTIONS) {
@@ -1297,7 +1373,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // EA = R7 + R11
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-					// thumb90/thumb98 do NOT recharge the prefetch buffer
+					EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8);
 
 					// 5. Execute Memory Load or Store Instruction
 					if (isMemLoad) {
@@ -1389,7 +1465,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_LIS(PPC_R11, ((u32)memoryWait32) >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
 				*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // Safe: rA=R7
-				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+				EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8);
 
 				// 4. Endian-Correct Load or Store (Lazy Register Execution)
 				if (isLoad) {
@@ -1402,7 +1478,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// thumb90 (STR): dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2
 				// thumb98 (LDR): 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)
-				// SP-relative ops do NOT recharge the prefetch buffer
 				chunkStaticCycles += (2 + isLoad) + STATIC_CODE_TICKS_SEQ16(currentPC);
 				EmitDynamicNCyclePenalty(emitPtr, currentPC);
 				break;

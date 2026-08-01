@@ -183,6 +183,7 @@
 #define PPC_B(offset)			((18 << 26) | ((offset) & 0x3FFFFFC))
 #define PPC_BLE(offset)			((16 << 26) | (4 << 21) | (1 << 16) | ((offset) & 0xFFFC))
 #define PPC_BLT(offset)			((16 << 26) | (12 << 21) | (0 << 16) | ((offset) & 0xFFFC))
+#define PPC_BGT(offset)			((16 << 26) | (12 << 21) | (1 << 16) | ((offset) & 0xFFFC))
 #define PPC_BLR()				0x4E800020
 
 // Advanced Memory & Bitwise
