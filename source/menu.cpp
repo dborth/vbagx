@@ -75,6 +75,7 @@ static GuiText * settingText = NULL;
 static GuiText * settingText2 = NULL;
 static int lastMenu = MENU_NONE;
 static int mapMenuCtrl = 0;
+static bool showCredits = false;
 
 static lwp_t guithread = LWP_THREAD_NULL;
 static lwp_t progressthread = LWP_THREAD_NULL;
@@ -823,7 +824,7 @@ SettingWindow(const char * title, GuiWindow * w)
  ***************************************************************************/
 static void WindowCredits(void * ptr)
 {
-	if(btnLogo->GetState() != STATE_CLICKED)
+	if(btnLogo->GetState() != STATE_CLICKED && !showCredits)
 		return;
 
 	btnLogo->ResetState();
@@ -944,6 +945,7 @@ static void WindowCredits(void * ptr)
 		   (userInput[3].wpad->btns_d || userInput[3].pad.btns_d || userInput[3].wiidrcdata.btns_d))
 		{
 			exit = true;
+			showCredits = false;
 		}
 		usleep(THREAD_SLEEP);
 	}
@@ -3525,6 +3527,7 @@ static int MenuSettings()
 	GuiImageData iconMenu(icon_settings_menu_png);
 	GuiImageData iconNetwork(icon_settings_network_png);
 	GuiImageData iconEmulation(icon_game_settings_png);
+	GuiImageData iconCredits(icon_credits_png);
 
 	GuiText savingBtnTxt1("Saving", 22, (GXColor){0, 0, 0, 255});
 	GuiText savingBtnTxt2("&", 18, (GXColor){0, 0, 0, 255});
@@ -3574,7 +3577,7 @@ static int MenuSettings()
 	GuiImage networkBtnIcon(&iconNetwork);
 	GuiButton networkBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	networkBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	networkBtn.SetPosition(-125, 250);
+	networkBtn.SetPosition(-200, 250);
 	networkBtn.SetLabel(&networkBtnTxt);
 	networkBtn.SetImage(&networkBtnImg);
 	networkBtn.SetImageOver(&networkBtnImgOver);
@@ -3591,7 +3594,7 @@ static int MenuSettings()
 	GuiImage emulationBtnIcon(&iconEmulation);
 	GuiButton emulationBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	emulationBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	emulationBtn.SetPosition(125, 250);
+	emulationBtn.SetPosition(0, 250);
 	emulationBtn.SetLabel(&emulationBtnTxt);
 	emulationBtn.SetImage(&emulationBtnImg);
 	emulationBtn.SetImageOver(&emulationBtnImgOver);
@@ -3601,6 +3604,25 @@ static int MenuSettings()
 	emulationBtn.SetTrigger(trigA);
 	emulationBtn.SetTrigger(trig2);
 	emulationBtn.SetEffectGrow();
+
+	GuiText creditsBtnTxt("Credits", 22, (GXColor){0, 0, 0, 255});
+	creditsBtnTxt.SetWrap(true, btnLargeOutline.GetWidth()-20);
+	GuiImage creditsBtnImg(&btnLargeOutline);
+	GuiImage creditsBtnImgOver(&btnLargeOutlineOver);
+	GuiImage creditsBtnIcon(&iconCredits);
+	GuiButton creditsBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
+	creditsBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	creditsBtn.SetPosition(200, 250);
+	creditsBtn.SetLabel(&creditsBtnTxt);
+	creditsBtn.SetImage(&creditsBtnImg);
+	creditsBtn.SetImageOver(&creditsBtnImgOver);
+	creditsBtn.SetIcon(&creditsBtnIcon);
+	creditsBtn.SetSoundOver(&btnSoundOver);
+	creditsBtn.SetSoundClick(&btnSoundClick);
+	creditsBtn.SetTrigger(trigA);
+	creditsBtn.SetTrigger(trig2);
+	creditsBtn.SetEffectGrow();
+	creditsBtn.SetUpdateCallback(WindowCredits);
 
 	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
@@ -3639,6 +3661,7 @@ static int MenuSettings()
 	w.Append(&menuBtn);
 	w.Append(&networkBtn);
 	w.Append(&emulationBtn);
+	w.Append(&creditsBtn);
 	w.Append(&backBtn);
 	w.Append(&resetBtn);
 
@@ -3665,6 +3688,11 @@ static int MenuSettings()
 		else if(emulationBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_SETTINGS_EMULATION;
+		}
+		else if(creditsBtn.GetState() == STATE_CLICKED)
+		{
+			showCredits = true;
+			creditsBtn.SetState(STATE_SELECTED);
 		}
 		else if(backBtn.GetState() == STATE_CLICKED)
 		{
@@ -5245,6 +5273,11 @@ MainMenu (int menu)
 				break;
 		}
 		lastMenu = currentMenu;
+		if (btnLogo->GetState() == STATE_CLICKED)
+		{
+			showCredits = true;
+			btnLogo->ResetState();
+		}
 		usleep(THREAD_SLEEP);
 	}
 
