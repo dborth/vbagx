@@ -135,7 +135,7 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 	JIT_SaveCPUState(&jitState);
 
 	// Skip catchup gracefully if trace is too long
-	if (jitResult.instructions > JIT_DIFFERENTIAL_MAX_CATCHUP) {
+	if (jitResult.instructions > JIT_DIFFERENTIAL_MAX_CATCHUP || jitResult.smcHit) {
 		JIT_RestoreCPUState(&jitState);
 		cpuTotalTicks += jitResult.cycles;
 
