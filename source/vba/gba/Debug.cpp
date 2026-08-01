@@ -91,7 +91,6 @@ void LogJITMismatch(const char* message) {
 		return;
 	}
 
-	debugStats.mismatchCount++;
 	LogDebug("==================== [JIT DIFFERENTIAL MISMATCH #%d] ====================\n", debugStats.mismatchCount);
 	LogDebug("%s", message);
 	LogDebug("========================================================================\n");
