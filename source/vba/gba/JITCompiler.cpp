@@ -536,16 +536,24 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	// Dynamic N-Cycle Penalty Check
 	// GBATEK: Only apply the N-cycle fetch penalty if the prefetch buffer was actually flushed.
 	auto EmitDynamicNCyclePenalty = [&](u32*& ptr, u32 pc) {
-		u32 nPenalty = STATIC_CODE_TICKS_16(pc) - STATIC_CODE_TICKS_SEQ16(pc);
-		if (nPenalty > 0) {
-			*ptr++ = PPC_RLWINM(PPC_R8, PPC_R5, 0, 24, 31); // Extract active hits from R5
-			*ptr++ = PPC_CMPWI(0, PPC_R8, 0);
-			u32* branchSkipPenalty = ptr++; // If hits > 0, skip penalty
+	    u32 nPenalty = STATIC_CODE_TICKS_16(pc) - STATIC_CODE_TICKS_SEQ16(pc);
+	    if (nPenalty > 0) {
+	        *ptr++ = PPC_RLWINM(PPC_R8, PPC_R5, 0, 24, 31); // Extract active hits from R5
+	        *ptr++ = PPC_CMPWI(0, PPC_R8, 0);
+	        u32* branchMiss = ptr++; // Branch if hits == 0
 
-			*ptr++ = PPC_ADDI(PPC_R3, PPC_R3, nPenalty);
+	        // --- HIT PATH (Consume 1 hit, no penalty) ---
+	        *ptr++ = PPC_ADDI(PPC_R8, PPC_R8, -1);          // Decrement hit count
+	        *ptr++ = PPC_RLWINM(PPC_R10, PPC_R5, 0, 0, 23); // Preserve upper active flag
+	        *ptr++ = PPC_OR(PPC_R5, PPC_R10, PPC_R8);       // Repack into R5
+	        u32* branchEnd = ptr++;
 
-			*branchSkipPenalty = PPC_BNE((u32)((ptr - branchSkipPenalty) * 4));
-		}
+	        // --- MISS PATH ---
+	        *branchMiss = PPC_BEQ((u32)((ptr - branchMiss) * 4));
+	        *ptr++ = PPC_ADDI(PPC_R3, PPC_R3, nPenalty);    // Apply N-cycle penalty
+
+	        *branchEnd = PPC_B((u32)((ptr - branchEnd) * 4));
+	    }
 	};
 
 	while (!endBlock && instrCount < JIT_TRACE_MAX_INSTRUCTIONS) {
