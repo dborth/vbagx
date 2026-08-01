@@ -109,6 +109,11 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 		return -1; // Did not handle, proceed to normal JIT execution block
 	}
 
+	if (debugStats.isPCChecked(pc)) {
+	    return -1;
+	}
+	debugStats.markPCChecked(pc);
+
 	// 1. Save initial emulator state
 	CPUStateBackup initial;
 	JIT_SaveCPUState(&initial);

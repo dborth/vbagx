@@ -84,7 +84,7 @@ void DebugStats::reset() {
 	    deepOpcodeSuccessFreq[i] = 0;
 	    deepOpcodeSuspectFreq[i] = 0;
 	}
-
+	memset(diffCheckedPCHash, 0, sizeof(diffCheckedPCHash));
     mismatchCount = 0;
     traceLogCount = 0;
 }
@@ -102,6 +102,22 @@ void DebugStats::print() {
 		DEBUG_LOG("Mismatches:      %u (%.2f%%)\n", diffMismatches, missPct);
 	}
 
+	struct DiffStat { u16 bucket; u32 mismatches; u32 matches; };
+	DiffStat topDiff[1024];
+	for (int i = 0; i < 1024; i++) {
+		topDiff[i].bucket = i;
+		topDiff[i].mismatches = diffMismatchOpcodeFreq[i];
+		topDiff[i].matches = diffMatchOpcodeFreq[i];
+	}
+
+	struct DeepStat { u16 bucket; u64 suspects; u64 successes; };
+	DeepStat deepDiff[1024];
+	for (int i = 0; i < 1024; i++) {
+		deepDiff[i].bucket = i;
+		deepDiff[i].suspects = deepOpcodeSuspectFreq[i];
+		deepDiff[i].successes = deepOpcodeSuccessFreq[i];
+	}
+
 	if (diffMismatches > 0) {
 		DEBUG_LOG("\nMismatch Root-Cause Distribution (Can Overlap):\n");
 		DEBUG_LOG("  Registers Diverged:    %u (cumulative reg misses)\n", diffMismatchRegs);
@@ -112,14 +128,6 @@ void DebugStats::print() {
 		DEBUG_LOG("  Prefetch Buffer Drift: %u\n", diffMismatchPrefetch);
 
 		// Top 10 Mismatching Opcodes & their failure rates
-		struct DiffStat { u16 bucket; u32 mismatches; u32 matches; };
-		DiffStat topDiff[1024];
-		for (int i = 0; i < 1024; i++) {
-			topDiff[i].bucket = i;
-			topDiff[i].mismatches = diffMismatchOpcodeFreq[i];
-			topDiff[i].matches = diffMatchOpcodeFreq[i];
-		}
-
 		std::sort(topDiff, topDiff + 1024, [](const DiffStat& a, const DiffStat& b) {
 			return a.mismatches > b.mismatches;
 		});
@@ -151,15 +159,6 @@ void DebugStats::print() {
 	        diffMismatchLengthBins[0], diffMismatchLengthBins[1], diffMismatchLengthBins[2],
 	        diffMismatchLengthBins[3], diffMismatchLengthBins[4], diffMismatchLengthBins[5]);
 
-	    // Deep Opcode Analysis
-	    struct DeepStat { u16 bucket; u64 suspects; u64 successes; };
-	    DeepStat deepDiff[1024];
-	    for (int i = 0; i < 1024; i++) {
-	        deepDiff[i].bucket = i;
-	        deepDiff[i].suspects = deepOpcodeSuspectFreq[i];
-	        deepDiff[i].successes = deepOpcodeSuccessFreq[i];
-	    }
-
 	    std::sort(deepDiff, deepDiff + 1024, [](const DeepStat& a, const DeepStat& b) {
 	        // Sort by the highest ratio of suspects to overall presence
 	        double ratioA = a.suspects + a.successes > 0 ? (double)a.suspects / (a.suspects + a.successes) : 0;
@@ -169,8 +168,8 @@ void DebugStats::print() {
 	        return ratioA > ratioB;
 	    });
 
-	    DEBUG_LOG("\nTop 10 Most Toxic Opcodes (High Suspect/Success Ratio anywhere in block):\n");
-	    for (int i = 0; i < 10; i++) {
+	    DEBUG_LOG("\nTop 20 Most Toxic Opcodes (High Suspect/Success Ratio anywhere in block):\n");
+	    for (int i = 0; i < 20; i++) {
 	        if (deepDiff[i].suspects == 0) break;
 	        u64 total = deepDiff[i].suspects + deepDiff[i].successes;
 	        double toxicity = ((double)deepDiff[i].suspects / total) * 100.0;
@@ -178,6 +177,43 @@ void DebugStats::print() {
 	        DEBUG_LOG("  #%d: Prefix ~0x%04X (Bucket %4d) | Toxic Ratio: %6.2f%% (%llu suspect / %llu safe)\n",
 	            i + 1, deepDiff[i].bucket << 6, deepDiff[i].bucket, toxicity, deepDiff[i].suspects, deepDiff[i].successes);
 	    }
+	}
+
+	// Re-sort for the Safest Opcodes (Zero suspects, highest success volume)
+	std::sort(deepDiff, deepDiff + 1024, [](const DeepStat& a, const DeepStat& b) {
+		if (a.suspects == 0 && b.suspects == 0) return a.successes > b.successes;
+		if (a.suspects == 0) return true;
+		if (b.suspects == 0) return false;
+		return a.successes > b.successes;
+	});
+
+	DEBUG_LOG("\nTop 20 Safest Opcodes (100%% Success, 0 Suspects):\n");
+	for (int i = 0; i < 20; i++) {
+		if (deepDiff[i].suspects > 0 || deepDiff[i].successes == 0) break;
+		DEBUG_LOG("  #%d: Prefix ~0x%04X (Bucket %4d) | Safe Hits: %llu\n",
+			i + 1, deepDiff[i].bucket << 6, deepDiff[i].bucket, deepDiff[i].successes);
+	}
+
+	// Sort for 100% safe opcodes (0 suspects, highest safe hits)
+	DeepStat safeDiff[1024];
+	for (int i = 0; i < 1024; i++) {
+	    safeDiff[i].bucket = i;
+	    safeDiff[i].suspects = debugStats.deepOpcodeSuspectFreq[i];
+	    safeDiff[i].successes = debugStats.deepOpcodeSuccessFreq[i];
+	}
+
+	std::sort(safeDiff, safeDiff + 1024, [](const DeepStat& a, const DeepStat& b) {
+	    if (a.suspects == 0 && b.suspects == 0) return a.successes > b.successes;
+	    if (a.suspects == 0) return true;
+	    if (b.suspects == 0) return false;
+	    return a.successes > b.successes;
+	});
+
+	DEBUG_LOG("\n--- LOCKED IN (100%% SAFE OPCODES) ---\n");
+	for (int i = 0; i < 20; i++) {
+	    if (safeDiff[i].suspects > 0 || safeDiff[i].successes == 0) break;
+	    DEBUG_LOG("  #%d: Opcode Prefix ~0x%04X (Bucket %4d) | Tested Safe Runs: %llu\n",
+	        i + 1, safeDiff[i].bucket << 6, safeDiff[i].bucket, safeDiff[i].successes);
 	}
 	DEBUG_LOG("----------------------------------------------------------\n");
 #endif
@@ -401,5 +437,22 @@ void DebugStats::updateDRC(int unplayed, int newState) {
 		drcTransitions++;
 		currentDrcState = newState;
 	}
+}
+
+bool DebugStats::isPCChecked(u32 pc) {
+	u32 slot = (pc >> 1) & (DIFF_PC_HASH_SIZE - 1);
+	while (diffCheckedPCHash[slot] != 0) {
+		if (diffCheckedPCHash[slot] == pc) return true;
+		slot = (slot + 1) & (DIFF_PC_HASH_SIZE - 1); // Linear probe
+	}
+	return false;
+}
+
+void DebugStats::markPCChecked(u32 pc) {
+	u32 slot = (pc >> 1) & (DIFF_PC_HASH_SIZE - 1);
+	while (diffCheckedPCHash[slot] != 0 && diffCheckedPCHash[slot] != pc) {
+		slot = (slot + 1) & (DIFF_PC_HASH_SIZE - 1);
+	}
+	diffCheckedPCHash[slot] = pc;
 }
 #endif

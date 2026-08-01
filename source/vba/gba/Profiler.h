@@ -6,6 +6,7 @@
 
 static const int MAX_JIT_TRACE_CALLS = 100;
 static const int MAX_JIT_MISMATCH_COUNT = 30;
+#define DIFF_PC_HASH_SIZE 4096
 
 enum BailoutReason {
 	BAILOUT_UNKNOWN = 0,
@@ -111,6 +112,11 @@ struct DebugStats {
 	void recordFPS(float coreFPS, float renderFPS);
 	void commitFrameskip();
 	void updateDRC(int unplayed, int newState);
+
+	u32 diffCheckedPCHash[DIFF_PC_HASH_SIZE];
+
+	bool isPCChecked(u32 pc);
+	void markPCChecked(u32 pc);
 };
 
 extern DebugStats debugStats;
