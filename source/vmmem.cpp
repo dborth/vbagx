@@ -7,7 +7,7 @@
  *
  * GameBoy Advance Virtual Memory Paging
  ***************************************************************************/
-
+#ifdef USE_VM
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,8 +32,6 @@
 #define MEM_BAD	0xff
 #define MEM_VM  0x01
 #define MEM_UN  0x80
-
-#ifdef USE_VM
 
 /** Setup VM to use small 16kb windows **/
 #define VMSHIFTBITS 14
