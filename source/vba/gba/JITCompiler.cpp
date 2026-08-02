@@ -1739,15 +1739,16 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// "+ numRegs") -- the only real difference is PUSH's flat "+1" vs POP's "+2".
 						chunkStaticCycles += numRegs + 2 + STATIC_CODE_TICKS_SEQ16(currentPC);
 					} else if (!(isPop && Rbit)) {
-						// PUSH {Rlist} / PUSH {Rlist, LR}: thumbB4/B5 use += throughout, so
-						// numRegs' +1s and their data-ticks (already accumulated into R3
-						// above) both survive, plus each one's own flat "+1".
-						chunkStaticCycles += numRegs + 1 + STATIC_CODE_TICKS_SEQ16(currentPC);
+						// PUSH {Rlist} / PUSH {Rlist, LR}:
+						// GBATEK: (n-1)S + 2N.
+						// In ARM7TDMI, PUSH instruction fetch is fully overlapped with the final stack store
+						chunkStaticCycles += numRegs + 1;
 					}
 
-					// Dynamic N-Cycle Penalty Check (Applied to all non-PC PUSH/POP)
-					if (!(isPop && Rbit)) {
-						EmitDynamicNCyclePenalty(emitPtr, currentPC + 2);
+					// Dynamic N-Cycle Penalty Check:
+					// ONLY apply to POP operations. PUSH does not stall on trailing ROM fetches.
+					if (isPop && !Rbit) {
+					    EmitDynamicNCyclePenalty(emitPtr, currentPC + 2);
 					}
 					// (POP {Rlist, PC} already emitted its own exit above and always ends
 					// the block there, so it never reaches this trailing accumulation.)
