@@ -465,119 +465,125 @@ static void loadXMLPaletteFromSection(gamePalette &pal)
 static bool
 decodePrefsData ()
 {
-	bool result = false;
-
 	xml = mxmlLoadString(NULL, (char *)savebuffer, MXML_TEXT_CALLBACK);
 
-	if(xml)
-	{
-		// File Settings
-		loadXMLSetting(&GCSettings.AutoLoad, "AutoLoad");
-		loadXMLSetting(&GCSettings.AutoSave, "AutoSave");
-		loadXMLSetting(&GCSettings.LoadMethod, "LoadMethod");
-		loadXMLSetting(&GCSettings.SaveMethod, "SaveMethod");
-		loadXMLSetting(GCSettings.LoadFolder, "LoadFolder", sizeof(GCSettings.LoadFolder));
-		loadXMLSetting(GCSettings.LastFileLoaded, "LastFileLoaded", sizeof(GCSettings.LastFileLoaded));
-		loadXMLSetting(GCSettings.SaveFolder, "SaveFolder", sizeof(GCSettings.SaveFolder));
-		loadXMLSetting(&GCSettings.AppendAuto, "AppendAuto");
-		//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder", sizeof(GCSettings.CheatFolder));
-		loadXMLSetting(GCSettings.ScreenshotsFolder, "ScreenshotsFolder", sizeof(GCSettings.ScreenshotsFolder));
-		loadXMLSetting(GCSettings.BorderFolder, "BorderFolder", sizeof(GCSettings.BorderFolder));
-		loadXMLSetting(GCSettings.CoverFolder, "CoverFolder", sizeof(GCSettings.CoverFolder));
-		loadXMLSetting(GCSettings.ArtworkFolder, "ArtworkFolder", sizeof(GCSettings.ArtworkFolder));
-
-		// Network Settings
-		loadXMLSetting(GCSettings.smbip, "smbip", sizeof(GCSettings.smbip));
-		loadXMLSetting(GCSettings.smbshare, "smbshare", sizeof(GCSettings.smbshare));
-		loadXMLSetting(GCSettings.smbuser, "smbuser", sizeof(GCSettings.smbuser));
-		loadXMLSetting(GCSettings.smbpwd, "smbpwd", sizeof(GCSettings.smbpwd));
-
-		// Video Settings
-		loadXMLSetting(&GCSettings.videomode, "videomode");
-		loadXMLSetting(&GCSettings.gbaZoomHor, "gbaZoomHor");
-		loadXMLSetting(&GCSettings.gbaZoomVert, "gbaZoomVert");
-		loadXMLSetting(&GCSettings.gbZoomHor, "gbZoomHor");
-		loadXMLSetting(&GCSettings.gbZoomVert, "gbZoomVert");
-		loadXMLSetting(&GCSettings.gbaFixed, "gbaFixed");
-		loadXMLSetting(&GCSettings.gbFixed, "gbFixed");
-		loadXMLSetting(&GCSettings.render, "render");
-		loadXMLSetting(&GCSettings.FilterMethod, "FilterMethod");
-		loadXMLSetting(&GCSettings.scaling, "scaling");
-		loadXMLSetting(&GCSettings.xshift, "xshift");
-		loadXMLSetting(&GCSettings.yshift, "yshift");
-		loadXMLSetting(&GCSettings.colorize, "colorize");
-#ifdef HW_RVL
-		loadXMLSetting(&GCSettings.DynamicRecompilation, "DynamicRecompilation");
-#endif
-		loadXMLSetting(&GCSettings.DisplayFrameRate, "DisplayFrameRate");
-		loadXMLSetting(&GCSettings.gbaFrameskip, "gbaFrameskip");
-		loadXMLSetting(&GCSettings.TurboModeEnabled, "TurboModeEnabled");
-
-		// Menu Settings
-#ifdef HW_RVL
-		loadXMLSetting(&GCSettings.WiimoteOrientation, "WiimoteOrientation");
-#endif
-		loadXMLSetting(&GCSettings.ExitAction, "ExitAction");
-		loadXMLSetting(&GCSettings.MusicVolume, "MusicVolume");
-		loadXMLSetting(&GCSettings.SFXVolume, "SFXVolume");
-		loadXMLSetting(&GCSettings.Rumble, "Rumble");
-		loadXMLSetting(&GCSettings.language, "language");
-		loadXMLSetting(&GCSettings.PreviewImage, "PreviewImage");
-
-		// Controller Settings
-		loadXMLController(btnmap[CTRLR_GCPAD], "gcpadmap");
-		loadXMLSetting(&GCSettings.WiiControls, "WiiControls");
-		loadXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap");
-		loadXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap");
-		loadXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap");
-		loadXMLController(btnmap[CTRLR_WUPC], "wupcpadmap");
-		loadXMLController(btnmap[CTRLR_WIIDRC], "drcpadmap");
-
-		// Emulation Settings
-		loadXMLSetting(&GCSettings.OffsetMinutesUTC, "OffsetMinutesUTC");
-		loadXMLSetting(&GCSettings.GBHardware, "GBHardware");
-		loadXMLSetting(&GCSettings.SGBBorder, "SGBBorder");
-		loadXMLSetting(&GCSettings.BasicPalette, "BasicPalette");
+	if(!xml) {
+		return false;
 	}
-	return result;
+
+	// File Settings
+
+	loadXMLSetting(&GCSettings.AutoLoad, "AutoLoad");
+	loadXMLSetting(&GCSettings.AutoSave, "AutoSave");
+	loadXMLSetting(&GCSettings.LoadMethod, "LoadMethod");
+	loadXMLSetting(&GCSettings.SaveMethod, "SaveMethod");
+	loadXMLSetting(GCSettings.LoadFolder, "LoadFolder", sizeof(GCSettings.LoadFolder));
+	loadXMLSetting(GCSettings.LastFileLoaded, "LastFileLoaded", sizeof(GCSettings.LastFileLoaded));
+	loadXMLSetting(GCSettings.SaveFolder, "SaveFolder", sizeof(GCSettings.SaveFolder));
+	loadXMLSetting(&GCSettings.AppendAuto, "AppendAuto");
+	//loadXMLSetting(GCSettings.CheatFolder, "CheatFolder", sizeof(GCSettings.CheatFolder));
+	loadXMLSetting(GCSettings.ScreenshotsFolder, "ScreenshotsFolder", sizeof(GCSettings.ScreenshotsFolder));
+	loadXMLSetting(GCSettings.BorderFolder, "BorderFolder", sizeof(GCSettings.BorderFolder));
+	loadXMLSetting(GCSettings.CoverFolder, "CoverFolder", sizeof(GCSettings.CoverFolder));
+	loadXMLSetting(GCSettings.ArtworkFolder, "ArtworkFolder", sizeof(GCSettings.ArtworkFolder));
+
+	// Network Settings
+
+	loadXMLSetting(GCSettings.smbip, "smbip", sizeof(GCSettings.smbip));
+	loadXMLSetting(GCSettings.smbshare, "smbshare", sizeof(GCSettings.smbshare));
+	loadXMLSetting(GCSettings.smbuser, "smbuser", sizeof(GCSettings.smbuser));
+	loadXMLSetting(GCSettings.smbpwd, "smbpwd", sizeof(GCSettings.smbpwd));
+
+	// Video Settings
+
+	loadXMLSetting(&GCSettings.videomode, "videomode");
+	loadXMLSetting(&GCSettings.gbaZoomHor, "gbaZoomHor");
+	loadXMLSetting(&GCSettings.gbaZoomVert, "gbaZoomVert");
+	loadXMLSetting(&GCSettings.gbZoomHor, "gbZoomHor");
+	loadXMLSetting(&GCSettings.gbZoomVert, "gbZoomVert");
+	loadXMLSetting(&GCSettings.gbaFixed, "gbaFixed");
+	loadXMLSetting(&GCSettings.gbFixed, "gbFixed");
+	loadXMLSetting(&GCSettings.render, "render");
+	loadXMLSetting(&GCSettings.FilterMethod, "FilterMethod");
+	loadXMLSetting(&GCSettings.scaling, "scaling");
+	loadXMLSetting(&GCSettings.xshift, "xshift");
+	loadXMLSetting(&GCSettings.yshift, "yshift");
+	loadXMLSetting(&GCSettings.colorize, "colorize");
+#ifdef HW_RVL
+	loadXMLSetting(&GCSettings.DynamicRecompilation, "DynamicRecompilation");
+#endif
+	loadXMLSetting(&GCSettings.DisplayFrameRate, "DisplayFrameRate");
+	loadXMLSetting(&GCSettings.gbaFrameskip, "gbaFrameskip");
+	loadXMLSetting(&GCSettings.TurboModeEnabled, "TurboModeEnabled");
+
+	// Menu Settings
+
+#ifdef HW_RVL
+	loadXMLSetting(&GCSettings.WiimoteOrientation, "WiimoteOrientation");
+#endif
+	loadXMLSetting(&GCSettings.ExitAction, "ExitAction");
+	loadXMLSetting(&GCSettings.MusicVolume, "MusicVolume");
+	loadXMLSetting(&GCSettings.SFXVolume, "SFXVolume");
+	loadXMLSetting(&GCSettings.Rumble, "Rumble");
+	loadXMLSetting(&GCSettings.language, "language");
+	loadXMLSetting(&GCSettings.PreviewImage, "PreviewImage");
+
+	// Controller Settings
+
+	loadXMLController(btnmap[CTRLR_GCPAD], "gcpadmap");
+	loadXMLSetting(&GCSettings.WiiControls, "WiiControls");
+	loadXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap");
+	loadXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap");
+	loadXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap");
+	loadXMLController(btnmap[CTRLR_WUPC], "wupcpadmap");
+	loadXMLController(btnmap[CTRLR_WIIDRC], "drcpadmap");
+
+	// Emulation Settings
+
+	loadXMLSetting(&GCSettings.OffsetMinutesUTC, "OffsetMinutesUTC");
+	loadXMLSetting(&GCSettings.GBHardware, "GBHardware");
+	loadXMLSetting(&GCSettings.SGBBorder, "SGBBorder");
+	loadXMLSetting(&GCSettings.BasicPalette, "BasicPalette");
+
+	mxmlDelete(xml);
+	return true;
 }
 
 static bool
 decodePalsData ()
 {
-	bool result = false;
-
 	xml = mxmlLoadString(NULL, (char *) savebuffer, MXML_TEXT_CALLBACK);
 
-	if (xml)
-	{
-		// count number of palettes in file
-		loadedPalettes = 0;
-		item = mxmlFindElement(xml, xml, "palette", NULL, NULL, MXML_DESCEND);
-		for (section = mxmlFindElement(item, xml, "game", NULL, NULL,
-				MXML_DESCEND); section; section = mxmlFindElement(section, xml,
-				"game", NULL, NULL, MXML_NO_DESCEND))
-		{
-			loadedPalettes++;
-		}
-		// Allocate enough memory for all palettes in file, plus all hardcoded palettes,
-		// plus one new palette
-		if (palettes)
-			free(palettes);
-
-		palettes = (gamePalette *)malloc(sizeof(gamePalette)*loadedPalettes);
-		// Load all palettes in file, hardcoded palettes are added later
-		int i = 0;
-		for (section = mxmlFindElement(item, xml, "game", NULL, NULL,
-				MXML_DESCEND); section; section = mxmlFindElement(section, xml,
-				"game", NULL, NULL, MXML_NO_DESCEND))
-		{
-			loadXMLPaletteFromSection(palettes[i]);
-			i++;
-		}
-		mxmlDelete(xml);
+	if (!xml) {
+		return false;
 	}
-	return result;
+
+	// count number of palettes in file
+	loadedPalettes = 0;
+	item = mxmlFindElement(xml, xml, "palette", NULL, NULL, MXML_DESCEND);
+	for (section = mxmlFindElement(item, xml, "game", NULL, NULL,
+			MXML_DESCEND); section; section = mxmlFindElement(section, xml,
+			"game", NULL, NULL, MXML_NO_DESCEND))
+	{
+		loadedPalettes++;
+	}
+	// Allocate enough memory for all palettes in file, plus all hardcoded palettes,
+	// plus one new palette
+	if (palettes)
+		free(palettes);
+
+	palettes = (gamePalette *)malloc(sizeof(gamePalette)*loadedPalettes);
+	// Load all palettes in file, hardcoded palettes are added later
+	int i = 0;
+	for (section = mxmlFindElement(item, xml, "game", NULL, NULL,
+			MXML_DESCEND); section; section = mxmlFindElement(section, xml,
+			"game", NULL, NULL, MXML_NO_DESCEND))
+	{
+		loadXMLPaletteFromSection(palettes[i]);
+		i++;
+	}
+	mxmlDelete(xml);
+	return true;
 }
 
 /****************************************************************************
