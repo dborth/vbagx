@@ -1101,6 +1101,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					// TRUE PATH: Stay in THUMB, exit block dynamically
 
+					// PIPELINE SYNC: Emit static prefetch sync for the chunk BEFORE the branch
+					EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
+					*emitPtr++ = PPC_LI(PPC_R5, 0); // BX flushes prefetch buffer BEFORE cost calculation!
+					
+					*emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, 3); // Internal cycles
+
 					// 1. Target PC to R4 (Must happen BEFORE dynamic math)
 					*emitPtr++ = PPC_RLWINM(PPC_R4, PPC_R12, 0, 0, 30); // R4 = TargetPC & ~1
 
@@ -1122,9 +1128,6 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);  // + 1S
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);  // + 1S (Pipeline filled)
 
-					// PIPELINE SYNC: Emit static prefetch sync for the chunk, plus 3 internal cycles
-					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + 3, chunkStartPC);
-					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 					*emitPtr++ = PPC_OR(PPC_R29, PPC_R4, PPC_R4); // Sync GBA PC (R29) with target
 
 					// Do NOT call linkerStubAddress. Return to C++ host instead.
@@ -1618,8 +1621,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, 1); // leading register
 
 					if (numRegs > 1) {
-						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
-						*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq32) >> 16);
+						*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq32) & 0xFFFF);
 						*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait (raw, single-register value)
 
 						// R3 needs the *total* wait-extra for all (numRegs-1) trailing registers;
@@ -1704,8 +1707,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Synchronize outResult metadata before returning to C++ host
 						EmitResultMetadata(emitPtr, instrCount + 1, 0);
 
-						// Dynamically calculate the ARM7 pipeline flush (1N + 1S) using the Target PC.
-						// The Target PC is safely staged in PPC_R4.
+						// PIPELINE SYNC: Sync the chunk FIRST (Base memory loop cost is numRegs + 3)
+						EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + numRegs + 3, chunkStartPC);
+						*emitPtr++ = PPC_LI(PPC_R5, 0); // POP PC flushes buffer BEFORE fetch costs!
 
 						// 1. Extract Target Bank into R8: R8 = (R4 >> 24) & 15
 						*emitPtr++ = PPC_RLWINM(PPC_R8, PPC_R4, 24, 28, 31);
@@ -1721,13 +1725,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R9, PPC_R8); // R11 = W_Starget
 
 						// 4. Add dynamic waitstates to cycle accumulator
-						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R10);
-						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-
-						// 5. Emit prefetch sync using the static base penalty (numRegs + 4)
-						u32 staticBasePenalty = numRegs + 4;
-						EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + staticBasePenalty, chunkStartPC);
-						*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
+						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R10); // + 1N
+						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11); // + 1S
 
 						// Do NOT call linkerStubAddress. Return to C++ host instead.
 						s32 returnOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
@@ -1834,8 +1833,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, 1); // leading register
 
 				if (numRegs > 1) {
-					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
-					*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq32) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq32) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait (raw, single-register value)
 
 					// R3 needs the *total* wait-extra for all (numRegs-1) trailing registers;

@@ -1107,8 +1107,8 @@ static INSN_REGPARM void thumbC8(u32 opcode) {
     armNextPC = reg[15].I; \
     reg[15].I += 2; \
     THUMB_PREFETCH; \
-    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2; \
     busPrefetchCount = 0; \
+    clockTicks += codeTicksAccessSeq16(armNextPC) + codeTicksAccess16(armNextPC) + 2; \
   }
 
 // BEQ offset
@@ -1187,8 +1187,8 @@ static INSN_REGPARM void thumbE0(u32 opcode) {
 	armNextPC = reg[15].I;
 	reg[15].I += 2;
 	THUMB_PREFETCH;
-	clockTicks = codeTicksAccessSeq16(armNextPC) * 2 + codeTicksAccess16(armNextPC) + 3;
 	busPrefetchCount = 0;
+	clockTicks = codeTicksAccessSeq16(armNextPC) * 2 + codeTicksAccess16(armNextPC) + 3;
 }
 
 // BLL #offset (forward)
@@ -1214,8 +1214,8 @@ static INSN_REGPARM void thumbF8(u32 opcode) {
 	reg[15].I += 2;
 	reg[14].I = temp | 1;
 	THUMB_PREFETCH;
-	clockTicks = codeTicksAccessSeq16(armNextPC) * 2 + codeTicksAccess16(armNextPC) + 3;
 	busPrefetchCount = 0;
+	clockTicks = codeTicksAccessSeq16(armNextPC) * 2 + codeTicksAccess16(armNextPC) + 3;
 }
 
 // Instruction table //////////////////////////////////////////////////////
