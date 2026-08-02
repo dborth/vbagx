@@ -8,19 +8,15 @@
  * GameBoy Advance Virtual Memory Paging
  ***************************************************************************/
 
-#ifndef __VBAVMHDR__
-#define __VBAVMHDR__
-
-int VMCPULoadROM();
-void VMClose();
+#ifndef _VMMEM_H_
+#define _VMMEM_H_
 
 #ifdef USE_VM
+int VMGBAROMLoad();
+void VMClose();
 u32 VMRead32( u32 address );
 u16 VMRead16( u32 address );
 u8 VMRead8( u32 address );
 #endif
 
-extern int GBAROMSize;
-
 #endif
-

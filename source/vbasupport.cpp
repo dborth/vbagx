@@ -90,6 +90,7 @@ static u64 lastRenderFrameTime = 0;
 
 static u64 start;
 int cartridgeType = CARTRIDGE_NONE;
+int GBAROMSize = 0;
 u32 RomIdCode;
 char RomTitle[17];
 
@@ -1294,6 +1295,130 @@ bool utilIsZipFile(const char* file)
 	return false;
 }
 
+static void GBAROMCleanup()
+{
+	if(vram != NULL)
+	{
+		free(vram);
+		vram = NULL;
+	}
+
+	if(paletteRAM != NULL)
+	{
+		free(paletteRAM);
+		paletteRAM = NULL;
+	}
+
+	if(internalRAM != NULL)
+	{
+		free(internalRAM);
+		internalRAM = NULL;
+	}
+
+	if(workRAM != NULL)
+	{
+		free(workRAM);
+		workRAM = NULL;
+	}
+
+	if(bios != NULL)
+	{
+		free(bios);
+		bios = NULL;
+	}
+
+	if(pix != NULL)
+	{
+		free(pix);
+		pix = NULL;
+	}
+
+	if(oam != NULL)
+	{
+		free(oam);
+		oam = NULL;
+	}
+
+	if(ioMem != NULL)
+	{
+		free(ioMem);
+		ioMem = NULL;
+	}
+	
+	#ifdef USE_VM
+	VMClose();
+	#endif
+}
+
+bool GBAROMAlloc()
+{
+	workRAM = (u8 *)memalign(32, 0x40000);
+	bios = (u8 *)memalign(32,0x4000);
+	internalRAM = (u8 *)memalign(32,0x8000);
+	paletteRAM = (u8 *)memalign(32,0x400);
+	vram = (u8 *)memalign(32, 0x20000);
+	oam = (u8 *)memalign(32, 0x400);
+	pix = (u8 *)memalign(32, 4 * 241 * 162);
+	ioMem = (u8 *)memalign(32, 0x400);
+
+	if(workRAM == NULL || bios == NULL || internalRAM == NULL ||
+		paletteRAM == NULL || vram == NULL || oam == NULL ||
+		pix == NULL || ioMem == NULL)
+	{
+		ErrorPrompt("Out of memory!");
+		GBAROMCleanup();
+		return false;
+	}
+	return true;
+}
+
+static int GBAROMLoad()
+{
+	GBAROMCleanup();
+	GBAROMSize = 0;
+
+#ifndef USE_VM
+	if(!inSz)
+	{
+		char filepath[1024];
+
+		if(!MakeFilePath(filepath, FILE_ROM))
+			return 0;
+
+		GBAROMSize = LoadFile ((char *)rom, filepath, 0, (1024*1024*32), NOTSILENT);
+	}
+	else
+	{
+		GBAROMSize = LoadSzFile(szpath, (unsigned char *)rom);
+	}
+
+	if(gb_first_rom(rom, GBAROMSize)) {
+		int r = YesNoPrompt("This file contains uncompressed Game Boy (Color) ROMs. Do you want to run these?", true);
+		if (r) {
+			return 2;
+		}
+	}
+	if(!GBAROMAlloc()) {
+		return 0;
+	}
+#else
+	GBAROMSize = VMGBAROMLoad();
+#endif
+
+	if(GBAROMSize)
+	{
+		flashInit();
+		eepromInit();
+		CPUUpdateRenderBuffers( true );
+		return 1;
+	}
+	else
+	{
+		GBAROMCleanup();
+		return 0;
+	}
+}
+
 bool LoadVBAROM()
 {
 	cartridgeType = CARTRIDGE_NONE;
@@ -1343,7 +1468,7 @@ bool LoadVBAROM()
 	srcWidth = 0;
 	srcHeight = 0;
 
-	VMClose(); // cleanup GBA memory
+	GBAROMCleanup(); // cleanup GBA memory
 	gbCleanUp(); // cleanup GB memory
 	
 	if (InitialBorder != NULL) {
@@ -1357,7 +1482,7 @@ bool LoadVBAROM()
 		emulator = GBASystem;
 		srcWidth = 240;
 		srcHeight = 160;
-		loaded = VMCPULoadROM();
+		loaded = GBAROMLoad();
 		cpuSaveType = 0;
 		if (loaded == 2) {
 			loaded = 0;

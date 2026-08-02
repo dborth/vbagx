@@ -25,11 +25,13 @@ extern int SunBars;
 extern u32 RomIdCode;
 extern bool TiltSideways;
 extern char RomTitle[];
+extern int GBAROMSize;
 
 float systemGetRenderFPS();
 float systemGetCoreFPS();
 void systemResetPacer();
 bool LoadVBAROM();
+bool GBAROMAlloc();
 void InitialisePalette();
 bool IsGameboyGame();
 bool IsGBAGame();

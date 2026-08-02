@@ -16,6 +16,8 @@
 #include <sys/dir.h>
 
 #include "vbagx.h"
+#include "vmmem.h"
+#include "vbasupport.h"
 #include "fileop.h"
 #include "menu.h"
 #include "filebrowser.h"
@@ -31,8 +33,6 @@
 #define MEM_VM  0x01
 #define MEM_UN  0x80
 
-int GBAROMSize = 0;
-
 #ifdef USE_VM
 
 /** Setup VM to use small 16kb windows **/
@@ -44,157 +44,17 @@ int GBAROMSize = 0;
 #define MAXVMMASK ( ( MAXROM >> VMSHIFTBITS ) - 1 )
 
 typedef struct
-  {
-    char *pageptr;
-    int pagetype;
-    int pageno;
-  }
+{
+	char *pageptr;
+	int pagetype;
+	int pageno;
+}
 VMPAGE;
 
 static VMPAGE vmpage[MAXVMPAGE];
 static int vmpageno = 0;
 static FILE* romfile = NULL;
 static char *rombase = NULL;
-#endif
-
-extern void CPUUpdateRenderBuffers(bool force);
-
-/****************************************************************************
-* VMClose
-****************************************************************************/
-void VMClose()
-{
-	if(vram != NULL)
-	{
-		free(vram);
-		vram = NULL;
-	}
-
-	if(paletteRAM != NULL)
-	{
-		free(paletteRAM);
-		paletteRAM = NULL;
-	}
-
-	if(internalRAM != NULL)
-	{
-		free(internalRAM);
-		internalRAM = NULL;
-	}
-
-	if(workRAM != NULL)
-	{
-		free(workRAM);
-		workRAM = NULL;
-	}
-
-	if(bios != NULL)
-	{
-		free(bios);
-		bios = NULL;
-	}
-
-	if(pix != NULL)
-	{
-		free(pix);
-		pix = NULL;
-	}
-
-	if(oam != NULL)
-	{
-		free(oam);
-		oam = NULL;
-	}
-
-	if(ioMem != NULL)
-	{
-		free(ioMem);
-		ioMem = NULL;
-	}
-
-	#ifdef USE_VM
-	if (rombase != NULL)
-	{
-		free(rombase);
-		rombase = NULL;
-	}
-	#endif
-}
-
-/****************************************************************************
-* VMAllocGBA
-*
-* Allocate the memory required for GBA.
-****************************************************************************/
-static void VMAllocGBA( void )
-{
-	workRAM = (u8 *)memalign(32, 0x40000);
-	bios = (u8 *)memalign(32,0x4000);
-	internalRAM = (u8 *)memalign(32,0x8000);
-	paletteRAM = (u8 *)memalign(32,0x400);
-	vram = (u8 *)memalign(32, 0x20000);
-	oam = (u8 *)memalign(32, 0x400);
-	pix = (u8 *)memalign(32, 4 * 241 * 162);
-	ioMem = (u8 *)memalign(32, 0x400);
-
-	if(workRAM == NULL || bios == NULL || internalRAM == NULL ||
-		paletteRAM == NULL || vram == NULL || oam == NULL ||
-		pix == NULL || ioMem == NULL)
-	{
-		ErrorPrompt("Out of memory!");
-		VMClose();
-	}
-}
-
-#ifndef USE_VM
-/****************************************************************************
-* VMCPULoadROM
-*
-* MEM2 version of GBA CPULoadROM
-****************************************************************************/
-
-int VMCPULoadROM()
-{
-	VMClose();
-	GBAROMSize = 0;
-
-	if(!inSz)
-	{
-		char filepath[1024];
-
-		if(!MakeFilePath(filepath, FILE_ROM))
-			return 0;
-
-		GBAROMSize = LoadFile ((char *)rom, filepath, 0, (1024*1024*32), NOTSILENT);
-	}
-	else
-	{
-		GBAROMSize = LoadSzFile(szpath, (unsigned char *)rom);
-	}
-
-	if(gb_first_rom(rom, GBAROMSize)) {
-		int r = YesNoPrompt("This file contains uncompressed Game Boy (Color) ROMs. Do you want to run these?", true);
-		if (r) {
-			return 2;
-		}
-	}
-
-	VMAllocGBA();
-
-	if(GBAROMSize)
-	{
-		flashInit();
-		eepromInit();
-		CPUUpdateRenderBuffers( true );
-		return 1;
-	}
-	else
-	{
-		VMClose();
-		return 0;
-	}
-}
-#else
 
 /****************************************************************************
 * VMFindFree
@@ -280,7 +140,7 @@ static void VMInit( void )
 * VM version of GBA CPULoadROM
 ****************************************************************************/
 
-int VMCPULoadROM()
+int VMGBAROMLoad()
 {
 	int res;
 	char filepath[MAXPATHLEN];
@@ -306,10 +166,11 @@ int VMCPULoadROM()
 		return 0;
 	}
 
-	/** Fix VM **/
 	VMClose();
 	VMInit();
-	VMAllocGBA();
+	if(!GBAROMAlloc()) {
+		return 0;
+	}
 
 	GBAROMSize = 0;
 
@@ -329,11 +190,7 @@ int VMCPULoadROM()
 	vmpage[0].pageno = 0;
 	vmpage[0].pagetype = MEM_VM;
 
-	flashInit();
-	eepromInit();
-	CPUUpdateRenderBuffers( true );
-
-	return 1;
+	return GBAROMSize;
 }
 
 /****************************************************************************
@@ -445,6 +302,15 @@ u8 VMRead8( u32 address )
 		VMClose();
 		ExitApp();
 		return 0;
+	}
+}
+
+void VMClose()
+{
+	if (rombase != NULL)
+	{
+		free(rombase);
+		rombase = NULL;
 	}
 }
 
