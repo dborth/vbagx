@@ -8,7 +8,7 @@
  * The PowerPC instruction-encoding macro library and the JIT's host-register
  * naming contract, shared between JITCompiler.cpp (the emitter), JITCache.cpp
  * (the linker stub), and JITTrampoline.S (the ABI bridge). Nothing in here
- * executes at runtime — every macro just folds its operands into a raw
+ * executes at runtime - every macro just folds its operands into a raw
  * 32-bit PowerPC instruction word to be written into the arena.
  *
  * Two things worth understanding before touching any emitter code:
@@ -18,15 +18,15 @@
  *     register pool R15-R28, and which are fixed-role: R14 gbaRegs pointer,
  *     R29 GBA PC, R30 read-page table, R6 packed condition flags). This
  *     must stay in sync with JITTrampoline.S and JITCompiler.cpp's own
- *     allocator — a mismatch here is a silent correctness bug, not a
+ *     allocator - a mismatch here is a silent correctness bug, not a
  *     compile error.
- *   - The "PACKED FLAGS" section documents PPC_REG_FLAGS (R6): all four
+ *   - The PACKED FLAGS section documents PPC_REG_FLAGS (R6): all four
  *     GBA condition flags (N/Z/C/V) live packed into the top nibble of one
  *     register rather than one dedicated register apiece, freeing R7-R9
  *     back into general scratch. PPC_MERGE_FLAG_BIT/PPC_EXTRACT_FLAG_BIT
- *     are the only two macros that need to know the packed bit layout —
+ *     are the only two macros that need to know the packed bit layout -
  *     every call site elsewhere just names a flag and reuses the same
- *     rotate amount it would have used for a classic "extract to bit 31"
+ *     rotate amount it would have used for a classic extract to bit 31
  *     single-bit rlwinm, so the bit-position arithmetic lives in exactly
  *     one place.
  *
@@ -55,13 +55,13 @@
 // R13 : Host Small Data Area (SDA) pointer (System ABI reserved, do not touch).
 //
 // VOLATILE REGISTERS (Host ABI - Clobbered across C++ calls)
-// R3  : `execute` arg in / Block epilogue return value (cycles out).
-// R4  : `gbaRegs` arg in / Block epilogue return value (next PC out) / instruction-local scratch.
-// R5  : `flags` arg in / Live `busPrefetchCount` accumulator.
+// R3  : execute arg in / Block epilogue return value (cycles out).
+// R4  : gbaRegs arg in / Block epilogue return value (next PC out) / instruction-local scratch.
+// R5  : flags arg in / Live busPrefetchCount accumulator.
 // R6  : PPC_REG_FLAGS -- all four GBA condition flags (N/Z/C/V) packed into one register
 //       (lazily loaded, whole-register dirty-tracked). Bits 0-3 in IBM/rlwinm numbering
 //       (i.e. the top nibble, conventional bits 31-28) hold N,Z,C,V respectively; the
-//       low 28 bits are unused don't-care space and are never read. See "PACKED FLAGS"
+//       low 28 bits are unused don't-care space and are never read. See PACKED FLAGS
 //       below for the insertion/extraction convention shared by the emitter.
 // R7  : General scratch
 // R8  : General scratch
@@ -114,7 +114,7 @@
 // back into the general scratch pool at the cost of a couple of extra rlwimi/rlwinm
 // ops around each flag access (never around the surrounding ALU math itself).
 //
-// Layout (rlwinm/rlwimi "IBM" bit numbering, bit 0 = MSB): bits 0,1,2,3 hold N,Z,C,V
+// Layout (rlwinm/rlwimi IBM bit numbering, bit 0 = MSB): bits 0,1,2,3 hold N,Z,C,V
 // respectively (i.e. conventional bits 31,30,29,28 -- the top nibble). The remaining
 // 28 low bits are unused scratch space; nothing ever reads them, so they're left as
 // whatever garbage rotate/insert leaves behind.
@@ -124,7 +124,7 @@
 // output of the usual rlwinm/cntlzw/mfxer extraction idioms used throughout the
 // emitter. The three macros below are the ONLY place that ever needs to know the
 // packed bit layout; every call site just names the flag and reuses the exact shift
-// amount it would have used for a classic "extract to bit 31" single-bit rlwinm.
+// amount it would have used for a classic extract to bit 31 single-bit rlwinm.
 #define FLAG_BIT_N 0
 #define FLAG_BIT_Z 1
 #define FLAG_BIT_C 2
@@ -133,14 +133,14 @@
 #define PPC_REG_FLAGS PPC_R6
 
 // Merge a flag bit directly into PPC_REG_FLAGS, in one instruction, without disturbing
-// the other three packed flags. `srcReg`/`sh` are exactly the register and rotate amount
-// you'd pass to a classic single-bit extraction `PPC_RLWINM(dst, srcReg, sh, 31, 31)` --
-// this redirects that same extraction to land in `targetBit` of the packed register
+// the other three packed flags. srcReg/sh are exactly the register and rotate amount
+// you'd pass to a classic single-bit extraction PPC_RLWINM(dst, srcReg, sh, 31, 31) --
+// this redirects that same extraction to land in targetBit of the packed register
 // instead of bit 31 of a scratch/dedicated register.
 #define PPC_MERGE_FLAG_BIT(targetBit, srcReg, sh) \
 	PPC_RLWIMI(PPC_REG_FLAGS, (srcReg), (((sh) + 31 - (targetBit)) & 31), (targetBit), (targetBit))
 
-// Extract flag `targetBit` out of PPC_REG_FLAGS into `dstReg` as a plain 0/1 integer
+// Extract flag targetBit out of PPC_REG_FLAGS into dstReg as a plain 0/1 integer
 // (bit 31 / LSB of dstReg), ready for CMPWI-against-zero or arithmetic use (e.g. the
 // ADC/SBC carry-in trick).
 #define PPC_EXTRACT_FLAG_BIT(dstReg, targetBit) \
