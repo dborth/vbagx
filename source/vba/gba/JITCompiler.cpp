@@ -1734,20 +1734,23 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 						endBlock = true;
 					} else if (isPop && !Rbit) {
-						// POP {Rlist}: thumbBC ends with `clockTicks += 2 + codeTicksAccess16(...)`.
-						// Same structure as thumbB4/B5's PUSH case below (which already keeps its
-						// "+ numRegs") -- the only real difference is PUSH's flat "+1" vs POP's "+2".
-						chunkStaticCycles += numRegs + 2 + STATIC_CODE_TICKS_SEQ16(currentPC);
+					    // POP {Rlist}: thumbBC ends with `clockTicks += 2 + codeTicksAccess16(...)`.
+					    chunkStaticCycles += numRegs + 2 + STATIC_CODE_TICKS_SEQ16(currentPC);
 					} else if (!(isPop && Rbit)) {
-						// PUSH {Rlist} / PUSH {Rlist, LR}:
-						// GBATEK: (n-1)S + 2N.
-						// In ARM7TDMI, PUSH instruction fetch is fully overlapped with the final stack store
-						chunkStaticCycles += numRegs + 1;
+					    // PUSH {Rlist} / PUSH {Rlist, LR}: thumbB4/B5 end with
+					    // `clockTicks += 1 + codeTicksAccess16(armNextPC)`. The flat "+1" was already
+					    // here, but codeTicksAccess16()'s own cost -- the next-opcode fetch, forced
+					    // non-sequential by PUSH's internal (I) cycle -- was missing outright. Bake
+					    // the S8 baseline in here, same as POP, and let EmitDynamicNCyclePenalty
+					    // below upgrade it to N8 at runtime when R5 says it's actually a cold miss.
+					    chunkStaticCycles += numRegs + 1 + STATIC_CODE_TICKS_SEQ16(currentPC);
 					}
 
-					// Dynamic N-Cycle Penalty Check:
-					// ONLY apply to POP operations. PUSH does not stall on trailing ROM fetches.
-					if (isPop && !Rbit) {
+					// Dynamic N-Cycle Penalty Check: upgrades the S8 baseline above to N8 when the
+					// live prefetch state (R5) indicates a miss, mirroring codeTicksAccess16()
+					// exactly. Applies to POP {Rlist} AND PUSH (both variants) -- POP {Rlist, PC}
+					// already emitted its own dynamic exit earlier and never reaches this point.
+					if (!(isPop && Rbit)) {
 					    EmitDynamicNCyclePenalty(emitPtr, currentPC + 2);
 					}
 					// (POP {Rlist, PC} already emitted its own exit above and always ends
