@@ -104,6 +104,8 @@ static vm_page* VM_Base;
 static vm_page* MEM_Base = NULL;
 
 static mutex_t vm_mutex = LWP_MUTEX_NULL;
+static u32 VMSize = 0;
+static u32 MEMSize = 0;
 static bool vm_initialized = 0;
 
 static __inline__ void tlbie(void* p)
@@ -236,46 +238,11 @@ extern void vm_dsi_handler_stub(frame_context*);
 }
 #endif
 
-void* VM_Init(u32 VMSize, u32 MEMSize)
-{
-	u32 i;
-	u16 index, v_index;
+void VM_Clear(void) {
+	if (!vm_initialized) return;
 
-	if (vm_initialized)
-		return VM_Base;
+	LWP_MutexLock(vm_mutex);
 
-	// parameter checking
-	if (VMSize>MAX_VM_SIZE || MEMSize<MIN_MEM_SIZE || MEMSize>MAX_MEM_SIZE)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
-
-	VMSize = (VMSize+PAGE_SIZE-1)&PAGE_MASK;
-	MEMSize = (MEMSize+PAGE_SIZE-1)&PAGE_MASK;
-	VM_Base = (vm_page*)(0x7F000000);
-	pmap_max = MEMSize / PAGE_SIZE + 16;
-
-	if (VMSize <= MEMSize)
-	{
-		errno = EINVAL;
-		return NULL;
-	}
-
-	if (LWP_MutexInit(&vm_mutex, 0) != 0)
-	{
-		errno = ENOLCK;
-		return NULL;
-	}
-
-	MEMSize += PTE_SIZE;
-	MEM_Base = (vm_page*)memalign(PAGE_SIZE, MEMSize);
-
-	if (MEM_Base==NULL)
-	{
-		errno = ENOMEM;
-		return NULL;
-	}
 	memset(MEM_Base, 0, MEMSize);
 	AR_Clear(AR_ARAMINTUSER);
 
@@ -283,7 +250,10 @@ void* VM_Init(u32 VMSize, u32 MEMSize)
 	DCZeroRange(MEM_Base, MEMSize);
 	HTABORG = (PTE*)(((u32)MEM_Base+0xFFFF)&~0xFFFF);
 
-	// initial commit: map pmap_max pages to fill PTEs with valid RPNs
+	// map pmap_max pages to fill PTEs with valid RPNs
+	u32 i;
+	u16 index, v_index;
+
 	for (index=0,v_index=0; index<pmap_max; ++index,++v_index)
 	{
 		if ((PTE*)(MEM_Base+index) == HTABORG)
@@ -313,6 +283,44 @@ void* VM_Init(u32 VMSize, u32 MEMSize)
 	}
 
 	pmap_head = 0;
+	LWP_MutexUnlock(vm_mutex);
+}
+
+void* VM_Init(u32 reqVMSize, u32 reqMEMSize)
+{
+	if (vm_initialized)
+		return VM_Base;
+
+	// parameter checking
+	if (reqVMSize>MAX_VM_SIZE || reqMEMSize<MIN_MEM_SIZE || reqMEMSize>MAX_MEM_SIZE || reqVMSize <= reqMEMSize)
+	{
+		errno = EINVAL;
+		return NULL;
+	}
+
+	VMSize = (reqVMSize+PAGE_SIZE-1)&PAGE_MASK;
+	MEMSize = (reqMEMSize+PAGE_SIZE-1)&PAGE_MASK;
+	VM_Base = (vm_page*)(0x7F000000);
+	pmap_max = MEMSize / PAGE_SIZE + 16;
+
+	if (LWP_MutexInit(&vm_mutex, 0) != 0)
+	{
+		errno = ENOLCK;
+		return NULL;
+	}
+
+	MEMSize += PTE_SIZE;
+	MEM_Base = (vm_page*)memalign(PAGE_SIZE, MEMSize);
+
+	if (MEM_Base==NULL)
+	{
+		errno = ENOMEM;
+		return NULL;
+	}
+	
+	vm_initialized = 1;
+
+	VM_Clear();
 
 	// set SDR1
 	mtspr(25, MEM_VIRTUAL_TO_PHYSICAL(HTABORG)|HTABMASK);
@@ -322,8 +330,6 @@ void* VM_Init(u32 VMSize, u32 MEMSize)
 	__exception_sethandler(EX_DSI, vm_dsi_handler_stub);
 
 	atexit(VM_Deinit);
-
-	vm_initialized = 1;
 
 	return VM_Base;
 }

@@ -28,6 +28,7 @@
 #include "utils/FreeTypeGX.h"
 
 #ifdef HW_DOL
+#include "utils/vmpager.h"
 #include "utils/vm.h"
 #endif
 
@@ -159,6 +160,7 @@ void SystemInit() {
 	#else
 	ipl_set_config(6); // disable Qoob modchip
 	VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024);
+    VMPager_Init();
 	#endif
 
 	USBGeckoOutput();

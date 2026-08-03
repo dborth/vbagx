@@ -1,0 +1,30 @@
+/****************************************************************************
+ * Visual Boy Advance GX
+ *
+ * Daryl Borth September 2008
+ *
+ * vmpager.h
+ *
+ * GameBoy Advance Virtual Memory Paging
+ ***************************************************************************/
+
+#ifndef _VMPAGER_H_
+#define _VMPAGER_H_
+
+#ifdef HW_DOL
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void VMPager_Init();
+void VMPager_Shutdown();
+int VMPager_LoadROM(const char * filepath);
+void VMPager_CloseFile();
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+
+#endif

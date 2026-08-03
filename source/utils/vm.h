@@ -30,6 +30,7 @@ extern "C" {
 
 extern void* VM_Init(u32 VMSize, u32 MEMSize);
 extern void* VM_GetBase(void);
+extern void VM_Clear(void);
 extern void VM_Deinit(void);
 
 #ifdef __cplusplus
