@@ -16,6 +16,7 @@
 #include <wiiuse/wpad.h>
 #endif
 
+#include "vbagx.h"
 #include "system.h"
 #include "video.h"
 #include "audio.h"
@@ -25,6 +26,10 @@
 #include "font_ttf.h"
 #include "utils/wiidrc.h"
 #include "utils/FreeTypeGX.h"
+
+#ifdef HW_DOL
+#include "utils/vm.h"
+#endif
 
 extern "C" {
 extern char* strcasestr(const char *, const char *);
@@ -153,6 +158,7 @@ void SystemInit() {
 	}
 	#else
 	ipl_set_config(6); // disable Qoob modchip
+	VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024);
 	#endif
 
 	USBGeckoOutput();

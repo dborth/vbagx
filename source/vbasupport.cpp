@@ -1345,7 +1345,7 @@ static void GBAROMCleanup()
 		ioMem = NULL;
 	}
 	
-	#ifdef USE_VM
+	#ifdef HW_DOL
 	VMClose();
 	#endif
 }
@@ -1377,7 +1377,9 @@ static int GBAROMLoad()
 	GBAROMCleanup();
 	GBAROMSize = 0;
 
-#ifndef USE_VM
+#ifdef HW_DOL
+	GBAROMSize = VMGBAROMLoad();
+#else
 	if(!inSz)
 	{
 		char filepath[1024];
@@ -1385,7 +1387,7 @@ static int GBAROMLoad()
 		if(!MakeFilePath(filepath, FILE_ROM))
 			return 0;
 
-		GBAROMSize = LoadFile ((char *)rom, filepath, 0, (1024*1024*32), NOTSILENT);
+		GBAROMSize = LoadFile ((char *)rom, filepath, 0, (MAX_GBA_ROM_SIZE), NOTSILENT);
 	}
 	else
 	{
@@ -1401,8 +1403,6 @@ static int GBAROMLoad()
 	if(!GBAROMAlloc()) {
 		return 0;
 	}
-#else
-	GBAROMSize = VMGBAROMLoad();
 #endif
 
 	if(GBAROMSize)

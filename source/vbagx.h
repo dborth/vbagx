@@ -24,6 +24,7 @@
 
 #define NOTSILENT 0
 #define SILENT 1
+#define MAX_GBA_ROM_SIZE (1024*1024*32)
 
 const char pathPrefix[10][11] =
 { "", "sd:/", "usb:/", "dvd:/", "smb:/", "carda:/", "cardb:/", "port2:/", "gcloader:/" };

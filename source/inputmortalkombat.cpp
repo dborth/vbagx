@@ -210,21 +210,15 @@ u32 GetMKInput(unsigned short pad, int rumbleTime=4) {
 // Allows writes to the ROM memory for hacking
 void gbaWriteMemory(u32 addr, u32 value) {
 	if (addr<0x8000000 || addr>=0xD000000) CPUWriteMemory(addr, value);
-#ifndef USE_VM
 	else WRITE32LE(((u16 *)&rom[addr&0x1FFFFFC]), value);
-#endif
 }
 void gbaWriteHalfWord(u32 addr, u16 value) {
 	if (addr<0x8000000 || addr>=0xD000000) CPUWriteHalfWord(addr, value);
-#ifndef USE_VM
 	else WRITE16LE(((u16 *)&rom[addr&0x1FFFFFC]), value);
-#endif
 }
 void gbaWriteByte(u32 addr, u8 value) {
 	if (addr<0x8000000 || addr>=0xD000000) CPUWriteByte(addr, value);
-#ifndef USE_VM
 	else rom[addr & 0x1FFFFFF] = value;
-#endif
 }
 void gbWriteByte(u16 addr, u8 value) {
 	if (addr>=0x8000) gbWriteMemory(addr, value);
@@ -809,7 +803,6 @@ bool MKAIsStanding() {
 	}
 }
 void MKARename(u8 n, const char *name) {
-#ifndef USE_VM
 	if (n>=MKA_SubZero2) n--; // second sub zero is not in names list!
 	u32 addr = 0x80285CC+n*16;
 	char *s = (char *)&rom[addr & 0x1FFFFFF];
@@ -821,7 +814,6 @@ void MKARename(u8 n, const char *name) {
 	for (i=0; i<L; i++) strcat(s, " ");
 	for (int i=strlen(s)+1; i<12; i++) s[i]=' ';
 	s[12]='\0';
-#endif
 }
 void MKARenameEveryoneProperlyExcept(u8 n) {
 	const char *names[MKA_ShaoKhan+1] = {

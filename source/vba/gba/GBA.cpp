@@ -2176,13 +2176,10 @@ static inline void GBA_InitMemoryPages() {
 
     // 0x09 - 0x0C: ROM (Wait States 1 & 2)
     // 0x08 is intentionally left NULL to force RTC checks via slow-path.
-    // Only populate physical ROM pointers if GC Virtual Memory is disabled
-#ifndef USE_VM
     for (int i = 0x09; i <= 0x0C; i++) {
         gbaReadTable.readPages[i] = rom;
         gbaReadTable.readMasks[i] = 0x1FFFFFF;
     }
-#endif
 }
 
 void CPUInit(const char *biosFileName, bool useBiosFile)

@@ -63,9 +63,6 @@ u8 inline CPUReadByteQuick( u32 addr )
 		case 0x09:
 		case 0x0A:
 		case 0x0C:
-#ifdef USE_VM
-			return VMRead8( addr & 0x1FFFFFF );
-#endif
 		default:
 			return CPUReadByteQuickDef(addr);
 	}
@@ -81,9 +78,6 @@ u16 inline CPUReadHalfWordQuick( u32 addr )
 		case 0x09:
 		case 0x0A:
 		case 0x0C:
-#ifdef USE_VM
-			return VMRead16( addr & 0x1FFFFFF );
-#endif
 		default:
 			return CPUReadHalfWordQuickDef(addr);
 	}
@@ -99,9 +93,6 @@ u32 inline CPUReadMemoryQuick( u32 addr )
 		case 0x09:
 		case 0x0A:
 		case 0x0C:
-#ifdef USE_VM
-			return VMRead32( addr & 0x1FFFFFF );
-#endif
 		default:
 			return CPUReadMemoryQuickDef(addr);
 	}
@@ -113,15 +104,9 @@ u32 inline CPUReadMemoryQuick( u32 addr )
  * End of VM override
  ****************************************************************************/
 
-#ifdef USE_VM
-#define SAFE_QUICK_READ32(addr) CPUReadMemoryQuick(addr)
-#define SAFE_QUICK_READ16(addr) CPUReadHalfWordQuick(addr)
-#define SAFE_QUICK_READ8(addr) CPUReadByteQuick(addr)
-#else
 #define SAFE_QUICK_READ32(addr) CPUReadMemoryQuickDef(addr)
 #define SAFE_QUICK_READ16(addr) CPUReadHalfWordQuickDef(addr)
 #define SAFE_QUICK_READ8(addr) CPUReadByteQuickDef(addr)
-#endif
 
 #define FALLBACK_UNREADABLE_32() \
 	do { \
@@ -216,11 +201,7 @@ static inline u32 CPUReadMemory(u32 address)
 		case 10:
 		case 11:
 		case 12:
-			#ifdef USE_VM // Nintendo GC Virtual Memory
-			value = VMRead32( alignedAddress & 0x1FFFFFC );
-			#else
 			value = READ32LE(((u32 *)&rom[alignedAddress & 0x1FFFFFC]));
-			#endif
 			break;
 		case 13:
 			value = eepromRead(alignedAddress);
@@ -356,11 +337,7 @@ static inline u32 CPUReadHalfWord(u32 address)
 		case 10:
 		case 11:
 		case 12:
-			#ifdef USE_VM // Nintendo GC Virtual Memory
-			value = VMRead16( alignedAddress & 0x1FFFFFE );
-			#else
 			value = READ16LE(((u16 *)&rom[alignedAddress & 0x1FFFFFE]));
-			#endif
 			break;
 		case 13:
 			value = eepromRead(alignedAddress);
@@ -443,11 +420,7 @@ static inline u8 CPUReadByte(u32 address)
 		case 10:
 		case 11:
 		case 12:
-			#ifdef USE_VM // Nintendo GC Virtual Memory
-			return VMRead8( address & 0x1FFFFFF );
-			#else
 			return rom[address & 0x1FFFFFF];
-			#endif
 		case 13:
 			return eepromRead(address);
 		case 14:

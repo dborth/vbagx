@@ -11,12 +11,9 @@
 #ifndef _VMMEM_H_
 #define _VMMEM_H_
 
-#ifdef USE_VM
+#ifdef HW_DOL
 int VMGBAROMLoad();
 void VMClose();
-u32 VMRead32( u32 address );
-u16 VMRead16( u32 address );
-u8 VMRead8( u32 address );
 #endif
 
 #endif

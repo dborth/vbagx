@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 #ifdef HW_RVL
 	savebuffer = (unsigned char *)mem2_malloc(SAVEBUFFERSIZE);
 	browserList = (BROWSERENTRY *)mem2_malloc(sizeof(BROWSERENTRY)*MAX_BROWSER_SIZE);
-	rom = (u8 *)mem2_malloc(1024*1024*32); // allocate 32 MB to GBA ROM
+	rom = (u8 *)mem2_malloc(MAX_GBA_ROM_SIZE); // allocate 32 MB to GBA ROM
 #else
 	savebuffer = (unsigned char *)malloc(SAVEBUFFERSIZE);
 	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY)*MAX_BROWSER_SIZE);
