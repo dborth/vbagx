@@ -222,9 +222,7 @@ preparePrefsData ()
 
 	createXMLSection("Emulation", "Emulation Settings");
 
-#ifdef HW_RVL
 	createXMLSetting("DynamicRecompilation", "Dynamic Recompilation (JIT)", BtoStr(GCSettings.DynamicRecompilation));
-#endif
 	createXMLSetting("OffsetMinutesUTC", "Offset from UTC (minutes)", toStr(GCSettings.OffsetMinutesUTC));
 	createXMLSetting("GBHardware", "Hardware (GB/GBC)", toStr(GCSettings.GBHardware));
 	createXMLSetting("SGBBorder", "Border (GB/GBC)", toStr(GCSettings.SGBBorder));
@@ -509,9 +507,7 @@ decodePrefsData ()
 	loadXMLSetting(&GCSettings.xshift, "xshift");
 	loadXMLSetting(&GCSettings.yshift, "yshift");
 	loadXMLSetting(&GCSettings.colorize, "colorize");
-#ifdef HW_RVL
 	loadXMLSetting(&GCSettings.DynamicRecompilation, "DynamicRecompilation");
-#endif
 	loadXMLSetting(&GCSettings.DisplayFrameRate, "DisplayFrameRate");
 	loadXMLSetting(&GCSettings.gbaFrameskip, "gbaFrameskip");
 	loadXMLSetting(&GCSettings.TurboModeEnabled, "TurboModeEnabled");
@@ -675,9 +671,7 @@ DefaultSettings ()
 	GCSettings.xshift = 0; // horizontal video shift
 	GCSettings.yshift = 0; // vertical video shift
 	GCSettings.colorize = false; // Colorize mono gameboy games
-#ifdef HW_RVL
 	GCSettings.DynamicRecompilation = true;
-#endif
 	GCSettings.DisplayFrameRate = FRAMERATE_OFF;
 	GCSettings.gbaFrameskip = true; // Turn auto-frameskip on for GBA games
 	GCSettings.TurboModeEnabled = true; // Enabled by default

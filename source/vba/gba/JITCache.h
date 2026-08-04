@@ -39,7 +39,11 @@
 #include "JITPPCEmitter.h"
 #include "Debug.h"
 
+#ifdef HW_RVL
 #define JIT_ARENA_SIZE					(1024 * 1024 * 8) // 8 MB
+#else
+#define JIT_ARENA_SIZE					(1024 * 1024 * 4) // 4 MB
+#endif
 #define HASH_TABLE_SIZE					65536
 #define SMC_MAP_SIZE                    65536 // 64K pages (1KB page granularity across 64MB)
 

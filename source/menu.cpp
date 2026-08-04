@@ -3379,10 +3379,6 @@ static int MenuSettingsEmulation()
 	sprintf(options.name[i++], "GB Screen Palette");
 	options.length = i;
 
-	#ifdef HW_DOL
-	options.name[0][0] = 0; // disable GBA Dynamic Recompilation on GameCube
-	#endif
-
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 	
