@@ -22,7 +22,6 @@
 
 #include "vbagx.h"
 #include "vbasupport.h"
-#include "vmmem.h"
 #include "filebrowser.h"
 #include "menu.h"
 #include "video.h"

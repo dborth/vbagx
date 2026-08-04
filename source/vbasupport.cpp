@@ -24,7 +24,6 @@
 #include "fileop.h"
 #include "filebrowser.h"
 #include "audio.h"
-#include "vmmem.h"
 #include "input.h"
 #include "gameinput.h"
 #include "video.h"
@@ -33,6 +32,7 @@
 #include "gamesettings.h"
 #include "preferences.h"
 #include "utils/pngu.h"
+#include "utils/vmpager.h"
 
 #include "vba/Util.h"
 #include "vba/common/Port.h"
@@ -1346,7 +1346,7 @@ static void GBAROMCleanup()
 	}
 	
 	#ifdef HW_DOL
-	VMClose();
+	VMPager_CloseFile();
 	#endif
 }
 
@@ -1377,17 +1377,29 @@ static int GBAROMLoad()
 	GBAROMCleanup();
 	GBAROMSize = 0;
 
-#ifdef HW_DOL
-	GBAROMSize = VMGBAROMLoad();
-#else
 	if(!inSz)
 	{
-		char filepath[1024];
+		char filepath[MAXPATHLEN];
 
 		if(!MakeFilePath(filepath, FILE_ROM))
 			return 0;
 
+		#ifdef HW_RVL
 		GBAROMSize = LoadFile ((char *)rom, filepath, 0, (MAX_GBA_ROM_SIZE), NOTSILENT);
+		#else
+		if(!utilIsGBAImage(filepath)) {
+			ErrorPrompt("Compressed GBA files are not supported!");
+			return 0;
+		}
+
+		ShowAction("Loading...");
+		GBAROMSize = VMPager_LoadROM(filepath);
+		CancelAction();
+
+		if(GBAROMSize == 0) {
+			ErrorPrompt("Error opening file!");
+		}
+		#endif
 	}
 	else
 	{
@@ -1400,10 +1412,10 @@ static int GBAROMLoad()
 			return 2;
 		}
 	}
+
 	if(!GBAROMAlloc()) {
 		return 0;
 	}
-#endif
 
 	if(GBAROMSize)
 	{

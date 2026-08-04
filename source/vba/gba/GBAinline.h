@@ -6,7 +6,6 @@
 #include "JIT.h"
 #include "RTC.h"
 #include "Sound.h"
-#include "vmmem.h" // Nintendo GC Virtual Memory
 
 extern const u32 objTilesAddress[3];
 

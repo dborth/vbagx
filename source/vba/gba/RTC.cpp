@@ -4,7 +4,6 @@
 #include "../common/Port.h"
 #include "../Util.h"
 #include "../NLS.h"
-#include "vmmem.h"
 
 #include <time.h>
 #include <string.h>
