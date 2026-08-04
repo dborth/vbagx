@@ -31,6 +31,7 @@
 #include <ogc/aram.h>
 #include <ogc/context.h>
 #include "vm.h"
+#include "vmpager.h"
 
 // maximum virtual memory size
 #define MAX_VM_SIZE      (256*1024*1024)
@@ -49,6 +50,8 @@
 #define HTABMASK         0
 #define PTE_SIZE         ((HTABMASK+1)*65536)
 #define PTE_COUNT        (PTE_SIZE>>3)
+
+#define ARAM_MAX_SLOTS   (ARAM_SIZE / PAGE_SIZE)
 
 // keeps a record of each currently mapped page
 typedef union
@@ -107,6 +110,13 @@ static mutex_t vm_mutex = LWP_MUTEX_NULL;
 static u32 VMSize = 0;
 static u32 MEMSize = 0;
 static bool vm_initialized = 0;
+
+// Tracks which v_index currently resides in each ARAM slot
+static u16 aram_map[ARAM_MAX_SLOTS];
+// Tracks which ARAM slot holds a given v_index
+static u16 v_to_aram[65536];
+// Simple FIFO clock hand for eviction
+static u16 aram_head = 0;
 
 static __inline__ void tlbie(void* p)
 {
@@ -238,6 +248,20 @@ extern void vm_dsi_handler_stub(frame_context*);
 }
 #endif
 
+static void ClearMEM1Mapping(u16 v_index) {
+	u16 p_index = virt_map[v_index].p_map_index;
+	if (p_index != pmap_max) {
+		PTE *p = HTABORG + phys_map[p_index].pte_index;
+		p->data[0] = 0;
+		p->data[1] = 0;
+		tlbie((void*)(VM_Base + v_index));
+
+		virt_map[v_index].p_map_index = pmap_max;
+		phys_map[p_index].dirty = 0; // Prevent locator from flushing bad data
+	}
+	virt_map[v_index].committed = 0;
+}
+
 void VM_Clear(void) {
 	if (!vm_initialized) return;
 
@@ -245,6 +269,14 @@ void VM_Clear(void) {
 
 	memset(MEM_Base, 0, MEMSize);
 	AR_Clear(AR_ARAMINTUSER);
+
+	for (u32 j = 0; j < ARAM_MAX_SLOTS; j++)
+		aram_map[j] = 0xFFFF;
+
+	for (u32 j = 0; j < 65536; j++)
+		v_to_aram[j] = 0xFFFF;
+
+	aram_head = 0;
 
 	tlbia();
 	DCZeroRange(MEM_Base, MEMSize);
@@ -300,7 +332,7 @@ void* VM_Init(u32 reqVMSize, u32 reqMEMSize)
 
 	VMSize = (reqVMSize+PAGE_SIZE-1)&PAGE_MASK;
 	MEMSize = (reqMEMSize+PAGE_SIZE-1)&PAGE_MASK;
-	VM_Base = (vm_page*)(0x7F000000);
+	VM_Base = (vm_page*)(0x70000000);
 	pmap_max = MEMSize / PAGE_SIZE + 16;
 
 	if (LWP_MutexInit(&vm_mutex, 0) != 0)
@@ -318,8 +350,10 @@ void* VM_Init(u32 reqVMSize, u32 reqMEMSize)
 		return NULL;
 	}
 	
-	vm_initialized = 1;
+	AR_Init(NULL, 0);
+	ARQ_Init();
 
+	vm_initialized = 1;
 	VM_Clear();
 
 	// set SDR1
@@ -337,6 +371,17 @@ void* VM_Init(u32 reqVMSize, u32 reqMEMSize)
 void* VM_GetBase(void)
 {
 	return VM_Base;
+}
+
+bool VM_IsCommitted(u16 v_index)
+{
+	return virt_map[v_index].committed == 1;
+}
+
+void VM_SetCommitted(u16 v_index) {
+	LWP_MutexLock(vm_mutex);
+	virt_map[v_index].committed = 1;
+	LWP_MutexUnlock(vm_mutex);
 }
 
 void VM_Deinit(void)
@@ -360,13 +405,9 @@ void VM_Deinit(void)
 
 	vm_initialized = 0;
 }
-#ifdef DSISR
-#undef DSISR
-#endif
-#ifdef DAR
-#undef DAR
-#endif
+
 static ARQRequest arq_request;
+
 int vm_dsi_handler(u32 DSISR, u32 DAR)
 {
 	u16 v_index;
@@ -379,39 +420,83 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 	if (!vm_initialized)
 		return 0;
 
-	LWP_MutexLock(vm_mutex);
-
 	DAR &= ~0xFFF;
 	v_index = (vm_page*)DAR - VM_Base;
 
+	if (!virt_map[v_index].committed) {
+		// If this is the game thread, request the page and wait.
+		// If it is the pager thread doing a memcpy, bypass this and fault in a blank page!
+		if (LWP_GetSelf() != VMPager_GetThread()) {
+
+			u32 msr;
+			asm volatile("mfmsr %0" : "=r"(msr));
+			asm volatile("mtmsr %0" :: "r"(msr | MSR_EE)); // Must enable before queue block
+
+			VMPager_RequestPage(v_index);
+			while (!virt_map[v_index].committed) {
+				LWP_YieldThread();
+				asm volatile("" ::: "memory");
+			}
+
+			asm volatile("mtmsr %0" :: "r"(msr));
+			return 1;
+		}
+
+	}
+
+	LWP_MutexLock(vm_mutex);
 	p_index = locate_oldest();
 
-	// purge p_index if it's dirty
-	if (phys_map[p_index].dirty)
-	{
+	// Evict dirty MEM1 page back to ARAM (L2 Cache Management)
+	if (phys_map[p_index].dirty) {
+		u16 evict_v_index = phys_map[p_index].page_index;
+
+		// Find an existing ARAM slot or allocate the oldest frame
+		u16 target_slot = v_to_aram[evict_v_index];
+		if (target_slot == 0xFFFF) {
+			target_slot = aram_head;
+			aram_head = (aram_head + 1) % ARAM_MAX_SLOTS;
+
+			// If we are stealing a slot, invalidate the old L2 occupant
+			u16 old_occupant = aram_map[target_slot];
+			if (old_occupant != 0xFFFF) {
+				v_to_aram[old_occupant] = 0xFFFF;
+				ClearMEM1Mapping(old_occupant);
+			}
+
+			aram_map[target_slot] = evict_v_index;
+			v_to_aram[evict_v_index] = target_slot;
+		}
+
+		u32 aram_offset = target_slot * PAGE_SIZE;
+
 		DCFlushRange(MEM_Base+p_index, PAGE_SIZE);
-		ARQ_PostRequest(&arq_request,99,ARQ_MRAMTOARAM,ARQ_PRIO_HI,phys_map[p_index].page_index*PAGE_SIZE,(u32)(MEM_Base+p_index),PAGE_SIZE);
-		
-		virt_map[phys_map[p_index].page_index].committed = 1;
-		virt_map[phys_map[p_index].page_index].p_map_index = pmap_max;
+		AR_StartDMA(AR_MRAMTOARAM, (u32)(MEM_Base+p_index), aram_offset, PAGE_SIZE);
+		while(AR_GetDMAStatus());
+
+		virt_map[evict_v_index].committed = 1;
+		virt_map[evict_v_index].p_map_index = pmap_max;
 		phys_map[p_index].dirty = 0;
 	}
 
-	// fetch v_index if it has been previously committed
-	if (virt_map[v_index].committed)
+	// Fetch v_index if it has been previously committed to ARAM
+	if (virt_map[v_index].committed && v_to_aram[v_index] != 0xFFFF)
 	{
+		u32 aram_offset = v_to_aram[v_index] * PAGE_SIZE;
 		DCInvalidateRange(MEM_Base+p_index, PAGE_SIZE);
-		ARQ_PostRequest(&arq_request,99,ARQ_ARAMTOMRAM,ARQ_PRIO_HI,v_index*PAGE_SIZE,(u32)(MEM_Base+p_index),PAGE_SIZE);
+		AR_StartDMA(AR_ARAMTOMRAM, (u32)(MEM_Base+p_index), aram_offset, PAGE_SIZE);
+		while(AR_GetDMAStatus());
 	}
-	else
+	else {
 		DCZeroRange(MEM_Base+p_index, PAGE_SIZE);
+	}
 
+	// Map new physical page to virtual memory
 	virt_map[v_index].p_map_index = p_index;
 	phys_map[p_index].page_index = v_index;
 	phys_map[p_index].pte_index = insert_pte(v_index, MEM_VIRTUAL_TO_PHYSICAL(MEM_Base+p_index), 0, 0b10) - HTABORG;
 
 	LWP_MutexUnlock(vm_mutex);
-
 	return 1;
 }
 #endif

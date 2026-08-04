@@ -24,14 +24,18 @@
 #ifdef HW_DOL
 #include <gctypes.h>
 
+#define ARAM_SIZE		(16*1024*1024) // ARAM is 16MB
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern void* VM_Init(u32 VMSize, u32 MEMSize);
-extern void* VM_GetBase(void);
-extern void VM_Clear(void);
-extern void VM_Deinit(void);
+void* VM_Init(u32 VMSize, u32 MEMSize);
+void* VM_GetBase(void);
+void VM_Clear(void);
+bool VM_IsCommitted(u16 v_index);
+void VM_SetCommitted(u16 v_index);
+void VM_Deinit(void);
 
 #ifdef __cplusplus
 }
