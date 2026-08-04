@@ -188,6 +188,7 @@
 
 // Advanced Memory & Bitwise
 // Endian-Correct Memory Loads & Stores (GBA is Little-Endian, Wii is Big-Endian)
+#define PPC_LBZ(rD, rA, d)				((34 << 26) | ((rD) << 21) | ((rA) << 16) | ((d) & 0xFFFF))
 #define PPC_LWZX(rD, rA, rB)			((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (23 << 1))
 #define PPC_LWBRX(rD, rA, rB)			((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (534 << 1)) // Load Word Byte-Reverse
 #define PPC_LHBRX(rD, rA, rB)			((31 << 26) | ((rD) << 21) | ((rA) << 16) | ((rB) << 11) | (790 << 1)) // Load Halfword Byte-Reverse
