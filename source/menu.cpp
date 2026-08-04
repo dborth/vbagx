@@ -5292,6 +5292,10 @@ MainMenu (int menu)
 	delete bgBottomImg;
 	delete mainWindow;
 
+	btnLogo = NULL;
+	gameScreenImg = NULL;
+	bgTopImg = NULL;
+	bgBottomImg = NULL;
 	mainWindow = NULL;
 	
 	if(gameScreenTexture != NULL) {
