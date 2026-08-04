@@ -1387,11 +1387,6 @@ static int GBAROMLoad()
 		#ifdef HW_RVL
 		GBAROMSize = LoadFile ((char *)rom, filepath, 0, (MAX_GBA_ROM_SIZE), NOTSILENT);
 		#else
-		if(!utilIsGBAImage(filepath)) {
-			ErrorPrompt("Compressed GBA files are not supported!");
-			return 0;
-		}
-
 		ShowAction("Loading...");
 		GBAROMSize = VMPager_LoadROM(filepath);
 		CancelAction();
@@ -1454,6 +1449,11 @@ bool LoadVBAROM()
 
 		if(utilIsGBAImage(zippedFilename))
 		{
+			#ifdef HW_DOL
+			ErrorPrompt("Compressed GBA files are not supported!");
+			return false;
+			#endif
+
 			cartridgeType = CARTRIDGE_GBA;
 		}
 		else if(utilIsGBImage(zippedFilename))
