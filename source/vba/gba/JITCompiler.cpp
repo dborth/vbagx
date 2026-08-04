@@ -478,6 +478,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		u32 execBank = (pc >> 24) & 15;
 		// The hardware prefetcher only runs if the CPU is executing from ROM
 		if (execBank < 0x08 || execBank > 0x0D) return;
+		
+		u32 enableAddr = (u32)&busPrefetchEnable;
+		*ptr++ = PPC_LIS(scratchReg, enableAddr >> 16);
+		*ptr++ = PPC_ORI(scratchReg, scratchReg, enableAddr & 0xFFFF);
+		*ptr++ = PPC_LBZ(scratchReg, scratchReg, 0);
+		*ptr++ = PPC_CMPWI(0, scratchReg, 0);
+		u32* branchDisabled = ptr++; // BEQ -> prefetch disabled, R5 stays untouched
 
 		u32 seqCost = memoryWaitSeq[execBank];
 		if (seqCost == 0) seqCost = 1;
@@ -531,6 +538,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 		*branchNoHits = PPC_BEQ((u32)((ptr - branchNoHits) * 4));
 		*branchSkip = PPC_B((u32)((ptr - branchSkip) * 4));
+		
+		*branchDisabled = PPC_BEQ((u32)((ptr - branchDisabled) * 4)); // <-- lands here, R5 untouched
 	};
 	
 	// Dynamic N-Cycle Penalty Check
@@ -594,6 +603,17 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	// R5==0 stands in for that per-instruction "busPrefetch" bool directly, because
 	// nothing earlier in this instruction's own emission touches R5.
 	auto EmitSingleAccessRecharge = [&](u32*& ptr, u32 bankReg, u32 dataWaitReg, u32 scratchReg) {
+		// GATE: dataTicksAccess32/16 only ever prime busPrefetchCount when the global
+		// busPrefetchEnable is true (UPDATE_BUS_PREFETCH, GBA-thumb.cpp). This is
+		// WAITCNT-derived runtime state, not a constant -- confirmed off for this ROM
+		// right now. Missing this check primed R5 unconditionally whenever R5==0.
+		u32 enableAddr = (u32)&busPrefetchEnable;
+		*ptr++ = PPC_LIS(scratchReg, enableAddr >> 16);
+		*ptr++ = PPC_ORI(scratchReg, scratchReg, enableAddr & 0xFFFF);
+		*ptr++ = PPC_LBZ(scratchReg, scratchReg, 0);
+		*ptr++ = PPC_CMPWI(0, scratchReg, 0);
+		u32* branchDisabled = ptr++; // BEQ -> prefetch disabled, R5 stays untouched
+
 		*ptr++ = PPC_CMPWI(0, bankReg, 2);
 		u32* branchLt2 = ptr++;                 // BLT -> outside RAM (low)
 
@@ -624,6 +644,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 		*branchAlreadyPrimed = PPC_BNE((u32)((ptr - branchAlreadyPrimed) * 4));
 		*branchToDone = PPC_B((u32)((ptr - branchToDone) * 4));
+
+		*branchDisabled = PPC_BEQ((u32)((ptr - branchDisabled) * 4)); // <-- lands here, R5 untouched
 	};
 
 	while (!endBlock && instrCount < JIT_TRACE_MAX_INSTRUCTIONS) {
