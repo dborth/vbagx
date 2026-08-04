@@ -1365,8 +1365,8 @@ bool GBAROMAlloc()
 		paletteRAM == NULL || vram == NULL || oam == NULL ||
 		pix == NULL || ioMem == NULL)
 	{
-		ErrorPrompt("Out of memory!");
 		GBAROMCleanup();
+		ErrorPrompt("Out of memory!");
 		return false;
 	}
 	return true;
