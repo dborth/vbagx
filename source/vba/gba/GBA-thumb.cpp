@@ -36,24 +36,6 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
 #define UPDATE_BUS_PREFETCH \
 		busPrefetch = (busPrefetchCount == 0) & busPrefetchEnable;
 
-// Hardware Accurate Prefetch Recharge
-// Accumulates hits while the CPU is stalled on non-ROM data buses
-#define RECHARGE_PREFETCH(dataAddr, ticks) \
-    if (((armNextPC >> 24) & 15) >= 0x08) { \
-        if (((dataAddr) >> 24) < 0x08) { \
-            u32 sCost = memoryWaitSeq[(armNextPC >> 24) & 15]; \
-            if (sCost == 0) sCost = 1; \
-            u32 hits = (ticks) / sCost; \
-            if (hits > 8) hits = 8; \
-            if (hits > 0) { \
-                busPrefetchCount = (busPrefetchCount << hits) | ((1 << hits) - 1); \
-                busPrefetchCount |= 0x100; \
-            } \
-        } else { \
-            busPrefetchCount = 0; \
-        } \
-    }
-
 #define NEG(i) ((i) >> 31)
 #define POS(i) ((~(i)) >> 31)
 
@@ -931,9 +913,7 @@ static INSN_REGPARM void thumbB0(u32 opcode) {
     u32 c = (u32)count; \
     u32 seq = dataTicksAccessSeq32(address); \
     u32 non = dataTicksAccess32(address); \
-    u32 tickCost = 1 + ((seq & -c) | (non & (c - 1))); \
-    clockTicks += tickCost; \
-    RECHARGE_PREFETCH(address, tickCost); \
+    clockTicks += 1 + ((seq & -c) | (non & (c - 1))); \
     count = 1; \
     address += 4; \
   }
@@ -944,9 +924,7 @@ static INSN_REGPARM void thumbB0(u32 opcode) {
     u32 c = (u32)count; \
     u32 seq = dataTicksAccessSeq32(address); \
     u32 non = dataTicksAccess32(address); \
-    u32 tickCost = 1 + ((seq & -c) | (non & (c - 1))); \
-    clockTicks += tickCost; \
-    RECHARGE_PREFETCH(address, tickCost); \
+    clockTicks += 1 + ((seq & -c) | (non & (c - 1))); \
     count = 1; \
     address += 4; \
   }
@@ -1021,12 +999,13 @@ static INSN_REGPARM void thumbBD(u32 opcode) {
 	POP_REG(64, 6);
 	POP_REG(128, 7);
 	reg[15].I = (CPUReadMemory(address) & 0xFFFFFFFE);
-	if (!count) {
-		clockTicks += 1 + dataTicksAccess32(address);
-	} else {
-		clockTicks += 1 + dataTicksAccessSeq32(address);
-	}
-	count++;
+
+	u32 c = (u32)count;
+	u32 seq = dataTicksAccessSeq32(address);
+	u32 non = dataTicksAccess32(address);
+	clockTicks += 1 + ((seq & -c) | (non & (c - 1)));
+	count = 1;
+
 	armNextPC = reg[15].I;
 	reg[15].I += 2;
 	reg[13].I = temp;
@@ -1045,9 +1024,7 @@ static INSN_REGPARM void thumbBD(u32 opcode) {
     u32 c = (u32)count; \
     u32 seq = dataTicksAccessSeq32(address); \
     u32 non = dataTicksAccess32(address); \
-    u32 tickCost = 1 + ((seq & -c) | (non & (c - 1))); \
-    clockTicks += tickCost; \
-    RECHARGE_PREFETCH(address, tickCost); \
+    clockTicks += 1 + ((seq & -c) | (non & (c - 1))); \
     count = 1; \
     address += 4; \
   }
@@ -1058,9 +1035,7 @@ static INSN_REGPARM void thumbBD(u32 opcode) {
     u32 c = (u32)count; \
     u32 seq = dataTicksAccessSeq32(address); \
     u32 non = dataTicksAccess32(address); \
-    u32 tickCost = 1 + ((seq & -c) | (non & (c - 1))); \
-    clockTicks += tickCost; \
-    RECHARGE_PREFETCH(address, tickCost); \
+    clockTicks += 1 + ((seq & -c) | (non & (c - 1))); \
     count = 1; \
     address += 4; \
   }
