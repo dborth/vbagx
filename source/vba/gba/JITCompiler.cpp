@@ -492,6 +492,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		// banks (GBATEK) -- always a power of two, so a plain shift is exact.
 		u32 shift = (seqCost >= 8) ? 3 : (seqCost >= 4) ? 2 : (seqCost >= 2) ? 1 : 0;
 
+		// Natively emulates C++ recharge without obliterating an already-active buffer
 		*ptr++ = PPC_CMPWI(0, bankReg, 8);
 		u32* branchRecharge = ptr++; // Branch to Recharge Path if bank < 8
 
@@ -499,22 +500,19 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*ptr++ = PPC_LI(PPC_R5, 0);
 		u32* branchSkip = ptr++; // Skip recharge logic
 
+		// Recharge Path (Bank < 8)
 		*branchRecharge = PPC_BLT((u32)((ptr - branchRecharge) * 4));
 
-		// RECHARGE_PREFETCH computes floor(tickCost_i / sCost) PER REGISTER and
-		// sums the results -- it does NOT sum tickCost first and divide once (integer
-		// division doesn't distribute: floor(1/2)+floor(1/2) == 0, floor(2/2) == 1).
-		// dataWaitStateReg holds ONE register's raw wait-state extra; add the "+1"
-		// baseline, divide for a single register's hit contribution, THEN multiply
-		// by transferCount (how many registers this batched call represents).
-		*ptr++ = PPC_ADDI(dataWaitStateReg, dataWaitStateReg, 1);
-		if (shift > 0)
-			*ptr++ = PPC_SRWI(scratchReg, dataWaitStateReg, shift);
-		else
-			*ptr++ = PPC_OR(scratchReg, dataWaitStateReg, dataWaitStateReg);
+		*ptr++ = PPC_ADDI(dataWaitStateReg, dataWaitStateReg, transferCount);
 
-		if (transferCount > 1)
-			*ptr++ = PPC_MULLI(scratchReg, scratchReg, transferCount);
+		// 1. Calculate hits (ticks / seqCost) into scratchReg
+		if (seqCost == 1) {
+			*ptr++ = PPC_OR(scratchReg, dataWaitStateReg, dataWaitStateReg);
+		} else if (seqCost == 2) {
+			*ptr++ = PPC_SRWI(scratchReg, dataWaitStateReg, 1);
+		} else {
+			*ptr++ = PPC_SRWI(scratchReg, dataWaitStateReg, 1); // Safe fallback
+		}
 
 		// Clamp hits to 8 maximum safely
 		*ptr++ = PPC_CMPWI(0, scratchReg, 8);
@@ -522,19 +520,21 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*ptr++ = PPC_LI(scratchReg, 8);
 		*branchClamp = PPC_BLE((u32)((ptr - branchClamp) * 4));
 
-		// Interpreter only touches busPrefetchCount at all `if (hits > 0)`
+		// 2. A zero-hit recharge must leave R5 -- active flag included -- untouched.
 		*ptr++ = PPC_CMPWI(0, scratchReg, 0);
 		u32* branchNoHits = ptr++;
 
+		// 3. Shift existing hits in R5 by the total wait cycles FIRST
 		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, scratchReg);
 
-		// bitmask = (1 << hits) - 1, using dataWaitStateReg as secondary scratch
+		// 4. Create bitmask: (1 << hits) - 1
 		*ptr++ = PPC_LI(dataWaitStateReg, 1);
-		*ptr++ = PPC_SLW(dataWaitStateReg, dataWaitStateReg, scratchReg);
-		*ptr++ = PPC_ADDI(dataWaitStateReg, dataWaitStateReg, -1); // (1<<hits)-1
+		*ptr++ = PPC_SLW(scratchReg, dataWaitStateReg, scratchReg);  // scratchReg = 1 << hits
+		*ptr++ = PPC_SUBF(scratchReg, dataWaitStateReg, scratchReg); // scratchReg = scratchReg - 1
 
-		*ptr++ = PPC_OR(PPC_R5, PPC_R5, dataWaitStateReg);
-		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100);
+		// 5. Append hits + mark active (now correctly gated behind hits > 0)
+		*ptr++ = PPC_OR(PPC_R5, PPC_R5, scratchReg); // Add new hits
+		*ptr++ = PPC_ORI(PPC_R5, PPC_R5, 0x100); // Ensure active flag
 
 		*branchNoHits = PPC_BEQ((u32)((ptr - branchNoHits) * 4));
 		*branchSkip = PPC_B((u32)((ptr - branchSkip) * 4));
@@ -1643,22 +1643,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, 1); // leading register
 
 					if (numRegs > 1) {
-						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq32) >> 16);
-						*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq32) & 0xFFFF);
-						*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait (raw, single-register value)
+						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
+						*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+						*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait
 
-						// R3 needs the *total* wait-extra for all (numRegs-1) trailing registers;
-						// EmitPrefetchDataWait needs the *raw single-register* value (it derives
-						// per-register hits itself and multiplies by transferCount internally) --
-						// so do the R3 multiply into R11 (rebuilt from readMasks right after this
-						// block regardless) instead of clobbering R9 in place.
 						if ((numRegs - 1) > 1) {
-							*emitPtr++ = PPC_MULLI(PPC_R11, PPC_R9, numRegs - 1);
-							*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-						} else {
-							*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
+							*emitPtr++ = PPC_MULLI(PPC_R9, PPC_R9, numRegs - 1); // R9 = sWait * (numRegs - 1)
 						}
 
+						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
 						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, numRegs - 1); // trailing seq run
 					}
 
@@ -1859,22 +1852,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, 1); // leading register
 
 				if (numRegs > 1) {
-					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq32) >> 16);
-					*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq32) & 0xFFFF);
-					*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait (raw, single-register value)
+					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq) >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq) & 0xFFFF);
+					*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait
 
-					// R3 needs the *total* wait-extra for all (numRegs-1) trailing registers;
-					// EmitPrefetchDataWait needs the *raw single-register* value (it derives
-					// per-register hits itself and multiplies by transferCount internally) --
-					// so do the R3 multiply into R11 (rebuilt from readMasks right after this
-					// block regardless) instead of clobbering R9 in place.
 					if ((numRegs - 1) > 1) {
-						*emitPtr++ = PPC_MULLI(PPC_R11, PPC_R9, numRegs - 1);
-						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
-					} else {
-						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
+						*emitPtr++ = PPC_MULLI(PPC_R9, PPC_R9, numRegs - 1); // R9 = sWait * (numRegs - 1)
 					}
 
+					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
 					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, numRegs - 1); // trailing seq run
 				}
 
