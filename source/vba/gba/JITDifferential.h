@@ -39,4 +39,22 @@ int JIT_RunDifferentialThumbHook_Impl(
 
 void JIT_RecordMemoryWrite(unsigned int addr, unsigned int value, unsigned char size);
 
+#define JIT_R5_TRACE_MAX 32
+
+#define JIT_R5_TAG_PUSHPOP_BEFORE      1
+#define JIT_R5_TAG_PUSHPOP_AFTER       2
+#define JIT_R5_TAG_BRANCH_BEFORE       3
+#define JIT_R5_TAG_BRANCH_AFTER        4
+#define JIT_R5_TAG_TRACE_ENTRY         5   // NEW: R5 as seeded by the trampoline, before any compiled instruction runs
+#define JIT_R5_TAG_SINGLEACCESS_ENTRY  6   // NEW: before EmitSingleAccessRecharge (Format 9/10/11)
+#define JIT_R5_TAG_SINGLEACCESS_MID    7   // NEW: after EmitSingleAccessRecharge, before EmitDynamicNCyclePenalty
+#define JIT_R5_TAG_SINGLEACCESS_AFTER  8   // NEW: after EmitDynamicNCyclePenalty
+
+extern unsigned int g_jitR5Trace[JIT_R5_TRACE_MAX];
+extern unsigned int g_jitR5TraceTags[JIT_R5_TRACE_MAX];
+extern unsigned int g_jitR5TraceIndex;
+extern unsigned int g_jitR5DumpSpill[4]; // R9,R10,R11,R12 save slots for EmitR5TraceDump
+
+void JIT_ResetR5Trace();
+
 #endif // JIT_DIFFERENTIAL_H

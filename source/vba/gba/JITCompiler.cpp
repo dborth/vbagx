@@ -392,10 +392,61 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*ptr++ = PPC_STW(PPC_R11, PPC_R10, 16);     // Store smcHit
 	};
 
-	// Lazily claims arena space (and emits the prologue) the FIRST time we're
-	// actually about to commit real code -- not up front. Walking cold/unsupported
-	// code costs a couple of branches and nothing else: no allocate(), no rewind(),
-	// no arena traffic, no registerBlock spam beyond the one at the end.
+#ifdef JIT_DIFFERENTIAL_TESTING
+	auto EmitR5TraceDump = [&](u32*& ptr, u32 tag, u32 pcTag) {
+		// Save R9-R12 into a dedicated global spill buffer before touching them --
+		// NOT the stack (compiled traces never adjust r1; see EnsureFlagsLoaded's
+		// 84(r1) convention). R8 is the pointer: it's confirmed dead at every call
+		// site this runs from, including the mid-instruction Format 9/10/11 ones,
+		// where R10 (page pointer) and R12 (masked EA) are live and still needed
+		// by the load/store instruction immediately following this dump.
+		u32 spillAddr = (u32)&g_jitR5DumpSpill[0];
+		*ptr++ = PPC_LIS(PPC_R8, spillAddr >> 16);
+		*ptr++ = PPC_ORI(PPC_R8, PPC_R8, spillAddr & 0xFFFF);
+		*ptr++ = PPC_STW(PPC_R9,  PPC_R8, 0);
+		*ptr++ = PPC_STW(PPC_R10, PPC_R8, 4);
+		*ptr++ = PPC_STW(PPC_R11, PPC_R8, 8);
+		*ptr++ = PPC_STW(PPC_R12, PPC_R8, 12);
+
+		u32 idxAddr  = (u32)&g_jitR5TraceIndex;
+		u32 tagsAddr = (u32)&g_jitR5TraceTags[0];
+		u32 bufAddr  = (u32)&g_jitR5Trace[0];
+		u32 packedTag = (tag << 24) | (pcTag & 0xFFFFFF);
+
+		*ptr++ = PPC_LIS(PPC_R11, idxAddr >> 16);
+		*ptr++ = PPC_ORI(PPC_R11, PPC_R11, idxAddr & 0xFFFF);
+		*ptr++ = PPC_LWZ(PPC_R12, PPC_R11, 0);
+		*ptr++ = PPC_CMPWI(0, PPC_R12, JIT_R5_TRACE_MAX);
+		u32* branchSkip = ptr++;
+
+		*ptr++ = PPC_RLWINM(PPC_R9, PPC_R12, 2, 0, 29);
+
+		*ptr++ = PPC_LIS(PPC_R10, bufAddr >> 16);
+		*ptr++ = PPC_ORI(PPC_R10, PPC_R10, bufAddr & 0xFFFF);
+		*ptr++ = PPC_ADD(PPC_R10, PPC_R10, PPC_R9);
+		*ptr++ = PPC_STW(PPC_R5, PPC_R10, 0);
+
+		*ptr++ = PPC_LIS(PPC_R10, tagsAddr >> 16);
+		*ptr++ = PPC_ORI(PPC_R10, PPC_R10, tagsAddr & 0xFFFF);
+		*ptr++ = PPC_ADD(PPC_R10, PPC_R10, PPC_R9);
+		*ptr++ = PPC_LIS(PPC_R9, packedTag >> 16);
+		*ptr++ = PPC_ORI(PPC_R9, PPC_R9, packedTag & 0xFFFF);
+		*ptr++ = PPC_STW(PPC_R9, PPC_R10, 0);
+
+		*ptr++ = PPC_ADDI(PPC_R12, PPC_R12, 1);
+		*ptr++ = PPC_STW(PPC_R12, PPC_R11, 0);
+
+		// Buffer-full skip lands exactly here, so R9-R12 always get restored below
+		// regardless of whether the dump itself actually fired.
+		*branchSkip = PPC_BGE((u32)((ptr - branchSkip) * 4));
+
+		*ptr++ = PPC_LWZ(PPC_R9,  PPC_R8, 0);
+		*ptr++ = PPC_LWZ(PPC_R10, PPC_R8, 4);
+		*ptr++ = PPC_LWZ(PPC_R11, PPC_R8, 8);
+		*ptr++ = PPC_LWZ(PPC_R12, PPC_R8, 12);
+	};
+#endif
+
 	auto EnsureArenaAllocated = [&]() {
 		if (arenaAllocated) return;
 		arenaAllocated = true;
@@ -408,6 +459,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*emitPtr++ = PPC_CMPWI(0, PPC_R3, YIELD_NUMBER);
 		quotaGuard = emitPtr;
 		*emitPtr++ = PPC_BGE(0);
+
+#ifdef JIT_DIFFERENTIAL_TESTING
+		// TEMPORARY: R5 exactly as the trampoline handed it to us -- nothing in
+		// this trace's own compiled code has touched it yet. Compare directly
+		// against JITDifferential.cpp's "Entry busPrefetchCount" line.
+		EmitR5TraceDump(emitPtr, JIT_R5_TAG_TRACE_ENTRY, currentPC);
+#endif
 	};
 
 	// Resets chunk-level cycle/prefetch tracking to start counting fresh *after* the
@@ -1378,7 +1436,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)dataTicksTable) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // EA = R7 + R11
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+#ifdef JIT_DIFFERENTIAL_TESTING
+					EmitR5TraceDump(emitPtr, JIT_R5_TAG_SINGLEACCESS_ENTRY, currentPC);
+#endif
 					EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8);
+#ifdef JIT_DIFFERENTIAL_TESTING
+					EmitR5TraceDump(emitPtr, JIT_R5_TAG_SINGLEACCESS_MID, currentPC);
+#endif
 
 					// 5. Execute Memory Load or Store Instruction
 					if (isMemLoad) {
@@ -1408,6 +1472,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// Advance static cycles and prepay the sequential fetch cost
 					chunkStaticCycles += (2 + isMemLoad) + STATIC_CODE_TICKS_SEQ16(currentPC);
 					EmitDynamicNCyclePenalty(emitPtr, currentPC + 2);
+#ifdef JIT_DIFFERENTIAL_TESTING
+					EmitR5TraceDump(emitPtr, JIT_R5_TAG_SINGLEACCESS_AFTER, currentPC);
+#endif
 				}
 				break;
 			}
@@ -1471,7 +1538,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, ((u32)memoryWait32) & 0xFFFF);
 				*emitPtr++ = PPC_LBZX(PPC_R11, PPC_R7, PPC_R11); // Safe: rA=R7
 				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R11);
+#ifdef JIT_DIFFERENTIAL_TESTING
+				EmitR5TraceDump(emitPtr, JIT_R5_TAG_SINGLEACCESS_ENTRY, currentPC);
+#endif
 				EmitSingleAccessRecharge(emitPtr, PPC_R7, PPC_R11, PPC_R8);
+#ifdef JIT_DIFFERENTIAL_TESTING
+				EmitR5TraceDump(emitPtr, JIT_R5_TAG_SINGLEACCESS_MID, currentPC);
+#endif
 
 				// 4. Endian-Correct Load or Store (Lazy Register Execution)
 				if (isLoad) {
@@ -1486,6 +1559,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// thumb98 (LDR): 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)
 				chunkStaticCycles += (2 + isLoad) + STATIC_CODE_TICKS_SEQ16(currentPC);
 				EmitDynamicNCyclePenalty(emitPtr, currentPC + 2);
+#ifdef JIT_DIFFERENTIAL_TESTING
+				EmitR5TraceDump(emitPtr, JIT_R5_TAG_SINGLEACCESS_AFTER, currentPC);
+#endif
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -1772,9 +1848,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// live prefetch state (R5) indicates a miss, mirroring codeTicksAccess16()
 					// exactly. Applies to POP {Rlist} AND PUSH (both variants) -- POP {Rlist, PC}
 					// already emitted its own dynamic exit earlier and never reaches this point.
+#ifdef JIT_DIFFERENTIAL_TESTING
+					EmitR5TraceDump(emitPtr, JIT_R5_TAG_PUSHPOP_BEFORE, currentPC);
+#endif
 					if (!(isPop && Rbit)) {
 					    EmitDynamicNCyclePenalty(emitPtr, currentPC + 2);
 					}
+#ifdef JIT_DIFFERENTIAL_TESTING
+					EmitR5TraceDump(emitPtr, JIT_R5_TAG_PUSHPOP_AFTER, currentPC);
+#endif
 					// (POP {Rlist, PC} already emitted its own exit above and always ends
 					// the block there, so it never reaches this trailing accumulation.)
 				}
@@ -2008,7 +2090,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 										   STATIC_CODE_TICKS_SEQ16(targetPC) +
 										   STATIC_CODE_TICKS_16(targetPC) + 3;
 
+#ifdef JIT_DIFFERENTIAL_TESTING
+						EmitR5TraceDump(emitPtr, JIT_R5_TAG_BRANCH_BEFORE, currentPC);
+#endif
 						EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
+#ifdef JIT_DIFFERENTIAL_TESTING
+						EmitR5TraceDump(emitPtr, JIT_R5_TAG_BRANCH_AFTER, currentPC);
+#endif
 						*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 
 						// Emit the dirty flags and registers WITHOUT clearing the compiler's tracking state
@@ -2076,7 +2164,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// Unconditional branch breaks prefetch and forces a full N+S cycle refill from the Target
 				u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(targetPC) * 2 + STATIC_CODE_TICKS_16(targetPC) + 3;
 
+#ifdef JIT_DIFFERENTIAL_TESTING
+				EmitR5TraceDump(emitPtr, JIT_R5_TAG_BRANCH_BEFORE, currentPC);
+#endif
 				EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
+#ifdef JIT_DIFFERENTIAL_TESTING
+				EmitR5TraceDump(emitPtr, JIT_R5_TAG_BRANCH_AFTER, currentPC);
+#endif
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 
 				// 3. JIT EXIT: Flush State
@@ -2139,9 +2233,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1 +
 									   (STATIC_CODE_TICKS_SEQ16(targetPC) * 2) + STATIC_CODE_TICKS_16(targetPC) + 3;
 
+#ifdef JIT_DIFFERENTIAL_TESTING
+					EmitR5TraceDump(emitPtr, JIT_R5_TAG_BRANCH_BEFORE, currentPC);
+#endif
 					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
+#ifdef JIT_DIFFERENTIAL_TESTING
+					EmitR5TraceDump(emitPtr, JIT_R5_TAG_BRANCH_AFTER, currentPC);
+#endif
 					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
-
+					
 					// Flush dirty flags and registers before dynamic block exit
 					FlushDirtyFlags(emitPtr);
 					FlushDirtyRegisters(emitPtr);
