@@ -29,7 +29,7 @@
 extern int emulating;
 void StopColorizing();
 void gbSetPalette(u32 RRGGBB[]);
-int MenuRequested = 0;
+bool MenuRequested = false;
 char appPath[1024] = { 0 };
 static bool autoboot = false;
 
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 		}
 
 		autoboot = false;
-		MenuRequested = 0;
+		MenuRequested = false;
 		SwitchMemoryModeGame();
 		SwitchAudioMode(0);
 		SelectFilterMethod(GCSettings.FilterMethod); // Initialize / Re-evaluate active filter
@@ -123,6 +123,7 @@ int main(int argc, char *argv[])
 			}
 			if(MenuRequested)
 			{
+				MenuRequested = false;
 				SwitchMemoryModeMenu();
 				TakeScreenshot();
 				ResetVideo_Menu();

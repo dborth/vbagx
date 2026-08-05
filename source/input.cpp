@@ -988,7 +988,7 @@ u32 GetJoy(int pad)
 	// request to go back to menu
 	if (isMenuRequested())
 	{
-		MenuRequested = 1;
+		MenuRequested = true;
 		updateRumbleFrame();
 		return 0;
 	}

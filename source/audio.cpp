@@ -15,12 +15,12 @@
 #ifndef NO_SOUND
 #include <asndlib.h>
 #endif
+#include "vbagx.h"
 #include "audio.h"
 #include "system.h"
 #include "vba/gba/Debug.h"
 
 extern bool turboMode;
-extern int MenuRequested;
 
 // One DMA frame is 3200 bytes (800 stereo 16-bit frames).
 #define DMA_BYTES 3200

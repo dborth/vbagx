@@ -239,7 +239,7 @@ struct SGCSettings
 
 void ExitApp();
 extern struct SGCSettings GCSettings;
-extern int MenuRequested;
+extern bool MenuRequested;
 extern char appPath[];
 
 extern FreeTypeGX *fontSystem[];

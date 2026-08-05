@@ -1390,7 +1390,7 @@ u32 MinishCapInput(unsigned short pad)
 	} else if (Subscreen==0x2c) {
 	} else if (Subscreen==0x38 && SelBox==4) { // Sleep button returns to menu instead of sleep
 		if (ActionButton) {
-			MenuRequested = 1;
+			MenuRequested = true;
 			return 0;
 		}
 	} else if (Subscreen==0x38) { // Action button counts as A Button on quest status screen
