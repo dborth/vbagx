@@ -922,10 +922,11 @@ static INSN_REGPARM void thumbB0(u32 opcode) {
 #define PUSH_REG(val, r) \
   if (opcode & (val)) { \
     CPUWriteMemory(address, reg[(r)].I); \
-    u32 c = (u32)count; \
-    u32 seq = dataTicksAccessSeq32(address); \
-    u32 non = dataTicksAccess32(address); \
-    clockTicks += 1 + ((seq & -c) | (non & (c - 1))); \
+    if (__builtin_expect(count == 0 || (address >> 24) != ((address - 4) >> 24), 0)) { \
+      clockTicks += 1 + dataTicksAccess32(address); \
+    } else { \
+      clockTicks += 1 + dataTicksAccessSeq32(address); \
+    } \
     count = 1; \
     address += 4; \
   }
@@ -933,10 +934,11 @@ static INSN_REGPARM void thumbB0(u32 opcode) {
 #define POP_REG(val, r) \
   if (opcode & (val)) { \
     reg[(r)].I = CPUReadMemory(address); \
-    u32 c = (u32)count; \
-    u32 seq = dataTicksAccessSeq32(address); \
-    u32 non = dataTicksAccess32(address); \
-    clockTicks += 1 + ((seq & -c) | (non & (c - 1))); \
+    if (__builtin_expect(count == 0 || (address >> 24) != ((address - 4) >> 24), 0)) { \
+      clockTicks += 1 + dataTicksAccess32(address); \
+    } else { \
+      clockTicks += 1 + dataTicksAccessSeq32(address); \
+    } \
     count = 1; \
     address += 4; \
   }
@@ -1029,25 +1031,29 @@ static INSN_REGPARM void thumbBD(u32 opcode) {
 
 // Load/store multiple ////////////////////////////////////////////////////
 
-#define THUMB_STM_REG(val,r,b) \
+#define THUMB_STM_REG(val, r, b) \
   if(opcode & (val)) { \
     CPUWriteMemory(address, reg[(r)].I); \
     reg[(b)].I = temp; \
-    u32 c = (u32)count; \
-    u32 seq = dataTicksAccessSeq32(address); \
-    u32 non = dataTicksAccess32(address); \
-    clockTicks += 1 + ((seq & -c) | (non & (c - 1))); \
+    if (__builtin_expect(count == 0 || (address >> 24) != ((address - 4) >> 24), 0)) { \
+      clockTicks += 1 + dataTicksAccess32(address); \
+    } else { \
+      clockTicks += 1 + dataTicksAccessSeq32(address); \
+    } \
     count = 1; \
     address += 4; \
   }
 
-#define THUMB_LDM_REG(val,r) \
+#define THUMB_LDM_REG(val, r) \
   if(opcode & (val)) { \
     reg[(r)].I = CPUReadMemory(address); \
-    u32 c = (u32)count; \
-    u32 seq = dataTicksAccessSeq32(address); \
-    u32 non = dataTicksAccess32(address); \
-    clockTicks += 1 + ((seq & -c) | (non & (c - 1))); \
+    if (__builtin_expect(count == 0, 0)) { \
+      clockTicks += 1 + dataTicksAccess32(address); \
+    } else if (__builtin_expect((address >> 24) != ((address - 4) >> 24), 0)) { \
+      clockTicks += 1 + dataTicksAccess32(address); \
+    } else { \
+      clockTicks += 1 + dataTicksAccessSeq32(address); \
+    } \
     count = 1; \
     address += 4; \
   }
