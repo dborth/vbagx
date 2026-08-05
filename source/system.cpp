@@ -22,15 +22,10 @@
 #include "audio.h"
 #include "fileop.h"
 #include "input.h"
-#include "mem2.h"
+#include "memmanager.h"
 #include "font_ttf.h"
 #include "utils/wiidrc.h"
 #include "utils/FreeTypeGX.h"
-
-#ifdef HW_DOL
-#include "utils/vmpager.h"
-#include "utils/vm.h"
-#endif
 
 extern "C" {
 extern char* strcasestr(const char *, const char *);
@@ -145,6 +140,8 @@ static void ipl_set_config(unsigned char c)
 #endif
 
 void SystemInit() {
+	InitMemManager();
+
 	#ifdef HW_RVL
 	L2Enhance();
 
@@ -159,8 +156,6 @@ void SystemInit() {
 	}
 	#else
 	ipl_set_config(6); // disable Qoob modchip
-	VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024);
-    VMPager_Init();
 	#endif
 
 	USBGeckoOutput();
@@ -191,11 +186,6 @@ void SystemInit() {
 	SetupPads();
 	InitDeviceThread();
 	MountAllFAT(); // Initialize libFAT for SD and USB
-
-	#ifdef HW_RVL
-	InitMem2Manager();
-	#endif
-
 	InitFreeType((u8*)font_ttf, font_ttf_size); // Initialize font system
 }
 

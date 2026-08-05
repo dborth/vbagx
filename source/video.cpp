@@ -18,6 +18,7 @@
 #include <gccore.h>
 
 #include "vbagx.h"
+#include "memmanager.h"
 #include "videofilters.h"
 #include "menu.h"
 #include "input.h"
@@ -1011,6 +1012,8 @@ void ClearScreenshot()
  ***************************************************************************/
 static void TakeScreenshot()
 {
+	SwitchMemoryModeMenu();
+	AllocSaveBuffer();
 	IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
 
 	if (pngContext == NULL) {
@@ -1037,6 +1040,7 @@ static void TakeScreenshot()
 		return;
 	}
 	memcpy(gameScreenPng.buffer, savebuffer, gameScreenPng.size);
+	FreeSaveBuffer();
 }
 
 /****************************************************************************

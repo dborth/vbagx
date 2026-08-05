@@ -19,7 +19,7 @@
 #include "input.h"
 #include "video.h"
 #include "gamesettings.h"
-#include "mem2.h"
+#include "memmanager.h"
 #include "videofilters.h"
 
 #include "vba/gba/Globals.h"
@@ -52,15 +52,6 @@ int main(int argc, char *argv[])
 	#endif
 
 	InitialisePalette();
-
-#ifdef HW_RVL
-	savebuffer = (unsigned char *)mem2_malloc(SAVEBUFFERSIZE);
-	browserList = (BROWSERENTRY *)mem2_malloc(sizeof(BROWSERENTRY)*MAX_BROWSER_SIZE);
-	rom = (u8 *)mem2_malloc(MAX_GBA_ROM_SIZE); // allocate 32 MB to GBA ROM
-#else
-	savebuffer = (unsigned char *)malloc(SAVEBUFFERSIZE);
-	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY)*MAX_BROWSER_SIZE);
-#endif
 	InitGUIThreads();
 
 #ifdef HW_RVL
@@ -90,6 +81,7 @@ int main(int argc, char *argv[])
 			// since we're entering the menu
 			ResumeDeviceThread();
 
+			SwitchMemoryModeMenu();
 			SwitchAudioMode(1);
 
 			if(!ROMLoaded)
@@ -102,6 +94,7 @@ int main(int argc, char *argv[])
 		ConfigRequested = 0;
 		ScreenshotRequested = 0;
 
+		SwitchMemoryModeGame();
 		SwitchAudioMode(0);
 
 		SelectFilterMethod(GCSettings.FilterMethod); // Initialize / Re-evaluate active filter

@@ -26,6 +26,7 @@
 #include <fat.h>
 
 #include "vbagx.h"
+#include "memmanager.h"
 #include "vbasupport.h"
 #include "fileop.h"
 #include "networkop.h"
@@ -34,15 +35,10 @@
 #include "filebrowser.h"
 #include "gui/gui.h"
 
-#ifdef HW_RVL
-	#include "mem2.h"
-#endif
-
 #define THREAD_SLEEP 100
 
 unsigned char *savebuffer = NULL;
 u8 *ext_font_ttf = NULL;
-static mutex_t bufferLock = LWP_MUTEX_NULL;
 FILE * file; // file pointer - the only one we should ever use!
 bool unmountRequired[9] = { false, false, false, false, false, false, false, false, false };
 bool isMounted[9] = { false, false, false, false, false, false, false, false, false };
@@ -786,11 +782,7 @@ bool CreateDirectory(char * path) {
 void
 AllocSaveBuffer ()
 {
-	if(bufferLock == LWP_MUTEX_NULL)
-		LWP_MutexInit(&bufferLock, false);
-
-	if(bufferLock != LWP_MUTEX_NULL)
-		LWP_MutexLock(bufferLock);
+	savebuffer = getSharedBuffer();
 	memset (savebuffer, 0, SAVEBUFFERSIZE);
 }
 
@@ -801,8 +793,8 @@ AllocSaveBuffer ()
 void
 FreeSaveBuffer ()
 {
-	if(bufferLock != LWP_MUTEX_NULL)
-		LWP_MutexUnlock(bufferLock);
+	savebuffer = NULL;
+	ReleaseSharedBuffer();
 }
 
 /****************************************************************************
@@ -956,10 +948,10 @@ size_t LoadFont(char * filepath)
 	}
 
 	if(ext_font_ttf) {
-		mem2_free(ext_font_ttf);
+		extmem_free(ext_font_ttf);
 	}
 
-	ext_font_ttf = (u8 *)mem2_malloc(loadSize);
+	ext_font_ttf = (u8 *)extmem_malloc(loadSize);
 
 	if(!ext_font_ttf) {
 		ErrorPrompt("Font file is too large!");
@@ -989,7 +981,7 @@ void LoadBgMusic()
 		return;
 	}
 
-	u8 * ogg_data = (u8 *)mem2_malloc(ogg_size);
+	u8 * ogg_data = (u8 *)extmem_malloc(ogg_size);
 
 	if(!ogg_data) {
 		return;

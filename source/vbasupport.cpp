@@ -1385,7 +1385,7 @@ static int GBAROMLoad()
 			return 0;
 
 		#ifdef HW_RVL
-		GBAROMSize = LoadFile ((char *)rom, filepath, 0, (MAX_GBA_ROM_SIZE), NOTSILENT);
+		GBAROMSize = LoadFile ((char *)rom, filepath, 0, MAX_GBA_ROM_SIZE, NOTSILENT);
 		#else
 		ShowAction("Loading...");
 		GBAROMSize = VMPager_LoadROM(filepath);

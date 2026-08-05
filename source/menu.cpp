@@ -22,6 +22,7 @@
 #endif
 
 #include "vbagx.h"
+#include "memmanager.h"
 #include "system.h"
 #include "vbasupport.h"
 #include "videofilters.h"
@@ -44,16 +45,6 @@
 
 #ifdef HW_RVL
 GuiImageData * pointer[4];
-#endif
-
-#ifdef HW_RVL
-	#include "mem2.h"
-
-	#define MEM_ALLOC(A) (u8*)mem2_malloc(A)
-	#define MEM_DEALLOC(A) mem2_free(A)
-#else
-	#define MEM_ALLOC(A) (u8*)memalign(32, A)
-	#define MEM_DEALLOC(A) free(A)
 #endif
 
 static GuiTrigger * trigA = NULL;
@@ -191,7 +182,7 @@ void ChangeLanguage() {
 		if(ext_font_ttf != NULL) {
 			HaltGui();
 			DeinitFreeType();
-			mem2_free(ext_font_ttf);
+			extmem_free(ext_font_ttf);
 			ext_font_ttf = NULL;
 			InitFreeType((u8*)font_ttf, font_ttf_size);
 		}
@@ -1059,7 +1050,13 @@ static int MenuGameSelection()
 	GuiImage preview;
 	preview.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	preview.SetPosition(174, -8);
-	u8* imgBuffer = MEM_ALLOC(640 * 480 * 4);
+
+#ifdef HW_RVL
+	u8* imgBuffer = (u8 *)extmem_malloc(640 * 480 * 4);
+#else
+	u8* imgBuffer = (u8 *)memalign(32, 640 * 480 * 4);
+#endif
+
 	int  previousBrowserIndex = -1;
 	char imagePath[MAXJOLIET + 1];
 
@@ -1183,7 +1180,13 @@ static int MenuGameSelection()
 	mainWindow->Remove(&gameBrowser);
 	mainWindow->Remove(&bgPreview);
 	mainWindow->Remove(&preview);
-	MEM_DEALLOC(imgBuffer);
+
+#ifdef HW_RVL
+	extmem_free(imgBuffer);
+#else
+	free(imgBuffer);
+#endif
+
 	return menu;
 }
 
