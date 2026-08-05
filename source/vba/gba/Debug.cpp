@@ -38,7 +38,7 @@
 #include <time.h>
 
 #include "JIT.h"
-#include "mem2.h"
+#include "memmanager.h"
 
 // -----------------------------------------------------------------------------
 // Debug Logger Buffer & Utility Method
@@ -51,7 +51,7 @@ static bool JITBlockDumped = false;
 void InitDebugLog() {
 	if (!debugLogBuffer) {
 		jitLogCapacity = 2 * 1024 * 1024;
-		debugLogBuffer = (char*)mem2_malloc(jitLogCapacity);
+		debugLogBuffer = (char*)extmem_malloc(jitLogCapacity);
 	}
 	
 	jitLogSize = 0;
@@ -162,7 +162,7 @@ void WriteDebugLogToFile() {
 
 	// Clear buffer after writing
 	if (debugLogBuffer) {
-		mem2_free(debugLogBuffer);
+		extmem_free(debugLogBuffer);
 		debugLogBuffer = NULL;
 	}
 	jitLogSize = 0;
