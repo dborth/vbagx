@@ -44,8 +44,6 @@
 #define JIT_DIFFERENTIAL_MAX_CATCHUP 14
 #define JIT_DIFFERENTIAL_MAX_WRITES_PER_INSN 8
 
-extern u8 smcPageFlags[65536];
-
 struct MemoryWriteEntry {
     u32 address;
     u32 value;
@@ -147,7 +145,7 @@ void JIT_RecordMemoryWrite(unsigned int addr, unsigned int value, unsigned char 
     u8 pageIdx = addr >> 24;
     if (pageIdx == 2 || pageIdx == 3) {
         u32 page = (addr >> 10) & 0xFFFF;
-        if (smcPageFlags[page]) {
+        if (jitCache.smcPageFlags[page]) {
             g_catchupSMCHit = true;
         }
     }

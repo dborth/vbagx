@@ -21,6 +21,7 @@
 
 #include "vbagx.h"
 #include "vbasupport.h"
+#include "memmanager.h"
 #include "fileop.h"
 #include "filebrowser.h"
 #include "audio.h"
@@ -1229,15 +1230,8 @@ extern bool gbUpdateSizes();
 bool LoadGBROM()
 {
 	gbEmulatorType = GCSettings.GBHardware;
-
-	gbRom = (u8 *)malloc(1024*1024*8);
-	if (!gbRom)
-	{
-		InfoPrompt("Unable to allocate 8 MB of memory");
-		return false;
-	}
+	gbRom = romPtr;
 	bios = (u8 *)calloc(1,0x100);
-
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
 	if(!inSz)
@@ -1297,60 +1291,37 @@ bool utilIsZipFile(const char* file)
 
 static void GBAROMCleanup()
 {
-	if(vram != NULL)
-	{
-		free(vram);
-		vram = NULL;
-	}
+	if(vram != NULL) free(vram);
+	if(paletteRAM != NULL) free(paletteRAM);
+	if(internalRAM != NULL) free(internalRAM);
+	if(workRAM != NULL) free(workRAM);
+	if(bios != NULL) free(bios);
+	if(pix != NULL) free(pix);
+	if(oam != NULL) free(oam);
+	if(ioMem != NULL) free(ioMem);
+	vram = NULL;
+	paletteRAM = NULL;
+	internalRAM = NULL;
+	workRAM = NULL;
+	bios = NULL;
+	pix = NULL;
+	oam = NULL;
+	ioMem = NULL;
+}
 
-	if(paletteRAM != NULL)
-	{
-		free(paletteRAM);
-		paletteRAM = NULL;
-	}
-
-	if(internalRAM != NULL)
-	{
-		free(internalRAM);
-		internalRAM = NULL;
-	}
-
-	if(workRAM != NULL)
-	{
-		free(workRAM);
-		workRAM = NULL;
-	}
-
-	if(bios != NULL)
-	{
-		free(bios);
-		bios = NULL;
-	}
-
-	if(pix != NULL)
-	{
-		free(pix);
-		pix = NULL;
-	}
-
-	if(oam != NULL)
-	{
-		free(oam);
-		oam = NULL;
-	}
-
-	if(ioMem != NULL)
-	{
-		free(ioMem);
-		ioMem = NULL;
-	}
-	
+static void romCleanup()
+{
+	cartridgeType = CARTRIDGE_NONE;
+	GBAROMCleanup(); // cleanup GBA memory
+	gbCleanUp(); // cleanup GB memory
+	gbRom = NULL;
+	rom = NULL;
 	#ifdef HW_DOL
 	VMPager_CloseFile();
 	#endif
 }
 
-bool GBAROMAlloc()
+static bool GBAROMAlloc()
 {
 	workRAM = (u8 *)memalign(32, 0x40000);
 	bios = (u8 *)memalign(32,0x4000);
@@ -1365,7 +1336,6 @@ bool GBAROMAlloc()
 		paletteRAM == NULL || vram == NULL || oam == NULL ||
 		pix == NULL || ioMem == NULL)
 	{
-		GBAROMCleanup();
 		ErrorPrompt("Out of memory!");
 		return false;
 	}
@@ -1374,8 +1344,8 @@ bool GBAROMAlloc()
 
 static int GBAROMLoad()
 {
-	GBAROMCleanup();
 	GBAROMSize = 0;
+	rom = romPtr;
 
 	if(!inSz)
 	{
@@ -1392,7 +1362,7 @@ static int GBAROMLoad()
 		CancelAction();
 
 		if(GBAROMSize == 0) {
-			ErrorPrompt("Error opening file!");
+			ErrorPrompt("Error loading file!");
 		}
 		#endif
 	}
@@ -1404,6 +1374,8 @@ static int GBAROMLoad()
 	if(gb_first_rom(rom, GBAROMSize)) {
 		int r = YesNoPrompt("This file contains uncompressed Game Boy (Color) ROMs. Do you want to run these?", true);
 		if (r) {
+			GBAROMSize = 0;
+			rom = NULL;
 			return 2;
 		}
 	}
@@ -1412,30 +1384,24 @@ static int GBAROMLoad()
 		return 0;
 	}
 
-	if(GBAROMSize)
-	{
+	if(GBAROMSize) {
 		flashInit();
 		eepromInit();
 		CPUUpdateRenderBuffers( true );
 		return 1;
 	}
-	else
-	{
-		GBAROMCleanup();
-		return 0;
-	}
+	return 0;
 }
 
 bool LoadVBAROM()
 {
-	cartridgeType = CARTRIDGE_NONE;
-	int loaded = 0;
+	int newCartridgeType = CARTRIDGE_NONE;
 
 	// image type (checks file extension)
 	if(utilIsGBAImage(browserList[browser.selIndex].filename))
-		cartridgeType = CARTRIDGE_GBA;
+		newCartridgeType = CARTRIDGE_GBA;
 	else if(utilIsGBImage(browserList[browser.selIndex].filename))
-		cartridgeType = CARTRIDGE_GB;
+		newCartridgeType = CARTRIDGE_GB;
 	else if(utilIsZipFile(browserList[browser.selIndex].filename))
 	{
 		// we need to check the file extension of the first file in the archive
@@ -1454,11 +1420,11 @@ bool LoadVBAROM()
 			return false;
 			#endif
 
-			cartridgeType = CARTRIDGE_GBA;
+			newCartridgeType = CARTRIDGE_GBA;
 		}
 		else if(utilIsGBImage(zippedFilename))
 		{
-			cartridgeType = CARTRIDGE_GB;
+			newCartridgeType = CARTRIDGE_GB;
 		}
 		else
 		{
@@ -1470,19 +1436,19 @@ bool LoadVBAROM()
 	}
 
 	// leave before we do anything
-	if(cartridgeType != CARTRIDGE_GB && cartridgeType != CARTRIDGE_GBA)
+	if(newCartridgeType != CARTRIDGE_GB && newCartridgeType != CARTRIDGE_GBA)
 	{
 		// Not zip gba agb gbc cgb sgb gb mb bin elf or dmg!
 		ErrorPrompt("Unrecognized file extension!");
 		return false;
 	}
 
+	romCleanup();
+	int loaded = 0;
+	cartridgeType = newCartridgeType;
 	srcWidth = 0;
 	srcHeight = 0;
 
-	GBAROMCleanup(); // cleanup GBA memory
-	gbCleanUp(); // cleanup GB memory
-	
 	if (InitialBorder != NULL) {
 		free(InitialBorder);
 		InitialBorder = NULL;
@@ -1498,12 +1464,13 @@ bool LoadVBAROM()
 		cpuSaveType = 0;
 		if (loaded == 2) {
 			loaded = 0;
-			cartridgeType = CARTRIDGE_GB;
+			cartridgeType = CARTRIDGE_GB; // GB ROM within GBA rom - falls through to load below
 		} else if (loaded == 1 && GCSettings.SGBBorder == SGBBORDER_FROMPNG) {
 			LoadPNGBorder("defaultgba");
 		}
 	}
-	else if (cartridgeType == CARTRIDGE_GB)
+
+	if (cartridgeType == CARTRIDGE_GB)
 	{
 		emulator = GBSystem;
 		gbBorderOn = (GCSettings.SGBBorder == SGBBORDER_FROMGAME);
@@ -1529,55 +1496,56 @@ bool LoadVBAROM()
 		loaded = LoadGBROM();
 	}
 
-	if(loaded) {
-		soundInit();
-
-		// Setup GX
-		if (InitialBorder) {
-			GX_Render_Init(InitialBorderWidth, InitialBorderHeight);
-		} else {
-			GX_Render_Init(srcWidth, srcHeight);
-		}
-
-		if (cartridgeType == CARTRIDGE_GB)
-		{
-			gbGetHardwareType();
-
-			LoadPatch();
-
-			// Apply preferences specific to this game
-			gbApplyPerImagePreferences();
-
-			gbSoundReset();
-			gbSoundSetDeclicking(true);
-			gbReset();
-		}
-		else
-		{
-			// Set defaults
-			cpuSaveType = 0; // automatic
-			flashSetSize(0x10000); // 64K saves
-			rtcEnable(false);
-			mirroringEnable = false;
-
-			// Apply preferences specific to this game
-			ApplyPerImagePreferences();
-			doMirroring(mirroringEnable);
-
-			soundReset();
-			CPUInit(NULL, false);
-			LoadPatch();
-			CPUReset();
-		}
-
-		soundInit();
-
-		emulating = 1;
-
-		// Start system clock
-		start = gettime();
+	if(!loaded) {
+		romCleanup();
+		return false;
 	}
-	return loaded;
+
+	soundInit();
+
+	// Setup GX
+	if (InitialBorder) {
+		GX_Render_Init(InitialBorderWidth, InitialBorderHeight);
+	} else {
+		GX_Render_Init(srcWidth, srcHeight);
+	}
+
+	if (cartridgeType == CARTRIDGE_GB)
+	{
+		gbGetHardwareType();
+
+		LoadPatch();
+
+		// Apply preferences specific to this game
+		gbApplyPerImagePreferences();
+
+		gbSoundReset();
+		gbSoundSetDeclicking(true);
+		gbReset();
+	}
+	else
+	{
+		// Set defaults
+		cpuSaveType = 0; // automatic
+		flashSetSize(0x10000); // 64K saves
+		rtcEnable(false);
+		mirroringEnable = false;
+
+		// Apply preferences specific to this game
+		ApplyPerImagePreferences();
+		doMirroring(mirroringEnable);
+		soundReset();
+		CPUInit(NULL, false);
+		LoadPatch();
+		CPUReset();
+	}
+
+	soundInit();
+
+	emulating = 1;
+	// Start system clock
+	start = gettime();
+	return true;
 }
 
 /****************************************************************************

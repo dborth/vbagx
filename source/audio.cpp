@@ -20,7 +20,7 @@
 #include "vba/gba/Debug.h"
 
 extern bool turboMode;
-extern int ConfigRequested;
+extern int MenuRequested;
 
 // One DMA frame is 3200 bytes (800 stereo 16-bit frames).
 #define DMA_BYTES 3200
@@ -268,7 +268,7 @@ SoundWii::SoundWii()
 
 bool SoundWii::canWrite()
 {
-    if (ConfigRequested)
+    if (MenuRequested)
     {
         AUDIO_StopDMA();
         AudioStart();

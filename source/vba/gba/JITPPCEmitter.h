@@ -39,7 +39,6 @@
  * sync/isync) required after emitting or patching any executable code.
  ***************************************************************************/
 
-#ifndef NO_JIT_COMPILER
 #ifndef JIT_PPC_EMITTER_H
 #define JIT_PPC_EMITTER_H
 
@@ -230,4 +229,3 @@
 #define PPC_BL(offset)         ((18 << 26) | ((offset) & 0x3FFFFFC) | 1)
 
 #endif // JIT_PPC_EMITTER_H
-#endif

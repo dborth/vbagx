@@ -37,28 +37,45 @@
  *     this to stay correct.
  ***************************************************************************/
 
-#ifndef NO_JIT_COMPILER
 #include <ogc/cache.h>
 #include "JIT.h"
 
 JITCache jitCache;
 
-alignas(32) u8 smcPageFlags[SMC_MAP_SIZE] = {0};
-BasicBlock* smcRegistry[SMC_MAP_SIZE] = {nullptr};
-
 JITCache::JITCache() {
-	memset(blockTable, 0, sizeof(blockTable));
+	jitArena = nullptr;
+	blockTable = nullptr;
+	smcRegistry = nullptr;
+	smcPageFlags = nullptr;
+	linkerStubAddress = nullptr;
+	linkerReturnAddress = nullptr;
 	arenaOffset = 0;
-	jitArena = (u32*)memalign(32, JIT_ARENA_SIZE);
-	flushCache();
+	isInitialized = false;
 }
 
 JITCache::~JITCache() {
+    destroy();
+}
+
+void JITCache::initialize(u32* arenaPtr, BasicBlock* blockPtr, BasicBlock** smcRegPtr, u8* smcFlagsPtr) {
+	if (isInitialized) return;
+
+	jitArena = arenaPtr;
+	blockTable = blockPtr;
+	smcRegistry = smcRegPtr;
+	smcPageFlags = smcFlagsPtr;
+	arenaOffset = 0;
 	flushCache();
-	if (jitArena) {
-		free(jitArena);
-		jitArena = nullptr;
-	}
+	isInitialized = true;
+}
+
+void JITCache::destroy() {
+	jitArena = nullptr;
+	blockTable = nullptr;
+	smcRegistry = nullptr;
+	smcPageFlags = nullptr;
+	arenaOffset = 0;
+	isInitialized = false;
 }
 
 u32* JITCache::allocateJITMemory(size_t numBytes) {
@@ -147,17 +164,18 @@ void JITCache::flushCache() {
 	JIT_LOG_CACHE_FLUSH();
 
 	arenaOffset = 0;
-	memset(blockTable, 0, sizeof(blockTable));
-	memset(smcPageFlags, 0, sizeof(smcPageFlags));
-	memset(smcRegistry, 0, sizeof(smcRegistry));
+
+	memset(blockTable, 0, HASH_TABLE_SIZE * sizeof(BasicBlock));
+	memset(smcRegistry, 0, SMC_MAP_SIZE * sizeof(BasicBlock*));
+	memset(smcPageFlags, 0, SMC_MAP_SIZE * sizeof(u8));
 
 	if (jitArena) {
 		u32* emitPtr = jitArena;
 		linkerStubAddress = emitPtr;
 
 		// 1. Load the Base Address of the blockTable struct array
-		*emitPtr++ = PPC_LIS(PPC_R10, (u32)&blockTable[0] >> 16);
-		*emitPtr++ = PPC_ORI(PPC_R10, PPC_R10, (u32)&blockTable[0] & 0xFFFF);
+		*emitPtr++ = PPC_LIS(PPC_R10, (u32)blockTable >> 16);
+		*emitPtr++ = PPC_ORI(PPC_R10, PPC_R10, (u32)blockTable & 0xFFFF);
 
 		// 2. Native Hash Calculation
 		*emitPtr++ = PPC_SRWI(PPC_R11, PPC_R4, 1);
@@ -279,5 +297,3 @@ void JITCache::invalidateSMCTarget(u32 targetEA) {
 		}
 	}
 }
-
-#endif

@@ -23,8 +23,6 @@
 #ifndef JIT_DEBUGSTATELOG_H
 #define JIT_DEBUGSTATELOG_H
 
-#ifndef NO_JIT_COMPILER
-
 #include "../common/Types.h"
 
 class JITDebugStateLog {
@@ -49,7 +47,5 @@ class JITDebugStateLog {
 };
 
 extern JITDebugStateLog jitDebugStateLog;
-
-#endif // NO_JIT_COMPILER
 
 #endif // JIT_DEBUGSTATELOG_H

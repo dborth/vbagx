@@ -368,11 +368,6 @@ void* VM_Init(u32 reqVMSize, u32 reqMEMSize)
 	return VM_Base;
 }
 
-void* VM_GetBase(void)
-{
-	return VM_Base;
-}
-
 bool VM_IsCommitted(u16 v_index)
 {
 	return virt_map[v_index].committed == 1;

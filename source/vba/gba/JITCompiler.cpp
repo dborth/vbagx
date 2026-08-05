@@ -40,7 +40,6 @@
  * executed).
  ***************************************************************************/
 
-#ifndef NO_JIT_COMPILER
 #include <ogc/cache.h>
 #include "JIT.h"
 #include "GBAinline.h"
@@ -362,11 +361,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*emitPtr++ = PPC_RLWINM(PPC_R9, PPC_R9, 22, 10, 31);
 
 		// 6. Load smcPageFlags base pointer into R8
-		*emitPtr++ = PPC_LIS(PPC_R8, ((u32)smcPageFlags) >> 16);
-		*emitPtr++ = PPC_ORI(PPC_R8, PPC_R8, ((u32)smcPageFlags) & 0xFFFF);
+		*emitPtr++ = PPC_LIS(PPC_R8, ((u32)cache.smcPageFlags) >> 16);
+		*emitPtr++ = PPC_ORI(PPC_R8, PPC_R8, ((u32)cache.smcPageFlags) & 0xFFFF);
 
 		// 7. Load the SMC flag byte
-		*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R8, PPC_R9); // R9 = smcPageFlags[pageIndex]
+		*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R8, PPC_R9); // R9 = cache.smcPageFlags[pageIndex]
 
 		// 8. Check if flag != 0
 		*emitPtr++ = PPC_CMPWI(0, PPC_R9, 0);
@@ -2127,7 +2126,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
-
+					
 					// Flush dirty flags and registers before dynamic block exit
 					FlushDirtyFlags(emitPtr);
 					FlushDirtyRegisters(emitPtr);
@@ -2309,4 +2308,3 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 	return cache.registerBlock(startPC, instrCount, (JITBlockFunc)blockStart);
 }
-#endif

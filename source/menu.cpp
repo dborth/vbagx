@@ -1051,11 +1051,7 @@ static int MenuGameSelection()
 	preview.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	preview.SetPosition(174, -8);
 
-#ifdef HW_RVL
-	u8* imgBuffer = (u8 *)extmem_malloc(640 * 480 * 4);
-#else
-	u8* imgBuffer = (u8 *)memalign(32, 640 * 480 * 4);
-#endif
+	u8* imgBuffer = coreMem.menu.imageBuffer;
 
 	int  previousBrowserIndex = -1;
 	char imagePath[MAXJOLIET + 1];
@@ -1180,12 +1176,6 @@ static int MenuGameSelection()
 	mainWindow->Remove(&gameBrowser);
 	mainWindow->Remove(&bgPreview);
 	mainWindow->Remove(&preview);
-
-#ifdef HW_RVL
-	extmem_free(imgBuffer);
-#else
-	free(imgBuffer);
-#endif
 
 	return menu;
 }
@@ -1695,7 +1685,6 @@ static int MenuGame()
 				mainWindow->Remove(gameScreenImg);
 				delete gameScreenImg;
 				if(gameScreenTexture != NULL) {
-					free(gameScreenTexture);
 					gameScreenTexture = NULL;
 				}
 				ClearScreenshot();
@@ -4914,18 +4903,15 @@ static u8 * CreateBlurredGameTexture() {
 	int blurAmount = 4; // blur amount
 	GXColor blurOverlayColor = (GXColor){50, 50, 50, 160};
 
-	u8 * dst = (u8 *)memalign(32, screenwidth * screenheight * 4);
-	if(!dst) {
-		return NULL;
-	}
+	u8 * dst = coreMem.menu.imageBuffer;
 
 	int scaledWidth = (int)(gameScreenPng.width * gameScreenPng.scaleX);
 	int scaledHeight = (int)(gameScreenPng.height * gameScreenPng.scaleY);
 
 	// Failsafe for invalid scale metrics
 	if (scaledWidth <= 0 || scaledHeight <= 0) {
-		memset(dst, 0, screenwidth * screenheight * 4);
-		return dst;
+		free(src);
+		return NULL;
 	}
 
 	// Calculate the absolute top-left starting pixel of the scaled image.
@@ -4950,8 +4936,8 @@ static u8 * CreateBlurredGameTexture() {
 
 	// Failsafe if the image is pushed entirely off-screen
 	if (cropWidth <= 0 || cropHeight <= 0) {
-		memset(dst, 0, screenwidth * screenheight * 4);
-		return dst;
+		free(src);
+		return NULL;
 	}
 
 	// Determine the starting offset within the theoretical scaled image
@@ -4959,15 +4945,8 @@ static u8 * CreateBlurredGameTexture() {
 	int cropStartY = trueOffsetY < 0 ? -trueOffsetY : 0;
 
 	// Allocate scratch space ONLY for the viewable cropped portion
-	u8 *scaledImg = (u8 *)malloc(cropWidth * cropHeight * 4);
-	u8 *rowBuf    = (u8 *)malloc(cropWidth * 4);
-
-	if (!scaledImg || !rowBuf) {
-		if (scaledImg) free(scaledImg);
-		if (rowBuf) free(rowBuf);
-		free(dst);
-		return NULL;
-	}
+	u8 *scaledImg = coreMem.menu.workBuffer1;
+	u8 *rowBuf    = coreMem.menu.workBuffer2;
 
 	// Scale the raw input PNG directly into our viewable cropped buffer
 	for (int dy = 0; dy < cropHeight; ++dy) {
@@ -5096,9 +5075,6 @@ static u8 * CreateBlurredGameTexture() {
 	}
 
 	DCFlushRange(dst, screenwidth * screenheight * 4);
-
-	free(scaledImg);
-	free(rowBuf);
 	free(src);
 	return dst;
 }
@@ -5302,14 +5278,13 @@ MainMenu (int menu)
 	mainWindow = NULL;
 	
 	if(gameScreenTexture != NULL) {
-		free(gameScreenTexture);
 		gameScreenTexture = NULL;
 	}
 
 	ClearScreenshot();
 
 	// wait for keys to be depressed
-	while(MenuRequested())
+	while(isMenuRequested())
 	{
 		UpdatePads();
 		usleep(THREAD_SLEEP);

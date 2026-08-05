@@ -999,7 +999,6 @@ static long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int g
 void ClearScreenshot()
 {
 	if(gameScreenPng.buffer) {
-		free(gameScreenPng.buffer);
 		gameScreenPng.buffer = NULL;
 	}
 	gameScreenPng.size = 0;
@@ -1010,9 +1009,8 @@ void ClearScreenshot()
  *
  * Copies the current texturemem screen into a PNG buffer
  ***************************************************************************/
-static void TakeScreenshot()
+void TakeScreenshot()
 {
-	SwitchMemoryModeMenu();
 	AllocSaveBuffer();
 	IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
 
@@ -1034,7 +1032,7 @@ static void TakeScreenshot()
 		return;
 	}
 
-	gameScreenPng.buffer = (u8 *) malloc(gameScreenPng.size);
+	gameScreenPng.buffer = coreMem.menu.gameScreen;
 	if (gameScreenPng.buffer == NULL) {
 		gameScreenPng.size = 0;
 		return;
@@ -1353,16 +1351,6 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 	#ifdef HW_RVL
 	draw_cursor(); // render cursor
 	#endif
-
-	if(ScreenshotRequested)
-	{
-		// Wait for the GPU to finish the CURRENT frame before reading from the EFB to encode the PNG
-		GX_DrawDone();
-		
-		ScreenshotRequested = 0;
-		TakeScreenshot();
-		ConfigRequested = 1;
-	}
 
 	// EFB is ready to be copied into XFB
 	VIDEO_SetNextFramebuffer(xfb[whichfb]);

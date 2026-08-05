@@ -29,8 +29,7 @@
 extern int emulating;
 void StopColorizing();
 void gbSetPalette(u32 RRGGBB[]);
-int ScreenshotRequested = 0;
-int ConfigRequested = 0;
+int MenuRequested = 0;
 char appPath[1024] = { 0 };
 static bool autoboot = false;
 
@@ -91,12 +90,9 @@ int main(int argc, char *argv[])
 		}
 
 		autoboot = false;
-		ConfigRequested = 0;
-		ScreenshotRequested = 0;
-
+		MenuRequested = 0;
 		SwitchMemoryModeGame();
 		SwitchAudioMode(0);
-
 		SelectFilterMethod(GCSettings.FilterMethod); // Initialize / Re-evaluate active filter
 
 		// stop checking if devices were removed/inserted
@@ -113,12 +109,9 @@ int main(int argc, char *argv[])
 			else
 				StopColorizing();
 		}
-		#ifndef NO_JIT_COMPILER
 		DEBUG_RESET_LOGS();
-		#endif
 
 		systemResetPacer();
-
 		while (emulating) // emulation loop
 		{
 			emulator.emuMain(emulator.emuCount);
@@ -128,8 +121,10 @@ int main(int argc, char *argv[])
 				emulator.emuReset(); // reset game
 				ResetRequested = 0;
 			}
-			if(ConfigRequested)
+			if(MenuRequested)
 			{
+				SwitchMemoryModeMenu();
+				TakeScreenshot();
 				ResetVideo_Menu();
 				break; // leave emulation loop
 			}
@@ -139,9 +134,7 @@ int main(int argc, char *argv[])
 			#endif
 		} // emulation loop
 
-		#ifndef NO_JIT_COMPILER
 		DEBUG_OUTPUT_LOGS();
-		#endif
 	} // main loop
 	return 0;
 }
@@ -150,7 +143,7 @@ void ExitApp()
 {
 	SavePrefs(SILENT);
 
-	if (ROMLoaded && !ConfigRequested && GCSettings.AutoSave == AUTOSAVE_SRAM)
+	if (ROMLoaded && !MenuRequested && GCSettings.AutoSave == AUTOSAVE_SRAM)
 		SaveBatteryOrStateAuto(FILE_SRAM, SILENT);
 
 	SystemExit(GCSettings.ExitAction, autoboot);

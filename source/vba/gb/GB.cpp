@@ -3392,11 +3392,6 @@ void gbCleanUp() {
 		gbRam = NULL;
 	}
 
-	if (gbRom != NULL) {
-		free(gbRom);
-		gbRom = NULL;
-	}
-
 	if (bios != NULL) {
 		free(bios);
 		bios = NULL;
@@ -3440,18 +3435,7 @@ void gbCleanUp() {
 bool gbLoadRom(const char *szFile) {
 	int size = 0;
 
-	if (gbRom != NULL) {
-		gbCleanUp();
-	}
-
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
-
-	/*  gbRom = utilLoad(szFile,
-	 utilIsGBImage,
-	 NULL,
-	 size);*/
-	if (!gbRom)
-		return false;
 
 	gbRomSize = size;
 

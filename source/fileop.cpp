@@ -37,6 +37,7 @@
 
 #define THREAD_SLEEP 100
 
+static mutex_t saveBufferLock = LWP_MUTEX_NULL;
 unsigned char *savebuffer = NULL;
 u8 *ext_font_ttf = NULL;
 FILE * file; // file pointer - the only one we should ever use!
@@ -71,7 +72,7 @@ static lwp_t devicethread = LWP_THREAD_NULL;
 static volatile bool deviceHalt = true;
 
 #ifdef HW_RVL
-// device thread synchronization (no spin-waits)
+// device thread synchronization
 static mutex_t deviceMutex    = LWP_MUTEX_NULL;
 static cond_t  deviceWakeCond = LWP_COND_NULL; // main -> device: wake / re-check halt
 static cond_t  deviceHaltCond = LWP_COND_NULL; // device -> main: now halted
@@ -219,6 +220,8 @@ parsecallback (void *arg)
 void
 InitDeviceThread()
 {
+	LWP_MutexInit(&saveBufferLock, false);
+
 #ifdef HW_RVL
 	LWP_MutexInit(&deviceMutex, false);
 	LWP_CondInit(&deviceWakeCond);
@@ -782,7 +785,7 @@ bool CreateDirectory(char * path) {
 void
 AllocSaveBuffer ()
 {
-	savebuffer = getSharedBuffer();
+	LWP_MutexLock(saveBufferLock);
 	memset (savebuffer, 0, SAVEBUFFERSIZE);
 }
 
@@ -793,8 +796,7 @@ AllocSaveBuffer ()
 void
 FreeSaveBuffer ()
 {
-	savebuffer = NULL;
-	ReleaseSharedBuffer();
+	LWP_MutexUnlock(saveBufferLock);
 }
 
 /****************************************************************************

@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-void VMPager_Init();
+void VMPager_Init(u8 *vmPtr);
 void VMPager_Shutdown();
 void VMPager_RequestPage(u16 v_index);
 int VMPager_LoadROM(const char * filepath);

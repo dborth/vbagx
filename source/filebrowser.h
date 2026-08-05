@@ -11,8 +11,8 @@
 #ifndef _FILEBROWSER_H_
 #define _FILEBROWSER_H_
 
-#include <unistd.h>
-#include <gccore.h>
+#include <gctypes.h>
+#include <sys/param.h>
 
 #define MAXJOLIET 255
 #ifdef HW_DOL

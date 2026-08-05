@@ -43,7 +43,7 @@ void systemGameRumble(int RumbleForFrames);
 void systemGameRumbleOnlyFor(int OnlyRumbleForFrames);
 void updateRumbleFrame();
 u32 GetJoy(int which);
-bool MenuRequested();
+bool isMenuRequested();
 void SetupPads();
 void UpdatePads();
 

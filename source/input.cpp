@@ -280,7 +280,7 @@ static void updateRumble()
 	if(!GCSettings.Rumble) return;
 
 	bool r = false;
-	if (ConfigRequested) r = (menuRumbleCount > 0);
+	if (MenuRequested) r = (menuRumbleCount > 0);
 	else r = cartridgeRumble || possibleCartridgeRumble || (gameRumbleCount > 0) || (menuRumbleCount > 0);
 
 	if (SilenceNeeded > 0)
@@ -313,7 +313,7 @@ void updateRumbleFrame()
 	if (rumbleCountAlready > 70) {
 		SilenceNeeded = 5;
 		rumbleCountAlready = 0;
-	} else if (ConfigRequested) {
+	} else if (MenuRequested) {
 		if (menuRumbleCount>0) ++rumbleCountAlready;
 		else rumbleCountAlready=0;
 	} else {
@@ -322,7 +322,7 @@ void updateRumbleFrame()
 		else rumbleCountAlready=0;
 	}
 	updateRumble();
-	if (gameRumbleCount>0 && !ConfigRequested) --gameRumbleCount;
+	if (gameRumbleCount>0 && !MenuRequested) --gameRumbleCount;
 	if (menuRumbleCount>0) --menuRumbleCount;
 }
 
@@ -949,7 +949,7 @@ static u32 DecodeJoy(unsigned short pad)
 	return J;
 }
 
-bool MenuRequested()
+bool isMenuRequested()
 {
 	for(int i=0; i<4; i++) {
 		if (
@@ -986,9 +986,9 @@ static int GetPlayerChan(int pad)
 u32 GetJoy(int pad)
 {
 	// request to go back to menu
-	if (MenuRequested())
+	if (isMenuRequested())
 	{
-		ScreenshotRequested = 1;
+		MenuRequested = 1;
 		updateRumbleFrame();
 		return 0;
 	}

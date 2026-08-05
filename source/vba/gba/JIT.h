@@ -59,7 +59,6 @@
 #include "GBA.h"
 #include "JITCache.h"
 
-#ifndef NO_JIT_COMPILER
 #define JIT_TRACE_MAX_INSTRUCTIONS 42
 
 struct JITResult {
@@ -76,6 +75,5 @@ struct CPUFlags;
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache);
 extern "C" void ExecuteJITTrace(JITBlockFunc execute, JITResult* outResult, u32* busPrefetchCount, u32* gbaRegs, CPUFlags* flags, GBAReadPageTable* readTable);
 extern "C" void ExecuteJITTrace_Return();
-#endif
 
 #endif // JIT_H

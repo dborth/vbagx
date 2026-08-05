@@ -403,14 +403,13 @@ static inline void CPUWriteMemory(u32 address, u32 value) {
 	// OPTIMIZATION: ~0x03 maps cleanly to a 1-cycle rlwinm mask
 	address &= ~0x03;
 	u8 pageIdx = address >> 24;
-#ifndef NO_JIT_COMPILER
+
 	if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
 		u32 page = (address >> 10) & 0xFFFF;
-		if (smcPageFlags[page]) {
+		if (jitCache.smcPageFlags[page]) {
 			jitCache.invalidateSMCTarget(address);
 		}
 	}
-#endif
 	u8 *base = gbaWritePagePtrs[pageIdx];
 
 	// FAST PATH
@@ -472,14 +471,13 @@ static inline void CPUWriteHalfWord(u32 address, u16 value) {
 	JIT_RECORD_MEMORY_WRITE(address, value, 2);
 	address &= ~0x01;
 	u8 pageIdx = address >> 24;
-#ifndef NO_JIT_COMPILER
+
 	if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
 		u32 page = (address >> 10) & 0xFFFF;
-		if (smcPageFlags[page]) {
+		if (jitCache.smcPageFlags[page]) {
 			jitCache.invalidateSMCTarget(address);
 		}
 	}
-#endif
 	u8 *base = gbaWritePagePtrs[pageIdx];
 
 	// FAST PATH
@@ -546,14 +544,13 @@ static inline void CPUWriteHalfWord(u32 address, u16 value) {
 static inline void CPUWriteByte(u32 address, u8 b) {
 	JIT_RECORD_MEMORY_WRITE(address, b, 1);
 	u8 pageIdx = address >> 24;
-#ifndef NO_JIT_COMPILER
+
 	if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
 		u32 page = (address >> 10) & 0xFFFF;
-		if (smcPageFlags[page]) {
+		if (jitCache.smcPageFlags[page]) {
 			jitCache.invalidateSMCTarget(address);
 		}
 	}
-#endif
 	u8 *base = gbaWritePagePtrs[pageIdx];
 
 	// FAST PATH

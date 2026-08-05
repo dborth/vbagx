@@ -787,11 +787,6 @@ bool CPUReadMemState(char *memory, int available)
 
 void CPUCleanUp()
 {
-  if(rom != NULL) {
-    free(rom);
-    rom = NULL;
-  }
-
   if(vram != NULL) {
     free(vram);
     vram = NULL;
@@ -2197,9 +2192,7 @@ void CPUInit(const char *biosFileName, bool useBiosFile)
   memcpy(bios, myROM, sizeof(myROM));
 
   GBA_InitMemoryPages();
-#ifndef NO_JIT_COMPILER
-  jitCache.flushCache();
-#endif
+
   int i = 0;
 
   biosProtected[0] = 0x00;

@@ -31,7 +31,6 @@ float systemGetRenderFPS();
 float systemGetCoreFPS();
 void systemResetPacer();
 bool LoadVBAROM();
-bool GBAROMAlloc();
 void InitialisePalette();
 bool IsGameboyGame();
 bool IsGBAGame();

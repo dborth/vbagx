@@ -20,10 +20,10 @@
 #include "vmpager.h"
 #include "vm.h"
 
-extern int GBAROMSize;
-extern u8 *rom;
+static FILE* romFile = NULL;
+static int romSize = 0;
+static u8* vmRomPtr;
 
-static FILE* romfile = NULL;
 static lwp_t pager_thread = LWP_THREAD_NULL;
 static mqbox_t pager_queue = MQ_BOX_NULL;
 static bool pager_running = false;
@@ -53,20 +53,20 @@ static void* VMPager_ThreadFunc(void* arg) {
 
 		// Align the fetch index to our prefetch block size to avoid overlapping reads
 		u16 start_v_index = (req_v_index / PREFETCH_PAGES) * PREFETCH_PAGES;
-		u16 max_pages = (GBAROMSize + PAGE_SIZE - 1) / PAGE_SIZE;
+		u16 max_pages = (romSize + PAGE_SIZE - 1) / PAGE_SIZE;
 
 		u16 end_v_index = start_v_index + PREFETCH_PAGES;
 		if (end_v_index > max_pages) end_v_index = max_pages;
 
 		u32 offset = start_v_index * PAGE_SIZE;
 		u32 readSize = (end_v_index - start_v_index) * PAGE_SIZE;
-		if (offset + readSize > (u32)GBAROMSize) readSize = GBAROMSize - offset;
+		if (offset + readSize > (u32)romSize) readSize = romSize - offset;
 
-		if (romfile) {
-			fseeko(romfile, offset, SEEK_SET);
-			fread(page_buffer, 1, readSize, romfile);
+		if (romFile) {
+			fseeko(romFile, offset, SEEK_SET);
+			fread(page_buffer, 1, readSize, romFile);
 			// This memcpy will intentionally trigger DSI exceptions on the pager thread
-			memcpy(rom + offset, page_buffer, readSize);
+			memcpy(vmRomPtr + offset, page_buffer, readSize);
 			// Explicitly mark these pages as committed now that MEM1 is populated
 			u32 pages_read = (readSize + PAGE_SIZE - 1) / PAGE_SIZE;
 			for (u32 i = 0; i < pages_read; i++) {
@@ -77,7 +77,7 @@ static void* VMPager_ThreadFunc(void* arg) {
 	return NULL;
 }
 
-void VMPager_Init() {
+void VMPager_Init(u8 *ptr) {
 	if (pager_running) return;
 
 	pager_stack = (u8*)memalign(32, PAGER_STACK_SIZE);
@@ -87,6 +87,8 @@ void VMPager_Init() {
 
 	pager_running = true;
 	LWP_CreateThread(&pager_thread, VMPager_ThreadFunc, NULL, pager_stack, PAGER_STACK_SIZE, 80);
+
+	vmRomPtr = ptr;
 }
 
 void VMPager_Shutdown() {
@@ -116,27 +118,34 @@ void VMPager_RequestPage(u16 v_index) {
 int VMPager_LoadROM(const char * filepath) {
 	VMPager_CloseFile();
 	
-	romfile = fopen(filepath, "rb");
-	if (romfile == NULL) {
+	romFile = fopen(filepath, "rb");
+	if (romFile == NULL) {
 		return 0;
 	}
 
-	fseeko(romfile, 0, SEEK_END);
-	GBAROMSize = ftello(romfile);
-	fseeko(romfile, 0, SEEK_SET);
+	fseeko(romFile, 0, SEEK_END);
+	romSize = ftello(romFile);
+	fseeko(romFile, 0, SEEK_SET);
 
-	rom = (u8*)VM_GetBase();
+	if(romSize <= 0) {
+		fclose(romFile);
+		romFile = NULL;
+		romSize = 0;
+		return 0;
+	}
+
+	VM_Clear();
 
 	u32 offset = 0;
 	// Only preload up to 16MB (ARAM limit) at boot
-	u32 preloadSize = (GBAROMSize > ARAM_SIZE) ? (ARAM_SIZE) : GBAROMSize;
+	u32 preloadSize = (romSize > ARAM_SIZE) ? (ARAM_SIZE) : romSize;
 
 	while (offset < preloadSize) {
 		u32 readSize = preloadSize - offset;
 		if (readSize > PAGE_BUFFER_SIZE) readSize = PAGE_BUFFER_SIZE;
 
-		fread(page_buffer, 1, readSize, romfile);
-		memcpy(rom + offset, page_buffer, readSize);
+		fread(page_buffer, 1, readSize, romFile);
+		memcpy(vmRomPtr + offset, page_buffer, readSize);
 		offset += readSize;
 	}
 
@@ -145,15 +154,14 @@ int VMPager_LoadROM(const char * filepath) {
 		VM_SetCommitted(i);
 	}
 
-	return GBAROMSize;
+	return romSize;
 }
 
 void VMPager_CloseFile() {
-	if (romfile) {
-		fclose(romfile);
-		romfile = NULL;
+	if (romFile) {
+		fclose(romFile);
+		romFile = NULL;
+		romSize = 0;
 	}
-	rom = NULL;
-	VM_Clear();
 }
 #endif

@@ -1366,19 +1366,16 @@ int thumbExecute() {
 
     bool useJIT = false;
 
-#ifndef NO_JIT_COMPILER
     if(GCSettings.DynamicRecompilation) {
     	// Default to true upon entering the loop. This ensures that if the
     	// scheduler previously yielded for an interrupt, the interrupt handler
     	// (a valid Trace Header) is allowed to be JIT compiled.
     	useJIT = true;
     }
-#endif
 
     do {
 		u32 pc = armNextPC;
 
-#ifndef NO_JIT_COMPILER
 		if (useJIT) {
 			BasicBlock* block = jitCache.getBlock(pc);
 
@@ -1450,7 +1447,6 @@ int thumbExecute() {
 		} else {
 			PROFILER_CLEAR_BAILOUT_FLAG();
 		}
-#endif
 		// ========================================================================
 		// LEGACY C++ FALLBACK PATH
 		// ========================================================================

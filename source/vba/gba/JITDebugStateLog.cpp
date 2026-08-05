@@ -14,7 +14,6 @@
  * memory. WriteToFile() flushes the buffer to disk and releases it.
  ***************************************************************************/
 
-#ifndef NO_JIT_COMPILER
 #if VBAGX_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
@@ -105,5 +104,4 @@ void JITDebugStateLog::WriteToFile() {
 	free(logBuffer);
 	logBuffer = nullptr;
 }
-#endif
 #endif
