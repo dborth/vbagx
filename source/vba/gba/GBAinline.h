@@ -3,6 +3,7 @@
 
 #include "../common/Port.h"
 #include "GBA.h"
+#include "GBAcpu.h"
 #include "JIT.h"
 #include "RTC.h"
 #include "Sound.h"
@@ -40,93 +41,49 @@ extern u32 RomIdCode;
 #define gid(a,b,c) (a|(b<<8)|(c<<16))
 #define CORVETTE		gid('A','V','C')
 
-/*****************************************************************************
- * Nintendo GameCube Virtual Memory function override (not for Wii)
- * Daryl Borth September 2008
- ****************************************************************************/
-
-#define CPUReadByteQuickDef(addr) \
+#define CPUReadByteQuick(addr) \
   map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]
 
-#define CPUReadHalfWordQuickDef(addr) \
+#define CPUReadHalfWordQuick(addr) \
   READ16LE(((u16*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 
-#define CPUReadMemoryQuickDef(addr) \
+#define CPUReadMemoryQuick(addr) \
   READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 
-u8 inline CPUReadByteQuick( u32 addr )
+static inline u32 CPUReadOpenBus(u32 address)
 {
-	switch(addr >> 24 )
-	{
-		case 0x08:
-		case 0x09:
-		case 0x0A:
-		case 0x0C:
-		default:
-			return CPUReadByteQuickDef(addr);
-	}
+    if (!armState) {
+        u32 reg15 = reg[15].I;
+        u8 region = reg15 >> 24;
 
-	return 0;
+        switch (region) {
+        case 0x02: /* EWRAM */
+        case 0x05: /* PALRAM */
+        case 0x06: /* VRAM */
+        case 0x08: case 0x09: /* ROM0 */
+        case 0x0A: case 0x0B: /* ROM1 */
+        case 0x0C: case 0x0D: /* ROM2 */
+            return cpuPrefetch[1] | (cpuPrefetch[1] << 16);
+
+        case 0x00: /* BIOS */
+        case 0x07: /* OAM */
+            if ((reg15 & 2) == 0)
+                return cpuPrefetch[1] | (cpuPrefetch[1] << 16);
+            return cpuPrefetch[0] | (cpuPrefetch[1] << 16);
+
+        case 0x03: /* IWRAM */
+            if ((reg15 & 2) == 0)
+                return cpuPrefetch[1] | (cpuPrefetch[0] << 16);
+            return cpuPrefetch[0] | (cpuPrefetch[1] << 16);
+        }
+    }
+
+    return cpuPrefetch[1];
 }
 
-u16 inline CPUReadHalfWordQuick( u32 addr )
-{
-	switch(addr >> 24)
-	{
-		case 0x08:
-		case 0x09:
-		case 0x0A:
-		case 0x0C:
-		default:
-			return CPUReadHalfWordQuickDef(addr);
-	}
-
-	return 0;
-}
-
-u32 inline CPUReadMemoryQuick( u32 addr )
-{
-	switch(addr >> 24)
-	{
-		case 0x08:
-		case 0x09:
-		case 0x0A:
-		case 0x0C:
-		default:
-			return CPUReadMemoryQuickDef(addr);
-	}
-
-	return 0;
-}
-
-/*****************************************************************************
- * End of VM override
- ****************************************************************************/
-
-#define SAFE_QUICK_READ32(addr) CPUReadMemoryQuickDef(addr)
-#define SAFE_QUICK_READ16(addr) CPUReadHalfWordQuickDef(addr)
-#define SAFE_QUICK_READ8(addr) CPUReadByteQuickDef(addr)
-
-#define FALLBACK_UNREADABLE_32() \
-	do { \
-		if(cpuDmaHack) { value = cpuDmaLast; } \
-		else if(armState) { value = SAFE_QUICK_READ32(reg[15].I); } \
-		else { value = SAFE_QUICK_READ16(reg[15].I) | (SAFE_QUICK_READ16(reg[15].I) << 16); } \
-	} while(0)
-
-	#define FALLBACK_UNREADABLE_16() \
-	do { \
-		if(cpuDmaHack) { value = cpuDmaLast & 0xFFFF; } \
-		else if(armState) { value = SAFE_QUICK_READ16(reg[15].I + (address & 2)); } \
-		else { value = SAFE_QUICK_READ16(reg[15].I); } \
-	} while(0)
-
-	#define FALLBACK_UNREADABLE_8() \
-	do { \
-		if(cpuDmaHack) { return cpuDmaLast & 0xFF; } \
-		else if(armState) { return SAFE_QUICK_READ8(reg[15].I + (address & 3)); } \
-		else { return SAFE_QUICK_READ8(reg[15].I + (address & 1)); } \
-	} while(0)
+#define FALLBACK_UNREADABLE_32() { value = CPUReadOpenBus(address); break; }
+#define FALLBACK_UNREADABLE_16() { value = CPUReadOpenBus(address) >> (8 * (address & 2)); break; }
+#define FALLBACK_UNREADABLE_8()  { return CPUReadOpenBus(address) >> (8 * (address & 3)); }
 
 static inline u32 CPUReadMemory(u32 address)
 {

@@ -173,7 +173,7 @@ inline int codeTicksAccess32(u32 address) // ARM NON SEQ
     {
       u32 shift = 1 + ((busPrefetchCount >> 1) & 1);
       busPrefetchCount = ((busPrefetchCount & 0xFF) >> shift) | (busPrefetchCount & 0xFFFFFF00);
-      return (memoryWaitSeq[addr] - 1) & ((s32)(shift - 2) >> 31);
+      return (memoryWaitSeq32[addr] - 2) & ((s32)(shift - 2) >> 31);
     }
   }
   busPrefetchCount = 0;
@@ -215,7 +215,7 @@ inline int codeTicksAccessSeq32(u32 address) // ARM SEQ
     {
       u32 shift = 1 + ((busPrefetchCount >> 1) & 1);
       busPrefetchCount = ((busPrefetchCount & 0xFF) >> shift) | (busPrefetchCount & 0xFFFFFF00);
-      return memoryWaitSeq[addr] & ((s32)(shift - 2) >> 31);
+      return memoryWaitSeq32[addr] & ((s32)(shift - 2) >> 31);
     }
     else if (busPrefetchCount > 0xFF)
     {
@@ -224,6 +224,7 @@ inline int codeTicksAccessSeq32(u32 address) // ARM SEQ
     }
     return memoryWaitSeq32[addr];
   }
+  busPrefetchCount = 0; // Prevents phantom prefetch leaks outside ROM
   return memoryWaitSeq32[addr];
 }
 
