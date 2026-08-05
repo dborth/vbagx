@@ -84,16 +84,6 @@ static bool g_catchupSMCHit = false;
 static u8 g_currentInsnWriteCount = 0;
 static MemoryWriteEntry g_currentInsnWrites[JIT_DIFFERENTIAL_MAX_WRITES_PER_INSN];
 
-// --- TEMPORARY: R5 trace buffer (see JITDifferential.h) ---
-u32 g_jitR5Trace[JIT_R5_TRACE_MAX];
-u32 g_jitR5TraceTags[JIT_R5_TRACE_MAX];
-u32 g_jitR5TraceIndex = 0;
-u32 g_jitR5DumpSpill[4];
-
-void JIT_ResetR5Trace() {
-    g_jitR5TraceIndex = 0;
-}
-
 // Safely grabs original values without acknowledging hardware events (timers, DMA, etc.)
 static u32 JIT_ReadMemoryRaw(u32 address, u8 size) {
     u8 pageIdx = address >> 24;
@@ -311,7 +301,6 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
     JITResult jitResult = {0, 0, 0, 0};
     reg[15].I = pc + 4;
 
-	JIT_ResetR5Trace();
     ExecuteJITTrace(block->execute, &jitResult, &busPrefetchCount, &reg[0].I, &gbaFlags, &gbaReadTable);
     JIT_LOG_EXEC(jitResult.instructions, block->length, jitResult.bailedOut);
 
@@ -471,9 +460,8 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
             }
         };
 
-        appendToMsg("StartPC: 0x%08X | Trace Length: %u | Opcode: 0x%04X\n", pc, instructionCount, startOpcode);
-        appendToMsg("Initial Flags: N=%d Z=%d C=%d V=%d\n", initial.flags.N, initial.flags.Z, initial.flags.C, initial.flags.V);
-        appendToMsg("Entry busPrefetchCount: 0x%08X\n", initial.busPrefetchCount);
+        appendToMsg("StartPC: 0x%08X | Trace Length: %u | Opcode: 0x%04X\n", pc, jitResult.instructions, startOpcode);
+        appendToMsg("Initial Flags: N=%u Z=%u C=%u V=%u\n", initial.flags.N, initial.flags.Z, initial.flags.C, initial.flags.V);
         appendToMsg("JIT Result:  NextPC=0x%08X | Cycles=%u | Flags=(N:%u Z:%u C:%u V:%u) | Insns=%u\n",
             jitResult.nextPC, jitResult.cycles, jitState.flags.N, jitState.flags.Z, jitState.flags.C, jitState.flags.V, jitResult.instructions);
         appendToMsg("C++ Result:  NextPC=0x%08X | Cycles=%d | Flags=(N:%u Z:%u C:%u V:%u) | Insns=%u\n",
@@ -510,8 +498,8 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
         appendToMsg("\n--- C++ EXECUTION TRACE (Ran %u insns) ---\n", instructionCount);
         for (u32 i = 0; i < instructionCount; i++) {
             const CatchupTrace& tr = catchupChain[i];
-            appendToMsg("  [%02u] PC: 0x%08X | Opcode: 0x%04X | Cycles: %d | Writes: %u | busPrefetchCount(after)=0x%08X\n",
-            	i, tr.pc, tr.opcode, tr.cycles, tr.writeCount, tr.stateAfter.busPrefetchCount);
+            appendToMsg("  [%02u] PC: 0x%08X | Opcode: 0x%04X | Cycles: %d | Writes: %u\n",
+                i, tr.pc, tr.opcode, tr.cycles, tr.writeCount);
 
             for (u8 w = 0; w < tr.writeCount; w++) {
                 const MemoryWriteEntry& write = tr.writes[w];
@@ -519,29 +507,7 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
                     write.size * 8, write.address, write.value, write.oldValue);
             }
         }
-        appendToMsg("\n--- JIT R5 (live busPrefetchCount) TRACE (%u entries) ---\n", g_jitR5TraceIndex);
-		{
-        	static const char* tagNames[9] = {
-        	    "?",
-        	    "PUSH/POP-before    ",
-        	    "PUSH/POP-after     ",
-        	    "Branch-before      ",
-        	    "Branch-after       ",
-        	    "Trace-entry        ",
-        	    "SingleAccess-entry ",
-        	    "SingleAccess-mid   ",
-        	    "SingleAccess-after "
-        	};
-        	u32 n = g_jitR5TraceIndex < JIT_R5_TRACE_MAX ? g_jitR5TraceIndex : JIT_R5_TRACE_MAX;
-        	for (u32 i = 0; i < n; i++) {
-        	    u32 tag   = g_jitR5TraceTags[i] >> 24;
-        	    u32 tagPC = g_jitR5TraceTags[i] & 0xFFFFFF;
-        	    const char* name = (tag < 9) ? tagNames[tag] : "?";
-        	    appendToMsg("  [%02u] %s PC:0x%06X R5=0x%08X\n", i, name, tagPC, g_jitR5Trace[i]);
-        	}
-		}
-
-		JIT_LOG_MISMATCH(assembledMsg);
+        JIT_LOG_MISMATCH(assembledMsg);
     }
 
     // Check if the freshly left-in-place JIT state tripped an event boundary
