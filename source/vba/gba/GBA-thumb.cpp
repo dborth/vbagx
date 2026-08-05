@@ -31,11 +31,10 @@ static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
 
 // Common macros //////////////////////////////////////////////////////////
 
-// Broadway Optimization: Branchless Memory Prefetch Evaluation
-// Replaces volatile boolean comparisons with pure 1-cycle bitwise logic
-// Logic: ~((v | -v) >> 31) & 1 yields 1 ONLY if v is exactly 0.
+// Broadway Optimization: Trust GCC's cntlzw hardware intrinsic for (== 0).
+// Achieves branchless boolean assignment without forcing manual I-Cache bloat.
 #define UPDATE_BUS_PREFETCH \
-		busPrefetch |= (busPrefetchEnable & (~((busPrefetchCount | -busPrefetchCount) >> 31) & 1));
+		busPrefetch = (busPrefetchCount == 0) & busPrefetchEnable;
 
 // Hardware Accurate Prefetch Recharge
 // Accumulates hits while the CPU is stalled on non-ROM data buses
@@ -447,21 +446,29 @@ static INSN_REGPARM void thumb40_1(u32 opcode) {
 // LSL Rd, Rs
 static INSN_REGPARM void thumb40_2(u32 opcode) {
 	int dest = opcode & 7;
-	u32 value = reg[(opcode >> 3) & 7].B.B0;
+	u32 shift = reg[(opcode >> 3) & 7].B.B0;
+	u32 val = reg[dest].I;
 
-	if (value) {
-		u32 is32 = (value == 32);
-		u32 isUnder32 = (value < 32);
+	// Branchless mask generation
+	u32 mask_not_0 = -(u32) (shift != 0);
+	u32 mask_less_32 = -(u32) (shift < 32);
 
-		// Branchless flag and shift evaluation using Broadway's dual IUs
-		gbaFlags.C = (is32 & (reg[dest].I & 1)) | (isUnder32 & ((reg[dest].I >> (32 - (value & 31))) & 1));
-		value = isUnder32 * (reg[dest].I << (value & 31));
+	// Broadway Optimization: Pure bitwise masking eliminates `mullw` and branching
+	u32 res_shifted = (val << (shift & 0x1F)) & mask_less_32;
+	reg[dest].I = (res_shifted & mask_not_0) | (val & ~mask_not_0);
 
-		reg[dest].I = value;
-	}
+	u32 is32 = -(u32) (shift == 32);
+
+	// C++ Safe evaluation: ((32 - shift) & 0x1F) prevents UB (val >> 32) when shift == 0
+	u32 c_under_32 = (val >> ((32 - shift) & 0x1F)) & 1;
+	u32 c_32 = val & 1;
+
+	u32 new_c = (c_under_32 & mask_less_32) | (c_32 & is32);
+	gbaFlags.C = (new_c & mask_not_0) | (gbaFlags.C & ~mask_not_0);
+
 	gbaFlags.N = (reg[dest].I >> 31);
 	gbaFlags.Z = (reg[dest].I == 0);
-	clockTicks = codeTicksAccessSeq16(armNextPC) + 2; // Internal cycles do not force an N-fetch. Use Sequential.
+	clockTicks = codeTicksAccessSeq16(armNextPC) + 2;
 }
 
 // LSR Rd, Rs
@@ -499,7 +506,6 @@ static INSN_REGPARM void thumb41_0(u32 opcode) {
 	u32 mask_not_0 = -(u32) (shift != 0);
 	u32 mask_less_32 = -(u32) (shift < 32);
 
-	// If shift >= 32, clamp to 31 to propagate the sign bit across the whole register
 	u32 shift_clamped = (shift & mask_less_32) | (31 & ~mask_less_32);
 	u32 res_shifted = (u32) (val >> shift_clamped);
 
@@ -507,14 +513,17 @@ static INSN_REGPARM void thumb41_0(u32 opcode) {
 
 	// gbaFlags.C logic: bit 31 if shift >= 32
 	u32 c_shift = shift - 1;
-	u32 c_shift_clamped = (c_shift & mask_less_32) | (31 & ~mask_less_32);
+	// C++ Safe evaluation: clamp against c_shift to prevent (val >> 0xFFFFFFFF) UB when shift == 0
+	u32 c_mask_less_32 = -(u32) (c_shift < 32);
+	u32 c_shift_clamped = (c_shift & c_mask_less_32) | (31 & ~c_mask_less_32);
+
 	u32 new_c = ((u32) val >> c_shift_clamped) & 1;
 
 	gbaFlags.C = (new_c & mask_not_0) | (gbaFlags.C & ~mask_not_0);
 
 	gbaFlags.N = (reg[dest].I >> 31);
 	gbaFlags.Z = (reg[dest].I == 0);
-	clockTicks = codeTicksAccessSeq16(armNextPC) + 2; // Internal cycles do not force an N-fetch. Use Sequential.
+	clockTicks = codeTicksAccessSeq16(armNextPC) + 2;
 }
 
 // ADC Rd, Rs
