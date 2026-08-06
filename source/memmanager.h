@@ -14,6 +14,7 @@
 #include <gctypes.h>
 #include "filebrowser.h"
 #include "fileop.h"
+#include "video.h"
 #include "vba/gba/JITCache.h"
 
 #define IMAGE_BUFFER_SIZE (640 * 480 * 4)
@@ -30,11 +31,12 @@ struct MenuMemory {
 
 // Mode 2: GB Game
 struct GBMemory {
-
+	u8 texturemem[TEXTUREMEM_SIZE];
 } __attribute__((aligned(32)));
 
 // Mode 3: GBA Game
 struct GBAMemory {
+    u8 texturemem[TEXTUREMEM_SIZE];
     u32 jitArena[JIT_ARENA_SIZE / sizeof(u32)];
     u8 blockTable[HASH_TABLE_SIZE * 16];
     u8 smcPageFlags[SMC_MAP_SIZE];

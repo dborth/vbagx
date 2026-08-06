@@ -124,6 +124,8 @@ int main(int argc, char *argv[])
 			if(MenuRequested)
 			{
 				MenuRequested = false;
+				// requires that imageBuffer and texturemem not occupy the same space
+				memcpy(coreMem.menu.imageBuffer, coreMem.gba.texturemem, TEXTUREMEM_SIZE);
 				SwitchMemoryModeMenu();
 				TakeScreenshot();
 				ResetVideo_Menu();

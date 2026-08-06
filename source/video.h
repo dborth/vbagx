@@ -14,6 +14,10 @@
 
 #include <ogcsys.h>
 
+#define TEX_WIDTH 640
+#define TEX_HEIGHT 480
+#define TEXTUREMEM_SIZE 	TEX_WIDTH*TEX_HEIGHT*2
+
 void InitializeVideo ();
 void GX_Render_Init(int width, int height);
 void GX_Render(int gbWidth, int gbHeight, u8 * buffer);
@@ -49,6 +53,7 @@ typedef struct
 	int yoffset;
 } GameScreenPng;
 
+extern u8* texturemem;
 extern GameScreenPng gameScreenPng;
 
 char *AllocAndGetPNGBorderPath(const char* title);

@@ -59,16 +59,12 @@ bool SGBBorderLoadedFromGame = false;
 static u8 gp_fifo[DEFAULT_FIFO_SIZE] ATTRIBUTE_ALIGN(32);
 static volatile unsigned int copynow = GX_FALSE;
 
-/*** Texture memory ***/
-#define TEX_WIDTH 640
-#define TEX_HEIGHT 480
-#define TEXTUREMEM_SIZE 	TEX_WIDTH*TEX_HEIGHT*2
 // FPS - 256x20 RGBA8 texture
 #define FPS_FONT_TEX_WIDTH  256
 #define FPS_FONT_TEX_HEIGHT 20
 #define FPS_FONT_TEX_SIZE   (FPS_FONT_TEX_WIDTH * FPS_FONT_TEX_HEIGHT * 4)
 
-static u8 texturemem[TEXTUREMEM_SIZE] ATTRIBUTE_ALIGN (32);
+u8* texturemem = NULL;
 static u8 fps_font_texture_data[FPS_FONT_TEX_SIZE] ATTRIBUTE_ALIGN(32);
 static unsigned char scanline_tex_data[32] ATTRIBUTE_ALIGN (32);
 
@@ -186,7 +182,7 @@ copy_to_xfb (u32 arg)
 static void InitFPSFontData() {
 	int w, h;
 	DecodePNG((u8 *)fps_font_png, &w, &h, fps_font_texture_data, FPS_FONT_TEX_WIDTH, FPS_FONT_TEX_HEIGHT);
-    }
+}
 
 static void InitFPSFontTexture() {
 	DCStoreRange(fps_font_texture_data, sizeof(fps_font_texture_data));
@@ -913,9 +909,7 @@ static bool borderJustChanged = false;
  * GX_Render_Init
  ***************************************************************************/
 void GX_Render_Init(int width, int height) {
-	memset(texturemem, 0, TEXTUREMEM_SIZE);
-
-	/*** Setup for first call to scaler ***/
+	// Setup for first call to scaler
 	vwidth = width;
 	vheight = height;
 
@@ -1018,7 +1012,7 @@ void TakeScreenshot()
 		return;
 	}
 
-	int res = PNGU_EncodeFromGXTexture(pngContext, gameScreenPng.width, gameScreenPng.height, texturemem, gameScreenPng.width * 3);
+	int res = PNGU_EncodeFromGXTexture(pngContext, gameScreenPng.width, gameScreenPng.height, coreMem.menu.imageBuffer, gameScreenPng.width * 3);
 
 	if(res == PNGU_OK) {
 		gameScreenPng.size = pngContext->cursor;

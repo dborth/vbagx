@@ -70,6 +70,7 @@ static bool ChangeMode(int mode) {
 
 	browserList = NULL;
 	savebuffer = NULL;
+	texturemem = NULL;
 	jitCache.destroy();
 	memoryMode = mode;
 	return true;
@@ -83,11 +84,12 @@ void SwitchMemoryModeMenu() {
 
 static void SwitchMemoryModeGB() {
 	if(!ChangeMode(MEMORY_MODE_GB)) return;
+	texturemem = coreMem.gb.texturemem;
 }
 
 static void SwitchMemoryModeGBA() {
 	if(!ChangeMode(MEMORY_MODE_GBA)) return;
-
+	texturemem = coreMem.gba.texturemem;
 	jitCache.initialize(
 		(u32*)coreMem.gba.jitArena,
 		(BasicBlock*)coreMem.gba.blockTable,
@@ -103,4 +105,5 @@ void SwitchMemoryModeGame() {
 	else {
 		SwitchMemoryModeGB();
 	}
+	memset(texturemem, 0, TEXTUREMEM_SIZE);
 }
