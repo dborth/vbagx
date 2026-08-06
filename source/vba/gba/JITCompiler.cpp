@@ -476,7 +476,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 	};
 
-	auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg, u32 pc, u32 transferCount) {
+	auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 busPrefetchReg, u32 scratchReg, u32 pc, u32 transferCount) {
 		u32 execBank = (pc >> 24) & 15;
 		// The hardware prefetcher only runs if the CPU is executing from ROM
 		if (execBank < 0x08 || execBank > 0x0D) {
@@ -484,14 +484,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			return;
 		}
 
-		u32 enableAddr = (u32)&busPrefetchEnable;
-		*ptr++ = PPC_LIS(scratchReg, enableAddr >> 16);
-		*ptr++ = PPC_ORI(scratchReg, scratchReg, enableAddr & 0xFFFF);
-		*ptr++ = PPC_LBZ(scratchReg, scratchReg, 0);
-		*ptr++ = PPC_CMPWI(0, scratchReg, 0);
-		u32* branchDisabled = ptr++; // BEQ -> prefetch disabled, R5 stays untouched
-
-				// Mirrors dataTicksAccess32/16's own range check exactly: recharge only
+		// Mirrors dataTicksAccess32/16's own range check exactly: recharge only
 		// applies for bank in [2,7] (EWRAM/IWRAM). The previous version tested
 		// `bank < 8`, which wrongly let banks 0/1 (BIOS / unused) take the
 		// recharge path instead of flushing.
@@ -499,6 +492,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		u32* branchLt2 = ptr++; // BLT -> outside RAM (low), flush
 		*ptr++ = PPC_CMPWI(0, bankReg, 7);
 		u32* branchGt7 = ptr++; // BGT -> outside RAM (high), flush
+
+		*ptr++ = PPC_CMPWI(0, busPrefetchReg, 0);
+		u32* branchNoRecharge = ptr++;
 
 		// --- Recharge path (bank in [2,7]) ---------------------------------
 		// Clamp the raw table wait-state to >=1, exactly mirroring GBAcpu.h's
@@ -508,7 +504,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		// arithmetic -- we want 0/1, not 0/-1.
 		*ptr++ = PPC_ADDI(scratchReg, dataWaitStateReg, -1);
 		*ptr++ = PPC_SRWI(scratchReg, scratchReg, 31);
-		*ptr++ = PPC_OR(dataWaitStateReg, dataWaitStateReg, scratchReg);
+		*ptr++ = PPC_OR(scratchReg, dataWaitStateReg, scratchReg);
 
 		// Every register in this batch (the single leading register, or the
 		// whole trailing sequential run) shares the SAME per-register
@@ -517,7 +513,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		// `transferCount` times in a row telescopes into ONE combined shift:
 		//   ((R5 + 1) << (waitState * transferCount)) - 1
 		if (transferCount > 1) {
-			*ptr++ = PPC_MULLI(dataWaitStateReg, dataWaitStateReg, transferCount);
+			*ptr++ = PPC_MULLI(scratchReg, scratchReg, transferCount);
 		}
 
 		// Clamp the combined shift to 31: PowerPC's `slw` treats a shift count
@@ -526,13 +522,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		// gradually would. PUSH/POP/LDM/STM only ever see IWRAM/EWRAM's small
 		// fixed latencies in practice, so this is a safety net, not a path hit
 		// in normal play.
-		*ptr++ = PPC_CMPWI(0, dataWaitStateReg, 31);
+		*ptr++ = PPC_CMPWI(0, scratchReg, 31);
 		u32* branchNoClamp = ptr++;
-		*ptr++ = PPC_LI(dataWaitStateReg, 31);
+		*ptr++ = PPC_LI(scratchReg, 31);
 		*branchNoClamp = PPC_BLE((u32)((ptr - branchNoClamp) * 4));
 
 		*ptr++ = PPC_ADDI(PPC_R5, PPC_R5, 1);
-		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, dataWaitStateReg);
+		*ptr++ = PPC_SLW(PPC_R5, PPC_R5, scratchReg);
 		*ptr++ = PPC_ADDI(PPC_R5, PPC_R5, -1);
 		u32* branchToDone = ptr++;
 
@@ -541,8 +537,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*branchGt7 = PPC_BGT((u32)((ptr - branchGt7) * 4));
 		*ptr++ = PPC_LI(PPC_R5, 0);
 
+		*branchNoRecharge = PPC_BEQ((u32)((ptr - branchNoRecharge) * 4));
 		*branchToDone = PPC_B((u32)((ptr - branchToDone) * 4));
-		*branchDisabled = PPC_BEQ((u32)((ptr - branchDisabled) * 4));
 	};
 	
 	// Dynamic N-Cycle Penalty Check
@@ -1664,25 +1660,36 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					u32* branchNullToBailout = emitPtr++;
 					RegisterBailout(branchNullToBailout, COND_BEQ, currentPC, chunkStaticCycles);
 
+					// Branchless busPrefetch evaluation
+					u32 enableAddr = (u32)&busPrefetchEnable;
+					*emitPtr++ = PPC_LIS(PPC_R8, enableAddr >> 16);
+					*emitPtr++ = PPC_ORI(PPC_R8, PPC_R8, enableAddr & 0xFFFF);
+					*emitPtr++ = PPC_LBZ(PPC_R8, PPC_R8, 0); // R8 = busPrefetchEnable
+					*emitPtr++ = PPC_CNTLZW(PPC_R4, PPC_R5); // R4 = hardware clz(R5)
+					*emitPtr++ = PPC_SRWI(PPC_R4, PPC_R4, 5); // R4 = (R5 == 0) ? 1 : 0
+					*emitPtr++ = PPC_AND(PPC_R8, PPC_R8, PPC_R4); // R8 = busPrefetch flag
+
 					// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only).
 					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWait32) >> 16);
 					*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait32) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
 
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, 1); // leading register
+					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, PPC_R4, currentPC, 1); // leading register
 
 					if (numRegs > 1) {
 						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq32) >> 16);
 						*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq32) & 0xFFFF);
 						*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait
 
+						// Pass raw sWait to EmitPrefetchDataWait BEFORE multiplying it for R3!
+						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, PPC_R4, currentPC, numRegs - 1); // trailing seq run
+
 						if ((numRegs - 1) > 1) {
 							*emitPtr++ = PPC_MULLI(PPC_R9, PPC_R9, numRegs - 1); // R9 = sWait * (numRegs - 1)
 						}
 
 						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, numRegs - 1); // trailing seq run
 					}
 
 					// Construct R11 as the Mask before moving onto SMC checks
@@ -1874,24 +1881,36 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				u32* branchNullToBailout = emitPtr++;
 				RegisterBailout(branchNullToBailout, COND_BEQ, currentPC, chunkStaticCycles);
 
+				// Branchless busPrefetch evaluation
+				u32 enableAddr = (u32)&busPrefetchEnable;
+				*emitPtr++ = PPC_LIS(PPC_R8, enableAddr >> 16);
+				*emitPtr++ = PPC_ORI(PPC_R8, PPC_R8, enableAddr & 0xFFFF);
+				*emitPtr++ = PPC_LBZ(PPC_R8, PPC_R8, 0); // R8 = busPrefetchEnable
+				*emitPtr++ = PPC_CNTLZW(PPC_R4, PPC_R5); // R4 = hardware clz(R5)
+				*emitPtr++ = PPC_SRWI(PPC_R4, PPC_R4, 5); // R4 = (R5 == 0) ? 1 : 0
+				*emitPtr++ = PPC_AND(PPC_R8, PPC_R8, PPC_R4); // R8 = busPrefetch flag
+
+				// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only).
 				*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWait32) >> 16);
 				*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWait32) & 0xFFFF);
 				*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
 
 				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, 1); // leading register
+				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, PPC_R4, currentPC, 1); // leading register
 
 				if (numRegs > 1) {
 					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq32) >> 16);
 					*emitPtr++ = PPC_ORI(PPC_R9, PPC_R9, ((u32)memoryWaitSeq32) & 0xFFFF);
 					*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = sWait
 
+					// Pass raw sWait to EmitPrefetchDataWait BEFORE multiplying it for R3
+					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, PPC_R4, currentPC, numRegs - 1); // trailing seq run
+
 					if ((numRegs - 1) > 1) {
 						*emitPtr++ = PPC_MULLI(PPC_R9, PPC_R9, numRegs - 1); // R9 = sWait * (numRegs - 1)
 					}
 
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, numRegs - 1); // trailing seq run
 				}
 
 				if (!isLoad) {
