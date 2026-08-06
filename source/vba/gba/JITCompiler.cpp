@@ -473,7 +473,11 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		}
 	};
 
-	auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg, u32 transferCount) {
+	auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg, u32 pc, u32 transferCount) {
+		u32 execBank = (pc >> 24) & 15;
+		// The hardware prefetcher only runs if the CPU is executing from ROM
+		if (execBank < 0x08 || execBank > 0x0D) return;
+
 		u32 enableAddr = (u32)&busPrefetchEnable;
 		*ptr++ = PPC_LIS(scratchReg, enableAddr >> 16);
 		*ptr++ = PPC_ORI(scratchReg, scratchReg, enableAddr & 0xFFFF);
@@ -481,7 +485,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		*ptr++ = PPC_CMPWI(0, scratchReg, 0);
 		u32* branchDisabled = ptr++; // BEQ -> prefetch disabled, R5 stays untouched
 
-		// Mirrors dataTicksAccess32/16's own range check exactly: recharge only
+				// Mirrors dataTicksAccess32/16's own range check exactly: recharge only
 		// applies for bank in [2,7] (EWRAM/IWRAM). The previous version tested
 		// `bank < 8`, which wrongly let banks 0/1 (BIOS / unused) take the
 		// recharge path instead of flushing.
@@ -1655,7 +1659,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
 
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, 1); // leading register
+					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, 1); // leading register
 
 					if (numRegs > 1) {
 						*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq32) >> 16);
@@ -1667,7 +1671,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						}
 
 						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, numRegs - 1); // trailing seq run
+						EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, numRegs - 1); // trailing seq run
 					}
 
 					// Construct R11 as the Mask before moving onto SMC checks
@@ -1864,7 +1868,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_LBZX(PPC_R9, PPC_R7, PPC_R9); // R9 = nWait
 
 				*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, 1); // leading register
+				EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, 1); // leading register
 
 				if (numRegs > 1) {
 					*emitPtr++ = PPC_LIS(PPC_R9, ((u32)memoryWaitSeq32) >> 16);
@@ -1876,7 +1880,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					}
 
 					*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R9);
-					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, numRegs - 1); // trailing seq run
+					EmitPrefetchDataWait(emitPtr, PPC_R7, PPC_R9, PPC_R8, currentPC, numRegs - 1); // trailing seq run
 				}
 
 				if (!isLoad) {
