@@ -41,8 +41,9 @@
 #include <stdarg.h>
 #include <string.h>
 
-#define JIT_DIFFERENTIAL_MAX_CATCHUP 14
+#define JIT_DIFFERENTIAL_MAX_CATCHUP 30
 #define JIT_DIFFERENTIAL_MAX_WRITES_PER_INSN 8
+#define JIT_DIFFERENTIAL_SAMPLE_RATE 10 // Test 1 out of every 10 blocks
 
 struct MemoryWriteEntry {
     u32 address;
@@ -192,9 +193,95 @@ static inline void JIT_RestoreCPUState(const CPUStateBackup* b) {
     cpuNextEvent = b->cpuNextEvent;
 }
 
+// Pre-flight check to ensure the C++ interpreter doesn't trigger irreversible hardware side-effects
+static bool IsSafeToExecuteMemOp(u16 opcode, u32 pc) {
+    u32 addr = 0;
+    bool isMem = false;
+    bool isStore = false;
+
+    // Format 6: LDR [PC, imm]
+    if ((opcode & 0xF800) == 0x4800) {
+        addr = ((pc + 4) & ~3) + ((opcode & 0xFF) << 2);
+        isMem = true;
+        isStore = false;
+    }
+    // Format 9: LDR/STR [imm], LDRB/STRB [imm]
+    else if ((opcode & 0xE000) == 0x6000) {
+        u8 rb = (opcode >> 3) & 0x07;
+        u32 offset = (opcode >> 6) & 0x1F;
+        if (!(opcode & 0x1000)) offset <<= 2; // Word offsets shift by 2, Bytes do not
+        addr = reg[rb].I + offset;
+        isMem = true;
+        isStore = !(opcode & 0x0800);
+    }
+    // Format 8: LDRH/STRH [imm]
+    else if ((opcode & 0xF000) == 0x8000) {
+        u8 rb = (opcode >> 3) & 0x07;
+        addr = reg[rb].I + (((opcode >> 6) & 0x1F) << 1);
+        isMem = true;
+        isStore = !(opcode & 0x0800);
+    }
+    // Format 10: Reg offset loads/stores
+    else if ((opcode & 0xF000) == 0x5000) {
+        u8 rb = (opcode >> 3) & 0x07;
+        u8 ro = (opcode >> 6) & 0x07;
+        addr = reg[rb].I + reg[ro].I;
+        isMem = true;
+        u16 subOp = opcode & 0x0E00;
+        isStore = (subOp == 0x0000 || subOp == 0x0200 || subOp == 0x0400);
+    }
+    // Format 11: LDR/STR [SP, imm]
+    else if ((opcode & 0xF000) == 0x9000) {
+        addr = reg[13].I + ((opcode & 0xFF) << 2);
+        isMem = true;
+        isStore = !(opcode & 0x0800);
+    }
+    // Format 14: PUSH/POP
+    else if ((opcode & 0xF600) == 0xB400) {
+        int numRegs = 0;
+        for (int i = 0; i < 8; i++) if (opcode & (1 << i)) numRegs++;
+        if (opcode & 0x0100) numRegs++;
+
+        if (!(opcode & 0x0800)) { // PUSH
+            addr = reg[13].I - (numRegs * 4); // Use lowest bounded address for bank check
+            isStore = true;
+        } else { // POP
+            addr = reg[13].I;
+            isStore = false;
+        }
+        isMem = true;
+    }
+    // Format 15: LDMIA/STMIA
+    else if ((opcode & 0xF000) == 0xC000) {
+        u8 rb = (opcode >> 8) & 0x07;
+        addr = reg[rb].I;
+        isMem = true;
+        isStore = !(opcode & 0x0800);
+    }
+
+    if (isMem) {
+        u8 bank = (addr >> 24) & 0xF;
+        if (isStore) {
+            // STRICT JIT EMULATION: Only Banks 2 & 3 (WRAM) allowed for stores
+            if (bank != 2 && bank != 3) return false;
+        } else {
+            // LOAD GUARD: Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
+            if (bank == 0 || bank == 4 || bank >= 13) return false;
+        }
+    }
+    return true;
+}
+
 int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode, int* diffClockTicks, insnfunc_t* thumbInsnTable) {
 	if (block == nullptr || block->execute == nullptr || debugStats.mismatchCount >= MAX_JIT_MISMATCH_COUNT || debugStats.isPCChecked(pc)) {
 		return -1; // Proceed to normal JIT execution
+	}
+
+	// Deterministic execution sampling to reduce emulator strain & lockups
+	static u64 s_diffSampleCounter = 0;
+	s_diffSampleCounter++;
+	if ((s_diffSampleCounter % JIT_DIFFERENTIAL_SAMPLE_RATE) != 0) {
+		return -1;
 	}
 
 	debugStats.markPCChecked(pc);
@@ -220,6 +307,13 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 	// Execute ahead to chart the golden path
 	while (instructionCount < targetInstructions && !armState && !holdState && !SWITicks) {
 		u16 opcode = cpuPrefetch[0];
+
+		// Hardware Side-Effect Pre-Flight Check
+		// armNextPC is physically 2 bytes ahead of the instruction PC in THUMB mode.
+		if (!IsSafeToExecuteMemOp(opcode, armNextPC - 2)) {
+			break; // Stop catch-up immediately to prevent hardware corruption
+		}
+
 		cpuPrefetch[0] = cpuPrefetch[1];
 		busPrefetch = false;
 
@@ -249,7 +343,7 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 		cppCycles += *diffClockTicks;
 
 		// Snapshot execution details & writes performed by this instruction
-		catchupChain[instructionCount].pc = oldArmNextPC;
+		catchupChain[instructionCount].pc = oldArmNextPC - 2; // Fixed to point to actual instruction PC
 		catchupChain[instructionCount].opcode = opcode;
 		catchupChain[instructionCount].cycles = *diffClockTicks;
 		catchupChain[instructionCount].accumulatedCycles = cppCycles;
