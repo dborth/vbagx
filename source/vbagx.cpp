@@ -145,6 +145,7 @@ int main(int argc, char *argv[])
 
 void ExitApp()
 {
+	SwitchMemoryModeMenu();
 	SavePrefs(SILENT);
 
 	if (ROMLoaded && !MenuRequested && GCSettings.AutoSave == AUTOSAVE_SRAM)
