@@ -450,7 +450,7 @@ static INSN_REGPARM void thumb40_2(u32 opcode) {
 
 	gbaFlags.N = (reg[dest].I >> 31);
 	gbaFlags.Z = (reg[dest].I == 0);
-	clockTicks = codeTicksAccessSeq16(armNextPC) + 2;
+	clockTicks = codeTicksAccessSeq16(armNextPC) + 1; // Internal cycles do not force an N-fetch. Use Sequential.
 }
 
 // LSR Rd, Rs
@@ -476,7 +476,7 @@ static INSN_REGPARM void thumb40_3(u32 opcode) {
 
 	gbaFlags.N = (reg[dest].I >> 31);
 	gbaFlags.Z = (reg[dest].I == 0);
-	clockTicks = codeTicksAccessSeq16(armNextPC) + 2; // Internal cycles do not force an N-fetch. Use Sequential.
+	clockTicks = codeTicksAccessSeq16(armNextPC) + 1; // Internal cycles do not force an N-fetch. Use Sequential.
 }
 
 // ASR Rd, Rs
@@ -505,7 +505,7 @@ static INSN_REGPARM void thumb41_0(u32 opcode) {
 
 	gbaFlags.N = (reg[dest].I >> 31);
 	gbaFlags.Z = (reg[dest].I == 0);
-	clockTicks = codeTicksAccessSeq16(armNextPC) + 2;
+	clockTicks = codeTicksAccessSeq16(armNextPC) + 1; // Internal cycles do not force an N-fetch. Use Sequential.
 }
 
 // ADC Rd, Rs
@@ -543,7 +543,7 @@ static INSN_REGPARM void thumb41_3(u32 opcode) {
 
 	gbaFlags.N = (reg[dest].I >> 31);
 	gbaFlags.Z = (reg[dest].I == 0);
-	clockTicks = codeTicksAccessSeq16(armNextPC) + 2; // Internal cycles do not force an N-fetch. Use Sequential.
+	clockTicks = codeTicksAccessSeq16(armNextPC) + 1; // Internal cycles do not force an N-fetch. Use Sequential.
 }
 
 // TST Rd, Rs

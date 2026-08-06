@@ -1036,8 +1036,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						*branchSkip = PPC_BEQ((u32)((emitPtr - branchSkip) * 4));
 
 						// Matches thumb40_2 / thumb40_3 / thumb41_0 / thumb41_3:
-						// clockTicks = codeTicksAccess16(armNextPC) + 2;
-						chunkStaticCycles += STATIC_CODE_TICKS_16(currentPC) + 2;
+						// clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
+						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
 				}
 				else if (((opcode >> 8) & 0x03) != 3) {
