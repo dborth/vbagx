@@ -45,6 +45,7 @@
 
 #ifdef HW_RVL
 GuiImageData * pointer[4];
+u8 pointerTexture[4][96 * 96 * 4] __attribute__((aligned(32)));
 #endif
 
 static GuiTrigger * trigA = NULL;
@@ -530,13 +531,24 @@ static void * ProgressThread (void *arg)
 }
 
 /****************************************************************************
- * InitGUIThread
+ * InitGUI
  *
- * Startup GUI threads
+ * Initialize common objects and startup GUI threads
  ***************************************************************************/
-void
-InitGUIThreads()
+void InitGUI()
 {
+	#ifdef HW_RVL
+	pointer[0] = new GuiImageData(player1_point_png, pointerTexture[0]);
+	pointer[1] = new GuiImageData(player2_point_png, pointerTexture[1]);
+	pointer[2] = new GuiImageData(player3_point_png, pointerTexture[2]);
+	pointer[3] = new GuiImageData(player4_point_png, pointerTexture[3]);
+	#endif
+
+	trigA = new GuiTrigger;
+	trigA->SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A, WIIDRC_BUTTON_A);
+	trig2 = new GuiTrigger;
+	trig2->SetSimpleTrigger(-1, WPAD_BUTTON_2, 0, 0);
+
 	LWP_MutexInit(&guiMutex, false);
 	LWP_CondInit(&guiHaltCond);
 	LWP_CondInit(&guiWakeCond);
@@ -1051,7 +1063,7 @@ static int MenuGameSelection()
 	preview.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
 	preview.SetPosition(174, -8);
 
-	u8* imgBuffer = coreMem.menu.imageBuffer;
+	u8* imgBuffer = (u8 *)mem1_malloc(IMAGE_BUFFER_SIZE);
 
 	int  previousBrowserIndex = -1;
 	char imagePath[MAXJOLIET + 1];
@@ -1176,6 +1188,8 @@ static int MenuGameSelection()
 	mainWindow->Remove(&gameBrowser);
 	mainWindow->Remove(&bgPreview);
 	mainWindow->Remove(&preview);
+
+	mem1_free(imgBuffer);
 
 	return menu;
 }
@@ -4903,14 +4917,17 @@ static u8 * CreateBlurredGameTexture() {
 	int blurAmount = 4; // blur amount
 	GXColor blurOverlayColor = (GXColor){50, 50, 50, 160};
 
-	u8 * dst = coreMem.menu.imageBuffer;
+	u8 * dst = (u8 *)mem1_malloc(IMAGE_BUFFER_SIZE);
+	if(!dst) {
+		return NULL;
+	}
 
 	int scaledWidth = (int)(gameScreenPng.width * gameScreenPng.scaleX);
 	int scaledHeight = (int)(gameScreenPng.height * gameScreenPng.scaleY);
 
 	// Failsafe for invalid scale metrics
 	if (scaledWidth <= 0 || scaledHeight <= 0) {
-		free(src);
+		mem1_free(dst);
 		return NULL;
 	}
 
@@ -4936,7 +4953,7 @@ static u8 * CreateBlurredGameTexture() {
 
 	// Failsafe if the image is pushed entirely off-screen
 	if (cropWidth <= 0 || cropHeight <= 0) {
-		free(src);
+		mem1_free(dst);
 		return NULL;
 	}
 
@@ -4945,8 +4962,15 @@ static u8 * CreateBlurredGameTexture() {
 	int cropStartY = trueOffsetY < 0 ? -trueOffsetY : 0;
 
 	// Allocate scratch space ONLY for the viewable cropped portion
-	u8 *scaledImg = coreMem.menu.workBuffer1;
-	u8 *rowBuf    = coreMem.menu.workBuffer2;
+	u8 *scaledImg = (u8 *)mem1_malloc(cropWidth * cropHeight * 4);
+	u8 *rowBuf    = (u8 *)mem1_malloc(cropWidth * 4);
+
+	if (!scaledImg || !rowBuf) {
+		if (scaledImg) mem1_free(scaledImg);
+		if (rowBuf) mem1_free(rowBuf);
+		mem1_free(dst);
+		return NULL;
+	}
 
 	// Scale the raw input PNG directly into our viewable cropped buffer
 	for (int dy = 0; dy < cropHeight; ++dy) {
@@ -5073,9 +5097,11 @@ static u8 * CreateBlurredGameTexture() {
 			}
 		}
 	}
-
 	DCFlushRange(dst, screenwidth * screenheight * 4);
-	free(src);
+
+	mem1_free(scaledImg);
+	mem1_free(rowBuf);
+	mem1_free(src);
 	return dst;
 }
 
@@ -5089,21 +5115,6 @@ MainMenu (int menu)
 	int currentMenu = menu;
 	lastMenu = MENU_NONE;
 	
-	if(firstRun)
-	{
-		#ifdef HW_RVL
-		pointer[0] = new GuiImageData(player1_point_png);
-		pointer[1] = new GuiImageData(player2_point_png);
-		pointer[2] = new GuiImageData(player3_point_png);
-		pointer[3] = new GuiImageData(player4_point_png);
-		#endif
-
-		trigA = new GuiTrigger;
-		trigA->SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A, WIIDRC_BUTTON_A);
-		trig2 = new GuiTrigger;
-		trig2->SetSimpleTrigger(-1, WPAD_BUTTON_2, 0, 0);
-	}
-
 	mainWindow = new GuiWindow(screenwidth, screenheight);
 
 	if(menu == MENU_GAME)

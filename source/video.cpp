@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <malloc.h>
 #include <string.h>
 #include <unistd.h>
 #include <ogc/timesupp.h>
@@ -993,6 +994,7 @@ static long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int g
 void ClearScreenshot()
 {
 	if(gameScreenPng.buffer) {
+		mem1_free(gameScreenPng.buffer);
 		gameScreenPng.buffer = NULL;
 	}
 	gameScreenPng.size = 0;
@@ -1003,7 +1005,7 @@ void ClearScreenshot()
  *
  * Copies the current texturemem screen into a PNG buffer
  ***************************************************************************/
-void TakeScreenshot()
+void TakeScreenshot(u8 * gameTexture)
 {
 	AllocSaveBuffer();
 	IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
@@ -1012,7 +1014,7 @@ void TakeScreenshot()
 		return;
 	}
 
-	int res = PNGU_EncodeFromGXTexture(pngContext, gameScreenPng.width, gameScreenPng.height, coreMem.menu.imageBuffer, gameScreenPng.width * 3);
+	int res = PNGU_EncodeFromGXTexture(pngContext, gameScreenPng.width, gameScreenPng.height, gameTexture, gameScreenPng.width * 3);
 
 	if(res == PNGU_OK) {
 		gameScreenPng.size = pngContext->cursor;
@@ -1026,7 +1028,7 @@ void TakeScreenshot()
 		return;
 	}
 
-	gameScreenPng.buffer = coreMem.menu.gameScreen;
+	gameScreenPng.buffer = (u8 *) mem1_malloc(gameScreenPng.size);
 	if (gameScreenPng.buffer == NULL) {
 		gameScreenPng.size = 0;
 		return;

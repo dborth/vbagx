@@ -53,7 +53,7 @@ GuiImage::GuiImage(u8 * img, int w, int h)
 
 GuiImage::GuiImage(int w, int h, GXColor c)
 {
-	image = (u8 *)memalign (32, w * h << 2);
+	image = (u8 *)mem1_malloc (w * h << 2);
 	width = w;
 	height = h;
 	imageangle = 0;
@@ -84,7 +84,7 @@ GuiImage::GuiImage(int w, int h, GXColor c)
 GuiImage::~GuiImage()
 {
 	if(imgType == IMAGE_COLOR && image)
-		free(image);
+		mem1_free(image);
 }
 
 u8 * GuiImage::GetImage()

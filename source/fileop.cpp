@@ -786,6 +786,7 @@ void
 AllocSaveBuffer ()
 {
 	LWP_MutexLock(saveBufferLock);
+	savebuffer = (u8 *)mem1_malloc(SAVEBUFFERSIZE);
 	memset (savebuffer, 0, SAVEBUFFERSIZE);
 }
 
@@ -796,6 +797,7 @@ AllocSaveBuffer ()
 void
 FreeSaveBuffer ()
 {
+	mem1_free(savebuffer);
 	LWP_MutexUnlock(saveBufferLock);
 }
 

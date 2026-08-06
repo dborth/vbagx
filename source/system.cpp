@@ -9,6 +9,7 @@
  ***************************************************************************/
 
 #include <gccore.h>
+#include <malloc.h>
 #include <sys/iosupport.h>
 
 #ifdef HW_RVL
@@ -391,6 +392,8 @@ char * getMemoryFreeInfo() {
     // fordblks tracks the actual free memory inside the MEM1 pool.
     struct mallinfo mi = mallinfo();
     mem1_mb = (float)mi.fordblks / (1024.0f * 1024.0f);
+
+    mem1_mb += mem1_size_free() / (1024.0f * 1024.0f);
 
     uint32_t mem2_bytes = SYS_GetArena2Size();
     float mem2_mb = (float)mem2_bytes / (1024.0f * 1024.0f);

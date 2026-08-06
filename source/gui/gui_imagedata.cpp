@@ -23,6 +23,16 @@ GuiImageData::GuiImageData(const u8 * i, int maxw, int maxh)
 		data = DecodePNG(i, &width, &height, data, maxw, maxh);
 }
 
+GuiImageData::GuiImageData(const u8 * i, u8 * dst, int maxw, int maxh)
+{
+	data = NULL;
+	width = 0;
+	height = 0;
+
+	if(i)
+		data = DecodePNG(i, &width, &height, dst, maxw, maxh);
+}
+
 /**
  * Destructor for the GuiImageData class.
  */
@@ -30,7 +40,7 @@ GuiImageData::~GuiImageData()
 {
 	if(data)
 	{
-		free(data);
+		mem1_free(data);
 		data = NULL;
 	}
 }

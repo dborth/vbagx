@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "gettext.h"
+#include "memmanager.h"
 #include "filelist.h"
 #include "vbagx.h"
 
@@ -49,7 +50,7 @@ expand_escape(const char *str)
 	char *retval, *rp;
 	const char *cp = str;
 
-	retval = (char *) malloc(strlen(str) + 1);
+	retval = (char *) mem1_malloc(strlen(str) + 1);
 	if (retval == NULL)
 		return NULL;
 	rp = retval;
@@ -156,7 +157,7 @@ static MSG *setMSG(const char *msgid, const char *msgstr)
 	MSG *msg = findMSG(id);
 	if (!msg)
 	{
-		msg = (MSG *) malloc(sizeof(MSG));
+		msg = (MSG *) mem1_malloc(sizeof(MSG));
 		msg->id = id;
 		msg->msgstr = NULL;
 		msg->next = baseMSG;
@@ -167,7 +168,7 @@ static MSG *setMSG(const char *msgid, const char *msgstr)
 		if (msgstr)
 		{
 			if (msg->msgstr)
-				free(msg->msgstr);
+				mem1_free(msg->msgstr);
 
 			msg->msgstr = expand_escape(msgstr);
 		}
@@ -181,8 +182,8 @@ static void gettextCleanUp(void)
 	while (baseMSG)
 	{
 		MSG *nextMsg = baseMSG->next;
-		free(baseMSG->msgstr);
-		free(baseMSG);
+		mem1_free(baseMSG->msgstr);
+		mem1_free(baseMSG);
 		baseMSG = nextMsg;
 	}
 }
@@ -247,7 +248,7 @@ bool LoadLanguage()
 			char *msgid, *end;
 			if (lastID)
 			{
-				free(lastID);
+				mem1_free(lastID);
 				lastID = NULL;
 			}
 			msgid = &line[7];
@@ -255,7 +256,7 @@ bool LoadLanguage()
 			if (end && end - msgid > 1)
 			{
 				*end = 0;
-				lastID = strdup(msgid);
+				lastID = mem1_strdup(msgid);
 			}
 		}
 		else if (strncmp(line, "msgstr \"", 8) == 0)
@@ -272,7 +273,7 @@ bool LoadLanguage()
 				*end = 0;
 				setMSG(lastID, msgstr);
 			}
-			free(lastID);
+			mem1_free(lastID);
 			lastID = NULL;
 		}
 	}

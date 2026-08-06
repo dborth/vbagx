@@ -15,6 +15,8 @@
 #include "memmanager.h"
 #include "filebrowser.h"
 #include "fileop.h"
+#include "video.h"
+#include "vba/gba/JITCache.h"
 
 #ifdef HW_DOL
 #include "utils/vm.h"
@@ -30,8 +32,36 @@ enum {
 	MEMORY_MODE_GBA
 };
 
+// Mode 2: GB Game
+struct GBMemory {
+	u8 texturemem[TEXTUREMEM_SIZE];
+} __attribute__((aligned(32)));
+
+// Mode 3: GBA Game
+struct GBAMemory {
+    u8 texturemem[TEXTUREMEM_SIZE];
+    u32 jitArena[JIT_ARENA_SIZE / sizeof(u32)];
+    u8 blockTable[HASH_TABLE_SIZE * 16];
+    u8 smcPageFlags[SMC_MAP_SIZE];
+    u8 smcRegistry[SMC_MAP_SIZE * sizeof(void*)];
+} __attribute__((aligned(32)));
+
+// Mode 1: Menu
+struct MenuMemory {
+    BROWSERENTRY browserList[MAX_BROWSER_SIZE];
+    u8 heapSpace[sizeof(struct GBAMemory) - (sizeof(BROWSERENTRY) * MAX_BROWSER_SIZE)];
+} __attribute__((aligned(32)));
+
+// The Master Overlay
+union CoreMemoryOverlay {
+    struct MenuMemory menu;
+    struct GBMemory gb;
+    struct GBAMemory gba;
+};
+
 alignas(32) union CoreMemoryOverlay coreMem;
 u8 *romPtr;
+static heap_cntrl mem1_heap;
 static heap_cntrl mem2_heap;
 static int memoryMode = -1;
 
@@ -45,6 +75,40 @@ void InitMemManager ()
 	romPtr = (u8 *)VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024); // 2MB MEM1 + 16 ARAM + SD backing for GB/GBA ROM
 	VMPager_Init(romPtr);
 #endif
+	SwitchMemoryModeMenu();
+}
+
+void* mem1_malloc(u32 size)
+{
+	if(memoryMode != MEMORY_MODE_MENU) return NULL;
+	return __lwp_heap_allocate(&mem1_heap, size);
+}
+
+char* mem1_strdup(const char *s)
+{
+    if (!s)
+        return NULL;
+
+    size_t len = strlen(s) + 1;
+    char *dup = (char *)mem1_malloc(len);
+
+    if (dup)
+        memcpy(dup, s, len);
+
+    return dup;
+}
+
+void mem1_free(void *ptr)
+{
+	if(memoryMode != MEMORY_MODE_MENU || !ptr) return;
+	__lwp_heap_free(&mem1_heap, ptr);
+}
+
+int mem1_size_free()
+{
+	heap_iblock info;
+	__lwp_heap_getinfo(&mem1_heap,&info);
+	return info.free_size;
 }
 
 void* extmem_malloc(u32 size)
@@ -70,6 +134,7 @@ static bool ChangeMode(int mode) {
 
 	browserList = NULL;
 	savebuffer = NULL;
+	memset(&mem1_heap, 0, sizeof(heap_cntrl));
 	texturemem = NULL;
 	jitCache.destroy();
 	memoryMode = mode;
@@ -79,7 +144,7 @@ static bool ChangeMode(int mode) {
 void SwitchMemoryModeMenu() {
 	if(!ChangeMode(MEMORY_MODE_MENU)) return;
 	browserList = coreMem.menu.browserList;
-	savebuffer = coreMem.menu.savebuffer;
+	__lwp_heap_init(&mem1_heap, coreMem.menu.heapSpace, sizeof(coreMem.menu.heapSpace), 32);
 }
 
 static void SwitchMemoryModeGB() {

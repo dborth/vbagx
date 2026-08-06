@@ -1129,7 +1129,7 @@ void SaveSGBBorderIfNoneExists(const void* buffer) {
 	f = fopen(borderPath, "wb");
 	if (!f) goto cleanup;
 	
-	rgba8 = malloc(256*224*3);
+	rgba8 = mem1_malloc(256*224*3);
 	if (!rgba8) goto cleanup;
 	pngContext = PNGU_SelectImageFromBuffer(rgba8);
 	if (pngContext == NULL) goto cleanup;
@@ -1138,9 +1138,9 @@ void SaveSGBBorderIfNoneExists(const void* buffer) {
 	fwrite(rgba8, 1, 256*224*3, f);
 	
 cleanup:
-	if (borderPath) free(borderPath);
+	if (borderPath) mem1_free(borderPath);
 	if (f) fclose(f);
-	if (rgba8) free(rgba8);
+	if (rgba8) mem1_free(rgba8);
 	if (pngContext) PNGU_ReleaseImageContext(pngContext);
 }
 
@@ -1162,14 +1162,14 @@ char* AllocAndGetPNGBorderPath(const char* title) {
 	}
 	
 	size_t length = strlen(method) + strlen(folder) + strlen(title) + 6;
-	char* path = (char*)malloc(length);
+	char* path = (char*)mem1_malloc(length);
 	if (path) sprintf(path, "%s%s/%s.png", method, folder, title);
 	return path;
 }
 
 void LoadPNGBorder(const char* fallback)
 {
-	void* png_tmp_buf = malloc(1024*1024);
+	void* png_tmp_buf = mem1_malloc(1024*1024);
 	char* borderPath = AllocAndGetPNGBorderPath(NULL);
 	PNGUPROP imgProp;
 	IMGCTX ctx = NULL;
@@ -1179,7 +1179,7 @@ void LoadPNGBorder(const char* fallback)
 	bool borderLoaded = LoadFile((char*)png_tmp_buf, borderPath, 0, 1024*1024, SILENT);
 	if (!borderLoaded) {
 		// Try default border.png
-		free(borderPath);
+		mem1_free(borderPath);
 		borderPath = AllocAndGetPNGBorderPath(fallback);
 		borderLoaded = LoadFile((char*)png_tmp_buf, borderPath, 0, 1024*1024, SILENT);
 	}
@@ -1206,12 +1206,12 @@ void LoadPNGBorder(const char* fallback)
 		goto cleanup;
 	}
 	
-	InitialBorder = (u16*)malloc(640*480*2);
+	InitialBorder = (u16*)mem1_malloc(640*480*2);
 	r = PNGU_DecodeTo4x4RGB565 (ctx, imgProp.imgWidth, imgProp.imgHeight, InitialBorder);
 	if (r != PNGU_OK) {
 		snprintf(error, 1023, "PNGU decoding error (%d): %s", r, borderPath);
 		ErrorPrompt(error);
-		free(InitialBorder);
+		mem1_free(InitialBorder);
 		InitialBorder = NULL;
 		goto cleanup;
 	}
@@ -1220,8 +1220,8 @@ void LoadPNGBorder(const char* fallback)
 	InitialBorderHeight = imgProp.imgHeight;
 	
 cleanup:
-	if (png_tmp_buf) free(png_tmp_buf);
-	if (borderPath) free(borderPath);
+	if (png_tmp_buf) mem1_free(png_tmp_buf);
+	if (borderPath) mem1_free(borderPath);
 	if (ctx) PNGU_ReleaseImageContext(ctx);
 }
 
@@ -1450,7 +1450,7 @@ bool LoadVBAROM()
 	srcHeight = 0;
 
 	if (InitialBorder != NULL) {
-		free(InitialBorder);
+		mem1_free(InitialBorder);
 		InitialBorder = NULL;
 	}
 	SGBBorderLoadedFromGame = false; // don't try to copy sgb border from game to png unless we're in sgb mode

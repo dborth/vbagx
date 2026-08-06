@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	#endif
 
 	InitialisePalette();
-	InitGUIThreads();
+	InitGUI();
 
 #ifdef HW_RVL
 	if(argc > 2 && argv[1] != NULL && argv[2] != NULL) {
@@ -124,10 +124,11 @@ int main(int argc, char *argv[])
 			if(MenuRequested)
 			{
 				MenuRequested = false;
-				// requires that imageBuffer and texturemem not occupy the same space
-				memcpy(coreMem.menu.imageBuffer, coreMem.gba.texturemem, TEXTUREMEM_SIZE);
+				u8 *tempBuffer = (u8 *)malloc(TEXTUREMEM_SIZE); // this one needs to stay malloc because we're switching modes!
+				memcpy(tempBuffer, texturemem, TEXTUREMEM_SIZE);
 				SwitchMemoryModeMenu();
-				TakeScreenshot();
+				TakeScreenshot(tempBuffer);
+				free(tempBuffer);
 				ResetVideo_Menu();
 				break; // leave emulation loop
 			}

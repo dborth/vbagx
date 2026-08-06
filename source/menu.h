@@ -16,7 +16,7 @@
 
 extern GuiImageData * pointer[4];
 
-void InitGUIThreads();
+void InitGUI();
 void MainMenu (int menuitem);
 void ErrorPrompt(const char * msg);
 int ErrorPromptRetry(const char * msg);

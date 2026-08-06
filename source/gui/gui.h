@@ -32,7 +32,6 @@
 #define LIBWIIGUI_H
 
 #include <gccore.h>
-#include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
@@ -49,6 +48,7 @@
 #include "filelist.h"
 #include "fileop.h"
 #include "input.h"
+#include "memmanager.h"
 #include "../utils/pngu.h"
 #include "../utils/FreeTypeGX.h"
 #include "../utils/oggplayer.h"
@@ -558,10 +558,17 @@ class GuiImageData
 	public:
 		//!Constructor
 		//!Converts the image data to RGBA8 - expects PNG format
-		//!\param i Image data
+		//!\param i Source image data (PNG)
 		//!\param w Max image width (0 = not set)
 		//!\param h Max image height (0 = not set)
 		GuiImageData(const u8 * i, int w=0, int h=0);
+		//!Constructor
+		//!Converts the image data to RGBA8 - expects PNG format
+		//!\param i Source image data (PNG)
+		//!\param d Destination texture buffer
+		//!\param w Max image width (0 = not set)
+		//!\param h Max image height (0 = not set)
+		GuiImageData(const u8 * i, u8 * dst, int maxw=0, int maxh=0);
 		//!Destructor
 		~GuiImageData();
 		//!Gets a pointer to the image data
