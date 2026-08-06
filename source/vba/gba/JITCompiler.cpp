@@ -470,13 +470,19 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 			*ptr++ = PPC_RLWINM(PPC_R5, PPC_R5, 0, 24, 31);
 			*ptr++ = PPC_SRW(PPC_R5, PPC_R5, PPC_R11);
 			*ptr++ = PPC_OR(PPC_R5, PPC_R5, PPC_R10);
+		} else {
+			// Zero out prefetch buffer state for non-ROM trace executions
+			*ptr++ = PPC_LI(PPC_R5, 0);
 		}
 	};
 
 	auto EmitPrefetchDataWait = [&](u32*& ptr, u32 bankReg, u32 dataWaitStateReg, u32 scratchReg, u32 pc, u32 transferCount) {
 		u32 execBank = (pc >> 24) & 15;
 		// The hardware prefetcher only runs if the CPU is executing from ROM
-		if (execBank < 0x08 || execBank > 0x0D) return;
+		if (execBank < 0x08 || execBank > 0x0D) {
+			*ptr++ = PPC_LI(PPC_R5, 0); // Mandatory 0-out for non-ROM execution
+			return;
+		}
 
 		u32 enableAddr = (u32)&busPrefetchEnable;
 		*ptr++ = PPC_LIS(scratchReg, enableAddr >> 16);
@@ -550,7 +556,12 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	// sync with it (3-1=2, but 3>>1=1 -- not the same state).
 	auto EmitDynamicNCyclePenalty = [&](u32*& ptr, u32 pc) {
 		u32 bank = (pc >> 24) & 15;
-		if (bank < 0x08 || bank > 0x0D) return;
+		if (bank < 0x08 || bank > 0x0D) {
+			// Zero out prefetch buffer state for non-ROM trace executions
+			*ptr++ = PPC_LI(PPC_R5, 0);
+			return;
+		}
+
 		u32 S8 = memoryWaitSeq[bank];
 		if (S8 == 0) S8 = 1;
 		u32 N8 = memoryWait[bank];
