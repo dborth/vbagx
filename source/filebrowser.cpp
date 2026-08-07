@@ -406,6 +406,10 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 					sprintf(file, "%s", filename);
 				}
 				break;
+			case FILE_CHEAT:
+				sprintf(folder, GCSettings.CheatFolder);
+				sprintf(file, "%s.cht", ROMFilename);
+				break;
 		}
 		sprintf (temppath, "%s%s/%s", pathPrefix[GCSettings.SaveMethod], folder, file);
 	}

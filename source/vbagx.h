@@ -45,6 +45,7 @@ enum
 
 enum {
     SAVEFOLDER_SAVES = 0,
+	SAVEFOLDER_CHEATS,
     SAVEFOLDER_LENGTH
 };
 
@@ -63,7 +64,8 @@ typedef struct {
 } FolderDef;
 
 const FolderDef saveFolder[] = {
-    { SAVEFOLDER_SAVES,  "saves" }
+    { SAVEFOLDER_SAVES,  "saves" },
+    { SAVEFOLDER_CHEATS, "cheats" }
 };
 
 const FolderDef loadFolder[] = {
@@ -79,6 +81,7 @@ enum
 	FILE_SRAM,
 	FILE_STATE,
 	FILE_ROM,
+	FILE_CHEAT,
 	FILE_BORDER_PNG
 };
 
@@ -226,6 +229,7 @@ struct SGCSettings
 	char	LoadFolder[MAXPATHLEN];  // Path to game files
 	char	LastFileLoaded[MAXPATHLEN]; //Last file loaded filename
 	char	SaveFolder[MAXPATHLEN];  // Path to save files
+	char	CheatFolder[MAXPATHLEN]; 	// Path to cheat files
 	char	ScreenshotsFolder[MAXPATHLEN]; //Path to screenshots files
 	char	CoverFolder[MAXPATHLEN]; 	//Path to cover files
 	char	ArtworkFolder[MAXPATHLEN]; 	//Path to artwork files

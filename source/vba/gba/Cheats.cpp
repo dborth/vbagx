@@ -278,25 +278,6 @@ u8 v3_deadtable2[256] = {
     0xFC, 0x31, 0x09, 0x48, 0xA3, 0xFF, 0x92, 0x12, 0x58, 0xE9, 0xFA, 0xAE, 0x4F, 0xE2, 0xB4, 0xCC
 };
 
-#define debuggerReadMemory(addr) \
-  READ32LE((&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
-
-#define debuggerReadHalfWord(addr) \
-  READ16LE((&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
-
-#define debuggerReadByte(addr) \
-  map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]
-
-#define debuggerWriteMemory(addr, value) \
-  WRITE32LE(&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask], value)
-
-#define debuggerWriteHalfWord(addr, value) \
-  WRITE16LE(&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask], value)
-
-#define debuggerWriteByte(addr, value) \
-  map[(addr)>>24].address[(addr) & map[(addr)>>24].mask] = (value)
-
-
 #define CHEAT_IS_HEX(a) ( ((a)>='A' && (a) <='F') || ((a) >='0' && (a) <= '9'))
 
 #define CHEAT_PATCH_ROM_16BIT(a,v) \
@@ -570,11 +551,12 @@ int cheatsCheckKeys(u32 keys, u32 extended)
   int i;
   mastercode = 0;
 
-  for (i = 0; i<4; i++)
+  for (i = 0; i<4; i++) {
     if (rompatch2addr [i] != 0) {
       CHEAT_PATCH_ROM_16BIT(rompatch2addr [i],rompatch2oldval [i]);
       rompatch2addr [i] = 0;
     }
+  }
 
   for (i = 0; i < cheatsNumber; i++) {
     if(!cheatsList[i].enabled) {
@@ -582,6 +564,7 @@ int cheatsCheckKeys(u32 keys, u32 extended)
       i += getCodeLength(i)-1;
       continue;
     }
+
     switch(cheatsList[i].size) {
     case GSA_CODES_ON:
       onoff = true;
@@ -2814,10 +2797,6 @@ bool cheatsLoadCheatList(const char *file)
   fclose(f);
   return true;
 }
-
-extern int cpuNextEvent;
-
-extern void debuggerBreakOnWrite(u32 , u32, u32, int, int);
 
 void cheatsWriteMemory(u32 address, u32 value)
 {

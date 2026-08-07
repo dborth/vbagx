@@ -88,7 +88,6 @@ bool fxOn = false;
 bool windowOn = false;
 int frameCount = 0;
 char buffer[1024];
-u32 lastTime = 0;
 int count = 0;
 
 int capture = 0;
@@ -905,6 +904,7 @@ void CPUUpdateRender()
       renderLine = mode5RenderLineNoWindow;
     else
       renderLine = mode5RenderLineAll;
+    break;
   default:
     break;
   }
@@ -2553,8 +2553,6 @@ void CPUReset()
   systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
   cpuDmaHack = false;
-
-  //lastTime = systemGetClock();
 
   SWITicks = 0;
 }

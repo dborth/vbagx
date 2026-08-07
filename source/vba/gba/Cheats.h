@@ -1,6 +1,8 @@
 #ifndef CHEATS_H
 #define CHEATS_H
 
+#include <zlib.h>
+
 struct CheatsData {
   int code;
   int size;

@@ -32,6 +32,7 @@
 #include "networkop.h"
 #include "fileop.h"
 #include "preferences.h"
+#include "cheatmgr.h"
 #include "button_mapping.h"
 #include "input.h"
 #include "filelist.h"
@@ -1702,6 +1703,7 @@ static int MenuGame()
 					gameScreenTexture = NULL;
 				}
 				ClearScreenshot();
+				RomCleanup();
 				if(GCSettings.AutoloadGame) {
 					ExitApp();
 				}
@@ -2113,6 +2115,7 @@ static int MenuGameSettings()
 #else
 	GuiImageData iconWiiControls(icon_settings_gamecube_png);
 #endif
+	GuiImageData iconCheats(icon_game_cheats_png);
 	GuiImageData iconScreenshot(icon_settings_screenshot_png);
 	GuiImageData btnCloseOutline(button_small_png);
 	GuiImageData btnCloseOutlineOver(button_small_over_png);
@@ -2172,7 +2175,7 @@ static int MenuGameSettings()
 	GuiImage wiiControlsBtnIcon(&iconWiiControls);
 	GuiButton wiiControlsBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	wiiControlsBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	wiiControlsBtn.SetPosition(-125, 250);
+	wiiControlsBtn.SetPosition(-200, 250);
 	wiiControlsBtn.SetLabel(&wiiControlsBtnTxt1, 0);
 	wiiControlsBtn.SetLabel(&wiiControlsBtnTxt2, 1);
 	wiiControlsBtn.SetImage(&wiiControlsBtnImg);
@@ -2190,7 +2193,7 @@ static int MenuGameSettings()
 	GuiImage screenshotBtnIcon(&iconScreenshot);
 	GuiButton screenshotBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	screenshotBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	screenshotBtn.SetPosition(125, 250);
+	screenshotBtn.SetPosition(0, 250);
 	screenshotBtn.SetLabel(&screenshotBtnTxt);
 	screenshotBtn.SetImage(&screenshotBtnImg);
 	screenshotBtn.SetImageOver(&screenshotBtnImgOver);
@@ -2201,6 +2204,23 @@ static int MenuGameSettings()
 	screenshotBtn.SetTrigger(trig2);
 	screenshotBtn.SetEffectGrow();
 	
+	GuiText cheatsBtnTxt("Cheats", 22, (GXColor){0, 0, 0, 255});
+	GuiImage cheatsBtnImg(&btnLargeOutline);
+	GuiImage cheatsBtnImgOver(&btnLargeOutlineOver);
+	GuiImage cheatsBtnIcon(&iconCheats);
+	GuiButton cheatsBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
+	cheatsBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	cheatsBtn.SetPosition(200, 250);
+	cheatsBtn.SetLabel(&cheatsBtnTxt);
+	cheatsBtn.SetImage(&cheatsBtnImg);
+	cheatsBtn.SetImageOver(&cheatsBtnImgOver);
+	cheatsBtn.SetIcon(&cheatsBtnIcon);
+	cheatsBtn.SetSoundOver(&btnSoundOver);
+	cheatsBtn.SetSoundClick(&btnSoundClick);
+	cheatsBtn.SetTrigger(trigA);
+	cheatsBtn.SetTrigger(trig2);
+	cheatsBtn.SetEffectGrow();
+
 	GuiText closeBtnTxt("Close", 20, (GXColor){0, 0, 0, 255});
 	GuiImage closeBtnImg(&btnCloseOutline);
 	GuiImage closeBtnImgOver(&btnCloseOutlineOver);
@@ -2239,6 +2259,7 @@ static int MenuGameSettings()
 	w.Append(&videoBtn);
 	w.Append(&wiiControlsBtn);
 	w.Append(&screenshotBtn);
+	w.Append(&cheatsBtn);
 	w.Append(&closeBtn);
 	w.Append(&backBtn);
 
@@ -2274,6 +2295,17 @@ static int MenuGameSettings()
 				SavePreviewImg(filepath, SILENT); 
 			}
 		}
+		else if(cheatsBtn.GetState() == STATE_CLICKED)
+		{
+			cheatsBtn.ResetState();
+
+			if(cheatCount > 0) {
+				menu = MENU_GAMESETTINGS_CHEATS;
+			}
+			else {
+				InfoPrompt("Cheats file not found!");
+			}
+		}
 		else if(closeBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_EXIT;
@@ -2298,6 +2330,96 @@ static int MenuGameSettings()
 
 	HaltGui();
 	mainWindow->Remove(&w);
+	return menu;
+}
+
+/****************************************************************************
+ * MenuGameCheats
+ *
+ * Displays a list of cheats available, and allows the user to enable/disable
+ * them.
+ ***************************************************************************/
+static int MenuGameCheats()
+{
+	int menu = MENU_NONE;
+	int ret;
+	u16 i = 0;
+	OptionList options;
+
+	for(i=0; i < cheatCount; i++)
+	{
+		snprintf (options.name[i], 50, "%s", cheats[i].name);
+		sprintf (options.value[i], "%s", cheats[i].enabled ? "On" : "Off");
+	}
+
+	options.length = i;
+
+	GuiText titleTxt("Game Settings - Cheats", 26, (GXColor){255, 255, 255, 255});
+	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
+	titleTxt.SetPosition(50,50);
+
+	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND_PCM);
+	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND_PCM);
+	GuiImageData btnOutline(button_png);
+	GuiImageData btnOutlineOver(button_over_png);
+
+	GuiTrigger trigB;
+	GuiTrigger trig1;
+	trigB.SetButtonOnlyTrigger(-1, WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B, PAD_BUTTON_B, WIIDRC_BUTTON_B);
+	trig1.SetButtonOnlyTrigger(-1, WPAD_BUTTON_1, 0, 0);
+
+	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiImage backBtnImg(&btnOutline);
+	GuiImage backBtnImgOver(&btnOutlineOver);
+	GuiButton backBtn(btnOutline.GetWidth(), btnOutline.GetHeight());
+	backBtn.SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+	backBtn.SetPosition(50, -35);
+	backBtn.SetLabel(&backBtnTxt);
+	backBtn.SetImage(&backBtnImg);
+	backBtn.SetImageOver(&backBtnImgOver);
+	backBtn.SetSoundOver(&btnSoundOver);
+	backBtn.SetSoundClick(&btnSoundClick);
+	backBtn.SetTrigger(trigA);
+	backBtn.SetTrigger(trig2);
+	backBtn.SetTrigger(&trigB);
+	backBtn.SetTrigger(&trig1);
+	backBtn.SetEffectGrow();
+
+	GuiOptionBrowser optionBrowser(552, 248, &options);
+	optionBrowser.SetPosition(0, 108);
+	optionBrowser.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	optionBrowser.SetCol2Position(475);
+
+	HaltGui();
+	GuiWindow w(screenwidth, screenheight);
+	w.Append(&backBtn);
+	mainWindow->Append(&optionBrowser);
+	mainWindow->Append(&w);
+	mainWindow->Append(&titleTxt);
+	ResumeGui();
+
+	while(menu == MENU_NONE)
+	{
+		usleep(THREAD_SLEEP);
+
+		ret = optionBrowser.GetClickedOption();
+
+		if(ret >= 0)
+		{
+			ToggleCheat(ret);
+			sprintf (options.value[ret], "%s", cheats[ret].enabled ? "On" : "Off");
+			optionBrowser.TriggerUpdate();
+		}
+
+		if(backBtn.GetState() == STATE_CLICKED)
+		{
+			menu = MENU_GAMESETTINGS;
+		}
+	}
+	HaltGui();
+	mainWindow->Remove(&optionBrowser);
+	mainWindow->Remove(&w);
+	mainWindow->Remove(&titleTxt);
 	return menu;
 }
 
@@ -3740,6 +3862,7 @@ static int MenuSettingsFile()
 	sprintf(options.name[i++], "Save Device");
 	sprintf(options.name[i++], "Load Folder");
 	sprintf(options.name[i++], "Save Folder");
+	sprintf(options.name[i++], "Cheats Folder");
 	sprintf(options.name[i++], "Screenshots Folder");
 	sprintf(options.name[i++], "Covers Folder");
 	sprintf(options.name[i++], "Artwork Folder");
@@ -3813,30 +3936,34 @@ static int MenuSettingsFile()
 				break;
 
 			case 4:
-				OnScreenKeyboard(GCSettings.ScreenshotsFolder, MAXPATHLEN);
+				OnScreenKeyboard(GCSettings.CheatFolder, MAXPATHLEN);
 				break;
 
 			case 5:
-				OnScreenKeyboard(GCSettings.CoverFolder, MAXPATHLEN);
+				OnScreenKeyboard(GCSettings.ScreenshotsFolder, MAXPATHLEN);
 				break;
 
 			case 6:
+				OnScreenKeyboard(GCSettings.CoverFolder, MAXPATHLEN);
+				break;
+
+			case 7:
 				OnScreenKeyboard(GCSettings.ArtworkFolder, MAXPATHLEN);
 				break;
 			
-			case 7:
+			case 8:
 				GCSettings.AutoLoad++;
 				if (GCSettings.AutoLoad > AUTOLOAD_STATE)
 					GCSettings.AutoLoad = AUTOLOAD_OFF;
 				break;
 
-			case 8:
+			case 9:
 				GCSettings.AutoSave++;
 				if (GCSettings.AutoSave > AUTOSAVE_BOTH)
 					GCSettings.AutoSave = AUTOSAVE_OFF;
 				break;
 
-			case 9:
+			case 10:
 				GCSettings.AppendAuto = !GCSettings.AppendAuto;
 				break;
 		}
@@ -3866,21 +3993,22 @@ static int MenuSettingsFile()
 
 			snprintf (options.value[2], 35, "%s", GCSettings.LoadFolder);
 			snprintf (options.value[3], 35, "%s", GCSettings.SaveFolder);
-			snprintf (options.value[4], 35, "%s", GCSettings.ScreenshotsFolder);
-			snprintf (options.value[5], 35, "%s", GCSettings.CoverFolder);
-			snprintf (options.value[6], 35, "%s", GCSettings.ArtworkFolder);
+			snprintf (options.value[4], 35, "%s", GCSettings.CheatFolder);
+			snprintf (options.value[5], 35, "%s", GCSettings.ScreenshotsFolder);
+			snprintf (options.value[6], 35, "%s", GCSettings.CoverFolder);
+			snprintf (options.value[7], 35, "%s", GCSettings.ArtworkFolder);
 			
-			if (GCSettings.AutoLoad == AUTOLOAD_OFF) sprintf (options.value[7],"Off");
-			else if (GCSettings.AutoLoad == AUTOLOAD_SRAM) sprintf (options.value[7],"SRAM");
-			else if (GCSettings.AutoLoad == AUTOLOAD_STATE) sprintf (options.value[7],"State");
+			if (GCSettings.AutoLoad == AUTOLOAD_OFF) sprintf (options.value[8],"Off");
+			else if (GCSettings.AutoLoad == AUTOLOAD_SRAM) sprintf (options.value[8],"SRAM");
+			else if (GCSettings.AutoLoad == AUTOLOAD_STATE) sprintf (options.value[8],"State");
 
-			if (GCSettings.AutoSave == AUTOSAVE_OFF) sprintf (options.value[8],"Off");
-			else if (GCSettings.AutoSave == AUTOSAVE_SRAM) sprintf (options.value[8],"SRAM");
-			else if (GCSettings.AutoSave == AUTOSAVE_STATE) sprintf (options.value[8],"State");
-			else if (GCSettings.AutoSave == AUTOSAVE_BOTH) sprintf (options.value[8],"Both");
+			if (GCSettings.AutoSave == AUTOSAVE_OFF) sprintf (options.value[9],"Off");
+			else if (GCSettings.AutoSave == AUTOSAVE_SRAM) sprintf (options.value[9],"SRAM");
+			else if (GCSettings.AutoSave == AUTOSAVE_STATE) sprintf (options.value[9],"State");
+			else if (GCSettings.AutoSave == AUTOSAVE_BOTH) sprintf (options.value[9],"Both");
 
-			if (!GCSettings.AppendAuto) sprintf (options.value[9],"Off");
-			else sprintf (options.value[9],"On");
+			if (!GCSettings.AppendAuto) sprintf (options.value[10],"Off");
+			else sprintf (options.value[10],"On");
 
 			optionBrowser.TriggerUpdate();
 		}
@@ -5240,6 +5368,9 @@ MainMenu (int menu)
 				break;
 			case MENU_GAMESETTINGS_PALETTE:
 				currentMenu = MenuPalette();
+				break;
+			case MENU_GAMESETTINGS_CHEATS:
+				currentMenu = MenuGameCheats();
 				break;
 			case MENU_SETTINGS:
 				currentMenu = MenuSettings();

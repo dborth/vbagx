@@ -26,6 +26,7 @@
 #include "filebrowser.h"
 #include "audio.h"
 #include "input.h"
+#include "cheatmgr.h"
 #include "gameinput.h"
 #include "video.h"
 #include "menu.h"
@@ -41,7 +42,6 @@
 #include "vba/gba/Flash.h"
 #include "vba/gba/RTC.h"
 #include "vba/gba/Sound.h"
-#include "vba/gba/Cheats.h"
 #include "vba/gba/GBA.h"
 #include "vba/gba/JIT.h"
 #include "vba/gb/gb.h"
@@ -1309,16 +1309,25 @@ static void GBAROMCleanup()
 	ioMem = NULL;
 }
 
-static void romCleanup()
+void RomCleanup()
 {
 	cartridgeType = CARTRIDGE_NONE;
 	GBAROMCleanup(); // cleanup GBA memory
 	gbCleanUp(); // cleanup GB memory
+	ResetCheats();
 	gbRom = NULL;
 	rom = NULL;
 	#ifdef HW_DOL
 	VMPager_CloseFile();
 	#endif
+	srcWidth = 0;
+	srcHeight = 0;
+
+	if (InitialBorder != NULL) {
+		mem1_free(InitialBorder);
+		InitialBorder = NULL;
+	}
+	SGBBorderLoadedFromGame = false;
 }
 
 static bool GBAROMAlloc()
@@ -1385,6 +1394,7 @@ static int GBAROMLoad()
 	}
 
 	if(GBAROMSize) {
+		LoadCheatFile();
 		flashInit();
 		eepromInit();
 		CPUUpdateRenderBuffers( true );
@@ -1443,17 +1453,10 @@ bool LoadVBAROM()
 		return false;
 	}
 
-	romCleanup();
-	int loaded = 0;
-	cartridgeType = newCartridgeType;
-	srcWidth = 0;
-	srcHeight = 0;
+	RomCleanup();
 
-	if (InitialBorder != NULL) {
-		mem1_free(InitialBorder);
-		InitialBorder = NULL;
-	}
-	SGBBorderLoadedFromGame = false; // don't try to copy sgb border from game to png unless we're in sgb mode
+	cartridgeType = newCartridgeType;
+	int loaded = 0;
 
 	if(cartridgeType == CARTRIDGE_GBA)
 	{
@@ -1497,7 +1500,7 @@ bool LoadVBAROM()
 	}
 
 	if(!loaded) {
-		romCleanup();
+		RomCleanup();
 		return false;
 	}
 
