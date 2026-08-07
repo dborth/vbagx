@@ -34,7 +34,8 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ## FEATURES
 
 * Custom-built dynamic recompiler (JIT) for GBA games, built from the ground up specifically for VBA-GX, with 
-  excellent accuracy and enough headroom to hold a rock-solid 60fps with room to spare (Wii only)
+  excellent accuracy and enough headroom to hold a rock-solid 60fps with room to spare
+* ARAM/SD hybrid virtual memory pager on GameCube - ROM data is backed by ARAM/SD completely transparently
 * Native 48kHz audio output with no upsampling, dropout-resistant buffering, and smooth fades instead of clicks -
   simply the best VBA-GX has ever sounded
 * Wiimote, Nunchuk, Classic, Wii U Pro, and Gamecube controller support
@@ -45,9 +46,10 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * IPS/UPS patch support
 * Custom controller configurations
 * SD, USB, DVD, SMB, Zip, and 7z support
-* Compatibility based on VBA-M r1231
-* MEM2 ROM Storage for fast access
-* Auto frame skip (optional) for those core heavy games
+* Compatibility based on VBA-M r1231+
+* MEM2 ROM Storage for fast access (Wii)
+* Auto frame skip (optional) for those core heavy games (it's still recommended to leave enabled for audio timing,
+  even with JIT enabled)
 * Turbo speed, video zooming, widescreen, unfiltered, and 240p video options
 * Video filters - hq2x, Scale2x, Scanlines, 2xBR, DDT
 * Native loading/saving of ROMS and SRAM from Goomba (a GB emulator for GBA)
@@ -59,11 +61,15 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 [3.0.1]
 
-* Implemented a brand new Dynamic Recompilation (JIT) core for GBA games on Wii, built entirely from scratch. This is
-  a from-the-ground-up addition, not a port - real GBA titles now run with plenty of headroom above a full, locked
-  60fps, well beyond what the interpreter core could sustain. Enable it from Settings > Emulation > Dynamic GBA Recompilation
-* GB/GBA audio is cleaner and truer to the original hardware, with one less resampling step - it is now generated natively at 
-  48kHz - instead of upsampled from 44100Hz (GBA) and 22050Hz (GB)
+* Implemented a brand new Dynamic Recompilation (JIT) core for GBA games on both Wii and GameCube, built entirely from 
+  scratch. This is a from-the-ground-up addition, not a port - real GBA titles now run with plenty of headroom above 
+  a full, locked 60fps, well beyond what the interpreter core could sustain. Enable it from Settings > Emulation
+* Replaced GameCube's old ROM paging system with a new ARAM/SD hybrid virtual memory pager - ROM data now streams
+  transparently from SD into ARAM and MEM1 on demand instead of needing to fit entirely in memory ahead of time, 
+  allowing the JIT to be possible (since it doesn't have to be aware of backing data location)
+* Rewritten memory management for both Wii/GameCube, freeing up 8MB+ for a JIT Cache, while still allowing 32MB ROMs
+* GB/GBA audio is cleaner and truer to the original hardware, with one less resampling step - it is now generated 
+  natively at 48kHz - instead of upsampled from 44100Hz (GBA) and 22050Hz (GB)
 * Audio samples are now written directly into the output buffer with no intermediate mixing buffer in between,
   reducing audio latency
 * Smart dynamic audio rate control keeps playback speed correctly matched to real GBA hardware timing, with a
@@ -71,8 +77,8 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
   pitch adjustments during normal play
 * Buffer underruns (audio momentarily running dry) now fade smoothly to silence and back instead of producing a
   hard click, and startup/resume is primed to avoid an initial stutter
-* Reworked frameskip and frame pacing so video timing is smoother and more consistent, especially when the JIT
-  core is running well above 60fps, and skipped frames are spaced more evenly instead of clumping
+* Reworked frameskip and frame pacing so video timing is smoother and more consistent, especially when the JIT core 
+  is running well above 60fps, and skipped frames are spaced more evenly instead of clumping
 * Added FPS display option
 
 [3.0.0 - July 6, 2026]
@@ -748,15 +754,19 @@ are fully supported, and the patch will stop them from working.
 
 VBA-GX includes a dynamic recompiler (JIT) for GBA games, built entirely from
 scratch specifically for VBA-GX. Rather than interpreting GBA code one
-instruction at a time, it translates hot game code directly into native Wii
-CPU instructions, while carefully preserving the timing accuracy of the
-original interpreter core. The result is a major speed boost with excellent
-compatibility - even demanding GBA titles run with plenty of headroom to
-spare above a full, locked 60fps, rather than merely scraping by.
+instruction at a time, it translates hot game code directly into native
+Broadway/Gekko CPU instructions, while carefully preserving the timing
+accuracy of the original interpreter core. The result is a major speed
+boost with excellent compatibility - even demanding GBA titles run with
+plenty of headroom to spare above a full, locked 60fps, rather than merely
+scraping by.
 
-This option is only available on Wii, and can be turned on or off from the
-main menu under Settings > Emulation > GBA Dynamic Recompilation. It is not
-available on GameCube.
+It can be turned on or off from the main menu under Settings > Emulation >
+GBA Dynamic Recompilation. On Wii it's on solid ground and safe to leave on
+by default. On GameCube it's newly available as of this release, made
+possible by the new ARAM/SD hybrid ROM pager, and is offered as an option
+rather than the default while it gets more mileage across a wider range of
+games and ROM sizes.
 
 Dynamic Recompilation is very stable, but if you ever notice graphical
 glitches or other unexpected behavior in a specific game, try turning it off
