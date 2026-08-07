@@ -65,7 +65,7 @@ static volatile unsigned int copynow = GX_FALSE;
 #define FPS_FONT_TEX_HEIGHT 20
 #define FPS_FONT_TEX_SIZE   (FPS_FONT_TEX_WIDTH * FPS_FONT_TEX_HEIGHT * 4)
 
-u8* texturemem = NULL;
+static u8 texturemem[TEXTUREMEM_SIZE] ATTRIBUTE_ALIGN (32);
 static u8 fps_font_texture_data[FPS_FONT_TEX_SIZE] ATTRIBUTE_ALIGN(32);
 static unsigned char scanline_tex_data[32] ATTRIBUTE_ALIGN (32);
 
@@ -910,6 +910,8 @@ static bool borderJustChanged = false;
  * GX_Render_Init
  ***************************************************************************/
 void GX_Render_Init(int width, int height) {
+	memset(texturemem, 0, TEXTUREMEM_SIZE);
+
 	// Setup for first call to scaler
 	vwidth = width;
 	vheight = height;
@@ -1005,7 +1007,7 @@ void ClearScreenshot()
  *
  * Copies the current texturemem screen into a PNG buffer
  ***************************************************************************/
-void TakeScreenshot(u8 * gameTexture)
+void TakeScreenshot()
 {
 	AllocSaveBuffer();
 	IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
@@ -1014,7 +1016,7 @@ void TakeScreenshot(u8 * gameTexture)
 		return;
 	}
 
-	int res = PNGU_EncodeFromGXTexture(pngContext, gameScreenPng.width, gameScreenPng.height, gameTexture, gameScreenPng.width * 3);
+	int res = PNGU_EncodeFromGXTexture(pngContext, gameScreenPng.width, gameScreenPng.height, texturemem, gameScreenPng.width * 3);
 
 	if(res == PNGU_OK) {
 		gameScreenPng.size = pngContext->cursor;

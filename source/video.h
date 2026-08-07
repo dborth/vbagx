@@ -24,7 +24,7 @@ void GX_Render(int gbWidth, int gbHeight, u8 * buffer);
 void StopGX();
 void ResetVideo_Emu();
 void ResetVideo_Menu();
-void TakeScreenshot(u8 * gameTexture);
+void TakeScreenshot();
 void ClearScreenshot();
 void Menu_Render();
 void Menu_DrawImg(f32 xpos, f32 ypos, u16 width, u16 height, u8 data[], f32 degrees, f32 scaleX, f32 scaleY, u8 alphaF );
@@ -53,7 +53,6 @@ typedef struct
 	int yoffset;
 } GameScreenPng;
 
-extern u8* texturemem;
 extern GameScreenPng gameScreenPng;
 
 char *AllocAndGetPNGBorderPath(const char* title);
