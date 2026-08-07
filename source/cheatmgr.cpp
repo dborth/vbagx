@@ -5,7 +5,7 @@
  *
  * cheatmgr.cpp
  *
- * Cheat manager -  Libretro .cht support for VBA-M
+ * Cheat manager - Libretro .cht support for VBA-M
  ***************************************************************************/
 
 #include <stdio.h>
@@ -31,10 +31,6 @@ int cheatCount = 0;
  *
  * Registers codes into VBA-M on enable, and deletes them on disable.
  ***************************************************************************/
-static inline char to_upper(char c) {
-    return (c >= 'a' && c <= 'z') ? (c - 32) : c;
-}
-
 void ToggleCheat(int id) {
 	if (id < 0 || id >= cheatCount)
 		return;
@@ -56,34 +52,37 @@ void ToggleCheat(int id) {
 
 		char* token = strtok(codeCopy, "+");
 		while (token != NULL) {
-			// Sanitize string (strip spaces/hyphens and count hex chars)
-			char sanitized[32] = {0};
-			int len = 0;
-			for (int i = 0; token[i] != '\0' && len < 31; i++) {
-				if (token[i] != ' ' && token[i] != '-') {
-					sanitized[len++] = to_upper(token[i]);
-				}
+			// Trim whitespace
+			while (*token == ' ' || *token == '\t') token++;
+			int tokenLen = strlen(token);
+			while (tokenLen > 0 && (token[tokenLen - 1] == ' ' || token[tokenLen - 1] == '\t')) {
+				token[--tokenLen] = '\0';
 			}
-			sanitized[len] = '\0';
 
 			if (cartridgeType == CARTRIDGE_GBA) {
 				if (cheatsNumber >= 100) break; // Core limit safety check
 
-				if (len == 12) {
-					// CodeBreaker GBA expects a space inserted at index 8 (XXXXXXXX YYYY)
+				if (tokenLen == 13) {
+					// CodeBreaker GBA (XXXXXXXX YYYY)
+					cheatsAddCBACode(token, group->name);
+					cheatsEnable(cheatsNumber - 1);
+					group->vbaCodeCount++;
+				}
+				else if (tokenLen == 12) {
+					// Unformatted CodeBreaker GBA (XXXXXXXXYYYY)
 					char formatted[14];
-					strncpy(formatted, sanitized, 8);
+					strncpy(formatted, token, 8);
 					formatted[8] = ' ';
-					strncpy(formatted + 9, sanitized + 8, 4);
+					strncpy(formatted + 9, token + 8, 4);
 					formatted[13] = '\0';
 
 					cheatsAddCBACode(formatted, group->name);
 					cheatsEnable(cheatsNumber - 1);
 					group->vbaCodeCount++;
 				}
-				else if (len == 16) {
+				else if (tokenLen == 16) {
 					// GameShark GBA v3
-					cheatsAddGSACode(sanitized, group->name, true);
+					cheatsAddGSACode(token, group->name, true);
 					cheatsEnable(cheatsNumber - 1);
 					group->vbaCodeCount++;
 				}
@@ -91,15 +90,15 @@ void ToggleCheat(int id) {
 			else if (cartridgeType == CARTRIDGE_GB) {
 				if (gbCheatNumber >= 100) break; // Core limit safety check
 
-				if (len == 7 || len == 11) {
-					// Game Boy Game Genie
-					gbAddGgCheat(sanitized, group->name);
+				if (tokenLen == 7 || tokenLen == 11) {
+					// Game Boy Game Genie ("XXX-YYY" or "XXX-YYY-ZZZ")
+					gbAddGgCheat(token, group->name);
 					gbCheatEnable(gbCheatNumber - 1);
 					group->vbaCodeCount++;
 				}
-				else if (len == 8) {
-					// Game Boy GameShark
-					gbAddGsCheat(sanitized, group->name);
+				else if (tokenLen == 8) {
+					// Game Boy GameShark ("XXXXXXXX")
+					gbAddGsCheat(token, group->name);
 					gbCheatEnable(gbCheatNumber - 1);
 					group->vbaCodeCount++;
 				}
@@ -152,12 +151,9 @@ void ResetCheats() {
 	}
 }
 
-/****************************************************************************
- * LoadCheatFile
- *
- * Erases any pre-existing cheats, loads cheats from a cheat file
- * Called when a ROM is first loaded
- ***************************************************************************/
+static inline char to_upper(char c) {
+    return (c >= 'a' && c <= 'z') ? (c - 32) : c;
+}
 
 // Helper: Safely get the next line without modifying the buffer
 static const char* GetNextLine(const char* cursor) {
@@ -235,69 +231,120 @@ struct TempCheatInfo {
 	char code[1024];
 };
 
-// Helper: Validates and sanitizes cheat strings according to format rules
+// Helper: Validates and sanitizes cheat strings according to platform rules
 static void SanitizeCheatString(const char* raw, char* outBuffer, int maxOutLen) {
 	outBuffer[0] = '\0';
 	int outLen = 0;
-	char acc[64] = {0};
-	int accLen = 0;
 
-	// Read character by character to safely extract hex blocks and drop bad data
+	char hexAcc[64] = {0};
+	int hexLen = 0;
+	bool tokenValid = true;
+
 	for (int i = 0; ; i++) {
 		char c = raw[i];
 
-		// 1. Accumulate valid hex characters
 		if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
-			if (accLen < 63) {
-				acc[accLen++] = to_upper(c);
-				acc[accLen] = '\0';
+			if (hexLen < 63) {
+				hexAcc[hexLen++] = to_upper(c);
+				hexAcc[hexLen] = '\0';
 			}
 		}
-		// 2. Evaluate tokens when hitting a separator or end-of-string
-		else if (c == '+' || c == ' ' || c == '-' || c == '\0') {
-			if (cartridgeType == CARTRIDGE_GBA) {
-				if (accLen == 12) {
-					// CodeBreaker GBA: Formatted strictly as XXXXXXXX YYYY
-					if (outLen + 14 < maxOutLen) {
-						if (outLen > 0) { outBuffer[outLen++] = '+'; }
-						strncpy(outBuffer + outLen, acc, 8);
-						outLen += 8;
-						outBuffer[outLen++] = ' ';
-						strncpy(outBuffer + outLen, acc + 8, 4);
-						outLen += 4;
-						outBuffer[outLen] = '\0';
+		else if (c == ' ' || c == '-' || c == '\t' || c == '\r' || c == '\n') {
+			// Formatting whitespace and hyphens within codes are skipped during hex accumulation
+		}
+		else if (c == '+' || c == ',' || c == ';' || c == '\0') {
+			if (tokenValid && hexLen > 0) {
+				bool matched = false;
+
+				if (cartridgeType == CARTRIDGE_GBA) {
+					if (hexLen == 12) {
+						// CodeBreaker GBA: Formatted as XXXXXXXX YYYY
+						if (outLen + 14 < maxOutLen) {
+							if (outLen > 0) { outBuffer[outLen++] = '+'; }
+							strncpy(outBuffer + outLen, hexAcc, 8);
+							outLen += 8;
+							outBuffer[outLen++] = ' ';
+							strncpy(outBuffer + outLen, hexAcc + 8, 4);
+							outLen += 4;
+							outBuffer[outLen] = '\0';
+						}
+						matched = true;
 					}
-					accLen = 0; // Reset for next token
-				} else if (accLen == 16) {
-					// GameShark GBA v3: Formatted as XXXXXXXXXXXXXXXX
-					if (outLen + 17 < maxOutLen) {
-						if (outLen > 0) { outBuffer[outLen++] = '+'; }
-						strcpy(outBuffer + outLen, acc);
-						outLen += 16;
+					else if (hexLen == 16) {
+						// GameShark GBA v3: Formatted as XXXXXXXXXXXXXXXX
+						if (outLen + 17 < maxOutLen) {
+							if (outLen > 0) { outBuffer[outLen++] = '+'; }
+							strcpy(outBuffer + outLen, hexAcc);
+							outLen += 16;
+							outBuffer[outLen] = '\0';
+						}
+						matched = true;
 					}
-					accLen = 0;
-				} else if (c == '\0') {
-					accLen = 0; // End of string, discard any incomplete accumulation
+					else if (hexLen == 8 && c != '\0') {
+						// GBA 8 hex digits split across '+' (e.g. 8300399C+869F)
+						matched = true; // Continue accumulating for 12-digit CodeBreaker
+					}
 				}
-			}
-			else if (cartridgeType == CARTRIDGE_GB) {
-				// Game Boy Game Genie (7, 11) or Game Boy GameShark (8)
-				if (accLen == 7 || accLen == 8 || accLen == 11) {
-					if (outLen + accLen + 2 < maxOutLen) {
-						if (outLen > 0) { outBuffer[outLen++] = '+'; }
-						strcpy(outBuffer + outLen, acc);
-						outLen += accLen;
+				else if (cartridgeType == CARTRIDGE_GB) {
+					if (hexLen == 6) {
+						// Game Boy Game Genie 6-digit: XXX-YYY
+						if (outLen + 8 < maxOutLen) {
+							if (outLen > 0) { outBuffer[outLen++] = '+'; }
+							strncpy(outBuffer + outLen, hexAcc, 3);
+							outLen += 3;
+							outBuffer[outLen++] = '-';
+							strncpy(outBuffer + outLen, hexAcc + 3, 3);
+							outLen += 3;
+							outBuffer[outLen] = '\0';
+						}
+						matched = true;
 					}
-					accLen = 0;
-				} else if (c == '\0') {
-					accLen = 0;
+					else if (hexLen == 9) {
+						// Game Boy Game Genie 9-digit: XXX-YYY-ZZZ
+						if (outLen + 12 < maxOutLen) {
+							if (outLen > 0) { outBuffer[outLen++] = '+'; }
+							strncpy(outBuffer + outLen, hexAcc, 3);
+							outLen += 3;
+							outBuffer[outLen++] = '-';
+							strncpy(outBuffer + outLen, hexAcc + 3, 3);
+							outLen += 3;
+							outBuffer[outLen++] = '-';
+							strncpy(outBuffer + outLen, hexAcc + 6, 3);
+							outLen += 3;
+							outBuffer[outLen] = '\0';
+						}
+						matched = true;
+					}
+					else if (hexLen == 8) {
+						// Game Boy GameShark: XXXXXXXX
+						if (outLen + 9 < maxOutLen) {
+							if (outLen > 0) { outBuffer[outLen++] = '+'; }
+							strcpy(outBuffer + outLen, hexAcc);
+							outLen += 8;
+							outBuffer[outLen] = '\0';
+						}
+						matched = true;
+					}
 				}
+
+				if (matched) {
+					if (hexLen != 8 || cartridgeType != CARTRIDGE_GBA || c == '\0') {
+						hexLen = 0;
+						hexAcc[0] = '\0';
+					}
+				} else {
+					hexLen = 0;
+					hexAcc[0] = '\0';
+				}
+			} else {
+				hexLen = 0;
+				hexAcc[0] = '\0';
+				tokenValid = true;
 			}
 		}
-		// 3. Drop bad data: Clear accumulator if an invalid character is hit
 		else {
-			accLen = 0;
-			acc[0] = '\0';
+			// Invalid character encountered -> mark token invalid to drop bad data
+			tokenValid = false;
 		}
 
 		if (c == '\0') {
@@ -306,6 +353,12 @@ static void SanitizeCheatString(const char* raw, char* outBuffer, int maxOutLen)
 	}
 }
 
+/****************************************************************************
+ * LoadCheatFile
+ *
+ * Erases any pre-existing cheats, loads cheats from a cheat file
+ * Called when a ROM is first loaded
+ ***************************************************************************/
 void LoadCheatFile() {
 	char filepath[1024];
 	int fileSize = 0;

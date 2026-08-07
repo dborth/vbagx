@@ -111,7 +111,6 @@
 #include <ogc/cache.h>
 #include <ogc/message.h>
 #include <ogc/lwp.h>
-#include <ogc/system.h>
 
 #include "vmpager.h"
 #include "vm.h"

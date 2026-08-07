@@ -437,7 +437,7 @@ bool LoadBatteryOrState(char * filepath, int action, bool silent)
 			
 	if (cartridgeType == CARTRIDGE_GB && goomba_is_sram(savebuffer)) {
 		void* cleaned = goomba_cleanup(savebuffer);
-		if (savebuffer == NULL) {
+		if (cleaned == NULL) {
 			ErrorPrompt(goomba_last_error());
 			offset = 0;
 		} else {
@@ -555,8 +555,7 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 	if(action == FILE_STATE && gameScreenPng.size > 0)
 	{
 		char screenpath[1024];
-		strncpy(screenpath, filepath, 1024);
-		screenpath[strlen(screenpath)-4] = 0;
+		StripExt(screenpath, filepath);
 		strcat(screenpath, ".png");
 		SaveFile((char *)gameScreenPng.buffer, screenpath, gameScreenPng.size, silent);
 	}
@@ -1252,16 +1251,16 @@ bool LoadGBROM()
 	const void* secondRom = gb_next_rom(gbRom, gbRomSize, firstRom);
 	if (firstRom != NULL && firstRom != gbRom) {
 		char msgbuf[32];
-		const void* rom;
-		for (rom = firstRom; rom != NULL; rom = gb_next_rom(gbRom, gbRomSize, rom)) {
-			sprintf(msgbuf, "Load %s?", gb_get_title(rom, NULL));
+		const void* gbRomPtr;
+		for (gbRomPtr = firstRom; gbRomPtr != NULL; gbRomPtr = gb_next_rom(gbRom, gbRomSize, gbRomPtr)) {
+			sprintf(msgbuf, "Load %s?", gb_get_title(gbRomPtr, NULL));
 			if (secondRom == NULL || YesNoPrompt(msgbuf, true)) {
-				gbRomSize = gb_rom_size(rom);
-				memmove(gbRom, rom, gbRomSize);
+				gbRomSize = gb_rom_size(gbRomPtr);
+				memmove(gbRom, gbRomPtr, gbRomSize);
 				break;
 			}
 		}
-		if (rom == NULL) {
+		if (gbRomPtr == NULL) {
 			InfoPrompt("No more ROMs found in the file.");
 			return false;
 		}
@@ -1394,7 +1393,6 @@ static int GBAROMLoad()
 	}
 
 	if(GBAROMSize) {
-		LoadCheatFile();
 		flashInit();
 		eepromInit();
 		CPUUpdateRenderBuffers( true );

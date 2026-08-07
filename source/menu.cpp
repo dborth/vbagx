@@ -1704,6 +1704,7 @@ static int MenuGame()
 				}
 				ClearScreenshot();
 				RomCleanup();
+				ROMFilename[0] = '\0';
 				if(GCSettings.AutoloadGame) {
 					ExitApp();
 				}

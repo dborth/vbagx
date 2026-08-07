@@ -9,7 +9,6 @@
  ***************************************************************************/
 
 #include <ogc/lwp_heap.h>
-#include <ogc/system.h>
 #include "vbagx.h"
 #include "vbasupport.h"
 #include "memmanager.h"

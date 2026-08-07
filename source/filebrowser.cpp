@@ -21,6 +21,7 @@
 
 #include "vbagx.h"
 #include "vbasupport.h"
+#include "cheatmgr.h"
 #include "filebrowser.h"
 #include "menu.h"
 #include "video.h"
@@ -36,11 +37,11 @@ extern char* strcasestr(const char *, const char *);
 BROWSERINFO browser;
 BROWSERENTRY * browserList = NULL; // list of files/folders in browser
 
-char szpath[MAXPATHLEN];
-char szname[MAXPATHLEN];
+char szpath[MAXPATHLEN]= "";
+char szname[MAXPATHLEN]= "";
 bool inSz = false;
 
-char ROMFilename[512];
+char ROMFilename[512]= "";
 bool ROMLoaded = false;
 
 #ifdef HW_RVL
@@ -407,6 +408,7 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 				}
 				break;
 			case FILE_CHEAT:
+				if(strlen(ROMFilename) == 0) return false;
 				sprintf(folder, GCSettings.CheatFolder);
 				sprintf(file, "%s.cht", ROMFilename);
 				break;
@@ -605,6 +607,7 @@ int BrowserLoadFile()
 
 	if (!ROMLoaded)
 	{
+		ROMFilename[0] = '\0';
 		if(inSz)
 		{
 			browser.selIndex = 0;
@@ -618,6 +621,7 @@ int BrowserLoadFile()
 		else if (GCSettings.AutoLoad == AUTOLOAD_STATE)
 			LoadBatteryOrStateAuto(FILE_STATE, SILENT);
 
+		LoadCheatFile();
 		ResetBrowser();
 	}
 	CancelAction();
