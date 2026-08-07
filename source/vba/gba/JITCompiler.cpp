@@ -917,61 +917,79 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
 					}
 					else if (op == 13) { // MUL (Rd = Rd * Rs)
-						EnsureArenaAllocated();
-						u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
-						u32 hostRd = WriteGBAReg(rd, emitPtr, false, lockedMask); // Reads Rd, then modifies it
+					    EnsureArenaAllocated();
 
-						// thumb43_1's real cost depends on the ORIGINAL Rd's magnitude
-						// (ARM7TDMI multiply early-termination): rm = |original Rd|-ish
-						// (sign-complemented if negative), active_bits = 31-clz(rm|1),
-						// cost = 2 + (active_bits>>3) [0..3] + codeTicksAccess16(armNextPC).
-						// Save the original Rd before MULLW overwrites it.
-						*emitPtr++ = PPC_OR(PPC_R11, hostRd, hostRd);
-						*emitPtr++ = PPC_MULLW(hostRd, hostRd, hostRs);
+					    // MUL's internal multiply cycles recharge the ROM prefetch buffer
+					    // mid-instruction (see below), so it has to be its own chunk boundary:
+					    // the PRIOR chunk must be resolved using R5's state from BEFORE that
+					    // recharge. Previously this was deferred into the shared
+					    // chunkStaticCycles/EmitPrefetchSync bulk refund, which let instructions
+					    // that executed chronologically BEFORE the MUL retroactively "borrow"
+					    // hit credit the MUL only just generated (confirmed via hand-traced
+					    // mismatch: 3 hits were refunded across 5 instructions when only the
+					    // MUL's own trailing fetch ever legitimately saw a primed buffer).
+					    EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles, chunkStartPC);
+					    ResetChunkTracking(currentPC);
 
-						// rm = (original Rd < 0) ? ~original Rd : original Rd - branchless
-						// via arithmetic-shift sign mask (0 or -1), same trick as thumb43_1.
-						*emitPtr++ = PPC_MFXER(PPC_R10); // Protect host XER CA flag from srawi
-						*emitPtr++ = PPC_SRAWI(PPC_R12, PPC_R11, 31);
-						*emitPtr++ = PPC_MTXER(PPC_R10);
-						*emitPtr++ = PPC_XOR(PPC_R11, PPC_R11, PPC_R12);
-						*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, 1); // avoid clz(0)
+					    u32 hostRs = ReadGBAReg(rs, emitPtr, lockedMask);
+					    u32 hostRd = WriteGBAReg(rd, emitPtr, false, lockedMask); // Reads Rd, then modifies it
 
-						// active_bits = 31 - cntlzw(rm); (>>3) maps 0-31 to 0..3
-						*emitPtr++ = PPC_CNTLZW(PPC_R12, PPC_R11);
-						*emitPtr++ = PPC_LI(PPC_R10, 31);
-						*emitPtr++ = PPC_SUBF(PPC_R12, PPC_R12, PPC_R10);
-						*emitPtr++ = PPC_SRWI(PPC_R12, PPC_R12, 3);
-						*emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R12);
-						// thumb43_1: MUL's internal multiply cycles run with the bus free, so the
-						// interpreter treats that window exactly like a recharge (gated on
-						// busPrefetchEnable, same as every other recharge path):
-						//   busPrefetchCount = (busPrefetchCount << clockTicks) | (0xFF >> (8 - clockTicks))
-						// where clockTicks == 1 + m here. Skipping this starves the next
-						// EmitPrefetchSync chunk-boundary refund of hits it should have found.
-						u32 enableAddr = (u32)&busPrefetchEnable;
-						*emitPtr++ = PPC_LIS(PPC_R11, enableAddr >> 16);
-						*emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, enableAddr & 0xFFFF);
-						*emitPtr++ = PPC_LBZ(PPC_R11, PPC_R11, 0);
-						*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
-						u32* branchNoRecharge = emitPtr++; // BEQ -> prefetch disabled, R5 untouched
+					    // thumb43_1's real cost depends on the ORIGINAL Rd's magnitude
+					    // (ARM7TDMI multiply early-termination): rm = |original Rd|-ish
+					    // (sign-complemented if negative), active_bits = 31-clz(rm|1),
+					    // cost = 2 + (active_bits>>3) [0..3] + codeTicksAccessSeq16(armNextPC).
+					    // Save the original Rd before MULLW overwrites it.
+					    *emitPtr++ = PPC_OR(PPC_R11, hostRd, hostRd);
+					    *emitPtr++ = PPC_MULLW(hostRd, hostRd, hostRs);
 
-						*emitPtr++ = PPC_ADDI(PPC_R10, PPC_R12, 1);       // R10 = clockTicks = 1 + m
-						*emitPtr++ = PPC_SLW(PPC_R5, PPC_R5, PPC_R10);    // R5 <<= clockTicks
-						*emitPtr++ = PPC_LI(PPC_R11, 8);
-						*emitPtr++ = PPC_SUBF(PPC_R11, PPC_R10, PPC_R11); // R11 = 8 - clockTicks
-						*emitPtr++ = PPC_LI(PPC_R12, 0xFF);
-						*emitPtr++ = PPC_SRW(PPC_R12, PPC_R12, PPC_R11);  // R12 = 0xFF >> (8 - clockTicks)
-						*emitPtr++ = PPC_OR(PPC_R5, PPC_R5, PPC_R12);     // R5 |= mask
+					    // rm = (original Rd < 0) ? ~original Rd : original Rd - branchless
+					    // via arithmetic-shift sign mask (0 or -1), same trick as thumb43_1.
+					    *emitPtr++ = PPC_MFXER(PPC_R10); // Protect host XER CA flag from srawi
+					    *emitPtr++ = PPC_SRAWI(PPC_R12, PPC_R11, 31);
+					    *emitPtr++ = PPC_MTXER(PPC_R10);
+					    *emitPtr++ = PPC_XOR(PPC_R11, PPC_R11, PPC_R12);
+					    *emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, 1); // avoid clz(0)
 
-						*branchNoRecharge = PPC_BEQ((u32)((emitPtr - branchNoRecharge) * 4));
+					    // active_bits = 31 - cntlzw(rm); (>>3) maps 0-31 to 0..3
+					    *emitPtr++ = PPC_CNTLZW(PPC_R12, PPC_R11);
+					    *emitPtr++ = PPC_LI(PPC_R10, 31);
+					    *emitPtr++ = PPC_SUBF(PPC_R12, PPC_R12, PPC_R10);
+					    *emitPtr++ = PPC_SRWI(PPC_R12, PPC_R12, 3);
+					    *emitPtr++ = PPC_ADD(PPC_R3, PPC_R3, PPC_R12); // R3 += m
+					    *emitPtr++ = PPC_ADDI(PPC_R3, PPC_R3, 2);       // R3 += fixed 2-cycle overhead
 
-						// MUL only updates N and Z in Thumb
-						EmitNZFlags(hostRd);
+					    // thumb43_1: MUL's internal multiply cycles run with the bus free, so the
+					    // interpreter treats that window exactly like a recharge (gated on
+					    // busPrefetchEnable, same as every other recharge path):
+					    //   busPrefetchCount = (busPrefetchCount << clockTicks) | (0xFF >> (8 - clockTicks))
+					    // where clockTicks == 1 + m here.
+					    u32 enableAddr = (u32)&busPrefetchEnable;
+					    *emitPtr++ = PPC_LIS(PPC_R11, enableAddr >> 16);
+					    *emitPtr++ = PPC_ORI(PPC_R11, PPC_R11, enableAddr & 0xFFFF);
+					    *emitPtr++ = PPC_LBZ(PPC_R11, PPC_R11, 0);
+					    *emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
+					    u32* branchNoRecharge = emitPtr++; // BEQ -> prefetch disabled, R5 untouched
 
-						// MUL relies on internal cycles and does not disrupt the prefetch buffer.
-						// The runtime math already dynamically adds 'm' to PPC_R3.
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 2;
+					    *emitPtr++ = PPC_ADDI(PPC_R10, PPC_R12, 1);       // R10 = clockTicks = 1 + m
+					    *emitPtr++ = PPC_SLW(PPC_R5, PPC_R5, PPC_R10);    // R5 <<= clockTicks
+					    *emitPtr++ = PPC_LI(PPC_R11, 8);
+					    *emitPtr++ = PPC_SUBF(PPC_R11, PPC_R10, PPC_R11); // R11 = 8 - clockTicks
+					    *emitPtr++ = PPC_LI(PPC_R12, 0xFF);
+					    *emitPtr++ = PPC_SRW(PPC_R12, PPC_R12, PPC_R11);  // R12 = 0xFF >> (8 - clockTicks)
+					    *emitPtr++ = PPC_OR(PPC_R5, PPC_R5, PPC_R12);     // R5 |= mask
+
+					    *branchNoRecharge = PPC_BEQ((u32)((emitPtr - branchNoRecharge) * 4));
+
+					    // MUL's own trailing codeTicksAccessSeq16(armNextPC) call must resolve
+					    // immediately against the R5 state just written above, as its own
+					    // self-contained 1-instruction "chunk" -- for the same reason as the
+					    // recharge itself, this can't be left for the next chunk boundary to
+					    // pick up, or later instructions will wrongly inherit its hit credit.
+					    EmitPrefetchSync(emitPtr, 1, STATIC_CODE_TICKS_SEQ16(currentPC + 2), currentPC + 2);
+					    ResetChunkTracking(currentPC);
+
+					    // MUL only updates N and Z in Thumb
+					    EmitNZFlags(hostRd);
 					}
 					else if (op == 11) { // CMN (Compare Negative: Rd + Rs)
 						EnsureArenaAllocated();
