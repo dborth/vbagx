@@ -99,10 +99,9 @@ gamePalette gamePalettes[32] = {
 			0xFF8000,0xAD0040,0x630000,  0x00A0FF,0x2000AD,0x000063}}
 };
 
+int gameSettingsCount = 112;
 
-int gameSettingsCount = 106;
-
-gameSetting gameSettings[106] = {
+gameSetting gameSettings[112] = {
 	{
 	"Dragon Ball Z - The Legacy of Goku II (Europe)(En,Fr,De,Es,It)",
 	"ALFP",
@@ -424,7 +423,7 @@ gameSetting gameSettings[106] = {
 	-1
 	},
 	{
-	"useBios=1",
+	"Yu-Gi-Oh! GX - Duel Academy (USA)",
 	"BYGE",
 	2,
 	-1,
@@ -434,7 +433,7 @@ gameSetting gameSettings[106] = {
 	{
 	"Yoshi - Topsy-Turvy (USA)",
 	"KYGE",
-	4,
+	1,
 	-1,
 	-1,
 	-1
@@ -720,6 +719,14 @@ gameSetting gameSettings[106] = {
 	1
 	},
 	{
+	"Higurashi no Nakukoroni (Japan)",
+	"HGRS",
+	2,
+	-1,
+	-1,
+	-1
+	},
+	{
 	"Koro Koro Puzzle - Happy Panechu! (Japan)",
 	"KHPJ",
 	4,
@@ -951,4 +958,44 @@ gameSetting gameSettings[106] = {
 	-1,
 	-1
 	},
+	{
+	"Diddy Kong PILOT",
+	"RARE",
+	1,
+	-1,
+	-1,
+	-1
+	},
+	{
+	"Shantae Advance : Risky Revolution (16MB SRAM patched Cart Dump)",
+	"CRC_31265C5D",
+	2,
+	-1,
+	-1,
+	-1
+	},
+	{
+	"Shantae Advance : Risky Revolution (32MB SRAM patched Cart Overdump)",
+	"CRC_3EF54827",
+	2,
+	-1,
+	-1,
+	-1
+	},
+	{
+	"Sigma Star DX (16MB SRAM patched Cart Dump)",
+	"CRC_FF797AC9",
+	2,
+	-1,
+	-1,
+	-1
+	},
+	{
+	"Sigma Star DX (32MB SRAM patched Cart Overdump)",
+	"CRC_504A4965",
+	2,
+	-1,
+	-1,
+	-1
+	}
 };
