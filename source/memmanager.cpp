@@ -33,10 +33,12 @@ enum {
 
 // Mode 2: GB Game
 struct GBMemory {
+	u8 texturemem[TEXTUREMEM_SIZE];
 } __attribute__((aligned(32)));
 
 // Mode 3: GBA Game
 struct GBAMemory {
+    u8 texturemem[TEXTUREMEM_SIZE];
     u32 jitArena[JIT_ARENA_SIZE / sizeof(u32)];
     u8 blockTable[HASH_TABLE_SIZE * 16];
     u8 smcPageFlags[SMC_MAP_SIZE];
@@ -132,6 +134,7 @@ static bool ChangeMode(int mode) {
 	browserList = NULL;
 	savebuffer = NULL;
 	memset(&mem1_heap, 0, sizeof(heap_cntrl));
+	texturemem = NULL;
 	jitCache.destroy();
 	memoryMode = mode;
 	return true;
@@ -145,10 +148,12 @@ void SwitchMemoryModeMenu() {
 
 static void SwitchMemoryModeGB() {
 	if(!ChangeMode(MEMORY_MODE_GB)) return;
+	texturemem = coreMem.gb.texturemem;
 }
 
 static void SwitchMemoryModeGBA() {
 	if(!ChangeMode(MEMORY_MODE_GBA)) return;
+	texturemem = coreMem.gba.texturemem;
 	jitCache.initialize(
 		(u32*)coreMem.gba.jitArena,
 		(BasicBlock*)coreMem.gba.blockTable,
@@ -164,4 +169,5 @@ void SwitchMemoryModeGame() {
 	else {
 		SwitchMemoryModeGB();
 	}
+	memset(texturemem, 0, TEXTUREMEM_SIZE);
 }
