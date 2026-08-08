@@ -1,4 +1,3 @@
-//#include "../win32/stdafx.h" // would fix LNK2005 linker errors for MSVC
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -3268,8 +3267,6 @@ static bool gbReadSaveState(gzFile gzFile) {
 	if (gbBorderOn && !gbSgbMask) {
 		gbSgbRenderBorder();
 	}
-
-	systemDrawScreen();
 
 	if (version > GBSAVE_GAME_VERSION_1) {
 		if (skipSaveGameCheats) {
