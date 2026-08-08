@@ -43,6 +43,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * Rotation sensors, Solar sensors, and Rumble support
 * Optional special Wii controls built-in for some games
 * SRAM and State saving
+* Cheat code support (Libretro .cht format) for both GBA and GB/GBC games
 * IPS/UPS patch support
 * Custom controller configurations
 * SD, USB, DVD, SMB, Zip, and 7z support
@@ -68,6 +69,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
   transparently from SD into ARAM and MEM1 on demand instead of needing to fit entirely in memory ahead of time, 
   allowing the JIT to be possible (since it doesn't have to be aware of backing data location)
 * Rewritten memory management for both Wii/GameCube, freeing up 8MB+ for a JIT Cache, while still allowing 32MB ROMs
+* Added cheat code support for both GBA and GB/GBC games, using the Libretro .cht file format
 * GB/GBA audio is cleaner and truer to the original hardware, with one less resampling step - it is now generated 
   natively at 48kHz - instead of upsampled from 44100Hz (GBA) and 22050Hz (GB)
 * Audio samples are now written directly into the output buffer with no intermediate mixing buffer in between,
@@ -772,6 +774,47 @@ Dynamic Recompilation is very stable, but if you ever notice graphical
 glitches or other unexpected behavior in a specific game, try turning it off
 to see if the issue goes away with the standard interpreter core.
 
+#### Cheats
+
+VBA GX supports cheat codes for both GBA and GB/GBC games, loaded from
+Libretro-format .cht files. Cheat files must be named to match the ROM
+(e.g. "Pokemon Emerald.gba" needs "Pokemon Emerald.cht") and placed in the
+"vbagx/cheats" folder on your storage device. A .cht file is a simple text
+file with one description/code pair per cheat, numbered starting from 0:
+
+	cheat0_desc = "Infinite Health"
+	cheat0_code = "0203AD4C 00000063"
+	cheat1_desc = "Infinite Money"
+	cheat1_code = "83007CFC 270F"
+
+Quotes around the value are optional. The description is what's shown in
+the in-game Cheats menu; if it's left out, the cheat is just labelled
+"Unnamed Cheat".
+
+Once a matching .cht file is found, its cheats are loaded automatically
+when the ROM starts. Press Home during a game to bring up the in-game
+menu, then choose Cheats to see the list and toggle codes on or off.
+Toggling takes effect immediately, no reset needed.
+
+The following code types are recognized automatically based on the format
+of each code - you don't need to tell VBA GX which kind you're entering:
+
+GBA games:
+* CodeBreaker (12 hex digits, shown as "XXXXXXXX YYYY" or run together
+  as "XXXXXXXXYYYY")
+* GameShark GBA v3 (16 hex digits)
+
+GB/GBC games:
+* Game Boy Game Genie ("XXX-YYY" or "XXX-YYY-ZZZ")
+* Game Boy GameShark (8 hex digits)
+
+Spaces and hyphens inside a code are ignored, and hex digits are
+case-insensitive, so codes can be pasted in from most sources without
+reformatting. A single cheat entry can also chain multiple codes together
+by separating them with a "+" (some CodeBreaker/GameShark cheats require
+more than one line to work) - just put all the codes for that cheat on
+the cheat's "_code" line, joined with "+".
+
 #### Controls
 
 See the website at http://www.wiibrew.org/wiki/VBA for better control
@@ -1338,26 +1381,23 @@ switched items since then.
 
 ## CREDITS
 
-			Coding & menu design		Tantric
-			Codebase update & Goomba	libertyernie
-			Menu screenshots			cebolleto
-			GBA tiled rendering			bgK (for RetroArch)
-			Additional coding			Carl Kenner, dancinninjac
+			Coding & menu design		Daryl Borth (Tantric)
+			Additional coding			libertyernie, Carl Kenner, 
+										dancinninjac, cebolleto
 			Menu artwork				the3seashells
 			Menu sound					Peter de Man
 
 			VBA GameCube/Wii			SoftDev, emukidid
 
-			Visual Boy Advance - M		VBA-M Team
-			Visual Boy Advance			Forgotten
+			Visual Boy Advance - M	VBA-M Team
+			Visual Boy Advance		Forgotten
 			libogc/devkitPPC			shagkur & wintermute
 			FreeTypeGX					Armin Tamzarian
 
 			And many others who have contributed over the years!
 
-
 ## LINKS
 
-                                  VBAGX Web Site
+                                  VBA GX Web Site
                           https://github.com/dborth/vbagx
 
