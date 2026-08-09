@@ -1942,6 +1942,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				}
 
 				// 4. Memory Operations Loop
+				bool firstRegStored = false;
 				for (int i = 0; i < 8; i++) {
 					if (regList & (1 << i)) {
 						*emitPtr++ = PPC_AND(PPC_R4, PPC_R12, PPC_R11); // Apply Mask
@@ -1951,6 +1952,14 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						} else {
 							u32 hostRs = ReadGBAReg(i, emitPtr, lockedMask);
 							*emitPtr++ = PPC_STWBRX(hostRs, PPC_R10, PPC_R4);
+
+							// For STMIA, update the base register immediately after the first store!
+							// If Rb is in the list and stored later, it correctly fetches the NEW (writeback) value.
+							if (!firstRegStored) {
+								u32 hostRbWB = WriteGBAReg(rb, emitPtr, false, lockedMask);
+								*emitPtr++ = PPC_ADDI(hostRbWB, hostRbWB, numRegs * 4);
+								firstRegStored = true;
+							}
 						}
 						*emitPtr++ = PPC_ADDI(PPC_R12, PPC_R12, 4); // ADVANCE R12 DIRECTLY
 					}
@@ -1958,12 +1967,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// 5. Writeback to Base Register (Rn)
 				// ARM protocol: If Rb is in the load list, the loaded value overrides writeback.
-				bool writeback = true;
-				if (isLoad && (regList & (1 << rb))) writeback = false;
+				// For STMIA, the writeback is handled inside the loop to accurately emulate hardware.
+				if (isLoad) {
+					bool writeback = true;
+					if (regList & (1 << rb)) writeback = false;
 
-				if (writeback) {
-					u32 hostRbWB = WriteGBAReg(rb, emitPtr, false, lockedMask);
-					*emitPtr++ = PPC_ADDI(hostRbWB, hostRbWB, numRegs * 4);
+					if (writeback) {
+						u32 hostRbWB = WriteGBAReg(rb, emitPtr, false, lockedMask);
+						*emitPtr++ = PPC_ADDI(hostRbWB, hostRbWB, numRegs * 4);
+					}
 				}
 
 				// thumbC0 (STMIA) / thumbC8 (LDMIA) -- verified against the current GBA-thumb.cpp --
