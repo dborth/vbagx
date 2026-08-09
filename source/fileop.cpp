@@ -891,7 +891,11 @@ LoadFile (char * rbuffer, char *filepath, size_t length, size_t buffersize, bool
 
 			if (IsZipFile (zipbuffer))
 			{
-				size = UnZipBuffer ((unsigned char *)rbuffer, buffersize); // unzip
+				size = UnZipBuffer ((unsigned char *)rbuffer, buffersize);
+
+				if(size == 0) {
+					ErrorPrompt("Error unzipping file!");
+				}
 			}
 			else
 			{
