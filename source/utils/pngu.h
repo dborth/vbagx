@@ -3,7 +3,7 @@
 * PNGU
 * 
 * Original author: frontier (http://frontier-dev.net)
-* This is Daryl Borth's modified/condensed version + RGB565 decoder from original
+* This is Daryl Borth's modified/condensed version + RGB555 decoder from original
 *
 ********************************************************************************************/
 
@@ -102,8 +102,8 @@ int PNGU_EncodeFromRGB (IMGCTX ctx, u32 width, u32 height, void *buffer, u32 str
 int PNGU_EncodeFromGXTexture (IMGCTX ctx, u32 width, u32 height, void *buffer, u32 stride);
 int PNGU_EncodeFromEFB (IMGCTX ctx, u32 width, u32 height);
 
-int PNGU_DecodeTo4x4RGB565 (IMGCTX ctx, u32 width, u32 height, void *buffer);
-int PNGU_EncodeFromLinearRGB565 (IMGCTX ctx, u32 width, u32 height, const void* buffer, int rowlength);
+int PNGU_DecodeTo4x4RGB555 (IMGCTX ctx, u32 width, u32 height, void *buffer);
+int PNGU_EncodeFromLinearRGB555 (IMGCTX ctx, u32 width, u32 height, const void* buffer, int rowlength);
 
 #ifdef __cplusplus
 	}

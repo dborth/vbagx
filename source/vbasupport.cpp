@@ -1133,7 +1133,7 @@ void SaveSGBBorderIfNoneExists(const void* buffer) {
 	pngContext = PNGU_SelectImageFromBuffer(rgba8);
 	if (pngContext == NULL) goto cleanup;
 	
-	if(PNGU_EncodeFromLinearRGB565(pngContext, 256, 224, buffer, 258) != PNGU_OK) goto cleanup;
+	if(PNGU_EncodeFromLinearRGB555(pngContext, 256, 224, buffer, 258) != PNGU_OK) goto cleanup;
 	fwrite(rgba8, 1, 256*224*3, f);
 	
 cleanup:
@@ -1206,7 +1206,7 @@ void LoadPNGBorder(const char* fallback)
 	}
 	
 	InitialBorder = (u16*)mem1_malloc(640*480*2);
-	r = PNGU_DecodeTo4x4RGB565 (ctx, imgProp.imgWidth, imgProp.imgHeight, InitialBorder);
+	r = PNGU_DecodeTo4x4RGB555 (ctx, imgProp.imgWidth, imgProp.imgHeight, InitialBorder);
 	if (r != PNGU_OK) {
 		snprintf(error, 1023, "PNGU decoding error (%d): %s", r, borderPath);
 		ErrorPrompt(error);
@@ -1574,9 +1574,9 @@ void InitialisePalette()
 		}
 		systemGbPalette[i++] = 0;
 	}
-	// Set palette etc - Fixed to RGB565
-	systemRedShift = 11;
-	systemGreenShift = 6;
+	// Set palette mapping - Configured for RGB555 / GX_TF_RGB5A3 (MSB = 1)
+	systemRedShift = 10;
+	systemGreenShift = 5;
 	systemBlueShift = 0;
 	for(i = 0; i < 0x10000; i++)
 	{

@@ -1056,10 +1056,13 @@ template <int PITCH>
 static inline void MakeTextureVBA_Impl(const void *src, void *dst, s32 width, s32 height, s32 dst_gap_bytes)
 {
     u32 src_row_stride = PITCH * 4;
-    u32 r_src_row;
+    u32 r_src_row, mask;
     u32 tmpA, tmpB, tmpC, tmpD;
 
     __asm__ __volatile__ (
+        "lis    %[mask], 0x8000\n"             // mask = 0x80000000
+        "ori    %[mask], %[mask], 0x8000\n"    // mask = 0x80008000 (Sets MSB for 2x RGB5A3 pixels)
+
         "srwi   %[width], %[width], 2\n"
         "srwi   %[height], %[height], 2\n"
 
@@ -1074,24 +1077,36 @@ static inline void MakeTextureVBA_Impl(const void *src, void *dst, s32 width, s3
 
         // Load Row 1, Store Row 0
         "lwz    %[tmpC], %c[p1](%[src])\n"
+        "or     %[tmpA], %[tmpA], %[mask]\n"
         "stw    %[tmpA], 0(%[dst])\n"
+
         "lwz    %[tmpD], %c[p1_4](%[src])\n"
+        "or     %[tmpB], %[tmpB], %[mask]\n"
         "stw    %[tmpB], 4(%[dst])\n"
 
         // Load Row 2, Store Row 1
         "lwz    %[tmpA], %c[p2](%[src])\n"
+        "or     %[tmpC], %[tmpC], %[mask]\n"
         "stw    %[tmpC], 8(%[dst])\n"
+
         "lwz    %[tmpB], %c[p2_4](%[src])\n"
+        "or     %[tmpD], %[tmpD], %[mask]\n"
         "stw    %[tmpD], 12(%[dst])\n"
 
         // Load Row 3, Store Row 2
         "lwz    %[tmpC], %c[p3](%[src])\n"
+        "or     %[tmpA], %[tmpA], %[mask]\n"
         "stw    %[tmpA], 16(%[dst])\n"
+
         "lwz    %[tmpD], %c[p3_4](%[src])\n"
+        "or     %[tmpB], %[tmpB], %[mask]\n"
         "stw    %[tmpB], 20(%[dst])\n"
 
         // Store Row 3
+        "or     %[tmpC], %[tmpC], %[mask]\n"
         "stw    %[tmpC], 24(%[dst])\n"
+
+        "or     %[tmpD], %[tmpD], %[mask]\n"
         "stw    %[tmpD], 28(%[dst])\n"
 
         // Advance inner loop (X)
@@ -1107,6 +1122,7 @@ static inline void MakeTextureVBA_Impl(const void *src, void *dst, s32 width, s3
         "bne    2b\n"
 
         : [r_src_row] "=&b" (r_src_row),
+          [mask] "=&r" (mask),
           [tmpA] "=&r" (tmpA),
           [tmpB] "=&r" (tmpB),
           [tmpC] "=&r" (tmpC),
@@ -1131,10 +1147,13 @@ static inline void MakeTextureVBA_Impl(const void *src, void *dst, s32 width, s3
 static void MakeTextureVBA_Dynamic(const void *src, void *dst, s32 width, s32 height, s32 pitch, s32 dst_gap_bytes)
 {
     u32 src_row_stride = pitch * 4;
-    u32 r_src_row, row_ptr;
+    u32 r_src_row, row_ptr, mask;
     u32 tmpA, tmpB, tmpC, tmpD;
 
     __asm__ __volatile__ (
+        "lis    %[mask], 0x8000\n"
+        "ori    %[mask], %[mask], 0x8000\n"
+
         "srwi   %[width], %[width], 2\n"       // num_tiles_x = width / 4
         "srwi   %[height], %[height], 2\n"     // num_tiles_y = height / 4
 
@@ -1152,26 +1171,38 @@ static void MakeTextureVBA_Dynamic(const void *src, void *dst, s32 width, s32 he
         // Load Row 1, Store Row 0
         // Interleaving hides the 3-cycle load latency
         "lwz    %[tmpC], 0(%[row_ptr])\n"
+        "or     %[tmpA], %[tmpA], %[mask]\n"
         "stw    %[tmpA], 0(%[dst])\n"
+
         "lwz    %[tmpD], 4(%[row_ptr])\n"
+        "or     %[tmpB], %[tmpB], %[mask]\n"
         "stw    %[tmpB], 4(%[dst])\n"
         "add    %[row_ptr], %[row_ptr], %[pitch]\n"
 
         // Load Row 2, Store Row 1
         "lwz    %[tmpA], 0(%[row_ptr])\n"      // Recycle tmpA and tmpB
+        "or     %[tmpC], %[tmpC], %[mask]\n"
         "stw    %[tmpC], 8(%[dst])\n"
+
         "lwz    %[tmpB], 4(%[row_ptr])\n"
+        "or     %[tmpD], %[tmpD], %[mask]\n"
         "stw    %[tmpD], 12(%[dst])\n"
         "add    %[row_ptr], %[row_ptr], %[pitch]\n"
 
         // Load Row 3, Store Row 2
         "lwz    %[tmpC], 0(%[row_ptr])\n"
+        "or     %[tmpA], %[tmpA], %[mask]\n"
         "stw    %[tmpA], 16(%[dst])\n"
+
         "lwz    %[tmpD], 4(%[row_ptr])\n"
+        "or     %[tmpB], %[tmpB], %[mask]\n"
         "stw    %[tmpB], 20(%[dst])\n"
 
         // Store Row 3
+        "or     %[tmpC], %[tmpC], %[mask]\n"
         "stw    %[tmpC], 24(%[dst])\n"
+
+        "or     %[tmpD], %[tmpD], %[mask]\n"
         "stw    %[tmpD], 28(%[dst])\n"
 
         // Advance pointers for the next tile in the row
@@ -1188,6 +1219,7 @@ static void MakeTextureVBA_Dynamic(const void *src, void *dst, s32 width, s32 he
 
         : [r_src_row] "=&b" (r_src_row),
           [row_ptr] "=&b" (row_ptr),
+          [mask] "=&r" (mask),
           [tmpA] "=&r" (tmpA),
           [tmpB] "=&r" (tmpB),
           [tmpC] "=&r" (tmpC),
@@ -1253,7 +1285,7 @@ static void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int widt
 /****************************************************************************
  * GX_Render
  *
- * Pass in a buffer, width and height to update as a tiled RGB565 texture
+ * Pass in a buffer, width and height to update as a tiled RGB555 texture
  * (2 bytes per pixel)
  ****************************************************************************/
 void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
@@ -1289,7 +1321,7 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 	if (updateScaling) {
 		UpdateScaling();
 
-		GX_InitTexObj(&texobj, texturemem, vwidth * fscale, vheight * fscale, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);
+		GX_InitTexObj(&texobj, texturemem, vwidth * fscale, vheight * fscale, GX_TF_RGB5A3, GX_CLAMP, GX_CLAMP, GX_FALSE);
 
 		if (GCSettings.render == RENDER_UNFILTERED)
 			GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF

@@ -3,7 +3,7 @@
  * PNGU
  * 
  * Original author: frontier (http://frontier-dev.net)
- * This is Daryl Borth's modified/condensed version + RGB565 decoder from original
+ * This is Daryl Borth's modified/condensed version + RGB555 decoder from original
  *
  ***************************************************************************/
 
@@ -470,7 +470,7 @@ static u8 * PNGU_DecodeTo4x4RGBA8 (IMGCTX ctx, u32 width, u32 height, int * dstW
 	return dst;
 }
 
-int PNGU_DecodeTo4x4RGB565 (IMGCTX ctx, u32 width, u32 height, void *buffer)
+int PNGU_DecodeTo4x4RGB555 (IMGCTX ctx, u32 width, u32 height, void *buffer)
 {
 	int result;
 	u32 x, y, qwidth, qheight;
@@ -495,34 +495,38 @@ int PNGU_DecodeTo4x4RGB565 (IMGCTX ctx, u32 width, u32 height, void *buffer)
 			u64 field64 = *((u64 *)(ctx->row_pointers[y*4]+x*12));
 			u64 field32 = (u64) *((u32 *)(ctx->row_pointers[y*4]+x*12+8));
 			((u64 *) buffer)[blockbase] = 
-				(((field64 & 0xF800000000000000ULL) | ((field64 & 0xFC000000000000ULL) << 3) | ((field64 & 0xF80000000000ULL) << 5)) | 
-				(((field64 & 0xF800000000ULL) << 8) | ((field64 & 0xFC000000ULL) << 11) | ((field64 & 0xF80000ULL) << 13)) | 
-				(((field64 & 0xF800ULL) << 16) | ((field64 & 0xFCULL) << 19) | ((field32 & 0xF8000000ULL) >> 11)) |
-				(((field32 & 0xF80000ULL) >> 8) | ((field32 & 0xFC00ULL) >> 5) | ((field32 & 0xF8ULL) >> 3)));
+				(0x8000800080008000ULL |
+				((field64 & 0xF800000000000000ULL) >> 1) | ((field64 & 0x00F8000000000000ULL) << 2) | ((field64 & 0x0000F80000000000ULL) << 5) |
+				((field64 & 0x000000F800000000ULL) << 7) | ((field64 & 0x00000000F8000000ULL) << 10) | ((field64 & 0x0000000000F80000ULL) << 13) |
+				((field64 & 0x000000000000F800ULL) << 15) | ((field64 & 0x00000000000000F8ULL) << 18) | ((field32 & 0xF8000000ULL) >> 11) |
+				((field32 & 0x00F80000ULL) >> 9) | ((field32 & 0x0000F800ULL) >> 6) | ((field32 & 0x000000F8ULL) >> 3));
 
 			field64 = *((u64 *)(ctx->row_pointers[y*4+1]+x*12));
 			field32 = (u64) *((u32 *)(ctx->row_pointers[y*4+1]+x*12+8));
 			((u64 *) buffer)[blockbase+1] = 
-				(((field64 & 0xF800000000000000ULL) | ((field64 & 0xFC000000000000ULL) << 3) | ((field64 & 0xF80000000000ULL) << 5)) | 
-				(((field64 & 0xF800000000ULL) << 8) | ((field64 & 0xFC000000ULL) << 11) | ((field64 & 0xF80000ULL) << 13)) | 
-				(((field64 & 0xF800ULL) << 16) | ((field64 & 0xFCULL) << 19) | ((field32 & 0xF8000000ULL) >> 11)) |
-				(((field32 & 0xF80000ULL) >> 8) | ((field32 & 0xFC00ULL) >> 5) | ((field32 & 0xF8ULL) >> 3)));
+				(0x8000800080008000ULL |
+				((field64 & 0xF800000000000000ULL) >> 1) | ((field64 & 0x00F8000000000000ULL) << 2) | ((field64 & 0x0000F80000000000ULL) << 5) |
+				((field64 & 0x000000F800000000ULL) << 7) | ((field64 & 0x00000000F8000000ULL) << 10) | ((field64 & 0x0000000000F80000ULL) << 13) |
+				((field64 & 0x000000000000F800ULL) << 15) | ((field64 & 0x00000000000000F8ULL) << 18) | ((field32 & 0xF8000000ULL) >> 11) |
+				((field32 & 0x00F80000ULL) >> 9) | ((field32 & 0x0000F800ULL) >> 6) | ((field32 & 0x000000F8ULL) >> 3));
 
 			field64 = *((u64 *)(ctx->row_pointers[y*4+2]+x*12));
 			field32 = (u64) *((u32 *)(ctx->row_pointers[y*4+2]+x*12+8));
 			((u64 *) buffer)[blockbase+2] = 
-				(((field64 & 0xF800000000000000ULL) | ((field64 & 0xFC000000000000ULL) << 3) | ((field64 & 0xF80000000000ULL) << 5)) | 
-				(((field64 & 0xF800000000ULL) << 8) | ((field64 & 0xFC000000ULL) << 11) | ((field64 & 0xF80000ULL) << 13)) | 
-				(((field64 & 0xF800ULL) << 16) | ((field64 & 0xFCULL) << 19) | ((field32 & 0xF8000000ULL) >> 11)) |
-				(((field32 & 0xF80000ULL) >> 8) | ((field32 & 0xFC00ULL) >> 5) | ((field32 & 0xF8ULL) >> 3)));
+				(0x8000800080008000ULL |
+				((field64 & 0xF800000000000000ULL) >> 1) | ((field64 & 0x00F8000000000000ULL) << 2) | ((field64 & 0x0000F80000000000ULL) << 5) |
+				((field64 & 0x000000F800000000ULL) << 7) | ((field64 & 0x00000000F8000000ULL) << 10) | ((field64 & 0x0000000000F80000ULL) << 13) |
+				((field64 & 0x000000000000F800ULL) << 15) | ((field64 & 0x00000000000000F8ULL) << 18) | ((field32 & 0xF8000000ULL) >> 11) |
+				((field32 & 0x00F80000ULL) >> 9) | ((field32 & 0x0000F800ULL) >> 6) | ((field32 & 0x000000F8ULL) >> 3));
 
 			field64 = *((u64 *)(ctx->row_pointers[y*4+3]+x*12));
 			field32 = (u64) *((u32 *)(ctx->row_pointers[y*4+3]+x*12+8));
 			((u64 *) buffer)[blockbase+3] = 
-				(((field64 & 0xF800000000000000ULL) | ((field64 & 0xFC000000000000ULL) << 3) | ((field64 & 0xF80000000000ULL) << 5)) | 
-				(((field64 & 0xF800000000ULL) << 8) | ((field64 & 0xFC000000ULL) << 11) | ((field64 & 0xF80000ULL) << 13)) | 
-				(((field64 & 0xF800ULL) << 16) | ((field64 & 0xFCULL) << 19) | ((field32 & 0xF8000000ULL) >> 11)) |
-				(((field32 & 0xF80000ULL) >> 8) | ((field32 & 0xFC00ULL) >> 5) | ((field32 & 0xF8ULL) >> 3)));
+				(0x8000800080008000ULL |
+				((field64 & 0xF800000000000000ULL) >> 1) | ((field64 & 0x00F8000000000000ULL) << 2) | ((field64 & 0x0000F80000000000ULL) << 5) |
+				((field64 & 0x000000F800000000ULL) << 7) | ((field64 & 0x00000000F8000000ULL) << 10) | ((field64 & 0x0000000000F80000ULL) << 13) |
+				((field64 & 0x000000000000F800ULL) << 15) | ((field64 & 0x00000000000000F8ULL) << 18) | ((field32 & 0xF8000000ULL) >> 11) |
+				((field32 & 0x00F80000ULL) >> 9) | ((field32 & 0x0000F800ULL) >> 6) | ((field32 & 0x000000F8ULL) >> 3));
 		}
 	
 	// Free resources
@@ -838,7 +842,7 @@ int PNGU_EncodeFromGXTexture (IMGCTX ctx, u32 width, u32 height, void *buffer, u
 
 	u16 *tex16 = (u16 *)buffer;
 
-	// Un-swizzle the 4x4 tiled GX_TF_RGB565 texture
+	// Un-swizzle the 4x4 tiled GX_TF_RGB5A3 texture
 	for (int y = 0; y < height; y++) {
 		int tile_y = y / 4;
 		int in_tile_y = y % 4;
@@ -850,15 +854,15 @@ int PNGU_EncodeFromGXTexture (IMGCTX ctx, u32 width, u32 height, void *buffer, u
 			int tex_pixel_idx = (tile_y * (padded_width / 4) + tile_x) * 16 + (in_tile_y * 4 + in_tile_x);
 			u16 color = tex16[tex_pixel_idx];
 
-			// Extract 5:6:5 channels
-			u8 r = (color >> 11) & 0x1F;
-			u8 g = (color >> 5) & 0x3F;
+			// RGB555 format
+			u8 r = (color >> 10) & 0x1F;
+			u8 g = (color >> 5) & 0x1F;
 			u8 b = color & 0x1F;
 
 			// Write to linear buffer (expanding bits to fill 0-255 completely)
 			int out_idx = (y * width + x) * 3;
 			tmpbuffer[out_idx]     = (r << 3) | (r >> 2);
-			tmpbuffer[out_idx + 1] = (g << 2) | (g >> 4);
+			tmpbuffer[out_idx + 1] = (g << 3) | (g >> 2);
 			tmpbuffer[out_idx + 2] = (b << 3) | (b >> 2);
 		}
 	}
@@ -899,7 +903,7 @@ int PNGU_EncodeFromEFB (IMGCTX ctx, u32 width, u32 height)
 }
 
 // Added by libertyernie
-int PNGU_EncodeFromLinearRGB565 (IMGCTX ctx, u32 width, u32 height, const void* buffer, int rowlength)
+int PNGU_EncodeFromLinearRGB555 (IMGCTX ctx, u32 width, u32 height, const void* buffer, int rowlength)
 {
 	int res;
 	u32 x, y, tmpy1, tmpxy;
@@ -918,9 +922,9 @@ int PNGU_EncodeFromLinearRGB565 (IMGCTX ctx, u32 width, u32 height, const void* 
 		{
 			tmpxy = x * 3 + tmpy1;
 			u16 color = *src++;
-			tmpbuffer[tmpxy  ] = (color >> 11) << 3; // R
-			tmpbuffer[tmpxy+1] = ((color >> 6) & 31) << 3; // G - discard least significant byte
-			tmpbuffer[tmpxy+2] = (color & 31) << 3; // B
+			tmpbuffer[tmpxy  ] = ((color >> 10) & 31) << 3; // R (Bits 14-10)
+			tmpbuffer[tmpxy+1] = ((color >> 5) & 31) << 3;  // G (Bits 9-5)
+			tmpbuffer[tmpxy+2] = (color & 31) << 3;         // B (Bits 4-0)
 		}
 		
 		if (rowlength > width) {
