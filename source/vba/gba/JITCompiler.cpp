@@ -1347,14 +1347,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						u32* branchGuard1 = emitPtr++;
 						RegisterBailout(branchGuard1, COND_BNE, currentPC, chunkStaticCycles);
 					} else {
-						// LOAD GUARD: Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
+						// LOAD GUARD: Block BIOS (0), MMIO/Palette/VRAM/OAM (4-7), and EEPROM/SRAM (>= 0x0D)
 						// 1. BIOS GUARD (Bank 0x00) - Enforce "Open-Bus" protection
 						*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
 						u32* branchGuard3 = emitPtr++;
 						RegisterBailout(branchGuard3, COND_BEQ, currentPC, chunkStaticCycles);
 
-						// 2. MMIO HARDWARE GUARD (Bank 0x04) - Trigger hardware updates
-						*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
+						// 2. MMIO / VRAM / PALETTE / OAM HARDWARE GUARD (Banks 0x04 to 0x07) - Trigger hardware updates
+						*emitPtr++ = PPC_RLWINM(PPC_R10, PPC_R11, 30, 31, 31); // R10 = Bank >> 2
+						*emitPtr++ = PPC_CMPWI(0, PPC_R10, 1);
 						u32* branchGuard1 = emitPtr++;
 						RegisterBailout(branchGuard1, COND_BEQ, currentPC, chunkStaticCycles);
 
@@ -1400,8 +1401,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);
 
-					// Alignment Fix - Prevent Broadway Alignment Exception Storms by masking the EA natively
+					// Alignment
 					if (accessType == 4) {
+						*emitPtr++ = PPC_RLWINM(PPC_R9, PPC_R12, 3, 27, 28); // R9 = (R12 & 3) * 8 (Extract rotation)
 						*emitPtr++ = PPC_RLWINM(PPC_R12, PPC_R12, 0, 0, 29); // Clear bits 30-31 (Word align)
 					} else if (accessType == 2) {
 						*emitPtr++ = PPC_RLWINM(PPC_R12, PPC_R12, 0, 0, 30); // Clear bit 31 (Halfword align)
@@ -1429,6 +1431,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask);
 						if (accessType == 4) {
 							*emitPtr++ = PPC_LWBRX(hostRd, PPC_R10, PPC_R12);
+							*emitPtr++ = PPC_LI(PPC_R11, 32);
+							*emitPtr++ = PPC_SUBF(PPC_R9, PPC_R9, PPC_R11);        // R9 = 32 - R9
+							*emitPtr++ = PPC_RLWNM(hostRd, hostRd, PPC_R9, 0, 31); // Rotate left by (32 - R9)
 						}
 						else if (accessType == 2) {
 							*emitPtr++ = PPC_LHBRX(hostRd, PPC_R10, PPC_R12);
@@ -1504,6 +1509,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				*emitPtr++ = PPC_AND(PPC_R12, PPC_R12, PPC_R11);       // R12 = EA & mask
 
 				// Alignment Fix - SP-relative ops are always Word (32-bit) accesses
+				*emitPtr++ = PPC_RLWINM(PPC_R9, PPC_R12, 3, 27, 28);   // R9 = (R12 & 3) * 8 (Extract rotation)
 				*emitPtr++ = PPC_RLWINM(PPC_R12, PPC_R12, 0, 0, 29);   // Clear bits 30-31
 
 				// 3.5 RUNTIME DATA-ACCESS CYCLE LOOKUP (safe path only - the guard
@@ -1521,6 +1527,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				if (isLoad) {
 					u32 hostRd = WriteGBAReg(rd, emitPtr, true, lockedMask); // Full overwrite bypasses read
 					*emitPtr++ = PPC_LWBRX(hostRd, PPC_R10, PPC_R12);
+					*emitPtr++ = PPC_LI(PPC_R11, 32);
+					*emitPtr++ = PPC_SUBF(PPC_R9, PPC_R9, PPC_R11);        // R9 = 32 - R9
+					*emitPtr++ = PPC_RLWNM(hostRd, hostRd, PPC_R9, 0, 31); // Rotate left by (32 - R9)
 				} else {
 					u32 hostRd = ReadGBAReg(rd, emitPtr, lockedMask);
 					*emitPtr++ = PPC_STWBRX(hostRd, PPC_R10, PPC_R12);
@@ -1653,12 +1662,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						u32* branchGuard1 = emitPtr++;
 						RegisterBailout(branchGuard1, COND_BNE, currentPC, chunkStaticCycles);
 					} else {
-						// LOAD GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
+						// LOAD GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO/VRAM/Palette (4-7), and EEPROM/SRAM (>= 0x0D)
 						*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
 						u32* branchGuard3 = emitPtr++;
 						RegisterBailout(branchGuard3, COND_BEQ, currentPC, chunkStaticCycles);
 
-						*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
+						*emitPtr++ = PPC_RLWINM(PPC_R10, PPC_R11, 30, 31, 31); // R10 = Bank >> 2
+						*emitPtr++ = PPC_CMPWI(0, PPC_R10, 1);
 						u32* branchGuard1 = emitPtr++;
 						RegisterBailout(branchGuard1, COND_BEQ, currentPC, chunkStaticCycles);
 
@@ -1874,12 +1884,13 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					u32* branchGuard1 = emitPtr++;
 					RegisterBailout(branchGuard1, COND_BNE, currentPC, chunkStaticCycles);
 				} else {
-					// LDMIA GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO (4), and EEPROM/SRAM (>= 0x0D)
+					// LDMIA GUARD: Allow WRAM and ROM. Block BIOS (0), MMIO/VRAM/Palette (4-7), and EEPROM/SRAM (>= 0x0D)
 					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 0);
 					u32* branchGuard3 = emitPtr++;
 					RegisterBailout(branchGuard3, COND_BEQ, currentPC, chunkStaticCycles);
 
-					*emitPtr++ = PPC_CMPWI(0, PPC_R11, 4);
+					*emitPtr++ = PPC_RLWINM(PPC_R10, PPC_R11, 30, 31, 31); // R10 = Bank >> 2
+					*emitPtr++ = PPC_CMPWI(0, PPC_R10, 1);
 					u32* branchGuard1 = emitPtr++;
 					RegisterBailout(branchGuard1, COND_BEQ, currentPC, chunkStaticCycles);
 
