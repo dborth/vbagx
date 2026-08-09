@@ -3007,18 +3007,6 @@ bool gbWriteMemSaveState(char *memory, int available) {
 	return res;
 }
 
-bool gbWriteSaveState(const char *name) {
-	gzFile gzFile = utilGzOpen(name, "wb");
-
-	if (gzFile == NULL)
-		return false;
-
-	bool res = gbWriteSaveState(gzFile);
-
-	utilGzClose(gzFile);
-	return res;
-}
-
 static bool gbReadSaveState(gzFile gzFile) {
 	int version = utilReadInt(gzFile);
 
@@ -3361,20 +3349,6 @@ static bool gbReadSaveState(gzFile gzFile) {
 
 bool gbReadMemSaveState(char *memory, int available) {
 	gzFile gzFile = utilMemGzOpen(memory, available, "r");
-
-	bool res = gbReadSaveState(gzFile);
-
-	utilGzClose(gzFile);
-
-	return res;
-}
-
-bool gbReadSaveState(const char *name) {
-	gzFile gzFile = utilGzOpen(name, "rb");
-
-	if (gzFile == NULL) {
-		return false;
-	}
 
 	bool res = gbReadSaveState(gzFile);
 

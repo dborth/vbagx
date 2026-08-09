@@ -21,12 +21,10 @@ bool gbUpdateSizes();
 void gbEmulate(int);
 void gbWriteMemory(u16, u8);
 void gbDrawLine();
-bool gbIsGameboyRom(const char *);
 void gbGetHardwareType();
 void gbReset();
 void gbCleanUp();
 bool gbWriteMemSaveState(char *, int);
-bool gbReadSaveState(const char *);
 bool gbReadMemSaveState(char *, int);
 void gbSgbRenderBorder();
 
