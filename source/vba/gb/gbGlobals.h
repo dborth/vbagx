@@ -51,6 +51,10 @@ extern u8 gbObp0Line [300];
 extern u8 gbObp1Line [300];
 // gbSpritesTicks is used for the emulation of Parodius' Laser Beam.
 extern u8 gbSpritesTicks[300];
+// gbOAMLatch is a copy of OAM taken at mode 2 entry each scanline.
+// Real GBC hardware locks OAM during modes 2 and 3, so both pipeline
+// passes in gbDrawSprites must see the same OAM state.
+extern u8 gbOAMLatch[0xa0];
 
 extern u8 register_LCDC;
 extern u8 register_LY;

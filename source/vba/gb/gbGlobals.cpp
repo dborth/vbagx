@@ -39,3 +39,5 @@ int gbDmaTicks = 0;
 
 u8 (*gbSerialFunction)(u8) = NULL;
 void (*sgbBorderListener)(bool) = NULL;
+
+u8 gbOAMLatch[0xa0];

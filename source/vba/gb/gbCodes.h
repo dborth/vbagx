@@ -12,6 +12,7 @@
    break;
  case 0x03:
    // INC BC
+   gbOamBugAccess(BC.W, GB_OAM_BUG_WRITE, 0);
    BC.W++;
    break;
  case 0x04:
@@ -55,6 +56,7 @@
    break;
  case 0x0b:
    // DEC BC
+   gbOamBugAccess(BC.W, GB_OAM_BUG_WRITE, 0);
    BC.W--;
    break;
  case 0x0c:
@@ -105,6 +107,7 @@
    break;
  case 0x13:
    // INC DE
+   gbOamBugAccess(DE.W, GB_OAM_BUG_WRITE, 0);
    DE.W++;
    break;
  case 0x14:
@@ -145,6 +148,7 @@
    break;
  case 0x1b:
    // DEC DE
+   gbOamBugAccess(DE.W, GB_OAM_BUG_WRITE, 0);
    DE.W--;
    break;
  case 0x1c:
@@ -184,10 +188,12 @@
    break;
  case 0x22:
    // LDI (HL),A
+   gbOamBugAccess(HL.W, GB_OAM_BUG_WRITE, 0);
    gbWriteMemory(HL.W++,AF.B.B1);
    break;
  case 0x23:
    // INC HL
+   gbOamBugAccess(HL.W, GB_OAM_BUG_WRITE, 0);
    HL.W++;
    break;
  case 0x24:
@@ -228,10 +234,12 @@
    break;
  case 0x2a:
    // LDI A,(HL)
+   gbOamBugAccess(HL.W, GB_OAM_BUG_READ_INC, 0);
    AF.B.B1 = gbReadMemory(HL.W++);
    break;
  case 0x2b:
    // DEC HL
+   gbOamBugAccess(HL.W, GB_OAM_BUG_WRITE, 0);
    HL.W--;
    break;
  case 0x2c:
@@ -270,21 +278,23 @@
    break;
  case 0x32:
    // LDD (HL),A
+   gbOamBugAccess(HL.W, GB_OAM_BUG_WRITE, 0);
    gbWriteMemory(HL.W--,AF.B.B1);
    break;
  case 0x33:
    // INC SP
+   gbOamBugAccess(SP.W, GB_OAM_BUG_WRITE, 0);
    SP.W++;
    break;
  case 0x34:
    // INC (HL)
-   tempValue=gbReadMemory(HL.W)+1;
+   tempValue=rmwValue+1;
    AF.B.B0= (AF.B.B0 & C_FLAG)|ZeroTable[tempValue]| (tempValue&0x0F? 0:H_FLAG);
    gbWriteMemory(HL.W,tempValue);
    break;
  case 0x35:
    // DEC (HL)
-   tempValue=gbReadMemory(HL.W)-1;
+   tempValue=rmwValue-1;
    AF.B.B0= N_FLAG|(AF.B.B0 & C_FLAG)|ZeroTable[tempValue]|
      ((tempValue&0x0F)==0x0F? H_FLAG:0);gbWriteMemory(HL.W,tempValue);
    break;
@@ -313,10 +323,12 @@ case 0x38:
    break;
  case 0x3a:
    // LDD A,(HL)
+   gbOamBugAccess(HL.W, GB_OAM_BUG_READ_INC, 0);
    AF.B.B1 = gbReadMemory(HL.W--);
    break;
  case 0x3b:
    // DEC SP
+   gbOamBugAccess(SP.W, GB_OAM_BUG_WRITE, 0);
    SP.W--;
    break;
  case 0x3c:
@@ -1017,6 +1029,8 @@ case 0x38:
    break;
  case 0xc1:
    // POP BC
+   gbOamBugAccess(SP.W, GB_OAM_BUG_READ_INC, 1);
+   gbOamBugAccess((u16)(SP.W + 1), GB_OAM_BUG_READ, 0);
    BC.B.B0=gbReadMemory(SP.W++);
    BC.B.B1=gbReadMemory(SP.W++);
    break;
@@ -1052,6 +1066,9 @@ case 0x38:
    break;
  case 0xc5:
    // PUSH BC
+   gbOamBugAccess(SP.W, GB_OAM_BUG_WRITE, 2);
+   gbOamBugAccess((u16)(SP.W - 1), GB_OAM_BUG_WRITE, 1);
+   gbOamBugAccess((u16)(SP.W - 2), GB_OAM_BUG_WRITE, 0);
    gbWriteMemory(--SP.W,BC.B.B1);
    gbWriteMemory(--SP.W,BC.B.B0);
    break;
@@ -1137,6 +1154,8 @@ case 0x38:
    break;
  case 0xd1:
    // POP DE
+   gbOamBugAccess(SP.W, GB_OAM_BUG_READ_INC, 1);
+   gbOamBugAccess((u16)(SP.W + 1), GB_OAM_BUG_READ, 0);
    DE.B.B0=gbReadMemory(SP.W++);
    DE.B.B1=gbReadMemory(SP.W++);
    break;
@@ -1171,6 +1190,9 @@ case 0x38:
    break;
  case 0xd5:
    // PUSH DE
+   gbOamBugAccess(SP.W, GB_OAM_BUG_WRITE, 2);
+   gbOamBugAccess((u16)(SP.W - 1), GB_OAM_BUG_WRITE, 1);
+   gbOamBugAccess((u16)(SP.W - 2), GB_OAM_BUG_WRITE, 0);
    gbWriteMemory(--SP.W,DE.B.B1);
    gbWriteMemory(--SP.W,DE.B.B0);
    break;
@@ -1254,6 +1276,8 @@ case 0x38:
    break;
  case 0xe1:
    // POP HL
+   gbOamBugAccess(SP.W, GB_OAM_BUG_READ_INC, 1);
+   gbOamBugAccess((u16)(SP.W + 1), GB_OAM_BUG_READ, 0);
    HL.B.B0=gbReadMemory(SP.W++);
    HL.B.B1=gbReadMemory(SP.W++);
    break;
@@ -1270,6 +1294,9 @@ case 0x38:
    break;
  case 0xe5:
    // PUSH HL
+   gbOamBugAccess(SP.W, GB_OAM_BUG_WRITE, 2);
+   gbOamBugAccess((u16)(SP.W - 1), GB_OAM_BUG_WRITE, 1);
+   gbOamBugAccess((u16)(SP.W - 2), GB_OAM_BUG_WRITE, 0);
    gbWriteMemory(--SP.W,HL.B.B1);
    gbWriteMemory(--SP.W,HL.B.B0);
    break;
@@ -1330,6 +1357,8 @@ case 0x38:
    break;
  case 0xf1:
    // POP AF
+   gbOamBugAccess(SP.W, GB_OAM_BUG_READ_INC, 1);
+   gbOamBugAccess((u16)(SP.W + 1), GB_OAM_BUG_READ, 0);
    AF.B.B0=gbReadMemory(SP.W++)&0xF0;
    AF.B.B1=gbReadMemory(SP.W++);
    break;
@@ -1349,6 +1378,9 @@ case 0x38:
    break;
  case 0xf5:
    // PUSH AF
+   gbOamBugAccess(SP.W, GB_OAM_BUG_WRITE, 2);
+   gbOamBugAccess((u16)(SP.W - 1), GB_OAM_BUG_WRITE, 1);
+   gbOamBugAccess((u16)(SP.W - 2), GB_OAM_BUG_WRITE, 0);
    gbWriteMemory(--SP.W,AF.B.B1);
    gbWriteMemory(--SP.W,AF.B.B0);
    break;

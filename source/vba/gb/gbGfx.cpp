@@ -535,7 +535,7 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
     else if(color >= 0x200 && color < 0x300) {
       int sprite = color & 0xff;
 
-      int spriteX = gbMemory[0xfe00 + 4 * sprite + 1] - 8;
+      int spriteX = gbOAMLatch[4 * sprite + 1] - 8;
 
       if(spriteX == x) {
         if(sprite < spriteNumber)
@@ -601,14 +601,14 @@ void gbDrawSprites(bool draw)
   if((register_LCDC & 2) && (layerSettings & 0x1000)) {
     int yc = register_LY;
 
-    int address = 0xfe00;
+    int address = 0;
     for(int i = 0; i < 40; i++) {
-      y = gbMemory[address++];
-      x = gbMemory[address++];
-      int tile = gbMemory[address++];
+      y = gbOAMLatch[address++];
+      x = gbOAMLatch[address++];
+      int tile = gbOAMLatch[address++];
       if(size)
         tile &= 254;
-      int flags = gbMemory[address++];
+      int flags = gbOAMLatch[address++];
 
       if(x > 0 && y > 0 && x < 168 && y < 160) {
         // check if sprite intersects current line

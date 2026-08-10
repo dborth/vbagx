@@ -36,7 +36,7 @@
    break;
  case 0x06:
    // RLC (HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    AF.B.B0 = (tempValue & 0x80)?C_FLAG:0;
    tempValue = (tempValue<<1) | (tempValue>>7);
    AF.B.B0 |= ZeroTable[tempValue];
@@ -86,7 +86,7 @@
    break;
  case 0x0e:
    // RRC (HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    AF.B.B0=(tempValue&0x01 ? C_FLAG : 0);
    tempValue=(tempValue>>1)|(tempValue<<7);
    AF.B.B0|=ZeroTable[tempValue];
@@ -160,7 +160,7 @@
    break;
  case 0x16:
    // RL (HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    if(tempValue&0x80) {
      tempValue=(tempValue<<1)|(AF.B.B0&C_FLAG ? 1 : 0);
      AF.B.B0=ZeroTable[tempValue]|C_FLAG;
@@ -242,7 +242,7 @@
    break;
  case 0x1e:
    // RR (HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    if(tempValue&0x01) {
      tempValue=(tempValue>>1)|(AF.B.B0 & C_FLAG ? 0x80:0);
      AF.B.B0=ZeroTable[tempValue]|C_FLAG;
@@ -300,7 +300,7 @@
    break;
  case 0x26:
    // SLA (HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    AF.B.B0=(tempValue&0x80?C_FLAG : 0);
    tempValue<<=1;
    AF.B.B0|=ZeroTable[tempValue];
@@ -350,7 +350,7 @@
    break;
  case 0x2e:
    // SRA (HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    AF.B.B0=(tempValue&0x01 ? C_FLAG: 0);
    tempValue=(tempValue>>1)|(tempValue&0x80);
    AF.B.B0|=ZeroTable[tempValue];
@@ -394,7 +394,7 @@
    break;
  case 0x36:
    // SWAP (HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue = (tempValue&0xf0)>>4 | (tempValue&0x0f)<<4;
    AF.B.B0 = ZeroTable[tempValue];
    gbWriteMemory(HL.W,tempValue);
@@ -442,7 +442,7 @@
    break;
  case 0x3e:
    // SRL (HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    AF.B.B0=(tempValue&0x01)?C_FLAG:0;
    tempValue>>=1;
    AF.B.B0|=ZeroTable[tempValue];
@@ -744,7 +744,7 @@
    break;
  case 0x86:
    // RES 0,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue&=~(1<<0);
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -778,7 +778,7 @@
    break;
  case 0x8e:
    // RES 1,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue&=~(1<<1);
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -812,7 +812,7 @@
    break;
  case 0x96:
    // RES 2,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue&=~(1<<2);
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -846,7 +846,7 @@
    break;
  case 0x9e:
    // RES 3,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue&=~(1<<3);
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -880,7 +880,7 @@
    break;
  case 0xa6:
    // RES 4,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue&=~(1<<4);
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -914,7 +914,7 @@
    break;
  case 0xae:
    // RES 5,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue&=~(1<<5);
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -948,7 +948,7 @@
    break;
  case 0xb6:
    // RES 6,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue&=~(1<<6);
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -982,7 +982,7 @@
    break;
  case 0xbe:
    // RES 7,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue&=~(1<<7);
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -1016,7 +1016,7 @@
    break;
  case 0xc6:
    // SET 0,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue|=1<<0;
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -1050,7 +1050,7 @@
    break;
  case 0xce:
    // SET 1,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue|=1<<1;
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -1084,7 +1084,7 @@
    break;
  case 0xd6:
    // SET 2,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue|=1<<2;
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -1118,7 +1118,7 @@
    break;
  case 0xde:
    // SET 3,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue|=1<<3;
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -1152,7 +1152,7 @@
    break;
  case 0xe6:
    // SET 4,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue|=1<<4;
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -1186,7 +1186,7 @@
    break;
  case 0xee:
    // SET 5,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue|=1<<5;
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -1220,7 +1220,7 @@
    break;
  case 0xf6:
    // SET 6,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue|=1<<6;
    gbWriteMemory(HL.W,tempValue);
    break;
@@ -1254,7 +1254,7 @@
    break;
  case 0xfe:
    // SET 7,(HL)
-   tempValue=gbReadMemory(HL.W);
+   tempValue=rmwValue;
    tempValue|=1<<7;
    gbWriteMemory(HL.W,tempValue);
    break;

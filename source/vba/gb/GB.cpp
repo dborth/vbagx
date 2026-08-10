@@ -571,7 +571,8 @@ u8 ZeroTable[256] = {
 #define GBSAVE_GAME_VERSION_10 10
 #define GBSAVE_GAME_VERSION_11 11
 #define GBSAVE_GAME_VERSION_12 12
-#define GBSAVE_GAME_VERSION GBSAVE_GAME_VERSION_12
+#define GBSAVE_GAME_VERSION_13 13
+#define GBSAVE_GAME_VERSION GBSAVE_GAME_VERSION_13
 
 int inline gbGetValue(int min, int max, int v) {
 	return (int) (min + (float) (max - min) * (2.0 * (v / 31.0) - (v / 31.0) * (v / 31.0)));
@@ -657,6 +658,83 @@ void gbCompareLYToLYC() {
 			gbInt48Signal &= ~8;
 		}
 	}
+}
+
+// DMG OAM corruption bug. Fires when a 16-bit register operation
+// places a value in $FE00-$FEFF on the address bus during mode 2
+// (OAM scan). The PPU scans one 8-byte OAM row per M-cycle (20 rows
+// in 20 M-cycles); the row that gets corrupted is the one being
+// scanned during the access M-cycle -- the actual address (beyond
+// selecting $FExx) has no effect. Row 0 is never corrupted.
+//
+// Calibrated against Blargg's oam_bug tests 4-6: at instruction end,
+// gbLcdTicks == 20 corresponds to the PPU scanning row 0, so the
+// scanned row is (20 - gbLcdTicks). For accesses in earlier M-cycles
+// of an instruction (POP/PUSH), cyclesBeforeEnd shifts the row back.
+//
+// Corruption patterns per pandocs "OAM Corruption Bug": distinct
+// bitwise glitches for reads, writes, and a read combined with an
+// increment/decrement in the same M-cycle.
+#define GB_OAM_BUG_READ     0
+#define GB_OAM_BUG_WRITE    1
+#define GB_OAM_BUG_READ_INC 2
+
+static inline u16 gbOamBugReadWord(int offset) {
+	return (u16)(gbMemory[0xfe00 + offset] | (gbMemory[0xfe01 + offset] << 8));
+}
+
+static inline void gbOamBugWriteWord(int offset, u16 value) {
+	gbMemory[0xfe00 + offset] = (u8)(value & 0xff);
+	gbMemory[0xfe01 + offset] = (u8)(value >> 8);
+}
+
+static void gbOamBugCorrupt(int type, int row) {
+	u8 *oam = &gbMemory[0xfe00];
+
+	if ((row < 1) || (row > 19))
+		return;
+
+	if (type == GB_OAM_BUG_READ_INC) {
+		// Read during increment/decrement: unless the row is one of
+		// the first four or the last one, the first word of the
+		// preceding row is glitched, then the preceding row is copied
+		// both to the current row and to two rows back. A normal read
+		// corruption then follows (a no-op after those copies).
+		if ((row >= 4) && (row <= 18)) {
+			u16 a = gbOamBugReadWord((row - 2) * 8);
+			u16 b = gbOamBugReadWord((row - 1) * 8);
+			u16 c = gbOamBugReadWord(row * 8);
+			u16 d = gbOamBugReadWord((row - 1) * 8 + 4);
+			gbOamBugWriteWord((row - 1) * 8, (u16)((b & (a | c | d)) | (a & c & d)));
+			memcpy(&oam[(row - 2) * 8], &oam[(row - 1) * 8], 8);
+			memcpy(&oam[row * 8], &oam[(row - 1) * 8], 8);
+		}
+		type = GB_OAM_BUG_READ;
+	}
+
+	// a = first word of the current row, b = first word of the
+	// preceding row, c = third word of the preceding row. The first
+	// word of the current row is glitched; its last three words are
+	// copied from the preceding row.
+	u16 a = gbOamBugReadWord(row * 8);
+	u16 b = gbOamBugReadWord((row - 1) * 8);
+	u16 c = gbOamBugReadWord((row - 1) * 8 + 4);
+	u16 corrupted;
+	if (type == GB_OAM_BUG_WRITE)
+		corrupted = (u16)(((a ^ c) & (b ^ c)) ^ c);
+	else
+		corrupted = (u16)(b | (a & c));
+	gbOamBugWriteWord(row * 8, corrupted);
+	memcpy(&oam[row * 8 + 2], &oam[(row - 1) * 8 + 2], 6);
+}
+
+static inline void gbOamBugAccess(u16 addr, int type, int cyclesBeforeEnd) {
+	if (!(gbHardware & 1))         return;
+	if (!(register_LCDC & 0x80))   return;
+	if (gbLcdMode != 2)            return;
+	if ((addr & 0xff00) != 0xfe00) return;
+
+	gbOamBugCorrupt(type, GBLCD_MODE_2_CLOCK_TICKS - (gbLcdTicks + cyclesBeforeEnd));
 }
 
 void gbWriteMemory(u16 address, u8 value) {
@@ -1144,6 +1222,11 @@ void gbWriteMemory(u16 address, u8 value) {
 		if ((register_LY <= register_WY) && ((gbWindowLine < 0) || (gbWindowLine >= 144))) {
 			gbWindowLine = -1;
 			oldRegister_WY = register_WY;
+		} else if ((register_LY > register_WY) && (gbWindowLine < 0)) {
+			// WY was written mid-frame with a value already behind the
+			// current scanline; the window cannot trigger for the rest
+			// of this frame, so latch a past-end-of-screen sentinel.
+			gbWindowLine = 146;
 		}
 		return;
 
@@ -2984,6 +3067,7 @@ static bool gbWriteSaveState(gzFile gzFile) {
 	utilWriteInt(gzFile, gbWindowLine);
 	utilWriteInt(gzFile, inUseRegister_WY);
 	utilWriteInt(gzFile, gbScreenOn);
+	utilGzWrite(gzFile, gbOAMLatch, sizeof(gbOAMLatch));
 	utilWriteInt(gzFile, 0x12345678); // end marker
 	return true;
 }
@@ -3334,6 +3418,13 @@ static bool gbReadSaveState(gzFile gzFile) {
 		gbWindowLine = utilReadInt(gzFile);
 		inUseRegister_WY = utilReadInt(gzFile);
 		gbScreenOn = (utilReadInt(gzFile) ? true : false);
+		if (version >= GBSAVE_GAME_VERSION_13) {
+			utilGzRead(gzFile, gbOAMLatch, sizeof(gbOAMLatch));
+		} else {
+			// Older savestates predate the OAM latch; reconstruct it
+			// from live OAM as the closest available approximation.
+			memcpy(gbOAMLatch, &gbMemory[0xfe00], sizeof(gbOAMLatch));
+		}
 	}
 
 	if (gbSpeed)
@@ -3727,6 +3818,13 @@ void gbEmulate(int ticksToStop) {
 	int opcode2 = 0;
 	bool execute = false;
 
+	// Read-modify-write (HL) opcode staging. The real hardware issues
+	// the (HL) read on its own dedicated M-cycle and only performs the
+	// write on the final cycle; without this, both land on the last
+	// cycle and the read is observed one M-cycle late.
+	int rmwStage = 0;
+	u8 rmwValue = 0;
+
 	while (1) {
 		u16 oldPCW = PC.W;
 
@@ -3786,6 +3884,23 @@ void gbEmulate(int ticksToStop) {
 			}
 			gbOldClockTicks = clockTicks - 1;
 			gbIntBreak = 1;
+
+			// Detect (HL) read-modify-write opcodes; the read must be
+			// staged out onto its own M-cycle, one cycle before the
+			// final (write) cycle of the instruction.
+			rmwStage = 0;
+			if (opcode1 == 0xCB) {
+				// CB-prefixed (HL) ops end in 6 or E; BIT b,(HL) is
+				// read-only (top two bits of the opcode == 01) and is
+				// excluded, since it never writes (HL) back.
+				if (((opcode2 & 0x07) == 0x06) && ((opcode2 & 0xC0) != 0x40))
+					rmwStage = 1;
+			} else if ((opcode1 == 0x34) || (opcode1 == 0x35)) {
+				// INC (HL) / DEC (HL)
+				rmwStage = 1;
+			}
+			if (rmwStage)
+				gbOldClockTicks--;
 		}
 
 		if (!emulating)
@@ -3976,6 +4091,10 @@ void gbEmulate(int ticksToStop) {
 
 						// OAM being accessed mode
 						// next mode is OAM and VRAM in use
+						// Snapshot OAM as it is latched for the duration of this
+						// scanline; CPU writes to OAM during modes 2/3 must not
+						// affect what gets rendered until the next mode 2 entry.
+						memcpy(gbOAMLatch, &gbMemory[0xfe00], 0xa0);
 						if ((gbScreenOn) && (register_LCDC & 0x80)) {
 							gbDrawSprites(false);
 							// Used to add a one tick delay when a window line is drawn.
@@ -4385,6 +4504,15 @@ void gbEmulate(int ticksToStop) {
 				gbOldClockTicks = 0;
 				goto gbRedoLoop;
 			}
+		}
+
+		// Perform the read of a read-modify-write (HL) instruction now,
+		// one machine cycle before the write done by the opcode handler.
+		if ((rmwStage == 1) && execute) {
+			rmwStage = 2;
+			rmwValue = gbReadMemory(HL.W);
+			clockTicks = 1;
+			goto gbRedoLoop;
 		}
 
 		// Executes the opcode(s), and apply the instruction's remaining clockTicks (if any).
