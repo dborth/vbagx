@@ -866,11 +866,15 @@ static int srcHeight = 0;
 
 void systemDrawScreen()
 {
-	GX_Render(
-		srcWidth,
-		srcHeight,
-		pix
-	);
+	u8* renderBuffer = pix;
+
+	// Advance pointer by 484 bytes (240 pixels * 2 bpp + 4 byte pitch pad)
+	// to skip the uninitialized top row without runtime multiplication stalls
+	if (cartridgeType == CARTRIDGE_GBA) {
+		renderBuffer += 484;
+	}
+
+	GX_Render(srcWidth, srcHeight, renderBuffer);
 
 	renderFrameCount++;
 	if (renderFrameCount >= 60)
