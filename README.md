@@ -34,7 +34,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 ## FEATURES
 
 * Custom-built dynamic recompiler (JIT) for GBA games, built from the ground up specifically for VBA-GX, with 
-  excellent accuracy and enough headroom to hold a rock-solid 60fps with room to spare
+  excellent accuracy and enough headroom to run full-speed
 * ARAM/SD hybrid virtual memory pager on GameCube - ROM data is backed by ARAM/SD completely transparently
 * Native 48kHz audio output with no upsampling, dropout-resistant buffering, and smooth fades instead of clicks -
   simply the best VBA-GX has ever sounded
@@ -47,8 +47,6 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 * IPS/UPS patch support
 * Custom controller configurations
 * SD, USB, DVD, SMB, Zip, and 7z support
-* Compatibility based on VBA-M r1231+
-* MEM2 ROM Storage for fast access (Wii)
 * Auto frame skip (optional) for those core heavy games (it's still recommended to leave enabled for audio timing,
   even with JIT enabled)
 * Turbo speed, video zooming, widescreen, unfiltered, and 240p video options
@@ -63,8 +61,8 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 [3.0.1]
 
 * Implemented a brand new Dynamic Recompilation (JIT) core for GBA games on both Wii and GameCube, built entirely from 
-  scratch. This is a from-the-ground-up addition, not a port - real GBA titles now run with plenty of headroom above 
-  a full, locked 60fps, well beyond what the interpreter core could sustain. Enable it from Settings > Emulation
+  scratch. This is a from-the-ground-up addition, not a port - real GBA titles now run with plenty of headroom to  
+  run at full speed, well beyond what the interpreter core could sustain. Enable it from Settings > Emulation
 * Replaced GameCube's old ROM paging system with a new ARAM/SD hybrid virtual memory pager - ROM data now streams
   transparently from SD into ARAM and MEM1 on demand instead of needing to fit entirely in memory ahead of time, 
   allowing the JIT to be possible (since it doesn't have to be aware of backing data location)
