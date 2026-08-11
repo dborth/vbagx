@@ -58,7 +58,7 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
-[3.0.1]
+[3.0.1 - August 11, 2026]
 
 * Implemented a brand new Dynamic Recompilation (JIT) core for GBA games on both Wii and GameCube, built entirely from 
   scratch. This is a from-the-ground-up addition, not a port - real GBA titles now run with plenty of headroom to  
