@@ -8,7 +8,8 @@
  * Memory manager
  ***************************************************************************/
 
-#include <ogc/lwp_heap.h>
+#include <ogc/system.h>
+#include <malloc.h>
 #include "vbagx.h"
 #include "vbasupport.h"
 #include "memmanager.h"
@@ -60,15 +61,16 @@ union CoreMemoryOverlay {
 
 alignas(32) union CoreMemoryOverlay coreMem;
 u8 *romPtr;
-static heap_cntrl mem1_heap;
-static heap_cntrl mem2_heap;
+static mspace mem1_space = NULL;
+static mspace extmem_space = NULL;
 static int memoryMode = -1;
 
 void InitMemManager ()
 {
 #ifdef HW_RVL
 	void *mem2_heap_ptr = SYS_AllocArenaMem2Hi(MEM2_SIZE, 32);
-	__lwp_heap_init(&mem2_heap, mem2_heap_ptr, MEM2_SIZE, 32);
+	extmem_space = create_mspace_with_base(mem2_heap_ptr, MEM2_SIZE, 0);
+	mspace_set_footprint_limit(extmem_space, MEM2_SIZE);
 	romPtr = (u8 *)extmem_malloc(MAX_GBA_ROM_SIZE); // allocate 32 MB to GBA ROM
 #else
 	romPtr = (u8 *)VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024); // 2MB MEM1 + 16 ARAM + SD backing for GB/GBA ROM
@@ -80,7 +82,7 @@ void InitMemManager ()
 void* mem1_malloc(u32 size)
 {
 	if(memoryMode != MEMORY_MODE_MENU) return NULL;
-	return __lwp_heap_allocate(&mem1_heap, size);
+	return mspace_malloc(mem1_space, size);
 }
 
 char* mem1_strdup(const char *s)
@@ -100,31 +102,31 @@ char* mem1_strdup(const char *s)
 void mem1_free(void *ptr)
 {
 	if(memoryMode != MEMORY_MODE_MENU || !ptr) return;
-	__lwp_heap_free(&mem1_heap, ptr);
+	mspace_free(mem1_space, ptr);
 }
 
 int mem1_size_free()
 {
-	heap_iblock info;
-	__lwp_heap_getinfo(&mem1_heap,&info);
-	return info.free_size;
+	if(!mem1_space) return 0;
+	struct mallinfo info = mspace_mallinfo(mem1_space);
+	return info.fordblks;
 }
 
 void* extmem_malloc(u32 size)
 {
-	return __lwp_heap_allocate(&mem2_heap, size);
+	return mspace_malloc(extmem_space, size);
 }
 
 void extmem_free(void *ptr)
 {
-	__lwp_heap_free(&mem2_heap, ptr);
+	mspace_free(extmem_space, ptr);
 }
 
 int extmem_size_free()
 {
-	heap_iblock info;
-	__lwp_heap_getinfo(&mem2_heap,&info);
-	return info.free_size;
+	if(!extmem_space) return 0;
+	struct mallinfo info = mspace_mallinfo(extmem_space);
+	return info.fordblks;
 }
 
 static bool ChangeMode(int mode) {
@@ -133,7 +135,7 @@ static bool ChangeMode(int mode) {
 
 	browserList = NULL;
 	savebuffer = NULL;
-	memset(&mem1_heap, 0, sizeof(heap_cntrl));
+	mem1_space = NULL;
 	texturemem = NULL;
 	jitCache.destroy();
 	memoryMode = mode;
@@ -143,7 +145,8 @@ static bool ChangeMode(int mode) {
 void SwitchMemoryModeMenu() {
 	if(!ChangeMode(MEMORY_MODE_MENU)) return;
 	browserList = coreMem.menu.browserList;
-	__lwp_heap_init(&mem1_heap, coreMem.menu.heapSpace, sizeof(coreMem.menu.heapSpace), 32);
+	mem1_space = create_mspace_with_base(coreMem.menu.heapSpace, sizeof(coreMem.menu.heapSpace), 0);
+	mspace_set_footprint_limit(mem1_space, sizeof(coreMem.menu.heapSpace));
 }
 
 static void SwitchMemoryModeGB() {
