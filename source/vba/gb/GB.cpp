@@ -1097,11 +1097,14 @@ void gbWriteMemory(u16 address, u8 value) {
 			temp = ((GBLY_INCREMENT_CLOCK_TICKS - GBLCD_MODE_2_CLOCK_TICKS) - gbLcdLYIncrementTicks);
 
 		if (temp >= 0) {
-			for (int i = temp << (gbSpeed ? 1 : 2); i < 300; i++)
-				if (temp < 300)
-					gbSCYLine[i] = value;
+			// The PPU fetcher is already processing tiles. An SCY change mid-line
+			// won't visually manifest until the current FIFO empties and the
+			// fetcher grabs the next 8-pixel sliver.
+			int start = (temp << (gbSpeed ? 1 : 2)) + 8;
+			if (start > 299) start = 299;
+			for (int i = start; i < 300; i++)
+				gbSCYLine[i] = value;
 		}
-
 		else
 			memset(gbSCYLine, value, sizeof(gbSCYLine));
 
@@ -1117,11 +1120,15 @@ void gbWriteMemory(u16 address, u8 value) {
 			temp = ((GBLY_INCREMENT_CLOCK_TICKS - GBLCD_MODE_2_CLOCK_TICKS) - gbLcdLYIncrementTicksDelayed);
 
 		if (temp >= 0) {
-			for (int i = temp << (gbSpeed ? 1 : 2); i < 300; i++)
-				if (temp < 300)
-					gbSCXLine[i] = value;
+			// Dynamic FIFO flush penalty.
+			// Writing to SCX mid-line forces the PPU to dump the current FIFO and
+			// restart the fetcher state machine. The visual delay is the standard
+			// 8-pixel fetch time PLUS the fine-scroll discard of the new SCX value.
+			int start = (temp << (gbSpeed ? 1 : 2)) + 8 + (value & 7);
+			if (start > 299) start = 299;
+			for (int i = start; i < 300; i++)
+				gbSCXLine[i] = value;
 		}
-
 		else
 			memset(gbSCXLine, value, sizeof(gbSCXLine));
 
@@ -1157,18 +1164,19 @@ void gbWriteMemory(u16 address, u8 value) {
 
 		// BGP
 	case 0x47: {
-
 		int temp = -1;
-
 		gbMemory[0xff47] = value;
 
 		if (gbLcdModeDelayed == 3)
 			temp = ((GBLY_INCREMENT_CLOCK_TICKS - GBLCD_MODE_2_CLOCK_TICKS) - gbLcdLYIncrementTicksDelayed);
 
 		if (temp >= 0) {
-			for (int i = temp << (gbSpeed ? 1 : 2); i < 300; i++)
-				if (temp < 300)
-					gbBgpLine[i] = value;
+			// Palettes apply at the tail-end of the pipeline (LCD output).
+			// No pre-fetch delay is applied here.
+			int start = (temp << (gbSpeed ? 1 : 2));
+			if (start > 299) start = 299;
+			for (int i = start; i < 300; i++)
+				gbBgpLine[i] = value;
 		} else
 			memset(gbBgpLine, value, sizeof(gbBgpLine));
 
@@ -1179,16 +1187,17 @@ void gbWriteMemory(u16 address, u8 value) {
 		// OBP0
 	case 0x48: {
 		int temp = -1;
-
 		gbMemory[0xff48] = value;
 
 		if (gbLcdModeDelayed == 3)
 			temp = ((GBLY_INCREMENT_CLOCK_TICKS - GBLCD_MODE_2_CLOCK_TICKS) - gbLcdLYIncrementTicksDelayed);
 
 		if (temp >= 0) {
-			for (int i = temp << (gbSpeed ? 1 : 2); i < 300; i++)
-				if (temp < 300)
-					gbObp0Line[i] = value;
+			// Instant palette application, zero delay.
+			int start = (temp << (gbSpeed ? 1 : 2));
+			if (start > 299) start = 299;
+			for (int i = start; i < 300; i++)
+				gbObp0Line[i] = value;
 		} else
 			memset(gbObp0Line, value, sizeof(gbObp0Line));
 
@@ -1199,16 +1208,17 @@ void gbWriteMemory(u16 address, u8 value) {
 		// OBP1
 	case 0x49: {
 		int temp = -1;
-
 		gbMemory[0xff49] = value;
 
 		if (gbLcdModeDelayed == 3)
 			temp = ((GBLY_INCREMENT_CLOCK_TICKS - GBLCD_MODE_2_CLOCK_TICKS) - gbLcdLYIncrementTicksDelayed);
 
 		if (temp >= 0) {
-			for (int i = temp << (gbSpeed ? 1 : 2); i < 300; i++)
-				if (temp < 300)
-					gbObp1Line[i] = value;
+			// Instant palette application, zero delay.
+			int start = (temp << (gbSpeed ? 1 : 2));
+			if (start > 299) start = 299;
+			for (int i = start; i < 300; i++)
+				gbObp1Line[i] = value;
 		} else
 			memset(gbObp1Line, value, sizeof(gbObp1Line));
 
