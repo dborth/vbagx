@@ -22,6 +22,7 @@
 #include "fileop.h"
 #include "video.h"
 #include "filebrowser.h"
+#include "vbasupport.h"
 #include "input.h"
 #include "button_mapping.h"
 #include "gamesettings.h"
@@ -863,6 +864,7 @@ bool LoadPrefs()
 #endif
 
 	ChangeLanguage();
+	InitialisePalette();
 	return true;
 }
 

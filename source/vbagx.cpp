@@ -50,7 +50,6 @@ int main(int argc, char *argv[])
 		CreateAppPath(argv[0]);
 	#endif
 
-	InitialisePalette();
 	InitGUI();
 
 #ifdef HW_RVL
