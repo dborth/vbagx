@@ -32,11 +32,6 @@ enum {
 	MEMORY_MODE_GBA
 };
 
-// Mode 2: GB Game
-struct GBMemory {
-	u8 texturemem[TEXTUREMEM_SIZE];
-} __attribute__((aligned(32)));
-
 // Mode 3: GBA Game
 struct GBAMemory {
     u8 texturemem[TEXTUREMEM_SIZE];
@@ -44,6 +39,12 @@ struct GBAMemory {
     u8 blockTable[HASH_TABLE_SIZE * 16];
     u8 smcPageFlags[SMC_MAP_SIZE];
     u8 smcRegistry[SMC_MAP_SIZE * sizeof(void*)];
+} __attribute__((aligned(32)));
+
+// Mode 2: GB Game
+struct GBMemory {
+	u8 texturemem[TEXTUREMEM_SIZE];
+	u8 heapSpace[sizeof(struct GBAMemory) - TEXTUREMEM_SIZE];
 } __attribute__((aligned(32)));
 
 // Mode 1: Menu
@@ -81,13 +82,13 @@ void InitMemManager ()
 
 void* mem1_malloc(u32 size)
 {
-	if(memoryMode != MEMORY_MODE_MENU) return NULL;
+	if(!mem1_space) return NULL;
 	return mspace_malloc(mem1_space, size);
 }
 
 char* mem1_strdup(const char *s)
 {
-    if (!s)
+    if (!mem1_space || !s)
         return NULL;
 
     size_t len = strlen(s) + 1;
@@ -101,7 +102,7 @@ char* mem1_strdup(const char *s)
 
 void mem1_free(void *ptr)
 {
-	if(memoryMode != MEMORY_MODE_MENU || !ptr) return;
+	if(!mem1_space || !ptr) return;
 	mspace_free(mem1_space, ptr);
 }
 
@@ -135,6 +136,7 @@ static bool ChangeMode(int mode) {
 
 	browserList = NULL;
 	savebuffer = NULL;
+	if(mem1_space) destroy_mspace(mem1_space);
 	mem1_space = NULL;
 	texturemem = NULL;
 	jitCache.destroy();
@@ -142,16 +144,21 @@ static bool ChangeMode(int mode) {
 	return true;
 }
 
+static void CreateMem1Space(u8 *heapSpace) {
+	mem1_space = create_mspace_with_base(heapSpace, sizeof(heapSpace), 0);
+	mspace_set_footprint_limit(mem1_space, sizeof(heapSpace));
+}
+
 void SwitchMemoryModeMenu() {
 	if(!ChangeMode(MEMORY_MODE_MENU)) return;
 	browserList = coreMem.menu.browserList;
-	mem1_space = create_mspace_with_base(coreMem.menu.heapSpace, sizeof(coreMem.menu.heapSpace), 0);
-	mspace_set_footprint_limit(mem1_space, sizeof(coreMem.menu.heapSpace));
+	CreateMem1Space(coreMem.menu.heapSpace);
 }
 
 static void SwitchMemoryModeGB() {
 	if(!ChangeMode(MEMORY_MODE_GB)) return;
 	texturemem = coreMem.gb.texturemem;
+	CreateMem1Space(coreMem.gb.heapSpace);
 }
 
 static void SwitchMemoryModeGBA() {
