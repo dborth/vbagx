@@ -144,21 +144,21 @@ static bool ChangeMode(int mode) {
 	return true;
 }
 
-static void CreateMem1Space(u8 *heapSpace) {
-	mem1_space = create_mspace_with_base(heapSpace, sizeof(heapSpace), 0);
-	mspace_set_footprint_limit(mem1_space, sizeof(heapSpace));
+static void CreateMem1Space(u8 *heapSpace, u32 size) {
+	mem1_space = create_mspace_with_base(heapSpace, size, 0);
+	mspace_set_footprint_limit(mem1_space, size);
 }
 
 void SwitchMemoryModeMenu() {
 	if(!ChangeMode(MEMORY_MODE_MENU)) return;
 	browserList = coreMem.menu.browserList;
-	CreateMem1Space(coreMem.menu.heapSpace);
+	CreateMem1Space(coreMem.menu.heapSpace, sizeof(coreMem.menu.heapSpace));
 }
 
 static void SwitchMemoryModeGB() {
 	if(!ChangeMode(MEMORY_MODE_GB)) return;
 	texturemem = coreMem.gb.texturemem;
-	CreateMem1Space(coreMem.gb.heapSpace);
+	CreateMem1Space(coreMem.gb.heapSpace, sizeof(coreMem.gb.heapSpace));
 }
 
 static void SwitchMemoryModeGBA() {
