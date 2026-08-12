@@ -33,6 +33,7 @@
 #include "gcunzip.h"
 #include "gamesettings.h"
 #include "gbaoverrides.h"
+#include "gameborder.h"
 #include "preferences.h"
 #include "utils/pngu.h"
 #include "utils/vmpager.h"
@@ -1162,126 +1163,26 @@ void LoadPatch()
 	FreeSaveBuffer ();
 }
 
-void SaveSGBBorderIfNoneExists(const void* buffer) {
-	char* borderPath = NULL;
-	FILE* f = NULL;
-	void* rgba8 = NULL;
-	IMGCTX pngContext = NULL;
-	
-	int err;
-	
-	struct stat s;
-	borderPath = AllocAndGetPNGBorderPath(NULL);
-	
-	char* slash = strrchr(borderPath, '/');
-	*slash = '\0'; // cut string off at directory name
-	
-	err = stat(borderPath, &s);
-	if (err == -1) goto cleanup;
-	if (!S_ISDIR(s.st_mode)) goto cleanup;
-	
-	*slash = '/'; // restore slash, bring filename back
-	
-	err = stat(borderPath, &s);
-	if (err != -1 || errno != ENOENT) goto cleanup;
-	
-	f = fopen(borderPath, "wb");
-	if (!f) goto cleanup;
-	
-	rgba8 = mem1_malloc(256*224*3);
-	if (!rgba8) goto cleanup;
-	pngContext = PNGU_SelectImageFromBuffer(rgba8);
-	if (pngContext == NULL) goto cleanup;
-	
-	if(PNGU_EncodeFromLinearRGB555(pngContext, 256, 224, buffer, 258) != PNGU_OK) goto cleanup;
-	fwrite(rgba8, 1, 256*224*3, f);
-	
-cleanup:
-	if (borderPath) mem1_free(borderPath);
-	if (f) fclose(f);
-	if (rgba8) mem1_free(rgba8);
-	if (pngContext) PNGU_ReleaseImageContext(pngContext);
+static void ResetGameBorder() {
+	gameBorder.clear();
+	sgbBorderExtractor.reset(false, false);
 }
 
-char* AllocAndGetPNGBorderPath(const char* title) {
-	const char* method = pathPrefix[GCSettings.LoadMethod];
-	const char* folder = GCSettings.BorderFolder;
-	
-	char tmp[13];
-	
-	// If no title was passed in, get the rom title
-	if (title == NULL) {
-		if (cartridgeType == CARTRIDGE_GB) {
-			title = gb_get_title(gbRom, NULL);
-		} else if (cartridgeType == CARTRIDGE_GBA) {
-			memcpy(tmp, rom + 0xA0, 12);
-			tmp[12] = '\0';
-			title = tmp;
+static void InitGameBorder() {
+	gameBorder.clear();
+
+	if(GCSettings.SGBBorder == SGBBORDER_FROMPNG) {
+		int bw = 0, bh = 0;
+		const char* fallback = (cartridgeType == CARTRIDGE_GBA) ? "defaultgba" : "default";
+		u16* borderPixels = BorderManager::load(NULL, fallback, bw, bh);
+
+		if (borderPixels) {
+			gameBorder.setBorder(borderPixels, bw, bh);
 		}
 	}
-	
-	size_t length = strlen(method) + strlen(folder) + strlen(title) + 6;
-	char* path = (char*)mem1_malloc(length);
-	if (path) sprintf(path, "%s%s/%s.png", method, folder, title);
-	return path;
-}
 
-void LoadPNGBorder(const char* fallback)
-{
-	void* png_tmp_buf = mem1_malloc(1024*1024);
-	char* borderPath = AllocAndGetPNGBorderPath(NULL);
-	PNGUPROP imgProp;
-	IMGCTX ctx = NULL;
-	char error[1024]; error[1023] = 0;
-	int r;
-	
-	bool borderLoaded = LoadFile((char*)png_tmp_buf, borderPath, 0, 1024*1024, SILENT);
-	if (!borderLoaded) {
-		// Try default border.png
-		mem1_free(borderPath);
-		borderPath = AllocAndGetPNGBorderPath(fallback);
-		borderLoaded = LoadFile((char*)png_tmp_buf, borderPath, 0, 1024*1024, SILENT);
-	}
-	if (!borderLoaded) goto cleanup;
-	
-	ctx = PNGU_SelectImageFromBuffer(png_tmp_buf);
-	
-	if (ctx == NULL) {
-		snprintf(error, 1023, "Error reading %s", borderPath);
-		ErrorPrompt(error);
-		goto cleanup;
-	}
-	
-	r = PNGU_GetImageProperties(ctx, &imgProp);
-	if (r != PNGU_OK) {
-		snprintf(error, 1023, "PNGU properties error (%d): %s", r, borderPath);
-		ErrorPrompt(error);
-		goto cleanup;
-	}
-	
-	if (imgProp.imgWidth > 640 || imgProp.imgHeight > 480) {
-		snprintf(error, 1023, "Wrong size (should be 640x480 or smaller): %s", borderPath);
-		ErrorPrompt(error);
-		goto cleanup;
-	}
-	
-	InitialBorder = (u16*)mem1_malloc(640*480*2);
-	r = PNGU_DecodeTo4x4RGB555 (ctx, imgProp.imgWidth, imgProp.imgHeight, InitialBorder);
-	if (r != PNGU_OK) {
-		snprintf(error, 1023, "PNGU decoding error (%d): %s", r, borderPath);
-		ErrorPrompt(error);
-		mem1_free(InitialBorder);
-		InitialBorder = NULL;
-		goto cleanup;
-	}
-	
-	InitialBorderWidth = imgProp.imgWidth;
-	InitialBorderHeight = imgProp.imgHeight;
-	
-cleanup:
-	if (png_tmp_buf) mem1_free(png_tmp_buf);
-	if (borderPath) mem1_free(borderPath);
-	if (ctx) PNGU_ReleaseImageContext(ctx);
+	bool wantSgbCapture = (cartridgeType == CARTRIDGE_GB) && gbSgbMode && (GCSettings.SGBBorder == SGBBORDER_FROMGAME);
+	sgbBorderExtractor.reset(wantSgbCapture, gameBorder.hasBorder());
 }
 
 extern bool gbUpdateSizes();
@@ -1311,9 +1212,11 @@ bool LoadGBROM()
 	const void* secondRom = gb_next_rom(gbRom, gbRomSize, firstRom);
 	if (firstRom != NULL && firstRom != gbRom) {
 		char msgbuf[32];
+		char gb_title_buffer[16];
 		const void* gbRomPtr;
 		for (gbRomPtr = firstRom; gbRomPtr != NULL; gbRomPtr = gb_next_rom(gbRom, gbRomSize, gbRomPtr)) {
-			sprintf(msgbuf, "Load %s?", gb_get_title(gbRomPtr, NULL));
+			gb_get_title(gbRomPtr, gb_title_buffer);
+			sprintf(msgbuf, "Load %s?", gb_title_buffer);
 			if (secondRom == NULL || YesNoPrompt(msgbuf, true)) {
 				gbRomSize = gb_rom_size(gbRomPtr);
 				memmove(gbRom, gbRomPtr, gbRomSize);
@@ -1325,8 +1228,6 @@ bool LoadGBROM()
 			return false;
 		}
 	}
-	
-	if (GCSettings.SGBBorder == SGBBORDER_FROMPNG) LoadPNGBorder("default");
 
 	if(gbRomSize <= 0)
 		return false;
@@ -1382,11 +1283,7 @@ void RomCleanup()
 	srcWidth = 0;
 	srcHeight = 0;
 
-	if (InitialBorder != NULL) {
-		mem1_free(InitialBorder);
-		InitialBorder = NULL;
-	}
-	SGBBorderLoadedFromGame = false;
+	ResetGameBorder();
 }
 
 static bool GBAROMAlloc()
@@ -1526,8 +1423,8 @@ bool LoadVBAROM()
 		if (loaded == 2) {
 			loaded = 0;
 			cartridgeType = CARTRIDGE_GB; // GB ROM within GBA rom - falls through to load below
-		} else if (loaded == 1 && GCSettings.SGBBorder == SGBBORDER_FROMPNG) {
-			LoadPNGBorder("defaultgba");
+		} else if (loaded == 1) {
+			InitGameBorder();
 		}
 	}
 
@@ -1543,7 +1440,6 @@ bool LoadVBAROM()
 			gbBorderLineSkip = 256;
 			gbBorderColumnSkip = 48;
 			gbBorderRowSkip = 40;
-			SGBBorderLoadedFromGame = false; // try to load the border during rendering
 		}
 		else
 		{
@@ -1566,8 +1462,8 @@ bool LoadVBAROM()
 	soundInit();
 
 	// Setup GX
-	if (InitialBorder) {
-		GX_Render_Init(InitialBorderWidth, InitialBorderHeight);
+	if (gameBorder.hasBorder()) {
+		GX_Render_Init(gameBorder.getWidth(), gameBorder.getHeight());
 	} else {
 		GX_Render_Init(srcWidth, srcHeight);
 	}
@@ -1582,6 +1478,7 @@ bool LoadVBAROM()
 		gbSoundReset();
 		gbSoundSetDeclicking(true);
 		gbReset();
+		InitGameBorder();
 	}
 	else
 	{

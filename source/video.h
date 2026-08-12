@@ -56,11 +56,4 @@ typedef struct
 extern u8* texturemem;
 extern GameScreenPng gameScreenPng;
 
-char *AllocAndGetPNGBorderPath(const char* title);
-void SaveSGBBorderIfNoneExists(const void* buffer);
-extern u16 *InitialBorder;
-extern int InitialBorderWidth;
-extern int InitialBorderHeight;
-extern bool SGBBorderLoadedFromGame;
-
 #endif

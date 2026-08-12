@@ -36,8 +36,5 @@ where the next ROM would be does not contain a valid Nintendo logo at 0x104,
 this method will return NULL. */
 const void* gb_next_rom(const void* data, size_t length, const void* first_rom);
 
-/* Returns a copy of the title from the ROM header. If buffer is NULL, the
-string will be allocated in an internal 16-byte buffer which will be
-overwritten later. If buffer is not NULL, the title will be copied to buffer,
-and buffer will be returned. */
-const char* gb_get_title(const void* rom, char* buffer);
+/* Updates buffer with the title from the ROM header */
+void gb_get_title(const void* rom, char* buffer);

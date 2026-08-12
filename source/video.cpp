@@ -20,6 +20,7 @@
 
 #include "vbagx.h"
 #include "memmanager.h"
+#include "gameborder.h"
 #include "videofilters.h"
 #include "menu.h"
 #include "input.h"
@@ -49,11 +50,6 @@ GameScreenPng gameScreenPng;
 
 int screenheight = 480;
 int screenwidth = 640;
-
-u16 *InitialBorder = NULL;
-int InitialBorderWidth = 0;
-int InitialBorderHeight = 0;
-bool SGBBorderLoadedFromGame = false;
 
 /*** 3D GX ***/
 #define DEFAULT_FIFO_SIZE ( 256 * 1024 )
@@ -902,10 +898,6 @@ ResetVideo_Emu ()
 	updateScaling = 1;
 }
 
-static const u16* lastCopiedBorder = NULL;
-static int sgbBorderCheckCounter = 0;
-static bool borderJustChanged = false;
-
 /****************************************************************************
  * GX_Render_Init
  ***************************************************************************/
@@ -913,82 +905,19 @@ void GX_Render_Init(int width, int height) {
 	// Setup for first call to scaler
 	vwidth = width;
 	vheight = height;
-
-	// Reset state trackers upon texture recreation
-	lastCopiedBorder = NULL;
-	sgbBorderCheckCounter = 0;
-	borderJustChanged = false;
 }
 
-static bool borderAreaEmpty(const u16* buffer) {
-	u16 reference = buffer[0];
-	for (int y = 0; y < 40; y++) {
-		for (int x = 0; x < 256; x++) {
-			if (buffer[256 * y + x] != reference)
-				return false;
-		}
-	}
-	for (int y = 40; y < 184; y++) {
-		for (int x = 0; x < 48; x++) {
-			if (buffer[256 * y + x] != reference)
-				return false;
-		}
-		for (int x = 208; x < 224; x++) {
-			if (buffer[256 * y + x] != reference)
-				return false;
-		}
-	}
-	for (int y = 184; y < 224; y++) {
-		for (int x = 0; x < 256; x++) {
-			if (buffer[256 * y + x] != reference)
-				return false;
-		}
-	}
-	return true;
-}
+static long long int* ProcessFrameAndGetDest(void* textureBase, const u16* frameBuffer, int gbWidth, int gbHeight) {
+    if (sgbBorderExtractor.processFrame(frameBuffer, gbWidth, gbHeight)) {
+        // Scraper succeeded - load the PNG it just created
+        int bw = 0, bh = 0;
+        u16* borderPixels = BorderManager::load(NULL, NULL, bw, bh);
+        if (borderPixels) {
+            gameBorder.setBorder(borderPixels, bw, bh);
+        }
+    }
 
-/****************************************************************************
- * ProcessSGBBorder
- ***************************************************************************/
-static void ProcessSGBBorder(u8* buffer, int gbWidth, int gbHeight) {
-	if (gbWidth == 256 && gbHeight == 224 && !SGBBorderLoadedFromGame) {
-		// Throttle heavy pixel scanning path to once per second
-		sgbBorderCheckCounter++;
-		if (sgbBorderCheckCounter >= 60) {
-			sgbBorderCheckCounter = 0;
-			if (!borderAreaEmpty((u16*)buffer)) {
-				// don't try to load the default border anymore
-				SGBBorderLoadedFromGame = true;
-				SaveSGBBorderIfNoneExists(buffer);
-			}
-		}
-	}
-}
-
-/****************************************************************************
- * DrawBorderAndGetDest
- ***************************************************************************/
-static long long int* DrawBorderAndGetDest(void* textureBase, int gbWidth, int gbHeight, int borderWidth, int borderHeight) {
-	long long int* dst = (long long int*) textureBase;
-	borderJustChanged = false;
-
-	if (InitialBorder) {
-		// Only copy the 600 KB border once when it changes!
-		if (InitialBorder != lastCopiedBorder) {
-			memcpy(dst, InitialBorder, borderWidth * borderHeight * 2);
-			lastCopiedBorder = InitialBorder;
-			borderJustChanged = true; // Signal that the GPU needs a full RAM sync
-		}
-
-		int rows_to_skip = (borderHeight - gbHeight) / 2;
-		if (rows_to_skip > 0)
-			dst += rows_to_skip * borderWidth / 4;
-		dst += (borderWidth - gbWidth) / 2;
-	} else {
-		lastCopiedBorder = NULL; // Reset tracking if running borderless
-	}
-
-	return dst;
+    return (long long int*)gameBorder.applyToTexture(textureBase, gbWidth, gbHeight);
 }
 
 void ClearScreenshot()
@@ -1240,46 +1169,45 @@ static void MakeTextureVBA_Dynamic(const void *src, void *dst, s32 width, s32 he
  ****************************************************************************/
 static void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height)
 {
-    int borderWidth = InitialBorder ? InitialBorderWidth : width;
-    int borderHeight = InitialBorder ? InitialBorderHeight : height;
+	long long int* dst_ptr = ProcessFrameAndGetDest(textureBase, (const u16*)srcBuffer, width, height);
 
-    ProcessSGBBorder(srcBuffer, width, height);
-    long long int* dst_ptr = DrawBorderAndGetDest(textureBase, width, height, borderWidth, borderHeight);
+	int targetWidth  = gameBorder.hasBorder() ? gameBorder.getWidth()  : width;
+	int targetHeight = gameBorder.hasBorder() ? gameBorder.getHeight() : height;
 
-    int gbPitch = width * 2 + 4;
-    int dst_gap_bytes = ((borderWidth - width) / 4) * 32;
+	int gbPitch = width * 2 + 4;
+	int dst_gap_bytes = ((targetWidth - width) / 4) * 32;
 
-    // Route to the statically optimized ASM based on console resolution width
-    switch (width) {
-        case 160: // GB / GBC (Pitch = 324)
-            MakeTextureVBA_Impl<324>(srcBuffer, dst_ptr, width, height, dst_gap_bytes);
-            break;
-        case 240: // GBA (Pitch = 484)
-            MakeTextureVBA_Impl<484>(srcBuffer, dst_ptr, width, height, dst_gap_bytes);
-            break;
-        case 256: // SGB (Pitch = 516)
-            MakeTextureVBA_Impl<516>(srcBuffer, dst_ptr, width, height, dst_gap_bytes);
-            break;
-        default:  // Fallback for custom borders/resolutions
-            MakeTextureVBA_Dynamic(srcBuffer, dst_ptr, width, height, gbPitch, dst_gap_bytes);
-            break;
-    }
+	// Route to the statically optimized ASM based on console resolution width
+	switch (width) {
+		case 160: // GB / GBC (Pitch = 324)
+			MakeTextureVBA_Impl<324>(srcBuffer, dst_ptr, width, height, dst_gap_bytes);
+			break;
+		case 240: // GBA (Pitch = 484)
+			MakeTextureVBA_Impl<484>(srcBuffer, dst_ptr, width, height, dst_gap_bytes);
+			break;
+		case 256: // SGB (Pitch = 516)
+			MakeTextureVBA_Impl<516>(srcBuffer, dst_ptr, width, height, dst_gap_bytes);
+			break;
+		default:  // Fallback for custom borders/resolutions
+			MakeTextureVBA_Dynamic(srcBuffer, dst_ptr, width, height, gbPitch, dst_gap_bytes);
+			break;
+	}
 
-    // High-efficiency targeted data cache flushing
-    if (InitialBorder && !borderJustChanged) {
-        // Normal Frame: Flush ONLY the game screen cache lines (Saves ~87% bus bandwidth)
-        u8* flush_ptr = (u8*)dst_ptr;
-        u32 row_bytes = width * 8;         // bytes per tile row for game screen
-        u32 stride_bytes = borderWidth * 8; // full texture pitch stride bytes
-        int tile_rows = height / 4;
-        for (int i = 0; i < tile_rows; i++) {
-            DCStoreRange(flush_ptr, row_bytes);
-            flush_ptr += stride_bytes;
-        }
-    } else {
-        // Flush everything if borderless, OR if the border was just copied this frame
-        DCStoreRange(textureBase, borderWidth * borderHeight * 2);
-    }
+	// High-efficiency targeted data cache flushing
+	if (targetWidth > width && !updateScaling) {
+		// Normal Frame: Flush ONLY the game screen cache lines
+		u8* flush_ptr = (u8*)dst_ptr;
+		u32 row_bytes = width * 8; // bytes per tile row for game screen
+		u32 stride_bytes = targetWidth * 8; // full texture pitch stride bytes
+		int tile_rows = height / 4;
+		for (int i = 0; i < tile_rows; i++) {
+			DCStoreRange(flush_ptr, row_bytes);
+			flush_ptr += stride_bytes;
+		}
+	} else {
+		// Flush everything if borderless, OR if the border was just copied this frame
+		DCStoreRange(textureBase, targetWidth * targetHeight * 2);
+	}
 }
 
 /****************************************************************************
@@ -1290,15 +1218,13 @@ static void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int widt
  ****************************************************************************/
 void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 {
-	// Disable custom exterior borders if CPU filtering to prevent scaling overlap
-	bool useBorder = (InitialBorder != NULL) && (fscale == 1);
-	int borderWidth = useBorder ? InitialBorderWidth : consoleWidth;
-	int borderHeight = useBorder ? InitialBorderHeight : consoleHeight;
+	bool useBorder = gameBorder.hasBorder() && (fscale == 1);
+	int targetWidth  = useBorder ? gameBorder.getWidth()  : consoleWidth;
+	int targetHeight = useBorder ? gameBorder.getHeight() : consoleHeight;
 
-	// Only trigger a scaling/texture re-init if the dimensions or scale actually changed
-	if (vwidth != borderWidth || vheight != borderHeight || updateScaling) {
-		vwidth = borderWidth;
-		vheight = borderHeight;
+	if (vwidth != targetWidth || vheight != targetHeight) {
+		vwidth = targetWidth;
+		vheight = targetHeight;
 		updateScaling = 1;
 	}
 
