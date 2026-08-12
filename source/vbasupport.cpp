@@ -32,6 +32,7 @@
 #include "menu.h"
 #include "gcunzip.h"
 #include "gamesettings.h"
+#include "gbaoverrides.h"
 #include "preferences.h"
 #include "utils/pngu.h"
 #include "utils/vmpager.h"
@@ -1010,52 +1011,107 @@ void ResetTiltAndCursor() {
 
 static void ApplyPerImagePreferences()
 {
-	// look for matching game setting
-	int snum = -1;
 	RomIdCode = rom[0xac] | (rom[0xad] << 8) | (rom[0xae] << 16) | (rom[0xaf] << 24);
 	RomTitle[0] = '\0';
 
-	for(int i=0; i < gameSettingsCount; ++i)
+	char gameId[5];
+	gameId[0] = rom[0xac];
+	gameId[1] = rom[0xad];
+	gameId[2] = rom[0xae];
+	gameId[3] = rom[0xaf];
+	gameId[4] = '\0';
+
+	int profileIndex = -1;
+
+	// 1. Lookup by CRC32
+	u32 currentCrc = crc32(0, rom, GBAROMSize);
+	for(uint16_t i = 0; i < CRC_COUNT; ++i)
 	{
-		if(gameSettings[i].gameID[0] == rom[0xac] &&
-			gameSettings[i].gameID[1] == rom[0xad] &&
-			gameSettings[i].gameID[2] == rom[0xae] &&
-			gameSettings[i].gameID[3] == rom[0xaf])
+		if(crcTable[i].crc32 == currentCrc)
 		{
-			snum = i;
+			profileIndex = crcTable[i].profileIndex;
 			break;
 		}
 	}
 
-	// match found!
-	if(snum >= 0)
+	// 2. Lookup by Game ID if CRC match was not found
+	if(profileIndex == -1)
 	{
-		if(gameSettings[snum].rtcEnabled >= 0)
-			rtcEnable(gameSettings[snum].rtcEnabled);
-		if(gameSettings[snum].flashSize > 0)
-			flashSetSize(gameSettings[snum].flashSize);
-		if(gameSettings[snum].saveType >= 0)
-			cpuSaveType = gameSettings[snum].saveType;
-		if(gameSettings[snum].mirroringEnabled >= 0)
-			mirroringEnable = gameSettings[snum].mirroringEnabled;
+		for(uint16_t i = 0; i < GAME_ID_COUNT; ++i)
+		{
+			if(strncmp(gameIdTable[i].gameId, gameId, 4) == 0)
+			{
+				profileIndex = gameIdTable[i].profileIndex;
+				break;
+			}
+		}
 	}
-	// In most cases this is already handled in GameSettings, but just to make sure:
-	switch (rom[0xac])
+
+	// 3. Apply profile settings if a match was discovered
+	if(profileIndex >= 0 && profileIndex < PROFILE_COUNT)
 	{
-		case 'F': // Classic NES
-			cpuSaveType = 1; // EEPROM
-			mirroringEnable = 1;
-			break;
-		case 'K': // Accelerometers
-			cpuSaveType = 4; // EEPROM + sensor
-			break;
-		case 'R': // WarioWare Twisted style sensors
-		case 'V': // Drill Dozer
-			rtcEnableWarioRumble(true);
-			break;
-		case 'U': // Boktai solar sensor and clock
+		const OverrideProfile& profile = overrideProfiles[profileIndex];
+
+		if (profile.saveType != -1)
+			cpuSaveType = profile.saveType;
+
+		if (profile.rtcEnabled != -1)
+			rtcEnable(profile.rtcEnabled);
+
+		if (profile.mirroringEnabled != -1)
+			mirroringEnable = profile.mirroringEnabled;
+
+		if (profile.flashSize != -1)
+			flashSetSize(profile.flashSize);
+	}
+	else
+	{
+		// fallback logic / heuristics
+
+		// Pokémon mainline games (Ruby, Sapphire, Emerald, FireRed, LeafGreen)
+		if ((gameId[0] == 'A' || gameId[0] == 'B') &&
+		    (gameId[1] == 'P' || gameId[1] == 'A') &&
+		    (gameId[2] == 'E' || gameId[2] == 'R' || gameId[2] == 'S' || gameId[2] == 'D' || gameId[2] == 'X'))
+		{
+			cpuSaveType = 3; // FLASH
+			flashSetSize(131072);
 			rtcEnable(true);
-			break;
+		}
+		// Super Mario Advance 4 (Super Mario Bros 3)
+		else if (!strncmp(gameId, "AX4", 3))
+		{
+			cpuSaveType = 3; // FLASH
+			flashSetSize(131072);
+		}
+		// Mother 3
+		else if (!strncmp(gameId, "A3U", 3))
+		{
+			cpuSaveType = 3; // FLASH
+			flashSetSize(131072);
+		}
+		else
+		{
+			// General Publisher / Sensor checking
+			switch (gameId[0])
+			{
+				case 'F': // Classic NES / Famicom Mini
+					cpuSaveType = 1; // EEPROM
+					mirroringEnable = true;
+					break;
+				case 'K': // Accelerometers (Yoshi Topsy-Turvy, Koro Koro Puzzle)
+					cpuSaveType = 4; // EEPROM + sensor
+					break;
+				case 'R': // WarioWare Twisted
+				case 'V': // Drill Dozer
+					cpuSaveType = 2; // SRAM
+					rtcEnableWarioRumble(true);
+					break;
+				case 'U': // Boktai solar sensor and clock
+					cpuSaveType = 1; // EEPROM
+					rtcEnable(true);
+					break;
+			}
+		}
 	}
 }
 
@@ -1506,6 +1562,7 @@ bool LoadVBAROM()
 		return false;
 	}
 
+	LoadPatch();
 	soundInit();
 
 	// Setup GX
@@ -1518,8 +1575,6 @@ bool LoadVBAROM()
 	if (cartridgeType == CARTRIDGE_GB)
 	{
 		gbGetHardwareType();
-
-		LoadPatch();
 
 		// Apply preferences specific to this game
 		gbApplyPerImagePreferences();
@@ -1541,7 +1596,6 @@ bool LoadVBAROM()
 		doMirroring(mirroringEnable);
 		soundReset();
 		CPUInit(NULL, false);
-		LoadPatch();
 		CPUReset();
 	}
 
