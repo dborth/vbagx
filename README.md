@@ -58,6 +58,13 @@ With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
 
 ## UPDATE HISTORY
 
+[3.0.2 - August 12, 2026]
+
+* Fixed crash returning to the menu when set to non-English language
+* Fixed bug with Monochrome Screen setting not being applied consistently
+* Improved game compatibility with a new mechanism to automatically detect the proper settings
+* Fixed bugs with border handling code (refactored/rewritten)
+
 [3.0.1 - August 11, 2026]
 
 * Implemented a brand new Dynamic Recompilation (JIT) core for GBA games on both Wii and GameCube, built entirely from 
