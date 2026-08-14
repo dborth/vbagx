@@ -3653,7 +3653,7 @@ static int MenuSettings()
 	GuiImageData iconFile(icon_settings_file_png);
 	GuiImageData iconMenu(icon_settings_menu_png);
 	GuiImageData iconNetwork(icon_settings_network_png);
-	GuiImageData iconEmulation(icon_game_settings_png);
+	GuiImageData iconEmulation(icon_settings_emulation_png);
 	GuiImageData iconCredits(icon_credits_png);
 
 	GuiText savingBtnTxt1("Saving", 22, (GXColor){0, 0, 0, 255});
