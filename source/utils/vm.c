@@ -696,9 +696,9 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 	v_index = (vm_page*)DAR - VM_Base;
 
 	if (!virt_map[v_index].committed) {
-		// If this is the game thread, request the page and wait.
-		// If it is the pager thread doing a memcpy, bypass this and fault in a blank page!
-		if (LWP_GetSelf() != VMPager_GetThread()) {
+		// If this is the game thread during normal gameplay, request the page and wait.
+		// If it is the pager thread doing a memcpy OR the main thread doing an initial preload, bypass this and fault in a blank page!
+		if (LWP_GetSelf() != VMPager_GetThread() && !VMPager_IsPreloading()) {
 
 			u32 msr;
 			asm volatile("mfmsr %0" : "=r"(msr));
@@ -713,7 +713,6 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 			asm volatile("mtmsr %0" :: "r"(msr));
 			return 1;
 		}
-
 	}
 
 	LWP_MutexLock(vm_mutex);

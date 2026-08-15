@@ -128,6 +128,7 @@ static u8* vmRomPtr;
 static lwp_t pager_thread = LWP_THREAD_NULL;
 static mqbox_t pager_queue = MQ_BOX_NULL;
 static bool pager_running = false;
+static bool is_preloading = false;
 
 // Read-ahead granularity: each page-in request is rounded out to a
 // PREFETCH_PAGES-aligned block and serviced as one batch (see the
@@ -252,6 +253,10 @@ void VMPager_RequestPage(u16 v_index) {
 	}
 }
 
+bool VMPager_IsPreloading(void) {
+	return is_preloading;
+}
+
 // Opens a ROM file from the SD card and performs the initial bulk
 // preload described in the "INITIAL BOOT PRELOAD" section of the file
 // header: closes any currently open ROM, determines the file's size,
@@ -282,6 +287,8 @@ int VMPager_LoadROM(const char * filepath) {
 		return 0;
 	}
 
+	// Flag that we are intentionally faulting memory on the main thread
+	is_preloading = true;
 	VM_Clear();
 
 	u32 offset = 0;
@@ -293,6 +300,9 @@ int VMPager_LoadROM(const char * filepath) {
 		if (readSize > PAGE_BUFFER_SIZE) readSize = PAGE_BUFFER_SIZE;
 
 		fread(page_buffer, 1, readSize, romFile);
+
+		// This memcpy triggers DSI exceptions on the main thread.
+		// Because is_preloading is true, vm.c will map blank frames instantly.
 		memcpy(vmRomPtr + offset, page_buffer, readSize);
 		offset += readSize;
 	}
@@ -301,6 +311,9 @@ int VMPager_LoadROM(const char * filepath) {
 	for (u32 i = 0; i < pages_read; i++) {
 		VM_SetCommitted(i);
 	}
+
+	// Release the flag for normal gameplay
+	is_preloading = false;
 
 	return romSize;
 }
