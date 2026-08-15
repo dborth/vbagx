@@ -41,7 +41,7 @@
 #include "gui/gui.h"
 #include "utils/gettext.h"
 #include "utils/FreeTypeGX.h"
-#include "vba/gb/GB.h"
+#include "vba/gb/gb.h"
 
 #define THREAD_SLEEP 100
 
