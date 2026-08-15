@@ -344,7 +344,15 @@ void systemFrame()
 ****************************************************************************/
 
 void systemGbPrint(u8 *data,int pages,int feed,int palette, int contrast) {}
-void systemMessage(int num, const char *msg, ...) {}
+
+static char lastSystemMessage[128];
+
+void systemMessage(int num, const char *msg, ...) {
+    va_list args;
+    va_start(args, msg);
+    vsnprintf(lastSystemMessage, sizeof(lastSystemMessage), msg, args);
+    va_end(args);
+}
 
 bool MemCPUReadBatteryFile(char * membuffer, int size)
 {
@@ -1216,8 +1224,6 @@ void InitGameDimensionsAndBorder() {
 	}
 }
 
-extern bool gbUpdateSizes();
-
 bool LoadGBROM()
 {
 	gbRom = romPtr;
@@ -1262,7 +1268,11 @@ bool LoadGBROM()
 	if(gbRomSize <= 0)
 		return false;
 
-	return gbUpdateSizes();
+	if(!gbUpdateSizes()) {
+		ErrorPrompt(lastSystemMessage);
+		return false;
+	}
+	return true;
 }
 
 bool utilIsZipFile(const char* file)

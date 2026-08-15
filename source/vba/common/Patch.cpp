@@ -219,7 +219,9 @@ bool patchApplyUPS(MFILE *f, u8 **rom, int *size)
     return false;
   }
   if (dataSize > *size) {
-    *rom = (u8*)realloc(*rom, dataSize);
+#ifndef GEKKO
+	*rom = (u8*)realloc(*rom, dataSize);
+#endif
     memset(*rom + *size, 0, dataSize - *size);
     *size = dataSize;
   }

@@ -3504,24 +3504,6 @@ void gbCleanUp() {
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 }
 
-bool gbLoadRom(const char *szFile) {
-	int size = 0;
-
-	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
-
-	gbRomSize = size;
-
-	gbBatteryError = false;
-
-	if (bios != NULL) {
-		free(bios);
-		bios = NULL;
-	}
-	bios = (u8*) calloc(1, 0x100);
-
-	return gbUpdateSizes();
-}
-
 bool gbUpdateSizes() {
 	if (gbRom[0x148] > 8) {
 		systemMessage(MSG_UNSUPPORTED_ROM_SIZE, N_("Unsupported rom size %02x"), gbRom[0x148]);
@@ -3529,12 +3511,6 @@ bool gbUpdateSizes() {
 	}
 
 	if (gbRomSize < gbRomSizes[gbRom[0x148]]) {
-		u8 *gbRomNew = (u8*) realloc(gbRom, gbRomSizes[gbRom[0x148]]);
-		if (!gbRomNew) {
-			assert(false);
-			return false;
-		};
-		gbRom = gbRomNew;
 		for (int i = gbRomSize; i < gbRomSizes[gbRom[0x148]]; i++)
 			gbRom[i] = 0x00; // Not sure if it's 0x00, 0xff or random data...
 	}
@@ -3549,12 +3525,6 @@ bool gbUpdateSizes() {
 			}
 			gbRom[0x148]++;
 		}
-		u8 *gbRomNew = (u8*) realloc(gbRom, gbRomSizes[gbRom[0x148]]);
-		if (!gbRomNew) {
-			assert(false);
-			return false;
-		};
-		gbRom = gbRomNew;
 	}
 	gbRomSize = gbRomSizes[gbRom[0x148]];
 	gbRomSizeMask = gbRomSizesMasks[gbRom[0x148]];
