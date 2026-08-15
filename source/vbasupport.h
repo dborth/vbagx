@@ -32,6 +32,8 @@ float systemGetCoreFPS();
 void systemResetPacer();
 bool LoadVBAROM();
 void RomCleanup();
+void InitGBGame();
+void InitGameDimensionsAndBorder();
 void InitialisePalette();
 bool IsGameboyGame();
 bool IsGBAGame();

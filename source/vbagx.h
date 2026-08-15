@@ -113,14 +113,6 @@ enum {
 };
 
 enum {
-	RENDER_FILTERED = 1,
-	RENDER_UNFILTERED,
-	RENDER_FILTERED_SOFT,
-	RENDER_FILTERED_SHARP,
-	RENDER_LENGTH
-};
-
-enum {
 	VIDEOMODE_AUTO = 0,
 	VIDEOMODE_NTSC,
 	VIDEOMODE_PROGRESSIVE,
@@ -143,6 +135,14 @@ enum {
 	SCALING_STRETCH_TO_FIT,
 	SCALING_WIDESCREEN_CORRECTION,
 	SCALING_LENGTH
+};
+
+enum {
+	VIDEO_HW_SOFTEN_OFF = 0,
+	VIDEO_HW_SOFTEN_AUTO,
+	VIDEO_HW_SOFTEN_SHARP,
+	VIDEO_HW_SOFTEN_SOFT,
+	VIDEO_HW_SOFTEN_LENGTH
 };
 
 enum {
@@ -189,23 +189,27 @@ enum {
 
 struct SGCSettings
 {
+	int		AutoLoad;
+	int		AutoSave;
+	int		LoadMethod;    // For ROMS: Auto, SD, DVD, USB, Network (SMB)
+	int		SaveMethod;    // For SRAM, Freeze, Prefs: Auto, SD, USB, SMB
+	bool	AppendAuto;
+
+	int		videoMode;
+	int		videoAspectRatioCorrection;
+	bool	videoBilinearFilter;
+	int		videoHardwareSoften;
+	bool	videoScanlines;
+	int		videoUpscalingFilter;
+	int		videoXshift;
+	int		videoYshift;
 	float	gbaZoomHor;    // GBA horizontal zoom amount
 	float	gbaZoomVert;   // GBA vertical zoom amount
 	float	gbZoomHor;     // GB horizontal zoom amount
 	float	gbZoomVert;    // GB vertical zoom amount
 	int		gbFixed;
 	int		gbaFixed;
-	int		AutoLoad;
-	int		AutoSave;
-	int		LoadMethod;    // For ROMS: Auto, SD, DVD, USB, Network (SMB)
-	int		SaveMethod;    // For SRAM, Freeze, Prefs: Auto, SD, USB, SMB
-	bool	AppendAuto;
-	int		videomode;     // 0 - automatic, 1 - NTSC (480i), 2 - Progressive (480p), 3 - PAL (50Hz), 4 - PAL (60Hz)
-	int		scaling;       // 0 - default, 1 - partial stretch, 2 - stretch to fit, 3 - widescreen correction
-	int		render;		   // 1 - filtered, 2 - unfiltered
-	int		FilterMethod; // convert to RenderFilter
-	int		xshift;		   // video output shift
-	int		yshift;
+
 	bool	colorize;      // colorize Mono Gameboy games
 	bool	DynamicRecompilation;
 	int		DisplayFrameRate;

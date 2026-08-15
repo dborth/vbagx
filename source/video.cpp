@@ -255,7 +255,7 @@ static void SetupScanlineFilterTEV() {
  ****************************************************************************/
 static inline void configure_tev_pipeline()
 {
-	if(GCSettings.FilterMethod == FILTER_SCANLINES) {
+	if(GCSettings.videoUpscalingFilter == FILTER_SCANLINES) {
 		SetupScanlineFilterTEV();
 	}
 	else {
@@ -317,7 +317,7 @@ static inline void draw_square(Mtx v)
 	GX_LoadPosMtxImm(mv, GX_PNMTX0);
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
 
-	if(GCSettings.FilterMethod == FILTER_SCANLINES) {
+	if(GCSettings.videoUpscalingFilter == FILTER_SCANLINES) {
 		// Calculate physical dimensions of the rendering quad in EFB pixels
 		// We use the static 'square' array which holds the final scaled/zoomed screen footprint
 		// square[3] and square[0] are the Right and Left X bounds
@@ -359,7 +359,7 @@ static inline void draw_square(Mtx v)
 	}
 	GX_End();
 
-	if(GCSettings.FilterMethod == FILTER_SCANLINES) {
+	if(GCSettings.videoUpscalingFilter == FILTER_SCANLINES) {
 		// force identity matrix to ensure texture mapping is pristine and devoid of stray scaling
 		Mtx texMtx;
 		guMtxIdentity(texMtx);
@@ -523,7 +523,7 @@ static GXRModeObj * FindVideoMode()
 	GXRModeObj * mode;
 	
 	// choose the desired video mode
-	switch(GCSettings.videomode)
+	switch(GCSettings.videoMode)
 	{
 		case VIDEOMODE_NTSC: // NTSC (480i)
 			mode = &TVNtsc480IntDf;
@@ -692,9 +692,9 @@ static inline void UpdateScaling()
 	float GameboyAspectRatio;
 	float MaxStretchRatio = 1.6f;
 
-	if (GCSettings.scaling == SCALING_PARTIAL_STRETCH)
+	if (GCSettings.videoAspectRatioCorrection == SCALING_PARTIAL_STRETCH)
 		MaxStretchRatio = 1.3f;
-	else if (GCSettings.scaling == SCALING_STRETCH_TO_FIT)
+	else if (GCSettings.videoAspectRatioCorrection == SCALING_STRETCH_TO_FIT)
 		MaxStretchRatio = 1.6f;
 	else
 		MaxStretchRatio = 1.0f;
@@ -705,7 +705,7 @@ static inline void UpdateScaling()
 	else
 		TvAspectRatio = 4.0f/3.0f;
 	#else
-	if (GCSettings.scaling == SCALING_WIDESCREEN_CORRECTION)
+	if (GCSettings.videoAspectRatioCorrection == SCALING_WIDESCREEN_CORRECTION)
 		TvAspectRatio = 16.0f/9.0f;
 	else
 		TvAspectRatio = 4.0f/3.0f;
@@ -755,10 +755,10 @@ static inline void UpdateScaling()
 	}
 
 	// Set new aspect
-	square[0] = square[9]  = -xscale + GCSettings.xshift;
-	square[3] = square[6]  =  xscale + GCSettings.xshift;
-	square[1] = square[4]  =  yscale - GCSettings.yshift;
-	square[7] = square[10] = -yscale - GCSettings.yshift;
+	square[0] = square[9]  = -xscale + GCSettings.videoXshift;
+	square[3] = square[6]  =  xscale + GCSettings.videoXshift;
+	square[1] = square[4]  =  yscale - GCSettings.videoYshift;
+	square[7] = square[10] = -yscale - GCSettings.videoYshift;
 	DCFlushRange (square, 32); // update memory BEFORE the GPU accesses it!
 
 	draw_init ();
@@ -778,7 +778,7 @@ static inline void UpdateScaling()
 		float vh = vheight * ratio;
 		
 		// 240p adjustment
-		if (GCSettings.videomode == VIDEOMODE_240P || GCSettings.videomode == VIDEOMODE_EURGB_240P) vw *= 2;
+		if (GCSettings.videoMode == VIDEOMODE_240P || GCSettings.videoMode == VIDEOMODE_EURGB_240P) vw *= 2;
 		
 		float vx = (vmode->fbWidth - vw) / 2;
 		float vy = (vmode->efbHeight - vh) / 2;
@@ -812,8 +812,8 @@ static inline void UpdateScaling()
 
 	// Calculate the EFB center coordinates, accounting for user X/Y shifting.
 	// Base center X is +xshift, Y is -yshift mapped against 640x480
-	float efbCenterX = vpX + vpW * ((320.0f + GCSettings.xshift) / 640.0f);
-	float efbCenterY = vpY + vpH * ((240.0f + GCSettings.yshift) / 480.0f);
+	float efbCenterX = vpX + vpW * ((320.0f + GCSettings.videoXshift) / 640.0f);
+	float efbCenterY = vpY + vpH * ((240.0f + GCSettings.videoYshift) / 480.0f);
 
 	// 3. Map EFB pixels to Physical TV (VI) pixels
 	// The copy stretches the full EFB to the physical VI dimensions
@@ -870,10 +870,13 @@ ResetVideo_Emu ()
 	u8 sharp[7] = {0,0,21,22,21,0,0};
 	u8 soft[7] = {8,8,10,12,10,8,8};
 	u8* vfilter =
-		GCSettings.render == RENDER_FILTERED_SHARP ? sharp
-		: GCSettings.render == RENDER_FILTERED_SOFT ? soft
-		: rmode->vfilter;
-	GX_SetCopyFilter (rmode->aa, rmode->sample_pattern, (GCSettings.render != RENDER_UNFILTERED) ? GX_TRUE : GX_FALSE, vfilter);	// deflickering filter only for filtered mode
+			GCSettings.videoHardwareSoften == VIDEO_HW_SOFTEN_SHARP ? sharp
+			: GCSettings.videoHardwareSoften == VIDEO_HW_SOFTEN_SOFT ? soft
+			: rmode->vfilter;
+
+	// Enable the copy filter if not in SF mode, OR if the user explicitly selected a filter
+	u8 vf_enable = (rmode->xfbMode != VI_XFBMODE_SF || GCSettings.videoHardwareSoften != VIDEO_HW_SOFTEN_OFF) ? GX_TRUE : GX_FALSE;
+	GX_SetCopyFilter(rmode->aa, rmode->sample_pattern, vf_enable, vfilter);
 
 	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 	
@@ -1249,12 +1252,14 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 
 		GX_InitTexObj(&texobj, texturemem, vwidth * fscale, vheight * fscale, GX_TF_RGB5A3, GX_CLAMP, GX_CLAMP, GX_FALSE);
 
-		if (GCSettings.render == RENDER_UNFILTERED)
-			GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR); // original/unfiltered video mode: force texture filtering OFF
+		if (!GCSettings.videoBilinearFilter)
+			GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR);
+		else
+			GX_InitTexObjFilterMode(&texobj,GX_LINEAR,GX_LINEAR);
 
 		GX_LoadTexObj(&texobj, GX_TEXMAP0);
 
-		if(GCSettings.FilterMethod == FILTER_SCANLINES)
+		if(GCSettings.videoUpscalingFilter == FILTER_SCANLINES)
 			InitScanlineTexture();
 
 		if(GCSettings.DisplayFrameRate)

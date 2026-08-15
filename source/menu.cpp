@@ -41,6 +41,7 @@
 #include "gui/gui.h"
 #include "utils/gettext.h"
 #include "utils/FreeTypeGX.h"
+#include "vba/gb/GB.h"
 
 #define THREAD_SLEEP 100
 
@@ -2111,6 +2112,7 @@ static int MenuGameSettings()
 	GuiImageData btnLargeOutlineOver(button_large_over_png);
 	GuiImageData iconMappings(icon_settings_mappings_png);
 	GuiImageData iconVideo(icon_settings_video_png);
+	GuiImageData iconEmulation(icon_settings_emulation_png);
 #ifdef HW_RVL
 	GuiImageData iconWiiControls(icon_settings_nunchuk_png);
 #else
@@ -2131,7 +2133,7 @@ static int MenuGameSettings()
 	GuiImage mappingBtnIcon(&iconMappings);
 	GuiButton mappingBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	mappingBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	mappingBtn.SetPosition(-125, 120);
+	mappingBtn.SetPosition(-200, 120);
 	mappingBtn.SetLabel(&mappingBtnTxt);
 	mappingBtn.SetImage(&mappingBtnImg);
 	mappingBtn.SetImageOver(&mappingBtnImgOver);
@@ -2142,6 +2144,24 @@ static int MenuGameSettings()
 	mappingBtn.SetTrigger(trig2);
 	mappingBtn.SetEffectGrow();
 
+	GuiText emulationBtnTxt("Emulation", 22, (GXColor){0, 0, 0, 255});
+	emulationBtnTxt.SetWrap(true, btnLargeOutline.GetWidth()-20);
+	GuiImage emulationBtnImg(&btnLargeOutline);
+	GuiImage emulationBtnImgOver(&btnLargeOutlineOver);
+	GuiImage emulationBtnIcon(&iconEmulation);
+	GuiButton emulationBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
+	emulationBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
+	emulationBtn.SetPosition(0, 120);
+	emulationBtn.SetLabel(&emulationBtnTxt);
+	emulationBtn.SetImage(&emulationBtnImg);
+	emulationBtn.SetImageOver(&emulationBtnImgOver);
+	emulationBtn.SetIcon(&emulationBtnIcon);
+	emulationBtn.SetSoundOver(&btnSoundOver);
+	emulationBtn.SetSoundClick(&btnSoundClick);
+	emulationBtn.SetTrigger(trigA);
+	emulationBtn.SetTrigger(trig2);
+	emulationBtn.SetEffectGrow();
+
 	GuiText videoBtnTxt("Video", 22, (GXColor){0, 0, 0, 255});
 	videoBtnTxt.SetWrap(true, btnLargeOutline.GetWidth()-30);
 	GuiImage videoBtnImg(&btnLargeOutline);
@@ -2149,7 +2169,7 @@ static int MenuGameSettings()
 	GuiImage videoBtnIcon(&iconVideo);
 	GuiButton videoBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	videoBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	videoBtn.SetPosition(125, 120);
+	videoBtn.SetPosition(200, 120);
 	videoBtn.SetLabel(&videoBtnTxt);
 	videoBtn.SetImage(&videoBtnImg);
 	videoBtn.SetImageOver(&videoBtnImgOver);
@@ -2258,6 +2278,7 @@ static int MenuGameSettings()
 	w.Append(&titleTxt);
 	w.Append(&mappingBtn);
 	w.Append(&videoBtn);
+	w.Append(&emulationBtn);
 	w.Append(&wiiControlsBtn);
 	w.Append(&screenshotBtn);
 	w.Append(&cheatsBtn);
@@ -2279,6 +2300,10 @@ static int MenuGameSettings()
 		else if(videoBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_GAMESETTINGS_VIDEO;
+		}
+		else if(emulationBtn.GetState() == STATE_CLICKED)
+		{
+			menu = MENU_GAMESETTINGS_EMULATION;
 		}
 		else if(wiiControlsBtn.GetState() == STATE_CLICKED)
 		{
@@ -3119,16 +3144,16 @@ static void ScreenPositionWindowUpdate(void * ptr, int x, int y)
 	GuiButton * b = (GuiButton *)ptr;
 	if(b->GetState() == STATE_CLICKED)
 	{
-		GCSettings.xshift += x;
-		GCSettings.yshift += y;
+		GCSettings.videoXshift += x;
+		GCSettings.videoYshift += y;
 
-		if(!(GCSettings.xshift > -50 && GCSettings.xshift < 50))
-			GCSettings.xshift = 0;
-		if(!(GCSettings.yshift > -50 && GCSettings.yshift < 50))
-			GCSettings.yshift = 0;
+		if(!(GCSettings.videoXshift > -50 && GCSettings.videoXshift < 50))
+			GCSettings.videoXshift = 0;
+		if(!(GCSettings.videoYshift > -50 && GCSettings.videoYshift < 50))
+			GCSettings.videoYshift = 0;
 
 		char shift[10];
-		sprintf(shift, "%hd, %hd", GCSettings.xshift, GCSettings.yshift);
+		sprintf(shift, "%hd, %hd", GCSettings.videoXshift, GCSettings.videoYshift);
 		settingText->SetText(shift);
 		b->ResetState();
 	}
@@ -3219,11 +3244,11 @@ static void ScreenPositionWindow()
 
 	settingText = new GuiText(NULL, 20, (GXColor){0, 0, 0, 255});
 	char shift[10];
-	sprintf(shift, "%i, %i", GCSettings.xshift, GCSettings.yshift);
+	sprintf(shift, "%i, %i", GCSettings.videoXshift, GCSettings.videoYshift);
 	settingText->SetText(shift);
 
-	int currentX = GCSettings.xshift;
-	int currentY = GCSettings.yshift;
+	int currentX = GCSettings.videoXshift;
+	int currentY = GCSettings.videoYshift;
 
 	w->Append(&arrowLeftBtn);
 	w->Append(&arrowRightBtn);
@@ -3235,8 +3260,8 @@ static void ScreenPositionWindow()
 	if(!SettingWindow("Screen Position",w))
 	{
 		// undo changes
-		GCSettings.xshift = currentX;
-		GCSettings.yshift = currentY;
+		GCSettings.videoXshift = currentX;
+		GCSettings.videoYshift = currentY;
 	}
 
 	delete(w);
@@ -3251,9 +3276,13 @@ static int MenuSettingsVideo()
 	bool firstRun = true;
 	OptionList options;
 
-	sprintf(options.name[i++], "Rendering");
-	sprintf(options.name[i++], "Scaling");
-	sprintf(options.name[i++], "Filtering");
+	sprintf(options.name[i++], "Output Mode");
+	sprintf(options.name[i++], "Aspect Ratio Correction");
+	sprintf(options.name[i++], "Bilinear Filtering");
+	sprintf(options.name[i++], "Hardware Softening");
+	sprintf(options.name[i++], "Upscaling");
+	sprintf(options.name[i++], "Scanline Overlay");
+
 	if(IsGBAGame()) {
 		sprintf(options.name[i++], "GBA Screen Zoom");
 		sprintf(options.name[i++], "GBA Fixed Pixel Ratio");
@@ -3262,24 +3291,11 @@ static int MenuSettingsVideo()
 		sprintf(options.name[i++], "GB Fixed Pixel Ratio");
 	}
 	sprintf(options.name[i++], "Screen Position");
-	sprintf(options.name[i++], "Video Mode");
-	sprintf(options.name[i++], "GB Mono Colorization");
-	sprintf(options.name[i++], "GB Palette");
-	sprintf(options.name[i++], "Show Framerate");
-	sprintf(options.name[i++], "GBA Frameskip");
-	sprintf(options.name[i++], "Enable Turbo Mode");
+
 	options.length = i;
 
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
-	
-	if(IsGBAGame()) {
-		options.name[7][0] = 0; // disable GB Mono Colorization
-		options.name[8][0] = 0; // disable GB Palette
-	}
-	else {
-		options.name[10][0] = 0; // disable GBA Frameskip
-	}
 
 	GuiText titleTxt("Game Settings - Video", 26, (GXColor){255, 255, 255, 255});
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
@@ -3327,33 +3343,47 @@ static int MenuSettingsVideo()
 		switch (ret)
 		{
 			case 0:
-				GCSettings.render++;
-				if (GCSettings.render >= RENDER_LENGTH)
-					GCSettings.render = RENDER_FILTERED;
+				GCSettings.videoMode++;
+				if(GCSettings.videoMode >= VIDEOMODE_LENGTH)
+					GCSettings.videoMode = VIDEOMODE_AUTO;
 				break;
 
 			case 1:
-				GCSettings.scaling++;
-				if (GCSettings.scaling >= SCALING_LENGTH)
-					GCSettings.scaling = SCALING_MAINTAIN_ASPECT;
+				GCSettings.videoAspectRatioCorrection++;
+				if (GCSettings.videoAspectRatioCorrection >= SCALING_LENGTH)
+					GCSettings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
 				// disable Widescreen correction in Wii mode - determined automatically
 				#ifdef HW_RVL
-				if(GCSettings.scaling == SCALING_WIDESCREEN_CORRECTION)
-					GCSettings.scaling = SCALING_MAINTAIN_ASPECT;
+				if(GCSettings.videoAspectRatioCorrection == SCALING_WIDESCREEN_CORRECTION)
+					GCSettings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
 				#endif
 				break;
 
 			case 2:
-				GCSettings.FilterMethod++;
-				if (GCSettings.FilterMethod >= NUM_FILTERS)
-					GCSettings.FilterMethod = FILTER_NONE;
+				GCSettings.videoBilinearFilter = !GCSettings.videoBilinearFilter;
 				break;
 
 			case 3:
-				ScreenZoomWindow();
+				GCSettings.videoHardwareSoften++;
+				if(GCSettings.videoHardwareSoften >= VIDEO_HW_SOFTEN_LENGTH)
+					GCSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_OFF;
 				break;
 
 			case 4:
+				GCSettings.videoUpscalingFilter++;
+				if (GCSettings.videoUpscalingFilter >= NUM_FILTERS)
+					GCSettings.videoUpscalingFilter = FILTER_NONE;
+				break;
+
+			case 5:
+				GCSettings.videoScanlines = !GCSettings.videoScanlines;
+				break;
+
+			case 6:
+				ScreenZoomWindow();
+				break;
+
+			case 7:
 				if(IsGBAGame()) {
 					GCSettings.gbaFixed++;
 					if(GCSettings.gbaFixed > 3)
@@ -3365,33 +3395,8 @@ static int MenuSettingsVideo()
 				}
 				break;
 
-			case 5:
-				ScreenPositionWindow();
-				break;
-
-			case 6:
-				GCSettings.videomode++;
-				if(GCSettings.videomode >= VIDEOMODE_LENGTH)
-					GCSettings.videomode = VIDEOMODE_AUTO;
-				break;
-
-			case 7:
-				GCSettings.colorize = !GCSettings.colorize;
-				break;
-
 			case 8:
-				menu = MENU_GAMESETTINGS_PALETTE;
-				break;
-			case 9:
-				GCSettings.DisplayFrameRate++;
-				if(GCSettings.DisplayFrameRate >= FRAMERATE_LENGTH)
-					GCSettings.DisplayFrameRate = FRAMERATE_OFF;
-				break;
-			case 10:
-				GCSettings.gbaFrameskip = !GCSettings.gbaFrameskip;
-				break;
-			case 11:
-				GCSettings.TurboModeEnabled = !GCSettings.TurboModeEnabled;
+				ScreenPositionWindow();
 				break;
 		}
 
@@ -3399,86 +3404,69 @@ static int MenuSettingsVideo()
 		{
 			firstRun = false;
 
-			if (GCSettings.render == RENDER_FILTERED)
-				sprintf (options.value[0], "Filtered (Auto)");
-			else if (GCSettings.render == RENDER_UNFILTERED)
-				sprintf (options.value[0], "Unfiltered");
-			else if (GCSettings.render == RENDER_FILTERED_SHARP)
-				sprintf (options.value[0], "Filtered (Sharp)");
-			else if (GCSettings.render == RENDER_FILTERED_SOFT)
-				sprintf (options.value[0], "Filtered (Soft)");
+			switch(GCSettings.videoMode)
+			{
+				case VIDEOMODE_AUTO:
+					sprintf (options.value[0], "Automatic (Recommended)"); break;
+				case VIDEOMODE_NTSC:
+					sprintf (options.value[0], "NTSC (480i)"); break;
+				case VIDEOMODE_PROGRESSIVE:
+					sprintf (options.value[0], "NTSC (480p)"); break;
+				case VIDEOMODE_PAL:
+					sprintf (options.value[0], "PAL (576i)"); break;
+				case VIDEOMODE_EURGB:
+					sprintf (options.value[0], "European RGB (240i)"); break;
+				case VIDEOMODE_240P:
+					sprintf (options.value[0], "NTSC (240p)"); break;
+				case VIDEOMODE_EURGB_240P:
+					sprintf (options.value[0], "European RGB (240p)"); break;
+			}
 
-			if (GCSettings.scaling == SCALING_MAINTAIN_ASPECT)
+			if (GCSettings.videoAspectRatioCorrection == SCALING_MAINTAIN_ASPECT)
 				sprintf (options.value[1], "Maintain Aspect Ratio");
-			else if (GCSettings.scaling == SCALING_PARTIAL_STRETCH)
+			else if (GCSettings.videoAspectRatioCorrection == SCALING_PARTIAL_STRETCH)
 				sprintf (options.value[1], "Partial Stretch");
-			else if (GCSettings.scaling == SCALING_STRETCH_TO_FIT)
+			else if (GCSettings.videoAspectRatioCorrection == SCALING_STRETCH_TO_FIT)
 				sprintf (options.value[1], "Stretch to Fit");
-			else if (GCSettings.scaling == SCALING_WIDESCREEN_CORRECTION)
+			else if (GCSettings.videoAspectRatioCorrection == SCALING_WIDESCREEN_CORRECTION)
 				sprintf (options.value[1], "16:9 Correction");
 
-			sprintf (options.value[2], "%s", GetFilterName(GCSettings.FilterMethod));
+			sprintf (options.value[2], "%s", GCSettings.videoBilinearFilter ? "On" : "Off");
+
+			switch(GCSettings.videoHardwareSoften)
+			{
+				case VIDEO_HW_SOFTEN_OFF:
+					sprintf (options.value[3], "Off"); break;
+				case VIDEO_HW_SOFTEN_AUTO:
+					sprintf (options.value[3], "Auto"); break;
+				case VIDEO_HW_SOFTEN_SHARP:
+					sprintf (options.value[3], "Sharp"); break;
+				case VIDEO_HW_SOFTEN_SOFT:
+					sprintf (options.value[3], "Soft"); break;
+			}
+
+			sprintf (options.value[4], "%s", GetFilterName(GCSettings.videoUpscalingFilter));
+			sprintf (options.value[5], "%s", GCSettings.videoScanlines ? "On" : "Off");
 
 			int fixed;
 			if(IsGBAGame()) {
-				sprintf (options.value[3], "%.2f%%, %.2f%%", GCSettings.gbaZoomHor*100, GCSettings.gbaZoomVert*100);
+				sprintf (options.value[6], "%.2f%%, %.2f%%", GCSettings.gbaZoomHor*100, GCSettings.gbaZoomVert*100);
 				fixed = GCSettings.gbaFixed;
 			} else {
-				sprintf (options.value[3], "%.2f%%, %.2f%%", GCSettings.gbZoomHor*100, GCSettings.gbZoomVert*100);
+				sprintf (options.value[6], "%.2f%%, %.2f%%", GCSettings.gbZoomHor*100, GCSettings.gbZoomVert*100);
 				fixed = GCSettings.gbFixed;
 			}
 
 			if (fixed) {
 				int w = fixed / 10;
 				int ratio = fixed % 10;
-				const char* widescreen = w
-					? "(16:9 Correction)"
-					: "";
-				
-				sprintf (options.value[4], "%dx %s", ratio, widescreen);
+				const char* widescreen = w ? "(16:9 Correction)" : "";
+				sprintf (options.value[7], "%dx %s", ratio, widescreen);
 			} else {
-				sprintf (options.value[4], "Disabled");
+				sprintf (options.value[7], "Disabled");
 			}
 
-			sprintf (options.value[5], "%d, %d", GCSettings.xshift, GCSettings.yshift);
-
-			switch(GCSettings.videomode)
-			{
-				case VIDEOMODE_AUTO:
-					sprintf (options.value[6], "Automatic (Recommended)"); break;
-				case VIDEOMODE_NTSC:
-					sprintf (options.value[6], "NTSC (480i)"); break;
-				case VIDEOMODE_PROGRESSIVE:
-					sprintf (options.value[6], "NTSC (480p)"); break;
-				case VIDEOMODE_PAL:
-					sprintf (options.value[6], "PAL (576i)"); break;
-				case VIDEOMODE_EURGB:
-					sprintf (options.value[6], "European RGB (240i)"); break;
-				case VIDEOMODE_240P:
-					sprintf (options.value[6], "NTSC (240p)"); break;
-				case VIDEOMODE_EURGB_240P:
-					sprintf (options.value[6], "European RGB (240p)"); break;
-			}
-
-			if (GCSettings.colorize)
-				sprintf (options.value[7], "On");
-			else
-				sprintf (options.value[7], "Off");
-
-			if(strcmp(CurrentPalette.gameName, "default"))
-				sprintf(options.value[8], "Custom");
-			else
-				sprintf(options.value[8], "Default");
-
-			if (GCSettings.DisplayFrameRate == FRAMERATE_OFF)
-				sprintf (options.value[9], "Off");
-			else if (GCSettings.DisplayFrameRate == FRAMERATE_ACTUAL)
-				sprintf (options.value[9], "Actual");
-			else if (GCSettings.DisplayFrameRate == FRAMERATE_CORE)
-				sprintf (options.value[9], "Core (Unbound)");
-
-			sprintf (options.value[10], "%s", GCSettings.gbaFrameskip ? "On" : "Off");
-			sprintf (options.value[11], "%s", GCSettings.TurboModeEnabled ? "On" : "Off");
+			sprintf (options.value[8], "%d, %d", GCSettings.videoXshift, GCSettings.videoYshift);
 
 			optionBrowser.TriggerUpdate();
 		}
@@ -3499,19 +3487,41 @@ static int MenuSettingsEmulation()
 {
 	int menu = MENU_NONE;
 	int ret;
-	int i = 0;
 	bool firstRun = true;
 	OptionList options;
 
-	sprintf(options.name[i++], "GBA Dynamic Recompilation");
-	sprintf(options.name[i++], "Offset from UTC (hours)");
-	sprintf(options.name[i++], "Hardware (GB/GBC)");
-	sprintf(options.name[i++], "Super Game Boy border");
-	sprintf(options.name[i++], "GB Screen Palette");
+	enum SettingID {
+		SET_NONE = -1, SET_DYNAREC, SET_FRAMESKIP, SET_HW, SET_SGB_BORDER,
+		SET_CUSTOM_PAL, SET_MONO_PAL, SET_MONO_COLOR, SET_TURBO, SET_FPS, SET_UTC
+	};
+
+	SettingID optionMap[32];
+	int i = 0;
+
+	if (IsGBAGame()) {
+		optionMap[i] = SET_DYNAREC;   sprintf(options.name[i++], "Dynamic Recompilation");
+		optionMap[i] = SET_FRAMESKIP; sprintf(options.name[i++], "Frameskip");
+	} else {
+		optionMap[i] = SET_HW;        sprintf(options.name[i++], "Hardware");
+	}
+
+	optionMap[i] = SET_SGB_BORDER; sprintf(options.name[i++], "Super Game Boy border");
+
+	if (gbHardware == 1) { // GB
+		optionMap[i] = SET_CUSTOM_PAL; sprintf(options.name[i++], "Custom Palette");
+		optionMap[i] = SET_MONO_PAL;   sprintf(options.name[i++], "Mono Screen Palette");
+		optionMap[i] = SET_MONO_COLOR; sprintf(options.name[i++], "Mono Colorization");
+	}
+
+	optionMap[i] = SET_TURBO; sprintf(options.name[i++], "Enable Turbo Mode");
+	optionMap[i] = SET_FPS;   sprintf(options.name[i++], "Show Framerate");
+	optionMap[i] = SET_UTC;   sprintf(options.name[i++], "Offset from UTC (hours)");
+
 	options.length = i;
 
-	for(i=0; i < options.length; i++)
-		options.value[i][0] = 0;
+	for(int j = 0; j < options.length; j++) {
+		options.value[j][0] = '\0';
+	}
 	
 	GuiText titleTxt("Game Settings - Emulation", 26, (GXColor){255, 255, 255, 255});
 	titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
@@ -3550,83 +3560,80 @@ static int MenuSettingsEmulation()
 	mainWindow->Append(&titleTxt);
 	ResumeGui();
 
+	const char* hwNames[]     = {"Auto", "Game Boy Color", "Super Game Boy", "Game Boy", "Game Boy Advance", "Super Game Boy 2"};
+	const char* borderNames[] = {"Off", "From game (SGB only)", "From .png file"};
+	const char* fpsNames[]    = {"Off", "Actual", "Core (Unbound)"};
+
+	int initialGBHardware = GCSettings.GBHardware;
+	int initialBasicPalette = GCSettings.BasicPalette;
+
 	while(menu == MENU_NONE)
 	{
 		usleep(THREAD_SLEEP);
-
 		ret = optionBrowser.GetClickedOption();
 
-		switch (ret)
-		{
-			case 0:
-				GCSettings.DynamicRecompilation ^= 1;
-				break;
-			case 1:
-				GCSettings.OffsetMinutesUTC += 15;
-				if (GCSettings.OffsetMinutesUTC > 60*14) {
-					GCSettings.OffsetMinutesUTC = -60*12;
-				}
-				break;
-			case 2:
-				GCSettings.GBHardware++;
-				if (GCSettings.GBHardware >= GBHARDWARE_LENGTH)
-					GCSettings.GBHardware = GBHARDWARE_AUTO;
-				break;
-			
-			case 3:
-				GCSettings.SGBBorder++;
-				if (GCSettings.SGBBorder >= SGBBORDER_LENGTH)
-					GCSettings.SGBBorder = SGBBORDER_OFF;
-				break;
-			
-			case 4:
-				GCSettings.BasicPalette ^= 1;
-				break;
+		if (ret >= 0 && ret < options.length) {
+			switch (optionMap[ret]) {
+				case SET_DYNAREC:    GCSettings.DynamicRecompilation ^= 1; break;
+				case SET_FRAMESKIP:  GCSettings.gbaFrameskip = !GCSettings.gbaFrameskip; break;
+				case SET_HW:
+					if (++GCSettings.GBHardware >= GBHARDWARE_LENGTH) GCSettings.GBHardware = GBHARDWARE_AUTO;
+					break;
+				case SET_SGB_BORDER:
+					if (++GCSettings.SGBBorder >= SGBBORDER_LENGTH) GCSettings.SGBBorder = SGBBORDER_OFF;
+					break;
+				case SET_CUSTOM_PAL: menu = MENU_GAMESETTINGS_PALETTE; break;
+				case SET_MONO_PAL:   GCSettings.BasicPalette ^= 1; break;
+				case SET_MONO_COLOR: GCSettings.colorize = !GCSettings.colorize; break;
+				case SET_TURBO:      GCSettings.TurboModeEnabled = !GCSettings.TurboModeEnabled; break;
+				case SET_FPS:
+					if (++GCSettings.DisplayFrameRate >= FRAMERATE_LENGTH) GCSettings.DisplayFrameRate = FRAMERATE_OFF;
+					break;
+				case SET_UTC:
+					GCSettings.OffsetMinutesUTC += 15;
+					if (GCSettings.OffsetMinutesUTC > 60*14) GCSettings.OffsetMinutesUTC = -60*12;
+					break;
+				default: break;
+			}
 		}
 
 		if(ret >= 0 || firstRun)
 		{
 			firstRun = false;
 
-			sprintf (options.value[0], "%s", GCSettings.DynamicRecompilation ? "On" : "Off");
-			sprintf (options.value[1], "%+.2f", GCSettings.OffsetMinutesUTC / 60.0);
+			for (int j = 0; j < options.length; j++) {
+				char* val = options.value[j];
 
-			if (GCSettings.GBHardware == GBHARDWARE_AUTO)
-				sprintf (options.value[2], "Auto");
-			else if (GCSettings.GBHardware == GBHARDWARE_GBC)
-				sprintf (options.value[2], "Game Boy Color");
-			else if (GCSettings.GBHardware == GBHARDWARE_SGB)
-				sprintf (options.value[2], "Super Game Boy");
-			else if (GCSettings.GBHardware == GBHARDWARE_GB)
-				sprintf (options.value[2], "Game Boy");
-			else if (GCSettings.GBHardware == GBHARDWARE_GBA)
-				sprintf (options.value[2], "Game Boy Advance");
-			else if (GCSettings.GBHardware == GBHARDWARE_SGB2)
-				sprintf (options.value[2], "Super Game Boy 2");
-			
-			if (GCSettings.SGBBorder == SGBBORDER_OFF)
-				sprintf (options.value[3], "Off");
-			else if (GCSettings.SGBBorder == SGBBORDER_FROMGAME)
-				sprintf (options.value[3], "From game (SGB only)");
-			else if (GCSettings.SGBBorder == SGBBORDER_FROMPNG)
-				sprintf (options.value[3], "From .png file");
-
-			if (GCSettings.BasicPalette == BASICPALETTE_GREEN)
-				sprintf (options.value[4], "Green Screen");
-			else
-				sprintf (options.value[4], "Monochrome Screen");
-			
-			
+				switch (optionMap[j]) {
+					case SET_DYNAREC:    sprintf(val, "%s", GCSettings.DynamicRecompilation ? "On" : "Off"); break;
+					case SET_FRAMESKIP:  sprintf(val, "%s", GCSettings.gbaFrameskip ? "On" : "Off"); break;
+					case SET_HW:         sprintf(val, "%s", hwNames[GCSettings.GBHardware]); break;
+					case SET_SGB_BORDER: sprintf(val, "%s", borderNames[GCSettings.SGBBorder]); break;
+					case SET_CUSTOM_PAL: sprintf(val, "%s", strcmp(CurrentPalette.gameName, "default") ? "Custom" : "Default"); break;
+					case SET_MONO_PAL:   sprintf(val, "%s", (GCSettings.BasicPalette == BASICPALETTE_GREEN) ? "Green Screen" : "Monochrome Screen"); break;
+					case SET_MONO_COLOR: sprintf(val, "%s", GCSettings.colorize ? "On" : "Off"); break;
+					case SET_TURBO:      sprintf(val, "%s", GCSettings.TurboModeEnabled ? "On" : "Off"); break;
+					case SET_FPS:        sprintf(val, "%s", fpsNames[GCSettings.DisplayFrameRate]); break;
+					case SET_UTC:        sprintf(val, "%+.2f", GCSettings.OffsetMinutesUTC / 60.0); break;
+					default: break;
+				}
+			}
 			optionBrowser.TriggerUpdate();
 		}
 
 		if(backBtn.GetState() == STATE_CLICKED)
 		{
-			menu = MENU_SETTINGS;
+			menu = MENU_GAMESETTINGS;
 		}
 	}
+
 	HaltGui();
 	InitialisePalette();
+
+	if (GCSettings.GBHardware != initialGBHardware || GCSettings.BasicPalette != initialBasicPalette) {
+		InitGBGame();
+	}
+
 	mainWindow->Remove(&optionBrowser);
 	mainWindow->Remove(&w);
 	mainWindow->Remove(&titleTxt);
@@ -3653,7 +3660,6 @@ static int MenuSettings()
 	GuiImageData iconFile(icon_settings_file_png);
 	GuiImageData iconMenu(icon_settings_menu_png);
 	GuiImageData iconNetwork(icon_settings_network_png);
-	GuiImageData iconEmulation(icon_settings_emulation_png);
 	GuiImageData iconCredits(icon_credits_png);
 
 	GuiText savingBtnTxt1("Saving", 22, (GXColor){0, 0, 0, 255});
@@ -3704,7 +3710,7 @@ static int MenuSettings()
 	GuiImage networkBtnIcon(&iconNetwork);
 	GuiButton networkBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	networkBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	networkBtn.SetPosition(-200, 250);
+	networkBtn.SetPosition(-125, 250);
 	networkBtn.SetLabel(&networkBtnTxt);
 	networkBtn.SetImage(&networkBtnImg);
 	networkBtn.SetImageOver(&networkBtnImgOver);
@@ -3715,23 +3721,6 @@ static int MenuSettings()
 	networkBtn.SetTrigger(trig2);
 	networkBtn.SetEffectGrow();
 
-	GuiText emulationBtnTxt("Emulation", 22, (GXColor){0, 0, 0, 255});
-	GuiImage emulationBtnImg(&btnLargeOutline);
-	GuiImage emulationBtnImgOver(&btnLargeOutlineOver);
-	GuiImage emulationBtnIcon(&iconEmulation);
-	GuiButton emulationBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
-	emulationBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	emulationBtn.SetPosition(0, 250);
-	emulationBtn.SetLabel(&emulationBtnTxt);
-	emulationBtn.SetImage(&emulationBtnImg);
-	emulationBtn.SetImageOver(&emulationBtnImgOver);
-	emulationBtn.SetIcon(&emulationBtnIcon);
-	emulationBtn.SetSoundOver(&btnSoundOver);
-	emulationBtn.SetSoundClick(&btnSoundClick);
-	emulationBtn.SetTrigger(trigA);
-	emulationBtn.SetTrigger(trig2);
-	emulationBtn.SetEffectGrow();
-
 	GuiText creditsBtnTxt("Credits", 22, (GXColor){0, 0, 0, 255});
 	creditsBtnTxt.SetWrap(true, btnLargeOutline.GetWidth()-20);
 	GuiImage creditsBtnImg(&btnLargeOutline);
@@ -3739,7 +3728,7 @@ static int MenuSettings()
 	GuiImage creditsBtnIcon(&iconCredits);
 	GuiButton creditsBtn(btnLargeOutline.GetWidth(), btnLargeOutline.GetHeight());
 	creditsBtn.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
-	creditsBtn.SetPosition(200, 250);
+	creditsBtn.SetPosition(125, 250);
 	creditsBtn.SetLabel(&creditsBtnTxt);
 	creditsBtn.SetImage(&creditsBtnImg);
 	creditsBtn.SetImageOver(&creditsBtnImgOver);
@@ -3787,7 +3776,6 @@ static int MenuSettings()
 	w.Append(&savingBtn);
 	w.Append(&menuBtn);
 	w.Append(&networkBtn);
-	w.Append(&emulationBtn);
 	w.Append(&creditsBtn);
 	w.Append(&backBtn);
 	w.Append(&resetBtn);
@@ -3811,10 +3799,6 @@ static int MenuSettings()
 		else if(networkBtn.GetState() == STATE_CLICKED)
 		{
 			menu = MENU_SETTINGS_NETWORK;
-		}
-		else if(emulationBtn.GetState() == STATE_CLICKED)
-		{
-			menu = MENU_SETTINGS_EMULATION;
 		}
 		else if(creditsBtn.GetState() == STATE_CLICKED)
 		{
@@ -5367,6 +5351,9 @@ MainMenu (int menu)
 			case MENU_GAMESETTINGS_VIDEO:
 				currentMenu = MenuSettingsVideo();
 				break;
+			case MENU_GAMESETTINGS_EMULATION:
+				currentMenu = MenuSettingsEmulation();
+				break;
 			case MENU_GAMESETTINGS_PALETTE:
 				currentMenu = MenuPalette();
 				break;
@@ -5384,9 +5371,6 @@ MainMenu (int menu)
 				break;
 			case MENU_SETTINGS_NETWORK:
 				currentMenu = MenuSettingsNetwork();
-				break;
-			case MENU_SETTINGS_EMULATION:
-				currentMenu = MenuSettingsEmulation();
 				break;
 			default: // unrecognized menu
 				currentMenu = MenuGameSelection();

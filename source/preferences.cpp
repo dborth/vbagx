@@ -193,22 +193,20 @@ preparePrefsData ()
 
 	createXMLSection("Video", "Video Settings");
 
-	createXMLSetting("videomode", "Video Mode", toStr(GCSettings.videomode));
+	createXMLSetting("videoMode", "Output Mode", toStr(GCSettings.videoMode));
+	createXMLSetting("videoAspectRatioCorrection", "Aspect Ratio Correction", toStr(GCSettings.videoAspectRatioCorrection));
+	createXMLSetting("videoBilinearFilter", "Bilinear Filtering", BtoStr(GCSettings.videoBilinearFilter));
+	createXMLSetting("videoHardwareSoften", "Hardware Soften", toStr(GCSettings.videoHardwareSoften));
+	createXMLSetting("videoScanlines", "Scanlines", BtoStr(GCSettings.videoScanlines));
+	createXMLSetting("videoUpscalingFilter", "Upscaling Filter Method", toStr(GCSettings.videoUpscalingFilter));
 	createXMLSetting("gbaZoomHor", "GBA Horizontal Zoom Level", FtoStr(GCSettings.gbaZoomHor));
 	createXMLSetting("gbaZoomVert", "GBA Vertical Zoom Level", FtoStr(GCSettings.gbaZoomVert));
 	createXMLSetting("gbZoomHor", "GB Horizontal Zoom Level", FtoStr(GCSettings.gbZoomHor));
 	createXMLSetting("gbZoomVert", "GB Vertical Zoom Level", FtoStr(GCSettings.gbZoomVert));
 	createXMLSetting("gbFixed", "GB Fixed Pixel Ratio", toStr(GCSettings.gbFixed));
 	createXMLSetting("gbaFixed", "GBA Fixed Pixel Ratio", toStr(GCSettings.gbaFixed));
-	createXMLSetting("render", "Video Filtering", toStr(GCSettings.render));
-	createXMLSetting("FilterMethod", "Filter Method", toStr(GCSettings.FilterMethod));
-	createXMLSetting("scaling", "Aspect Ratio Correction", toStr(GCSettings.scaling));
-	createXMLSetting("xshift", "Horizontal Video Shift", toStr(GCSettings.xshift));
-	createXMLSetting("yshift", "Vertical Video Shift", toStr(GCSettings.yshift));
-	createXMLSetting("colorize", "Colorize Mono Gameboy", BtoStr(GCSettings.colorize));
-	createXMLSetting("DisplayFrameRate", "Show Framerate", toStr(GCSettings.DisplayFrameRate));
-	createXMLSetting("gbaFrameskip", "GBA Frameskip", BtoStr(GCSettings.gbaFrameskip));
-	createXMLSetting("TurboModeEnabled", "Turbo Mode Enabled", BtoStr(GCSettings.TurboModeEnabled));
+	createXMLSetting("videoXshift", "Horizontal Video Shift", toStr(GCSettings.videoXshift));
+	createXMLSetting("videoYshift", "Vertical Video Shift", toStr(GCSettings.videoYshift));
 
 	createXMLSection("Menu", "Menu Settings");
 
@@ -225,11 +223,17 @@ preparePrefsData ()
 	createXMLSection("Emulation", "Emulation Settings");
 
 	createXMLSetting("DynamicRecompilation", "Dynamic Recompilation (JIT)", BtoStr(GCSettings.DynamicRecompilation));
-	createXMLSetting("OffsetMinutesUTC", "Offset from UTC (minutes)", toStr(GCSettings.OffsetMinutesUTC));
+	createXMLSetting("gbaFrameskip", "GBA Frameskip", BtoStr(GCSettings.gbaFrameskip));
+
 	createXMLSetting("GBHardware", "Hardware (GB/GBC)", toStr(GCSettings.GBHardware));
 	createXMLSetting("SGBBorder", "Border (GB/GBC)", toStr(GCSettings.SGBBorder));
 	createXMLSetting("BasicPalette", "Basic Color Palette for GB", toStr(GCSettings.BasicPalette));
-	
+	createXMLSetting("colorize", "Colorize Mono Gameboy", BtoStr(GCSettings.colorize));
+
+	createXMLSetting("DisplayFrameRate", "Show Framerate", toStr(GCSettings.DisplayFrameRate));
+	createXMLSetting("TurboModeEnabled", "Turbo Mode Enabled", BtoStr(GCSettings.TurboModeEnabled));
+	createXMLSetting("OffsetMinutesUTC", "Offset from UTC (minutes)", toStr(GCSettings.OffsetMinutesUTC));
+
 	createXMLSection("Controller", "Controller Settings");
 
 	createXMLController(btnmap[CTRLR_GCPAD], "gcpadmap", "GameCube Pad");
@@ -496,23 +500,20 @@ decodePrefsData ()
 
 	// Video Settings
 
-	loadXMLSetting(&GCSettings.videomode, "videomode");
+	loadXMLSetting(&GCSettings.videoMode, "videoMode");
+	loadXMLSetting(&GCSettings.videoAspectRatioCorrection, "videoAspectRatioCorrection");
+	loadXMLSetting(&GCSettings.videoBilinearFilter, "videoBilinearFilter");
+	loadXMLSetting(&GCSettings.videoHardwareSoften, "videoHardwareSoften");
+	loadXMLSetting(&GCSettings.videoUpscalingFilter, "videoUpscalingFilter");
+	loadXMLSetting(&GCSettings.videoScanlines, "videoScanlines");
 	loadXMLSetting(&GCSettings.gbaZoomHor, "gbaZoomHor");
 	loadXMLSetting(&GCSettings.gbaZoomVert, "gbaZoomVert");
 	loadXMLSetting(&GCSettings.gbZoomHor, "gbZoomHor");
 	loadXMLSetting(&GCSettings.gbZoomVert, "gbZoomVert");
 	loadXMLSetting(&GCSettings.gbaFixed, "gbaFixed");
 	loadXMLSetting(&GCSettings.gbFixed, "gbFixed");
-	loadXMLSetting(&GCSettings.render, "render");
-	loadXMLSetting(&GCSettings.FilterMethod, "FilterMethod");
-	loadXMLSetting(&GCSettings.scaling, "scaling");
-	loadXMLSetting(&GCSettings.xshift, "xshift");
-	loadXMLSetting(&GCSettings.yshift, "yshift");
-	loadXMLSetting(&GCSettings.colorize, "colorize");
-	loadXMLSetting(&GCSettings.DynamicRecompilation, "DynamicRecompilation");
-	loadXMLSetting(&GCSettings.DisplayFrameRate, "DisplayFrameRate");
-	loadXMLSetting(&GCSettings.gbaFrameskip, "gbaFrameskip");
-	loadXMLSetting(&GCSettings.TurboModeEnabled, "TurboModeEnabled");
+	loadXMLSetting(&GCSettings.videoXshift, "videoXshift");
+	loadXMLSetting(&GCSettings.videoYshift, "videoYshift");
 
 	// Menu Settings
 
@@ -538,10 +539,17 @@ decodePrefsData ()
 
 	// Emulation Settings
 
-	loadXMLSetting(&GCSettings.OffsetMinutesUTC, "OffsetMinutesUTC");
+	loadXMLSetting(&GCSettings.DynamicRecompilation, "DynamicRecompilation");
+	loadXMLSetting(&GCSettings.gbaFrameskip, "gbaFrameskip");
+
 	loadXMLSetting(&GCSettings.GBHardware, "GBHardware");
 	loadXMLSetting(&GCSettings.SGBBorder, "SGBBorder");
+	loadXMLSetting(&GCSettings.colorize, "colorize");
 	loadXMLSetting(&GCSettings.BasicPalette, "BasicPalette");
+
+	loadXMLSetting(&GCSettings.DisplayFrameRate, "DisplayFrameRate");
+	loadXMLSetting(&GCSettings.TurboModeEnabled, "TurboModeEnabled");
+	loadXMLSetting(&GCSettings.OffsetMinutesUTC, "OffsetMinutesUTC");
 
 	mxmlDelete(xml);
 	return true;
@@ -614,22 +622,24 @@ void FixInvalidSettings()
 		GCSettings.gbZoomHor = 1.0;
 	if(!(GCSettings.gbZoomVert >= 0.5 && GCSettings.gbZoomVert <= 1.6))
 		GCSettings.gbZoomVert = 1.0;
-	if(!(GCSettings.xshift > -50 && GCSettings.xshift < 50))
-		GCSettings.xshift = 0;
-	if(!(GCSettings.yshift > -50 && GCSettings.yshift < 50))
-		GCSettings.yshift = 0;
+	if(!(GCSettings.videoXshift > -50 && GCSettings.videoXshift < 50))
+		GCSettings.videoXshift = 0;
+	if(!(GCSettings.videoYshift > -50 && GCSettings.videoYshift < 50))
+		GCSettings.videoYshift = 0;
 	if(!(GCSettings.MusicVolume >= 0 && GCSettings.MusicVolume <= 100))
 		GCSettings.MusicVolume = 20;
 	if(!(GCSettings.SFXVolume >= 0 && GCSettings.SFXVolume <= 100))
 		GCSettings.SFXVolume = 40;
 	if(GCSettings.language < LANG_JAPANESE || GCSettings.language >= LANG_LENGTH)
 		GCSettings.language = LANG_ENGLISH;
-	if(!(GCSettings.render >= RENDER_FILTERED && GCSettings.render < RENDER_LENGTH))
-		GCSettings.render = RENDER_FILTERED_SHARP;
-	if(!(GCSettings.FilterMethod >= FILTER_NONE && GCSettings.FilterMethod <= NUM_FILTERS))
-		GCSettings.FilterMethod = FILTER_NONE;
-	if(!(GCSettings.videomode >= VIDEOMODE_AUTO && GCSettings.videomode < VIDEOMODE_LENGTH))
-		GCSettings.videomode = VIDEOMODE_AUTO;
+	if(!(GCSettings.videoHardwareSoften >= VIDEO_HW_SOFTEN_OFF && GCSettings.videoHardwareSoften < VIDEO_HW_SOFTEN_LENGTH))
+		GCSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_AUTO;
+	if(!(GCSettings.videoUpscalingFilter >= FILTER_NONE && GCSettings.videoUpscalingFilter <= NUM_FILTERS))
+		GCSettings.videoUpscalingFilter = FILTER_NONE;
+	if(!(GCSettings.videoAspectRatioCorrection >= SCALING_MAINTAIN_ASPECT && GCSettings.videoAspectRatioCorrection < SCALING_LENGTH))
+		GCSettings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
+	if(!(GCSettings.videoMode >= VIDEOMODE_AUTO && GCSettings.videoMode < VIDEOMODE_LENGTH))
+		GCSettings.videoMode = VIDEOMODE_AUTO;
 	if(!(GCSettings.DisplayFrameRate >= FRAMERATE_OFF && GCSettings.DisplayFrameRate < FRAMERATE_LENGTH))
 		GCSettings.DisplayFrameRate = FRAMERATE_OFF;
 }
@@ -665,14 +675,15 @@ DefaultSettings ()
 	GCSettings.gbZoomVert = 1.0; // GBA vertical zoom level
 	GCSettings.gbFixed = 0; // not fixed - use zoom level
 	GCSettings.gbaFixed = 0; // not fixed - use zoom level
-	GCSettings.videomode = VIDEOMODE_AUTO;
-	GCSettings.render = RENDER_FILTERED_SHARP;
-	GCSettings.FilterMethod = FILTER_NONE;
-	GCSettings.scaling = SCALING_PARTIAL_STRETCH;
+	GCSettings.videoMode = VIDEOMODE_AUTO;
+	GCSettings.videoBilinearFilter = true;
+	GCSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_SHARP;
+	GCSettings.videoUpscalingFilter = FILTER_NONE;
+	GCSettings.videoAspectRatioCorrection = SCALING_PARTIAL_STRETCH;
 	GCSettings.WiiControls = false; // Match Wii Game
 
-	GCSettings.xshift = 0; // horizontal video shift
-	GCSettings.yshift = 0; // vertical video shift
+	GCSettings.videoXshift = 0; // horizontal video shift
+	GCSettings.videoYshift = 0; // vertical video shift
 	GCSettings.colorize = false; // Colorize mono gameboy games
 	GCSettings.DynamicRecompilation = true;
 	GCSettings.DisplayFrameRate = FRAMERATE_OFF;
@@ -853,7 +864,7 @@ bool LoadPrefs()
 
 	FixInvalidSettings();
 
-	if(GCSettings.videomode > VIDEOMODE_AUTO) {
+	if(GCSettings.videoMode > VIDEOMODE_AUTO) {
 		ResetVideo_Menu();
 	}
 

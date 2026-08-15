@@ -1168,7 +1168,7 @@ static void ResetGameBorder() {
 	sgbBorderExtractor.reset(false, false);
 }
 
-static void InitGameBorder() {
+void InitGameDimensionsAndBorder() {
 	gameBorder.clear();
 
 	if(GCSettings.SGBBorder == SGBBORDER_FROMPNG) {
@@ -1183,13 +1183,43 @@ static void InitGameBorder() {
 
 	bool wantSgbCapture = (cartridgeType == CARTRIDGE_GB) && gbSgbMode && (GCSettings.SGBBorder == SGBBORDER_FROMGAME);
 	sgbBorderExtractor.reset(wantSgbCapture, gameBorder.hasBorder());
+
+	if(cartridgeType == CARTRIDGE_GBA) {
+		srcWidth = 240;
+		srcHeight = 160;
+	}
+	else {
+		gbBorderOn = (GCSettings.SGBBorder == SGBBORDER_FROMGAME);
+
+		if(gbBorderOn)
+		{
+			srcWidth = 256;
+			srcHeight = 224;
+			gbBorderLineSkip = 256;
+			gbBorderColumnSkip = 48;
+			gbBorderRowSkip = 40;
+		}
+		else
+		{
+			srcWidth = 160;
+			srcHeight = 144;
+			gbBorderLineSkip = 160;
+			gbBorderColumnSkip = 0;
+			gbBorderRowSkip = 0;
+		}
+	}
+
+	if (gameBorder.hasBorder()) {
+		GX_Render_Init(gameBorder.getWidth(), gameBorder.getHeight());
+	} else {
+		GX_Render_Init(srcWidth, srcHeight);
+	}
 }
 
 extern bool gbUpdateSizes();
 
 bool LoadGBROM()
 {
-	gbEmulatorType = GCSettings.GBHardware;
 	gbRom = romPtr;
 	bios = (u8 *)calloc(1,0x100);
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
@@ -1358,6 +1388,16 @@ static int GBAROMLoad()
 	return 0;
 }
 
+void InitGBGame() {
+	gbEmulatorType = GCSettings.GBHardware;
+	gbGetHardwareType();
+	gbApplyPerImagePreferences();
+
+	gbSoundReset();
+	gbSoundSetDeclicking(true);
+	gbReset();
+}
+
 bool LoadVBAROM()
 {
 	int newCartridgeType = CARTRIDGE_NONE;
@@ -1416,40 +1456,17 @@ bool LoadVBAROM()
 	if(cartridgeType == CARTRIDGE_GBA)
 	{
 		emulator = GBASystem;
-		srcWidth = 240;
-		srcHeight = 160;
 		loaded = GBAROMLoad();
 		cpuSaveType = 0;
 		if (loaded == 2) {
 			loaded = 0;
 			cartridgeType = CARTRIDGE_GB; // GB ROM within GBA rom - falls through to load below
-		} else if (loaded == 1) {
-			InitGameBorder();
 		}
 	}
 
 	if (cartridgeType == CARTRIDGE_GB)
 	{
 		emulator = GBSystem;
-		gbBorderOn = (GCSettings.SGBBorder == SGBBORDER_FROMGAME);
-
-		if(gbBorderOn)
-		{
-			srcWidth = 256;
-			srcHeight = 224;
-			gbBorderLineSkip = 256;
-			gbBorderColumnSkip = 48;
-			gbBorderRowSkip = 40;
-		}
-		else
-		{
-			srcWidth = 160;
-			srcHeight = 144;
-			gbBorderLineSkip = 160;
-			gbBorderColumnSkip = 0;
-			gbBorderRowSkip = 0;
-		}
-
 		loaded = LoadGBROM();
 	}
 
@@ -1461,24 +1478,9 @@ bool LoadVBAROM()
 	LoadPatch();
 	soundInit();
 
-	// Setup GX
-	if (gameBorder.hasBorder()) {
-		GX_Render_Init(gameBorder.getWidth(), gameBorder.getHeight());
-	} else {
-		GX_Render_Init(srcWidth, srcHeight);
-	}
-
 	if (cartridgeType == CARTRIDGE_GB)
 	{
-		gbGetHardwareType();
-
-		// Apply preferences specific to this game
-		gbApplyPerImagePreferences();
-
-		gbSoundReset();
-		gbSoundSetDeclicking(true);
-		gbReset();
-		InitGameBorder();
+		InitGBGame();
 	}
 	else
 	{
@@ -1514,7 +1516,6 @@ void InitialisePalette()
 	// Build GBPalette
 	for( i = 0; i < 24; )
 	{
-
 		if (GCSettings.BasicPalette == BASICPALETTE_GREEN) //Greenish color
 		{
 			systemGbPalette[i++] = (0x1c) | (0x1e << 5) | (0x1c << 10);

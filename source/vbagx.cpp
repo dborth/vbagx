@@ -90,9 +90,10 @@ int main(int argc, char *argv[])
 
 		autoboot = false;
 		MenuRequested = false;
+		InitGameDimensionsAndBorder();
 		SwitchMemoryModeGame();
 		SwitchAudioMode(0);
-		SelectFilterMethod(GCSettings.FilterMethod); // Initialize / Re-evaluate active filter
+		SelectFilterMethod(GCSettings.videoUpscalingFilter); // Initialize / Re-evaluate active filter
 
 		// stop checking if devices were removed/inserted
 		// since we're starting emulation again
