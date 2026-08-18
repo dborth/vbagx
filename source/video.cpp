@@ -1266,7 +1266,7 @@ void GX_Render(int consoleWidth, int consoleHeight, u8 * buffer)
 			InitFPSFontTexture();
 
 		#ifdef HW_RVL
-		GX_InitTexObj(&cursorObj, pointer[0]->GetImage(), 96, 96, GX_TF_RGBA8,GX_CLAMP, GX_CLAMP,GX_FALSE);
+		GX_InitTexObj(&cursorObj, pointer[0]->getImage(), 96, 96, GX_TF_RGBA8,GX_CLAMP, GX_CLAMP,GX_FALSE);
 		#endif
 	}
 
