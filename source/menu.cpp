@@ -466,7 +466,7 @@ ProgressWindow(char *title, char *msg)
 		return;
 
 	HaltGui();
-	int oldState = mainWindow->getState();
+	STATE oldState = mainWindow->getState();
 	mainWindow->setState(STATE::DISABLED);
 	mainWindow->append(&promptWindow);
 	mainWindow->changeFocus(&promptWindow);
@@ -858,7 +858,7 @@ static void WindowCredits(void * ptr)
 	txt[i] = new GuiText("Official Site: https://github.com/dborth/vbagx", 20, (GXColor){0, 0, 0, 255});
 	txt[i]->setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP); txt[i]->setPosition(0,y); i++; y+=32;
 
-	GuiText::setPresets(20, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_LEFT | FTGX_ALIGN_V::TOP, ALIGN_H::LEFT, ALIGN_V::TOP);
+	GuiText::setPresets(20, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_LEFT | FTGX_ALIGN_TOP, ALIGN_H::LEFT, ALIGN_V::TOP);
 
 	txt[i] = new GuiText("Main developer");
 	txt[i]->setPosition(40,y); i++;
@@ -912,7 +912,7 @@ static void WindowCredits(void * ptr)
 	txt[i]->setAlignment(ALIGN_H::RIGHT, ALIGN_V::BOTTOM);
 	txt[i]->setPosition(-20, -46); i++;
 
-	GuiText::setPresets(12, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_CENTER | FTGX_ALIGN_V::TOP, ALIGN_H::CENTRE, ALIGN_V::BOTTOM);
+	GuiText::setPresets(12, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_CENTER | FTGX_ALIGN_TOP, ALIGN_H::CENTRE, ALIGN_V::BOTTOM);
 
 	txt[i] = new GuiText("This software is open source and may be copied, distributed, or modified");
 	txt[i]->setPosition(0, -32); i++;

@@ -75,10 +75,9 @@ enum class STATE {
 	DISABLED
 };
 
-enum
-{
-	SCROLL::NONE,
-	SCROLL::HORIZONTAL
+enum class SCROLL {
+	NONE,
+	HORIZONTAL
 };
 
 #include "GuiTrigger.h"
