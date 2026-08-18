@@ -23,7 +23,7 @@ BUILD		:=	build_gc
 SOURCES		:=	source source/libgui source/utils source/utils/sz \
 				source/vba source/vba/apu source/vba/common \
 				source/vba/gb source/vba/gba source/goomba source/goomba/minilzo-2.06
-DATA		:=	data/images data/fonts data/lang data/pcm
+DATA		:=	data/images data/fonts data/lang data/sounds
 INCLUDES 	:=  source source/vba
 
 #---------------------------------------------------------------------------------
