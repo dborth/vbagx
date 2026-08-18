@@ -23,7 +23,7 @@
 #include "video.h"
 #include "input.h"
 #include "gameinput.h"
-#include "gui/Gui.h"
+#include "libgui/Gui.h"
 #include "vbasupport.h"
 #include "vba/gba/GBA.h"
 #include "vba/gba/bios.h"

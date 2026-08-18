@@ -13,7 +13,7 @@
 
 #include <ogcsys.h>
 
-#include "gui/Gui.h"
+#include "libgui/Gui.h"
 
 extern GuiImageData * pointer[4];
 
