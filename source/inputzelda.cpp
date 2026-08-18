@@ -23,8 +23,8 @@
 #include "audio.h"
 #include "video.h"
 #include "input.h"
-#include "gui/gui.h"
 #include "gameinput.h"
+#include "gui/Gui.h"
 #include "vbasupport.h"
 
 #include "vba/gba/GBA.h"

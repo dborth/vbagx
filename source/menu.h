@@ -12,7 +12,8 @@
 #define _MENU_H
 
 #include <ogcsys.h>
-#include "gui/gui.h"
+
+#include "gui/Gui.h"
 
 extern GuiImageData * pointer[4];
 
