@@ -39,8 +39,6 @@
 #include "menu.h"
 #include "gamesettings.h"
 #include "libgui/Gui.h"
-#include "utils/gettext.h"
-#include "utils/FreeTypeGX.h"
 #include "vba/gb/gb.h"
 
 #define THREAD_SLEEP 100
@@ -130,6 +128,38 @@ HaltGui()
 	LWP_MutexUnlock(guiMutex);
 }
 
+static bool LoadLanguage()
+{
+	char line[200];
+	char *lastID = NULL;
+
+	const uint8_t *buffer;
+	size_t size;
+
+	switch(GCSettings.language)
+	{
+		case LANG_JAPANESE: buffer = jp_lang; size = jp_lang_size; break;
+		case LANG_ENGLISH: buffer = en_lang; size = en_lang_size; break;
+		case LANG_GERMAN: buffer = de_lang; size = de_lang_size; break;
+		case LANG_FRENCH: buffer = fr_lang; size = fr_lang_size; break;
+		case LANG_SPANISH: buffer = es_lang; size = es_lang_size; break;
+		case LANG_ITALIAN: buffer = it_lang; size = it_lang_size; break;
+		case LANG_DUTCH: buffer = nl_lang; size = nl_lang_size; break;
+		case LANG_SIMP_CHINESE:
+		case LANG_TRAD_CHINESE: buffer = zh_lang; size = zh_lang_size; break;
+		case LANG_KOREAN: buffer = ko_lang; size = ko_lang_size; break;
+		case LANG_PORTUGUESE: buffer = pt_lang; size = pt_lang_size; break;
+		case LANG_BRAZILIAN_PORTUGUESE: buffer = pt_br_lang; size = pt_br_lang_size; break;
+		case LANG_CATALAN: buffer = ca_lang; size = ca_lang_size; break;
+		case LANG_TURKISH: buffer = tr_lang; size = tr_lang_size; break;
+		case LANG_SWEDISH: buffer = sv_lang; size = sv_lang_size; break;
+		default: return false;
+	}
+
+	textTranslator->loadLanguage(buffer, size);
+	return true;
+}
+
 static void ResetText()
 {
 	LoadLanguage();
@@ -165,12 +195,12 @@ void ChangeLanguage() {
 				break;
 		}
 
-		size_t fontSize = LoadFont(filepath);
+		size_t fileSize = LoadFont(filepath);
 
-		if(fontSize > 0) {
+		if(fileSize > 0) {
 			HaltGui();
-			DeinitFreeType();
-			InitFreeType((u8*)ext_font_ttf, fontSize);
+			delete fontSystem;
+			fontSystem = new GuiTextRenderer(ext_font_ttf, fileSize, glyphRenderer);
 		}
 		else {
 			GCSettings.language = currentLanguage;
@@ -184,10 +214,10 @@ void ChangeLanguage() {
 	else {
 		if(ext_font_ttf != NULL) {
 			HaltGui();
-			DeinitFreeType();
+			delete fontSystem;
 			extmem_free(ext_font_ttf);
 			ext_font_ttf = NULL;
-			InitFreeType((u8*)font_ttf, font_ttf_size);
+			fontSystem = new GuiTextRenderer(font_ttf, font_ttf_size, glyphRenderer);
 		}
 	}
 #endif
@@ -220,15 +250,15 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
 	GuiImageData dialogBox(dialogue_box_png);
 	GuiImage dialogBoxImg(&dialogBox);
 
-	GuiText titleTxt(title, 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt(title, 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	titleTxt.setPosition(0,14);
-	GuiText msgTxt(msg, 26, (GXColor){0, 0, 0, 255});
+	GuiText msgTxt(msg, 26, (GuiColor){0, 0, 0, 255});
 	msgTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	msgTxt.setPosition(0,-20);
 	msgTxt.setWrap(true, 430);
 
-	GuiText btn1Txt(btn1Label, 22, (GXColor){0, 0, 0, 255});
+	GuiText btn1Txt(btn1Label, 22, (GuiColor){0, 0, 0, 255});
 	GuiImage btn1Img(&btnOutline);
 	GuiImage btn1ImgOver(&btnOutlineOver);
 	GuiButton btn1(btnOutline.getWidth(), btnOutline.getHeight());
@@ -254,7 +284,7 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
 	btn1.setState(STATE::SELECTED);
 	btn1.setEffectGrow();
 
-	GuiText btn2Txt(btn2Label, 22, (GXColor){0, 0, 0, 255});
+	GuiText btn2Txt(btn2Label, 22, (GuiColor){0, 0, 0, 255});
 	GuiImage btn2Img(&btnOutline);
 	GuiImage btn2ImgOver(&btnOutlineOver);
 	GuiButton btn2(btnOutline.getWidth(), btnOutline.getHeight());
@@ -377,7 +407,7 @@ UpdateGUI (void *arg)
 			for(i = 0; i <= 255; i += 15)
 			{
 				mainWindow->draw();
-				Menu_DrawRectangle(0,0,screenwidth,screenheight,(GXColor){0, 0, 0, (u8)i},1);
+				Menu_DrawRectangle(0,0,screenwidth,screenheight,(GuiColor){0, 0, 0, (u8)i},1);
 				Menu_Render();
 			}
 			ExitApp();
@@ -429,10 +459,10 @@ ProgressWindow(char *title, char *msg)
 	throbberImg.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	throbberImg.setPosition(0, 40);
 
-	GuiText titleTxt(title, 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt(title, 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	titleTxt.setPosition(0,14);
-	GuiText msgTxt(msg, 26, (GXColor){0, 0, 0, 255});
+	GuiText msgTxt(msg, 26, (GuiColor){0, 0, 0, 255});
 	msgTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	msgTxt.setPosition(0,80);
 
@@ -675,7 +705,7 @@ static void OnScreenKeyboard(char * var, u32 maxlen)
 	GuiImageData btnOutline(button_png);
 	GuiImageData btnOutlineOver(button_over_png);
 
-	GuiText okBtnTxt("OK", 22, (GXColor){0, 0, 0, 255});
+	GuiText okBtnTxt("OK", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage okBtnImg(&btnOutline);
 	GuiImage okBtnImgOver(&btnOutlineOver);
 	GuiButton okBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -692,7 +722,7 @@ static void OnScreenKeyboard(char * var, u32 maxlen)
 	okBtn.setTrigger(trig2);
 	okBtn.setEffectGrow();
 
-	GuiText cancelBtnTxt("Cancel", 22, (GXColor){0, 0, 0, 255});
+	GuiText cancelBtnTxt("Cancel", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage cancelBtnImg(&btnOutline);
 	GuiImage cancelBtnImgOver(&btnOutlineOver);
 	GuiButton cancelBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -758,11 +788,11 @@ SettingWindow(const char * title, GuiWindow * w)
 	GuiImageData dialogBox(dialogue_box_png);
 	GuiImage dialogBoxImg(&dialogBox);
 
-	GuiText titleTxt(title, 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt(title, 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	titleTxt.setPosition(0,14);
 
-	GuiText okBtnTxt("OK", 22, (GXColor){0, 0, 0, 255});
+	GuiText okBtnTxt("OK", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage okBtnImg(&btnOutline);
 	GuiImage okBtnImgOver(&btnOutlineOver);
 	GuiButton okBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -779,7 +809,7 @@ SettingWindow(const char * title, GuiWindow * w)
 	okBtn.setTrigger(trig2);
 	okBtn.setEffectGrow();
 
-	GuiText cancelBtnTxt("Cancel", 22, (GXColor){0, 0, 0, 255});
+	GuiText cancelBtnTxt("Cancel", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage cancelBtnImg(&btnOutline);
 	GuiImage cancelBtnImgOver(&btnOutlineOver);
 	GuiButton cancelBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -852,13 +882,13 @@ static void WindowCredits(void * ptr)
 	int numEntries = 23;
 	GuiText * txt[numEntries];
 
-	txt[i] = new GuiText("Credits", 20, (GXColor){0, 0, 0, 255});
+	txt[i] = new GuiText("Credits", 20, (GuiColor){0, 0, 0, 255});
 	txt[i]->setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP); txt[i]->setPosition(0,y); i++; y+=32;
 
-	txt[i] = new GuiText("Official Site: https://github.com/dborth/vbagx", 20, (GXColor){0, 0, 0, 255});
+	txt[i] = new GuiText("Official Site: https://github.com/dborth/vbagx", 20, (GuiColor){0, 0, 0, 255});
 	txt[i]->setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP); txt[i]->setPosition(0,y); i++; y+=32;
 
-	GuiText::setPresets(20, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_LEFT | FTGX_ALIGN_TOP, ALIGN_H::LEFT, ALIGN_V::TOP);
+	GuiText::setPresets(20, (GuiColor){0, 0, 0, 255}, 0, GUI_TEXT_JUSTIFY_LEFT | GUI_TEXT_ALIGN_TOP, ALIGN_H::LEFT, ALIGN_V::TOP);
 
 	txt[i] = new GuiText("Main developer");
 	txt[i]->setPosition(40,y); i++;
@@ -905,14 +935,14 @@ static void WindowCredits(void * ptr)
 	sprintf(consoleDetails, getConsoleDetails());
 	sprintf(memoryFreeInfo, getMemoryFreeInfo());
 
-	txt[i] = new GuiText(consoleDetails, 14, (GXColor){0, 0, 0, 255});
+	txt[i] = new GuiText(consoleDetails, 14, (GuiColor){0, 0, 0, 255});
 	txt[i]->setAlignment(ALIGN_H::RIGHT, ALIGN_V::BOTTOM);
 	txt[i]->setPosition(-20, -60); i++;
-	txt[i] = new GuiText(memoryFreeInfo, 14, (GXColor){0, 0, 0, 255});
+	txt[i] = new GuiText(memoryFreeInfo, 14, (GuiColor){0, 0, 0, 255});
 	txt[i]->setAlignment(ALIGN_H::RIGHT, ALIGN_V::BOTTOM);
 	txt[i]->setPosition(-20, -46); i++;
 
-	GuiText::setPresets(12, (GXColor){0, 0, 0, 255}, 0, FTGX_JUSTIFY_CENTER | FTGX_ALIGN_TOP, ALIGN_H::CENTRE, ALIGN_V::BOTTOM);
+	GuiText::setPresets(12, (GuiColor){0, 0, 0, 255}, 0, GUI_TEXT_JUSTIFY_CENTER | GUI_TEXT_ALIGN_TOP, ALIGN_H::CENTRE, ALIGN_V::BOTTOM);
 
 	txt[i] = new GuiText("This software is open source and may be copied, distributed, or modified");
 	txt[i]->setPosition(0, -32); i++;
@@ -992,7 +1022,7 @@ static int MenuGameSelection()
 	bool res;
 	int i;
 
-	GuiText titleTxt("Choose Game", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Choose Game", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -1007,7 +1037,7 @@ static int MenuGameSelection()
 	GuiTrigger trigHome;
 	trigHome.setButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0, WIIDRC_BUTTON_HOME);
 
-	GuiText settingsBtnTxt("Settings", 22, (GXColor){0, 0, 0, 255});
+	GuiText settingsBtnTxt("Settings", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage settingsBtnIcon(&iconSettings);
 	settingsBtnIcon.setAlignment(ALIGN_H::LEFT, ALIGN_V::MIDDLE);
 	settingsBtnIcon.setPosition(14,0);
@@ -1026,7 +1056,7 @@ static int MenuGameSelection()
 	settingsBtn.setTrigger(trig2);
 	settingsBtn.setEffectGrow();
 
-	GuiText exitBtnTxt("Exit", 22, (GXColor){0, 0, 0, 255});
+	GuiText exitBtnTxt("Exit", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage exitBtnIcon(&iconHome);
 	exitBtnIcon.setAlignment(ALIGN_H::LEFT, ALIGN_V::MIDDLE);
 	exitBtnIcon.setPosition(14,0);
@@ -1266,7 +1296,7 @@ static void PlayerMappingWindow(int chan)
 	char playerNumber[20];
 	sprintf(playerNumber, "Player %d", playerMapping[playerMappingChan]+1);
 
-	settingText = new GuiText(playerNumber, 22, (GXColor){0, 0, 0, 255});
+	settingText = new GuiText(playerNumber, 22, (GuiColor){0, 0, 0, 255});
 
 	w->append(&arrowLeftBtn);
 	w->append(&arrowRightBtn);
@@ -1298,7 +1328,7 @@ static int MenuGame()
 	bool isBoktai = ((RomIdCode & 0xFF)=='U');
     char s[64];
 
-	GuiText titleTxt(ROMFilename, 22, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt(ROMFilename, 22, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -1327,7 +1357,7 @@ static int MenuGame()
 	if (isBoktai) 
 		xOffset=200;
 
-	GuiText saveBtnTxt("Save", 22, (GXColor){0, 0, 0, 255});
+	GuiText saveBtnTxt("Save", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage saveBtnImg(&btnLargeOutline);
 	GuiImage saveBtnImgOver(&btnLargeOutlineOver);
 	GuiImage saveBtnIcon(&iconSave);
@@ -1344,7 +1374,7 @@ static int MenuGame()
 	saveBtn.setTrigger(trig2);
 	saveBtn.setEffectGrow();
 
-	GuiText loadBtnTxt("Load", 22, (GXColor){0, 0, 0, 255});
+	GuiText loadBtnTxt("Load", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage loadBtnImg(&btnLargeOutline);
 	GuiImage loadBtnImgOver(&btnLargeOutlineOver);
 	GuiImage loadBtnIcon(&iconLoad);
@@ -1361,7 +1391,7 @@ static int MenuGame()
 	loadBtn.setTrigger(trig2);
 	loadBtn.setEffectGrow();
 
-	GuiText deleteBtnTxt("Delete", 22, (GXColor){0, 0, 0, 255});
+	GuiText deleteBtnTxt("Delete", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage deleteBtnImg(&btnLargeOutline);
 	GuiImage deleteBtnImgOver(&btnLargeOutlineOver);
 	GuiImage deleteBtnIcon(&iconDelete);
@@ -1398,7 +1428,7 @@ static int MenuGame()
 		else 
 			sprintf(s, "Weather: %d%% sun", SunBars*10);
 		
-		sunBtnTxt = new GuiText(s, 22, (GXColor){0, 0, 0, 255});
+		sunBtnTxt = new GuiText(s, 22, (GuiColor){0, 0, 0, 255});
 		sunBtnTxt->setWrap(true, btnLargeOutline.getWidth()-30);
 		sunBtnImg = new GuiImage(&btnLargeOutline);
 		sunBtnImgOver = new GuiImage(&btnLargeOutlineOver);
@@ -1415,7 +1445,7 @@ static int MenuGame()
 		sunBtn->setEffectGrow();
 	}
 
-	GuiText resetBtnTxt("Reset", 22, (GXColor){0, 0, 0, 255});
+	GuiText resetBtnTxt("Reset", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage resetBtnImg(&btnLargeOutline);
 	GuiImage resetBtnImgOver(&btnLargeOutlineOver);
 	GuiImage resetBtnIcon(&iconReset);
@@ -1432,7 +1462,7 @@ static int MenuGame()
 	resetBtn.setTrigger(trig2);
 	resetBtn.setEffectGrow();
 
-	GuiText gameSettingsBtnTxt("Game Settings", 22, (GXColor){0, 0, 0, 255});
+	GuiText gameSettingsBtnTxt("Game Settings", 22, (GuiColor){0, 0, 0, 255});
 	gameSettingsBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
 	GuiImage gameSettingsBtnImg(&btnLargeOutline);
 	GuiImage gameSettingsBtnImgOver(&btnLargeOutlineOver);
@@ -1450,7 +1480,7 @@ static int MenuGame()
 	gameSettingsBtn.setTrigger(trig2);
 	gameSettingsBtn.setEffectGrow();
 
-	GuiText mainmenuBtnTxt("Main Menu", 22, (GXColor){0, 0, 0, 255});
+	GuiText mainmenuBtnTxt("Main Menu", 22, (GuiColor){0, 0, 0, 255});
 	if(GCSettings.AutoloadGame) {
 		mainmenuBtnTxt.setText("Exit");
 	}
@@ -1468,7 +1498,7 @@ static int MenuGame()
 	mainmenuBtn.setTrigger(trig2);
 	mainmenuBtn.setEffectGrow();
 
-	GuiText closeBtnTxt("Close", 20, (GXColor){0, 0, 0, 255});
+	GuiText closeBtnTxt("Close", 20, (GuiColor){0, 0, 0, 255});
 	GuiImage closeBtnImg(&btnCloseOutline);
 	GuiImage closeBtnImgOver(&btnCloseOutlineOver);
 	GuiButton closeBtn(btnCloseOutline.getWidth(), btnCloseOutline.getHeight());
@@ -1500,7 +1530,7 @@ static int MenuGame()
 	{
 		sprintf(txt, "P%d", i+1);
 
-		batteryTxt[i] = new GuiText(txt, 20, (GXColor){255, 255, 255, 255});
+		batteryTxt[i] = new GuiText(txt, 20, (GuiColor){255, 255, 255, 255});
 		batteryTxt[i]->setAlignment(ALIGN_H::LEFT, ALIGN_V::MIDDLE);
 		batteryImg[i] = new GuiImage(&battery);
 		batteryImg[i]->setAlignment(ALIGN_H::LEFT, ALIGN_V::MIDDLE);
@@ -1710,7 +1740,7 @@ static int MenuGame()
 					ExitApp();
 				}
 				else {
-					gameScreenImg = new GuiImage(screenwidth, screenheight, (GXColor){236, 226, 238, 255});
+					gameScreenImg = new GuiImage(screenwidth, screenheight, (GuiColor){236, 226, 238, 255});
 					gameScreenImg->colorStripe(10);
 					mainWindow->insert(gameScreenImg, 0);
 					ResumeGui();
@@ -1823,7 +1853,7 @@ static int MenuGameSaves(int action)
 	if(!ChangeInterface(method, NOTSILENT))
 		return MENU_GAME;
 
-	GuiText titleTxt(NULL, 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt(NULL, 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -1844,7 +1874,7 @@ static int MenuGameSaves(int action)
 	GuiTrigger trigHome;
 	trigHome.setButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0, WIIDRC_BUTTON_HOME);
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -1859,7 +1889,7 @@ static int MenuGameSaves(int action)
 	backBtn.setTrigger(trig2);
 	backBtn.setEffectGrow();
 
-	GuiText closeBtnTxt("Close", 20, (GXColor){0, 0, 0, 255});
+	GuiText closeBtnTxt("Close", 20, (GuiColor){0, 0, 0, 255});
 	GuiImage closeBtnImg(&btnCloseOutline);
 	GuiImage closeBtnImgOver(&btnCloseOutlineOver);
 	GuiButton closeBtn(btnCloseOutline.getWidth(), btnCloseOutline.getHeight());
@@ -2100,7 +2130,7 @@ static int MenuGameSettings()
 	char s[4];
 	char filepath[1024];
 
-	GuiText titleTxt("Game Settings", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Game Settings", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -2126,7 +2156,7 @@ static int MenuGameSettings()
 	GuiTrigger trigHome;
 	trigHome.setButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0, WIIDRC_BUTTON_HOME);
 
-	GuiText mappingBtnTxt("Button Mappings", 22, (GXColor){0, 0, 0, 255});
+	GuiText mappingBtnTxt("Button Mappings", 22, (GuiColor){0, 0, 0, 255});
 	mappingBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
 	GuiImage mappingBtnImg(&btnLargeOutline);
 	GuiImage mappingBtnImgOver(&btnLargeOutlineOver);
@@ -2144,7 +2174,7 @@ static int MenuGameSettings()
 	mappingBtn.setTrigger(trig2);
 	mappingBtn.setEffectGrow();
 
-	GuiText emulationBtnTxt("Emulation", 22, (GXColor){0, 0, 0, 255});
+	GuiText emulationBtnTxt("Emulation", 22, (GuiColor){0, 0, 0, 255});
 	emulationBtnTxt.setWrap(true, btnLargeOutline.getWidth()-20);
 	GuiImage emulationBtnImg(&btnLargeOutline);
 	GuiImage emulationBtnImgOver(&btnLargeOutlineOver);
@@ -2162,7 +2192,7 @@ static int MenuGameSettings()
 	emulationBtn.setTrigger(trig2);
 	emulationBtn.setEffectGrow();
 
-	GuiText videoBtnTxt("Video", 22, (GXColor){0, 0, 0, 255});
+	GuiText videoBtnTxt("Video", 22, (GuiColor){0, 0, 0, 255});
 	videoBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
 	GuiImage videoBtnImg(&btnLargeOutline);
 	GuiImage videoBtnImgOver(&btnLargeOutlineOver);
@@ -2181,13 +2211,13 @@ static int MenuGameSettings()
 	videoBtn.setEffectGrow();
 
 	#ifdef HW_RVL
-	GuiText wiiControlsBtnTxt1("Match Wii Controls", 22, (GXColor){0, 0, 0, 255});
+	GuiText wiiControlsBtnTxt1("Match Wii Controls", 22, (GuiColor){0, 0, 0, 255});
 	#else
-	GuiText wiiControlsBtnTxt1("Match GC Controls", 22, (GXColor){0, 0, 0, 255});
+	GuiText wiiControlsBtnTxt1("Match GC Controls", 22, (GuiColor){0, 0, 0, 255});
 	#endif
 	if (GCSettings.WiiControls) sprintf(s, "ON");
 	else sprintf(s, "OFF");
-	GuiText wiiControlsBtnTxt2(s, 18, (GXColor){0, 0, 0, 255});
+	GuiText wiiControlsBtnTxt2(s, 18, (GuiColor){0, 0, 0, 255});
 	wiiControlsBtnTxt1.setPosition(0, -10);
 	wiiControlsBtnTxt1.setWrap(true, btnLargeOutline.getWidth()-30);
 	wiiControlsBtnTxt2.setPosition(0, +30);
@@ -2208,7 +2238,7 @@ static int MenuGameSettings()
 	wiiControlsBtn.setTrigger(trig2);
 	wiiControlsBtn.setEffectGrow();
 
-	GuiText screenshotBtnTxt("Screenshot", 22, (GXColor){0, 0, 0, 255});
+	GuiText screenshotBtnTxt("Screenshot", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage screenshotBtnImg(&btnLargeOutline);
 	GuiImage screenshotBtnImgOver(&btnLargeOutlineOver);
 	GuiImage screenshotBtnIcon(&iconScreenshot);
@@ -2225,7 +2255,7 @@ static int MenuGameSettings()
 	screenshotBtn.setTrigger(trig2);
 	screenshotBtn.setEffectGrow();
 	
-	GuiText cheatsBtnTxt("Cheats", 22, (GXColor){0, 0, 0, 255});
+	GuiText cheatsBtnTxt("Cheats", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage cheatsBtnImg(&btnLargeOutline);
 	GuiImage cheatsBtnImgOver(&btnLargeOutlineOver);
 	GuiImage cheatsBtnIcon(&iconCheats);
@@ -2242,7 +2272,7 @@ static int MenuGameSettings()
 	cheatsBtn.setTrigger(trig2);
 	cheatsBtn.setEffectGrow();
 
-	GuiText closeBtnTxt("Close", 20, (GXColor){0, 0, 0, 255});
+	GuiText closeBtnTxt("Close", 20, (GuiColor){0, 0, 0, 255});
 	GuiImage closeBtnImg(&btnCloseOutline);
 	GuiImage closeBtnImgOver(&btnCloseOutlineOver);
 	GuiButton closeBtn(btnCloseOutline.getWidth(), btnCloseOutline.getHeight());
@@ -2258,7 +2288,7 @@ static int MenuGameSettings()
 	closeBtn.setTrigger(&trigHome);
 	closeBtn.setEffectGrow();
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -2380,7 +2410,7 @@ static int MenuGameCheats()
 
 	options.length = i;
 
-	GuiText titleTxt("Game Settings - Cheats", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Game Settings - Cheats", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -2394,7 +2424,7 @@ static int MenuGameCheats()
 	trigB.setButtonOnlyTrigger(-1, WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B, PAD_BUTTON_B, WIIDRC_BUTTON_B);
 	trig1.setButtonOnlyTrigger(-1, WPAD_BUTTON_1, 0, 0);
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -2456,7 +2486,7 @@ static int MenuSettingsMappings()
 {
 	int menu = MENU_NONE;
 
-	GuiText titleTxt("Game Settings - Button Mappings", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Game Settings - Button Mappings", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -2473,7 +2503,7 @@ static int MenuSettingsMappings()
 	GuiImageData iconWiiupro(icon_settings_wiiupro_png);
 	GuiImageData iconDrc(icon_settings_drc_png);
 
-	GuiText gamecubeBtnTxt("GameCube Controller", 22, (GXColor){0, 0, 0, 255});
+	GuiText gamecubeBtnTxt("GameCube Controller", 22, (GuiColor){0, 0, 0, 255});
 	gamecubeBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
 	GuiImage gamecubeBtnImg(&btnLargeOutline);
 	GuiImage gamecubeBtnImgOver(&btnLargeOutlineOver);
@@ -2491,7 +2521,7 @@ static int MenuSettingsMappings()
 	gamecubeBtn.setTrigger(trig2);
 	gamecubeBtn.setEffectGrow();
 	
-	GuiText wiimoteBtnTxt("Wiimote", 22, (GXColor){0, 0, 0, 255});
+	GuiText wiimoteBtnTxt("Wiimote", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage wiimoteBtnImg(&btnLargeOutline);
 	GuiImage wiimoteBtnImgOver(&btnLargeOutlineOver);
 	GuiImage wiimoteBtnIcon(&iconWiimote);
@@ -2508,7 +2538,7 @@ static int MenuSettingsMappings()
 	wiimoteBtn.setTrigger(trig2);
 	wiimoteBtn.setEffectGrow();
 
-	GuiText drcBtnTxt("Wii U GamePad", 22, (GXColor){0, 0, 0, 255});
+	GuiText drcBtnTxt("Wii U GamePad", 22, (GuiColor){0, 0, 0, 255});
 	drcBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
 	GuiImage drcBtnImg(&btnLargeOutline);
 	GuiImage drcBtnImgOver(&btnLargeOutlineOver);
@@ -2526,7 +2556,7 @@ static int MenuSettingsMappings()
 	drcBtn.setTrigger(trig2);
 	drcBtn.setEffectGrow();
 	
-	GuiText classicBtnTxt("Classic Controller", 22, (GXColor){0, 0, 0, 255});
+	GuiText classicBtnTxt("Classic Controller", 22, (GuiColor){0, 0, 0, 255});
 	classicBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
 	GuiImage classicBtnImg(&btnLargeOutline);
 	GuiImage classicBtnImgOver(&btnLargeOutlineOver);
@@ -2544,9 +2574,9 @@ static int MenuSettingsMappings()
 	classicBtn.setTrigger(trig2);
 	classicBtn.setEffectGrow();
 
-	GuiText nunchukBtnTxt1("Wiimote", 22, (GXColor){0, 0, 0, 255});
-	GuiText nunchukBtnTxt2("&", 18, (GXColor){0, 0, 0, 255});
-	GuiText nunchukBtnTxt3("Nunchuk", 22, (GXColor){0, 0, 0, 255});
+	GuiText nunchukBtnTxt1("Wiimote", 22, (GuiColor){0, 0, 0, 255});
+	GuiText nunchukBtnTxt2("&", 18, (GuiColor){0, 0, 0, 255});
+	GuiText nunchukBtnTxt3("Nunchuk", 22, (GuiColor){0, 0, 0, 255});
 	nunchukBtnTxt1.setPosition(0, -20);
 	nunchukBtnTxt3.setPosition(0, +20);
 	GuiImage nunchukBtnImg(&btnLargeOutline);
@@ -2567,7 +2597,7 @@ static int MenuSettingsMappings()
 	nunchukBtn.setTrigger(trig2);
 	nunchukBtn.setEffectGrow();
 
-	GuiText wiiuproBtnTxt("Wii U Pro Controller", 22, (GXColor){0, 0, 0, 255});
+	GuiText wiiuproBtnTxt("Wii U Pro Controller", 22, (GuiColor){0, 0, 0, 255});
 	wiiuproBtnTxt.setWrap(true, btnLargeOutline.getWidth()-20);
 	GuiImage wiiuproBtnImg(&btnLargeOutline);
 	GuiImage wiiuproBtnImgOver(&btnLargeOutlineOver);
@@ -2585,7 +2615,7 @@ static int MenuSettingsMappings()
 	wiiuproBtn.setTrigger(trig2);
 	wiiuproBtn.setEffectGrow();
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -2685,7 +2715,7 @@ ButtonMappingWindow()
 	GuiImageData dialogBox(dialogue_box_png);
 	GuiImage dialogBoxImg(&dialogBox);
 
-	GuiText titleTxt("Button Mapping", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Button Mapping", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	titleTxt.setPosition(0,14);
 
@@ -2717,7 +2747,7 @@ ButtonMappingWindow()
 			break;
 	}
 
-	GuiText msgTxt(msg, 26, (GXColor){0, 0, 0, 255});
+	GuiText msgTxt(msg, 26, (GuiColor){0, 0, 0, 255});
 	msgTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	msgTxt.setPosition(0,-20);
 	msgTxt.setWrap(true, 430);
@@ -2818,12 +2848,12 @@ static int MenuSettingsMappingsMap()
 	char menuSubtitle[100];
 	sprintf(menuTitle, "Game Settings - Button Mappings");
 
-	GuiText titleTxt(menuTitle, 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt(menuTitle, 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,30);
 
 	sprintf(menuSubtitle, "%s", ctrlrName[mapMenuCtrl]);
-	GuiText subtitleTxt(menuSubtitle, 20, (GXColor){255, 255, 255, 255});
+	GuiText subtitleTxt(menuSubtitle, 20, (GuiColor){255, 255, 255, 255});
 	subtitleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	subtitleTxt.setPosition(50,60);
 
@@ -2834,7 +2864,7 @@ static int MenuSettingsMappingsMap()
 	GuiImageData btnShortOutline(button_short_png);
 	GuiImageData btnShortOutlineOver(button_short_over_png);
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -2849,7 +2879,7 @@ static int MenuSettingsMappingsMap()
 	backBtn.setTrigger(trig2);
 	backBtn.setEffectGrow();
 
-	GuiText resetBtnTxt("Reset Mappings", 22, (GXColor){0, 0, 0, 255});
+	GuiText resetBtnTxt("Reset Mappings", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage resetBtnImg(&btnShortOutline);
 	GuiImage resetBtnImgOver(&btnShortOutlineOver);
 	GuiButton resetBtn(btnShortOutline.getWidth(), btnShortOutline.getHeight());
@@ -3080,8 +3110,8 @@ static void ScreenZoomWindow()
 	screenPositionImg.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	screenPositionImg.setPosition(0, 0);
 
-	settingText = new GuiText(NULL, 20, (GXColor){0, 0, 0, 255});
-	settingText2 = new GuiText(NULL, 20, (GXColor){0, 0, 0, 255});
+	settingText = new GuiText(NULL, 20, (GuiColor){0, 0, 0, 255});
+	settingText2 = new GuiText(NULL, 20, (GuiColor){0, 0, 0, 255});
 	char zoom[10], zoom2[10];
 	float currentZoomHor, currentZoomVert;
 	
@@ -3242,7 +3272,7 @@ static void ScreenPositionWindow()
 	GuiImage screenPositionImg(&screenPosition);
 	screenPositionImg.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 
-	settingText = new GuiText(NULL, 20, (GXColor){0, 0, 0, 255});
+	settingText = new GuiText(NULL, 20, (GuiColor){0, 0, 0, 255});
 	char shift[10];
 	sprintf(shift, "%i, %i", GCSettings.videoXshift, GCSettings.videoYshift);
 	settingText->setText(shift);
@@ -3297,7 +3327,7 @@ static int MenuSettingsVideo()
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 
-	GuiText titleTxt("Game Settings - Video", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Game Settings - Video", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -3306,7 +3336,7 @@ static int MenuSettingsVideo()
 	GuiImageData btnOutline(button_png);
 	GuiImageData btnOutlineOver(button_over_png);
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -3523,7 +3553,7 @@ static int MenuSettingsEmulation()
 		options.value[j][0] = '\0';
 	}
 	
-	GuiText titleTxt("Game Settings - Emulation", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Game Settings - Emulation", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -3532,7 +3562,7 @@ static int MenuSettingsEmulation()
 	GuiImageData btnOutline(button_png);
 	GuiImageData btnOutlineOver(button_over_png);
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -3647,7 +3677,7 @@ static int MenuSettings()
 {
 	int menu = MENU_NONE;
 
-	GuiText titleTxt("Settings", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Settings", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -3662,9 +3692,9 @@ static int MenuSettings()
 	GuiImageData iconNetwork(icon_settings_network_png);
 	GuiImageData iconCredits(icon_credits_png);
 
-	GuiText savingBtnTxt1("Saving", 22, (GXColor){0, 0, 0, 255});
-	GuiText savingBtnTxt2("&", 18, (GXColor){0, 0, 0, 255});
-	GuiText savingBtnTxt3("Loading", 22, (GXColor){0, 0, 0, 255});
+	GuiText savingBtnTxt1("Saving", 22, (GuiColor){0, 0, 0, 255});
+	GuiText savingBtnTxt2("&", 18, (GuiColor){0, 0, 0, 255});
+	GuiText savingBtnTxt3("Loading", 22, (GuiColor){0, 0, 0, 255});
 	savingBtnTxt1.setPosition(0, -20);
 	savingBtnTxt3.setPosition(0, +20);
 	GuiImage savingBtnImg(&btnLargeOutline);
@@ -3685,7 +3715,7 @@ static int MenuSettings()
 	savingBtn.setTrigger(trig2);
 	savingBtn.setEffectGrow();
 
-	GuiText menuBtnTxt("Menu", 22, (GXColor){0, 0, 0, 255});
+	GuiText menuBtnTxt("Menu", 22, (GuiColor){0, 0, 0, 255});
 	menuBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
 	GuiImage menuBtnImg(&btnLargeOutline);
 	GuiImage menuBtnImgOver(&btnLargeOutlineOver);
@@ -3703,7 +3733,7 @@ static int MenuSettings()
 	menuBtn.setTrigger(trig2);
 	menuBtn.setEffectGrow();
 
-	GuiText networkBtnTxt("Network", 22, (GXColor){0, 0, 0, 255});
+	GuiText networkBtnTxt("Network", 22, (GuiColor){0, 0, 0, 255});
 	networkBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
 	GuiImage networkBtnImg(&btnLargeOutline);
 	GuiImage networkBtnImgOver(&btnLargeOutlineOver);
@@ -3721,7 +3751,7 @@ static int MenuSettings()
 	networkBtn.setTrigger(trig2);
 	networkBtn.setEffectGrow();
 
-	GuiText creditsBtnTxt("Credits", 22, (GXColor){0, 0, 0, 255});
+	GuiText creditsBtnTxt("Credits", 22, (GuiColor){0, 0, 0, 255});
 	creditsBtnTxt.setWrap(true, btnLargeOutline.getWidth()-20);
 	GuiImage creditsBtnImg(&btnLargeOutline);
 	GuiImage creditsBtnImgOver(&btnLargeOutlineOver);
@@ -3740,7 +3770,7 @@ static int MenuSettings()
 	creditsBtn.setEffectGrow();
 	creditsBtn.setUpdateCallback(WindowCredits);
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -3755,7 +3785,7 @@ static int MenuSettings()
 	backBtn.setTrigger(trig2);
 	backBtn.setEffectGrow();
 
-	GuiText resetBtnTxt("Reset Settings", 22, (GXColor){0, 0, 0, 255});
+	GuiText resetBtnTxt("Reset Settings", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage resetBtnImg(&btnOutline);
 	GuiImage resetBtnImgOver(&btnOutlineOver);
 	GuiButton resetBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -3859,7 +3889,7 @@ static int MenuSettingsFile()
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 
-	GuiText titleTxt("Settings - Saving & Loading", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Settings - Saving & Loading", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -3868,7 +3898,7 @@ static int MenuSettingsFile()
 	GuiImageData btnOutline(button_long_png);
 	GuiImageData btnOutlineOver(button_long_over_png);
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -4036,7 +4066,7 @@ static int MenuSettingsMenu()
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 
-	GuiText titleTxt("Settings - Menu", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Settings - Menu", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -4045,7 +4075,7 @@ static int MenuSettingsMenu()
 	GuiImageData btnOutline(button_long_png);
 	GuiImageData btnOutlineOver(button_long_over_png);
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -4234,7 +4264,7 @@ static int MenuSettingsNetwork()
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 
-	GuiText titleTxt("Settings - Network", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Settings - Network", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -4243,7 +4273,7 @@ static int MenuSettingsNetwork()
 	GuiImageData btnOutline(button_long_png);
 	GuiImageData btnOutlineOver(button_long_over_png);
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -4341,10 +4371,10 @@ static void RGBWindowUpdate(void * ptr, int red, int green, int blue)
 		if (blueAmount>255) blueAmount=255;
 		else if (blueAmount<0) blueAmount=0;
 
-		redText->setColor((GXColor){(u8)redAmount, 0, 0, 0xFF});
-		greenText->setColor((GXColor){0, (u8)greenAmount, 0, 0xFF});
-		blueText->setColor((GXColor){0, 0, (u8)blueAmount, 0xFF});
-		sampleText->setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+		redText->setColor((GuiColor){(u8)redAmount, 0, 0, 0xFF});
+		greenText->setColor((GuiColor){0, (u8)greenAmount, 0, 0xFF});
+		blueText->setColor((GuiColor){0, 0, (u8)blueAmount, 0xFF});
+		sampleText->setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 
 		char shift[10];
 		sprintf(shift, "%2x", redAmount);
@@ -4463,22 +4493,22 @@ static void PaletteWindow(const char *name)
 	blueBoxImg.setPosition(+50, 0);
 
 	char shift[10];
-	redText = new GuiText(NULL, 20, (GXColor){128, 0, 0, 255});
+	redText = new GuiText(NULL, 20, (GuiColor){128, 0, 0, 255});
 	redText->setPosition(-150,0);
 	sprintf(shift, "%2x", redAmount);
 	redText->setText(shift);
 
-	greenText = new GuiText(NULL, 20, (GXColor){0, 128, 0, 255});
+	greenText = new GuiText(NULL, 20, (GuiColor){0, 128, 0, 255});
 	greenText->setPosition(-50, 0);
 	sprintf(shift, "%2x", greenAmount);
 	greenText->setText(shift);
 
-	blueText = new GuiText(NULL, 20, (GXColor){0, 0, 128, 255});
+	blueText = new GuiText(NULL, 20, (GuiColor){0, 0, 128, 255});
 	blueText->setPosition(+50,0);
 	sprintf(shift, "%2x", blueAmount);
 	blueText->setText(shift);
 
-	sampleText = new GuiText(NULL, 20, (GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+	sampleText = new GuiText(NULL, 20, (GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 	sampleText->setPosition(+150,0);
 	sampleText->setText(name);
 
@@ -4515,7 +4545,7 @@ static void PaletteWindow(const char *name)
 	delete(blueText);
 }
 
-GXColor GetCol(int i) {
+GuiColor GetCol(int i) {
 	int c = 0;
 	u8 r=0, g=0, b=0;
 	if (unsigned(i) <= 13)
@@ -4526,7 +4556,7 @@ GXColor GetCol(int i) {
 		b = (c) & 255;
 		
 	}
-	return (GXColor){r,g,b,255};
+	return (GuiColor){r,g,b,255};
 }
 
 /****************************************************************************
@@ -4541,7 +4571,7 @@ static int MenuPalette()
 
 	int menu = MENU_NONE;
 
-	GuiText titleTxt("Palette", 26, (GXColor){255, 255, 255, 255});
+	GuiText titleTxt("Palette", 26, (GuiColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -4767,7 +4797,7 @@ static int MenuPalette()
 	spr2Btn.setTrigger(trig2);
 	spr2Btn.setEffectGrow();
 
-	GuiText importBtnTxt("Load / Save", 22, (GXColor){0, 0, 0, 255});
+	GuiText importBtnTxt("Load / Save", 22, (GuiColor){0, 0, 0, 255});
 	importBtnTxt.setWrap(true, btnOutline.getWidth()-30);
 	GuiImage importBtnImg(&btnOutline);
 	GuiImage importBtnImgOver(&btnOutlineOver);
@@ -4783,7 +4813,7 @@ static int MenuPalette()
 	importBtn.setTrigger(trig2);
 	importBtn.setEffectGrow();
 
-	GuiText closeBtnTxt("Close", 20, (GXColor){0, 0, 0, 255});
+	GuiText closeBtnTxt("Close", 20, (GuiColor){0, 0, 0, 255});
 	GuiImage closeBtnImg(&btnCloseOutline);
 	GuiImage closeBtnImgOver(&btnCloseOutlineOver);
 	GuiButton closeBtn(btnCloseOutline.getWidth(), btnCloseOutline.getHeight());
@@ -4799,7 +4829,7 @@ static int MenuPalette()
 	closeBtn.setTrigger(&trigHome);
 	closeBtn.setEffectGrow();
 
-	GuiText backBtnTxt("Go Back", 22, (GXColor){0, 0, 0, 255});
+	GuiText backBtnTxt("Go Back", 22, (GuiColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
 	GuiImage backBtnImgOver(&btnOutlineOver);
 	GuiButton backBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -4850,7 +4880,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[0] >> 0) & 0xFF;
 			PaletteWindow("BG 0");
 			CurrentPalette.palette[0] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			bg0BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			bg0BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			bg0Btn.resetState();
 		}
 		else if(bg1Btn.getState() == STATE::CLICKED)
@@ -4860,7 +4890,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[1] >> 0) & 0xFF;
 			PaletteWindow("BG 1");
 			CurrentPalette.palette[1] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			bg1BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			bg1BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			bg1Btn.resetState();
 		}
 		else if(bg2Btn.getState() == STATE::CLICKED)
@@ -4870,7 +4900,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[2] >> 0) & 0xFF;
 			PaletteWindow("BG 2");
 			CurrentPalette.palette[2] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			bg2BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			bg2BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			bg2Btn.resetState();
 		}
 		else if(bg3Btn.getState() == STATE::CLICKED)
@@ -4880,7 +4910,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[3] >> 0) & 0xFF;
 			PaletteWindow("BG 3");
 			CurrentPalette.palette[3] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			bg3BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			bg3BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			bg3Btn.resetState();
 		}
 		else if(win0Btn.getState() == STATE::CLICKED)
@@ -4890,7 +4920,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[4] >> 0) & 0xFF;
 			PaletteWindow("WIN 0");
 			CurrentPalette.palette[4] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			win0BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			win0BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			win0Btn.resetState();
 		}
 		else if(win1Btn.getState() == STATE::CLICKED)
@@ -4900,7 +4930,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[5] >> 0) & 0xFF;
 			PaletteWindow("WIN 1");
 			CurrentPalette.palette[5] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			win1BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			win1BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			win1Btn.resetState();
 		}
 		else if(win2Btn.getState() == STATE::CLICKED)
@@ -4910,7 +4940,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[6] >> 0) & 0xFF;
 			PaletteWindow("WIN 2");
 			CurrentPalette.palette[6] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			win2BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			win2BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			win2Btn.resetState();
 		}
 		else if(win3Btn.getState() == STATE::CLICKED)
@@ -4920,7 +4950,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[7] >> 0) & 0xFF;
 			PaletteWindow("WIN 3");
 			CurrentPalette.palette[7] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			win3BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			win3BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			win3Btn.resetState();
 		}
 		else if(obj0Btn.getState() == STATE::CLICKED)
@@ -4930,7 +4960,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[8] >> 0) & 0xFF;
 			PaletteWindow("OBJ 0");
 			CurrentPalette.palette[8] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			obj0BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			obj0BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			obj0Btn.resetState();
 		}
 		else if(obj1Btn.getState() == STATE::CLICKED)
@@ -4940,7 +4970,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[9] >> 0) & 0xFF;
 			PaletteWindow("OBJ 1");
 			CurrentPalette.palette[9] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			obj1BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			obj1BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			obj1Btn.resetState();
 		}
 		else if(obj2Btn.getState() == STATE::CLICKED)
@@ -4950,7 +4980,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[10] >> 0) & 0xFF;
 			PaletteWindow("OBJ 2");
 			CurrentPalette.palette[10] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			obj2BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			obj2BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			obj2Btn.resetState();
 		}
 		else if(spr0Btn.getState() == STATE::CLICKED)
@@ -4960,7 +4990,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[11] >> 0) & 0xFF;
 			PaletteWindow("SPR 0");
 			CurrentPalette.palette[11] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			spr0BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			spr0BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			spr0Btn.resetState();
 		}
 		else if(spr1Btn.getState() == STATE::CLICKED)
@@ -4970,7 +5000,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[12] >> 0) & 0xFF;
 			PaletteWindow("SPR 1");
 			CurrentPalette.palette[12] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			spr1BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			spr1BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			spr1Btn.resetState();
 		}
 		else if(spr2Btn.getState() == STATE::CLICKED)
@@ -4980,7 +5010,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[13] >> 0) & 0xFF;
 			PaletteWindow("SPR 2");
 			CurrentPalette.palette[13] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			spr2BtnTxt.setColor((GXColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			spr2BtnTxt.setColor((GuiColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
 			spr2Btn.resetState();
 		}
 		else if(importBtn.getState() == STATE::CLICKED)
@@ -5028,7 +5058,7 @@ static u8 * CreateBlurredGameTexture() {
 	}
 
 	int blurAmount = 4; // blur amount
-	GXColor blurOverlayColor = (GXColor){50, 50, 50, 160};
+	GuiColor blurOverlayColor = (GuiColor){50, 50, 50, 160};
 
 	u8 * dst = (u8 *)mem1_malloc(IMAGE_BUFFER_SIZE);
 	if(!dst) {
@@ -5239,7 +5269,7 @@ MainMenu (int menu)
 	}
 
 	if(gameScreenImg == NULL) {
-		gameScreenImg = new GuiImage(screenwidth, screenheight, (GXColor){236, 226, 238, 255});
+		gameScreenImg = new GuiImage(screenwidth, screenheight, (GuiColor){236, 226, 238, 255});
 		gameScreenImg->colorStripe(10);
 	}
 
@@ -5256,7 +5286,7 @@ MainMenu (int menu)
 	GuiImage logoImg(&logo);
 	GuiImageData logoOver(logo_over_png);
 	GuiImage logoImgOver(&logoOver);
-	GuiText logoTxt(APPVERSION, 18, (GXColor){255, 255, 255, 255});
+	GuiText logoTxt(APPVERSION, 18, (GuiColor){255, 255, 255, 255});
 	logoTxt.setAlignment(ALIGN_H::RIGHT, ALIGN_V::TOP);
 	logoTxt.setPosition(0, 4);
 	btnLogo = new GuiButton(logoImg.getWidth(), logoImg.getHeight());

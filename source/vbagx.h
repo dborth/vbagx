@@ -14,7 +14,6 @@
 #include <sys/param.h>
 
 #include "filelist.h"
-#include "utils/FreeTypeGX.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
 #define APPVERSION 		"3.0.2"
@@ -249,7 +248,5 @@ void ExitApp();
 extern struct SGCSettings GCSettings;
 extern bool MenuRequested;
 extern char appPath[];
-
-extern FreeTypeGX *fontSystem[];
 
 #endif
