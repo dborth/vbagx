@@ -373,7 +373,7 @@ void UpdatePads()
 		#endif
 
 		// 4. Merge into unified aggregate state for UI Elements
-		for (int hw = 0; hw < GUI_HW_MAX; hw++)
+		for (uint32_t hw = 0; hw < GUI_HW_MAX; hw++)
 		{
 			if (padData.hw_connected[hw])
 			{
@@ -834,7 +834,7 @@ static u32 DecodeJoy(unsigned short pad)
 		bool button_pressed = false;
 
 		// Check if ANY connected hardware matches the mapping
-		for (int hw = 0; hw < GUI_HW_MAX; hw++)
+		for (uint32_t hw = 0; hw < GUI_HW_MAX; hw++)
 		{
 			if (!data.hw_connected[hw]) continue;
 			uint32_t mapped_btn = btnmap[hw][i];
