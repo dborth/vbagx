@@ -1397,7 +1397,6 @@ switched items since then.
 			Visual Boy Advance - M	VBA-M Team
 			Visual Boy Advance		Forgotten
 			libogc/devkitPPC			shagkur & wintermute
-			FreeTypeGX					Armin Tamzarian
 
 			And many others who have contributed over the years!
 

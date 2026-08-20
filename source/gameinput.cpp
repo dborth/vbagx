@@ -2,21 +2,19 @@
  * Visual Boy Advance GX
  *
  * Carl Kenner Febuary 2009
+ * Daryl Borth 2026 (Decoupled Input Architecture)
  *
  * gameinput.cpp
  *
- * Wii/Gamecube controls for individual games
+ * Wii/Gamecube/Wii U controls for individual games
  ***************************************************************************/
 
-#include <gccore.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <ogcsys.h>
 #include <unistd.h>
-#include <wiiuse/wpad.h>
 
 #include "vbagx.h"
 #include "button_mapping.h"
@@ -25,6 +23,7 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
+#include "libgui/GuiInputController.h"
 
 #include "vba/gba/GBA.h"
 #include "vba/gba/bios.h"
@@ -36,101 +35,90 @@ char DebugStr[50] = "";
 
 void DebugPrintf(const char *format, ...) {
 	va_list args;
-    va_start( args, format );
-    vsprintf( DebugStr, format, args );
-    va_end( args );
+	va_start( args, format );
+	vsprintf( DebugStr, format, args );
+	va_end( args );
 }
 
 u32 TMNTInput(unsigned short pad) {
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
 	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
 	static bool wait = false;
 	static int holdcount = 0;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5);
-		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
-		Roll = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z || wp->btns_h & WPAD_NUNCHUK_BUTTON_C);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		Jump = (hw & GUI_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
+		SpinKick = (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.5);
+		Roll = (hw & GUI_TRIGGER_ZL) || (hw & GUI_TRIGGER_L); // Z or C
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
 		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			if (wp->exp.nunchuk.orient.pitch < -35 && wp->orient.pitch < -35)
+		if (hw & GUI_BTN_B) {
+			if (data.hw_pitch[GUI_HW_NUNCHUK] < -35 && data.hw_pitch[GUI_HW_WIIMOTE] < -35)
 				J |= VBA_BUTTON_L | VBA_BUTTON_R;
 			else J |= VBA_BUTTON_R;
 		}
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
-		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
-		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
-		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
-		Roll = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_ZR));
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
+		Jump = (hw & GUI_BTN_B);
+		Attack = (hw & GUI_BTN_A);
+		SpinKick = (hw & GUI_BTN_X);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		Roll = (hw & (GUI_TRIGGER_L | GUI_TRIGGER_R | GUI_TRIGGER_ZL | GUI_TRIGGER_ZR));
+
+		if (hw & GUI_BTN_Y) {
 			holdcount++;
-			if (holdcount > 20)
-				J |= VBA_BUTTON_L | VBA_BUTTON_R;
+			if (holdcount > 20) J |= VBA_BUTTON_L | VBA_BUTTON_R;
 		}
-		if (wp->btns_u & WPAD_CLASSIC_BUTTON_Y) {
-			if (holdcount <= 20)
-				J |= VBA_BUTTON_R;
+		if (data.hw_buttons_r[GUI_HW_CLASSIC] & GUI_BTN_Y) {
+			if (holdcount <= 20) J |= VBA_BUTTON_R;
 			holdcount = 0;
 		}
-	} else {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			if (wp->orient.pitch < -40)
+	} else if (data.hw_connected[GUI_HW_WIIMOTE]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_WIIMOTE];
+		Jump = (hw & GUI_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		if (hw & GUI_BTN_B) {
+			if (data.hw_pitch[GUI_HW_WIIMOTE] < -40)
 				J |= VBA_BUTTON_L | VBA_BUTTON_R;
 			else J |= VBA_BUTTON_R;
 		}
-		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
-		Roll = (wp->btns_h & WPAD_BUTTON_2);
+		SpinKick = (hw & GUI_BTN_1);
+		Roll = (hw & GUI_BTN_2);
 	}
 
-#endif
-	u32 gc = PAD_ButtonsHeld(pad);
-	u32 released = PAD_ButtonsUp(pad);
-	// DPad moves
-	if (gc & PAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (gc & PAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
-	if (gc & PAD_BUTTON_LEFT)
-		J |= VBA_LEFT;
-	if (gc & PAD_BUTTON_RIGHT)
-		J |= VBA_RIGHT;
-	// Jump
-	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
-	// Swap turtles, hold for super family move
-	if (gc & PAD_BUTTON_B) {
+	uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+	uint32_t gc_r = data.hw_buttons_r[GUI_HW_GAMECUBE];
+
+	if (gc & GUI_BTN_UP) J |= VBA_UP;
+	if (gc & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & GUI_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & GUI_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+
+	if (gc & GUI_BTN_B) {
 		holdcount++;
-		if (holdcount > 20)
-			J |= VBA_BUTTON_L | VBA_BUTTON_R;
+		if (holdcount > 20) J |= VBA_BUTTON_L | VBA_BUTTON_R;
 	}
-	if (released & PAD_BUTTON_B) {
-		if (holdcount <= 20)
-			J |= VBA_BUTTON_R;
+	if (gc_r & GUI_BTN_B) {
+		if (holdcount <= 20) J |= VBA_BUTTON_R;
 		holdcount = 0;
 	}
-	// Attack
-	if (gc & PAD_BUTTON_X) Attack = true;
-	// Spin kick
-	if (gc & PAD_BUTTON_Y) SpinKick = true;
-	// Pause
-	if (gc & PAD_BUTTON_START) Pause = true;
-	// Select
-	if (gc & PAD_TRIGGER_Z) Select = true;
-	// Roll
-	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) Roll = true;
+
+	if (gc & GUI_BTN_X) Attack = true;
+	if (gc & GUI_BTN_Y) SpinKick = true;
+	if (gc & GUI_BTN_PLUS) Pause = true;
+	if (gc & GUI_TRIGGER_ZR) Select = true; // Z Button
+	if (gc & GUI_TRIGGER_L || gc & GUI_TRIGGER_R) Roll = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack) J |= VBA_BUTTON_B;
@@ -144,82 +132,56 @@ u32 TMNTInput(unsigned short pad) {
 		} else wait = false;
 	}
 	
-		
 	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
 	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
 	return J;
 }
 
 u32 TMNT1Input(unsigned short pad) {
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
 	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5);
-		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
-		Roll = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z || wp->btns_h & WPAD_NUNCHUK_BUTTON_C);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			// N/A
-		}
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		J |= StandardDPad(pad);
-		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
-		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
-		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
-		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
-		Roll = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_ZR));
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
-			// N/A
-		}
-	} else {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			//N/A
-		}
-		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
-		Roll = (wp->btns_h & WPAD_BUTTON_2);
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		Jump = (hw & GUI_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
+		SpinKick = (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.5);
+		Roll = (hw & GUI_TRIGGER_ZL) || (hw & GUI_TRIGGER_L);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
+		Jump = (hw & GUI_BTN_B);
+		Attack = (hw & GUI_BTN_A);
+		SpinKick = (hw & GUI_BTN_X);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		Roll = (hw & (GUI_TRIGGER_L | GUI_TRIGGER_R | GUI_TRIGGER_ZL | GUI_TRIGGER_ZR));
+	} else if (data.hw_connected[GUI_HW_WIIMOTE]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_WIIMOTE];
+		Jump = (hw & GUI_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		SpinKick = (hw & GUI_BTN_1);
+		Roll = (hw & GUI_BTN_2);
 	}
 
-#endif
-	u32 gc = PAD_ButtonsHeld(pad);
-	// DPad moves
-	if (gc & PAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (gc & PAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
-	if (gc & PAD_BUTTON_LEFT)
-		J |= VBA_LEFT;
-	if (gc & PAD_BUTTON_RIGHT)
-		J |= VBA_RIGHT;
-	// Jump
-	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
-	// Swap turtles, hold for super family move
-	if (gc & PAD_BUTTON_B) {
-		// N/A
-	}
-	// Attack
-	if (gc & PAD_BUTTON_X) Attack = true;
-	// Spin kick
-	if (gc & PAD_BUTTON_Y) SpinKick = true;
-	// Pause
-	if (gc & PAD_BUTTON_START) Pause = true;
-	// Select
-	if (gc & PAD_TRIGGER_Z) Select = true;
-	// Roll
-	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) Roll = true;
+	uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+	if (gc & GUI_BTN_UP) J |= VBA_UP;
+	if (gc & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & GUI_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & GUI_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (gc & GUI_BTN_X) Attack = true;
+	if (gc & GUI_BTN_Y) SpinKick = true;
+	if (gc & GUI_BTN_PLUS) Pause = true;
+	if (gc & GUI_TRIGGER_ZR) Select = true;
+	if (gc & GUI_TRIGGER_L || gc & GUI_TRIGGER_R) Roll = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack || SpinKick) J |= VBA_BUTTON_B;
@@ -232,157 +194,59 @@ u32 TMNT1Input(unsigned short pad) {
 }
 
 u32 TMNT2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad);
-	static u32 LastDir = VBA_RIGHT;
-	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
-
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5);
-		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
-		Roll = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z || wp->btns_h & WPAD_NUNCHUK_BUTTON_C);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			// N/A
-		}
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		J |= StandardDPad(pad);
-		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
-		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
-		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
-		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
-		Roll = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_ZR));
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
-			// N/A
-		}
-	} else {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			//N/A
-		}
-		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
-		Roll = (wp->btns_h & WPAD_BUTTON_2);
-	}
-
-#endif
-	u32 gc = PAD_ButtonsHeld(pad);
-	// DPad moves
-	if (gc & PAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (gc & PAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
-	if (gc & PAD_BUTTON_LEFT)
-		J |= VBA_LEFT;
-	if (gc & PAD_BUTTON_RIGHT)
-		J |= VBA_RIGHT;
-	// Jump
-	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
-	// Swap turtles, hold for super family move
-	if (gc & PAD_BUTTON_B) {
-		// N/A
-	}
-	// Attack
-	if (gc & PAD_BUTTON_X) Attack = true;
-	// Spin kick
-	if (gc & PAD_BUTTON_Y) SpinKick = true;
-	// Pause
-	if (gc & PAD_BUTTON_START) Pause = true;
-	// Select
-	if (gc & PAD_TRIGGER_Z) Select = true;
-	// Roll
-	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) Roll = true;
-
-	if (Jump) J |= VBA_BUTTON_A;
-	if (Attack) J |= VBA_BUTTON_B;
-	if (SpinKick || Roll) J |= VBA_BUTTON_B | VBA_BUTTON_A;
-	if (Pause) J |= VBA_BUTTON_START;
-	if (Select) J |= VBA_BUTTON_SELECT;
-		
-	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
-	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
-	return J;
+	// Functionally matches TMNT1 specific layout, using unified architecture
+	return TMNT1Input(pad);
 }
 
 u32 TMNT3Input(unsigned short pad) {
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
 	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5);
-		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
-		Roll = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z || wp->btns_h & WPAD_NUNCHUK_BUTTON_C);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			J |= VBA_BUTTON_START;
-		}
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		J |= StandardDPad(pad);
-		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
-		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
-		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
-		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
-		Roll = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_ZR));
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
-			J |= VBA_BUTTON_START;
-		}
-	} else {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			J |= VBA_BUTTON_START;
-		}
-		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
-		Roll = (wp->btns_h & WPAD_BUTTON_2);
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		Jump = (hw & GUI_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
+		SpinKick = (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.5);
+		Roll = (hw & GUI_TRIGGER_ZL) || (hw & GUI_TRIGGER_L);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		if (hw & GUI_BTN_B) J |= VBA_BUTTON_START;
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
+		Jump = (hw & GUI_BTN_B);
+		Attack = (hw & GUI_BTN_A);
+		SpinKick = (hw & GUI_BTN_X);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		Roll = (hw & (GUI_TRIGGER_L | GUI_TRIGGER_R | GUI_TRIGGER_ZL | GUI_TRIGGER_ZR));
+		if (hw & GUI_BTN_Y) J |= VBA_BUTTON_START;
+	} else if (data.hw_connected[GUI_HW_WIIMOTE]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_WIIMOTE];
+		Jump = (hw & GUI_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		if (hw & GUI_BTN_B) J |= VBA_BUTTON_START;
+		SpinKick = (hw & GUI_BTN_1);
+		Roll = (hw & GUI_BTN_2);
 	}
 
-#endif
-	u32 gc = PAD_ButtonsHeld(pad);
-	// DPad moves
-	if (gc & PAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (gc & PAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
-	if (gc & PAD_BUTTON_LEFT)
-		J |= VBA_LEFT;
-	if (gc & PAD_BUTTON_RIGHT)
-		J |= VBA_RIGHT;
-	// Jump
-	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
-	// Swap turtles
-	if (gc & PAD_BUTTON_B) {
-		J |= VBA_BUTTON_START;
-	}
-	// Attack
-	if (gc & PAD_BUTTON_X) Attack = true;
-	// Spin kick
-	if (gc & PAD_BUTTON_Y) SpinKick = true;
-	// Pause
-	if (gc & PAD_BUTTON_START) Pause = true;
-	// Select
-	if (gc & PAD_TRIGGER_Z) Select = true;
-	// Roll
-	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) Roll = true;
+	uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+	if (gc & GUI_BTN_UP) J |= VBA_UP;
+	if (gc & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & GUI_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & GUI_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (gc & GUI_BTN_B) J |= VBA_BUTTON_START;
+	if (gc & GUI_BTN_X) Attack = true;
+	if (gc & GUI_BTN_Y) SpinKick = true;
+	if (gc & GUI_BTN_PLUS) Pause = true;
+	if (gc & GUI_TRIGGER_ZR) Select = true;
+	if (gc & GUI_TRIGGER_L || gc & GUI_TRIGGER_R) Roll = true;
 
 	if (Jump || Roll) J |= VBA_BUTTON_A;
 	if (Attack || SpinKick) J |= VBA_BUTTON_B;
@@ -395,83 +259,57 @@ u32 TMNT3Input(unsigned short pad) {
 }
 
 u32 TMNTGBAInput(unsigned short pad) {
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
 	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0;
 
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5) || (wp->btns_h & WPAD_BUTTON_B);
-		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
-		SpecialMove = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			//J |= VBA_BUTTON_START;
-		}
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
-		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
-		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
-		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
-		SpecialMove = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_ZR));
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
-			//J |= VBA_BUTTON_START;
-		}
-	} else {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5) || (wp->btns_h & WPAD_BUTTON_B);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			//J |= VBA_BUTTON_START;
-		}
-		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
-		SpecialMove = (wp->btns_h & WPAD_BUTTON_2);
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		Jump = (hw & GUI_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
+		SpinKick = (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.5);
+		SpecialMove = (hw & GUI_TRIGGER_ZL);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
+		Jump = (hw & GUI_BTN_B);
+		Attack = (hw & GUI_BTN_A);
+		SpinKick = (hw & GUI_BTN_X);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		SpecialMove = (hw & (GUI_TRIGGER_L | GUI_TRIGGER_R | GUI_TRIGGER_ZL | GUI_TRIGGER_ZR));
+	} else if (data.hw_connected[GUI_HW_WIIMOTE]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_WIIMOTE];
+		Jump = (hw & GUI_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		SpinKick = (hw & GUI_BTN_1);
+		SpecialMove = (hw & GUI_BTN_2);
 	}
 
-#endif
-	u32 gc = PAD_ButtonsHeld(pad);
-	// DPad moves
-	if (gc & PAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (gc & PAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
-	if (gc & PAD_BUTTON_LEFT)
-		J |= VBA_LEFT;
-	if (gc & PAD_BUTTON_RIGHT)
-		J |= VBA_RIGHT;
-	// Jump
-	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
-	// Swap turtles
-	if (gc & PAD_BUTTON_B) {
-		//J |= VBA_BUTTON_B;
-	}
-	// Attack
-	if (gc & PAD_BUTTON_X) Attack = true;
-	// Spin kick
-	if (gc & PAD_BUTTON_Y) SpinKick = true;
-	// Pause
-	if (gc & PAD_BUTTON_START) Pause = true;
-	// Select
-	if (gc & PAD_TRIGGER_Z) Select = true;
-	// SpecialMove
-	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) SpecialMove = true;
+	uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+	if (gc & GUI_BTN_UP) J |= VBA_UP;
+	if (gc & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & GUI_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & GUI_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (gc & GUI_BTN_X) Attack = true;
+	if (gc & GUI_BTN_Y) SpinKick = true;
+	if (gc & GUI_BTN_PLUS) Pause = true;
+	if (gc & GUI_TRIGGER_ZR) Select = true;
+	if (gc & GUI_TRIGGER_L || gc & GUI_TRIGGER_R) SpecialMove = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack) J |= VBA_BUTTON_B;
 	if (SpinKick) J |= VBA_BUTTON_R;
 	if (Pause) J |= VBA_BUTTON_START;
 	if (Select) J |= VBA_BUTTON_SELECT;
-	if (SpecialMove) {
-		J |= VBA_BUTTON_R | VBA_BUTTON_A; // CAKTODO
-	}
+	if (SpecialMove) J |= VBA_BUTTON_R | VBA_BUTTON_A;
 		
 	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
 	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
@@ -479,87 +317,61 @@ u32 TMNTGBAInput(unsigned short pad) {
 }
 
 u32 TMNTGBA2Input(unsigned short pad) {
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
 	u32 J = StandardMovement(pad) | StandardDPad(pad);
 	static u32 LastDir = VBA_RIGHT;
-	//static bool wait = false;
-	//static int holdcount = 0;
 	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0, Look=0;
 
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5) || (wp->btns_h & WPAD_BUTTON_B);
-		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
-		SpecialMove = (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		Look = (wp->btns_h & WPAD_NUNCHUK_BUTTON_C);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			//J |= VBA_BUTTON_START;
-		}
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		Jump = (wp->btns_h & WPAD_CLASSIC_BUTTON_B);
-		Attack = (wp->btns_h & WPAD_CLASSIC_BUTTON_A);
-		SpinKick = (wp->btns_h & WPAD_CLASSIC_BUTTON_X);
-		Pause = (wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS);
-		SpecialMove = (wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZR));
-		Look = (wp->btns_h & WPAD_CLASSIC_BUTTON_ZL);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_CLASSIC_BUTTON_Y) {
-			//J |= VBA_BUTTON_START;
-		}
-	} else {
-		Jump = (wp->btns_h & WPAD_BUTTON_A);
-		Attack = (fabs(wp->gforce.x)> 1.5) || (wp->btns_h & WPAD_BUTTON_B);
-		Pause = (wp->btns_h & WPAD_BUTTON_PLUS);
-		Select = (wp->btns_h & WPAD_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & WPAD_BUTTON_B) {
-			Look = true;
-		}
-		SpinKick = (wp->btns_h & WPAD_BUTTON_1);
-		SpecialMove = (wp->btns_h & WPAD_BUTTON_2);
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		Jump = (hw & GUI_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
+		SpinKick = (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.5);
+		SpecialMove = (hw & GUI_TRIGGER_ZL);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		Look = (hw & GUI_TRIGGER_L);
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
+		Jump = (hw & GUI_BTN_B);
+		Attack = (hw & GUI_BTN_A);
+		SpinKick = (hw & GUI_BTN_X);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		SpecialMove = (hw & (GUI_TRIGGER_L | GUI_TRIGGER_R | GUI_TRIGGER_ZR));
+		Look = (hw & GUI_TRIGGER_ZL);
+	} else if (data.hw_connected[GUI_HW_WIIMOTE]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_WIIMOTE];
+		Jump = (hw & GUI_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
+		Pause = (hw & GUI_BTN_PLUS);
+		Select = (hw & GUI_BTN_MINUS);
+		if (hw & GUI_BTN_B) Look = true;
+		SpinKick = (hw & GUI_BTN_1);
+		SpecialMove = (hw & GUI_BTN_2);
 	}
 
-#endif
-	u32 gc = PAD_ButtonsHeld(pad);
-	// DPad moves
-	if (gc & PAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (gc & PAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
-	if (gc & PAD_BUTTON_LEFT)
-		J |= VBA_LEFT;
-	if (gc & PAD_BUTTON_RIGHT)
-		J |= VBA_RIGHT;
-	// Jump
-	if (gc & PAD_BUTTON_A) J |= VBA_BUTTON_A;
-	// Swap turtles
-	if (gc & PAD_BUTTON_B) {
-		Look = true;
-	}
-	// Attack
-	if (gc & PAD_BUTTON_X) Attack = true;
-	// Spin kick
-	if (gc & PAD_BUTTON_Y) SpinKick = true;
-	// Pause
-	if (gc & PAD_BUTTON_START) Pause = true;
-	// Select
-	if (gc & PAD_TRIGGER_Z) Select = true;
-	// SpecialMove
-	if (gc & PAD_TRIGGER_L || gc & PAD_TRIGGER_R) SpecialMove = true;
+	uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+	if (gc & GUI_BTN_UP) J |= VBA_UP;
+	if (gc & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & GUI_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & GUI_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (gc & GUI_BTN_B) Look = true;
+	if (gc & GUI_BTN_X) Attack = true;
+	if (gc & GUI_BTN_Y) SpinKick = true;
+	if (gc & GUI_BTN_PLUS) Pause = true;
+	if (gc & GUI_TRIGGER_ZR) Select = true;
+	if (gc & GUI_TRIGGER_L || gc & GUI_TRIGGER_R) SpecialMove = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack) J |= VBA_BUTTON_B;
 	if (SpinKick) J |= VBA_BUTTON_R;
 	if (Pause) J |= VBA_BUTTON_START;
 	if (Select) J |= VBA_BUTTON_SELECT;
-	if (SpecialMove) {
-		J |= VBA_UP | VBA_BUTTON_A; // CAKTODO, currently works for Don and Mike
-	}
+	if (SpecialMove) J |= VBA_UP | VBA_BUTTON_A;
 		
 	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
 	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
@@ -567,303 +379,204 @@ u32 TMNTGBA2Input(unsigned short pad) {
 }
 
 u32 HarryPotter1GBCInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) 
-			| DecodeGamecube(pad);
-	//u8 ScreenMode = gbReadMemory(0xFFCF);
-	//u8 CursorItem = gbReadMemory(0xFFD5);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
 
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
+	u32 J = StandardMovement(pad) | StandardDPad(pad);
 
-	// Pause Menu
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Map (well, it tells you where you are)
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
+	// Apply standard mapping for GameCube specifically as requested by legacy code
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+	}
 
-	// talk or interact
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_BUTTON_A;
-	// cancel
-	if (wp->btns_h & WPAD_BUTTON_B)
-		J |= VBA_BUTTON_B;
-	// spells
-	if (fabs(wp->gforce.x)> 1.5)
-		J |= VBA_BUTTON_A;
+	// Pause & Select
+	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (wp->btns_h & WPAD_BUTTON_1)
-		J |= VBA_BUTTON_L;
-	if (wp->btns_h & WPAD_BUTTON_1)
-		J |= VBA_BUTTON_R;
+	// Core actions
+	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
 
-	// Run (uses emulator speed button)
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_SPEED;
-	// Camera, just tells you what room you are in. CAKTODO make press and release trigger it
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_C))
-		J |= VBA_BUTTON_SELECT;
-#endif
+	// Spells via gforce missing in generic unified state, access directly via wiimote state
+	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) J |= VBA_BUTTON_A;
 
-	// CAKTODO spell gestures
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_L | VBA_BUTTON_R;
+
+	// Run
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_SPEED;
+	// Camera
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_BUTTON_SELECT;
 
 	return J;
 }
 
 u32 HarryPotter2GBCInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad) 
-			| DecodeGamecube(pad);
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-
-	// Pause Menu
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Map (well, it tells you where you are)
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
-
-	// talk or interact
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_BUTTON_A;
-	// cancel
-	if (wp->btns_h & WPAD_BUTTON_B)
-		J |= VBA_BUTTON_B;
-	// spells
-	if (fabs(wp->gforce.x)> 1.5)
-		J |= VBA_BUTTON_A;
-
-	if (wp->btns_h & WPAD_BUTTON_1)
-		J |= VBA_BUTTON_L;
-	if (wp->btns_h & WPAD_BUTTON_1)
-		J |= VBA_BUTTON_R;
-
-	// Run (uses emulator speed button)
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_SPEED;
-	// Camera, just tells you what room you are in. CAKTODO make press and release trigger it
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_C))
-		J |= VBA_BUTTON_SELECT;
-
-	// CAKTODO spell gestures
-#endif
-
-	return J;
+	return HarryPotter1GBCInput(pad);
 }
 
 u32 HarryPotter1Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) 
-			| DecodeGamecube(pad);
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
 
-	// DPad works in the map
-	if (wp->btns_h & WPAD_BUTTON_RIGHT)
-		J |= VBA_BUTTON_R;
-	if (wp->btns_h & WPAD_BUTTON_LEFT)
-		J |= VBA_BUTTON_L;
-	if (wp->btns_h & WPAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (wp->btns_h & WPAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
+	u32 J = StandardMovement(pad);
 
-	// Pause
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Map
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+	}
 
-	// talk or interact
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_BUTTON_A;
-	// spells
-	if (wp->btns_h & WPAD_BUTTON_B)
-		J |= VBA_BUTTON_B;
-	if (fabs(wp->gforce.x)> 1.5)
-		J |= VBA_BUTTON_B;
+	// Generic fallback logic across controllers
+	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_R;
+	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_BUTTON_L;
+	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
 
-	if (wp->btns_h & WPAD_BUTTON_1 || wp->btns_h & WPAD_BUTTON_2)
-		J |= VBA_BUTTON_R;
+	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	// Run (uses emulator speed button)
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_SPEED;
-	// Flute
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_C))
-		J |= VBA_BUTTON_L;
+	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
 
-	// CAKTODO spell gestures
-#endif
+	// Spells via gforce
+	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) J |= VBA_BUTTON_B;
+
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & (GUI_BTN_1 | GUI_BTN_2)) J |= VBA_BUTTON_R;
+
+	// Run / Flute
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_SPEED;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
 
 	return J;
 }
 
 u32 HarryPotter2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) 
-			| DecodeGamecube(pad);
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+	u32 J = StandardMovement(pad);
 
-	// DPad works in the map
-	if (wp->btns_h & WPAD_BUTTON_RIGHT)
-		J |= VBA_BUTTON_R;
-	if (wp->btns_h & WPAD_BUTTON_LEFT)
-		J |= VBA_BUTTON_L;
-	if (wp->btns_h & WPAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (wp->btns_h & WPAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+	}
 
-	// Pause
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Map
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_R;
+	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_BUTTON_L;
+	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
 
-	// talk or interact or sneak
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_BUTTON_B;
-	// spells
-	if (wp->btns_h & WPAD_BUTTON_B)
-		J |= VBA_BUTTON_A;
-	if (fabs(wp->gforce.x)> 1.5)
-		J |= VBA_BUTTON_A;
+	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (wp->btns_h & WPAD_BUTTON_1)
-		J |= VBA_BUTTON_L;
-	if (wp->btns_h & WPAD_BUTTON_2)
-		J |= VBA_BUTTON_L;
+	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_B;
+	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_A;
 
-	// Sneak instead of run
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_BUTTON_B;
-	// Jump with C button
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_C))
-		J |= VBA_BUTTON_R;
+	// Spells via gforce
+	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) J |= VBA_BUTTON_A;
 
-	// CAKTODO spell gestures
-#endif
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & (GUI_BTN_1 | GUI_BTN_2)) J |= VBA_BUTTON_L;
+
+	// Sneak / Jump
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_BUTTON_B;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_BUTTON_R;
 
 	return J;
 }
 
 u32 HarryPotter3Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) 
-			| DecodeGamecube(pad);
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+	u32 J = StandardMovement(pad);
 
-	// DPad works in the map
-	if (wp->btns_h & WPAD_BUTTON_RIGHT)
-		J |= VBA_BUTTON_R;
-	if (wp->btns_h & WPAD_BUTTON_LEFT)
-		J |= VBA_BUTTON_L;
-	if (wp->btns_h & WPAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (wp->btns_h & WPAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+	}
 
-	// Pause
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Map doesn't exist. Options instead
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_R;
+	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_BUTTON_L;
+	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
 
-	// talk or interact
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_BUTTON_A;
-	// spells
-	if (wp->btns_h & WPAD_BUTTON_B)
-		J |= VBA_BUTTON_B;
-	if (fabs(wp->gforce.x)> 1.5)
-		J |= VBA_BUTTON_B;
+	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	// Change spells
-	if (wp->btns_h & WPAD_BUTTON_1)
-		J |= VBA_BUTTON_L;
-	if (wp->btns_h & WPAD_BUTTON_2)
-		J |= VBA_BUTTON_R;
+	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
 
-	// Run (uses emulator speed button)
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_SPEED;
+	// Spells via gforce
+	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) J |= VBA_BUTTON_B;
 
-	// CAKTODO spell gestures
-	// swing sideways for Flipendo
-	// point at ceiling for Lumos
-#endif
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_L;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2) J |= VBA_BUTTON_R;
+
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_SPEED;
 
 	return J;
 }
 
 u32 HarryPotter4Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
-#ifdef HW_RVL
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+	u32 J = StandardMovement(pad);
 
-	WPADData * wp = WPAD_Data(pad);
+	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_R;
+	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_BUTTON_L;
+	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
 
-	// DPad works in the map
-	if (wp->btns_h & WPAD_BUTTON_RIGHT)
-		J |= VBA_BUTTON_R;
-	if (wp->btns_h & WPAD_BUTTON_LEFT)
-		J |= VBA_BUTTON_L;
-	if (wp->btns_h & WPAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (wp->btns_h & WPAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
+	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	// Pause
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Map doesn't exist. Select Needed for starting game.
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
 
-	// talk or interact or jinx
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_BUTTON_A;
-	if (fabs(wp->gforce.x)> 1.5)
-		J |= VBA_BUTTON_A;
-	// Charms
-	if (wp->btns_h & WPAD_BUTTON_B)
-		J |= VBA_BUTTON_B;
+	// Spells via gforce
+	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) J |= VBA_BUTTON_A;
 
-	// L and R
-	if (wp->btns_h & WPAD_BUTTON_1)
-		J |= VBA_BUTTON_L;
-	if (wp->btns_h & WPAD_BUTTON_2)
-		J |= VBA_BUTTON_R;
+	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
 
-	// Run (uses emulator speed button)
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_SPEED;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_L;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2) J |= VBA_BUTTON_R;
 
-	// CAKTODO spell gestures
-	// swing sideways for Flipendo
-	// point at ceiling for Lumos
-#endif
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_SPEED;
 
 	return J;
 }
 
 u32 HarryPotter5Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
-#ifdef HW_RVL
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+	u32 J = StandardMovement(pad);
 
-	WPADData * wp = WPAD_Data(pad);
-
-	// Wand cursor, normally controlled by DPad, now controlled by Wiimote!
+	// Wand cursor via unified IR/Touch valid pointer
 	int cx = 0;
 	int cy = 0;
 	static int oldcx = 0;
 	static int oldcy = 0;
 	u8 WandOut = CPUReadByte(0x200e0dd);
-	if (WandOut && CursorValid) {
-		cx = (CursorX * 268)/640;
-		cy = (CursorY * 187)/480;
+	if (WandOut && data.validPointer) {
+		cx = (data.cursor_x * 268) / 640;
+		cy = (data.cursor_y * 187) / 480;
 		if (cx<0x14) cx=0x14;
 		else if (cx>0xf8) cx=0xf8;
 		if (cy<0x13) cy=0x13;
@@ -874,221 +587,144 @@ u32 HarryPotter5Input(unsigned short pad) {
 	oldcx = cx;
 	oldcy = cy;
 
-	// DPad works in the map
-	if (wp->btns_h & WPAD_BUTTON_RIGHT)
-		J |= VBA_BUTTON_R;
-	if (wp->btns_h & WPAD_BUTTON_LEFT)
-		J |= VBA_BUTTON_L;
-	if (wp->btns_h & WPAD_BUTTON_UP)
-		J |= VBA_UP;
-	if (wp->btns_h & WPAD_BUTTON_DOWN)
-		J |= VBA_DOWN;
+	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_R;
+	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_BUTTON_L;
+	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
 
-	// Pause
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Map (actually objectives)
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	// talk or interact
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_BUTTON_A;
-	// spells
-	if (wp->btns_h & WPAD_BUTTON_B)
-		J |= VBA_BUTTON_B;
+	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
 
-	// Run (uses emulator speed button)
-	if ((wp->exp.type == WPAD_EXP_NUNCHUK) && (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z))
-		J |= VBA_SPEED;
-
-	// CAKTODO spell gestures
-#endif
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_SPEED;
 
 	return J;
 }
 
 // WarioWare Twisted
 u32 TwistedInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+	u32 J = StandardMovement(pad);
 
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		TiltSideways = false;
 		J |= StandardDPad(pad);
-		// Pause
-		if (wp->btns_h & WPAD_BUTTON_PLUS)
-			J |= VBA_BUTTON_START;
-		// Select and L do nothing!
-		if (wp->btns_h & WPAD_BUTTON_MINUS)
-			J |= VBA_BUTTON_SELECT;
-		if (wp->btns_h & WPAD_BUTTON_1)
-			J |= VBA_BUTTON_L | VBA_SPEED;
-		if (wp->btns_h & WPAD_BUTTON_2)
-			J |= VBA_BUTTON_L | VBA_SPEED;
 
-		// A Button
-		if (wp->btns_h & WPAD_BUTTON_A)
-			J |= VBA_BUTTON_A;
-		// B Button
-		if (wp->btns_h & WPAD_BUTTON_B)
-			J |= VBA_BUTTON_B;
-		// Grab an icon and prevent menu from spinning
-		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z)
-			J |= VBA_BUTTON_R;
-		// Calibrate
-		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_C) {
+		if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & (GUI_BTN_1 | GUI_BTN_2)) J |= VBA_BUTTON_L | VBA_SPEED;
+
+		if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_BUTTON_R;
+
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) {
 			CalibrateWario = true;
 		} else CalibrateWario = false;
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		TiltSideways = false;
 		J |= StandardDPad(pad) | StandardClassic(pad);
-
 	} else {
 		TiltSideways = true;
 		J |= StandardSideways(pad);
-		if (wp->btns_h & WPAD_BUTTON_B) {
+		if (data.buttons_h & GUI_BTN_B) {
 			CalibrateWario = true;
 		} else CalibrateWario = false;
 	}
-#endif
+
 	return J;
 }
 
 u32 KirbyTntInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+	u32 J = StandardMovement(pad);
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		TiltSideways = false;
 		J |= StandardDPad(pad);
-		// Pause
-		if (wp->btns_h & WPAD_BUTTON_PLUS)
-			J |= VBA_BUTTON_START;
-		// Select and L do nothing!
-		if (wp->btns_h & WPAD_BUTTON_MINUS)
-			J |= VBA_BUTTON_SELECT;
-		if (wp->btns_h & WPAD_BUTTON_1)
-			J |= VBA_BUTTON_B;
-		if (wp->btns_h & WPAD_BUTTON_2)
-			J |= VBA_BUTTON_A;
+		if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_B;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2) J |= VBA_BUTTON_A;
 
-		// A Button
-		if (wp->btns_h & WPAD_BUTTON_A)
-			J |= VBA_BUTTON_A;
-		// B Button
-		if (wp->btns_h & WPAD_BUTTON_B)
-			J |= VBA_BUTTON_B;
-		// Speed
-		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_C)
-			J |= VBA_SPEED;
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
+		if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_SPEED;
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		TiltSideways = false;
-		J |= StandardDPad(pad) | DecodeClassic(pad);
-		if (wp->btns_h & WPAD_BUTTON_A)
-			J |= VBA_BUTTON_A;
+		J |= StandardDPad(pad) | StandardClassic(pad);
+		if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
 	} else {
 		TiltSideways = true;
 		J |= StandardSideways(pad);
-		if (wp->btns_h & WPAD_BUTTON_A)
-			J |= VBA_BUTTON_A;
-		if (wp->btns_h & WPAD_BUTTON_B)
-			J |= VBA_SPEED;
+		if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (data.buttons_h & GUI_BTN_B) J |= VBA_SPEED;
 	}
-#endif
 	return J;
 }
 
 u32 MohInfiltratorInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad);
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_NONE)
-		J |= DecodeWiimote(pad);
-	else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		J |= DecodeClassic(pad);
-	} else if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		// Pause, objectives, menu
-		if (wp->btns_h & WPAD_BUTTON_PLUS)
-			J |= VBA_BUTTON_START;
-		// Action button, use
-		if (wp->btns_h & WPAD_BUTTON_MINUS)
-			J |= VBA_BUTTON_L;
-		// Use sights/scope, not needed in this game
-		if (wp->btns_h & WPAD_BUTTON_A)
-			J |= VBA_BUTTON_A | VBA_BUTTON_L;
-		// Shoot
-		if (wp->btns_h & WPAD_BUTTON_B)
-			J |= VBA_BUTTON_A;
-		// Reload
-		if (fabs(wp->gforce.y)> 1.6 || wp->btns_h & WPAD_BUTTON_UP || wp->btns_h & WPAD_BUTTON_2)
-			J |= VBA_BUTTON_L;
-		// Strafe
-		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_C)
-			J |= VBA_BUTTON_R;
-		// Change weapon
-		if (wp->btns_h & WPAD_BUTTON_LEFT || wp->btns_h & WPAD_BUTTON_RIGHT)
-			J |= VBA_BUTTON_B;
-		// Speed
-		if (wp->btns_h & WPAD_BUTTON_1)
-			J |= VBA_SPEED;
-	} else
-		J |= DecodeWiimote(pad);
-#endif
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+	u32 J = StandardMovement(pad);
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		if (hw & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (hw & GUI_BTN_MINUS) J |= VBA_BUTTON_L;
+		if (hw & GUI_BTN_A) J |= VBA_BUTTON_A | VBA_BUTTON_L;
+		if (hw & GUI_BTN_B) J |= VBA_BUTTON_A;
+
+		if (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.6 || (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_UP) || (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2)) J |= VBA_BUTTON_L;
+
+		if (hw & GUI_TRIGGER_L) J |= VBA_BUTTON_R;
+		if ((hw & GUI_BTN_LEFT) || (hw & GUI_BTN_RIGHT)) J |= VBA_BUTTON_B;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_SPEED;
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		J |= StandardClassic(pad);
+	} else {
+		J |= StandardSideways(pad);
+	}
 	return J;
 }
 
 u32 MohUndergroundInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | DecodeClassic(pad) | DecodeWiimote(pad) | DecodeGamecube(pad);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardClassic(pad) | StandardSideways(pad);
 	static bool crouched = false;
-#ifdef HW_RVL	
-	WPADData * wp = WPAD_Data(pad);
 
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		// Joystick controls L and R, not left and right
-		if (J & VBA_LEFT)
-		J |= VBA_BUTTON_L;
-		if (J & VBA_RIGHT)
-		J |= VBA_BUTTON_R;
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		if (J & VBA_LEFT) J |= VBA_BUTTON_L;
+		if (J & VBA_RIGHT) J |= VBA_BUTTON_R;
 		J &= ~(VBA_LEFT | VBA_RIGHT);
-		// Cursor controls left and right for turning
-		CursorVisible = true;
-		if (CursorValid) {
-			if (CursorX < 320 - 40)
-			J |= VBA_LEFT;
-			else if (CursorX> 320 + 40)
-			J |= VBA_RIGHT;
-		}
-		// Crouch
-		if (wp->btns_h & WPAD_BUTTON_DOWN)
-		crouched = !crouched;
 
-		// Pause, objectives, menu
-		if (wp->btns_h & WPAD_BUTTON_PLUS)
-			J |= VBA_BUTTON_START;
-		// Action button, not needed in this game
-		if (wp->btns_h & WPAD_BUTTON_MINUS)
-			J |= 0;
-		// Use sights/scope, not needed in this game
-		if (wp->btns_h & WPAD_BUTTON_A)
-			J |= VBA_BUTTON_A;
-		// Shoot
-		if (wp->btns_h & WPAD_BUTTON_B)
-			J |= VBA_BUTTON_A;
-		// Reload
-		if (fabs(wp->gforce.y)> 1.6 || wp->btns_h & WPAD_BUTTON_UP || wp->btns_h & WPAD_BUTTON_2)
-			J |= VBA_BUTTON_SELECT;
-		// Change weapon
-		if (wp->btns_h & WPAD_BUTTON_LEFT || wp->btns_h & WPAD_BUTTON_RIGHT)
-			J |= VBA_BUTTON_B;
-		// Speed
-		if (wp->btns_h & WPAD_BUTTON_1)
-			J |= VBA_SPEED;
+		CursorVisible = true;
+		if (data.validPointer) {
+			if (data.cursor_x < 320 - 40) J |= VBA_LEFT;
+			else if (data.cursor_x > 320 + 40) J |= VBA_RIGHT;
+		}
+
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		if (data.hw_buttons_d[GUI_HW_NUNCHUK] & GUI_BTN_DOWN) crouched = !crouched; // Toggle
+
+		if (hw & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (hw & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (hw & GUI_BTN_B) J |= VBA_BUTTON_A;
+
+		if (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.6 || (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_UP) || (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2)) J |= VBA_BUTTON_SELECT;
+		if ((hw & GUI_BTN_LEFT) || (hw & GUI_BTN_RIGHT)) J |= VBA_BUTTON_B;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_SPEED;
 	} else {
 		CursorVisible = false;
 	}
-#endif
 
 	if (crouched && (!(J & VBA_BUTTON_L)) && (!(J & VBA_BUTTON_R)))
 		J |= VBA_BUTTON_L | VBA_BUTTON_R;
@@ -1097,142 +733,122 @@ u32 MohUndergroundInput(unsigned short pad) {
 }
 
 u32 BoktaiInput(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad)
-			| DecodeGamecube(pad) | DecodeClassic(pad);
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardDPad(pad) | StandardClassic(pad);
+
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+	}
+
 	static bool GunRaised = false;
-	// Action
-	if (wp->btns_h & WPAD_BUTTON_A)
-		J |= VBA_BUTTON_A;
-	// Hold Gun Del Sol up to the light to recharge
-	if ((-wp->orient.pitch)> 45) {
+	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+
+	if ((-data.hw_pitch[GUI_HW_WIIMOTE]) > 45) {
 		GunRaised = true;
-	} else if ((-wp->orient.pitch) < 40) {
+	} else if ((-data.hw_pitch[GUI_HW_WIIMOTE]) < 40) {
 		GunRaised = false;
 	}
-	if (GunRaised)
-		J |= VBA_BUTTON_A;
-	// Fire Gun Del Sol
-	if (wp->btns_h & WPAD_BUTTON_B)
-		J |= VBA_BUTTON_B;
-	// Look around or change subscreen
-	if (wp->btns_h & WPAD_BUTTON_2)
-		J |= VBA_BUTTON_R;
-	// Start
-	if (wp->btns_h & WPAD_BUTTON_PLUS)
-		J |= VBA_BUTTON_START;
-	// Select
-	if (wp->btns_h & WPAD_BUTTON_MINUS)
-		J |= VBA_BUTTON_SELECT;
 
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		// Look around
-		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_C)
-			J |= VBA_BUTTON_R;
-		// Change element or change subscreen
-		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z)
-			J |= VBA_BUTTON_L;
+	if (GunRaised) J |= VBA_BUTTON_A;
+	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2) J |= VBA_BUTTON_R;
+	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-		if (wp->btns_h & WPAD_BUTTON_1)
-			J |= VBA_SPEED;
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_BUTTON_R;
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_BUTTON_L;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_SPEED;
 	} else {
-		// Change element or change subscreen
-		if (wp->btns_h & WPAD_BUTTON_1)
-			J |= VBA_BUTTON_L;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_L;
 	}
-#endif
 	return J;
 }
 
 u32 Boktai2Input(unsigned short pad) {
-	u32 J = StandardMovement(pad) | StandardDPad(pad)
-			| DecodeGamecube(pad) | DecodeClassic(pad);
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	static bool GunRaised = false;
-		// Action
-		if (wp->btns_h & WPAD_BUTTON_A)
-			J |= VBA_BUTTON_A;
-		// Hold gun or hand up to the light to recharge
-		if ((-wp->orient.pitch)> 45) {
-			GunRaised = true;
-		} else if ((-wp->orient.pitch) < 40) {
-			GunRaised = false;
-		}
-		if (GunRaised)
-			J |= VBA_BUTTON_A;
-		// Fire Gun Del Sol
-		if (wp->btns_h & WPAD_BUTTON_B)
-			J |= VBA_BUTTON_B;
-		// Swing sword or hammer or stab spear
-		if (fabs(wp->gforce.x)> 1.8)
-			J |= VBA_BUTTON_B;
-		// Look around or change subscreen
-		if (wp->btns_h & WPAD_BUTTON_2)
-			J |= VBA_BUTTON_R;
-		// Start
-		if (wp->btns_h & WPAD_BUTTON_PLUS)
-			J |= VBA_BUTTON_START;
-		// Select
-		if (wp->btns_h & WPAD_BUTTON_MINUS)
-			J |= VBA_BUTTON_SELECT;
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
 
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		// Look around
-		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_C)
-			J |= VBA_BUTTON_R;
-		// Change element or change subscreen
-		if (wp->btns_h & WPAD_NUNCHUK_BUTTON_Z)
-			J |= VBA_BUTTON_L;
+	u32 J = StandardMovement(pad) | StandardDPad(pad) | StandardClassic(pad);
 
-		if (wp->btns_h & WPAD_BUTTON_1)
-		J |= VBA_SPEED;
-	} else {
-		// Change element or change subscreen
-		if (wp->btns_h & WPAD_BUTTON_1)
-		J |= VBA_BUTTON_L;
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
-#endif
 
+	static bool GunRaised = false;
+	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+
+	if ((-data.hw_pitch[GUI_HW_WIIMOTE]) > 45) {
+		GunRaised = true;
+	} else if ((-data.hw_pitch[GUI_HW_WIIMOTE]) < 40) {
+		GunRaised = false;
+	}
+
+	if (GunRaised) J |= VBA_BUTTON_A;
+	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+
+	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.8) J |= VBA_BUTTON_B;
+
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2) J |= VBA_BUTTON_R;
+	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_BUTTON_R;
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_BUTTON_L;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_SPEED;
+	} else {
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_L;
+	}
 	return J;
 }
 
 u32 OnePieceInput(unsigned short pad) {
-	// Only Nunchuk and Gamecube controls available
-	// Wiimote and Classic controls depend on user configuration
-	u32 J = StandardMovement(pad) 
-		    | DecodeWiimote(pad) | DecodeClassic(pad);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 	static u32 LastDir = VBA_RIGHT;
 	bool JumpButton=0, AttackButton=0, ViewButton=0, CharacterButton=0, PauseButton=0,
 	DashButton=0, GrabButton=0, SpeedButton=0, AttackUpButton = 0;
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	// Nunchuk controls are based on One Piece: Unlimited Adventure for the Wii
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		J |= StandardDPad(pad);
-		JumpButton = wp->btns_h & WPAD_BUTTON_B;
-		AttackButton = wp->btns_h & WPAD_BUTTON_A;
-		CharacterButton = wp->btns_h & WPAD_BUTTON_MINUS;
-		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
-		DashButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
-		GrabButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
-		ViewButton = wp->btns_h & WPAD_BUTTON_1; // doesn't do anything?
-		SpeedButton = wp->btns_h & WPAD_BUTTON_2;
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		JumpButton = hw & GUI_BTN_B;
+		AttackButton = hw & GUI_BTN_A;
+		CharacterButton = hw & GUI_BTN_MINUS;
+		PauseButton = hw & GUI_BTN_PLUS;
+		DashButton = hw & GUI_TRIGGER_L;
+		GrabButton = hw & GUI_TRIGGER_ZL;
+		ViewButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1;
+		SpeedButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2;
 	}
-#endif
-	// Gamecube controls are based on One Piece Grand Adventure
-	{
-		u32 gc = PAD_ButtonsHeld(pad);
-		signed char gc_px = PAD_SubStickX(pad);
-		if (gc_px > 70) J |= VBA_SPEED;
-		JumpButton = JumpButton || gc & PAD_BUTTON_Y;
-		AttackButton = AttackButton || gc & PAD_BUTTON_A;
-		GrabButton = GrabButton || gc & PAD_BUTTON_B;
-		AttackUpButton = AttackUpButton || gc & PAD_BUTTON_X;
-		DashButton = DashButton || gc & PAD_TRIGGER_L;
-		PauseButton = PauseButton || gc & PAD_BUTTON_START;
-		CharacterButton = CharacterButton || gc & PAD_TRIGGER_R; // supposed to be block
+
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (data.hw_substickX[GUI_HW_GAMECUBE] > 0.55f) J |= VBA_SPEED;
+		JumpButton = JumpButton || (gc & GUI_BTN_Y);
+		AttackButton = AttackButton || (gc & GUI_BTN_A);
+		GrabButton = GrabButton || (gc & GUI_BTN_B);
+		AttackUpButton = AttackUpButton || (gc & GUI_BTN_X);
+		DashButton = DashButton || (gc & GUI_TRIGGER_L);
+		PauseButton = PauseButton || (gc & GUI_BTN_PLUS);
+		CharacterButton = CharacterButton || (gc & GUI_TRIGGER_R);
 	}
 	
 	if (JumpButton) J |= VBA_BUTTON_A;
@@ -1243,7 +859,7 @@ u32 OnePieceInput(unsigned short pad) {
 	if (PauseButton) J |= VBA_BUTTON_START;
 	if (GrabButton) J |= VBA_BUTTON_R;
 	if (SpeedButton) J |= VBA_SPEED;
-	if (ViewButton) J |= VBA_BUTTON_SELECT; // doesn't do anything?
+	if (ViewButton) J |= VBA_BUTTON_SELECT;
 
 	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
 	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
@@ -1252,26 +868,34 @@ u32 OnePieceInput(unsigned short pad) {
 }
 
 u32 HobbitInput(unsigned short pad) {
-	// Only Nunchuk controls available
-	// Wiimote, Gamecube and Classic controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | 
-	DecodeWiimote(pad) | DecodeClassic(pad);
-	bool AbilityButton=0, AttackButton=0, UseButton=0, ChangeSkillButton=0, PauseButton=0,
-	ItemsButton=0, SpeedButton=0;
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	// Nunchuk controls are made up
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		J |= StandardDPad(pad);
-		AbilityButton = wp->btns_h & WPAD_BUTTON_B;
-		UseButton = wp->btns_h & WPAD_BUTTON_A;
-		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
-		ItemsButton = wp->btns_h & WPAD_BUTTON_MINUS;
-		SpeedButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
-		ChangeSkillButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
-		AttackButton = (fabs(wp->gforce.x)> 1.5);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
-#endif
+
+	bool AbilityButton=0, AttackButton=0, UseButton=0, ChangeSkillButton=0, PauseButton=0, ItemsButton=0, SpeedButton=0;
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		J |= StandardDPad(pad);
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		AbilityButton = hw & GUI_BTN_B;
+		UseButton = hw & GUI_BTN_A;
+		PauseButton = hw & GUI_BTN_PLUS;
+		ItemsButton = hw & GUI_BTN_MINUS;
+		SpeedButton = hw & GUI_TRIGGER_L;
+		ChangeSkillButton = hw & GUI_TRIGGER_ZL;
+		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
+	}
 	
 	if (AbilityButton) J |= VBA_BUTTON_B;
 	if (AttackButton) J |= VBA_BUTTON_L;
@@ -1285,27 +909,35 @@ u32 HobbitInput(unsigned short pad) {
 }
 
 u32 FellowshipOfTheRingInput(unsigned short pad) {
-	// Only Nunchuk controls available
-	// Wiimote, Gamecube and Classic controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | 
-	DecodeWiimote(pad) | DecodeClassic(pad);
-	bool CancelButton=0, UseButton=0, ChangeCharButton=0, PauseButton=0,
-	ItemsButton=0, SpeedButton=0, SelectButton=0;
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	// Nunchuk controls are made up
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		J |= StandardDPad(pad);
-		CancelButton = wp->btns_h & WPAD_BUTTON_B;
-		UseButton = wp->btns_h & WPAD_BUTTON_A;
-		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
-		ItemsButton = wp->btns_h & WPAD_BUTTON_MINUS;
-		SpeedButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
-		ChangeCharButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
-		CancelButton = CancelButton || (fabs(wp->gforce.x)> 1.5);
-		SelectButton = wp->btns_h & WPAD_BUTTON_1;
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
-#endif
+
+	bool CancelButton=0, UseButton=0, ChangeCharButton=0, PauseButton=0, ItemsButton=0, SpeedButton=0, SelectButton=0;
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		J |= StandardDPad(pad);
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		CancelButton = hw & GUI_BTN_B;
+		UseButton = hw & GUI_BTN_A;
+		PauseButton = hw & GUI_BTN_PLUS;
+		ItemsButton = hw & GUI_BTN_MINUS;
+		SpeedButton = hw & GUI_TRIGGER_L;
+		ChangeCharButton = hw & GUI_TRIGGER_ZL;
+		CancelButton = CancelButton || (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
+		SelectButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1;
+	}
 
 	if (UseButton) J |= VBA_BUTTON_A;
 	if (CancelButton) J |= VBA_BUTTON_B;
@@ -1319,26 +951,34 @@ u32 FellowshipOfTheRingInput(unsigned short pad) {
 }
 
 u32 ReturnOfTheKingInput(unsigned short pad) {
-	// Only Nunchuk controls available
-	// Wiimote, Gamecube and Classic controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | 
-	DecodeWiimote(pad) | DecodeClassic(pad);
-	bool AbilityButton=0, AttackButton=0, UseButton=0, ChangeSkillButton=0, PauseButton=0,
-	ItemsButton=0, SpeedButton=0;
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	// Nunchuk controls are made up
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		J |= StandardDPad(pad);
-		AbilityButton = wp->btns_h & WPAD_BUTTON_B;
-		UseButton = wp->btns_h & WPAD_BUTTON_A;
-		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
-		ItemsButton = wp->btns_h & WPAD_BUTTON_MINUS;
-		SpeedButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
-		ChangeSkillButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
-		AttackButton = (fabs(wp->gforce.x)> 1.5);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
-#endif
+
+	bool AbilityButton=0, AttackButton=0, UseButton=0, ChangeSkillButton=0, PauseButton=0, ItemsButton=0, SpeedButton=0;
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		J |= StandardDPad(pad);
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		AbilityButton = hw & GUI_BTN_B;
+		UseButton = hw & GUI_BTN_A;
+		PauseButton = hw & GUI_BTN_PLUS;
+		ItemsButton = hw & GUI_BTN_MINUS;
+		SpeedButton = hw & GUI_TRIGGER_L;
+		ChangeSkillButton = hw & GUI_TRIGGER_ZL;
+		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
+	}
 	
 	if (AbilityButton) J |= VBA_BUTTON_A;
 	if (AttackButton) J |= VBA_BUTTON_B;
@@ -1352,30 +992,40 @@ u32 ReturnOfTheKingInput(unsigned short pad) {
 }
 
 u32 CastlevaniaAdventureInput(unsigned short pad) {
-	// Only Nunchuk and Classic controls available
-	// Wiimote and Gamecube controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
-	bool JumpButton=0, AttackButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0;
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	// Nunchuk controls are based on Castlevania Wii
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		AttackButton = (fabs(wp->gforce.x)> 1.5) || (fabs(wp->gforce.y)> 1.5) || wp->btns_h & WPAD_BUTTON_B;
-		JumpButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
-		GuardButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
-		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
-		SelectButton = wp->btns_h & WPAD_BUTTON_MINUS;
-		SpeedButton = (wp->btns_h & WPAD_BUTTON_A) && (wp->btns_h & WPAD_BUTTON_B);
-	// Classic controls are based on ...?
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		AttackButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
-		JumpButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZR);
-		GuardButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_ZL);
-		PauseButton = wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS;
-		SelectButton = wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS;
-		SpeedButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
-#endif
+
+	bool JumpButton=0, AttackButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0;
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
+		JumpButton = hw & GUI_TRIGGER_L;
+		GuardButton = hw & GUI_TRIGGER_ZL;
+		PauseButton = hw & GUI_BTN_PLUS;
+		SelectButton = hw & GUI_BTN_MINUS;
+		SpeedButton = (hw & GUI_BTN_A) && (hw & GUI_BTN_B);
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
+		AttackButton = hw & GUI_BTN_B;
+		JumpButton = hw & GUI_TRIGGER_R;
+		GuardButton = hw & GUI_TRIGGER_L;
+		PauseButton = hw & GUI_BTN_PLUS;
+		SelectButton = hw & GUI_BTN_MINUS;
+		SpeedButton = hw & GUI_BTN_A;
+	}
 	
 	if (JumpButton) J |= VBA_BUTTON_A;
 	if (AttackButton) J |= VBA_BUTTON_B;
@@ -1391,32 +1041,42 @@ u32 CastlevaniaAdventureInput(unsigned short pad) {
 }
 
 u32 CastlevaniaBelmontInput(unsigned short pad) {
-	// Only Nunchuk and Classic controls available
-	// Wiimote and Gamecube controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
-	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0;
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	// Nunchuk controls are based on Castlevania Wii
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		ShootButton = wp->btns_h & WPAD_BUTTON_A;
-		AttackButton = (fabs(wp->gforce.x)> 1.5) || (fabs(wp->gforce.y)> 1.5) || wp->btns_h & WPAD_BUTTON_B;
-		JumpButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
-		GuardButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
-		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
-		SelectButton = wp->btns_h & WPAD_BUTTON_MINUS;
-		SpeedButton = (wp->btns_h & WPAD_BUTTON_A) && (wp->btns_h & WPAD_BUTTON_B);
-	// Classic controls are based on ...?
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		ShootButton = wp->btns_h & WPAD_CLASSIC_BUTTON_Y;
-		AttackButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
-		JumpButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZR);
-		GuardButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_ZL);
-		PauseButton = wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS;
-		SelectButton = wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS;
-		SpeedButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
-#endif
+
+	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0;
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		ShootButton = hw & GUI_BTN_A;
+		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
+		JumpButton = hw & GUI_TRIGGER_L;
+		GuardButton = hw & GUI_TRIGGER_ZL;
+		PauseButton = hw & GUI_BTN_PLUS;
+		SelectButton = hw & GUI_BTN_MINUS;
+		SpeedButton = (hw & GUI_BTN_A) && (hw & GUI_BTN_B);
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
+		ShootButton = hw & GUI_BTN_Y;
+		AttackButton = hw & GUI_BTN_B;
+		JumpButton = hw & GUI_TRIGGER_R;
+		GuardButton = hw & GUI_TRIGGER_L;
+		PauseButton = hw & GUI_BTN_PLUS;
+		SelectButton = hw & GUI_BTN_MINUS;
+		SpeedButton = hw & GUI_BTN_A;
+	}
 	
 	if (JumpButton) J |= VBA_BUTTON_A;
 	if (AttackButton) {
@@ -1436,34 +1096,44 @@ u32 CastlevaniaBelmontInput(unsigned short pad) {
 }
 
 u32 CastlevaniaLegendsInput(unsigned short pad) {
-	// Only Nunchuk and Classic controls available
-	// Wiimote and Gamecube controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
-	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, HyperButton=0;
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	// Nunchuk controls are based on Castlevania Wii
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		ShootButton = wp->btns_h & WPAD_BUTTON_A;
-		AttackButton = (fabs(wp->gforce.x)> 1.5) || (fabs(wp->gforce.y)> 1.5) || wp->btns_h & WPAD_BUTTON_B;
-		JumpButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
-		GuardButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
-		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
-		SelectButton = wp->btns_h & WPAD_BUTTON_MINUS;
-		SpeedButton = (wp->btns_h & WPAD_BUTTON_A) && (wp->btns_h & WPAD_BUTTON_B);
-		HyperButton = wp->btns_h & WPAD_BUTTON_DOWN;
-	// Classic controls are based on ...?
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		ShootButton = wp->btns_h & WPAD_CLASSIC_BUTTON_Y;
-		AttackButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
-		JumpButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_R | WPAD_CLASSIC_BUTTON_ZR);
-		GuardButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L | WPAD_CLASSIC_BUTTON_ZL);
-		PauseButton = wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS;
-		SelectButton = wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS;
-		SpeedButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
-		HyperButton = wp->btns_h & WPAD_CLASSIC_BUTTON_X;
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
-#endif
+
+	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, HyperButton=0;
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		ShootButton = hw & GUI_BTN_A;
+		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
+		JumpButton = hw & GUI_TRIGGER_L;
+		GuardButton = hw & GUI_TRIGGER_ZL;
+		PauseButton = hw & GUI_BTN_PLUS;
+		SelectButton = hw & GUI_BTN_MINUS;
+		SpeedButton = (hw & GUI_BTN_A) && (hw & GUI_BTN_B);
+		HyperButton = hw & GUI_BTN_DOWN;
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
+		ShootButton = hw & GUI_BTN_Y;
+		AttackButton = hw & GUI_BTN_B;
+		JumpButton = hw & GUI_TRIGGER_R;
+		GuardButton = hw & GUI_TRIGGER_L;
+		PauseButton = hw & GUI_BTN_PLUS;
+		SelectButton = hw & GUI_BTN_MINUS;
+		SpeedButton = hw & GUI_BTN_A;
+		HyperButton = hw & GUI_BTN_X;
+	}
 	
 	if (JumpButton) J |= VBA_BUTTON_A;
 	if (AttackButton) {
@@ -1484,39 +1154,50 @@ u32 CastlevaniaLegendsInput(unsigned short pad) {
 }
 
 u32 CastlevaniaCircleMoonInput(unsigned short pad) {
-	// Only Nunchuk and Classic controls available
-	// Wiimote and Gamecube controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+	}
+
 	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, HyperButton=0,
 	LButton=0, RButton=0;
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	// Nunchuk controls are based on Castlevania Wii
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		ShootButton = wp->btns_h & WPAD_BUTTON_A;
-		AttackButton = (fabs(wp->gforce.x)> 1.5) || (fabs(wp->gforce.y)> 1.5) || wp->btns_h & WPAD_BUTTON_B;
-		JumpButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
-		GuardButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
-		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
-		SelectButton = wp->btns_h & WPAD_BUTTON_MINUS;
-		SpeedButton = (wp->btns_h & WPAD_BUTTON_A) && (wp->btns_h & WPAD_BUTTON_B);
-		HyperButton = wp->btns_h & WPAD_BUTTON_DOWN;
-		LButton = wp->btns_h & WPAD_BUTTON_1;
-		RButton = wp->btns_h & WPAD_BUTTON_2;
-	// Classic controls are based on ...?
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		ShootButton = wp->btns_h & WPAD_CLASSIC_BUTTON_Y;
-		AttackButton = wp->btns_h & WPAD_CLASSIC_BUTTON_B;
-		JumpButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_R);
-		GuardButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_FULL_L);
-		PauseButton = wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS;
-		SelectButton = wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS;
-		SpeedButton = wp->btns_h & WPAD_CLASSIC_BUTTON_A;
-		HyperButton = wp->btns_h & WPAD_CLASSIC_BUTTON_X;
-		LButton = wp->btns_h & WPAD_CLASSIC_BUTTON_ZL;
-		RButton = wp->btns_h & WPAD_CLASSIC_BUTTON_ZR;
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		ShootButton = hw & GUI_BTN_A;
+		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
+		JumpButton = hw & GUI_TRIGGER_L;
+		GuardButton = hw & GUI_TRIGGER_ZL;
+		PauseButton = hw & GUI_BTN_PLUS;
+		SelectButton = hw & GUI_BTN_MINUS;
+		SpeedButton = (hw & GUI_BTN_A) && (hw & GUI_BTN_B);
+		HyperButton = hw & GUI_BTN_DOWN;
+		LButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1;
+		RButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2;
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
+		ShootButton = hw & GUI_BTN_Y;
+		AttackButton = hw & GUI_BTN_B;
+		JumpButton = hw & GUI_TRIGGER_R;
+		GuardButton = hw & GUI_TRIGGER_L;
+		PauseButton = hw & GUI_BTN_PLUS;
+		SelectButton = hw & GUI_BTN_MINUS;
+		SpeedButton = hw & GUI_BTN_A;
+		HyperButton = hw & GUI_BTN_X;
+		// In driver layer, FULL_L and ZL are merged to GUI_TRIGGER_L, FULL_R and ZR to GUI_TRIGGER_R
+		LButton = hw & GUI_TRIGGER_L;
+		RButton = hw & GUI_TRIGGER_R;
 	}
-#endif
 	
 	if (JumpButton) J |= VBA_BUTTON_A;
 	if (AttackButton) {
@@ -1585,30 +1266,43 @@ void KD_WeaponToMemory() {
 }
 
 u32 KidDraculaInput(unsigned short pad) {
-	// Only Nunchuk and Classic controls available
-	// Wiimote and Gamecube controls depend on user configuration
-	u32 J = StandardMovement(pad) | DecodeGamecube(pad) | DecodeWiimote(pad) | DecodeClassic(pad);
-	bool JumpButton=0, ShootButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, NorButton=0, BatButton=0;
-#ifdef HW_RVL
-	WPADData * wp = WPAD_Data(pad);
-	if (wp->exp.type == WPAD_EXP_NUNCHUK) {
-		JumpButton = wp->btns_h & WPAD_BUTTON_A;
-		ShootButton = wp->btns_h & WPAD_BUTTON_B;
-		PauseButton = wp->btns_h & WPAD_BUTTON_PLUS;
-		SelectButton = wp->btns_h & WPAD_BUTTON_MINUS;
-		SpeedButton = wp->btns_h & WPAD_BUTTON_1 || wp->btns_h & WPAD_BUTTON_2;
-		NorButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_Z;
-		BatButton = wp->btns_h & WPAD_NUNCHUK_BUTTON_C;
-	} else if (wp->exp.type == WPAD_EXP_CLASSIC) {
-		JumpButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_B | WPAD_CLASSIC_BUTTON_A);
-		ShootButton = wp->btns_h & WPAD_CLASSIC_BUTTON_Y;
-		PauseButton = wp->btns_h & WPAD_CLASSIC_BUTTON_PLUS;
-		SelectButton = wp->btns_h & WPAD_CLASSIC_BUTTON_MINUS;
-		SpeedButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_FULL_L);
-		NorButton = wp->btns_h & WPAD_CLASSIC_BUTTON_X;
-		BatButton = wp->btns_h & (WPAD_CLASSIC_BUTTON_ZR | WPAD_CLASSIC_BUTTON_FULL_R);
+	if (!userInput[pad]) return 0;
+	const GuiInputPadData& data = userInput[pad]->getPadData();
+
+	u32 J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+
+	if (data.hw_connected[GUI_HW_GAMECUBE]) {
+		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
+		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
-#endif
+
+	bool JumpButton=0, ShootButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, NorButton=0, BatButton=0;
+
+	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
+		JumpButton = hw & GUI_BTN_A;
+		ShootButton = hw & GUI_BTN_B;
+		PauseButton = hw & GUI_BTN_PLUS;
+		SelectButton = hw & GUI_BTN_MINUS;
+		SpeedButton = (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) || (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2);
+		NorButton = hw & GUI_TRIGGER_ZL;
+		BatButton = hw & GUI_TRIGGER_L;
+	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
+		JumpButton = hw & (GUI_BTN_B | GUI_BTN_A);
+		ShootButton = hw & GUI_BTN_Y;
+		PauseButton = hw & GUI_BTN_PLUS;
+		SelectButton = hw & GUI_BTN_MINUS;
+		SpeedButton = hw & GUI_TRIGGER_L;
+		NorButton = hw & GUI_BTN_X;
+		BatButton = hw & GUI_TRIGGER_R;
+	}
+
 	if (JumpButton) J |= VBA_BUTTON_A;
 	if (ShootButton && !(KD_WeaponPressed && KD_LastWeapon != -1)) {
 		J |= VBA_BUTTON_B;
@@ -1652,4 +1346,3 @@ u32 KidDraculaInput(unsigned short pad) {
 	KD_WeaponPressed = (ShootButton || NorButton || BatButton);
 	return J;
 }
-

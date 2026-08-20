@@ -236,13 +236,13 @@ preparePrefsData ()
 
 	createXMLSection("Controller", "Controller Settings");
 
-	createXMLController(btnmap[CTRLR_GCPAD], "gcpadmap", "GameCube Pad");
+	createXMLController(btnmap[GUI_HW_GAMECUBE], "gcpadmapping", "GameCube Pad");
 	createXMLSetting("WiiControls", "Match Wii Game", BtoStr(GCSettings.WiiControls));
-	createXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap", "Wiimote");
-	createXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap", "Classic Controller");
-	createXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap", "Nunchuk");
-	createXMLController(btnmap[CTRLR_WUPC], "wupcpadmap", "Wii U Pro Controller");
-	createXMLController(btnmap[CTRLR_WIIDRC], "drcpadmap", "Wii U Gamepad");
+	createXMLController(btnmap[GUI_HW_WIIMOTE], "wmpadmapping", "Wiimote");
+	createXMLController(btnmap[GUI_HW_CLASSIC], "ccpadmapping", "Classic Controller");
+	createXMLController(btnmap[GUI_HW_NUNCHUK], "ncpadmapping", "Nunchuk");
+	createXMLController(btnmap[GUI_HW_WUPC], "wupcpadmapping", "Wii U Pro Controller");
+	createXMLController(btnmap[GUI_HW_DRC], "drcpadmapping", "Wii U Gamepad");
 
 	int datasize = mxmlSaveString(xml, (char *)savebuffer, SAVEBUFFERSIZE, XMLSaveCallback);
 
@@ -529,13 +529,13 @@ decodePrefsData ()
 
 	// Controller Settings
 
-	loadXMLController(btnmap[CTRLR_GCPAD], "gcpadmap");
+	loadXMLController(btnmap[GUI_HW_GAMECUBE], "gcpadmapping");
 	loadXMLSetting(&GCSettings.WiiControls, "WiiControls");
-	loadXMLController(btnmap[CTRLR_WIIMOTE], "wmpadmap");
-	loadXMLController(btnmap[CTRLR_CLASSIC], "ccpadmap");
-	loadXMLController(btnmap[CTRLR_NUNCHUK], "ncpadmap");
-	loadXMLController(btnmap[CTRLR_WUPC], "wupcpadmap");
-	loadXMLController(btnmap[CTRLR_WIIDRC], "drcpadmap");
+	loadXMLController(btnmap[GUI_HW_WIIMOTE], "wmpadmapping");
+	loadXMLController(btnmap[GUI_HW_CLASSIC], "ccpadmapping");
+	loadXMLController(btnmap[GUI_HW_NUNCHUK], "ncpadmapping");
+	loadXMLController(btnmap[GUI_HW_WUPC], "wupcpadmapping");
+	loadXMLController(btnmap[GUI_HW_DRC], "drcpadmapping");
 
 	// Emulation Settings
 
