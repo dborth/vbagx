@@ -6,7 +6,7 @@
 
 #include "Gui.h"
 
-GuiImageData::GuiImageData(const u8 * i, int maxw, int maxh)
+GuiImageData::GuiImageData(const uint8_t * i, int maxw, int maxh)
 {
 	data = nullptr;
 	width = 0;
@@ -16,7 +16,7 @@ GuiImageData::GuiImageData(const u8 * i, int maxw, int maxh)
 		data = DecodePNG(i, &width, &height, data, maxw, maxh);
 }
 
-GuiImageData::GuiImageData(const u8 * i, u8 * dst, int maxw, int maxh)
+GuiImageData::GuiImageData(const uint8_t * i, uint8_t * dst, int maxw, int maxh)
 {
 	data = nullptr;
 	width = 0;
@@ -38,7 +38,7 @@ GuiImageData::~GuiImageData()
 	}
 }
 
-u8 * GuiImageData::getImage()
+uint8_t * GuiImageData::getImage()
 {
 	return data;
 }

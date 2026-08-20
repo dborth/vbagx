@@ -14,19 +14,19 @@ class GuiImageData
 		//!\param i Source image data (PNG)
 		//!\param w Max image width (0 = not set)
 		//!\param h Max image height (0 = not set)
-		GuiImageData(const u8 * i, int w=0, int h=0);
+		GuiImageData(const uint8_t * i, int w=0, int h=0);
 		//!Constructor
 		//!Converts the image data to RGBA8 - expects PNG format
 		//!\param i Source image data (PNG)
 		//!\param d Destination texture buffer
 		//!\param w Max image width (0 = not set)
 		//!\param h Max image height (0 = not set)
-		GuiImageData(const u8 * i, u8 * dst, int maxw=0, int maxh=0);
+		GuiImageData(const uint8_t * i, uint8_t * dst, int maxw=0, int maxh=0);
 		//!Destructor
 		~GuiImageData();
 		//!Gets a pointer to the image data
 		//!\return pointer to image data
-		u8 * getImage();
+		uint8_t * getImage();
 		//!Gets the image width
 		//!\return image width
 		int getWidth();
@@ -34,7 +34,7 @@ class GuiImageData
 		//!\return image height
 		int getHeight();
 	protected:
-		u8 * data; //!< Image data
+		uint8_t * data; //!< Image data
 		int height; //!< Height of image
 		int width; //!< Width of image
 };
