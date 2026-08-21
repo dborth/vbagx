@@ -39,6 +39,7 @@
 #include "menu.h"
 #include "gamesettings.h"
 #include "libgui/Gui.h"
+#include "utils/vmpager.h"
 #include "vba/gb/gb.h"
 
 #define THREAD_SLEEP 100
@@ -1293,6 +1294,17 @@ static void PlayerMappingWindow(int chan)
 }
 #endif
 
+
+static bool CanReturnToGame() {
+	#ifdef HW_DOL
+	if (!VMPager_Resume()) {
+		ErrorPrompt("Cannot resume - unable to reopen ROM file. Save your game!");
+		return false;
+	}
+	#endif
+	return true;
+}
+
 /****************************************************************************
  * MenuGame
  *
@@ -1665,10 +1677,13 @@ static int MenuGame()
 		}
 		else if(resetBtn.getState() == STATE::CLICKED)
 		{
-			if (WindowPrompt("Reset Game", "Reset this game? Any unsaved progress will be lost.", "OK", "Cancel"))
+			if (WindowPrompt("Reset Game", "Reset this game? Any unsaved progress will be lost.", "OK", "Cancel") && CanReturnToGame())
 			{
 				emulator.emuReset();
 				menu = MENU_EXIT;
+			}
+			else {
+				resetBtn.resetState();
 			}
 		}
 		else if(gameSettingsBtn.getState() == STATE::CLICKED)
@@ -1723,24 +1738,29 @@ static int MenuGame()
 		}
 		else if(closeBtn.getState() == STATE::CLICKED)
 		{
-			menu = MENU_EXIT;
+			if(CanReturnToGame()) {
+				menu = MENU_EXIT;
 
-			exitSound->play();
-			bgTopImg->setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			closeBtn.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			titleTxt.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			mainmenuBtn.setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			bgBottomImg->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			btnLogo->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			#ifdef HW_RVL
-			batteryBtn[0]->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			batteryBtn[1]->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			batteryBtn[2]->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			batteryBtn[3]->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			#endif
+				exitSound->play();
+				bgTopImg->setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				closeBtn.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				titleTxt.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				mainmenuBtn.setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				bgBottomImg->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				btnLogo->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				#ifdef HW_RVL
+				batteryBtn[0]->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				batteryBtn[1]->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				batteryBtn[2]->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				batteryBtn[3]->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				#endif
 
-			w.setEffect(EFFECT::FADE, -15);
-			usleep(350000); // wait for effects to finish
+				w.setEffect(EFFECT::FADE, -15);
+				usleep(350000); // wait for effects to finish
+			}
+			else {
+				closeBtn.resetState();
+			}
 		}
 	}
 
@@ -1976,7 +1996,7 @@ static int MenuGameSaves(int action)
 						result = LoadBatteryOrState(filepath, saves.type[ret], NOTSILENT);
 						break;
 				}
-				if(result)
+				if(result && CanReturnToGame())
 					menu = MENU_EXIT;
 			}
 			else if(action == 2) // delete SRAM/State
@@ -2005,8 +2025,6 @@ static int MenuGameSaves(int action)
 					}							
 				}
 				menu = MENU_GAME_DELETE;
-			
-			
 			}
 			else // save
 			{
@@ -2059,19 +2077,24 @@ static int MenuGameSaves(int action)
 		}
 		else if(closeBtn.getState() == STATE::CLICKED)
 		{
-			menu = MENU_EXIT;
+			if(CanReturnToGame()) {
+				menu = MENU_EXIT;
 
-			exitSound->play();
-			bgTopImg->setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			closeBtn.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			titleTxt.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			backBtn.setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			bgBottomImg->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			btnLogo->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				exitSound->play();
+				bgTopImg->setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				closeBtn.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				titleTxt.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				backBtn.setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				bgBottomImg->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				btnLogo->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
 
-			w.setEffect(EFFECT::FADE, -15);
+				w.setEffect(EFFECT::FADE, -15);
 
-			usleep(350000); // wait for effects to finish
+				usleep(350000); // wait for effects to finish
+			}
+			else {
+				closeBtn.resetState();
+			}
 		}
 	}
 
@@ -2324,19 +2347,24 @@ static int MenuGameSettings()
 		}
 		else if(closeBtn.getState() == STATE::CLICKED)
 		{
-			menu = MENU_EXIT;
+			if(CanReturnToGame()) {
+				menu = MENU_EXIT;
 
-			exitSound->play();
-			bgTopImg->setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			closeBtn.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			titleTxt.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			backBtn.setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			bgBottomImg->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			btnLogo->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				exitSound->play();
+				bgTopImg->setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				closeBtn.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				titleTxt.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				backBtn.setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				bgBottomImg->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				btnLogo->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
 
-			w.setEffect(EFFECT::FADE, -15);
+				w.setEffect(EFFECT::FADE, -15);
 
-			usleep(350000); // wait for effects to finish
+				usleep(350000); // wait for effects to finish
+			}
+			else {
+				closeBtn.resetState();
+			}
 		}
 		else if(backBtn.getState() == STATE::CLICKED)
 		{
@@ -4900,20 +4928,25 @@ static int MenuPalette()
 		}
 		else if(closeBtn.getState() == STATE::CLICKED)
 		{
-			menu = MENU_EXIT;
-			SavePaletteAs(SILENT, RomTitle);
+			if(CanReturnToGame()) {
+				menu = MENU_EXIT;
+				SavePaletteAs(SILENT, RomTitle);
 
-			exitSound->play();
-			bgTopImg->setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			closeBtn.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			titleTxt.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
-			backBtn.setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			bgBottomImg->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
-			btnLogo->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				exitSound->play();
+				bgTopImg->setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				closeBtn.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				titleTxt.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 15);
+				backBtn.setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				bgBottomImg->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
+				btnLogo->setEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_OUT, 15);
 
-			w.setEffect(EFFECT::FADE, -15);
+				w.setEffect(EFFECT::FADE, -15);
 
-			usleep(350000); // wait for effects to finish
+				usleep(350000); // wait for effects to finish
+			}
+			else {
+				closeBtn.resetState();
+			}
 		}
 		else if(backBtn.getState() == STATE::CLICKED)
 		{

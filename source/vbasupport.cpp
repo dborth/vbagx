@@ -1287,7 +1287,7 @@ int LoadROMToVM(const char* filepath) {
 				return 0;
 			}
 
-			VMPager_StartPreload(NULL, uncompSize);
+			VMPager_StartPreload();
 			size = UnZipBuffer((unsigned char*)romPtr, ARAM_SIZE);
 
 			if (size > 0 && (u32)size == uncompSize) {
@@ -1299,7 +1299,7 @@ int LoadROMToVM(const char* filepath) {
 			}
 			fclose(file);
 			file = NULL;
-			VMPager_CloseFile();
+			VMPager_EndPreload();
 		} else {
 			fseeko(file, 0, SEEK_END);
 			size = ftello(file);
@@ -1314,9 +1314,7 @@ int LoadROMToVM(const char* filepath) {
 				return 0;
 			}
 
-			FILE* vm_file = file;
-			file = NULL; // isolate the handle exclusively for the VM Pager
-			VMPager_StartPreload(vm_file, size);
+			VMPager_StartPreload();
 
 			u32 preload_size = (size > ARAM_SIZE) ? ARAM_SIZE : size;
 			ShowProgress("Loading...", 0, preload_size);
@@ -1330,7 +1328,7 @@ int LoadROMToVM(const char* filepath) {
 				size_t to_read = preload_size - offset;
 				if(to_read > 65536) to_read = 65536;
 
-				readsize = fread(chunk_buf, 1, to_read, vm_file);
+				readsize = fread(chunk_buf, 1, to_read, file);
 				if(readsize <= 0) break;
 
 				memcpy(romPtr + offset, chunk_buf, readsize);
@@ -1346,14 +1344,21 @@ int LoadROMToVM(const char* filepath) {
 			free(chunk_buf);
 
 			if (offset == size) {
-				VMPager_CloseFile(); // <= 16MB file. Everything is in ARAM. We don't need the file access anymore.
+				// <= 16MB file. Everything is in ARAM. We don't need file access so nothing more to do.
+				fclose(file);
+				file = NULL;
+				VMPager_EndPreload();
 				retry = 0;
 			} else if (offset == preload_size) {
-				// > 16MB file (size > offset, but we loaded 16MB). Preload finished, but more data remains.
-				VMPager_CompletePreload();
+				// > 16MB file (size > offset, but we loaded 16MB). Preload finished, but more data remains - so we pass a file handle
+				FILE* vm_file = file;
+				file = NULL; // isolate the handle exclusively for the VM Pager (it will be responsible to close it)
+				VMPager_EndPreloadWithFile(vm_file, size, filepath);
 				retry = 0;
 			} else {
-				VMPager_CloseFile(); // Interrupted read
+				fclose(file);
+				file = NULL;
+				VMPager_EndPreload();
 				retry = ErrorPromptRetry("Error reading uncompressed ROM data!");
 			}
 		}

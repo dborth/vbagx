@@ -21,6 +21,7 @@
 #include "gamesettings.h"
 #include "memmanager.h"
 #include "videofilters.h"
+#include "utils/vmpager.h"
 
 #include "vba/gba/Globals.h"
 #include "vba/gba/Sound.h"
@@ -130,6 +131,10 @@ int main(int argc, char *argv[])
 				TakeScreenshot(tempBuffer);
 				free(tempBuffer);
 				ResetVideo_Menu();
+
+				#ifdef HW_DOL
+				VMPager_Pause();
+				#endif
 				break; // leave emulation loop
 			}
 			#ifdef HW_RVL

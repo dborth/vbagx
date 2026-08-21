@@ -142,6 +142,7 @@
 // will never be a GB file because those can be read fully into ARAM.
 static FILE* romFile = NULL;
 static int fileSize = 0;
+static char romFilepath[1024] = { 0 };
 // Virtual-address base (inside vm.c's VM_Base-mapped region) that this
 // ROM's byte offset 0 corresponds to. Writes through this pointer are
 // what actually populate GBA-visible ROM memory, and are themselves
@@ -384,11 +385,9 @@ bool VMPager_IsPreloading(void) {
 // file will be NULL if it's less than 16MB and  `size` is not validated
 // (callers are expected to have already rejected an oversized file
 // themselves)
-void VMPager_StartPreload(FILE* file, u32 size) {
-	VMPager_CloseFile();
-	romFile = file;
-	fileSize = (int)size;
+void VMPager_StartPreload() {
 	is_preloading = true;
+	VMPager_CloseFile();
 	VM_Clear();
 }
 
@@ -416,7 +415,16 @@ void VMPager_CommitPageRange(u32 start_page, u32 end_page) {
 // Ends the preload phase started by VMPager_StartPreload(): always
 // clears `is_preloading`, so any subsequent fault on an uncommitted page
 // goes back through the normal VMPager_RequestAndWaitPage() path.
-void VMPager_CompletePreload() {
+void VMPager_EndPreload() {
+	romFile = NULL;
+	fileSize = 0;
+	is_preloading = false;
+}
+
+void VMPager_EndPreloadWithFile(FILE* file, u32 size, const char* path) {
+	romFile = file;
+	fileSize = (int)size;
+	snprintf(romFilepath, 1024, "%s", path);
 	is_preloading = false;
 }
 
@@ -431,7 +439,29 @@ void VMPager_CloseFile(void) {
 	if (romFile) {
 		fclose(romFile);
 		romFile = NULL;
+		romFilepath[0] = '\0';
 		fileSize = 0;
 	}
+}
+
+// Pauses the VM pager by closing the file handle, but leaving fileSize intact
+// so we know it needs to be reopened later.
+void VMPager_Pause(void) {
+	if (romFile) {
+		fclose(romFile);
+		romFile = NULL;
+	}
+}
+
+// Resumes the VM pager by providing a newly reopened file handle.
+bool VMPager_Resume() {
+	if(fileSize == 0)
+		return true;
+
+	if (romFile) {
+		fclose(romFile);
+	}
+	romFile = fopen(romFilepath, "rb");
+	return romFile == NULL ? false : true;
 }
 #endif

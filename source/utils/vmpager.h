@@ -22,12 +22,15 @@ extern "C" {
 void VMPager_Init(u8 *vmPtr);
 void VMPager_Shutdown();
 void VMPager_RequestAndWaitPage(u16 v_index);
-void VMPager_StartPreload(FILE* file, u32 size);
+void VMPager_StartPreload();
 void VMPager_CommitPageRange(u32 start_page, u32 end_page);
-void VMPager_CompletePreload();
+void VMPager_EndPreloadWithFile(FILE* file, u32 size, const char *filepath);
+void VMPager_EndPreload();
 lwp_t VMPager_GetThread(void);
 bool VMPager_IsPreloading(void);
 void VMPager_CloseFile();
+void VMPager_Pause(void);
+bool VMPager_Resume();
 #ifdef __cplusplus
 }
 #endif
