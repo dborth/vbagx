@@ -78,16 +78,28 @@
  *
  * INITIAL BOOT PRELOAD vs LAZY ON-DEMAND PAGING
  * ---------------------------------------------------
- * `VMPager_LoadROM` performs one additional, separate thing at ROM-load
- * time: rather than relying purely on lazy fault-driven paging from a
- * cold start (which would mean the very first frames of emulation take a
- * DSI fault + SD read for nearly every ROM page touched), it
- * synchronously bulk-reads up to `ARAM_SIZE` (16MB) of the ROM straight
- * into the VM region up front, on the calling thread, before the pager
- * thread's lazy path is ever exercised, and marks all of those pages
- * committed immediately. Only ROMs (or the remainder of larger ROMs)
- * beyond that initial 16MB window rely purely on the lazy
- * fault-request-pager-commit path described above during actual gameplay.
+ * Rather than relying purely on lazy fault-driven paging from a cold
+ * start (which would mean the very first frames of emulation take a DSI
+ * fault + SD read for nearly every ROM page touched), the ROM-loading
+ * caller bulk-reads up to `ARAM_SIZE` (16MB) of the ROM into the VM
+ * region itself, up front, before the pager thread's lazy path is ever
+ * exercised. This file exposes the three calls that make that safe:
+ *
+ *   1. `VMPager_StartPreload(file, size)` hands this pager the ROM's
+ *      already-open file handle and size, resets all VM/ARAM/PTE state
+ *      via `VM_Clear()`, and sets `is_preloading` so `vm.c`'s DSI
+ *      handler maps blank frames instantly for the caller's own writes
+ *      instead of routing them through the pager thread.
+ *   2. The caller streams ROM data into the VM region itself, calling
+ *      `VMPager_CommitPageRange(start_page, end_page)` after each chunk
+ *      to publish those pages as committed.
+ *   3. If the whole ROM fit in that initial window, the file is closed
+ *      via VMPager_CloseFile - there's nothing left to stream.
+ *      Otherwise if the ROM is larger than `ARAM_SIZE`, we call
+ *      `VMPager_CompletePreload()` to clear `is_preloading`. The file
+ *      remains open and the remainder is paged in lazily by the
+ *      background thread via the fault-request-pager-commit path
+ *      described above during actual gameplay.
  *
  * THREADING / SYNCHRONIZATION SUMMARY
  * ----------------------------------------
@@ -125,12 +137,11 @@
 #include "vmpager.h"
 #include "vm.h"
 
-#define MAX_ROM_SIZE (1024*1024*32)
-
 // The currently open GBA ROM file on the SD card - the Tier-0
-// authoritative backing store for every page vm.c ever pages in.
+// authoritative backing store for every page vm.c ever pages in. This
+// will never be a GB file because those can be read fully into ARAM.
 static FILE* romFile = NULL;
-static int romSize = 0;
+static int fileSize = 0;
 // Virtual-address base (inside vm.c's VM_Base-mapped region) that this
 // ROM's byte offset 0 corresponds to. Writes through this pointer are
 // what actually populate GBA-visible ROM memory, and are themselves
@@ -201,7 +212,7 @@ static void* VMPager_ThreadFunc(void* arg) {
 			continue;
 		}
 
-		u16 max_pages = (u16)((romSize + PAGE_SIZE - 1) / PAGE_SIZE);
+		u16 max_pages = (u16)((fileSize + PAGE_SIZE - 1) / PAGE_SIZE);
 
 		// A request beyond the ROM's real page count is normal GBA
 		// behaviour (mirrored/open-bus reads past cart end), not an
@@ -226,7 +237,7 @@ static void* VMPager_ThreadFunc(void* arg) {
 
 		u32 offset = (u32)start_v_index * PAGE_SIZE;
 		u32 readSize = (u32)(end_v_index - start_v_index) * PAGE_SIZE;
-		if (offset + readSize > (u32)romSize) readSize = (u32)romSize - offset;
+		if (offset + readSize > (u32)fileSize) readSize = (u32)fileSize - offset;
 
 		// readSize can never legitimately exceed the staging buffer's
 		// capacity; clamp explicitly right before it's handed to
@@ -235,28 +246,40 @@ static void* VMPager_ThreadFunc(void* arg) {
 
 		u32 pages_in_block = (u32)(end_v_index - start_v_index);
 
-		if (romFile && readSize > 0) {
-			fseeko(romFile, offset, SEEK_SET);
-			size_t bytesRead = fread(page_buffer, 1, readSize, romFile);
-			if (bytesRead > 0) {
-				// This memcpy will intentionally trigger DSI exceptions
-				// on the pager thread - see the REENTRANT FAULT note.
-				memcpy(vmRomPtr + offset, page_buffer, bytesRead);
+		if (romFile == NULL || fileSize == 0) {
+			VMPager_CloseFile(); // Ensure internal state is reset if fileSize is 0 but handle is open
+
+			// Still commit so nothing waits on this forever
+			for (u16 v = start_v_index; v < end_v_index; v++) {
+				VM_SetCommitted(v);
+			}
+		} else if (readSize > 0) {
+			size_t bytesRead = 0;
+
+			if (fseeko(romFile, offset, SEEK_SET) != 0) {
+				VMPager_CloseFile(); // Seek failed: invalidate file handle so future calls fail fast
+			} else {
+				bytesRead = fread(page_buffer, 1, readSize, romFile);
+				if (bytesRead == 0) {
+					// Read failed: invalidate file handle
+					VMPager_CloseFile();
+				} else {
+					// This memcpy will intentionally trigger DSI exceptions
+					// on the pager thread - see the REENTRANT FAULT note.
+					memcpy(vmRomPtr + offset, page_buffer, bytesRead);
+				}
 			}
 
-			// Only commit as many pages as were actually backed by real
-			// file data.
+			// Only commit as many pages as were actually backed by real file data.
 			u32 pages_read = (u32)(bytesRead + PAGE_SIZE - 1) / PAGE_SIZE;
 			if (pages_read > pages_in_block) pages_read = pages_in_block;
 
 			for (u32 i = 0; i < pages_read; i++) {
 				VM_SetCommitted(start_v_index + i);
 			}
-			// A short/truncated read (SD hiccup, EOF landing mid-block,
-			// etc.) still needs the rest of the block published as
-			// committed, so a waiter on any page in the tail is never
-			// left blocked indefinitely. Worst case here is stale/
-			// zeroed data for those trailing pages.
+			// A short/truncated read (SD hiccup, EOF landing mid-block, etc.) still needs the rest
+			// of the block published as committed, so a waiter on any page in the tail is never left
+			// blocked indefinitely. Worst case here is stale/zeroed data for those trailing pages.
 			for (u32 i = pages_read; i < pages_in_block; i++) {
 				VM_SetCommitted(start_v_index + i);
 			}
@@ -347,79 +370,68 @@ bool VMPager_IsPreloading(void) {
 	return is_preloading;
 }
 
-// Opens a ROM file from the SD card and performs the initial bulk
-// preload described in the "INITIAL BOOT PRELOAD" section of the file
-// header: closes any currently open ROM, determines the file's size,
-// resets the whole VM/ARAM/PTE state via VM_Clear(), then synchronously
-// reads up to ARAM_SIZE (16MB) worth of ROM data into the live VM region
-// in PAGE_BUFFER_SIZE-sized chunks (reusing the same staging buffer and
-// reentrant-faulting memcpy path the background pager thread uses),
-// marking every page it touches committed immediately. Any remainder of
-// a ROM larger than that initial window is left to be paged in lazily,
-// on demand, by the background thread during actual gameplay. Returns
-// the ROM size in bytes on success, or 0 on failure to open/size the file.
-int VMPager_LoadROM(const char * filepath) {
+// Begins a caller-driven preload: closes any previously open ROM, takes
+// ownership of `file` (an already-open handle positioned however the
+// caller likes - this pager only ever seeks explicitly before its own
+// reads, so starting position doesn't matter) and `size` (the ROM's
+// total byte size), resets all VM/ARAM/PTE state via VM_Clear(), and
+// sets `is_preloading` so vm.c's DSI handler maps blank frames instantly
+// for the caller's own writes into the VM region instead of routing them
+// through the pager thread's request/wait path. See the "INITIAL BOOT
+// PRELOAD vs LAZY ON-DEMAND PAGING" section of the file header for the
+// full three-call handshake this is step one of.
+//
+// file will be NULL if it's less than 16MB and  `size` is not validated
+// (callers are expected to have already rejected an oversized file
+// themselves)
+void VMPager_StartPreload(FILE* file, u32 size) {
 	VMPager_CloseFile();
-
-	romFile = fopen(filepath, "rb");
-	if (romFile == NULL) {
-		return 0;
-	}
-
-	fseeko(romFile, 0, SEEK_END);
-	off_t size = ftello(romFile);
-	fseeko(romFile, 0, SEEK_SET);
-
-	if (size <= 0 || size > MAX_ROM_SIZE) {
-		fclose(romFile);
-		romFile = NULL;
-		romSize = 0;
-		return 0;
-	}
-
-	romSize = (int)size;
-	// Flag that we are intentionally faulting memory on the calling
-	// thread, so vm_dsi_handler maps blank frames instantly instead of
-	// routing through the pager's request/wait path.
+	romFile = file;
+	fileSize = (int)size;
 	is_preloading = true;
 	VM_Clear();
-
-	u32 offset = 0;
-	// Only preload up to 16MB (ARAM limit) at boot; the rest streams in
-	// lazily during gameplay.
-	u32 preloadSize = (romSize > ARAM_SIZE) ? ARAM_SIZE : (u32)romSize;
-
-	while (offset < preloadSize) {
-		u32 readSize = preloadSize - offset;
-		if (readSize > PAGE_BUFFER_SIZE) readSize = PAGE_BUFFER_SIZE;
-
-		size_t bytesRead = fread(page_buffer, 1, readSize, romFile);
-		if (bytesRead > 0) {
-			memcpy(vmRomPtr + offset, page_buffer, bytesRead);
-		}
-		offset += readSize;
-	}
-
-	u32 pages_read = (preloadSize + PAGE_SIZE - 1) / PAGE_SIZE;
-	for (u32 i = 0; i < pages_read; i++) {
-		VM_SetCommitted(i);
-	}
-
-	// Release the flag for normal gameplay
-	is_preloading = false;
-
-	return romSize;
 }
 
-// Closes the currently open ROM file, if any, and resets the cached size.
+// Marks virtual pages `[start_page, end_page)` - a half-open range, so
+// `end_page` itself is not committed - as committed. Called by a
+// preloading caller after it has written the corresponding data into
+// the VM region itself (see VMPager_StartPreload); this is what makes
+// those pages visible to any fault that lands on them afterward.
+// Clamped to the 16-bit virtual page index space this pager (and vm.c)
+// operates over. Broadcasts on `pager_cond` afterward so any thread
+// already blocked in VMPager_RequestAndWaitPage for one of these pages
+// - normally none, since is_preloading routes faults away from that
+// path during a preload, but this makes no assumption about that -
+// wakes promptly rather than waiting on an unrelated future event.
+void VMPager_CommitPageRange(u32 start_page, u32 end_page) {
+	if (end_page > 65536) end_page = 65536;
+
+	for (u32 i = start_page; i < end_page; i++) {
+		VM_SetCommitted((u16)i);
+	}
+
+	VMPager_Notify();
+}
+
+// Ends the preload phase started by VMPager_StartPreload(): always
+// clears `is_preloading`, so any subsequent fault on an uncommitted page
+// goes back through the normal VMPager_RequestAndWaitPage() path.
+void VMPager_CompletePreload() {
+	is_preloading = false;
+}
+
+// Closes the currently open ROM file, if any, and resets the file size.
 // Does not touch VM/ARAM/PTE state - callers that need a full reset
-// should go through VMPager_LoadROM (which calls VM_Clear()) or VM_Clear
-// directly.
+// should go through VMPager_StartPreload (which calls VM_Clear()) or
+// VM_Clear directly.
+// Also called when the file is completely loaded into ARAM
 void VMPager_CloseFile(void) {
+	is_preloading = false;
+
 	if (romFile) {
 		fclose(romFile);
 		romFile = NULL;
-		romSize = 0;
+		fileSize = 0;
 	}
 }
 #endif

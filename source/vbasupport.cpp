@@ -36,6 +36,7 @@
 #include "gameborder.h"
 #include "preferences.h"
 #include "utils/pngu.h"
+#include "utils/vm.h"
 #include "utils/vmpager.h"
 
 #include "vba/Util.h"
@@ -1224,6 +1225,147 @@ void InitGameDimensionsAndBorder() {
 	}
 }
 
+static bool utilIsZipFile(const char* file)
+{
+  if(strlen(file) > 4)
+    {
+      char * p = strrchr(file,'.');
+      if(p != NULL)
+        {
+          if(strcasecmp(p, ".zip") == 0)
+            return true;
+        }
+	}
+	return false;
+}
+
+#ifdef HW_DOL
+int LoadROMToVM(const char* filepath) {
+	int size = 0;
+	char zipbuffer[2048];
+	int retry = 1;
+	int device;
+
+	if(!FindDevice((char*)filepath, &device))
+		return 0;
+
+	HaltDeviceThread();
+	HaltParseThread();
+	VMPager_CloseFile();
+
+	while(retry) {
+		if(!ChangeInterface(device, NOTSILENT))
+			break;
+
+		file = fopen(filepath, "rb");
+		if(!file) {
+			retry = ErrorPromptRetry("Error opening file!");
+			continue;
+		}
+
+		if (utilIsZipFile(filepath)) {
+			size_t readsize = fread(zipbuffer, 1, 32, file);
+			if(readsize < 32 || !IsZipFile(zipbuffer)) {
+				unmountRequired[device] = true;
+				retry = ErrorPromptRetry("Error reading file!");
+				fclose(file);
+				file = NULL;
+				continue;
+			}
+
+			u32 uncompSize = ((u8)zipbuffer[22]) |
+							 ((u8)zipbuffer[23] << 8) |
+							 ((u8)zipbuffer[24] << 16) |
+							 ((u8)zipbuffer[25] << 24);
+
+			if(uncompSize > ARAM_SIZE) {
+				ErrorPrompt("Compressed ROM file is too large to decompress!");
+				fclose(file);
+				file = NULL;
+				ResumeDeviceThread();
+				CancelAction();
+				return 0;
+			}
+
+			VMPager_StartPreload(NULL, uncompSize);
+			size = UnZipBuffer((unsigned char*)romPtr, ARAM_SIZE);
+
+			if (size > 0 && (u32)size == uncompSize) {
+				u32 pages = (size + 4095) / 4096;
+				VMPager_CommitPageRange(0, pages);
+				retry = 0;
+			} else {
+				retry = ErrorPromptRetry("Error extracting ZIP file!");
+			}
+			fclose(file);
+			file = NULL;
+			VMPager_CloseFile();
+		} else {
+			fseeko(file, 0, SEEK_END);
+			size = ftello(file);
+			fseeko(file, 0, SEEK_SET);
+
+			if (size > MAX_GBA_ROM_SIZE) {
+				ErrorPrompt("Unsupported file size!");
+				fclose(file);
+				file = NULL;
+				ResumeDeviceThread();
+				CancelAction();
+				return 0;
+			}
+
+			FILE* vm_file = file;
+			file = NULL; // isolate the handle exclusively for the VM Pager
+			VMPager_StartPreload(vm_file, size);
+
+			u32 preload_size = (size > ARAM_SIZE) ? ARAM_SIZE : size;
+			ShowProgress("Loading...", 0, preload_size);
+
+			size_t offset = 0;
+			u8* chunk_buf = (u8*)memalign(32, 65536);
+
+			size_t readsize;
+
+			while(offset < preload_size) {
+				size_t to_read = preload_size - offset;
+				if(to_read > 65536) to_read = 65536;
+
+				readsize = fread(chunk_buf, 1, to_read, vm_file);
+				if(readsize <= 0) break;
+
+				memcpy(romPtr + offset, chunk_buf, readsize);
+
+				u32 start_page = offset / 4096;
+				u32 end_page = (offset + readsize - 1) / 4096;
+				VMPager_CommitPageRange(start_page, end_page + 1);
+
+				offset += readsize;
+				ShowProgress("Loading...", offset, preload_size);
+			}
+
+			free(chunk_buf);
+
+			if (offset == size) {
+				VMPager_CloseFile(); // <= 16MB file. Everything is in ARAM. We don't need the file access anymore.
+				retry = 0;
+			} else if (offset == preload_size) {
+				// > 16MB file (size > offset, but we loaded 16MB). Preload finished, but more data remains.
+				VMPager_CompletePreload();
+				retry = 0;
+			} else {
+				VMPager_CloseFile(); // Interrupted read
+				retry = ErrorPromptRetry("Error reading uncompressed ROM data!");
+			}
+		}
+	}
+
+	ResumeDeviceThread();
+	CancelAction();
+
+	return size;
+}
+#endif
+
 bool LoadGBROM()
 {
 	gbRom = romPtr;
@@ -1237,7 +1379,11 @@ bool LoadGBROM()
 		if(!MakeFilePath(filepath, FILE_ROM))
 			return false;
 
+		#ifdef HW_RVL
 		gbRomSize = LoadFile ((char *)gbRom, filepath, 0, (1024*1024*8), NOTSILENT);
+		#else
+		gbRomSize = LoadROMToVM(filepath);
+		#endif
 	}
 	else
 	{
@@ -1273,20 +1419,6 @@ bool LoadGBROM()
 		return false;
 	}
 	return true;
-}
-
-bool utilIsZipFile(const char* file)
-{
-  if(strlen(file) > 4)
-    {
-      char * p = strrchr(file,'.');
-      if(p != NULL)
-        {
-          if(strcasecmp(p, ".zip") == 0)
-            return true;
-        }
-	}
-	return false;
 }
 
 static void GBAROMCleanup()
@@ -1362,13 +1494,7 @@ static int GBAROMLoad()
 		#ifdef HW_RVL
 		GBAROMSize = LoadFile ((char *)rom, filepath, 0, MAX_GBA_ROM_SIZE, NOTSILENT);
 		#else
-		ShowAction("Loading...");
-		GBAROMSize = VMPager_LoadROM(filepath);
-		CancelAction();
-
-		if(GBAROMSize == 0) {
-			ErrorPrompt("Error loading file!");
-		}
+		GBAROMSize = LoadROMToVM(filepath);
 		#endif
 	}
 	else
@@ -1430,11 +1556,6 @@ bool LoadVBAROM()
 
 		if(utilIsGBAImage(zippedFilename))
 		{
-			#ifdef HW_DOL
-			ErrorPrompt("Compressed GBA files are not supported!");
-			return false;
-			#endif
-
 			newCartridgeType = CARTRIDGE_GBA;
 		}
 		else if(utilIsGBImage(zippedFilename))
