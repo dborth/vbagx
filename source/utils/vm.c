@@ -192,6 +192,7 @@
 #include <string.h>
 #include <ogc/machine/processor.h>
 #include <ogc/aram.h>
+#include <ogc/cache.h>
 #include <ogc/context.h>
 #include "vm.h"
 #include "vmpager.h"
@@ -232,12 +233,14 @@ typedef union
 	};
 } p_map;
 
-// maps VM addresses to mapped pages
+// Bookkeeping for one virtual page. Kept as two full u16 fields rather
+// than a single packed bitfield so a write to one member is always its
+// own independent store, never a read-modify-write that also touches
+// the other member's bits.
 typedef struct
 {
-	// data must be fetched when paging in?
-	u16 committed  :  1;
-	u16 p_map_index: 12;
+	u16 committed;
+	u16 p_map_index;
 } vm_map;
 
 typedef union
@@ -288,6 +291,16 @@ static u16 v_to_aram[65536];
 // Simple FIFO clock hand for eviction
 static u16 aram_head = 0;
 
+// Flushes an updated PTE from CPU cache to physical memory so the
+// PowerPC hardware page-table walker - which reads HTABORG directly out
+// of RAM, not through the cache - always sees the current contents.
+// Called after every write to a PTE.
+static __inline__ void flush_pte(PTE* pte)
+{
+	DCStoreRange(pte, sizeof(PTE));
+	asm volatile("sync");
+}
+
 // PPC hardware TLB invalidate. The eieio/tlbsync/eieio sequence around
 // the tlbie guarantees the invalidation has been observed broadcast-wide
 // before continuing, which matters given page state is mutated from two
@@ -329,26 +342,39 @@ static u16 locate_oldest(void)
 		if (!phys_map[head].valid || phys_map[head].locked)
 			continue;
 
-		p = HTABORG+phys_map[head].pte_index;
-		tlbie((void*)(VM_Base+phys_map[head].page_index));
+		p = HTABORG + phys_map[head].pte_index;
+		tlbie((void*)(VM_Base + phys_map[head].page_index));
 
 		if (p->C)
 		{
 			p->C = 0;
 			phys_map[head].dirty = 1;
+			flush_pte(p);
 			continue;
 		}
 
 		if (p->R)
 		{
 			p->R = 0;
+			flush_pte(p);
 			continue;
 		}
 
 		p->data[0] = 0;
 		p->data[1] = 0;
+		flush_pte(p);
 
-		pmap_head = head+1;
+		// The outgoing virtual page's back-reference to this frame must
+		// be cleared before the frame is handed back for reuse, or a
+		// later ClearMEM1Mapping() on that old v_index would tear down
+		// whatever new page ends up owning this frame's PTE next.
+		u16 old_v = phys_map[head].page_index;
+		if (old_v < 65536 && virt_map[old_v].p_map_index == head)
+		{
+			virt_map[old_v].p_map_index = pmap_max;
+		}
+
+		pmap_head = head + 1;
 		return head;
 	}
 }
@@ -363,21 +389,23 @@ static PTE* StorePTE(PTEG pteg, u32 virtualmem, u32 physical, u8 WIMG, u8 PP, in
 
 	p.valid = 1;
 	p.VSID = VM_VSID;
-	p.hash = secondary ? 1:0;
+	p.hash = secondary ? 1 : 0;
 	p.API = virtualmem >> 22;
 	p.RPN = physical >> 12;
 	p.WIMG = WIMG;
 	p.PP = PP;
 
-	for (i=0; i < 8; i++)
+	for (i = 0; i < 8; i++)
 	{
 		if (pteg[i].valid)
 			continue;
 
 		tlbie((void*)(virtualmem));
 		pteg[i].data[1] = p.data[1];
+		asm volatile("eieio");
 		pteg[i].data[0] = p.data[0];
-		return pteg+i;
+		flush_pte(&pteg[i]);
+		return pteg + i;
 	}
 
 	return NULL;
@@ -402,14 +430,21 @@ static PTEG CalcPTEG(u32 virtualmem, int secondary)
 
 // Maps a virtual page index to a physical MEM1 address by inserting a PTE
 // into its primary hash bucket, falling back to the secondary bucket if
-// the primary is full.
+// the primary is full. If both buckets (16 ways total) are already full -
+// which requires simultaneously filling every way across both hash
+// chains for one virtual page, not something realistic MEMSize
+// configurations approach - the primary bucket's slot 0 is reclaimed:
+// whichever other physical frame currently owns that PTE slot is
+// unlinked (its phys_map entry invalidated and its virt_map
+// back-reference cleared) so the slot can be safely reused for the new
+// mapping. Never returns NULL.
 static PTE* insert_pte(u16 index, u32 physical, u8 WIMG, u8 PP)
 {
 	PTE *pte;
 	int i;
-	u32 virtualmem = (u32)(VM_Base+index);
+	u32 virtualmem = (u32)(VM_Base + index);
 
-	for (i=0; i < 2; i++)
+	for (i = 0; i < 2; i++)
 	{
 		PTEG pteg = CalcPTEG(virtualmem, i);
 		pte = StorePTE(pteg, virtualmem, physical, WIMG, PP, i);
@@ -417,7 +452,39 @@ static PTE* insert_pte(u16 index, u32 physical, u8 WIMG, u8 PP)
 			return pte;
 	}
 
-	return NULL;
+	PTEG pteg = CalcPTEG(virtualmem, 0);
+	pte = &pteg[0];
+	u16 target_pte_idx = pte - HTABORG;
+
+	// Unlink whichever frame currently owns this PTE slot so we don't
+	// end up with two physical frames pointing at the same PTE.
+	for (i = 0; i < pmap_max; i++) {
+		if (phys_map[i].valid && phys_map[i].pte_index == target_pte_idx) {
+			phys_map[i].valid = 0;
+			u16 old_v = phys_map[i].page_index;
+			if (old_v < 65536 && virt_map[old_v].p_map_index == i) {
+				virt_map[old_v].p_map_index = pmap_max;
+			}
+			break;
+		}
+	}
+
+	PTE p = {{0}};
+	p.valid = 1;
+	p.VSID = VM_VSID;
+	p.hash = 0;
+	p.API = virtualmem >> 22;
+	p.RPN = physical >> 12;
+	p.WIMG = WIMG;
+	p.PP = PP;
+
+	pte->data[1] = p.data[1];
+	asm volatile("eieio");
+	pte->data[0] = p.data[0];
+	flush_pte(pte);
+	tlbie((void*)(virtualmem));
+
+	return pte;
 }
 
 // Invalidates the entire TLB (64 congruence classes) - used once at
@@ -425,8 +492,8 @@ static PTE* insert_pte(u16 index, u32 physical, u8 WIMG, u8 PP)
 static void tlbia(void)
 {
 	int i;
-	for (i=0; i < 64; i++)
-		tlbie((void*)(i*PAGE_SIZE));
+	for (i = 0; i < 64; i++)
+		tlbie((void*)(i * PAGE_SIZE));
 }
 
 #ifdef __cplusplus
@@ -463,6 +530,7 @@ static void ClearMEM1Mapping(u16 v_index) {
 		PTE *p = HTABORG + phys_map[p_index].pte_index;
 		p->data[0] = 0;
 		p->data[1] = 0;
+		flush_pte(p);
 		tlbie((void*)(VM_Base + v_index));
 
 		virt_map[v_index].p_map_index = pmap_max;
@@ -515,7 +583,7 @@ void VM_Clear(void) {
 
 	tlbia();
 	DCZeroRange(MEM_Base, MEMSize);
-	HTABORG = (PTE*)(((u32)MEM_Base+0xFFFF)&~0xFFFF);
+	HTABORG = (PTE*)(((u32)MEM_Base + 0xFFFF) & ~0xFFFF);
 
 	// Mandatory phys_map/PTE seeding for locate_oldest() - see the
 	// VM_Clear function comment above. Not an optional preload.
@@ -523,11 +591,11 @@ void VM_Clear(void) {
 	u32 i;
 	u16 index, v_index;
 
-	for (index=0,v_index=0; index<pmap_max; ++index,++v_index)
+	for (index = 0, v_index = 0; index < pmap_max; ++index, ++v_index)
 	{
-		if ((PTE*)(MEM_Base+index) == HTABORG)
+		if ((PTE*)(MEM_Base + index) == HTABORG)
 		{
-			for (i=0; i<(PTE_SIZE/PAGE_SIZE); ++i,++index)
+			for (i = 0; i < (PTE_SIZE / PAGE_SIZE); ++i, ++index)
 				phys_map[index].valid = 0;
 
 			--index;
@@ -539,16 +607,21 @@ void VM_Clear(void) {
 		phys_map[index].locked = 0;
 		phys_map[index].dirty = 0;
 		phys_map[index].page_index = v_index;
-		phys_map[index].pte_index = insert_pte(v_index, MEM_VIRTUAL_TO_PHYSICAL(MEM_Base+index), 0, 0b10) - HTABORG;
+		phys_map[index].pte_index = insert_pte(v_index, MEM_VIRTUAL_TO_PHYSICAL(MEM_Base + index), 0, 0b10) - HTABORG;
 		virt_map[v_index].committed = 0;
 		virt_map[v_index].p_map_index = index;
 	}
 
-	// all indexes up to 65536
-	for (; v_index; ++v_index)
+	// Mark every remaining virtual page (from wherever the loop above
+	// left off, through the top of the 16-bit index space) as
+	// uncommitted and unmapped. Uses an explicit 32-bit loop counter
+	// rather than comparing the u16 `v_index` directly against 65536,
+	// since 65536 does not fit in a u16 and would force an always-true
+	// comparison after integer promotion.
+	for (u32 vi = v_index; vi < 65536; ++vi)
 	{
-		virt_map[v_index].committed = 0;
-		virt_map[v_index].p_map_index = pmap_max;
+		virt_map[(u16)vi].committed = 0;
+		virt_map[(u16)vi].p_map_index = pmap_max;
 	}
 
 	pmap_head = 0;
@@ -568,14 +641,14 @@ void* VM_Init(u32 reqVMSize, u32 reqMEMSize)
 		return VM_Base;
 
 	// parameter checking
-	if (reqVMSize>MAX_VM_SIZE || reqMEMSize<MIN_MEM_SIZE || reqMEMSize>MAX_MEM_SIZE || reqVMSize <= reqMEMSize)
+	if (reqVMSize > MAX_VM_SIZE || reqMEMSize < MIN_MEM_SIZE || reqMEMSize > MAX_MEM_SIZE || reqVMSize <= reqMEMSize)
 	{
 		errno = EINVAL;
 		return NULL;
 	}
 
-	VMSize = (reqVMSize+PAGE_SIZE-1)&PAGE_MASK;
-	MEMSize = (reqMEMSize+PAGE_SIZE-1)&PAGE_MASK;
+	VMSize = (reqVMSize + PAGE_SIZE - 1) & PAGE_MASK;
+	MEMSize = (reqMEMSize + PAGE_SIZE - 1) & PAGE_MASK;
 	VM_Base = (vm_page*)(0x70000000);
 	pmap_max = MEMSize / PAGE_SIZE + 16;
 
@@ -588,12 +661,12 @@ void* VM_Init(u32 reqVMSize, u32 reqMEMSize)
 	MEMSize += PTE_SIZE;
 	MEM_Base = (vm_page*)memalign(PAGE_SIZE, MEMSize);
 
-	if (MEM_Base==NULL)
+	if (MEM_Base == NULL)
 	{
 		errno = ENOMEM;
 		return NULL;
 	}
-	
+
 	AR_Init(NULL, 0);
 	ARQ_Init();
 
@@ -601,7 +674,7 @@ void* VM_Init(u32 reqVMSize, u32 reqMEMSize)
 	VM_Clear();
 
 	// set SDR1
-	mtspr(25, MEM_VIRTUAL_TO_PHYSICAL(HTABORG)|HTABMASK);
+	mtspr(25, MEM_VIRTUAL_TO_PHYSICAL(HTABORG) | HTABMASK);
 	// enable SR
 	asm volatile("mtsrin %0,%1" :: "r"(VM_VSID), "r"(VM_Base));
 	// hook DSI
@@ -653,8 +726,6 @@ void VM_Deinit(void)
 	vm_initialized = 0;
 }
 
-static ARQRequest arq_request;
-
 // The DSI (Data Storage Interrupt) fault handler - the heart of the
 // software MMU. Invoked (via vm_dsi_handler_stub) whenever the CPU
 // touches a page inside the VM_Base segment that has no valid PTE yet.
@@ -664,7 +735,7 @@ static ARQRequest arq_request;
 //   2. If the page has never been loaded from the SD ROM file
 //      (`!virt_map[v_index].committed`) AND we're not already on the
 //      pager thread, hand the request off to the pager thread
-//      (`VMPager_RequestPage`) and spin-yield until it reports the page
+//      (`VMPager_RequestAndWaitPage`) and waits until it reports the page
 //      committed - see the "GAME THREAD vs PAGER THREAD" note in the file
 //      header for why the pager thread itself must skip this branch.
 //   3. Otherwise (page already committed at least once, or we *are* the
@@ -685,9 +756,9 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 	u16 v_index;
 	u16 p_index;
 
-	if (DAR<(u32)VM_Base || DAR>=0x80000000)
+	if (DAR < (u32)VM_Base || DAR >= 0x80000000)
 		return 0;
-	if ((DSISR&~0x02000000)!=0x40000000)
+	if ((DSISR & ~0x02000000) != 0x40000000)
 		return 0;
 	if (!vm_initialized)
 		return 0;
@@ -696,19 +767,19 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 	v_index = (vm_page*)DAR - VM_Base;
 
 	if (!virt_map[v_index].committed) {
-		// If this is the game thread during normal gameplay, request the page and wait.
-		// If it is the pager thread doing a memcpy OR the main thread doing an initial preload, bypass this and fault in a blank page!
+		// Page has never been loaded at all: hand off to the pager and
+		// block on a condition variable until it's committed, rather
+		// than busy-spinning. Blocking here also means this thread
+		// leaves the ready queue entirely while it waits, so the
+		// scheduler is free to run the pager thread regardless of their
+		// relative priorities.
 		if (LWP_GetSelf() != VMPager_GetThread() && !VMPager_IsPreloading()) {
 
 			u32 msr;
 			asm volatile("mfmsr %0" : "=r"(msr));
 			asm volatile("mtmsr %0" :: "r"(msr | MSR_EE)); // Must enable before queue block
 
-			VMPager_RequestPage(v_index);
-			while (!virt_map[v_index].committed) {
-				LWP_YieldThread();
-				asm volatile("" ::: "memory");
-			}
+			VMPager_RequestAndWaitPage(v_index);
 
 			asm volatile("mtmsr %0" :: "r"(msr));
 			return 1;
@@ -741,8 +812,8 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 
 		u32 aram_offset = target_slot * PAGE_SIZE;
 
-		DCFlushRange(MEM_Base+p_index, PAGE_SIZE);
-		AR_StartDMA(AR_MRAMTOARAM, (u32)(MEM_Base+p_index), aram_offset, PAGE_SIZE);
+		DCFlushRange(MEM_Base + p_index, PAGE_SIZE);
+		AR_StartDMA(AR_MRAMTOARAM, (u32)(MEM_Base + p_index), aram_offset, PAGE_SIZE);
 		while(AR_GetDMAStatus());
 
 		virt_map[evict_v_index].committed = 1;
@@ -754,18 +825,18 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 	if (virt_map[v_index].committed && v_to_aram[v_index] != 0xFFFF)
 	{
 		u32 aram_offset = v_to_aram[v_index] * PAGE_SIZE;
-		DCInvalidateRange(MEM_Base+p_index, PAGE_SIZE);
-		AR_StartDMA(AR_ARAMTOMRAM, (u32)(MEM_Base+p_index), aram_offset, PAGE_SIZE);
+		DCInvalidateRange(MEM_Base + p_index, PAGE_SIZE);
+		AR_StartDMA(AR_ARAMTOMRAM, (u32)(MEM_Base + p_index), aram_offset, PAGE_SIZE);
 		while(AR_GetDMAStatus());
 	}
 	else {
-		DCZeroRange(MEM_Base+p_index, PAGE_SIZE);
+		DCZeroRange(MEM_Base + p_index, PAGE_SIZE);
 	}
 
 	// Map new physical page to virtual memory
 	virt_map[v_index].p_map_index = p_index;
 	phys_map[p_index].page_index = v_index;
-	phys_map[p_index].pte_index = insert_pte(v_index, MEM_VIRTUAL_TO_PHYSICAL(MEM_Base+p_index), 0, 0b10) - HTABORG;
+	phys_map[p_index].pte_index = insert_pte(v_index, MEM_VIRTUAL_TO_PHYSICAL(MEM_Base + p_index), 0, 0b10) - HTABORG;
 
 	LWP_MutexUnlock(vm_mutex);
 	return 1;

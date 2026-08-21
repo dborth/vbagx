@@ -19,7 +19,7 @@ extern "C" {
 
 void VMPager_Init(u8 *vmPtr);
 void VMPager_Shutdown();
-void VMPager_RequestPage(u16 v_index);
+void VMPager_RequestAndWaitPage(u16 v_index);
 int VMPager_LoadROM(const char * filepath);
 lwp_t VMPager_GetThread(void);
 bool VMPager_IsPreloading(void);
