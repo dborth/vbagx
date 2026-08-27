@@ -1478,12 +1478,6 @@ void Menu_DrawRectangle(f32 x, f32 y, f32 width, f32 height, GuiColor color)
 	guVector v[] = {{x,y,0.0f}, {x2,y,0.0f}, {x2,y2,0.0f}, {x,y2,0.0f}, {x,y,0.0f}};
 	u8 fmt = GX_TRIANGLEFAN;
 
-	if(!filled)
-	{
-		fmt = GX_LINESTRIP;
-		n = 5;
-	}
-
 	GX_Begin(fmt, GX_VTXFMT0, n);
 	for(long i=0; i<n; ++i)
 	{
