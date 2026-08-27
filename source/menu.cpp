@@ -378,9 +378,6 @@ UpdateGUI (void *arg)
 		UpdatePads();
 		mainWindow->draw();
 
-		if (mainWindow->getState() != STATE::DISABLED)
-			mainWindow->drawTooltip();
-
 		#ifdef HW_RVL
 		i = 3;
 		do
@@ -405,7 +402,7 @@ UpdateGUI (void *arg)
 			for(i = 0; i <= 255; i += 15)
 			{
 				mainWindow->draw();
-				Menu_DrawRectangle(0,0,screenwidth,screenheight,(GuiColor){0, 0, 0, (u8)i},1);
+				Menu_DrawRectangle(0,0,screenwidth,screenheight,(GuiColor){0, 0, 0, (u8)i});
 				Menu_Render();
 			}
 			ExitApp();

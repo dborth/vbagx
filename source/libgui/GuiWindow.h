@@ -20,6 +20,9 @@ class GuiWindow : public GuiElement
 		//!Appends a GuiElement to the GuiWindow
 		//!\param e The GuiElement to append. If it is already in the GuiWindow, it is removed first
 		void append(GuiElement* e);
+		//!Appends a GuiElement to the GuiWindow, and instructs the GuiElement to inform its parent on destruction
+		//!\param e The GuiElement to append. If it is already in the GuiWindow, it is removed first
+		void appendWithAutoRemove(GuiElement* e);
 		//!Inserts a GuiElement into the GuiWindow at the specified index
 		//!\param e The GuiElement to insert. If it is already in the GuiWindow, it is removed first
 		//!\param i Index in which to insert the element
@@ -74,8 +77,6 @@ class GuiWindow : public GuiElement
 		void resetText();
 		//!Draws all the elements in this GuiWindow
 		void draw();
-		//!Draws all of the tooltips in this GuiWindow
-		void drawTooltip();
 		//!Updates the window and all elements contains within
 		//!Allows the GuiWindow and all elements to respond to the input data specified
 		//!\param c Pointer to a GuiInputController, containing the current input data

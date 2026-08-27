@@ -93,7 +93,6 @@ typedef struct _gui_color {
 #include "GuiSound.h"
 #include "GuiImageData.h"
 #include "GuiImage.h"
-#include "GuiTooltip.h"
 #include "GuiButton.h"
 #include "GuiFileBrowser.h"
 #include "GuiKeyboard.h"
