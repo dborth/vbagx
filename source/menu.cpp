@@ -5343,13 +5343,11 @@ MainMenu (int selection)
 	}
 
 	delete btnLogo;
-	delete gameScreenImg;
 	delete bgTopImg;
 	delete bgBottomImg;
 	delete mainWindow;
 
 	btnLogo = NULL;
-	gameScreenImg = NULL;
 	bgTopImg = NULL;
 	bgBottomImg = NULL;
 	mainWindow = NULL;
