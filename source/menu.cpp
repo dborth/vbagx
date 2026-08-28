@@ -5353,10 +5353,6 @@ MainMenu (int selection)
 	bgTopImg = NULL;
 	bgBottomImg = NULL;
 	mainWindow = NULL;
-	
-	if(gameScreenTexture != NULL) {
-		gameScreenTexture = NULL;
-	}
 
 	ClearScreenshot();
 
