@@ -67,8 +67,8 @@ static cond_t  parseCond     = LWP_COND_NULL; // main -> parse: work available
 static cond_t  parseIdleCond = LWP_COND_NULL; // parse -> main: now idle
 static bool    parseActive   = false;          // protected by parseMutex
 
-// device thread
-static lwp_t devicethread = LWP_THREAD_NULL;
+// device checking thread
+static lwp_t devicecheckingthread = LWP_THREAD_NULL;
 static volatile bool deviceHalt = true;
 
 #ifdef HW_RVL
@@ -80,12 +80,12 @@ static bool    deviceIdle     = false;          // protected by deviceMutex
 #endif
 
 /****************************************************************************
- * ResumeDeviceThread
+ * ResumeDeviceCheckingThread
  *
  * Signals the device thread to start, and resumes the thread.
  ***************************************************************************/
 void
-ResumeDeviceThread()
+ResumeDeviceCheckingThread()
 {
 #ifdef HW_RVL
 	LWP_MutexLock(deviceMutex);
@@ -101,7 +101,7 @@ ResumeDeviceThread()
  * Signals the device thread to stop.
  ***************************************************************************/
 void
-HaltDeviceThread()
+HaltDeviceCheckingThread()
 {
 #ifdef HW_RVL
 	deviceHalt = true;
@@ -174,12 +174,12 @@ devicecallback (void *arg)
 		for(int i = 0; i < 10000 && !deviceHalt; i++)
 			usleep(THREAD_SLEEP);
 
-		// if halted, block here until ResumeDeviceThread wakes us
+		// if halted, block here until ResumeDeviceCheckingThread wakes us
 		if(deviceHalt)
 		{
 			LWP_MutexLock(deviceMutex);
 			deviceIdle = true;
-			LWP_CondBroadcast(deviceHaltCond); // tell HaltDeviceThread we've stopped
+			LWP_CondBroadcast(deviceHaltCond); // tell HaltDeviceCheckingThread we've stopped
 			while(deviceHalt)
 				LWP_CondWait(deviceWakeCond, deviceMutex);
 			deviceIdle = false;
@@ -212,13 +212,13 @@ parsecallback (void *arg)
 }
 
 /****************************************************************************
- * InitDeviceThread
+ * InitFileOpThreads
  *
  * libOGC provides a nice wrapper for LWP access.
  * This function sets up a new local queue and attaches the thread to it.
  ***************************************************************************/
 void
-InitDeviceThread()
+InitFileOpThreads()
 {
 	LWP_MutexInit(&saveBufferLock, false);
 
@@ -226,7 +226,7 @@ InitDeviceThread()
 	LWP_MutexInit(&deviceMutex, false);
 	LWP_CondInit(&deviceWakeCond);
 	LWP_CondInit(&deviceHaltCond);
-	LWP_CreateThread(&devicethread, devicecallback, NULL, NULL, 0, 40);
+	LWP_CreateThread(&devicecheckingthread, devicecallback, NULL, NULL, 0, 40);
 #endif
 	LWP_MutexInit(&parseMutex, false);
 	LWP_CondInit(&parseCond);
@@ -813,7 +813,7 @@ LoadSzFile(char * filepath, unsigned char * rbuffer)
 
 	// stop checking if devices were removed/inserted
 	// since we're loading a file
-	HaltDeviceThread();
+	HaltDeviceCheckingThread();
 
 	// halt parsing
 	HaltParseThread();
@@ -830,7 +830,7 @@ LoadSzFile(char * filepath, unsigned char * rbuffer)
 	}
 
 	// go back to checking if devices were inserted/removed
-	ResumeDeviceThread();
+	ResumeDeviceCheckingThread();
 
 	return size;
 }
@@ -851,7 +851,7 @@ LoadFile (char * rbuffer, char *filepath, size_t length, size_t buffersize, bool
 
 	// stop checking if devices were removed/inserted
 	// since we're loading a file
-	HaltDeviceThread();
+	HaltDeviceCheckingThread();
 
 	// halt parsing
 	HaltParseThread();
@@ -927,7 +927,7 @@ LoadFile (char * rbuffer, char *filepath, size_t length, size_t buffersize, bool
 	}
 
 	// go back to checking if devices were inserted/removed
-	ResumeDeviceThread();
+	ResumeDeviceCheckingThread();
 	CancelAction();
 	return size;
 }
@@ -1023,7 +1023,7 @@ SaveFile (char * buffer, char *filepath, size_t datasize, bool silent)
 
 	// stop checking if devices were removed/inserted
 	// since we're saving a file
-	HaltDeviceThread();
+	HaltDeviceCheckingThread();
 
 	// halt parsing
 	HaltParseThread();
@@ -1068,7 +1068,7 @@ SaveFile (char * buffer, char *filepath, size_t datasize, bool silent)
 	}
 
 	// go back to checking if devices were inserted/removed
-	ResumeDeviceThread();
+	ResumeDeviceCheckingThread();
 	if(!silent)
 		CancelAction();
 	return written;
