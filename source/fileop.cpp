@@ -80,6 +80,22 @@ static bool    deviceIdle     = false;          // protected by deviceMutex
 #endif
 
 /****************************************************************************
+ * Background worker thread
+ ***************************************************************************/
+#define WORKER_THREAD_STACKSIZE (24 * 1024)
+
+typedef int (*BgTaskFn)(void *arg);
+
+static lwp_t   workerThread    = LWP_THREAD_NULL;
+static mutex_t workerMutex     = LWP_MUTEX_NULL;
+static cond_t  workerCond      = LWP_COND_NULL; // main -> worker: task available
+static cond_t  workerIdleCond  = LWP_COND_NULL; // worker -> main: now idle
+static bool    workerBusy      = false; // protected by workerMutex - true while a task is running
+static BgTaskFn workerFn       = NULL;  // protected by workerMutex
+static void *  workerArg       = NULL;  // protected by workerMutex
+static int     workerResult    = 0;     // protected by workerMutex - result of the last completed task
+
+/****************************************************************************
  * ResumeDeviceCheckingThread
  *
  * Signals the device thread to start, and resumes the thread.
