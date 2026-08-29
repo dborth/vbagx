@@ -228,6 +228,63 @@ parsecallback (void *arg)
 }
 
 /****************************************************************************
+ * WorkerThread
+ ***************************************************************************/
+static void * workercallback (void *arg)
+{
+	LWP_MutexLock(workerMutex);
+	while(1)
+	{
+		// sleep until RunOnWorkerThread() signals there is work to do
+		while(!workerBusy)
+			LWP_CondWait(workerCond, workerMutex);
+		BgTaskFn fn = workerFn;
+		void * farg = workerArg;
+		LWP_MutexUnlock(workerMutex);
+
+		int result = fn ? fn(farg) : 0;
+
+		LWP_MutexLock(workerMutex);
+		workerResult = result;
+		workerBusy = false;
+		LWP_CondBroadcast(workerIdleCond);
+	}
+	return NULL;
+}
+
+bool RunOnWorkerThread(BgTaskFn fn, void * arg)
+{
+	LWP_MutexLock(workerMutex);
+	if(workerBusy)
+	{
+		LWP_MutexUnlock(workerMutex);
+		return false;
+	}
+	workerFn = fn;
+	workerArg = arg;
+	workerBusy = true;
+	LWP_CondSignal(workerCond);
+	LWP_MutexUnlock(workerMutex);
+	return true;
+}
+
+bool IsWorkerThreadFinished()
+{
+	LWP_MutexLock(workerMutex);
+	bool busy = workerBusy;
+	LWP_MutexUnlock(workerMutex);
+	return !busy;
+}
+
+int GetWorkerThreadResult()
+{
+	LWP_MutexLock(workerMutex);
+	int result = workerResult;
+	LWP_MutexUnlock(workerMutex);
+	return result;
+}
+
+/****************************************************************************
  * InitFileOpThreads
  *
  * libOGC provides a nice wrapper for LWP access.
@@ -248,6 +305,11 @@ InitFileOpThreads()
 	LWP_CondInit(&parseCond);
 	LWP_CondInit(&parseIdleCond);
 	LWP_CreateThread(&parsethread, parsecallback, NULL, NULL, 0, 80);
+
+	LWP_MutexInit(&workerMutex, false);
+	LWP_CondInit(&workerCond);
+	LWP_CondInit(&workerIdleCond);
+	LWP_CreateThread(&workerThread, workercallback, NULL, NULL, WORKER_THREAD_STACKSIZE, 80);
 }
 
 /****************************************************************************
