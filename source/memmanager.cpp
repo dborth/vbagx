@@ -134,6 +134,8 @@ static bool ChangeMode(int mode) {
 	if(memoryMode == mode)
 		return false;
 
+	GuiImageData::setDecodeScratch(nullptr, 0);
+
 	browserList = NULL;
 	savebuffer = NULL;
 	if(mem1_space) destroy_mspace(mem1_space);
@@ -154,6 +156,9 @@ void SwitchMemoryModeMenu() {
 	if(!ChangeMode(MEMORY_MODE_MENU)) return;
 	browserList = coreMem.menu.browserList;
 	CreateMem1Space(coreMem.menu.heapSpace, sizeof(coreMem.menu.heapSpace));
+
+	void * decodeScratch = mem1_malloc(IMAGE_DECODE_SCRATCH_SIZE);
+	GuiImageData::setDecodeScratch(decodeScratch, decodeScratch ? IMAGE_DECODE_SCRATCH_SIZE : 0);
 }
 
 static void SwitchMemoryModeGB() {
