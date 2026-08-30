@@ -147,6 +147,7 @@ static bool ChangeMode(int mode) {
 static void CreateMem1Space(u8 *heapSpace, u32 size) {
 	mem1_space = create_mspace_with_base(heapSpace, size, 0);
 	mspace_set_footprint_limit(mem1_space, size);
+	savebuffer = (u8 *)mem1_malloc(SAVEBUFFERSIZE);
 }
 
 void SwitchMemoryModeMenu() {
