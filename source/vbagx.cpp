@@ -66,14 +66,14 @@ int main(int argc, char *argv[])
 			GCSettings.SaveMethod = DEVICE_USB;
 			GCSettings.LoadMethod = DEVICE_USB;
 		}
-		SavePrefs(SILENT);
+		SavePrefs();
 
 		GCSettings.AutoloadGame = AutoloadGame(argv[1], argv[2]);
 		autoboot = GCSettings.AutoloadGame;
 	}
 #endif
 
-	while(1) // main loop
+	while (!ExitRequested && !ShutdownRequested) // main loop
 	{
 		if(!autoboot) {
 			// go back to checking if devices were inserted/removed
@@ -87,6 +87,10 @@ int main(int argc, char *argv[])
 				MainMenu(MENU_GAMESELECTION);
 			else
 				MainMenu(MENU_GAME);
+		}
+
+		if(ExitRequested || ShutdownRequested) {
+			break;
 		}
 
 		autoboot = false;
@@ -113,7 +117,7 @@ int main(int argc, char *argv[])
 		DEBUG_RESET_LOGS();
 
 		systemResetPacer();
-		while (emulating) // emulation loop
+		while (emulating && !MenuRequested && !ExitRequested && !ShutdownRequested) // emulation loop
 		{
 			emulator.emuMain(emulator.emuCount);
 
@@ -137,21 +141,17 @@ int main(int argc, char *argv[])
 				#endif
 				break; // leave emulation loop
 			}
-			#ifdef HW_RVL
-			if(ShutdownRequested)
-				ExitApp();
-			#endif
 		} // emulation loop
 
 		DEBUG_OUTPUT_LOGS();
 	} // main loop
-	return 0;
+	ExitApp();
 }
 
 void ExitApp()
 {
 	SwitchMemoryModeMenu();
-	SavePrefs(SILENT);
+	SavePrefs();
 
 	if (ROMLoaded && !MenuRequested && GCSettings.AutoSave == AUTOSAVE_SRAM)
 		SaveBatteryOrStateAuto(FILE_SRAM, SILENT);

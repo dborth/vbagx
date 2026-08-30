@@ -723,8 +723,7 @@ DefaultSettings ()
  ***************************************************************************/
 static char prefpath[MAXPATHLEN] = { 0 };
 
-bool
-SavePrefs (bool silent)
+bool SavePrefs()
 {
 	char filepath[MAXPATHLEN];
 	int datasize;
@@ -743,10 +742,10 @@ SavePrefs (bool silent)
 	}
 	else
 	{
-		autoSaveMethod(true);
+		autoSaveMethod();
 		device = GCSettings.SaveMethod;
 
-		if(!ChangeInterface(device, silent)) {
+		if(!ChangeInterface(device, true)) {
 			return false;
 		}
 		
@@ -762,15 +761,12 @@ SavePrefs (bool silent)
 	if(device == DEVICE_AUTO)
 		return false;
 
-	if (!silent)
-		ShowAction ("Saving preferences...");
-
 	FixInvalidSettings();
 
 	AllocSaveBuffer ();
 	datasize = preparePrefsData ();
 
-	offset = SaveFile(filepath, datasize, silent);
+	offset = SaveFile(filepath, datasize, true);
 
 	FreeSaveBuffer ();
 
@@ -778,9 +774,6 @@ SavePrefs (bool silent)
 
 	if (offset > 0)
 	{
-		if (!silent)
-			InfoPrompt("Preferences saved");
-
 		if(appPath[0] == 0)
 			strcpy(appPath, prefpath);
 		return true;

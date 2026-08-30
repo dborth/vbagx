@@ -8,12 +8,12 @@
  * Preferences save/load to XML file
  ***************************************************************************/
 
-bool SavePrefs (bool silent);
-bool LoadPrefs ();
+bool SavePrefs();
+bool LoadPrefs();
 void CreateMissingDirectories();
 void FixInvalidSettings();
-void DefaultSettings ();
-bool SavePalettes (bool silent);
+void DefaultSettings();
+bool SavePalettes(bool silent);
 bool LoadPalettes();
 void SetPalette(const char *gameName);
 bool SavePaletteAs(bool silent, const char *name);

@@ -82,7 +82,7 @@ static bool    deviceIdle     = false;          // protected by deviceMutex
 /****************************************************************************
  * Background worker thread
  ***************************************************************************/
-#define WORKER_THREAD_STACKSIZE (24 * 1024)
+#define WORKER_THREAD_STACKSIZE (32 * 1024)
 
 typedef int (*BgTaskFn)(void *arg);
 
@@ -864,7 +864,6 @@ void
 AllocSaveBuffer ()
 {
 	LWP_MutexLock(saveBufferLock);
-	savebuffer = (u8 *)mem1_malloc(SAVEBUFFERSIZE);
 	memset (savebuffer, 0, SAVEBUFFERSIZE);
 }
 
@@ -875,7 +874,6 @@ AllocSaveBuffer ()
 void
 FreeSaveBuffer ()
 {
-	mem1_free(savebuffer);
 	LWP_MutexUnlock(saveBufferLock);
 }
 
