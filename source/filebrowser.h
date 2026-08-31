@@ -13,6 +13,7 @@
 
 #include <gctypes.h>
 #include <sys/param.h>
+#include "vbagx.h"
 
 #define MAXJOLIET 255
 #ifdef HW_DOL

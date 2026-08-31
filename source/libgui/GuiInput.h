@@ -89,7 +89,7 @@ struct GuiInputPadData {
 		cursor_x = cursor_y = cursor_angle = 0.0f;
 		validPointer = isTouch = false;
 
-		for(int i = 0; i < GUI_HW_MAX; i++) {
+		for(uint32_t i = 0; i < GUI_HW_MAX; i++) {
 			hw_connected[i] = false;
 			hw_buttons_d[i] = hw_buttons_h[i] = hw_buttons_r[i] = 0;
 			hw_stickX[i] = hw_stickY[i] = hw_substickX[i] = hw_substickY[i] = 0.0f;

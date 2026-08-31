@@ -35,18 +35,10 @@
 #include <exception>
 #include <wchar.h>
 #include <math.h>
-#ifndef NO_SOUND
-#include <asndlib.h>
-#endif
-#include <wiiuse/wpad.h>
 
-#include "vbagx.h"
+#include "../drivers/Platform.h"
+
 #include "filelist.h"
-#include "fileop.h"
-#include "input.h"
-#include "memmanager.h"
-#include "../utils/pngu.h"
-#include "../utils/oggplayer.h"
 
 enum class ALIGN_V {
 	TOP,
@@ -72,15 +64,6 @@ enum class SCROLL {
 	NONE,
 	HORIZONTAL
 };
-
-typedef struct {
-	uint8_t r;			/*!< Red color component. */
-	uint8_t g;			/*!< Green color component. */
-	uint8_t b;			/*!< Blue alpha component. */
-	uint8_t a;			/*!< Alpha component. If a function does not use the alpha value, it is safely ignored. */
-} PixelColor;
-
-#include "video.h"
 
 #include "GuiInput.h"
 #include "GuiInputController.h"

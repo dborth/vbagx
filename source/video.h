@@ -22,22 +22,13 @@
 void InitializeVideo ();
 void GX_Render_Init(int width, int height);
 void GX_Render(int gbWidth, int gbHeight, u8 * buffer);
-void StopGX();
 void ResetVideo_Emu();
 void ResetVideo_Menu();
 void TakeScreenshot(u8 * gameTexture);
 void ClearScreenshot();
 void Menu_Render();
-void Menu_DrawImg(void * texture, f32 xpos, f32 ypos, u16 width, u16 height, f32 degrees, f32 scaleX, f32 scaleY, u8 alphaF );
-void Menu_DrawRectangle(f32 x, f32 y, f32 width, f32 height, PixelColor color);
-
-void* createTexture(int width, int height);
-void loadTextureData(void* texture, const uint8_t* rgba, int width, int height);
-void destroyTexture(void * texture);
 
 extern GXRModeObj *vmode;
-extern int screenheight;
-extern int screenwidth;
 extern s32 CursorX, CursorY;
 extern bool CursorVisible;
 extern bool CursorValid;

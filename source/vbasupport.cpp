@@ -1034,7 +1034,9 @@ static void ApplyPerImagePreferences()
 	int profileIndex = -1;
 
 	// 1. Lookup by CRC32
+	SYS_Report("doing a crc32 on ROM of size - %d\n", GBAROMSize);
 	u32 currentCrc = crc32(0, rom, GBAROMSize);
+	SYS_Report("done crc32\n");
 	for(uint16_t i = 0; i < CRC_COUNT; ++i)
 	{
 		if(crcTable[i].crc32 == currentCrc)

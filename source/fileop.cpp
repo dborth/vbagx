@@ -82,7 +82,7 @@ static bool    deviceIdle     = false;          // protected by deviceMutex
 /****************************************************************************
  * Background worker thread
  ***************************************************************************/
-#define WORKER_THREAD_STACKSIZE (32 * 1024)
+#define WORKER_THREAD_STACKSIZE (96 * 1024)
 
 typedef int (*BgTaskFn)(void *arg);
 

@@ -20,7 +20,8 @@ export	FREETYPE_LIBS	:=	`$(DEVKITPRO)/portlibs/ppc/bin/powerpc-eabi-pkg-config -
 TARGET		:=	vbagx-wii
 TARGETDIR   :=  executables
 BUILD		:=	build_wii
-SOURCES		:=	source source/libgui source/utils source/utils/sz \
+SOURCES		:=	source source/drivers source/drivers/ogc source/libgui \
+				source/utils source/utils/sz \
 				source/vba source/vba/apu source/vba/common \
 				source/vba/gb source/vba/gba source/goomba source/goomba/minilzo-2.06
 DATA		:=	data/images data/sounds data/fonts data/lang

@@ -19,6 +19,8 @@
 #include <gccore.h>
 
 #include "vbagx.h"
+#include "video.h"
+#include "fileop.h"
 #include "memmanager.h"
 #include "gameborder.h"
 #include "videofilters.h"
@@ -26,6 +28,7 @@
 #include "input.h"
 #include "vbasupport.h"
 #include "fps_font_png.h"
+#include "utils/pngu.h"
 
 s32 CursorX, CursorY;
 bool CursorVisible;
@@ -44,12 +47,9 @@ int whichfb = 0; // Frame buffer toggle
 #define MAX_FB_WIDTH 640
 #define MAX_FB_HEIGHT 576
 
-static Mtx GXmodelView2D;
+Mtx GXmodelView2D;
 
 GameScreenPng gameScreenPng;
-
-int screenheight = 480;
-int screenwidth = 640;
 
 /*** 3D GX ***/
 #define DEFAULT_FIFO_SIZE ( 256 * 1024 )
@@ -826,8 +826,8 @@ static inline void UpdateScaling()
 	float physCenterY    = efbCenterY * efb_to_vi_y;
 
 	// 4. Map Physical TV pixels back to the Menu's logical 640x480 rendering space
-	float vi_to_menu_x = (float)screenwidth / (float)menu_vmode->viWidth;
-	float vi_to_menu_y = (float)screenheight / (float)menu_vmode->viHeight;
+	float vi_to_menu_x = (float)platform->getVideo()->getScreenWidth() / (float)menu_vmode->viWidth;
+	float vi_to_menu_y = (float)platform->getVideo()->getScreenHeight() / (float)menu_vmode->viHeight;
 
 	float targetWidth   = physGameWidth * vi_to_menu_x;
 	float targetHeight  = physGameHeight * vi_to_menu_y;
@@ -841,8 +841,8 @@ static inline void UpdateScaling()
 	gameScreenPng.scaleY = targetHeight / (float)gameScreenPng.height;
 
 	// X/Y offsets are calculated dynamically from the 320/240 true center point
-	gameScreenPng.xoffset = targetCenterX - (screenwidth / 2.0f);
-	gameScreenPng.yoffset = targetCenterY - (screenheight / 2.0f);
+	gameScreenPng.xoffset = targetCenterX - (platform->getVideo()->getScreenWidth() / 2.0f);
+	gameScreenPng.yoffset = targetCenterY - (platform->getVideo()->getScreenHeight() / 2.0f);
 
 	updateScaling = 0;
 }

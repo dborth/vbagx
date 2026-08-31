@@ -24,6 +24,7 @@
 #include "input.h"
 #include "gameinput.h"
 #include "libgui/Gui.h"
+#include "drivers/ogc/wiidrc.h"
 #include "vbasupport.h"
 #include "vba/gba/GBA.h"
 #include "vba/gba/bios.h"
@@ -32,10 +33,6 @@
 #define ANALOG_SENSITIVITY 30
 
 int playerMapping[4] = {0,1,2,3};
-
-#ifdef HW_RVL
-static int rumbleCount[4] = {0,0,0,0};
-#endif
 
 static bool cartridgeRumble = false, possibleCartridgeRumble = false;
 static int gameRumbleCount = 0, menuRumbleCount = 0, rumbleCountAlready = 0;
@@ -432,57 +429,12 @@ void SetupPads()
 	#ifdef HW_RVL
 	WPAD_Init();
 	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
-	WPAD_SetVRes(WPAD_CHAN_ALL, screenwidth, screenheight);
+	WPAD_SetVRes(WPAD_CHAN_ALL, platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
 	#endif
 
 	for(int i = 0; i < 4; i++) {
 		userInput[i] = new GuiInputController(i);
 	}
-}
-
-/****************************************************************************
- * ShutoffRumble
- ***************************************************************************/
-void ShutoffRumble()
-{
-#ifdef HW_RVL
-	if(CONF_GetPadMotorMode() == 0)
-		return;
-	for(int i=0;i<4;i++)
-	{
-		WPAD_Rumble(i, 0);
-		rumbleCount[i] = 0;
-		rumbleRequest[i] = 0;
-	}
-#endif
-	PAD_ControlMotor(PAD_CHAN0, PAD_MOTOR_STOP);
-}
-
-/****************************************************************************
- * DoRumble
- ***************************************************************************/
-void DoRumble(int i)
-{
-#ifdef HW_RVL
-	if(CONF_GetPadMotorMode() == 0 || !GCSettings.Rumble) return;
-
-	if(rumbleRequest[i] && rumbleCount[i] < 3)
-	{
-		WPAD_Rumble(i, 1); // rumble on
-		rumbleCount[i]++;
-	}
-	else if(rumbleRequest[i])
-	{
-		rumbleCount[i] = 12;
-		rumbleRequest[i] = 0;
-	}
-	else
-	{
-		if(rumbleCount[i])
-			rumbleCount[i]--;
-		WPAD_Rumble(i, 0); // rumble off
-	}
-#endif
 }
 
 static int SilenceNeeded = 0;

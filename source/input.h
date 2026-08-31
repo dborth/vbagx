@@ -12,8 +12,6 @@
 #define _INPUT_H_
 
 #include <gccore.h>
-#include <wiiuse/wpad.h>
-#include "utils/wiidrc.h"
 
 #define PADCAL				50
 #define WIIDRCCAL			20
@@ -37,8 +35,6 @@ extern int playerMapping[4];
 extern u32 btnmap[6][10];
 
 void ResetControls(int wc = -1);
-void ShutoffRumble();
-void DoRumble(int i);
 void systemGameRumble(int RumbleForFrames);
 void systemGameRumbleOnlyFor(int OnlyRumbleForFrames);
 void updateRumbleFrame();

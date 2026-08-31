@@ -16,7 +16,6 @@
 void InitialiseSound();
 void StopAudio();
 void SwitchAudioMode(int mode);
-void ShutdownAudio();
 int AudioGetUnplayed();
 
 class SoundWii: public SoundDriver
