@@ -28,7 +28,7 @@
 #include "input.h"
 #include "vbasupport.h"
 #include "fps_font_png.h"
-#include "utils/pngu.h"
+#include "utils/pngcodec.h"
 
 s32 CursorX, CursorY;
 bool CursorVisible;
@@ -177,8 +177,7 @@ copy_to_xfb (u32 arg)
 }
 
 static void InitFPSFontData() {
-	int w, h;
-	DecodePNG((u8 *)fps_font_png, &w, &h, fps_font_texture_data, FPS_FONT_TEX_WIDTH, FPS_FONT_TEX_HEIGHT);
+	GuiImageData fpsFont((const uint8_t *)fps_font_png, fps_font_texture_data, FPS_FONT_TEX_WIDTH, FPS_FONT_TEX_HEIGHT);
 }
 
 static void InitFPSFontTexture() {
@@ -932,6 +931,37 @@ void ClearScreenshot()
 	gameScreenPng.size = 0;
 }
 
+// Un-swizzles a 4x4-tiled GX_TF_RGB5A3 texture
+static void UntileRGB5A3ToRGB24(const void * tiledTexture, int width, int height)
+{
+	int padded_width = (width + 3) & ~3;
+	u8 * dst = savebuffer;
+
+	const u16 * tex16 = (const u16 *) tiledTexture;
+
+	for(int y = 0; y < height; y++) {
+		int tile_y = y / 4;
+		int in_tile_y = y % 4;
+		for(int x = 0; x < width; x++) {
+			int tile_x = x / 4;
+			int in_tile_x = x % 4;
+
+			int tex_pixel_idx = (tile_y * (padded_width / 4) + tile_x) * 16 + (in_tile_y * 4 + in_tile_x);
+			u16 color = tex16[tex_pixel_idx];
+
+			// RGB555 format
+			u8 r = (color >> 10) & 0x1F;
+			u8 g = (color >> 5) & 0x1F;
+			u8 b = color & 0x1F;
+
+			int out_idx = (y * width + x) * 3;
+			dst[out_idx]     = (r << 3) | (r >> 2);
+			dst[out_idx + 1] = (g << 3) | (g >> 2);
+			dst[out_idx + 2] = (b << 3) | (b >> 2);
+		}
+	}
+}
+
 /****************************************************************************
  * TakeScreenshot
  *
@@ -940,35 +970,10 @@ void ClearScreenshot()
 void TakeScreenshot(u8 * gameTexture)
 {
 	AllocSaveBuffer();
-	IMGCTX pngContext = PNGU_SelectImageFromBuffer(savebuffer);
-
-	if (pngContext == NULL) {
-		FreeSaveBuffer();
-		return;
-	}
-
-	int res = PNGU_EncodeFromGXTexture(pngContext, gameScreenPng.width, gameScreenPng.height, gameTexture, gameScreenPng.width * 3);
-
-	if(res == PNGU_OK) {
-		gameScreenPng.size = pngContext->cursor;
-	} else {
-		gameScreenPng.size = 0;
-	}
-
-	PNGU_ReleaseImageContext(pngContext);
-
-	if (gameScreenPng.size == 0) {
-		FreeSaveBuffer();
-		return;
-	}
-
-	gameScreenPng.buffer = (u8 *) mem1_malloc(gameScreenPng.size);
-	if (gameScreenPng.buffer == NULL) {
-		gameScreenPng.size = 0;
-		FreeSaveBuffer();
-		return;
-	}
-	memcpy(gameScreenPng.buffer, savebuffer, gameScreenPng.size);
+	UntileRGB5A3ToRGB24(gameTexture, gameScreenPng.width, gameScreenPng.height);
+	u32 size = 0;
+	gameScreenPng.buffer = EncodePNGFromRGB24(gameScreenPng.width, gameScreenPng.height, savebuffer, 0, &size);
+	gameScreenPng.size = (int) size;
 	FreeSaveBuffer();
 }
 

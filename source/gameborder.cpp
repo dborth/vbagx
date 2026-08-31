@@ -15,7 +15,7 @@
 #include "vbasupport.h"
 #include "memmanager.h"
 #include "fileop.h"
-#include "utils/pngu.h"
+#include "utils/pngcodec.h"
 #include "goomba/goombarom.h"
 #include "vba/gba/Globals.h"
 #include "vba/gb/gbGlobals.h"
@@ -104,13 +104,46 @@ char * BorderManager::getPNGBorderPath(const char* title) {
 	return path;
 }
 
+// Converts flat, row-major RGBA8 pixels into a newly allocated 4x4-tiled
+// GX_TF_RGB5A3 buffer, opaque/RGB555-mode (bit15 set)
+static u16 * TileRGBA8ToRGB555(const u8 *rgba, int width, int height)
+{
+	int padWidth = (width + 3) & ~3;
+	int padHeight = (height + 3) & ~3;
+
+	u16 *tiled = (u16 *) malloc(padWidth * padHeight * 2);
+	if (!tiled)
+		return NULL;
+
+	for (int y = 0; y < padHeight; y++) {
+		int tile_y = y / 4;
+		int in_tile_y = y % 4;
+		for (int x = 0; x < padWidth; x++) {
+			int tile_x = x / 4;
+			int in_tile_x = x % 4;
+			int idx = (tile_y * (padWidth / 4) + tile_x) * 16 + (in_tile_y * 4 + in_tile_x);
+
+			u16 color = 0x8000; // RGB555 mode, opaque
+			if (x < width && y < height) {
+				const u8 *px = rgba + (y * width + x) * 4;
+				u8 r5 = px[0] >> 3;
+				u8 g5 = px[1] >> 3;
+				u8 b5 = px[2] >> 3;
+				color |= (r5 << 10) | (g5 << 5) | b5;
+			}
+			tiled[idx] = color;
+		}
+	}
+
+	return tiled;
+}
+
 u16* BorderManager::load(const char *title, const char *fallback, int &outWidth, int &outHeight) {
 	void *png_tmp_buf = mem1_malloc(1024 * 1024);
 	char *borderPath = getPNGBorderPath(title);
-	PNGUPROP imgProp;
-	IMGCTX ctx = NULL;
+	int imgWidth = 0, imgHeight = 0;
+	u8 *rgba = NULL;
 	u16 *newBorder = NULL;
-	int allocWidth, allocHeight;
 
 	bool borderLoaded = LoadFile((char*) png_tmp_buf, borderPath, 0, 1024 * 1024, SILENT);
 	if (!borderLoaded && fallback) {
@@ -122,41 +155,29 @@ u16* BorderManager::load(const char *title, const char *fallback, int &outWidth,
 	if (!borderLoaded)
 		goto cleanup;
 
-	ctx = PNGU_SelectImageFromBuffer(png_tmp_buf);
-	if (!ctx)
+	if (!PNGGetImageSize((const u8*) png_tmp_buf, &imgWidth, &imgHeight))
+		goto cleanup;
+	if (imgWidth > 640 || imgHeight > 480)
 		goto cleanup;
 
-	if (PNGU_GetImageProperties(ctx, &imgProp) != PNGU_OK)
-		goto cleanup;
-	if (imgProp.imgWidth > 640 || imgProp.imgHeight > 480)
+	rgba = DecodePNGToRGBA8((const u8*) png_tmp_buf, imgWidth, imgHeight);
+	if (!rgba)
 		goto cleanup;
 
-	
-	// PNGU_DecodeTo4x4RGB555 writes in 4x4 tiles; pad up to a tile boundary so an 
-	// odd-sized user PNG can't decode past the end of the buffer
-	allocWidth = (imgProp.imgWidth + 3) & ~3;
-	allocHeight = (imgProp.imgHeight + 3) & ~3;
-	newBorder = (u16*) malloc(allocWidth * allocHeight * 2);
-	
+	newBorder = TileRGBA8ToRGB555(rgba, imgWidth, imgHeight);
 	if (!newBorder)
 		goto cleanup;
 
-	if (PNGU_DecodeTo4x4RGB555(ctx, imgProp.imgWidth, imgProp.imgHeight, newBorder) != PNGU_OK) {
-		free(newBorder);
-		newBorder = NULL;
-		goto cleanup;
-	}
-
-	outWidth = imgProp.imgWidth;
-	outHeight = imgProp.imgHeight;
+	outWidth = imgWidth;
+	outHeight = imgHeight;
 
 cleanup:
+	if (rgba)
+		mem1_free(rgba);
 	if (png_tmp_buf)
 		mem1_free(png_tmp_buf);
 	if (borderPath)
 		mem1_free(borderPath);
-	if (ctx)
-		PNGU_ReleaseImageContext(ctx);
 
 	return newBorder;
 }
@@ -164,8 +185,9 @@ cleanup:
 void BorderManager::save(const void* buffer) {
 	char* borderPath = NULL;
 	FILE* f = NULL;
-	void* rgba8 = NULL;
-	IMGCTX pngContext = NULL;
+	u8* rgb24 = NULL;
+	u8* png = NULL;
+	u32 pngSize = 0;
 
 	int err;
 
@@ -187,19 +209,35 @@ void BorderManager::save(const void* buffer) {
 	f = fopen(borderPath, "wb");
 	if (!f) goto cleanup;
 
-	rgba8 = mem1_malloc(SGB_FRAME_WIDTH * SGB_FRAME_HEIGHT * 3);
-	if (!rgba8) goto cleanup;
-	pngContext = PNGU_SelectImageFromBuffer(rgba8);
-	if (pngContext == NULL) goto cleanup;
+	rgb24 = (u8*) mem1_malloc(SGB_FRAME_WIDTH * SGB_FRAME_HEIGHT * 3);
+	if (!rgb24) goto cleanup;
 
-	if(PNGU_EncodeFromLinearRGB555(pngContext, SGB_FRAME_WIDTH, SGB_FRAME_HEIGHT, buffer, 258) != PNGU_OK) goto cleanup;
-	fwrite(rgba8, 1, SGB_FRAME_WIDTH * SGB_FRAME_HEIGHT * 3, f);
+	// buffer is the raw, linear (not GX-tiled) SGB framebuffer capture,
+	// RGB555 pixels with a 258-pixel row stride - just convert to RGB24
+	{
+		const u16* src = (const u16*) buffer;
+		for (int y = 0; y < SGB_FRAME_HEIGHT; y++) {
+			const u16* srcRow = src + y * 258;
+			u8* dstRow = rgb24 + y * SGB_FRAME_WIDTH * 3;
+			for (int x = 0; x < SGB_FRAME_WIDTH; x++) {
+				u16 color = srcRow[x];
+				dstRow[x * 3]     = ((color >> 10) & 0x1F) << 3;
+				dstRow[x * 3 + 1] = ((color >> 5) & 0x1F) << 3;
+				dstRow[x * 3 + 2] = (color & 0x1F) << 3;
+			}
+		}
+	}
+
+	png = EncodePNGFromRGB24(SGB_FRAME_WIDTH, SGB_FRAME_HEIGHT, rgb24, 0, &pngSize);
+	if (!png) goto cleanup;
+
+	fwrite(png, 1, pngSize, f);
 
 	cleanup:
 	if (borderPath) mem1_free(borderPath);
 	if (f) fclose(f);
-	if (rgba8) mem1_free(rgba8);
-	if (pngContext) PNGU_ReleaseImageContext(pngContext);
+	if (rgb24) mem1_free(rgb24);
+	if (png) mem1_free(png);
 }
 
 GameBorder::GameBorder() :

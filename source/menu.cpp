@@ -46,7 +46,7 @@
 #include "libgui/Gui.h"
 #include "utils/vmpager.h"
 #include "vba/gb/gb.h"
-#include "utils/pngu.h"
+#include "utils/pngcodec.h"
 
 #define THREAD_SLEEP 100
 
@@ -1167,7 +1167,7 @@ static int MenuGameSelection()
 				}
 			}
 		}
-
+		
 		//update gamelist image
 		if(previousBrowserIndex != browser.selIndex || previousPreviewImg != GCSettings.PreviewImage)
 		{
