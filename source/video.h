@@ -27,6 +27,7 @@ void ResetVideo_Menu();
 void TakeScreenshot(u8 * gameTexture);
 void ClearScreenshot();
 void Menu_Render();
+void InitFPSFontData();
 
 extern GXRModeObj *vmode;
 extern s32 CursorX, CursorY;

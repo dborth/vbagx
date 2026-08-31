@@ -176,7 +176,7 @@ copy_to_xfb (u32 arg)
 	++FrameTimer;
 }
 
-static void InitFPSFontData() {
+void InitFPSFontData() {
 	GuiImageData fpsFont((const uint8_t *)fps_font_png, fps_font_texture_data, FPS_FONT_TEX_WIDTH, FPS_FONT_TEX_HEIGHT);
 }
 
@@ -678,8 +678,6 @@ if (CONF_GetAspectRatio() == CONF_ASPECT_16_9 && (*(u32*)(0xCD8005A0) >> 16) == 
 	GX_SetCopyClear (background, GX_MAX_Z24);
 	GX_SetDispCopyGamma (GX_GM_1_0);
 	GX_SetCullMode (GX_CULL_NONE);
-
-	InitFPSFontData();
 }
 
 static inline void UpdateScaling()

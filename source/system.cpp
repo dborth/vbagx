@@ -165,6 +165,8 @@ void SystemInit() {
 
 	platform->init(640, 480);
 
+	InitFPSFontData();
+
 	#ifdef HW_RVL
 	// Wii Power/Reset buttons
 	__STM_Close();
