@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <ogcsys.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -19,7 +20,6 @@
 #include <sdcard/wiisd_io.h>
 #include <sdcard/gcsd.h>
 #include <ogc/usbstorage.h>
-#include <ogc/cond.h>
 #include <di/di.h>
 #include <ogc/dvd.h>
 #include <iso9660.h>
@@ -34,10 +34,24 @@
 #include "menu.h"
 #include "filebrowser.h"
 #include "libgui/Gui.h"
+#include "drivers/Thread.h"
+#include "drivers/Mutex.h"
+#include "drivers/Cond.h"
 
 #define THREAD_SLEEP 100
 
-static mutex_t saveBufferLock = LWP_MUTEX_NULL;
+struct ThreadSync
+{
+	Mutex mutex;
+	Cond  workCond; // main -> worker: work/wake available
+	Cond  idleCond; // worker -> main: now idle/halted
+};
+
+static ThreadSync & DeviceSync() { static ThreadSync s; return s; }
+static ThreadSync & ParseSync()  { static ThreadSync s; return s; }
+static ThreadSync & WorkerSync() { static ThreadSync s; return s; }
+static Mutex & SaveBufferLock()  { static Mutex m; return m; }
+
 unsigned char *savebuffer = nullptr;
 uint8_t *ext_font_ttf = nullptr;
 FILE * file; // file pointer - the only one we should ever use!
@@ -54,29 +68,25 @@ bool isMounted[9] = { false, false, false, false, false, false, false, false, fa
 #endif
 
 // folder parsing thread
-static lwp_t parsethread = LWP_THREAD_NULL;
+static Thread parseThread;
 static DIR *dir = nullptr;
 static volatile bool parseHalt = true;
 static bool parseFilter = true;
 static bool ParseDirEntries();
 int selectLoadedFile = 0;
 
-// parse thread synchronization (no spin-waits)
-static mutex_t parseMutex    = LWP_MUTEX_NULL;
-static cond_t  parseCond     = LWP_COND_NULL; // main -> parse: work available
-static cond_t  parseIdleCond = LWP_COND_NULL; // parse -> main: now idle
-static bool    parseActive   = false;          // protected by parseMutex
+// parse thread synchronization - ParseSync().workCond signals
+// main -> parse: work available; ParseSync().idleCond signals parse -> main: now idle
+static bool parseActive = false; // protected by ParseSync().mutex
 
 // device checking thread
-static lwp_t devicecheckingthread = LWP_THREAD_NULL;
-static volatile bool deviceHalt = true;
+static Thread deviceThread;
+static volatile bool deviceCheckingHalt = true;
 
 #ifdef HW_RVL
-// device thread synchronization
-static mutex_t deviceMutex    = LWP_MUTEX_NULL;
-static cond_t  deviceWakeCond = LWP_COND_NULL; // main -> device: wake / re-check halt
-static cond_t  deviceHaltCond = LWP_COND_NULL; // device -> main: now halted
-static bool    deviceIdle     = false;          // protected by deviceMutex
+// device thread synchronization - DeviceSync().workCond signals main -> device:
+// wake / re-check halt; DeviceSync().idleCond signals device -> main: now halted
+static bool deviceIdle = false; // protected by DeviceSync().mutex
 #endif
 
 #define WORKER_THREAD_STACKSIZE (96 * 1024)
@@ -89,14 +99,13 @@ static bool    deviceIdle     = false;          // protected by deviceMutex
 
 typedef int (*BgTaskFn)(void *arg);
 
-static lwp_t   workerThread    = LWP_THREAD_NULL;
-static mutex_t workerMutex     = LWP_MUTEX_NULL;
-static cond_t  workerCond      = LWP_COND_NULL; // main -> worker: task available
-static cond_t  workerIdleCond  = LWP_COND_NULL; // worker -> main: now idle
-static bool    workerBusy      = false; // protected by workerMutex - true while a task is running
-static BgTaskFn workerFn       = nullptr;  // protected by workerMutex
-static void *  workerArg       = nullptr;  // protected by workerMutex
-static int     workerResult    = 0;     // protected by workerMutex - result of the last completed task
+// worker thread synchronization - WorkerSync().workCond signals main -> worker:
+// task available; WorkerSync().idleCond signals worker -> main: now idle
+static Thread   workerThread;
+static bool     workerBusy      = false; // protected by WorkerSync().mutex - true while a task is running
+static BgTaskFn workerFn        = nullptr;  // protected by WorkerSync().mutex
+static void *   workerArg       = nullptr;  // protected by WorkerSync().mutex
+static int      workerResult    = 0;     // protected by WorkerSync().mutex - result of the last completed task
 
 /****************************************************************************
  * ResumeDeviceCheckingThread
@@ -107,10 +116,10 @@ void
 ResumeDeviceCheckingThread()
 {
 #ifdef HW_RVL
-	LWP_MutexLock(deviceMutex);
-	deviceHalt = false;
-	LWP_CondSignal(deviceWakeCond);
-	LWP_MutexUnlock(deviceMutex);
+	DeviceSync().mutex.lock();
+	deviceCheckingHalt = false;
+	DeviceSync().workCond.signal();
+	DeviceSync().mutex.unlock();
 #endif
 }
 
@@ -123,12 +132,12 @@ void
 HaltDeviceCheckingThread()
 {
 #ifdef HW_RVL
-	deviceHalt = true;
-	LWP_MutexLock(deviceMutex);
-	LWP_CondSignal(deviceWakeCond); // interrupt condvar sleep if the thread is in one
+	deviceCheckingHalt = true;
+	DeviceSync().mutex.lock();
+	DeviceSync().workCond.signal(); // interrupt condvar sleep if the thread is in one
 	while(!deviceIdle)
-		LWP_CondWait(deviceHaltCond, deviceMutex);
-	LWP_MutexUnlock(deviceMutex);
+		DeviceSync().idleCond.wait(DeviceSync().mutex);
+	DeviceSync().mutex.unlock();
 #endif
 }
 
@@ -141,10 +150,10 @@ void
 HaltParseThread()
 {
 	parseHalt = true;
-	LWP_MutexLock(parseMutex);
+	ParseSync().mutex.lock();
 	while(parseActive)
-		LWP_CondWait(parseIdleCond, parseMutex);
-	LWP_MutexUnlock(parseMutex);
+		ParseSync().idleCond.wait(ParseSync().mutex);
+	ParseSync().mutex.unlock();
 }
 
 
@@ -190,19 +199,19 @@ devicecallback (void *arg)
 		}
 
 		// sleep ~1 sec in 100us steps so we can react to a halt request quickly
-		for(int i = 0; i < 10000 && !deviceHalt; i++)
+		for(int i = 0; i < 10000 && !deviceCheckingHalt; i++)
 			usleep(THREAD_SLEEP);
 
 		// if halted, block here until ResumeDeviceCheckingThread wakes us
-		if(deviceHalt)
+		if(deviceCheckingHalt)
 		{
-			LWP_MutexLock(deviceMutex);
+			DeviceSync().mutex.lock();
 			deviceIdle = true;
-			LWP_CondBroadcast(deviceHaltCond); // tell HaltDeviceCheckingThread we've stopped
-			while(deviceHalt)
-				LWP_CondWait(deviceWakeCond, deviceMutex);
+			DeviceSync().idleCond.signal(); // tell HaltDeviceCheckingThread we've stopped
+			while(deviceCheckingHalt)
+				DeviceSync().workCond.wait(DeviceSync().mutex);
 			deviceIdle = false;
-			LWP_MutexUnlock(deviceMutex);
+			DeviceSync().mutex.unlock();
 		}
 	}
 	return nullptr;
@@ -212,20 +221,20 @@ devicecallback (void *arg)
 static void *
 parsecallback (void *arg)
 {
-	LWP_MutexLock(parseMutex);
+	ParseSync().mutex.lock();
 	while(1)
 	{
 		// sleep until ParseDirectory signals there is work to do
 		while(!parseActive)
-			LWP_CondWait(parseCond, parseMutex);
-		LWP_MutexUnlock(parseMutex);
+			ParseSync().workCond.wait(ParseSync().mutex);
+		ParseSync().mutex.unlock();
 
 		while(ParseDirEntries())
 			usleep(THREAD_SLEEP);
 
-		LWP_MutexLock(parseMutex);
+		ParseSync().mutex.lock();
 		parseActive = false;
-		LWP_CondBroadcast(parseIdleCond); // wake HaltParseThread / waitParse callers
+		ParseSync().idleCond.signal(); // wake HaltParseThread / waitParse callers
 	}
 	return nullptr;
 }
@@ -235,84 +244,74 @@ parsecallback (void *arg)
  ***************************************************************************/
 static void * workercallback (void *arg)
 {
-	LWP_MutexLock(workerMutex);
+	WorkerSync().mutex.lock();
 	while(1)
 	{
 		// sleep until RunOnWorkerThread() signals there is work to do
 		while(!workerBusy)
-			LWP_CondWait(workerCond, workerMutex);
+			WorkerSync().workCond.wait(WorkerSync().mutex);
 		BgTaskFn fn = workerFn;
 		void * farg = workerArg;
-		LWP_MutexUnlock(workerMutex);
+		WorkerSync().mutex.unlock();
 
 		int result = fn ? fn(farg) : 0;
 
-		LWP_MutexLock(workerMutex);
+		WorkerSync().mutex.lock();
 		workerResult = result;
 		workerBusy = false;
-		LWP_CondBroadcast(workerIdleCond);
+		WorkerSync().idleCond.signal();
 	}
 	return nullptr;
 }
 
 bool RunOnWorkerThread(BgTaskFn fn, void * arg)
 {
-	LWP_MutexLock(workerMutex);
+	WorkerSync().mutex.lock();
 	if(workerBusy)
 	{
-		LWP_MutexUnlock(workerMutex);
+		WorkerSync().mutex.unlock();
 		return false;
 	}
 	workerFn = fn;
 	workerArg = arg;
 	workerBusy = true;
-	LWP_CondSignal(workerCond);
-	LWP_MutexUnlock(workerMutex);
+	WorkerSync().workCond.signal();
+	WorkerSync().mutex.unlock();
 	return true;
 }
 
 bool IsWorkerThreadFinished()
 {
-	LWP_MutexLock(workerMutex);
-	bool busy = workerBusy;
-	LWP_MutexUnlock(workerMutex);
-	return !busy;
+	MutexLock guard(WorkerSync().mutex);
+	return !workerBusy;
 }
 
 int GetWorkerThreadResult()
 {
-	LWP_MutexLock(workerMutex);
-	int result = workerResult;
-	LWP_MutexUnlock(workerMutex);
-	return result;
+	MutexLock guard(WorkerSync().mutex);
+	return workerResult;
 }
 
 /****************************************************************************
  * InitFileOpThreads
  *
- * libOGC provides a nice wrapper for LWP access.
- * This function sets up a new local queue and attaches the thread to it.
+ * Starts the device-checking, folder-parsing, and background worker
+ * threads via the libgui Thread/Mutex/Cond HAL (see ThreadSync above).
  ***************************************************************************/
 void
 InitFileOpThreads()
 {
-	LWP_MutexInit(&saveBufferLock, false);
+	SaveBufferLock();
 
 #ifdef HW_RVL
-	LWP_MutexInit(&deviceMutex, false);
-	LWP_CondInit(&deviceWakeCond);
-	LWP_CondInit(&deviceHaltCond);
-	LWP_CreateThread(&devicecheckingthread, devicecallback, NULL, NULL, DEVICE_THREAD_STACKSIZE, 40);
+	DeviceSync();
+	deviceThread.start(devicecallback, nullptr, DEVICE_THREAD_STACKSIZE, ThreadPriority::Low);
 #endif
-	LWP_MutexInit(&parseMutex, false);
-	LWP_CondInit(&parseCond);
-	LWP_CondInit(&parseIdleCond);
-	LWP_CreateThread(&parsethread, parsecallback, NULL, NULL, PARSE_THREAD_STACKSIZE, 80);
+	ParseSync();
+	parseThread.start(parsecallback, nullptr, PARSE_THREAD_STACKSIZE, ThreadPriority::High);
 
-	LWP_MutexInit(&workerMutex, false);
-	LWP_CondInit(&workerCond);
-	LWP_CondInit(&workerIdleCond);
-	LWP_CreateThread(&workerThread, workercallback, NULL, NULL, WORKER_THREAD_STACKSIZE, 80);
+	WorkerSync();
+	workerThread.start(workercallback, nullptr, WORKER_THREAD_STACKSIZE, ThreadPriority::High);
 }
 
 /****************************************************************************
@@ -820,19 +819,19 @@ ParseDirectory(bool waitParse, bool filter)
 	ParseDirEntries(); // index first 20 entries
 
 	// signal parse thread to continue indexing remaining entries
-	LWP_MutexLock(parseMutex);
+	ParseSync().mutex.lock();
 	parseActive = true;
-	LWP_CondSignal(parseCond);
-	LWP_MutexUnlock(parseMutex);
+	ParseSync().workCond.signal();
+	ParseSync().mutex.unlock();
 
 	if(waitParse) // wait for complete parsing
 	{
         ShowAction("Loading...");
 
-		LWP_MutexLock(parseMutex);
+		ParseSync().mutex.lock();
 		while(parseActive)
-			LWP_CondWait(parseIdleCond, parseMutex);
-		LWP_MutexUnlock(parseMutex);
+			ParseSync().idleCond.wait(ParseSync().mutex);
+		ParseSync().mutex.unlock();
 
 		CancelAction();
 	}
@@ -866,7 +865,7 @@ bool CreateDirectory(char * path) {
 void
 AllocSaveBuffer ()
 {
-	LWP_MutexLock(saveBufferLock);
+	SaveBufferLock().lock();
 	memset (savebuffer, 0, SAVEBUFFERSIZE);
 }
 
@@ -877,7 +876,7 @@ AllocSaveBuffer ()
 void
 FreeSaveBuffer ()
 {
-	LWP_MutexUnlock(saveBufferLock);
+	SaveBufferLock().unlock();
 }
 
 /****************************************************************************
