@@ -12,13 +12,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef NO_SOUND
-#include <asndlib.h>
-#endif
 #include "vbagx.h"
 #include "audio.h"
 #include "system.h"
 #include "vba/gba/Debug.h"
+#include "drivers/Platform.h"
 
 extern bool turboMode;
 
@@ -177,7 +175,7 @@ static void AudioPlayer()
  *
  * Called to cleanly kick off the Audio Queue and reset hysteresis state
  ***************************************************************************/
-void AudioStart()
+static void AudioStart()
 {
     nextab = 0;
     playab = 0;
@@ -189,59 +187,24 @@ void AudioStart()
 }
 
 /****************************************************************************
- * StopAudio
- ***************************************************************************/
-void StopAudio()
-{
-    AUDIO_StopDMA();
-    dma_started = false;
-}
-
-/****************************************************************************
  * SwitchAudioMode
  *
  * Switches between menu sound and emulator sound
  ***************************************************************************/
 void SwitchAudioMode(int mode)
 {
-    if(mode == 0) // emulator
-    {
-        #ifndef NO_SOUND
-        ASND_Pause(1);
-        ASND_End();
-        AUDIO_StopDMA();
-        AUDIO_RegisterDMACallback(NULL);
-        DSP_Halt();
-        AUDIO_RegisterDMACallback(AudioPlayer);
-        #endif
-
-        // Reset the ring so playback re-primes cleanly
-        AudioStart();
-    }
-    else // menu
-    {
-        #ifndef NO_SOUND
-        DSP_Unhalt();
-        ASND_Init();
-        ASND_Pause(0);
-        #else
-        AUDIO_StopDMA();
-        #endif
-    }
-}
-
-/****************************************************************************
- * InitialiseSound
- ***************************************************************************/
-void InitialiseSound()
-{
-    #ifdef NO_SOUND
-    AUDIO_Init(NULL);
-    AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ);
-    AUDIO_RegisterDMACallback(AudioPlayer);
-    #else
-    ASND_Init();
-    #endif
+	if(mode == 0) // emulator
+	{
+		platform->getAudio()->stop();
+		AUDIO_RegisterDMACallback(AudioPlayer);
+		AudioStart(); // Reset the ring so playback re-primes cleanly
+	}
+	else // menu
+	{
+		AUDIO_StopDMA();
+		AUDIO_RegisterDMACallback(NULL);
+		platform->getAudio()->start();
+	}
 }
 
 /****************************************************************************

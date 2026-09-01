@@ -13,8 +13,6 @@
 
 #include "vba/common/SoundDriver.h"
 
-void InitialiseSound();
-void StopAudio();
 void SwitchAudioMode(int mode);
 int AudioGetUnplayed();
 

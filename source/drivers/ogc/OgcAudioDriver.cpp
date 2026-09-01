@@ -9,8 +9,6 @@
 
 #include "OgcAudioDriver.h"
 
-#include "../../audio.h"
-
 static OgcAudioDriver *instance = nullptr;
 
 static void stream_callback(int voice) {
@@ -34,8 +32,22 @@ void OgcAudioDriver::handleStreamCallback(int voice) {
 
 void OgcAudioDriver::init() {
 	instance = this;
-	InitialiseSound();
+	ASND_Init();
 	streamVolume = 127;
+}
+
+void OgcAudioDriver::start() {
+	DSP_Unhalt();
+	ASND_Init();
+	ASND_Pause(0);
+}
+
+void OgcAudioDriver::stop() {
+	ASND_Pause(1);
+	ASND_End();
+	AUDIO_StopDMA();
+	AUDIO_RegisterDMACallback(NULL);
+	DSP_Halt();
 }
 
 void OgcAudioDriver::shutdown() {
