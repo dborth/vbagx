@@ -11,7 +11,7 @@
 #ifndef _MENU_H
 #define _MENU_H
 
-#include <ogcsys.h>
+#include <stdint.h>
 
 #include "libgui/Gui.h"
 

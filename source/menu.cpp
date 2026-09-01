@@ -8,8 +8,7 @@
  * Menu flow routines - handles all menu logic
  ***************************************************************************/
 
-#include <gccore.h>
-#include <ogcsys.h>
+#include <stdint.h>
 #include <ogc/cond.h>
 #include <ogc/lwp.h>
 #include <ogc/lwp_watchdog.h>

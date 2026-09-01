@@ -9,13 +9,12 @@
  * Wii/Gamecube controls for Mortal Kombat
  ***************************************************************************/
 
-#include <gccore.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <ogcsys.h>
 #include <unistd.h>
 
 #include "vbagx.h"

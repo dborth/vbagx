@@ -11,8 +11,6 @@
 #ifndef _MEMMANAGER_H_
 #define _MEMMANAGER_H_
 
-#include <gctypes.h>
-
 #define IMAGE_BUFFER_SIZE (640 * 480 * 4)
 #define IMAGE_DECODE_SCRATCH_SIZE (IMAGE_BUFFER_SIZE + (480 * sizeof(void*)))
 #define PNG_FILE_BUFFER_SIZE (512 * 1024)
@@ -26,11 +24,11 @@ extern uint8_t* romPtr;
 void InitMemManager();
 void SwitchMemoryModeMenu();
 void SwitchMemoryModeGame();
-void* mem1_malloc(u32 size);
+void* mem1_malloc(uint32_t size);
 void mem1_free(void *ptr);
 int mem1_size_free();
 char* mem1_strdup(const char *s);
-void* extmem_malloc(u32 size);
+void* extmem_malloc(uint32_t size);
 void extmem_free(void *ptr);
 int extmem_size_free();
 

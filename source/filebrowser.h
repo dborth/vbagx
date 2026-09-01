@@ -11,7 +11,6 @@
 #ifndef _FILEBROWSER_H_
 #define _FILEBROWSER_H_
 
-#include <gctypes.h>
 #include <sys/param.h>
 #include "vbagx.h"
 

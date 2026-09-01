@@ -8,7 +8,7 @@
  * Console support functions
  ***************************************************************************/
 
-#include <gccore.h>
+#include <stdint.h>
 #include <malloc.h>
 #include <sys/iosupport.h>
 #include <ogc/lwp_threads.h>

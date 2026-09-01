@@ -35,7 +35,7 @@ enum {
 // Mode 3: GBA Game
 struct GBAMemory {
     uint8_t texturemem[TEXTUREMEM_SIZE];
-    u32 jitArena[JIT_ARENA_SIZE / sizeof(u32)];
+    uint32_t jitArena[JIT_ARENA_SIZE / sizeof(uint32_t)];
     uint8_t blockTable[HASH_TABLE_SIZE * 16];
     uint8_t smcPageFlags[SMC_MAP_SIZE];
     uint8_t smcRegistry[SMC_MAP_SIZE * sizeof(void*)];
@@ -79,7 +79,7 @@ void InitMemManager ()
 #endif
 }
 
-void* mem1_malloc(u32 size)
+void* mem1_malloc(uint32_t size)
 {
 	if(!mem1_space) return nullptr;
 	return mspace_malloc(mem1_space, size);
@@ -112,7 +112,7 @@ int mem1_size_free()
 	return info.fordblks;
 }
 
-void* extmem_malloc(u32 size)
+void* extmem_malloc(uint32_t size)
 {
 	return mspace_malloc(extmem_space, size);
 }
@@ -147,7 +147,7 @@ static bool ChangeMode(int mode) {
 	return true;
 }
 
-static void CreateMem1Space(uint8_t *heapSpace, u32 size) {
+static void CreateMem1Space(uint8_t *heapSpace, uint32_t size) {
 	mem1_space = create_mspace_with_base(heapSpace, size, 0);
 	mspace_set_footprint_limit(mem1_space, size);
 	savebuffer = (uint8_t *)mem1_malloc(SAVEBUFFERSIZE);
@@ -173,7 +173,7 @@ static void SwitchMemoryModeGBA() {
 	if(!ChangeMode(MEMORY_MODE_GBA)) return;
 	texturemem = coreMem.gba.texturemem;
 	jitCache.initialize(
-		(u32*)coreMem.gba.jitArena,
+		(uint32_t*)coreMem.gba.jitArena,
 		(BasicBlock*)coreMem.gba.blockTable,
 		(BasicBlock**)coreMem.gba.smcRegistry,
 		(uint8_t*)coreMem.gba.smcPageFlags

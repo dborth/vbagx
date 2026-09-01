@@ -11,7 +11,7 @@
 #ifndef _INPUT_H_
 #define _INPUT_H_
 
-#include <gccore.h>
+#include <stdint.h>
 
 #define PADCAL				50
 #define WIIDRCCAL			20

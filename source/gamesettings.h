@@ -11,7 +11,7 @@
 #ifndef GAMESETTINGS_H
 #define GAMESETTINGS_H
 
-#include <gccore.h>
+#include <stdint.h>
 
 struct gamePalette {
 	char gameName[17];

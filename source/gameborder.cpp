@@ -10,6 +10,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <ogc/cache.h>
 #include "vbagx.h"
 #include "gameborder.h"
 #include "vbasupport.h"

@@ -10,7 +10,6 @@
 #ifndef _GAMEBORDER_H_
 #define _GAMEBORDER_H_
 
-#include <gccore.h>
 #include <malloc.h>
 #include <string.h>
 
