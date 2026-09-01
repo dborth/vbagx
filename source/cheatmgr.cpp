@@ -22,7 +22,7 @@
 #include "vba/gba/Cheats.h"
 #include "vba/gb/gbCheats.h"
 
-static char* stringPool = NULL; // Contiguous memory block for all strings
+static char* stringPool = nullptr; // Contiguous memory block for all strings
 Cheat cheats[MAX_CHEATS];
 int cheatCount = 0;
 
@@ -51,7 +51,7 @@ void ToggleCheat(int id) {
 		if (!codeCopy) return;
 
 		char* token = strtok(codeCopy, "+");
-		while (token != NULL) {
+		while (token != nullptr) {
 			// Trim whitespace
 			while (*token == ' ' || *token == '\t') token++;
 			int tokenLen = strlen(token);
@@ -104,7 +104,7 @@ void ToggleCheat(int id) {
 				}
 			}
 
-			token = strtok(NULL, "+");
+			token = strtok(nullptr, "+");
 		}
 		free(codeCopy);
 
@@ -147,7 +147,7 @@ void ResetCheats() {
 
 	if (stringPool) {
 		free(stringPool);
-		stringPool = NULL;
+		stringPool = nullptr;
 	}
 }
 
@@ -157,12 +157,12 @@ static inline char to_upper(char c) {
 
 // Helper: Safely get the next line without modifying the buffer
 static const char* GetNextLine(const char* cursor) {
-	if (!cursor || !*cursor) return NULL;
+	if (!cursor || !*cursor) return nullptr;
 	// Skip to end of current line
 	while (*cursor && *cursor != '\n' && *cursor != '\r') cursor++;
 	// Skip line break characters to reach next line (handles \r, \n, \r\n, \n\r)
 	while (*cursor == '\n' || *cursor == '\r') cursor++;
-	return (*cursor) ? cursor : NULL;
+	return (*cursor) ? cursor : nullptr;
 }
 
 // Helper: Measure or Extract Quoted String securely within a single line

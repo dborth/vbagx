@@ -40,8 +40,8 @@ bool vmode_60hz;
 
 /*** External 2D Video ***/
 /*** 2D Video Globals ***/
-GXRModeObj *vmode = NULL; // Graphics Mode Object
-u32 *xfb[2] = { NULL, NULL }; // Framebuffers
+GXRModeObj *vmode = nullptr; // Graphics Mode Object
+u32 *xfb[2] = { nullptr, nullptr }; // Framebuffers
 int whichfb = 0; // Frame buffer toggle
 
 #define MAX_FB_WIDTH 640
@@ -61,7 +61,7 @@ static volatile unsigned int copynow = GX_FALSE;
 #define FPS_FONT_TEX_HEIGHT 20
 #define FPS_FONT_TEX_SIZE   (FPS_FONT_TEX_WIDTH * FPS_FONT_TEX_HEIGHT * 4)
 
-u8* texturemem = NULL;
+u8* texturemem = nullptr;
 static u8 fps_font_texture_data[FPS_FONT_TEX_SIZE] ATTRIBUTE_ALIGN(32);
 static unsigned char scanline_tex_data[32] ATTRIBUTE_ALIGN (32);
 
@@ -154,7 +154,7 @@ static void * vbgetback (void *arg)
 		LWP_ThreadSignal(render_queue);    // Instantly alert the main thread
 		_CPU_ISR_Restore(level);
 	}
-	return NULL;
+	return nullptr;
 }
 
 /****************************************************************************
@@ -587,7 +587,7 @@ static void SetupVideoMode(GXRModeObj * mode)
 
 	// Detect if we are transitioning between Progressive and Interlaced
 	bool mode_switch = false;
-	if (vmode != NULL) {
+	if (vmode != nullptr) {
 		bool was_progressive = (vmode->viTVMode & 3) == VI_NON_INTERLACE || (vmode->viTVMode & 3) == VI_PROGRESSIVE;
 		bool is_progressive = (mode->viTVMode & 3) == VI_NON_INTERLACE || (mode->viTVMode & 3) == VI_PROGRESSIVE;
 		if (was_progressive != is_progressive) {
@@ -911,7 +911,7 @@ static long long int* ProcessFrameAndGetDest(void* textureBase, const u16* frame
     if (sgbBorderExtractor.processFrame(frameBuffer, gbWidth, gbHeight)) {
         // Scraper succeeded - load the PNG it just created
         int bw = 0, bh = 0;
-        u16* borderPixels = BorderManager::load(NULL, NULL, bw, bh);
+        u16* borderPixels = BorderManager::load(nullptr, nullptr, bw, bh);
         if (borderPixels) {
             gameBorder.setBorder(borderPixels, bw, bh);
         }
@@ -924,7 +924,7 @@ void ClearScreenshot()
 {
 	if(gameScreenPng.buffer) {
 		mem1_free(gameScreenPng.buffer);
-		gameScreenPng.buffer = NULL;
+		gameScreenPng.buffer = nullptr;
 	}
 	gameScreenPng.size = 0;
 }
@@ -1421,7 +1421,7 @@ void Menu_Render()
  ***************************************************************************/
 void Menu_DrawImg(void * texture, f32 xpos, f32 ypos, u16 width, u16 height, f32 degrees, f32 scaleX, f32 scaleY, u8 alpha)
 {
-	if(texture == NULL)
+	if(texture == nullptr)
 		return;
 
 	GXTexObj texObj;

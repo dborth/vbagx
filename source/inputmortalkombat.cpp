@@ -274,7 +274,7 @@ void MK3SetPal(int player, u8 NewChar, u8 SubChar=0) {
 	return;
 }
 
-void MK3Rename(int n, const char *name, const char *fullname = NULL) {
+void MK3Rename(int n, const char *name, const char *fullname = nullptr) {
 	if (n<0 || n>10) return;
 	u16 addr = 0x2DD9 + n*8;
 	int i;
@@ -306,7 +306,7 @@ void MK3RenameEveryoneProperlyExcept(u8 n) {
 	const char *names[MK3_SHAOKHAN+1] = {
 		"SINDEL", "SEKTOR", "KABAL", "SHEEVA", "SMOKE", "SUBZERO", "KANO", "SONYA", "CYRAX", "SHAO"};
 	const char *longnames[MK3_SHAOKHAN+1] = {
-		NULL, NULL, NULL, NULL, NULL, "SUB-ZERO", NULL, NULL, NULL, "SHAO KHAN"};
+		nullptr, nullptr, nullptr, nullptr, nullptr, "SUB-ZERO", nullptr, nullptr, nullptr, "SHAO KHAN"};
 	for (int i=0; i<=MK3_SHAOKHAN; i++) {
 		if (i!=n) MK3Rename(i, names[i], longnames[i]);
 	}
@@ -337,7 +337,7 @@ void MK3RandomFemale() {
 	}
 }
 
-void MK3Impersonate(u8 appearance, u8 moves, const char *name, const char *longname = NULL) {
+void MK3Impersonate(u8 appearance, u8 moves, const char *name, const char *longname = nullptr) {
 	gbWriteMemory(0xC0F0, appearance);
 	MK3Rename(appearance, name, longname);
 	if (moves!=MK3_RAND)

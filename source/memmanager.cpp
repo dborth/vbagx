@@ -62,8 +62,8 @@ union CoreMemoryOverlay {
 
 alignas(32) union CoreMemoryOverlay coreMem;
 u8 *romPtr;
-static mspace mem1_space = NULL;
-static mspace extmem_space = NULL;
+static mspace mem1_space = nullptr;
+static mspace extmem_space = nullptr;
 static int memoryMode = -1;
 
 void InitMemManager ()
@@ -81,14 +81,14 @@ void InitMemManager ()
 
 void* mem1_malloc(u32 size)
 {
-	if(!mem1_space) return NULL;
+	if(!mem1_space) return nullptr;
 	return mspace_malloc(mem1_space, size);
 }
 
 char* mem1_strdup(const char *s)
 {
     if (!mem1_space || !s)
-        return NULL;
+        return nullptr;
 
     size_t len = strlen(s) + 1;
     char *dup = (char *)mem1_malloc(len);
@@ -137,11 +137,11 @@ static bool ChangeMode(int mode) {
 
 	GuiImageData::setDecodeScratch(nullptr, 0);
 
-	browserList = NULL;
-	savebuffer = NULL;
+	browserList = nullptr;
+	savebuffer = nullptr;
 	if(mem1_space) destroy_mspace(mem1_space);
-	mem1_space = NULL;
-	texturemem = NULL;
+	mem1_space = nullptr;
+	texturemem = nullptr;
 	jitCache.destroy();
 	memoryMode = mode;
 	return true;

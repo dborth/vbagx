@@ -113,7 +113,7 @@ static u16 * TileRGBA8ToRGB555(const u8 *rgba, int width, int height)
 
 	u16 *tiled = (u16 *) malloc(padWidth * padHeight * 2);
 	if (!tiled)
-		return NULL;
+		return nullptr;
 
 	for (int y = 0; y < padHeight; y++) {
 		int tile_y = y / 4;
@@ -142,8 +142,8 @@ u16* BorderManager::load(const char *title, const char *fallback, int &outWidth,
 	void *png_tmp_buf = mem1_malloc(1024 * 1024);
 	char *borderPath = getPNGBorderPath(title);
 	int imgWidth = 0, imgHeight = 0;
-	u8 *rgba = NULL;
-	u16 *newBorder = NULL;
+	u8 *rgba = nullptr;
+	u16 *newBorder = nullptr;
 
 	bool borderLoaded = LoadFile((char*) png_tmp_buf, borderPath, 0, 1024 * 1024, SILENT);
 	if (!borderLoaded && fallback) {
@@ -183,16 +183,16 @@ cleanup:
 }
 
 void BorderManager::save(const void* buffer) {
-	char* borderPath = NULL;
-	FILE* f = NULL;
-	u8* rgb24 = NULL;
-	u8* png = NULL;
+	char* borderPath = nullptr;
+	FILE* f = nullptr;
+	u8* rgb24 = nullptr;
+	u8* png = nullptr;
 	u32 pngSize = 0;
 
 	int err;
 
 	struct stat s;
-	borderPath = getPNGBorderPath(NULL);
+	borderPath = getPNGBorderPath(nullptr);
 
 	char* slash = strrchr(borderPath, '/');
 	*slash = '\0'; // cut string off at directory name
@@ -241,7 +241,7 @@ void BorderManager::save(const void* buffer) {
 }
 
 GameBorder::GameBorder() :
-	pixels(NULL), width(0), height(0), needsTextureSync(false) {
+	pixels(nullptr), width(0), height(0), needsTextureSync(false) {
 }
 
 GameBorder::~GameBorder() {
@@ -251,7 +251,7 @@ GameBorder::~GameBorder() {
 void GameBorder::clear() {
 	if (pixels) {
 		free(pixels);
-		pixels = NULL;
+		pixels = nullptr;
 	}
 	width = 0;
 	height = 0;
@@ -269,7 +269,7 @@ void GameBorder::setBorder(u16 *newPixels, int newWidth, int newHeight) {
 }
 
 bool GameBorder::hasBorder() const {
-	return pixels != NULL;
+	return pixels != nullptr;
 }
 
 void* GameBorder::applyToTexture(void *textureBase, int gbWidth, int gbHeight) {

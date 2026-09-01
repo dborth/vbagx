@@ -29,7 +29,7 @@
 #include "videofilters.h"
 
 struct SGCSettings GCSettings;
-static gamePalette *palettes = NULL;
+static gamePalette *palettes = nullptr;
 static int loadedPalettes = 0;
 
 /****************************************************************************
@@ -37,13 +37,13 @@ static int loadedPalettes = 0;
  *
  * This sets up the save buffer for saving.
  ***************************************************************************/
-static mxml_node_t *xml = NULL;
-static mxml_node_t *data = NULL;
-static mxml_node_t *section = NULL;
-static mxml_node_t *item = NULL;
-static mxml_node_t *elem = NULL;
+static mxml_node_t *xml = nullptr;
+static mxml_node_t *data = nullptr;
+static mxml_node_t *section = nullptr;
+static mxml_node_t *item = nullptr;
+static mxml_node_t *elem = nullptr;
 
-static mxml_node_t *mxmlFindNewElement(mxml_node_t *parent, const char *nodename, const char *attr=NULL, const char *value=NULL)
+static mxml_node_t *mxmlFindNewElement(mxml_node_t *parent, const char *nodename, const char *attr=nullptr, const char *value=nullptr)
 {
 	mxml_node_t *node = mxmlFindElement(parent, xml, nodename, attr, value, MXML_DESCEND);
 	if (!node)
@@ -130,7 +130,7 @@ static const char * XMLSaveCallback(mxml_node_t *node, int where)
 		else if(!strcmp(name, "button"))
 			return ("\n\t\t");
 	}
-	return (NULL);
+	return (nullptr);
 }
 
 static const char * XMLSavePalCallback(mxml_node_t *node, int where)
@@ -155,7 +155,7 @@ static const char * XMLSavePalCallback(mxml_node_t *node, int where)
 		else if(!strcmp(name, "bkgr") || !strcmp(name, "wind") || !strcmp(name, "obj0") || !strcmp(name, "obj1"))
 			return ("\n\t");
 	}
-	return (NULL);
+	return (nullptr);
 }
 
 static int
@@ -251,7 +251,7 @@ preparePrefsData ()
 	return datasize;
 }
 
-static void createXMLPalette(gamePalette *p, bool overwrite, const char *newname = NULL)
+static void createXMLPalette(gamePalette *p, bool overwrite, const char *newname = nullptr)
 {
 	if (!newname)
 		newname = p->gameName;
@@ -387,63 +387,63 @@ static void loadXMLPaletteFromSection(gamePalette &pal)
 	if (section)
 	{
 		strncpy(pal.gameName, mxmlElementGetAttr(section, "name"), 17);
-		item = mxmlFindElement(section, xml, "bkgr", NULL, NULL, MXML_DESCEND);
+		item = mxmlFindElement(section, xml, "bkgr", nullptr, nullptr, MXML_DESCEND);
 		if (item)
 		{
 			const char * tmp = mxmlElementGetAttr(item, "c0");
 			if (tmp)
-				pal.palette[0] = strtoul(tmp, NULL, 16);
+				pal.palette[0] = strtoul(tmp, nullptr, 16);
 			tmp = mxmlElementGetAttr(item, "c1");
 			if (tmp)
-				pal.palette[1] = strtoul(tmp, NULL, 16);
+				pal.palette[1] = strtoul(tmp, nullptr, 16);
 			tmp = mxmlElementGetAttr(item, "c2");
 			if (tmp)
-				pal.palette[2] = strtoul(tmp, NULL, 16);
+				pal.palette[2] = strtoul(tmp, nullptr, 16);
 			tmp = mxmlElementGetAttr(item, "c3");
 			if (tmp)
-				pal.palette[3] = strtoul(tmp, NULL, 16);
+				pal.palette[3] = strtoul(tmp, nullptr, 16);
 		}
-		item = mxmlFindElement(section, xml, "wind", NULL, NULL, MXML_DESCEND);
+		item = mxmlFindElement(section, xml, "wind", nullptr, nullptr, MXML_DESCEND);
 		if (item)
 		{
 			const char * tmp = mxmlElementGetAttr(item, "c0");
 			if (tmp)
-				pal.palette[4] = strtoul(tmp, NULL, 16);
+				pal.palette[4] = strtoul(tmp, nullptr, 16);
 			tmp = mxmlElementGetAttr(item, "c1");
 			if (tmp)
-				pal.palette[5] = strtoul(tmp, NULL, 16);
+				pal.palette[5] = strtoul(tmp, nullptr, 16);
 			tmp = mxmlElementGetAttr(item, "c2");
 			if (tmp)
-				pal.palette[6] = strtoul(tmp, NULL, 16);
+				pal.palette[6] = strtoul(tmp, nullptr, 16);
 			tmp = mxmlElementGetAttr(item, "c3");
 			if (tmp)
-				pal.palette[7] = strtoul(tmp, NULL, 16);
+				pal.palette[7] = strtoul(tmp, nullptr, 16);
 		}
-		item = mxmlFindElement(section, xml, "obj0", NULL, NULL, MXML_DESCEND);
+		item = mxmlFindElement(section, xml, "obj0", nullptr, nullptr, MXML_DESCEND);
 		if (item)
 		{
 			const char * tmp = mxmlElementGetAttr(item, "c0");
 			if (tmp)
-				pal.palette[8] = strtoul(tmp, NULL, 16);
+				pal.palette[8] = strtoul(tmp, nullptr, 16);
 			tmp = mxmlElementGetAttr(item, "c1");
 			if (tmp)
-				pal.palette[9] = strtoul(tmp, NULL, 16);
+				pal.palette[9] = strtoul(tmp, nullptr, 16);
 			tmp = mxmlElementGetAttr(item, "c2");
 			if (tmp)
-				pal.palette[10] = strtoul(tmp, NULL, 16);
+				pal.palette[10] = strtoul(tmp, nullptr, 16);
 		}
-		item = mxmlFindElement(section, xml, "obj1", NULL, NULL, MXML_DESCEND);
+		item = mxmlFindElement(section, xml, "obj1", nullptr, nullptr, MXML_DESCEND);
 		if (item)
 		{
 			const char * tmp = mxmlElementGetAttr(item, "c0");
 			if (tmp)
-				pal.palette[11] = strtoul(tmp, NULL, 16);
+				pal.palette[11] = strtoul(tmp, nullptr, 16);
 			tmp = mxmlElementGetAttr(item, "c1");
 			if (tmp)
-				pal.palette[12] = strtoul(tmp, NULL, 16);
+				pal.palette[12] = strtoul(tmp, nullptr, 16);
 			tmp = mxmlElementGetAttr(item, "c2");
 			if (tmp)
-				pal.palette[13] = strtoul(tmp, NULL, 16);
+				pal.palette[13] = strtoul(tmp, nullptr, 16);
 		}
 		const char *use = mxmlElementGetAttr(section, "use");
 		if (use)
@@ -479,7 +479,7 @@ void ApplySettings() {
 static bool
 decodePrefsData ()
 {
-	xml = mxmlLoadString(NULL, (char *)savebuffer, MXML_TEXT_CALLBACK);
+	xml = mxmlLoadString(nullptr, (char *)savebuffer, MXML_TEXT_CALLBACK);
 
 	if(!xml) {
 		return false;
@@ -568,7 +568,7 @@ decodePrefsData ()
 static bool
 decodePalsData ()
 {
-	xml = mxmlLoadString(NULL, (char *) savebuffer, MXML_TEXT_CALLBACK);
+	xml = mxmlLoadString(nullptr, (char *) savebuffer, MXML_TEXT_CALLBACK);
 
 	if (!xml) {
 		return false;
@@ -576,10 +576,10 @@ decodePalsData ()
 
 	// count number of palettes in file
 	loadedPalettes = 0;
-	item = mxmlFindElement(xml, xml, "palette", NULL, NULL, MXML_DESCEND);
-	for (section = mxmlFindElement(item, xml, "game", NULL, NULL,
+	item = mxmlFindElement(xml, xml, "palette", nullptr, nullptr, MXML_DESCEND);
+	for (section = mxmlFindElement(item, xml, "game", nullptr, nullptr,
 			MXML_DESCEND); section; section = mxmlFindElement(section, xml,
-			"game", NULL, NULL, MXML_NO_DESCEND))
+			"game", nullptr, nullptr, MXML_NO_DESCEND))
 	{
 		loadedPalettes++;
 	}
@@ -591,9 +591,9 @@ decodePalsData ()
 	palettes = (gamePalette *)malloc(sizeof(gamePalette)*loadedPalettes);
 	// Load all palettes in file, hardcoded palettes are added later
 	int i = 0;
-	for (section = mxmlFindElement(item, xml, "game", NULL, NULL,
+	for (section = mxmlFindElement(item, xml, "game", nullptr, nullptr,
 			MXML_DESCEND); section; section = mxmlFindElement(section, xml,
-			"game", NULL, NULL, MXML_NO_DESCEND))
+			"game", nullptr, nullptr, MXML_NO_DESCEND))
 	{
 		loadXMLPaletteFromSection(palettes[i]);
 		i++;

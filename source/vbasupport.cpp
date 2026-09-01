@@ -113,12 +113,12 @@ void StopColorizing();
 
 struct EmulatedSystem emulator =
 {
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
 	false,
 	0
 };
@@ -447,7 +447,7 @@ bool LoadBatteryOrState(char * filepath, int action, bool silent)
 			
 	if (cartridgeType == CARTRIDGE_GB && goomba_is_sram(savebuffer)) {
 		void* cleaned = goomba_cleanup(savebuffer);
-		if (cleaned == NULL) {
+		if (cleaned == nullptr) {
 			ErrorPrompt(goomba_last_error());
 			offset = 0;
 		} else {
@@ -456,13 +456,13 @@ bool LoadBatteryOrState(char * filepath, int action, bool silent)
 				free(cleaned);
 			}
 			stateheader* sh = stateheader_for(savebuffer, RomTitle);
-			if (sh == NULL) {
+			if (sh == nullptr) {
 				ErrorPrompt(goomba_last_error());
 				offset = 0;
 			} else {
 				goomba_size_t outsize;
 				void* gbc_sram = goomba_extract(savebuffer, sh, &outsize);
-				if (gbc_sram == NULL) {
+				if (gbc_sram == nullptr) {
 					ErrorPrompt(goomba_last_error());
 					offset = 0;
 				} else {
@@ -587,7 +587,7 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 			size_t br = LoadFile(old_sram, filepath, GOOMBA_COLOR_SRAM_SIZE, GOOMBA_COLOR_SRAM_SIZE, true);
 			if (br >= GOOMBA_COLOR_SRAM_SIZE && goomba_is_sram(old_sram)) {
 				void* cleaned = goomba_cleanup(old_sram);
-				if (cleaned == NULL) {
+				if (cleaned == nullptr) {
 					ErrorPrompt(generic_goomba_error);
 					datasize = 0;
 				} else {
@@ -596,12 +596,12 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 						old_sram = (char*)cleaned;
 					}
 					stateheader* sh = stateheader_for(old_sram, RomTitle);
-					if (sh == NULL) {
+					if (sh == nullptr) {
 						// Game probably doesn't use SRAM
 						datasize = 0;
 					} else {
 						void* new_sram = goomba_new_sav(old_sram, sh, savebuffer, datasize);
-						if (new_sram == NULL) {
+						if (new_sram == nullptr) {
 							ErrorPrompt(goomba_last_error());
 							datasize = 0;
 						} else {
@@ -1182,7 +1182,7 @@ void InitGameDimensionsAndBorder() {
 	if(GCSettings.SGBBorder == SGBBORDER_FROMPNG) {
 		int bw = 0, bh = 0;
 		const char* fallback = (cartridgeType == CARTRIDGE_GBA) ? "defaultgba" : "default";
-		u16* borderPixels = BorderManager::load(NULL, fallback, bw, bh);
+		u16* borderPixels = BorderManager::load(nullptr, fallback, bw, bh);
 
 		if (borderPixels) {
 			gameBorder.setBorder(borderPixels, bw, bh);
@@ -1229,7 +1229,7 @@ static bool utilIsZipFile(const char* file)
   if(strlen(file) > 4)
     {
       char * p = strrchr(file,'.');
-      if(p != NULL)
+      if(p != nullptr)
         {
           if(strcasecmp(p, ".zip") == 0)
             return true;
@@ -1268,7 +1268,7 @@ int LoadROMToVM(const char* filepath) {
 				unmountRequired[device] = true;
 				retry = ErrorPromptRetry("Error reading file!");
 				fclose(file);
-				file = NULL;
+				file = nullptr;
 				continue;
 			}
 
@@ -1280,7 +1280,7 @@ int LoadROMToVM(const char* filepath) {
 			if(uncompSize > ARAM_SIZE) {
 				ErrorPrompt("Compressed ROM file is too large to decompress!");
 				fclose(file);
-				file = NULL;
+				file = nullptr;
 				ResumeDeviceCheckingThread();
 				CancelAction();
 				return 0;
@@ -1297,7 +1297,7 @@ int LoadROMToVM(const char* filepath) {
 				retry = ErrorPromptRetry("Error extracting ZIP file!");
 			}
 			fclose(file);
-			file = NULL;
+			file = nullptr;
 			VMPager_EndPreload();
 		} else {
 			fseeko(file, 0, SEEK_END);
@@ -1307,7 +1307,7 @@ int LoadROMToVM(const char* filepath) {
 			if (size > MAX_GBA_ROM_SIZE) {
 				ErrorPrompt("Unsupported file size!");
 				fclose(file);
-				file = NULL;
+				file = nullptr;
 				ResumeDeviceCheckingThread();
 				CancelAction();
 				return 0;
@@ -1345,18 +1345,18 @@ int LoadROMToVM(const char* filepath) {
 			if (offset == size) {
 				// <= 16MB file. Everything is in ARAM. We don't need file access so nothing more to do.
 				fclose(file);
-				file = NULL;
+				file = nullptr;
 				VMPager_EndPreload();
 				retry = 0;
 			} else if (offset == preload_size) {
 				// > 16MB file (size > offset, but we loaded 16MB). Preload finished, but more data remains - so we pass a file handle
 				FILE* vm_file = file;
-				file = NULL; // isolate the handle exclusively for the VM Pager (it will be responsible to close it)
+				file = nullptr; // isolate the handle exclusively for the VM Pager (it will be responsible to close it)
 				VMPager_EndPreloadWithFile(vm_file, size, filepath);
 				retry = 0;
 			} else {
 				fclose(file);
-				file = NULL;
+				file = nullptr;
 				VMPager_EndPreload();
 				retry = ErrorPromptRetry("Error reading uncompressed ROM data!");
 			}
@@ -1396,20 +1396,20 @@ bool LoadGBROM()
 	
 	const void* firstRom = gb_first_rom(gbRom, gbRomSize);
 	const void* secondRom = gb_next_rom(gbRom, gbRomSize, firstRom);
-	if (firstRom != NULL && firstRom != gbRom) {
+	if (firstRom != nullptr && firstRom != gbRom) {
 		char msgbuf[32];
 		char gb_title_buffer[16];
 		const void* gbRomPtr;
-		for (gbRomPtr = firstRom; gbRomPtr != NULL; gbRomPtr = gb_next_rom(gbRom, gbRomSize, gbRomPtr)) {
+		for (gbRomPtr = firstRom; gbRomPtr != nullptr; gbRomPtr = gb_next_rom(gbRom, gbRomSize, gbRomPtr)) {
 			gb_get_title(gbRomPtr, gb_title_buffer);
 			sprintf(msgbuf, "Load %s?", gb_title_buffer);
-			if (secondRom == NULL || YesNoPrompt(msgbuf, true)) {
+			if (secondRom == nullptr || YesNoPrompt(msgbuf, true)) {
 				gbRomSize = gb_rom_size(gbRomPtr);
 				memmove(gbRom, gbRomPtr, gbRomSize);
 				break;
 			}
 		}
-		if (gbRomPtr == NULL) {
+		if (gbRomPtr == nullptr) {
 			InfoPrompt("No more ROMs found in the file.");
 			return false;
 		}
@@ -1427,22 +1427,22 @@ bool LoadGBROM()
 
 static void GBAROMCleanup()
 {
-	if(vram != NULL) free(vram);
-	if(paletteRAM != NULL) free(paletteRAM);
-	if(internalRAM != NULL) free(internalRAM);
-	if(workRAM != NULL) free(workRAM);
-	if(bios != NULL) free(bios);
-	if(pix != NULL) free(pix);
-	if(oam != NULL) free(oam);
-	if(ioMem != NULL) free(ioMem);
-	vram = NULL;
-	paletteRAM = NULL;
-	internalRAM = NULL;
-	workRAM = NULL;
-	bios = NULL;
-	pix = NULL;
-	oam = NULL;
-	ioMem = NULL;
+	if(vram != nullptr) free(vram);
+	if(paletteRAM != nullptr) free(paletteRAM);
+	if(internalRAM != nullptr) free(internalRAM);
+	if(workRAM != nullptr) free(workRAM);
+	if(bios != nullptr) free(bios);
+	if(pix != nullptr) free(pix);
+	if(oam != nullptr) free(oam);
+	if(ioMem != nullptr) free(ioMem);
+	vram = nullptr;
+	paletteRAM = nullptr;
+	internalRAM = nullptr;
+	workRAM = nullptr;
+	bios = nullptr;
+	pix = nullptr;
+	oam = nullptr;
+	ioMem = nullptr;
 }
 
 void RomCleanup()
@@ -1451,8 +1451,8 @@ void RomCleanup()
 	GBAROMCleanup(); // cleanup GBA memory
 	gbCleanUp(); // cleanup GB memory
 	ResetCheats();
-	gbRom = NULL;
-	rom = NULL;
+	gbRom = nullptr;
+	rom = nullptr;
 	#ifdef HW_DOL
 	VMPager_CloseFile();
 	#endif
@@ -1473,9 +1473,9 @@ static bool GBAROMAlloc()
 	pix = (u8 *)memalign(32, 4 * 241 * 162);
 	ioMem = (u8 *)memalign(32, 0x400);
 
-	if(workRAM == NULL || bios == NULL || internalRAM == NULL ||
-		paletteRAM == NULL || vram == NULL || oam == NULL ||
-		pix == NULL || ioMem == NULL)
+	if(workRAM == nullptr || bios == nullptr || internalRAM == nullptr ||
+		paletteRAM == nullptr || vram == nullptr || oam == nullptr ||
+		pix == nullptr || ioMem == nullptr)
 	{
 		ErrorPrompt("Out of memory!");
 		return false;
@@ -1510,7 +1510,7 @@ static int GBAROMLoad()
 		int r = YesNoPrompt("This file contains uncompressed Game Boy (Color) ROMs. Do you want to run these?", true);
 		if (r) {
 			GBAROMSize = 0;
-			rom = NULL;
+			rom = nullptr;
 			return 2;
 		}
 	}
@@ -1552,7 +1552,7 @@ bool LoadVBAROM()
 		// we need to check the file extension of the first file in the archive
 		char * zippedFilename = GetFirstZipFilename ();
 
-		if(zippedFilename == NULL) // loading the file failed
+		if(zippedFilename == nullptr) // loading the file failed
 		{
 			ErrorPrompt("Empty or invalid ZIP file!");
 			return false;
@@ -1629,7 +1629,7 @@ bool LoadVBAROM()
 		ApplyPerImagePreferences();
 		doMirroring(mirroringEnable);
 		soundReset();
-		CPUInit(NULL, false);
+		CPUInit(nullptr, false);
 		CPUReset();
 	}
 

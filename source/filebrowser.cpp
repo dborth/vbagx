@@ -35,7 +35,7 @@ extern char* strcasestr(const char *, const char *);
 }
 
 BROWSERINFO browser;
-BROWSERENTRY * browserList = NULL; // list of files/folders in browser
+BROWSERENTRY * browserList = nullptr; // list of files/folders in browser
 
 char szpath[MAXPATHLEN]= "";
 char szname[MAXPATHLEN]= "";
@@ -234,7 +234,7 @@ static void CleanupPath(char * path)
 
 bool IsDeviceRoot(char * path)
 {
-	if(path == NULL || path[0] == 0)
+	if(path == nullptr || path[0] == 0)
 		return false;
 
 	if( strcmp(path, "sd:/")    == 0 ||
@@ -283,10 +283,10 @@ int UpdateDirName()
 			/* determine last subdirectory namelength */
 			sprintf(temp,"%s",browser.dir);
 			test = strtok(temp,"/");
-			while (test != NULL)
+			while (test != nullptr)
 			{
 				size = strlen(test);
-				test = strtok(NULL,"/");
+				test = strtok(nullptr,"/");
 			}
 	
 			/* remove last subdirectory name */
@@ -348,10 +348,10 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 	else if (type == FILE_BORDER_PNG)
 	{
 		const char* loadedpath = filename;
-		if (loadedpath == NULL) loadedpath = "default";
+		if (loadedpath == nullptr) loadedpath = "default";
 		// Ensure that loadedname contains only the filename, not the path
 		const char* loadedname = strrchr(loadedpath, '/');
-		if (loadedname == NULL) loadedname = loadedpath;
+		if (loadedname == nullptr) loadedname = loadedpath;
 		
 		// Check path length
 		if ((strlen(pathPrefix[GCSettings.LoadMethod]) + strlen(GCSettings.BorderFolder) + strlen(loadedname)) >= MAXPATHLEN) {
@@ -449,7 +449,7 @@ bool IsSz()
 	{
 		char * p = strrchr(browserList[browser.selIndex].filename, '.');
 
-		if (p != NULL)
+		if (p != nullptr)
 			if(strcasecmp(p, ".7z") == 0)
 				return true;
 	}
@@ -467,11 +467,11 @@ void StripExt(char* returnstring, const char * inputstring)
 
 	snprintf(returnstring, MAXJOLIET, "%s", inputstring);
 
-	if(inputstring == NULL || strlen(inputstring) < 4)
+	if(inputstring == nullptr || strlen(inputstring) < 4)
 		return;
 
 	loc_dot = strrchr(returnstring,'.');
-	if (loc_dot != NULL)
+	if (loc_dot != nullptr)
 		*loc_dot = 0; // strip file extension
 }
 
@@ -484,23 +484,23 @@ void ShortenFilename(char * returnstring, char * inputstring)
 	}
 	// skip URLs in brackets
 	char * dotcom = (char *) strstr(inputstring, ".com)");
-	char * url = NULL;
+	char * url = nullptr;
 	if (dotcom) {
 		url = (char *) strchr(inputstring, '(');
 		if (url >= dotcom) {
-			url = NULL;
-			dotcom = NULL;
+			url = nullptr;
+			dotcom = nullptr;
 		} else dotcom+= 5; // point to after ')'
 	}
 	// skip URLs not in brackets
 	if (!dotcom) {
 		dotcom = (char *) strstr(inputstring, ".com");
-		url = NULL;
+		url = nullptr;
 		if (dotcom) {
 			url = (char *) strstr(inputstring, "www");
 			if (url >= dotcom) {
-				url = NULL;
-				dotcom = NULL;
+				url = nullptr;
+				dotcom = nullptr;
 			} else dotcom+= 4; // point to after ')'
 		}
 	}
@@ -520,7 +520,7 @@ void ShortenFilename(char * returnstring, char * inputstring)
 	while (*s>='0' && *s<='9') s++;
 	if (r==(char *)returnstring) while ((*s!='\0' && *s<=' ') || *s=='-' || *s=='_' || *s=='+') s++;
 	// now go through rest of string until we get to the end or the extension
-	while (*s!='\0' && (loc_dot==NULL || s<loc_dot)) {
+	while (*s!='\0' && (loc_dot==nullptr || s<loc_dot)) {
 		// skip url
 		if (s==url) s=dotcom;
 		// skip whitespace, numbers, - and _ after url
@@ -741,7 +741,7 @@ int BrowserChangeFolder()
 	else
 	{
 		char * path = StripDevice(browser.dir);
-		if(path != NULL)
+		if(path != nullptr)
 			strcpy(GCSettings.LoadFolder, path);
 		FindDevice(browser.dir, &GCSettings.LoadMethod);
 	}
@@ -765,7 +765,7 @@ OpenGameList ()
 		if(strlen(GCSettings.LoadFolder) > 0) {
 			DIR *dir = opendir(browser.dir);
 
-			if(dir == NULL) {
+			if(dir == nullptr) {
 				sprintf(browser.dir, "%s", pathPrefix[device]);
 			}
 			else {
@@ -807,7 +807,7 @@ bool AutoloadGame(char* filepath, char* filename) {
 		if (strcmp(browserList[i].filename, ".") == 0 || strcmp(browserList[i].filename, "..") == 0) {
 			continue;
 		}
-		if(strcasestr(browserList[i].filename, filename) != NULL) {
+		if(strcasestr(browserList[i].filename, filename) != nullptr) {
 			browser.selIndex = i;
 			if(IsSz()) {
 				BrowserLoadSz();
