@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <sys/param.h>
 
+#include "drivers/InputDriver.h"
 #include "filelist.h"
 
 #define APPNAME 		"Visual Boy Advance GX"
@@ -123,12 +124,6 @@ enum {
 };
 
 enum {
-	WIIMOTEORIENTATION_VERTICAL = 0,
-	WIIMOTEORIENTATION_HORIZONTAL,
-	WIIMOTEORIENTATION_LENGTH
-};
-
-enum {
 	SCALING_MAINTAIN_ASPECT = 0,
 	SCALING_PARTIAL_STRETCH,
 	SCALING_STRETCH_TO_FIT,
@@ -214,7 +209,7 @@ struct SGCSettings
 	int		DisplayFrameRate;
 	bool	gbaFrameskip;  // turn on auto-frameskip for GBA games
 	bool	WiiControls;   // Match Wii Game
-	int		WiimoteOrientation;
+	int		wiimoteOrientation;
 	int		ExitAction;
 	int		MusicVolume;
 	int		SFXVolume;

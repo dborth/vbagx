@@ -211,7 +211,7 @@ preparePrefsData ()
 	createXMLSection("Menu", "Menu Settings");
 
 #ifdef HW_RVL
-	createXMLSetting("WiimoteOrientation", "Wiimote Orientation", toStr(GCSettings.WiimoteOrientation));
+	createXMLSetting("wiimoteOrientation", "Wiimote Orientation", toStr(GCSettings.wiimoteOrientation));
 #endif
 	createXMLSetting("ExitAction", "Exit Action", toStr(GCSettings.ExitAction));
 	createXMLSetting("MusicVolume", "Music Volume", toStr(GCSettings.MusicVolume));
@@ -460,6 +460,16 @@ static void loadXMLPaletteFromSection(gamePalette &pal)
 	}
 }
 
+static void applySettings() {
+	platform->getInput()->setWiimoteOrientation(GCSettings.wiimoteOrientation);
+	platform->getInput()->setRumbleEnabled(GCSettings.Rumble);
+	GuiSound::setDefaultVolume(SOUND::OGG, GCSettings.MusicVolume);
+	GuiSound::setDefaultVolume(SOUND::PCM, GCSettings.SFXVolume);
+	ResetVideo_Menu();
+	ChangeLanguage();
+	InitialisePalette();
+}
+
 /****************************************************************************
  * decodePrefsData
  *
@@ -518,7 +528,7 @@ decodePrefsData ()
 	// Menu Settings
 
 #ifdef HW_RVL
-	loadXMLSetting(&GCSettings.WiimoteOrientation, "WiimoteOrientation");
+	loadXMLSetting(&GCSettings.wiimoteOrientation, "WiimoteOrientation");
 #endif
 	loadXMLSetting(&GCSettings.ExitAction, "ExitAction");
 	loadXMLSetting(&GCSettings.MusicVolume, "MusicVolume");
@@ -642,6 +652,8 @@ void FixInvalidSettings()
 		GCSettings.videoMode = VIDEOMODE_AUTO;
 	if(!(GCSettings.DisplayFrameRate >= FRAMERATE_OFF && GCSettings.DisplayFrameRate < FRAMERATE_LENGTH))
 		GCSettings.DisplayFrameRate = FRAMERATE_OFF;
+	if(!(GCSettings.wiimoteOrientation >= WIIMOTE_ORIENTATION_AUTO && GCSettings.wiimoteOrientation < WIIMOTE_ORIENTATION_LENGTH))
+		GCSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_AUTO;
 }
 
 /****************************************************************************
@@ -690,7 +702,7 @@ DefaultSettings ()
 	GCSettings.gbaFrameskip = true; // Turn auto-frameskip on for GBA games
 	GCSettings.TurboModeEnabled = true; // Enabled by default
 
-	GCSettings.WiimoteOrientation = WIIMOTEORIENTATION_VERTICAL;
+	GCSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_AUTO;
 #ifdef HW_RVL
 	GCSettings.ExitAction = EXITACTION_WII_AUTO;
 #else
@@ -715,6 +727,8 @@ DefaultSettings ()
 	GCSettings.OffsetMinutesUTC = 0;
 	GCSettings.GBHardware = GBHARDWARE_AUTO;
 	GCSettings.SGBBorder = SGBBORDER_OFF;
+
+	applySettings();
 }
 
 
@@ -856,19 +870,13 @@ bool LoadPrefs()
 	}
 
 	FixInvalidSettings();
-
-	if(GCSettings.videoMode > VIDEOMODE_AUTO) {
-		ResetVideo_Menu();
-	}
+	applySettings();
 
 #ifdef HW_RVL
 	bg_music = (u8 * )bg_music_ogg;
 	bg_music_size = bg_music_ogg_size;
 	LoadBgMusic();
 #endif
-
-	ChangeLanguage();
-	InitialisePalette();
 	return true;
 }
 
