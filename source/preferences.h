@@ -13,6 +13,7 @@ bool LoadPrefs();
 void CreateMissingDirectories();
 void FixInvalidSettings();
 void DefaultSettings();
+void ApplySettings();
 bool SavePalettes(bool silent);
 bool LoadPalettes();
 void SetPalette(const char *gameName);

@@ -460,7 +460,7 @@ static void loadXMLPaletteFromSection(gamePalette &pal)
 	}
 }
 
-static void applySettings() {
+void ApplySettings() {
 	platform->getInput()->setWiimoteOrientation(GCSettings.wiimoteOrientation);
 	platform->getInput()->setRumbleEnabled(GCSettings.Rumble);
 	GuiSound::setDefaultVolume(SOUND::OGG, GCSettings.MusicVolume);
@@ -661,8 +661,7 @@ void FixInvalidSettings()
  *
  * Sets all the defaults!
  ***************************************************************************/
-void
-DefaultSettings ()
+void DefaultSettings()
 {
 	memset (&GCSettings, 0, sizeof (GCSettings));
 	ResetControls(); // controller button mappings
@@ -727,8 +726,6 @@ DefaultSettings ()
 	GCSettings.OffsetMinutesUTC = 0;
 	GCSettings.GBHardware = GBHARDWARE_AUTO;
 	GCSettings.SGBBorder = SGBBORDER_OFF;
-
-	applySettings();
 }
 
 
@@ -870,7 +867,7 @@ bool LoadPrefs()
 	}
 
 	FixInvalidSettings();
-	applySettings();
+	ApplySettings();
 
 #ifdef HW_RVL
 	bg_music = (u8 * )bg_music_ogg;

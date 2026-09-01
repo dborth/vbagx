@@ -3743,6 +3743,7 @@ static int MenuSettings()
 
 			if(choice == 1) {
 				DefaultSettings();
+				ApplySettings();
 				autoSaveMethod();
 				autoLoadMethod();
 			}
