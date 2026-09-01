@@ -32,13 +32,13 @@
 
 extern int rumbleRequest[4];
 extern int playerMapping[4];
-extern u32 btnmap[6][10];
+extern uint32_t btnmap[6][10];
 
 void ResetControls(int wc = -1);
 void systemGameRumble(int RumbleForFrames);
 void systemGameRumbleOnlyFor(int OnlyRumbleForFrames);
 void updateRumbleFrame();
-u32 GetJoy(int which);
+uint32_t GetJoy(int which);
 bool isMenuRequested();
 void SetupPads();
 void UpdatePads();

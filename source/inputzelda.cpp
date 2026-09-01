@@ -118,7 +118,7 @@ void ZeldaDxSheathSword()
 	ZeldaDxSwordPos = 0xFF;
 }
 
-u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
+uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
@@ -131,7 +131,7 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 	static int DelayCount = 0;
 	bool OnItemScreen = gbReadMemory(0xC16C) == 0x20; // 0x20 = items, 0x10 = normal
 
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 CursorPos = gbReadMemory(0xC1B6) + 2;
 	u8 SelItem = 0;
@@ -376,16 +376,16 @@ u32 LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 	return J;
 }
 
-static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
+static uint32_t ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 
 	u16 ItemsAddr;
 	if (Seasons) ItemsAddr = 0xC680;
 	else ItemsAddr = 0xC688;
-	static u32 OldJ = 0;
+	static uint32_t OldJ = 0;
 
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	// Rumble when they lose health!
 	u8 Health;
@@ -633,22 +633,22 @@ static u32 ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	return J;
 }
 
-u32 OracleOfAgesInput(unsigned short pad)
+uint32_t OracleOfAgesInput(unsigned short pad)
 {
 	return ZeldaOracleInput(false, pad);
 }
 
-u32 OracleOfSeasonsInput(unsigned short pad)
+uint32_t OracleOfSeasonsInput(unsigned short pad)
 {
 	return ZeldaOracleInput(true, pad);
 }
 
-u32 MinishCapInput(unsigned short pad)
+uint32_t MinishCapInput(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	// Rumble when they lose health!
 	u8 Health = CPUReadByte(0x2002aea);
@@ -677,8 +677,8 @@ u32 MinishCapInput(unsigned short pad)
 	}
 
 	static int frame = 0;
-	u32 SwordButtonNumber = 0;
-	u32 ZTargetButton = 0;
+	uint32_t SwordButtonNumber = 0;
+	uint32_t ZTargetButton = 0;
 
 	if (AButtonItem <= 6 && AButtonItem >= 1) SwordButtonNumber = VBA_BUTTON_A;
 	else if (BButtonItem <= 6 && BButtonItem >= 1) SwordButtonNumber = VBA_BUTTON_B;
@@ -1000,12 +1000,12 @@ u32 MinishCapInput(unsigned short pad)
 	return J;
 }
 
-u32 ALinkToThePastInput(unsigned short pad)
+uint32_t ALinkToThePastInput(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 	u8 Health = 0;
 	static u8 OldHealth = 0;
 
@@ -1042,12 +1042,12 @@ u32 ALinkToThePastInput(unsigned short pad)
 	return J;
 }
 
-u32 Zelda1Input(unsigned short pad)
+uint32_t Zelda1Input(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 	u8 Health = 0;
 	static u8 OldHealth = 0;
 
@@ -1081,12 +1081,12 @@ u32 Zelda1Input(unsigned short pad)
 	return J;
 }
 
-u32 Zelda2Input(unsigned short pad)
+uint32_t Zelda2Input(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 	u8 Health = 0;
 	static u8 OldHealth = 0;
 

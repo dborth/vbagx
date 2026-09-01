@@ -32,7 +32,7 @@
 #include "vba/gba/GBAinline.h"
 #include "vba/gb/gbGlobals.h"
 
-void gbSetSpritePal(u8 WhichPal, u32 bright, u32 medium, u32 dark);
+void gbSetSpritePal(u8 WhichPal, uint32_t bright, uint32_t medium, uint32_t dark);
 
 #define MK1_CAGE 0
 #define MK1_KANO 1
@@ -113,12 +113,12 @@ void gbSetSpritePal(u8 WhichPal, u32 bright, u32 medium, u32 dark);
 static bool HP=0,LP=0,HK=0,LK=0,BL=0,Throw=0,CS=0,F=0,B=0,Select=0,Start=0,SpecialMove=0;
 static u16	OurHealth=0,OpponentHealth=0,OurOldHealth=0;
 static s16  OurX=0,OpponentX=1;
-static u32  VBA_FORWARD=VBA_RIGHT, VBA_BACK=VBA_LEFT;
+static uint32_t  VBA_FORWARD=VBA_RIGHT, VBA_BACK=VBA_LEFT;
 
 static int ChameleonChangeTime = 0;
 
-u32 GetMKInput(unsigned short pad, int rumbleTime=4) {
-	u32 J = StandardMovement(pad);
+uint32_t GetMKInput(unsigned short pad, int rumbleTime=4) {
+	uint32_t J = StandardMovement(pad);
     HP=0;LP=0;HK=0;LK=0;BL=0;Throw=0;CS=0;F=0;B=0;Select=0;Start=0;SpecialMove=0;
 
 	if (!userInput[pad]) return J;
@@ -155,15 +155,15 @@ u32 GetMKInput(unsigned short pad, int rumbleTime=4) {
 }
 
 // Allows writes to the ROM memory for hacking
-void gbaWriteMemory(u32 addr, u32 value) {
+void gbaWriteMemory(uint32_t addr, uint32_t value) {
 	if (addr<0x8000000 || addr>=0xD000000) CPUWriteMemory(addr, value);
 	else WRITE32LE(((u16 *)&rom[addr&0x1FFFFFC]), value);
 }
-void gbaWriteHalfWord(u32 addr, u16 value) {
+void gbaWriteHalfWord(uint32_t addr, u16 value) {
 	if (addr<0x8000000 || addr>=0xD000000) CPUWriteHalfWord(addr, value);
 	else WRITE16LE(((u16 *)&rom[addr&0x1FFFFFC]), value);
 }
-void gbaWriteByte(u32 addr, u8 value) {
+void gbaWriteByte(uint32_t addr, u8 value) {
 	if (addr<0x8000000 || addr>=0xD000000) CPUWriteByte(addr, value);
 	else rom[addr & 0x1FFFFFF] = value;
 }
@@ -172,7 +172,7 @@ void gbWriteByte(u16 addr, u8 value) {
 	else gbRom[addr] = value;
 }
 
-u32 MK1Input(unsigned short pad) {
+uint32_t MK1Input(unsigned short pad) {
 	OurHealth = gbReadMemory(0xD695);
 	OpponentHealth = gbReadMemory(0xD696);
 	OurX = gbReadMemory(0xCF00);
@@ -183,7 +183,7 @@ u32 MK1Input(unsigned short pad) {
 		systemGameRumble(4);
 		OldMenuChar = MenuChar;
 	}
-	u32 J = GetMKInput(pad, 8);
+	uint32_t J = GetMKInput(pad, 8);
 	if (LK || HK || BL) J |= VBA_BUTTON_A;
 	if (LP || HP || BL) J |= VBA_BUTTON_B;
 	if (Start) J |= VBA_BUTTON_START;
@@ -203,13 +203,13 @@ u32 MK1Input(unsigned short pad) {
 	return J;
 }
 
-u32 MK2Input(unsigned short pad) {
+uint32_t MK2Input(unsigned short pad) {
 	OurX = gbReadMemory(0xDD12) | (gbReadMemory(0xDD13) << 8);
 	OpponentX = gbReadMemory(0xDD12+0x40) | (gbReadMemory(0xDD13+0x40) << 8);
 	OurHealth = gbReadMemory(0xDD20);
 	OpponentHealth = gbReadMemory(0xDD20+0x40);
 
-	u32 J = GetMKInput(pad, 5);
+	uint32_t J = GetMKInput(pad, 5);
 	if (LK || HK) J |= VBA_BUTTON_A;
 	if (LP || HP) J |= VBA_BUTTON_B;
 	if (BL) J |= VBA_BUTTON_START;
@@ -219,13 +219,13 @@ u32 MK2Input(unsigned short pad) {
 	return J;
 }
 
-u32 MK12Input(unsigned short pad) {
+uint32_t MK12Input(unsigned short pad) {
 	OurHealth = 0;
 	OpponentHealth = 0;
 	OurX = 0;
 	OpponentX = 1;
 
-	u32 J = GetMKInput(pad, 5);
+	uint32_t J = GetMKInput(pad, 5);
 	if (LK || HK) J |= VBA_BUTTON_A;
 	if (LP || HP) J |= VBA_BUTTON_B;
 	if (BL) J |= VBA_BUTTON_START;
@@ -419,7 +419,7 @@ u8 MK3SetSubchar(int Char, int Subchar, bool menu=false) {
 	return Subchar;
 }
 
-u32 MK3Input(unsigned short pad) {
+uint32_t MK3Input(unsigned short pad) {
 	OurHealth = gbReadMemory(0xC0D6);
 	OpponentHealth = gbReadMemory(0xC0D7);
 	u8 OpponentChar = gbReadMemory(0xC0F1);
@@ -451,7 +451,7 @@ u32 MK3Input(unsigned short pad) {
 		}
 	}
 
-	u32 J = GetMKInput(pad, 2);
+	uint32_t J = GetMKInput(pad, 2);
 	if (LK || HK) J |= VBA_BUTTON_A;
 	if (LP || HP) J |= VBA_BUTTON_B;
 	if (BL) J |= VBA_BUTTON_START;
@@ -533,7 +533,7 @@ u32 MK3Input(unsigned short pad) {
 	return J;
 }
 
-u32 MK4Input(unsigned short pad)
+uint32_t MK4Input(unsigned short pad)
 {
 	OurHealth = gbReadMemory(0xC0D6);
 	OpponentHealth = gbReadMemory(0xC0D7);
@@ -541,7 +541,7 @@ u32 MK4Input(unsigned short pad)
 	OpponentX = gbReadMemory(0xCD42) | (gbReadMemory(0xCD43) << 8);
 	bool InMenu = false;
 
-	u32 J = GetMKInput(pad);
+	uint32_t J = GetMKInput(pad);
 	if (LK || HK) J |= VBA_BUTTON_A;
 	if (LP || HP) J |= VBA_BUTTON_B;
 	if (BL) J |= VBA_BUTTON_START;
@@ -599,7 +599,7 @@ bool MKAIsStanding() {
 }
 void MKARename(u8 n, const char *name) {
 	if (n>=MKA_SubZero2) n--;
-	u32 addr = 0x80285CC+n*16;
+	uint32_t addr = 0x80285CC+n*16;
 	char *s = (char *)&rom[addr & 0x1FFFFFF];
 	int L = strlen(s)-1-strlen(name);
 	int i;
@@ -968,7 +968,7 @@ u8 MKANextSubchar(int Char, int Subchar, u16 OriginalColour) {
 	return Subchar;
 }
 
-u32 MKAInput(unsigned short pad)
+uint32_t MKAInput(unsigned short pad)
 {
 	bool InMenu= false;
 	if (CPUReadHalfWord(0x2000008)==0xFFFC) InMenu=true;
@@ -1019,7 +1019,7 @@ u32 MKAInput(unsigned short pad)
 	}
 	WasInMenu = InMenu;
 
-	u32 J = GetMKInput(pad);
+	uint32_t J = GetMKInput(pad);
 	if (LK || HK) J |= VBA_BUTTON_A;
 	if (LP || HP) J |= VBA_BUTTON_B;
 	if (BL) J |= VBA_BUTTON_R;
@@ -1057,12 +1057,12 @@ u32 MKAInput(unsigned short pad)
 	return J;
 }
 
-u32 MKDAInput(unsigned short pad)
+uint32_t MKDAInput(unsigned short pad)
 {
-	static u32 prevJ = 0, prevPrevJ = 0;
+	static uint32_t prevJ = 0, prevPrevJ = 0;
 	OurHealth = CPUReadByte(0x3000760);
 	u8 Side = CPUReadByte(0x3000747);
-	u32 Forwards, Back;
+	uint32_t Forwards, Back;
 	if (Side == 0) {
 		OurX = 0; OpponentX = 1;
 		Forwards = VBA_RIGHT;
@@ -1073,7 +1073,7 @@ u32 MKDAInput(unsigned short pad)
 		Back = VBA_RIGHT;
 	}
 
-	u32 J = GetMKInput(pad, 10);
+	uint32_t J = GetMKInput(pad, 10);
 	if (HP || LP) J |= VBA_BUTTON_B;
 	if (HK || LK) J |= VBA_BUTTON_A;
 	if (BL) J |= VBA_BUTTON_R;
@@ -1099,12 +1099,12 @@ u32 MKDAInput(unsigned short pad)
 	return J;
 }
 
-u32 MKTEInput(unsigned short pad)
+uint32_t MKTEInput(unsigned short pad)
 {
-	static u32 prevJ = 0, prevPrevJ = 0;
+	static uint32_t prevJ = 0, prevPrevJ = 0;
 	OurHealth = CPUReadByte(0x3000760);
 	u8 Side = CPUReadByte(0x3000777);
-	u32 Forwards, Back;
+	uint32_t Forwards, Back;
 	if (Side == 0) {
 		OurX = 0; OpponentX = 1;
 		Forwards = VBA_RIGHT;
@@ -1115,7 +1115,7 @@ u32 MKTEInput(unsigned short pad)
 		Back = VBA_RIGHT;
 	}
 
-	u32 J = GetMKInput(pad, 10);
+	uint32_t J = GetMKInput(pad, 10);
 	if (HP || LP) J |= VBA_BUTTON_B;
 	if (HK || LK) J |= VBA_BUTTON_A;
 	if (BL) J |= VBA_BUTTON_R;

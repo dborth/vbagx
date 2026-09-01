@@ -187,7 +187,7 @@ void BorderManager::save(const void* buffer) {
 	FILE* f = nullptr;
 	u8* rgb24 = nullptr;
 	u8* png = nullptr;
-	u32 pngSize = 0;
+	uint32_t pngSize = 0;
 
 	int err;
 

@@ -31,10 +31,10 @@
 #include "vba/gba/bios.h"
 #include "vba/gba/GBAinline.h"
 
-u32 MetroidZeroInput(unsigned short pad) {
+uint32_t MetroidZeroInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 BallState = CPUReadByte(0x30015df); // 0 = stand, 1 = crouch, 2 = ball
 	u16 Health = CPUReadByte(0x3001536);
@@ -146,10 +146,10 @@ u32 MetroidZeroInput(unsigned short pad) {
 	return J;
 }
 
-u32 MetroidFusionInput(unsigned short pad) {
+uint32_t MetroidFusionInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 BallState = CPUReadByte(0x3001329); // 0 = stand, 2 = crouch, 5 = ball
 	u16 Health = CPUReadHalfWord(0x3001310); 
@@ -258,10 +258,10 @@ u32 MetroidFusionInput(unsigned short pad) {
 	return J;
 }
 
-u32 Metroid1Input(unsigned short pad) {
+uint32_t Metroid1Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 BallState = CPUReadByte(0x3007500); // 3 = ball, other = stand
 	u8 MissileState = CPUReadByte(0x300730E); // 1 = missile, 0 = beam
@@ -313,10 +313,10 @@ u32 Metroid1Input(unsigned short pad) {
 	return J;
 }
 
-u32 Metroid2Input(unsigned short pad) {
+uint32_t Metroid2Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 BallState = gbReadMemory(0xD020); // 4 = crouch, 5 = ball, other = stand
 	u8 MissileState = gbReadMemory(0xD04D); // 8 = missile hatch open

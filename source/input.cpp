@@ -38,7 +38,7 @@ static bool cartridgeRumble = false, possibleCartridgeRumble = false;
 static int gameRumbleCount = 0, menuRumbleCount = 0, rumbleCountAlready = 0;
 
 static unsigned int vbapadmap[10]; // VBA controller buttons
-u32 btnmap[6][10]; // button mapping
+uint32_t btnmap[6][10]; // button mapping
 
 void ResetControls(int wiiCtrl)
 {
@@ -288,7 +288,7 @@ void UpdatePads()
 	WPAD_ScanPads();
 	#endif
 
-	u32 activeGamecubePads = PAD_ScanPads();
+	uint32_t activeGamecubePads = PAD_ScanPads();
 
 	float deltaTime = 1.0f / 60.0f;
 
@@ -509,11 +509,11 @@ void systemGameRumbleOnlyFor(int OnlyRumbleForFrames) {
 	gameRumbleCount = OnlyRumbleForFrames;
 }
 
-u32 StandardMovement(unsigned short chan)
+uint32_t StandardMovement(unsigned short chan)
 {
 	if (!userInput[chan]) return 0;
 	const GuiInputPadData& pad = userInput[chan]->getPadData();
-	u32 J = 0;
+	uint32_t J = 0;
 	
 	float sensitivity = (float)ANALOG_SENSITIVITY / 128.0f;
 	if (pad.stickY > sensitivity) J |= VBA_UP;
@@ -524,11 +524,11 @@ u32 StandardMovement(unsigned short chan)
 	return J;
 }
 
-u32 StandardDPad(unsigned short pad)
+uint32_t StandardDPad(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = 0;
+	uint32_t J = 0;
 	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
 	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
 	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_LEFT;
@@ -536,11 +536,11 @@ u32 StandardDPad(unsigned short pad)
 	return J;
 }
 
-u32 StandardSideways(unsigned short pad)
+uint32_t StandardSideways(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = 0;
+	uint32_t J = 0;
 
 	// Read directly from isolated Wiimote state
 	uint32_t wp = data.hw_buttons_h[GUI_HW_WIIMOTE];
@@ -564,11 +564,11 @@ u32 StandardSideways(unsigned short pad)
 	return J;
 }
 
-u32 StandardClassic(unsigned short pad)
+uint32_t StandardClassic(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = 0;
+	uint32_t J = 0;
 
 	// Read isolated Classic Controller state
 	uint32_t wp = data.hw_buttons_h[GUI_HW_CLASSIC];
@@ -596,7 +596,7 @@ u32 StandardClassic(unsigned short pad)
  * Reads the STATE (not changes) from a controller and reports
  * this STATE (not changes) to VBA
  ****************************************************************************/
-static u32 DecodeJoy(unsigned short pad)
+static uint32_t DecodeJoy(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
@@ -788,7 +788,7 @@ static u32 DecodeJoy(unsigned short pad)
 	}
 
 	// Get baseline movement (translates unified Analog Sticks to VBA directions)
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	// Evaluate Turbo (C-Stick Right / Right Stick Right)
 	if (GCSettings.TurboModeEnabled)
@@ -853,7 +853,7 @@ static int GetPlayerChan(int pad)
 	return pad;
 }
 
-u32 GetJoy(int pad)
+uint32_t GetJoy(int pad)
 {
 	// request to go back to menu
 	if (isMenuRequested())
@@ -865,7 +865,7 @@ u32 GetJoy(int pad)
 
 	int chan = GetPlayerChan(pad);
 
-	u32 J = DecodeJoy(chan);
+	uint32_t J = DecodeJoy(chan);
 	// don't allow up+down or left+right
 	if ((J & 48) == 48)
 		J &= ~16;

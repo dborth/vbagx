@@ -31,10 +31,10 @@
 #include "vba/gba/bios.h"
 #include "vba/gba/GBAinline.h"
 
-u32 LegoStarWars1Input(unsigned short pad) {
+uint32_t LegoStarWars1Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -56,10 +56,10 @@ u32 LegoStarWars1Input(unsigned short pad) {
 	return J;
 }
 
-u32 LegoStarWars2Input(unsigned short pad) {
+uint32_t LegoStarWars2Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -85,10 +85,10 @@ u32 LegoStarWars2Input(unsigned short pad) {
 	return J;
 }
 
-u32 SWObiWanInput(unsigned short pad) {
+uint32_t SWObiWanInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 Health = gbReadMemory(0xCFF2);
 	static u8 OldHealth = 0;
@@ -120,10 +120,10 @@ u32 SWObiWanInput(unsigned short pad) {
 	return J;
 }
 
-u32 SWEpisode2Input(unsigned short pad) {
+uint32_t SWEpisode2Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 Health = CPUReadByte(0x3002fb3);
 	static u8 OldHealth = 0;
@@ -145,10 +145,10 @@ u32 SWEpisode2Input(unsigned short pad) {
 	return J;
 }
 
-u32 SWEpisode3Input(unsigned short pad) {
+uint32_t SWEpisode3Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -170,10 +170,10 @@ u32 SWEpisode3Input(unsigned short pad) {
 	return J;
 }
 
-u32 SWJediPowerBattlesInput(unsigned short pad) {
+uint32_t SWJediPowerBattlesInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -195,10 +195,10 @@ u32 SWJediPowerBattlesInput(unsigned short pad) {
 	return J;
 }
 
-u32 SWTrilogyInput(unsigned short pad) {
+uint32_t SWTrilogyInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -220,10 +220,10 @@ u32 SWTrilogyInput(unsigned short pad) {
 	return J;
 }
 
-u32 SWEpisode4Input(unsigned short pad) {
+uint32_t SWEpisode4Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -245,18 +245,18 @@ u32 SWEpisode4Input(unsigned short pad) {
 	return J;
 }
 
-u32 SWEpisode5Input(unsigned short pad) {
+uint32_t SWEpisode5Input(unsigned short pad) {
 	return SWEpisode4Input(pad);
 }
 
-u32 SWEpisode6Input(unsigned short pad) {
+uint32_t SWEpisode6Input(unsigned short pad) {
 	return SWEpisode4Input(pad);
 }
 
-u32 SWYodaStoriesInput(unsigned short pad) {
+uint32_t SWYodaStoriesInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -278,10 +278,10 @@ u32 SWYodaStoriesInput(unsigned short pad) {
 	return J;
 }
 
-u32 SWNDAInput(unsigned short pad) {
+uint32_t SWNDAInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 Health = 0;
 	static u8 OldHealth = 0;

@@ -31,11 +31,11 @@
 #include "vba/gba/bios.h"
 #include "vba/gba/GBAinline.h"
 
-u32 MarioKartInput(unsigned short pad) {
+uint32_t MarioKartInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
-	static u32 frame = 0;
+	uint32_t J = StandardMovement(pad);
+	static uint32_t frame = 0;
 
 	u8 Health = 0;
 	static u8 OldHealth = 0;
@@ -74,10 +74,10 @@ u32 MarioKartInput(unsigned short pad) {
 	return J;
 }
 
-u32 Mario1DXInput(unsigned short pad) {
+uint32_t Mario1DXInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	// Pause & Select
 	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
@@ -102,18 +102,18 @@ u32 Mario1DXInput(unsigned short pad) {
 	return J;
 }
 
-u32 Mario1ClassicInput(unsigned short pad) {
+uint32_t Mario1ClassicInput(unsigned short pad) {
 	return Mario1DXInput(pad); // Mappings safely resolve exactly the same now
 }
 
-u32 MarioLand1Input(unsigned short pad) {
+uint32_t MarioLand1Input(unsigned short pad) {
 	return Mario1DXInput(pad);
 }
 
-u32 MarioLand2Input(unsigned short pad) {
+uint32_t MarioLand2Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
 	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
@@ -133,10 +133,10 @@ u32 MarioLand2Input(unsigned short pad) {
 	return J;
 }
 
-u32 Mario2Input(unsigned short pad) {
+uint32_t Mario2Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
 	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
@@ -153,10 +153,10 @@ u32 Mario2Input(unsigned short pad) {
 	return J;
 }
 
-u32 MarioWorldInput(unsigned short pad) {
+uint32_t MarioWorldInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	u8 FallState = CPUReadByte(0x3003FA1); // 0B = jump, 24 = fall
 	u8 RidingYoshi = CPUReadByte(0x3004302); // 00 = not riding, 01 = riding
@@ -190,14 +190,14 @@ u32 MarioWorldInput(unsigned short pad) {
 	return J;
 }
 
-u32 Mario3Input(unsigned short pad) {
+uint32_t Mario3Input(unsigned short pad) {
 	return Mario1DXInput(pad);
 }
 
-u32 YoshiIslandInput(unsigned short pad) {
+uint32_t YoshiIslandInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
 	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
@@ -214,12 +214,12 @@ u32 YoshiIslandInput(unsigned short pad) {
 	return J;
 }
 
-u32 UniversalGravitationInput(unsigned short pad) {
+uint32_t UniversalGravitationInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	TiltScreen = true;
 	TiltSideways = false;
-	u32 J = StandardMovement(pad);
+	uint32_t J = StandardMovement(pad);
 
 	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
 	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;

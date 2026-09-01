@@ -94,7 +94,7 @@ static u64 lastRenderFrameTime = 0;
 static u64 start;
 int cartridgeType = CARTRIDGE_NONE;
 int GBAROMSize = 0;
-u32 RomIdCode;
+uint32_t RomIdCode;
 char RomTitle[17];
 
 int SunBars = 3;
@@ -123,10 +123,10 @@ struct EmulatedSystem emulator =
 	0
 };
 
-u32 systemGetClock(void)
+uint32_t systemGetClock(void)
 {
     const u64 now = gettime();
-    return (u32)(ticks_to_microsecs(now - start) / 1000);
+    return (uint32_t)(ticks_to_microsecs(now - start) / 1000);
 }
 
 void systemGbBorderOn() {}
@@ -259,7 +259,7 @@ void systemFrame()
 		// frame renders -- no separate software throttle is needed here.
 		// This naturally satisfies "never exceed true GBA rate" for
 		// scenario 2 without any extra code.
-		u32 pendingFrames = FrameTimer;
+		uint32_t pendingFrames = FrameTimer;
 
 		// SKIP PRESSURE: blend how far behind real vblanks we are with
 		// how urgently audio needs this frame's CPU time
@@ -300,7 +300,7 @@ void systemFrame()
 		// Time-driven pacing. Nothing here blocks on real hardware, so
 		// this is the only thing standing between a fast JIT core and
 		// running ahead of true GBA time.
-		u32 usecSinceLastFrame = diff_usec(lastRenderFrameTime, gettime());
+		uint32_t usecSinceLastFrame = diff_usec(lastRenderFrameTime, gettime());
 
 		// SKIP PRESSURE: blend how far behind real time we are with audio urgency
 		float wallDeficit = clampf((float)usecSinceLastFrame / (float)MAX_PACE_DEBT_US, 0.0f, 1.0f);
@@ -697,7 +697,7 @@ bool systemReadJoypads()
 	return true;
 }
 
-u32 systemReadJoypad(int which)
+uint32_t systemReadJoypad(int which)
 {
 	if(which == -1) which = 0; // default joypad
 	return GetJoy(which);
@@ -889,7 +889,7 @@ void systemDrawScreen()
 	renderFrameCount++;
 	if (renderFrameCount >= 60)
 	{
-		u32 elapsedUs = diff_usec(lastFPS, gettime());
+		uint32_t elapsedUs = diff_usec(lastFPS, gettime());
 		if (elapsedUs > 0) {
 			renderFPS = ((float)renderFrameCount * (float)USEC_PER_SEC) / (float)elapsedUs;
 			coreFPS    = ((float)coreFrameCount * (float)USEC_PER_SEC) / (float)elapsedUs;
@@ -904,7 +904,7 @@ void systemDrawScreen()
 	PROFILER_MARK_FRAME();
 }
 
-static bool ValidGameId(u32 id)
+static bool ValidGameId(uint32_t id)
 {
 	if (id == 0)
 		return false;
@@ -1033,7 +1033,7 @@ static void ApplyPerImagePreferences()
 	int profileIndex = -1;
 
 	// 1. Lookup by CRC32
-	u32 currentCrc = crc32(0, rom, GBAROMSize);
+	uint32_t currentCrc = crc32(0, rom, GBAROMSize);
 	for(uint16_t i = 0; i < CRC_COUNT; ++i)
 	{
 		if(crcTable[i].crc32 == currentCrc)
@@ -1272,7 +1272,7 @@ int LoadROMToVM(const char* filepath) {
 				continue;
 			}
 
-			u32 uncompSize = ((u8)zipbuffer[22]) |
+			uint32_t uncompSize = ((u8)zipbuffer[22]) |
 							 ((u8)zipbuffer[23] << 8) |
 							 ((u8)zipbuffer[24] << 16) |
 							 ((u8)zipbuffer[25] << 24);
@@ -1289,8 +1289,8 @@ int LoadROMToVM(const char* filepath) {
 			VMPager_StartPreload();
 			size = UnZipBuffer((unsigned char*)romPtr, ARAM_SIZE);
 
-			if (size > 0 && (u32)size == uncompSize) {
-				u32 pages = (size + 4095) / 4096;
+			if (size > 0 && (uint32_t)size == uncompSize) {
+				uint32_t pages = (size + 4095) / 4096;
 				VMPager_CommitPageRange(0, pages);
 				retry = 0;
 			} else {
@@ -1315,7 +1315,7 @@ int LoadROMToVM(const char* filepath) {
 
 			VMPager_StartPreload();
 
-			u32 preload_size = (size > ARAM_SIZE) ? ARAM_SIZE : size;
+			uint32_t preload_size = (size > ARAM_SIZE) ? ARAM_SIZE : size;
 			ShowProgress("Loading...", 0, preload_size);
 
 			size_t offset = 0;
@@ -1332,8 +1332,8 @@ int LoadROMToVM(const char* filepath) {
 
 				memcpy(romPtr + offset, chunk_buf, readsize);
 
-				u32 start_page = offset / 4096;
-				u32 end_page = (offset + readsize - 1) / 4096;
+				uint32_t start_page = offset / 4096;
+				uint32_t end_page = (offset + readsize - 1) / 4096;
 				VMPager_CommitPageRange(start_page, end_page + 1);
 
 				offset += readsize;

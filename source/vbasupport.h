@@ -22,7 +22,7 @@ enum {
 extern struct EmulatedSystem emulator;
 extern int cartridgeType;
 extern int SunBars;
-extern u32 RomIdCode;
+extern uint32_t RomIdCode;
 extern bool TiltSideways;
 extern char RomTitle[];
 extern int GBAROMSize;
