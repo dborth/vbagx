@@ -164,7 +164,7 @@ void SystemInit() {
 	__exception_setreload(8);
 
 	platform->init(640, 480);
-
+	SwitchMemoryModeMenu();
 	InitFPSFontData();
 
 	#ifdef HW_RVL
@@ -195,8 +195,6 @@ void SystemInit() {
 
 static void ExitCleanup()
 {
-	platform->shutdown();
-
 	HaltDeviceCheckingThread();
 	UnmountAllFAT();
 
@@ -214,6 +212,7 @@ static void ExitCleanup()
 void SystemExit(int exitAction, bool autoloadedGame)
 {
 	ExitCleanup();
+	platform->shutdown();
 
 #ifdef HW_RVL
 	if(ShutdownRequested) {

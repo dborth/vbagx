@@ -77,7 +77,6 @@ void InitMemManager ()
 	romPtr = (u8 *)VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024); // 2MB MEM1 + 16 ARAM + SD backing for GB/GBA ROM
 	VMPager_Init(romPtr);
 #endif
-	SwitchMemoryModeMenu();
 }
 
 void* mem1_malloc(u32 size)
@@ -134,6 +133,8 @@ static bool ChangeMode(int mode) {
 	if(memoryMode == mode)
 		return false;
 
+	MutexLock scratchGuard(GuiImageData::scratchLock());
+
 	GuiImageData::setDecodeScratch(nullptr, 0);
 
 	browserList = NULL;
@@ -157,6 +158,7 @@ void SwitchMemoryModeMenu() {
 	browserList = coreMem.menu.browserList;
 	CreateMem1Space(coreMem.menu.heapSpace, sizeof(coreMem.menu.heapSpace));
 
+	MutexLock scratchGuard(GuiImageData::scratchLock());
 	void * decodeScratch = mem1_malloc(IMAGE_DECODE_SCRATCH_SIZE);
 	GuiImageData::setDecodeScratch(decodeScratch, decodeScratch ? IMAGE_DECODE_SCRATCH_SIZE : 0);
 }
