@@ -53,7 +53,7 @@
 #ifdef HW_RVL
 GuiImageData * pointer[4];
 GuiImage cursorImg[4];
-u8 pointerTexture[4][96 * 96 * 4] __attribute__((aligned(32)));
+uint8_t pointerTexture[4][96 * 96 * 4] __attribute__((aligned(32)));
 #endif
 
 static GuiTrigger * trigA = nullptr;
@@ -61,7 +61,7 @@ static GuiTrigger * trigA = nullptr;
 #ifdef HW_RVL
 static GuiButton * batteryBtn[4];
 #endif
-static u8 * gameScreenTexture = nullptr;
+static uint8_t * gameScreenTexture = nullptr;
 static GuiImage * gameScreenImg = nullptr;
 static GuiSound * bgMusic = nullptr;
 static GuiSound * enterSound = nullptr;
@@ -71,7 +71,7 @@ static GuiText * settingText2 = nullptr;
 static int lastMenu = MENU_NONE;
 static int mapMenuCtrl = 0;
 
-u8 * bg_music;
+uint8_t * bg_music;
 uint32_t bg_music_size;
 
 struct Menu;
@@ -537,7 +537,7 @@ static bool UpdateGui()
 		for(int a = 0; a <= 255; a += 15)
 		{
 			menu->mainWindow.draw();
-			platform->getVideo()->getImageRenderer()->drawRectangle(0,0,platform->getVideo()->getScreenWidth(),platform->getVideo()->getScreenHeight(),(PixelColor){0, 0, 0, (u8)a});
+			platform->getVideo()->getImageRenderer()->drawRectangle(0,0,platform->getVideo()->getScreenWidth(),platform->getVideo()->getScreenHeight(),(PixelColor){0, 0, 0, (uint8_t)a});
 			platform->getVideo()->render();
 		}
 		exiting = true;
@@ -1080,7 +1080,7 @@ static int MenuGameSelection()
 	preview.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	preview.setPosition(174, -8);
 
-	std::unique_ptr<u8, decltype(&mem1_free)> pngFileBuffer((u8 *)mem1_malloc(PNG_FILE_BUFFER_SIZE), mem1_free);
+	std::unique_ptr<uint8_t, decltype(&mem1_free)> pngFileBuffer((uint8_t *)mem1_malloc(PNG_FILE_BUFFER_SIZE), mem1_free);
 
 	int  previousBrowserIndex = -1;
 	char imagePath[MAXJOLIET + 1];
@@ -2382,7 +2382,7 @@ static int MenuGameCheats()
 {
 	int selection = MENU_NONE;
 	int ret;
-	u16 i = 0;
+	uint16_t i = 0;
 	OptionList options;
 
 	for(i=0; i < cheatCount; i++)
@@ -4340,10 +4340,10 @@ static void RGBWindowUpdate(void * ptr, int red, int green, int blue)
 		if (blueAmount>255) blueAmount=255;
 		else if (blueAmount<0) blueAmount=0;
 
-		redText->setColor((PixelColor){(u8)redAmount, 0, 0, 0xFF});
-		greenText->setColor((PixelColor){0, (u8)greenAmount, 0, 0xFF});
-		blueText->setColor((PixelColor){0, 0, (u8)blueAmount, 0xFF});
-		sampleText->setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+		redText->setColor((PixelColor){(uint8_t)redAmount, 0, 0, 0xFF});
+		greenText->setColor((PixelColor){0, (uint8_t)greenAmount, 0, 0xFF});
+		blueText->setColor((PixelColor){0, 0, (uint8_t)blueAmount, 0xFF});
+		sampleText->setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 
 		char shift[10];
 		sprintf(shift, "%2x", redAmount);
@@ -4471,7 +4471,7 @@ static void PaletteWindow(const char *name)
 	sprintf(shift, "%2x", blueAmount);
 	blueText->setText(shift);
 
-	sampleText = new GuiText(nullptr, 20, (PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+	sampleText = new GuiText(nullptr, 20, (PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 	sampleText->setPosition(+150,0);
 	sampleText->setText(name);
 
@@ -4510,7 +4510,7 @@ static void PaletteWindow(const char *name)
 
 PixelColor GetCol(int i) {
 	int c = 0;
-	u8 r=0, g=0, b=0;
+	uint8_t r=0, g=0, b=0;
 	if (unsigned(i) <= 13)
 	{ 
 		c = CurrentPalette.palette[i];
@@ -4824,7 +4824,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[0] >> 0) & 0xFF;
 			PaletteWindow("BG 0");
 			CurrentPalette.palette[0] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			bg0BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			bg0BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			bg0Btn.resetState();
 		}
 		else if(bg1Btn.getState() == STATE::CLICKED)
@@ -4834,7 +4834,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[1] >> 0) & 0xFF;
 			PaletteWindow("BG 1");
 			CurrentPalette.palette[1] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			bg1BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			bg1BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			bg1Btn.resetState();
 		}
 		else if(bg2Btn.getState() == STATE::CLICKED)
@@ -4844,7 +4844,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[2] >> 0) & 0xFF;
 			PaletteWindow("BG 2");
 			CurrentPalette.palette[2] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			bg2BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			bg2BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			bg2Btn.resetState();
 		}
 		else if(bg3Btn.getState() == STATE::CLICKED)
@@ -4854,7 +4854,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[3] >> 0) & 0xFF;
 			PaletteWindow("BG 3");
 			CurrentPalette.palette[3] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			bg3BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			bg3BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			bg3Btn.resetState();
 		}
 		else if(win0Btn.getState() == STATE::CLICKED)
@@ -4864,7 +4864,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[4] >> 0) & 0xFF;
 			PaletteWindow("WIN 0");
 			CurrentPalette.palette[4] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			win0BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			win0BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			win0Btn.resetState();
 		}
 		else if(win1Btn.getState() == STATE::CLICKED)
@@ -4874,7 +4874,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[5] >> 0) & 0xFF;
 			PaletteWindow("WIN 1");
 			CurrentPalette.palette[5] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			win1BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			win1BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			win1Btn.resetState();
 		}
 		else if(win2Btn.getState() == STATE::CLICKED)
@@ -4884,7 +4884,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[6] >> 0) & 0xFF;
 			PaletteWindow("WIN 2");
 			CurrentPalette.palette[6] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			win2BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			win2BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			win2Btn.resetState();
 		}
 		else if(win3Btn.getState() == STATE::CLICKED)
@@ -4894,7 +4894,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[7] >> 0) & 0xFF;
 			PaletteWindow("WIN 3");
 			CurrentPalette.palette[7] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			win3BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			win3BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			win3Btn.resetState();
 		}
 		else if(obj0Btn.getState() == STATE::CLICKED)
@@ -4904,7 +4904,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[8] >> 0) & 0xFF;
 			PaletteWindow("OBJ 0");
 			CurrentPalette.palette[8] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			obj0BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			obj0BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			obj0Btn.resetState();
 		}
 		else if(obj1Btn.getState() == STATE::CLICKED)
@@ -4914,7 +4914,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[9] >> 0) & 0xFF;
 			PaletteWindow("OBJ 1");
 			CurrentPalette.palette[9] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			obj1BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			obj1BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			obj1Btn.resetState();
 		}
 		else if(obj2Btn.getState() == STATE::CLICKED)
@@ -4924,7 +4924,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[10] >> 0) & 0xFF;
 			PaletteWindow("OBJ 2");
 			CurrentPalette.palette[10] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			obj2BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			obj2BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			obj2Btn.resetState();
 		}
 		else if(spr0Btn.getState() == STATE::CLICKED)
@@ -4934,7 +4934,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[11] >> 0) & 0xFF;
 			PaletteWindow("SPR 0");
 			CurrentPalette.palette[11] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			spr0BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			spr0BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			spr0Btn.resetState();
 		}
 		else if(spr1Btn.getState() == STATE::CLICKED)
@@ -4944,7 +4944,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[12] >> 0) & 0xFF;
 			PaletteWindow("SPR 1");
 			CurrentPalette.palette[12] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			spr1BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			spr1BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			spr1Btn.resetState();
 		}
 		else if(spr2Btn.getState() == STATE::CLICKED)
@@ -4954,7 +4954,7 @@ static int MenuPalette()
 			blueAmount = (CurrentPalette.palette[13] >> 0) & 0xFF;
 			PaletteWindow("SPR 2");
 			CurrentPalette.palette[13] = redAmount << 16 | greenAmount << 8 | blueAmount;
-			spr2BtnTxt.setColor((PixelColor){(u8)redAmount, (u8)greenAmount, (u8)blueAmount, 0xFF});
+			spr2BtnTxt.setColor((PixelColor){(uint8_t)redAmount, (uint8_t)greenAmount, (uint8_t)blueAmount, 0xFF});
 			spr2Btn.resetState();
 		}
 		else if(importBtn.getState() == STATE::CLICKED)
@@ -4997,12 +4997,12 @@ static int MenuPalette()
 	return selection;
 }
 
-static u8 * CreateBlurredGameTexture() {
+static uint8_t * CreateBlurredGameTexture() {
 	if(gameScreenPng.size == 0) {
 		return nullptr;
 	}
 
-	u8 *src = DecodePNGToRGBA8(gameScreenPng.buffer, gameScreenPng.width, gameScreenPng.height);
+	uint8_t *src = DecodePNGToRGBA8(gameScreenPng.buffer, gameScreenPng.width, gameScreenPng.height);
 	if(!src) {
 		return nullptr;
 	}
@@ -5010,7 +5010,7 @@ static u8 * CreateBlurredGameTexture() {
 	int blurAmount = 4; // blur amount
 	PixelColor blurOverlayColor = (PixelColor){50, 50, 50, 160};
 
-	u8 * dst = (u8 *)mem1_malloc(IMAGE_BUFFER_SIZE);
+	uint8_t * dst = (uint8_t *)mem1_malloc(IMAGE_BUFFER_SIZE);
 	if(!dst) {
 		mem1_free(src);
 		return nullptr;
@@ -5058,8 +5058,8 @@ static u8 * CreateBlurredGameTexture() {
 	int cropStartY = trueOffsetY < 0 ? -trueOffsetY : 0;
 
 	// Allocate scratch space ONLY for the viewable cropped portion
-	u8 *scaledImg = (u8 *)mem1_malloc(cropWidth * cropHeight * 4);
-	u8 *rowBuf    = (u8 *)mem1_malloc(cropWidth * 4);
+	uint8_t *scaledImg = (uint8_t *)mem1_malloc(cropWidth * cropHeight * 4);
+	uint8_t *rowBuf    = (uint8_t *)mem1_malloc(cropWidth * 4);
 
 	if (!scaledImg || !rowBuf) {
 		if (scaledImg) mem1_free(scaledImg);
@@ -5123,10 +5123,10 @@ static u8 * CreateBlurredGameTexture() {
 	int alphaIn = blurOverlayColor.a;
 	int invAlpha = 255 - alphaIn;
 
-	u8 bgR = (u8)((0 * invAlpha + blurOverlayColor.r * alphaIn) / 255);
-	u8 bgG = (u8)((0 * invAlpha + blurOverlayColor.g * alphaIn) / 255);
-	u8 bgB = (u8)((0 * invAlpha + blurOverlayColor.b * alphaIn) / 255);
-	u8 bgA = 255;
+	uint8_t bgR = (uint8_t)((0 * invAlpha + blurOverlayColor.r * alphaIn) / 255);
+	uint8_t bgG = (uint8_t)((0 * invAlpha + blurOverlayColor.g * alphaIn) / 255);
+	uint8_t bgB = (uint8_t)((0 * invAlpha + blurOverlayColor.b * alphaIn) / 255);
+	uint8_t bgA = 255;
 
 	// Vertical Blur, Overlay, & Swizzle directly to the GX Destination Layout
 	int tilesX = (platform->getVideo()->getScreenWidth() + 3) / 4;
@@ -5135,7 +5135,7 @@ static u8 * CreateBlurredGameTexture() {
 	for (int ty = 0; ty < tilesY; ++ty) {
 		for (int tx = 0; tx < tilesX; ++tx) {
 			int tileIdx = ty * tilesX + tx;
-			u8* destTilePtr = dst + (tileIdx * 64);
+			uint8_t* destTilePtr = dst + (tileIdx * 64);
 
 			for (int py = 0; py < 4; ++py) {
 				for (int px = 0; px < 4; ++px) {
@@ -5171,13 +5171,13 @@ static u8 * CreateBlurredGameTexture() {
 							sumB += scaledImg[idx + 2];
 						}
 
-						u8 blurredR = sumR / div;
-						u8 blurredG = sumG / div;
-						u8 blurredB = sumB / div;
+						uint8_t blurredR = sumR / div;
+						uint8_t blurredG = sumG / div;
+						uint8_t blurredB = sumB / div;
 
-						u8 finalR = (u8)((blurredR * invAlpha + blurOverlayColor.r * alphaIn) / 255);
-						u8 finalG = (u8)((blurredG * invAlpha + blurOverlayColor.g * alphaIn) / 255);
-						u8 finalB = (u8)((blurredB * invAlpha + blurOverlayColor.b * alphaIn) / 255);
+						uint8_t finalR = (uint8_t)((blurredR * invAlpha + blurOverlayColor.r * alphaIn) / 255);
+						uint8_t finalG = (uint8_t)((blurredG * invAlpha + blurOverlayColor.g * alphaIn) / 255);
+						uint8_t finalB = (uint8_t)((blurredB * invAlpha + blurOverlayColor.b * alphaIn) / 255);
 
 						destTilePtr[pixelIdx * 2 + 0] = 255;
 						destTilePtr[pixelIdx * 2 + 1] = finalR;

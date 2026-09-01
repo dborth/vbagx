@@ -34,7 +34,7 @@ void SgbBorderExtractor::reset(bool isSgbGame, bool borderAlreadyLoaded) {
 
 // True if every pixel outside the centered GB screen still matches
 // buffer[0], i.e. the game hasn't painted a border yet.
-static bool rowIsUniform(const u16* buffer, int y, int xStart, int xEnd, u16 reference) {
+static bool rowIsUniform(const uint16_t* buffer, int y, int xStart, int xEnd, uint16_t reference) {
 	for (int x = xStart; x < xEnd; x++) {
 		if (buffer[SGB_FRAME_WIDTH * y + x] != reference)
 			return false;
@@ -42,8 +42,8 @@ static bool rowIsUniform(const u16* buffer, int y, int xStart, int xEnd, u16 ref
 	return true;
 }
 
-bool SgbBorderExtractor::isBorderAreaEmpty(const u16 *buffer) {
-	u16 reference = buffer[0];
+bool SgbBorderExtractor::isBorderAreaEmpty(const uint16_t *buffer) {
+	uint16_t reference = buffer[0];
 
 	// Top / bottom borders (full width strips)
 	for (int y = 0; y < SGB_BORDER_TOP; y++)
@@ -63,7 +63,7 @@ bool SgbBorderExtractor::isBorderAreaEmpty(const u16 *buffer) {
 	return true;
 }
 
-bool SgbBorderExtractor::processFrame(const u16 *buffer, int gbWidth, int gbHeight) {
+bool SgbBorderExtractor::processFrame(const uint16_t *buffer, int gbWidth, int gbHeight) {
 	if (!isActive || gbWidth != SGB_FRAME_WIDTH || gbHeight != SGB_FRAME_HEIGHT)
 		return false;
 
@@ -106,12 +106,12 @@ char * BorderManager::getPNGBorderPath(const char* title) {
 
 // Converts flat, row-major RGBA8 pixels into a newly allocated 4x4-tiled
 // GX_TF_RGB5A3 buffer, opaque/RGB555-mode (bit15 set)
-static u16 * TileRGBA8ToRGB555(const u8 *rgba, int width, int height)
+static uint16_t * TileRGBA8ToRGB555(const uint8_t *rgba, int width, int height)
 {
 	int padWidth = (width + 3) & ~3;
 	int padHeight = (height + 3) & ~3;
 
-	u16 *tiled = (u16 *) malloc(padWidth * padHeight * 2);
+	uint16_t *tiled = (uint16_t *) malloc(padWidth * padHeight * 2);
 	if (!tiled)
 		return nullptr;
 
@@ -123,12 +123,12 @@ static u16 * TileRGBA8ToRGB555(const u8 *rgba, int width, int height)
 			int in_tile_x = x % 4;
 			int idx = (tile_y * (padWidth / 4) + tile_x) * 16 + (in_tile_y * 4 + in_tile_x);
 
-			u16 color = 0x8000; // RGB555 mode, opaque
+			uint16_t color = 0x8000; // RGB555 mode, opaque
 			if (x < width && y < height) {
-				const u8 *px = rgba + (y * width + x) * 4;
-				u8 r5 = px[0] >> 3;
-				u8 g5 = px[1] >> 3;
-				u8 b5 = px[2] >> 3;
+				const uint8_t *px = rgba + (y * width + x) * 4;
+				uint8_t r5 = px[0] >> 3;
+				uint8_t g5 = px[1] >> 3;
+				uint8_t b5 = px[2] >> 3;
 				color |= (r5 << 10) | (g5 << 5) | b5;
 			}
 			tiled[idx] = color;
@@ -138,12 +138,12 @@ static u16 * TileRGBA8ToRGB555(const u8 *rgba, int width, int height)
 	return tiled;
 }
 
-u16* BorderManager::load(const char *title, const char *fallback, int &outWidth, int &outHeight) {
+uint16_t* BorderManager::load(const char *title, const char *fallback, int &outWidth, int &outHeight) {
 	void *png_tmp_buf = mem1_malloc(1024 * 1024);
 	char *borderPath = getPNGBorderPath(title);
 	int imgWidth = 0, imgHeight = 0;
-	u8 *rgba = nullptr;
-	u16 *newBorder = nullptr;
+	uint8_t *rgba = nullptr;
+	uint16_t *newBorder = nullptr;
 
 	bool borderLoaded = LoadFile((char*) png_tmp_buf, borderPath, 0, 1024 * 1024, SILENT);
 	if (!borderLoaded && fallback) {
@@ -155,12 +155,12 @@ u16* BorderManager::load(const char *title, const char *fallback, int &outWidth,
 	if (!borderLoaded)
 		goto cleanup;
 
-	if (!PNGGetImageSize((const u8*) png_tmp_buf, &imgWidth, &imgHeight))
+	if (!PNGGetImageSize((const uint8_t*) png_tmp_buf, &imgWidth, &imgHeight))
 		goto cleanup;
 	if (imgWidth > 640 || imgHeight > 480)
 		goto cleanup;
 
-	rgba = DecodePNGToRGBA8((const u8*) png_tmp_buf, imgWidth, imgHeight);
+	rgba = DecodePNGToRGBA8((const uint8_t*) png_tmp_buf, imgWidth, imgHeight);
 	if (!rgba)
 		goto cleanup;
 
@@ -185,8 +185,8 @@ cleanup:
 void BorderManager::save(const void* buffer) {
 	char* borderPath = nullptr;
 	FILE* f = nullptr;
-	u8* rgb24 = nullptr;
-	u8* png = nullptr;
+	uint8_t* rgb24 = nullptr;
+	uint8_t* png = nullptr;
 	uint32_t pngSize = 0;
 
 	int err;
@@ -209,18 +209,18 @@ void BorderManager::save(const void* buffer) {
 	f = fopen(borderPath, "wb");
 	if (!f) goto cleanup;
 
-	rgb24 = (u8*) mem1_malloc(SGB_FRAME_WIDTH * SGB_FRAME_HEIGHT * 3);
+	rgb24 = (uint8_t*) mem1_malloc(SGB_FRAME_WIDTH * SGB_FRAME_HEIGHT * 3);
 	if (!rgb24) goto cleanup;
 
 	// buffer is the raw, linear (not GX-tiled) SGB framebuffer capture,
 	// RGB555 pixels with a 258-pixel row stride - just convert to RGB24
 	{
-		const u16* src = (const u16*) buffer;
+		const uint16_t* src = (const uint16_t*) buffer;
 		for (int y = 0; y < SGB_FRAME_HEIGHT; y++) {
-			const u16* srcRow = src + y * 258;
-			u8* dstRow = rgb24 + y * SGB_FRAME_WIDTH * 3;
+			const uint16_t* srcRow = src + y * 258;
+			uint8_t* dstRow = rgb24 + y * SGB_FRAME_WIDTH * 3;
 			for (int x = 0; x < SGB_FRAME_WIDTH; x++) {
-				u16 color = srcRow[x];
+				uint16_t color = srcRow[x];
 				dstRow[x * 3]     = ((color >> 10) & 0x1F) << 3;
 				dstRow[x * 3 + 1] = ((color >> 5) & 0x1F) << 3;
 				dstRow[x * 3 + 2] = (color & 0x1F) << 3;
@@ -258,7 +258,7 @@ void GameBorder::clear() {
 	needsTextureSync = false;
 }
 
-void GameBorder::setBorder(u16 *newPixels, int newWidth, int newHeight) {
+void GameBorder::setBorder(uint16_t *newPixels, int newWidth, int newHeight) {
 	clear();
 	if (newPixels) {
 		pixels = newPixels;
@@ -299,5 +299,5 @@ void* GameBorder::applyToTexture(void *textureBase, int gbWidth, int gbHeight) {
 	int tileRowBytes = (width / 4) * 32;
 	int offsetBytes = (offsetY / 4) * tileRowBytes + (offsetX / 4) * 32;
 
-	return (u8*)textureBase + offsetBytes;
+	return (uint8_t*)textureBase + offsetBytes;
 }

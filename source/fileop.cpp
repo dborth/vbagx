@@ -39,7 +39,7 @@
 
 static mutex_t saveBufferLock = LWP_MUTEX_NULL;
 unsigned char *savebuffer = nullptr;
-u8 *ext_font_ttf = nullptr;
+uint8_t *ext_font_ttf = nullptr;
 FILE * file; // file pointer - the only one we should ever use!
 bool unmountRequired[9] = { false, false, false, false, false, false, false, false, false };
 bool isMounted[9] = { false, false, false, false, false, false, false, false, false };
@@ -1038,7 +1038,7 @@ size_t LoadFont(char * filepath)
 		extmem_free(ext_font_ttf);
 	}
 
-	ext_font_ttf = (u8 *)extmem_malloc(loadSize);
+	ext_font_ttf = (uint8_t *)extmem_malloc(loadSize);
 
 	if(!ext_font_ttf) {
 		ErrorPrompt("Font file is too large!");
@@ -1068,7 +1068,7 @@ void LoadBgMusic()
 		return;
 	}
 
-	u8 * ogg_data = (u8 *)extmem_malloc(ogg_size);
+	uint8_t * ogg_data = (uint8_t *)extmem_malloc(ogg_size);
 
 	if(!ogg_data) {
 		return;

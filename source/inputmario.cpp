@@ -37,8 +37,8 @@ uint32_t MarioKartInput(unsigned short pad) {
 	uint32_t J = StandardMovement(pad);
 	static uint32_t frame = 0;
 
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;
 
@@ -158,8 +158,8 @@ uint32_t MarioWorldInput(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 FallState = CPUReadByte(0x3003FA1); // 0B = jump, 24 = fall
-	u8 RidingYoshi = CPUReadByte(0x3004302); // 00 = not riding, 01 = riding
+	uint8_t FallState = CPUReadByte(0x3003FA1); // 0B = jump, 24 = fall
+	uint8_t RidingYoshi = CPUReadByte(0x3004302); // 00 = not riding, 01 = riding
 	static bool NeedStomp = false;
 
 	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;

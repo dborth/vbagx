@@ -32,7 +32,7 @@
 #include "vba/gba/GBAinline.h"
 #include "vba/gb/gbGlobals.h"
 
-void gbSetSpritePal(u8 WhichPal, uint32_t bright, uint32_t medium, uint32_t dark);
+void gbSetSpritePal(uint8_t WhichPal, uint32_t bright, uint32_t medium, uint32_t dark);
 
 #define MK1_CAGE 0
 #define MK1_KANO 1
@@ -111,7 +111,7 @@ void gbSetSpritePal(u8 WhichPal, uint32_t bright, uint32_t medium, uint32_t dark
 #define MKA_ShaoKhan 25
 
 static bool HP=0,LP=0,HK=0,LK=0,BL=0,Throw=0,CS=0,F=0,B=0,Select=0,Start=0,SpecialMove=0;
-static u16	OurHealth=0,OpponentHealth=0,OurOldHealth=0;
+static uint16_t	OurHealth=0,OpponentHealth=0,OurOldHealth=0;
 static s16  OurX=0,OpponentX=1;
 static uint32_t  VBA_FORWARD=VBA_RIGHT, VBA_BACK=VBA_LEFT;
 
@@ -157,17 +157,17 @@ uint32_t GetMKInput(unsigned short pad, int rumbleTime=4) {
 // Allows writes to the ROM memory for hacking
 void gbaWriteMemory(uint32_t addr, uint32_t value) {
 	if (addr<0x8000000 || addr>=0xD000000) CPUWriteMemory(addr, value);
-	else WRITE32LE(((u16 *)&rom[addr&0x1FFFFFC]), value);
+	else WRITE32LE(((uint16_t *)&rom[addr&0x1FFFFFC]), value);
 }
-void gbaWriteHalfWord(uint32_t addr, u16 value) {
+void gbaWriteHalfWord(uint32_t addr, uint16_t value) {
 	if (addr<0x8000000 || addr>=0xD000000) CPUWriteHalfWord(addr, value);
-	else WRITE16LE(((u16 *)&rom[addr&0x1FFFFFC]), value);
+	else WRITE16LE(((uint16_t *)&rom[addr&0x1FFFFFC]), value);
 }
-void gbaWriteByte(uint32_t addr, u8 value) {
+void gbaWriteByte(uint32_t addr, uint8_t value) {
 	if (addr<0x8000000 || addr>=0xD000000) CPUWriteByte(addr, value);
 	else rom[addr & 0x1FFFFFF] = value;
 }
-void gbWriteByte(u16 addr, u8 value) {
+void gbWriteByte(uint16_t addr, uint8_t value) {
 	if (addr>=0x8000) gbWriteMemory(addr, value);
 	else gbRom[addr] = value;
 }
@@ -177,8 +177,8 @@ uint32_t MK1Input(unsigned short pad) {
 	OpponentHealth = gbReadMemory(0xD696);
 	OurX = gbReadMemory(0xCF00);
 	OpponentX = gbReadMemory(0xCF26);
-	u8 MenuChar = gbReadMemory(0xD61D)+1;
-	static u8 OldMenuChar = 0;
+	uint8_t MenuChar = gbReadMemory(0xD61D)+1;
+	static uint8_t OldMenuChar = 0;
 	if (MenuChar != OldMenuChar) {
 		systemGameRumble(4);
 		OldMenuChar = MenuChar;
@@ -245,7 +245,7 @@ uint32_t MK12Input(unsigned short pad) {
 	return J;
 }
 
-void MK3SetPal(int player, u8 NewChar, u8 SubChar=0) {
+void MK3SetPal(int player, uint8_t NewChar, uint8_t SubChar=0) {
 	switch (NewChar) {
 		case MK3_SHEEVA: gbSetSpritePal(player, 0xF5CCAC,0x9A7057,0x800000); break;
 		case MK3_KANO: gbSetSpritePal(player, 0xA87860,0x882020,0x000000); break;
@@ -276,7 +276,7 @@ void MK3SetPal(int player, u8 NewChar, u8 SubChar=0) {
 
 void MK3Rename(int n, const char *name, const char *fullname = nullptr) {
 	if (n<0 || n>10) return;
-	u16 addr = 0x2DD9 + n*8;
+	uint16_t addr = 0x2DD9 + n*8;
 	int i;
 	for (i=0; i<8; i++) {
 		if (name[i]=='\0') {
@@ -302,7 +302,7 @@ void MK3Rename(int n, const char *name, const char *fullname = nullptr) {
 	}
 }
 
-void MK3RenameEveryoneProperlyExcept(u8 n) {
+void MK3RenameEveryoneProperlyExcept(uint8_t n) {
 	const char *names[MK3_SHAOKHAN+1] = {
 		"SINDEL", "SEKTOR", "KABAL", "SHEEVA", "SMOKE", "SUBZERO", "KANO", "SONYA", "CYRAX", "SHAO"};
 	const char *longnames[MK3_SHAOKHAN+1] = {
@@ -337,14 +337,14 @@ void MK3RandomFemale() {
 	}
 }
 
-void MK3Impersonate(u8 appearance, u8 moves, const char *name, const char *longname = nullptr) {
+void MK3Impersonate(uint8_t appearance, uint8_t moves, const char *name, const char *longname = nullptr) {
 	gbWriteMemory(0xC0F0, appearance);
 	MK3Rename(appearance, name, longname);
 	if (moves!=MK3_RAND)
 		gbWriteMemory(0xCD00, moves);
 }
 
-u8 MK3SetSubchar(int Char, int Subchar, bool menu=false) {
+uint8_t MK3SetSubchar(int Char, int Subchar, bool menu=false) {
 	switch (Char) {
 		case MK3_SUBZERO:
 			if (Subchar>=5) Subchar = 0;
@@ -422,18 +422,18 @@ u8 MK3SetSubchar(int Char, int Subchar, bool menu=false) {
 uint32_t MK3Input(unsigned short pad) {
 	OurHealth = gbReadMemory(0xC0D6);
 	OpponentHealth = gbReadMemory(0xC0D7);
-	u8 OpponentChar = gbReadMemory(0xC0F1);
+	uint8_t OpponentChar = gbReadMemory(0xC0F1);
 	OurX = gbReadMemory(0xCD02) | (gbReadMemory(0xCD03) << 8);
 	OpponentX = gbReadMemory(0xCD42) | (gbReadMemory(0xCD43) << 8);
 	bool InSelectScreen=false, InGame=false;
 	if (gbReadMemory(0xC51E)==0x00 && gbReadMemory(0xC522)==0xFF) InSelectScreen = true;
 	if (gbReadMemory(0xC080)==0x00 && gbReadMemory(0xC522)==0x00) InGame = true;
 	static bool WasInSelectScreen = false;
-	static u8 MenuChar = 0;
-	static u8 MenuSubChar = 0;
+	static uint8_t MenuChar = 0;
+	static uint8_t MenuSubChar = 0;
 	if (InSelectScreen) MenuChar = gbReadMemory(0xD4CE);
 		
-	static u8 OldMenuChar = 0;
+	static uint8_t OldMenuChar = 0;
 	if (MenuChar != OldMenuChar) {
 		if (InSelectScreen && !InGame) {
 			systemGameRumble(4);
@@ -583,7 +583,7 @@ void MKASetYPos(s16 y) {
 		default: def = 0x33; break;
 	}
 	y-=def;
-	gbaWriteHalfWord(0x200000A, (u16)((s16)CPUReadHalfWord(0x200000A)+y));
+	gbaWriteHalfWord(0x200000A, (uint16_t)((s16)CPUReadHalfWord(0x200000A)+y));
 }
 
 bool MKAIsStanding() {
@@ -597,7 +597,7 @@ bool MKAIsStanding() {
 			return false;
 	}
 }
-void MKARename(u8 n, const char *name) {
+void MKARename(uint8_t n, const char *name) {
 	if (n>=MKA_SubZero2) n--;
 	uint32_t addr = 0x80285CC+n*16;
 	char *s = (char *)&rom[addr & 0x1FFFFFF];
@@ -610,7 +610,7 @@ void MKARename(u8 n, const char *name) {
 	for (int i=strlen(s)+1; i<12; i++) s[i]=' ';
 	s[12]='\0';
 }
-void MKARenameEveryoneProperlyExcept(u8 n) {
+void MKARenameEveryoneProperlyExcept(uint8_t n) {
 	const char *names[MKA_ShaoKhan+1] = {
 		"RAIN", "REPTILE", "STRYKER", "JAX", "NIGHT WOLF", "JADE", "NOOB SAIBOT", "SONYA",
 		"KANO", "MILEENA", "ERMAC", "SUB ZERO", "SUB ZERO", "KUNG LAO", "SEKTOR", "KITANA", "SMOKE",
@@ -762,7 +762,7 @@ void MKAMakeKabal() {
 #define BOSS_PINK 0xB3
 
 
-void MKAChangeColour(u8 colour) {
+void MKAChangeColour(uint8_t colour) {
 	gbaWriteHalfWord(0x2000004, colour);
 }
 
@@ -805,7 +805,7 @@ void MKARandomFemale() {
 	}
 }
 
-u8 MKANextSubchar(int Char, int Subchar, u16 OriginalColour) {
+uint8_t MKANextSubchar(int Char, int Subchar, uint16_t OriginalColour) {
 	Subchar++;
 	switch (Char) {
 		case MKA_Reptile:
@@ -978,13 +978,13 @@ uint32_t MKAInput(unsigned short pad)
 	OpponentHealth = CPUReadByte(0x2000020+0x68);
 	OurX = (s16)CPUReadHalfWord(0x2000008);
 	OpponentX = (s16)CPUReadHalfWord(0x2000008+0x68);
-	u8 OurChar =   CPUReadByte(0x2000025);
+	uint8_t OurChar =   CPUReadByte(0x2000025);
 
 	static int MenuChar = 0;
 	static int MenuSubchar = 0;
 	static bool WasInMenu = false;
-	static u8 OurOldChar = 255;
-	static u8 OriginalColour = 0;
+	static uint8_t OurOldChar = 255;
+	static uint8_t OriginalColour = 0;
 	static bool OldCostumeButton = false;
 	bool CostumeButton = false;
 	if (OriginalColour == 0) OriginalColour = CPUReadByte(0x2000004);
@@ -1043,7 +1043,7 @@ uint32_t MKAInput(unsigned short pad)
 
 	if (CostumeButton && !OldCostumeButton) {
 		int OldSubChar = MenuSubchar;
-		u8 OldMaxFrame = CPUReadByte(0x2000048);
+		uint8_t OldMaxFrame = CPUReadByte(0x2000048);
 		MenuSubchar = MKANextSubchar(MenuChar, MenuSubchar, OriginalColour);
 		if (MenuSubchar!=OldSubChar) systemGameRumble(8);
 		OurOldChar = CPUReadByte(0x2000025);
@@ -1061,7 +1061,7 @@ uint32_t MKDAInput(unsigned short pad)
 {
 	static uint32_t prevJ = 0, prevPrevJ = 0;
 	OurHealth = CPUReadByte(0x3000760);
-	u8 Side = CPUReadByte(0x3000747);
+	uint8_t Side = CPUReadByte(0x3000747);
 	uint32_t Forwards, Back;
 	if (Side == 0) {
 		OurX = 0; OpponentX = 1;
@@ -1103,7 +1103,7 @@ uint32_t MKTEInput(unsigned short pad)
 {
 	static uint32_t prevJ = 0, prevPrevJ = 0;
 	OurHealth = CPUReadByte(0x3000760);
-	u8 Side = CPUReadByte(0x3000777);
+	uint8_t Side = CPUReadByte(0x3000777);
 	uint32_t Forwards, Back;
 	if (Side == 0) {
 		OurX = 0; OpponentX = 1;

@@ -907,11 +907,11 @@ void GX_Render_Init(int width, int height) {
 	vheight = height;
 }
 
-static long long int* ProcessFrameAndGetDest(void* textureBase, const u16* frameBuffer, int gbWidth, int gbHeight) {
+static long long int* ProcessFrameAndGetDest(void* textureBase, const uint16_t* frameBuffer, int gbWidth, int gbHeight) {
     if (sgbBorderExtractor.processFrame(frameBuffer, gbWidth, gbHeight)) {
         // Scraper succeeded - load the PNG it just created
         int bw = 0, bh = 0;
-        u16* borderPixels = BorderManager::load(nullptr, nullptr, bw, bh);
+        uint16_t* borderPixels = BorderManager::load(nullptr, nullptr, bw, bh);
         if (borderPixels) {
             gameBorder.setBorder(borderPixels, bw, bh);
         }
@@ -935,7 +935,7 @@ static void UntileRGB5A3ToRGB24(const void * tiledTexture, int width, int height
 	int padded_width = (width + 3) & ~3;
 	u8 * dst = savebuffer;
 
-	const u16 * tex16 = (const u16 *) tiledTexture;
+	const uint16_t * tex16 = (const uint16_t *) tiledTexture;
 
 	for(int y = 0; y < height; y++) {
 		int tile_y = y / 4;
@@ -945,7 +945,7 @@ static void UntileRGB5A3ToRGB24(const void * tiledTexture, int width, int height
 			int in_tile_x = x % 4;
 
 			int tex_pixel_idx = (tile_y * (padded_width / 4) + tile_x) * 16 + (in_tile_y * 4 + in_tile_x);
-			u16 color = tex16[tex_pixel_idx];
+			uint16_t color = tex16[tex_pixel_idx];
 
 			// RGB555 format
 			u8 r = (color >> 10) & 0x1F;
@@ -1178,7 +1178,7 @@ static void MakeTextureVBA_Dynamic(const void *src, void *dst, s32 width, s32 he
  ****************************************************************************/
 static void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height)
 {
-	long long int* dst_ptr = ProcessFrameAndGetDest(textureBase, (const u16*)srcBuffer, width, height);
+	long long int* dst_ptr = ProcessFrameAndGetDest(textureBase, (const uint16_t*)srcBuffer, width, height);
 
 	int targetWidth  = gameBorder.hasBorder() ? gameBorder.getWidth()  : width;
 	int targetHeight = gameBorder.hasBorder() ? gameBorder.getHeight() : height;
@@ -1419,7 +1419,7 @@ void Menu_Render()
  *
  * Draws the specified image on screen using GX
  ***************************************************************************/
-void Menu_DrawImg(void * texture, f32 xpos, f32 ypos, u16 width, u16 height, f32 degrees, f32 scaleX, f32 scaleY, u8 alpha)
+void Menu_DrawImg(void * texture, f32 xpos, f32 ypos, uint16_t width, uint16_t height, f32 degrees, f32 scaleX, f32 scaleY, u8 alpha)
 {
 	if(texture == nullptr)
 		return;

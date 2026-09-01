@@ -36,8 +36,8 @@ uint32_t LegoStarWars1Input(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;
 
@@ -61,8 +61,8 @@ uint32_t LegoStarWars2Input(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;
 
@@ -90,8 +90,8 @@ uint32_t SWObiWanInput(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 Health = gbReadMemory(0xCFF2);
-	static u8 OldHealth = 0;
+	uint8_t Health = gbReadMemory(0xCFF2);
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;
 
@@ -125,8 +125,8 @@ uint32_t SWEpisode2Input(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 Health = CPUReadByte(0x3002fb3);
-	static u8 OldHealth = 0;
+	uint8_t Health = CPUReadByte(0x3002fb3);
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(6);
 	OldHealth = Health;
 
@@ -150,8 +150,8 @@ uint32_t SWEpisode3Input(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(6);
 	OldHealth = Health;
 
@@ -175,8 +175,8 @@ uint32_t SWJediPowerBattlesInput(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(6);
 	OldHealth = Health;
 
@@ -200,8 +200,8 @@ uint32_t SWTrilogyInput(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(6);
 	OldHealth = Health;
 
@@ -225,8 +225,8 @@ uint32_t SWEpisode4Input(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(6);
 	OldHealth = Health;
 
@@ -258,8 +258,8 @@ uint32_t SWYodaStoriesInput(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(6);
 	OldHealth = Health;
 
@@ -283,8 +283,8 @@ uint32_t SWNDAInput(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(6);
 	OldHealth = Health;
 

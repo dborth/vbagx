@@ -106,8 +106,8 @@ int emulating = 0;
 int systemRedShift = 0;
 int systemBlueShift = 0;
 int systemGreenShift = 0;
-u16 systemGbPalette[24];
-u16 systemColorMap16[0x10000];
+uint16_t systemGbPalette[24];
+uint16_t systemColorMap16[0x10000];
 
 void StopColorizing();
 
@@ -343,7 +343,7 @@ void systemFrame()
 * System
 ****************************************************************************/
 
-void systemGbPrint(u8 *data,int pages,int feed,int palette, int contrast) {}
+void systemGbPrint(uint8_t *data,int pages,int feed,int palette, int contrast) {}
 
 static char lastSystemMessage[128];
 
@@ -714,7 +714,7 @@ uint32_t systemReadJoypad(int which)
 static int sensorX = 2047;
 static int sensorY = 2047;
 static int sensorWario = 0x6C0;
-static u8 sensorDarkness = 0xE8; // total darkness (including daylight on rainy days)
+static uint8_t sensorDarkness = 0xE8; // total darkness (including daylight on rainy days)
 bool CalibrateWario = false;
 
 int systemGetSensorX()
@@ -733,14 +733,14 @@ int systemGetSensorZ()
 	else return sensorWario;
 }
 
-u8 systemGetSensorDarkness()
+uint8_t systemGetSensorDarkness()
 {
 	return sensorDarkness;
 }
 
 void systemUpdateSolarSensor()
 {
-	u8 sun = 0x0; //sun = 0xE8 - 0xE8 (case 0 and default)
+	uint8_t sun = 0x0; //sun = 0xE8 - 0xE8 (case 0 and default)
 
 	switch (SunBars)
 	{
@@ -876,7 +876,7 @@ static int srcHeight = 0;
 
 void systemDrawScreen()
 {
-	u8* renderBuffer = pix;
+	uint8_t* renderBuffer = pix;
 
 	// Advance pointer by 484 bytes (240 pixels * 2 bpp + 4 byte pitch pad)
 	// to skip the uninitialized top row without runtime multiplication stalls
@@ -910,7 +910,7 @@ static bool ValidGameId(uint32_t id)
 		return false;
 	for (unsigned i = 1u; i <= 4u; ++i)
 	{
-		u8 b = id & 0xFF;
+		uint8_t b = id & 0xFF;
 		id >>= 8;
 		if (!(b >= 'A' && b <= 'Z') && !(b >= '0' && b <= '9'))
 			return false;
@@ -935,7 +935,7 @@ bool IsGBAGame()
 static void gbApplyPerImagePreferences()
 {
 	// Only works for some GB Colour roms
-	u8 Colour = gbRom[0x143];
+	uint8_t Colour = gbRom[0x143];
 	if (Colour == 0x80 || Colour == 0xC0)
 	{
 		RomIdCode = gbRom[0x13f] | (gbRom[0x140] << 8) | (gbRom[0x141] << 16)
@@ -1182,7 +1182,7 @@ void InitGameDimensionsAndBorder() {
 	if(GCSettings.SGBBorder == SGBBORDER_FROMPNG) {
 		int bw = 0, bh = 0;
 		const char* fallback = (cartridgeType == CARTRIDGE_GBA) ? "defaultgba" : "default";
-		u16* borderPixels = BorderManager::load(nullptr, fallback, bw, bh);
+		uint16_t* borderPixels = BorderManager::load(nullptr, fallback, bw, bh);
 
 		if (borderPixels) {
 			gameBorder.setBorder(borderPixels, bw, bh);
@@ -1272,10 +1272,10 @@ int LoadROMToVM(const char* filepath) {
 				continue;
 			}
 
-			uint32_t uncompSize = ((u8)zipbuffer[22]) |
-							 ((u8)zipbuffer[23] << 8) |
-							 ((u8)zipbuffer[24] << 16) |
-							 ((u8)zipbuffer[25] << 24);
+			uint32_t uncompSize = ((uint8_t)zipbuffer[22]) |
+							 ((uint8_t)zipbuffer[23] << 8) |
+							 ((uint8_t)zipbuffer[24] << 16) |
+							 ((uint8_t)zipbuffer[25] << 24);
 
 			if(uncompSize > ARAM_SIZE) {
 				ErrorPrompt("Compressed ROM file is too large to decompress!");
@@ -1319,7 +1319,7 @@ int LoadROMToVM(const char* filepath) {
 			ShowProgress("Loading...", 0, preload_size);
 
 			size_t offset = 0;
-			u8* chunk_buf = (u8*)memalign(32, 65536);
+			uint8_t* chunk_buf = (uint8_t*)memalign(32, 65536);
 
 			size_t readsize;
 
@@ -1373,7 +1373,7 @@ int LoadROMToVM(const char* filepath) {
 bool LoadGBROM()
 {
 	gbRom = romPtr;
-	bios = (u8 *)calloc(1,0x100);
+	bios = (uint8_t *)calloc(1,0x100);
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
 	if(!inSz)
@@ -1464,14 +1464,14 @@ void RomCleanup()
 
 static bool GBAROMAlloc()
 {
-	workRAM = (u8 *)memalign(32, 0x40000);
-	bios = (u8 *)memalign(32,0x4000);
-	internalRAM = (u8 *)memalign(32,0x8000);
-	paletteRAM = (u8 *)memalign(32,0x400);
-	vram = (u8 *)memalign(32, 0x20000);
-	oam = (u8 *)memalign(32, 0x400);
-	pix = (u8 *)memalign(32, 4 * 241 * 162);
-	ioMem = (u8 *)memalign(32, 0x400);
+	workRAM = (uint8_t *)memalign(32, 0x40000);
+	bios = (uint8_t *)memalign(32,0x4000);
+	internalRAM = (uint8_t *)memalign(32,0x8000);
+	paletteRAM = (uint8_t *)memalign(32,0x400);
+	vram = (uint8_t *)memalign(32, 0x20000);
+	oam = (uint8_t *)memalign(32, 0x400);
+	pix = (uint8_t *)memalign(32, 4 * 241 * 162);
+	ioMem = (uint8_t *)memalign(32, 0x400);
 
 	if(workRAM == nullptr || bios == nullptr || internalRAM == nullptr ||
 		paletteRAM == nullptr || vram == nullptr || oam == nullptr ||

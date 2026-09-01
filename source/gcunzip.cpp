@@ -65,10 +65,10 @@ FLIP32 (u32 b)
 	return c;
 }
 
-static u16
-FLIP16 (u16 b)
+static uint16_t
+FLIP16 (uint16_t b)
 {
-	u16 c;
+	uint16_t c;
 
 	c = (b & 0xff00) >> 8;
 	c |= (b & 0xff) << 8;

@@ -31,19 +31,19 @@
 #include "vba/gba/bios.h"
 #include "vba/gba/GBAinline.h"
 
-u8 ZeldaDxLeftPos = 2, ZeldaDxRightPos = 3, ZeldaDxDownPos = 4;
-u8 ZeldaDxShieldPos = 5, ZeldaDxSwordPos = 5, ZeldaDxBraceletPos = 5;
+uint8_t ZeldaDxLeftPos = 2, ZeldaDxRightPos = 3, ZeldaDxDownPos = 4;
+uint8_t ZeldaDxShieldPos = 5, ZeldaDxSwordPos = 5, ZeldaDxBraceletPos = 5;
 
-void ZeldaSwap(u8 pos1, u8 pos2, u16 addr)
+void ZeldaSwap(uint8_t pos1, uint8_t pos2, uint16_t addr)
 {
-	u8 OldItem = gbReadMemory(addr + pos1);
+	uint8_t OldItem = gbReadMemory(addr + pos1);
 	gbWriteMemory(addr + pos1, gbReadMemory(addr + pos2));
 	gbWriteMemory(addr + pos2, OldItem);
 }
 
-u8 DrawnItemPos = 0xFF;
+uint8_t DrawnItemPos = 0xFF;
 
-bool ZeldaDrawItem(u8 ItemNumber, u16 addr, int boxes)
+bool ZeldaDrawItem(uint8_t ItemNumber, uint16_t addr, int boxes)
 {
 	if (gbReadMemory(addr + 1) == ItemNumber)
 		return true;
@@ -123,7 +123,7 @@ uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 
-	u16 ItemsAddr = 0xDB00;
+	uint16_t ItemsAddr = 0xDB00;
 	static bool QuestScreen = false;
 	static int StartCount = 0;
 	static int SwordCount = 0;
@@ -133,14 +133,14 @@ uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 
 	uint32_t J = StandardMovement(pad);
 
-	u8 CursorPos = gbReadMemory(0xC1B6) + 2;
-	u8 SelItem = 0;
+	uint8_t CursorPos = gbReadMemory(0xC1B6) + 2;
+	uint8_t SelItem = 0;
 	if (CursorPos < 12)
 		SelItem = gbReadMemory(ItemsAddr + CursorPos);
 
 	// Rumble when they lose health!
-	u8 Health = gbReadMemory(0xDB5A);
-	static u8 OldHealth = 0;
+	uint8_t Health = gbReadMemory(0xDB5A);
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth)
 		systemGameRumble(20);
 	OldHealth = Health;
@@ -252,7 +252,7 @@ uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 			systemGameRumbleOnlyFor(5);
 			J |= VBA_BUTTON_B;
 		} else {
-			u8 BButtonItem = gbReadMemory(ItemsAddr);
+			uint8_t BButtonItem = gbReadMemory(ItemsAddr);
 			if (BombArrows && (BButtonItem==5)) {
 				if (ZeldaDrawItem(2, ItemsAddr, 12)) {
 					J |= VBA_BUTTON_A; DelayCount++;
@@ -273,7 +273,7 @@ uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 			systemGameRumbleOnlyFor(5);
 			J |= VBA_BUTTON_B;
 		} else {
-			u8 BButtonItem = gbReadMemory(ItemsAddr);
+			uint8_t BButtonItem = gbReadMemory(ItemsAddr);
 			if (BombArrows && (BButtonItem==5)) {
 				if (ZeldaDrawItem(2, ItemsAddr, 12)) {
 					J |= VBA_BUTTON_A; DelayCount++;
@@ -316,7 +316,7 @@ uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 				systemGameRumble(5);
 				DelayCount = 10;
 			} else {
-				u8 BButtonItem = gbReadMemory(ItemsAddr);
+				uint8_t BButtonItem = gbReadMemory(ItemsAddr);
 				if (BombArrows && (BButtonItem==5)) {
 					if (ZeldaDrawItem(2, ItemsAddr, 12)) {
 						J |= VBA_BUTTON_A;
@@ -380,7 +380,7 @@ static uint32_t ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	if (!userInput[pad]) return 0;
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 
-	u16 ItemsAddr;
+	uint16_t ItemsAddr;
 	if (Seasons) ItemsAddr = 0xC680;
 	else ItemsAddr = 0xC688;
 	static uint32_t OldJ = 0;
@@ -388,10 +388,10 @@ static uint32_t ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	uint32_t J = StandardMovement(pad);
 
 	// Rumble when they lose health!
-	u8 Health;
+	uint8_t Health;
 	if (Seasons) Health = gbReadMemory(0xC6A2); // health in quarters... note C6A3 is max health
 	else Health = gbReadMemory(0xC6AA); // health in quarters... note C6AB is max health
-	static u8 OldHealth = 0;
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;
 
@@ -480,7 +480,7 @@ static uint32_t ZeldaOracleInput(bool Seasons, unsigned short pad) {
 		if (gbReadMemory(ItemsAddr+1)==5) SheathCount = 15;
 	}
 
-	u8 CursorPos = gbReadMemory(0xCBD0)+2;
+	uint8_t CursorPos = gbReadMemory(0xCBD0)+2;
 
 	// Can't swap items if using two handed sword unless on item screen
 	if (OnItemScreen || (gbReadMemory(ItemsAddr+0)!=0x0C && gbReadMemory(ItemsAddr+1)!=0x0C)) {
@@ -651,22 +651,22 @@ uint32_t MinishCapInput(unsigned short pad)
 	uint32_t J = StandardMovement(pad);
 
 	// Rumble when they lose health!
-	u8 Health = CPUReadByte(0x2002aea);
-	static u8 OldHealth = 0;
+	uint8_t Health = CPUReadByte(0x2002aea);
+	static uint8_t OldHealth = 0;
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;
 
-	static u8 SubscreenWanted = 0xFF;
+	static uint8_t SubscreenWanted = 0xFF;
 	static bool waiting = false;
-	u8 Subscreen = CPUReadByte(0x200008C);
+	uint8_t Subscreen = CPUReadByte(0x200008C);
 	if (Subscreen == 0x64) Subscreen = 0; // Boss battle (balloon)
 
-	u8 GameStart = CPUReadByte(0x2000086);
-	u8 SelBox = CPUReadByte(0x2000083);
-	u8 LoadMenu = CPUReadByte(0x200AF57);
+	uint8_t GameStart = CPUReadByte(0x2000086);
+	uint8_t SelBox = CPUReadByte(0x2000083);
+	uint8_t LoadMenu = CPUReadByte(0x200AF57);
 
-	static u8 AButtonItem = 0;
-	static u8 BButtonItem = 0;
+	static uint8_t AButtonItem = 0;
+	static uint8_t BButtonItem = 0;
 
 	if (Subscreen == 0x2c) {
 		AButtonItem = CPUReadByte(0x200af3c);
@@ -712,7 +712,7 @@ uint32_t MinishCapInput(unsigned short pad)
 	bool BItemButton        = data.buttons_h & GUI_TRIGGER_R;
 
 	bool OnItemScreen = (Subscreen==0x2c);
-	u8 RButtonAction = CPUReadByte(0x200af32);
+	uint8_t RButtonAction = CPUReadByte(0x200af32);
 
 	// Wii Pointer selection on item screen
 	int cx, cy, SelRow, SelCol, CursorRow = 0xFF, CursorCol = 0xFF;
@@ -1006,8 +1006,8 @@ uint32_t ALinkToThePastInput(unsigned short pad)
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 
 	// Rumble when they lose health!
 	if (Health < OldHealth) systemGameRumble(20);
@@ -1048,8 +1048,8 @@ uint32_t Zelda1Input(unsigned short pad)
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;
@@ -1087,8 +1087,8 @@ uint32_t Zelda2Input(unsigned short pad)
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
-	u8 Health = 0;
-	static u8 OldHealth = 0;
+	uint8_t Health = 0;
+	static uint8_t OldHealth = 0;
 
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;

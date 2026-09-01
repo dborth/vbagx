@@ -34,23 +34,23 @@ enum {
 
 // Mode 3: GBA Game
 struct GBAMemory {
-    u8 texturemem[TEXTUREMEM_SIZE];
+    uint8_t texturemem[TEXTUREMEM_SIZE];
     u32 jitArena[JIT_ARENA_SIZE / sizeof(u32)];
-    u8 blockTable[HASH_TABLE_SIZE * 16];
-    u8 smcPageFlags[SMC_MAP_SIZE];
-    u8 smcRegistry[SMC_MAP_SIZE * sizeof(void*)];
+    uint8_t blockTable[HASH_TABLE_SIZE * 16];
+    uint8_t smcPageFlags[SMC_MAP_SIZE];
+    uint8_t smcRegistry[SMC_MAP_SIZE * sizeof(void*)];
 } __attribute__((aligned(32)));
 
 // Mode 2: GB Game
 struct GBMemory {
-	u8 texturemem[TEXTUREMEM_SIZE];
-	u8 heapSpace[sizeof(struct GBAMemory) - TEXTUREMEM_SIZE];
+	uint8_t texturemem[TEXTUREMEM_SIZE];
+	uint8_t heapSpace[sizeof(struct GBAMemory) - TEXTUREMEM_SIZE];
 } __attribute__((aligned(32)));
 
 // Mode 1: Menu
 struct MenuMemory {
     BROWSERENTRY browserList[MAX_BROWSER_SIZE];
-    u8 heapSpace[sizeof(struct GBAMemory) - (sizeof(BROWSERENTRY) * MAX_BROWSER_SIZE)];
+    uint8_t heapSpace[sizeof(struct GBAMemory) - (sizeof(BROWSERENTRY) * MAX_BROWSER_SIZE)];
 } __attribute__((aligned(32)));
 
 // The Master Overlay
@@ -61,7 +61,7 @@ union CoreMemoryOverlay {
 };
 
 alignas(32) union CoreMemoryOverlay coreMem;
-u8 *romPtr;
+uint8_t *romPtr;
 static mspace mem1_space = nullptr;
 static mspace extmem_space = nullptr;
 static int memoryMode = -1;
@@ -72,9 +72,9 @@ void InitMemManager ()
 	void *mem2_heap_ptr = SYS_AllocArenaMem2Hi(MEM2_SIZE, 32);
 	extmem_space = create_mspace_with_base(mem2_heap_ptr, MEM2_SIZE, 0);
 	mspace_set_footprint_limit(extmem_space, MEM2_SIZE);
-	romPtr = (u8 *)extmem_malloc(MAX_GBA_ROM_SIZE); // allocate 32 MB to GBA ROM
+	romPtr = (uint8_t *)extmem_malloc(MAX_GBA_ROM_SIZE); // allocate 32 MB to GBA ROM
 #else
-	romPtr = (u8 *)VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024); // 2MB MEM1 + 16 ARAM + SD backing for GB/GBA ROM
+	romPtr = (uint8_t *)VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024); // 2MB MEM1 + 16 ARAM + SD backing for GB/GBA ROM
 	VMPager_Init(romPtr);
 #endif
 }
@@ -147,10 +147,10 @@ static bool ChangeMode(int mode) {
 	return true;
 }
 
-static void CreateMem1Space(u8 *heapSpace, u32 size) {
+static void CreateMem1Space(uint8_t *heapSpace, u32 size) {
 	mem1_space = create_mspace_with_base(heapSpace, size, 0);
 	mspace_set_footprint_limit(mem1_space, size);
-	savebuffer = (u8 *)mem1_malloc(SAVEBUFFERSIZE);
+	savebuffer = (uint8_t *)mem1_malloc(SAVEBUFFERSIZE);
 }
 
 void SwitchMemoryModeMenu() {
@@ -176,7 +176,7 @@ static void SwitchMemoryModeGBA() {
 		(u32*)coreMem.gba.jitArena,
 		(BasicBlock*)coreMem.gba.blockTable,
 		(BasicBlock**)coreMem.gba.smcRegistry,
-		(u8*)coreMem.gba.smcPageFlags
+		(uint8_t*)coreMem.gba.smcPageFlags
 	);
 }
 

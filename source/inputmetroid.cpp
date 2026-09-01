@@ -36,9 +36,9 @@ uint32_t MetroidZeroInput(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 BallState = CPUReadByte(0x30015df); // 0 = stand, 1 = crouch, 2 = ball
-	u16 Health = CPUReadByte(0x3001536);
-	static u16 OldHealth = 0;
+	uint8_t BallState = CPUReadByte(0x30015df); // 0 = stand, 1 = crouch, 2 = ball
+	uint16_t Health = CPUReadByte(0x3001536);
+	static uint16_t OldHealth = 0;
 
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;
@@ -151,9 +151,9 @@ uint32_t MetroidFusionInput(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 BallState = CPUReadByte(0x3001329); // 0 = stand, 2 = crouch, 5 = ball
-	u16 Health = CPUReadHalfWord(0x3001310); 
-	static u16 OldHealth = 0;
+	uint8_t BallState = CPUReadByte(0x3001329); // 0 = stand, 2 = crouch, 5 = ball
+	uint16_t Health = CPUReadHalfWord(0x3001310); 
+	static uint16_t OldHealth = 0;
 
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;
@@ -263,10 +263,10 @@ uint32_t Metroid1Input(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 BallState = CPUReadByte(0x3007500); // 3 = ball, other = stand
-	u8 MissileState = CPUReadByte(0x300730E); // 1 = missile, 0 = beam
-	u16 Health = CPUReadHalfWord(0x3007306);
-	static u16 OldHealth = 0;
+	uint8_t BallState = CPUReadByte(0x3007500); // 3 = ball, other = stand
+	uint8_t MissileState = CPUReadByte(0x300730E); // 1 = missile, 0 = beam
+	uint16_t Health = CPUReadHalfWord(0x3007306);
+	static uint16_t OldHealth = 0;
 
 	if (Health < OldHealth) systemGameRumble(20);
 	OldHealth = Health;
@@ -318,10 +318,10 @@ uint32_t Metroid2Input(unsigned short pad) {
 	const GuiInputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	u8 BallState = gbReadMemory(0xD020); // 4 = crouch, 5 = ball, other = stand
-	u8 MissileState = gbReadMemory(0xD04D); // 8 = missile hatch open
-	u8 Health = gbReadMemory(0xD051);
-	static u8 OldHealth = 0;
+	uint8_t BallState = gbReadMemory(0xD020); // 4 = crouch, 5 = ball, other = stand
+	uint8_t MissileState = gbReadMemory(0xD04D); // 8 = missile hatch open
+	uint8_t Health = gbReadMemory(0xD051);
+	static uint8_t OldHealth = 0;
 
 	if (Health != OldHealth) systemGameRumble(20);
 	OldHealth = Health;

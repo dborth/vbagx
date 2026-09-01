@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 			if(MenuRequested)
 			{
 				MenuRequested = false;
-				u8 *tempBuffer = (u8 *)malloc(TEXTUREMEM_SIZE); // this one needs to stay malloc because we're switching modes!
+				uint8_t *tempBuffer = (uint8_t *)malloc(TEXTUREMEM_SIZE); // this one needs to stay malloc because we're switching modes!
 				memcpy(tempBuffer, texturemem, TEXTUREMEM_SIZE);
 				SwitchMemoryModeMenu();
 				TakeScreenshot(tempBuffer);

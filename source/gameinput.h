@@ -119,8 +119,8 @@
 
 #define MARBLEMADNESS   0xFF000A
 
-u8 gbReadMemory(u16 address);
-void gbWriteMemory(u16 address, u8 value);
+uint8_t gbReadMemory(uint16_t address);
+void gbWriteMemory(uint16_t address, uint8_t value);
 
 uint32_t StandardDPad(unsigned short pad);
 uint32_t StandardMovement(unsigned short pad);

@@ -34,7 +34,7 @@ private:
 	int scanThrottle;
 
 	// Checks if the SGB border perimeter is empty (unrendered)
-	bool isBorderAreaEmpty(const u16* buffer);
+	bool isBorderAreaEmpty(const uint16_t* buffer);
 
 public:
 	SgbBorderExtractor();
@@ -43,12 +43,12 @@ public:
 	void reset(bool isSgbGame, bool borderAlreadyLoaded);
 
 	// The hot-loop hook. Returns true if a border was successfully scraped this frame.
-	bool processFrame(const u16* buffer, int gbWidth, int gbHeight);
+	bool processFrame(const uint16_t* buffer, int gbWidth, int gbHeight);
 };
 
 class BorderManager {
 public:
-	static u16* load(const char* title, const char* fallback, int& outWidth, int& outHeight);
+	static uint16_t* load(const char* title, const char* fallback, int& outWidth, int& outHeight);
 	static void save(const void* buffer);
 private:
 	static char* getPNGBorderPath(const char* title);
@@ -56,7 +56,7 @@ private:
 
 class GameBorder {
 private:
-	u16* pixels;
+	uint16_t* pixels;
 	int width;
 	int height;
 	bool needsTextureSync;
@@ -69,7 +69,7 @@ public:
 	void clear();
 
 	// Takes ownership of a newly loaded border
-	void setBorder(u16* newPixels, int newWidth, int newHeight);
+	void setBorder(uint16_t* newPixels, int newWidth, int newHeight);
 
 	bool hasBorder() const;
 
