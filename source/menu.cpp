@@ -43,7 +43,7 @@
 #include "menu.h"
 #include "gamesettings.h"
 #include "libgui/Gui.h"
-#include "drivers/ogc/vmpager.h"
+#include "drivers/ogc/vm/vmpager.h"
 #include "vba/gb/gb.h"
 #include "utils/pngcodec.h"
 
