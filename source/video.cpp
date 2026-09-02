@@ -23,7 +23,7 @@
 #include "fileop.h"
 #include "memmanager.h"
 #include "gameborder.h"
-#include "videofilters.h"
+#include "drivers/ogc/videofilters.h"
 #include "menu.h"
 #include "input.h"
 #include "vbasupport.h"

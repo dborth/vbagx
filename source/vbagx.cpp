@@ -20,7 +20,7 @@
 #include "video.h"
 #include "gamesettings.h"
 #include "memmanager.h"
-#include "videofilters.h"
+#include "drivers/ogc/videofilters.h"
 #include "utils/vmpager.h"
 
 #include "vba/gba/Globals.h"
