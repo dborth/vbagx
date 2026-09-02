@@ -4,7 +4,7 @@
 #include <ogc/audio.h>
 #include "../AudioDriver.h"
 
-class OgcNullAudioDriver : public AudioDriver
+class GameCubeAudioDriver : public AudioDriver
 {
 	public:
 		void init() override { AUDIO_Init(NULL); AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ); }
