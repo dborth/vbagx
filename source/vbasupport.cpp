@@ -37,8 +37,8 @@
 #include "preferences.h"
 
 #ifdef HW_DOL
-#include "drivers/ogc/vm.h"
-#include "drivers/ogc/vmpager.h"
+#include "drivers/ogc/vm/vm.h"
+#include "drivers/ogc/vm/vmpager.h"
 #endif
 
 #include "vba/Util.h"

@@ -19,8 +19,8 @@
 #include "vba/gba/JITCache.h"
 
 #ifdef HW_DOL
-#include "drivers/ogc/vm.h"
-#include "drivers/ogc/vmpager.h"
+#include "drivers/ogc/vm/vm.h"
+#include "drivers/ogc/vm/vmpager.h"
 #endif
 
 #define MEM2_SIZE		(42*1024*1024)

@@ -29,7 +29,7 @@
 #include "memmanager.h"
 #include "system.h"
 #include "vbasupport.h"
-#include "drivers/ogc/videofilters.h"
+#include "videofilters.h"
 #include "video.h"
 #include "filebrowser.h"
 #include "gcunzip.h"
