@@ -1268,7 +1268,7 @@ int LoadROMToVM(const char* filepath) {
 		if (utilIsZipFile(filepath)) {
 			size_t readsize = fread(zipbuffer, 1, 32, file);
 			if(readsize < 32 || !IsZipFile(zipbuffer)) {
-				unmountRequired[device] = true;
+				platform->getFileSystem()->invalidateStorageDevice(device);
 				retry = ErrorPromptRetry("Error reading file!");
 				fclose(file);
 				file = nullptr;
