@@ -98,21 +98,6 @@ static void USBGeckoOutput()
 	devoptab_list[STD_ERR] = &gecko_out;
 }
 
-/****************************************************************************
- * Startup / Shutdown / Reboot / Exit
- ***************************************************************************/
-
-#ifdef HW_RVL
-void ShutdownCB()
-{
-	ShutdownRequested = 1;
-}
-void ResetCB()
-{
-	ResetRequested = 1;
-}
-#endif
-
 #ifdef HW_DOL
 /****************************************************************************
  * ipl_set_config
