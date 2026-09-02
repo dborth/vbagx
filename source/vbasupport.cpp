@@ -35,8 +35,11 @@
 #include "gbaoverrides.h"
 #include "gameborder.h"
 #include "preferences.h"
-#include "utils/vm.h"
-#include "utils/vmpager.h"
+
+#ifdef HW_DOL
+#include "drivers/ogc/vm.h"
+#include "drivers/ogc/vmpager.h"
+#endif
 
 #include "vba/Util.h"
 #include "vba/common/Port.h"
