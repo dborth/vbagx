@@ -25,7 +25,7 @@
 #include "input.h"
 #include "button_mapping.h"
 #include "gamesettings.h"
-#include "videofilters.h"
+#include "drivers/ogc/videofilters.h"
 
 struct SGCSettings GCSettings;
 static gamePalette *palettes = nullptr;
