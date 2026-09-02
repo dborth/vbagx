@@ -416,25 +416,6 @@ void UpdatePads()
 	}
 }
 
-/****************************************************************************
- * SetupPads
- * Allocates controllers and initializes hardware
- ***************************************************************************/
-void SetupPads()
-{
-	PAD_Init();
-
-	#ifdef HW_RVL
-	WPAD_Init();
-	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
-	WPAD_SetVRes(WPAD_CHAN_ALL, platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
-	#endif
-
-	for(int i = 0; i < 4; i++) {
-		userInput[i] = new GuiInputController(i);
-	}
-}
-
 static int SilenceNeeded = 0;
 
 static void updateRumble()

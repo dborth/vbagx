@@ -32,14 +32,12 @@
 
 extern "C" {
 extern void __exception_setreload(int t);
-s32 __STM_Close();
-s32 __STM_Init();
 }
 
 int ShutdownRequested = 0;
 int ResetRequested = 0;
 int ExitRequested = 0;
-static bool isWiiVC = false;
+extern bool isWiiVC;
 
 static OgcPlatform platformInstance;
 Platform* platform = &platformInstance;
@@ -167,20 +165,6 @@ void SystemInit() {
 	SwitchMemoryModeMenu();
 	InitFPSFontData();
 
-	#ifdef HW_RVL
-	// Wii Power/Reset buttons
-	__STM_Close();
-	__STM_Init();
-	SYS_SetPowerCallback(ShutdownCB);
-	SYS_SetResetCallback(ResetCB);
-
-	WiiDRC_Init();
-	isWiiVC = WiiDRC_Inited();
-	WPAD_Init();
-	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
-	#endif
-
-	SetupPads();
 	InitFileOpThreads();
 	MountAllFAT(); // Initialize libFAT for SD and USB
 

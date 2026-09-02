@@ -40,7 +40,6 @@ void systemGameRumbleOnlyFor(int OnlyRumbleForFrames);
 void updateRumbleFrame();
 uint32_t GetJoy(int which);
 bool isMenuRequested();
-void SetupPads();
 void UpdatePads();
 
 #endif
