@@ -30,7 +30,7 @@
 #include "vbasupport.h"
 #include "fileop.h"
 #include "networkop.h"
-#include "gcunzip.h"
+#include "utils/decompress.h"
 #include "menu.h"
 #include "filebrowser.h"
 #include "libgui/Gui.h"

@@ -22,7 +22,7 @@
 #include "networkop.h"
 #include "fileop.h"
 #include "input.h"
-#include "gcunzip.h"
+#include "utils/decompress.h"
 
 extern "C" {
 extern char* strcasestr(const char *, const char *);

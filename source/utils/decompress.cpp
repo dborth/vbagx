@@ -3,7 +3,7 @@
  *
  * Daryl Borth 2008-2026
  *
- * gcunzip.cpp
+ * decompress.cpp
  *
  * File unzip routines
  ***************************************************************************/
@@ -18,7 +18,7 @@
 #include "fileop.h"
 #include "filebrowser.h"
 #include "menu.h"
-#include "gcunzip.h"
+#include "decompress.h"
 
 extern "C" {
 #include "utils/sz/7zCrc.h"

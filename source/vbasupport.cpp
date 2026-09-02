@@ -30,7 +30,7 @@
 #include "gameinput.h"
 #include "video.h"
 #include "menu.h"
-#include "gcunzip.h"
+#include "utils/decompress.h"
 #include "gamesettings.h"
 #include "gbaoverrides.h"
 #include "gameborder.h"
