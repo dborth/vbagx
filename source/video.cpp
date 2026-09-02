@@ -23,7 +23,7 @@
 #include "fileop.h"
 #include "memmanager.h"
 #include "gameborder.h"
-#include "videofilters.h"
+#include "drivers/ogc/videofilters.h"
 #include "menu.h"
 #include "input.h"
 #include "vbasupport.h"
@@ -332,7 +332,7 @@ static inline void draw_square(Mtx v)
 		// The "Half-Texel Offset" Epsilon.
 		// By shifting the UV start coordinates by exactly half a texel, we force the
 		// GPU sampler to hit the 'dead center' of the texture pixels (e.g. 0.5, 1.5, 2.5),
-		// preventing the moiré effect caused by floating-point edge-rounding.
+		// preventing the moirÃ© effect caused by floating-point edge-rounding.
 		// U: 1/8 texel = 0.125. Half of that = 0.0625f
 		// V: 1/4 texel = 0.25. Half of that = 0.125f
 		f32 u_off = 0.0625f;
