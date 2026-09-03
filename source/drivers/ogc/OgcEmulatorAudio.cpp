@@ -1,9 +1,7 @@
 /****************************************************************************
- * Visual Boy Advance GX
- *
+ * Visual Boy Advance GX - drivers/ogc
  * Daryl Borth 2008-2026
- *
- * audio.cpp
+ * OgcEmulatorAudio.cpp
  *
  * Direct-Queued Audio Driver with Dynamic Rate Control
  ***************************************************************************/
@@ -12,11 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "vbagx.h"
-#include "audio.h"
-#include "system.h"
-#include "vba/gba/Debug.h"
-#include "drivers/Platform.h"
+
+#include "OgcEmulatorAudio.h"
+#include "../../vbagx.h"
+#include "../../system.h"
+#include "../../vba/gba/Debug.h"
 
 extern bool turboMode;
 
@@ -130,11 +128,11 @@ int AudioGetUnplayed()
 }
 
 /****************************************************************************
- * AudioPlayer (ISR)
+ * AudioDMACallback (ISR)
  *
  * Hardware DMA callback. Executes entirely in interrupt context.
  ***************************************************************************/
-static void AudioPlayer()
+void AudioDMACallback()
 {
 	int unplayed = getUnplayed();
 
@@ -171,11 +169,11 @@ static void AudioPlayer()
 }
 
 /****************************************************************************
- * AudioStart
+ * AudioReset
  *
  * Called to cleanly kick off the Audio Queue and reset hysteresis state
  ***************************************************************************/
-static void AudioStart()
+void AudioReset()
 {
     nextab = 0;
     playab = 0;
@@ -184,27 +182,6 @@ static void AudioStart()
     wasStarved = false;
     lastL = 0;
     lastR = 0;
-}
-
-/****************************************************************************
- * SwitchAudioMode
- *
- * Switches between menu sound and emulator sound
- ***************************************************************************/
-void SwitchAudioMode(int mode)
-{
-	if(mode == 0) // emulator
-	{
-		platform->getAudio()->stop();
-		AUDIO_RegisterDMACallback(AudioPlayer);
-		AudioStart(); // Reset the ring so playback re-primes cleanly
-	}
-	else // menu
-	{
-		AUDIO_StopDMA();
-		AUDIO_RegisterDMACallback(NULL);
-		platform->getAudio()->start();
-	}
 }
 
 /****************************************************************************
@@ -223,7 +200,7 @@ bool SoundWii::canWrite()
     if (MenuRequested)
     {
         AUDIO_StopDMA();
-        AudioStart();
+        AudioReset();
         return false;
     }
 

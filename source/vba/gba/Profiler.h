@@ -40,7 +40,7 @@ struct DebugStats {
 	u32 audioBufferFullnessBins[13];
 	u32 drcStateTicks[3]; // 0: Neutral, 1: Draining, 2: Filling
 	u32 drcTransitions;
-	int currentDrcState;  // Internal tracker to avoid polluting audio.cpp
+	int currentDrcState;  // Internal tracker to avoid polluting OgcEmulatorAudio.cpp
 
 	// Frameskip Stats
 	u32 framesSkippedTotal;

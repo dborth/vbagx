@@ -18,7 +18,6 @@
 
 #include "vbagx.h"
 #include "button_mapping.h"
-#include "audio.h"
 #include "video.h"
 #include "input.h"
 #include "gameinput.h"
@@ -118,7 +117,7 @@ uint32_t TMNTInput(unsigned short pad) {
 	if (gc & GUI_BTN_Y) SpinKick = true;
 	if (gc & GUI_BTN_PLUS) Pause = true;
 	if (gc & GUI_TRIGGER_ZR) Select = true; // Z Button
-	if (gc & GUI_TRIGGER_L || gc & GUI_TRIGGER_R) Roll = true;
+	if ((gc & GUI_TRIGGER_L) || (gc & GUI_TRIGGER_R)) Roll = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack) J |= VBA_BUTTON_B;
@@ -181,7 +180,7 @@ uint32_t TMNT1Input(unsigned short pad) {
 	if (gc & GUI_BTN_Y) SpinKick = true;
 	if (gc & GUI_BTN_PLUS) Pause = true;
 	if (gc & GUI_TRIGGER_ZR) Select = true;
-	if (gc & GUI_TRIGGER_L || gc & GUI_TRIGGER_R) Roll = true;
+	if ((gc & GUI_TRIGGER_L) || (gc & GUI_TRIGGER_R)) Roll = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack || SpinKick) J |= VBA_BUTTON_B;
@@ -246,7 +245,7 @@ uint32_t TMNT3Input(unsigned short pad) {
 	if (gc & GUI_BTN_Y) SpinKick = true;
 	if (gc & GUI_BTN_PLUS) Pause = true;
 	if (gc & GUI_TRIGGER_ZR) Select = true;
-	if (gc & GUI_TRIGGER_L || gc & GUI_TRIGGER_R) Roll = true;
+	if ((gc & GUI_TRIGGER_L) || (gc & GUI_TRIGGER_R)) Roll = true;
 
 	if (Jump || Roll) J |= VBA_BUTTON_A;
 	if (Attack || SpinKick) J |= VBA_BUTTON_B;
@@ -302,7 +301,7 @@ uint32_t TMNTGBAInput(unsigned short pad) {
 	if (gc & GUI_BTN_Y) SpinKick = true;
 	if (gc & GUI_BTN_PLUS) Pause = true;
 	if (gc & GUI_TRIGGER_ZR) Select = true;
-	if (gc & GUI_TRIGGER_L || gc & GUI_TRIGGER_R) SpecialMove = true;
+	if ((gc & GUI_TRIGGER_L) || (gc & GUI_TRIGGER_R)) SpecialMove = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack) J |= VBA_BUTTON_B;
@@ -364,7 +363,7 @@ uint32_t TMNTGBA2Input(unsigned short pad) {
 	if (gc & GUI_BTN_Y) SpinKick = true;
 	if (gc & GUI_BTN_PLUS) Pause = true;
 	if (gc & GUI_TRIGGER_ZR) Select = true;
-	if (gc & GUI_TRIGGER_L || gc & GUI_TRIGGER_R) SpecialMove = true;
+	if ((gc & GUI_TRIGGER_L) || (gc & GUI_TRIGGER_R)) SpecialMove = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack) J |= VBA_BUTTON_B;

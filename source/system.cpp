@@ -21,12 +21,10 @@
 #include "vbagx.h"
 #include "system.h"
 #include "video.h"
-#include "audio.h"
 #include "fileop.h"
 #include "input.h"
 #include "memmanager.h"
 #include "font_ttf.h"
-#include "drivers/ogc/wiidrc.h"
 #include "drivers/ogc/OgcPlatform.h"
 #include "libgui/Gui.h"
 

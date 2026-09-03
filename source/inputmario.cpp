@@ -19,7 +19,6 @@
 
 #include "vbagx.h"
 #include "button_mapping.h"
-#include "audio.h"
 #include "video.h"
 #include "input.h"
 #include "gameinput.h"

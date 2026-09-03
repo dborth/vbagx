@@ -17,12 +17,10 @@
 
 #include "vbagx.h"
 #include "button_mapping.h"
-#include "audio.h"
 #include "video.h"
 #include "input.h"
 #include "gameinput.h"
 #include "libgui/Gui.h"
-#include "drivers/ogc/wiidrc.h"
 #include "vbasupport.h"
 #include "vba/gba/GBA.h"
 #include "vba/gba/bios.h"

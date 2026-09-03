@@ -24,7 +24,7 @@
 #include "memmanager.h"
 #include "fileop.h"
 #include "filebrowser.h"
-#include "audio.h"
+#include "drivers/ogc/OgcEmulatorAudio.h"
 #include "input.h"
 #include "cheatmgr.h"
 #include "gameinput.h"
@@ -65,7 +65,7 @@
 #define MAX_PACE_DEBT_US		(FRAME_PERIOD_US * MAX_FRAME_SKIP) // cap on banked "behind schedule" debt after a pause/loadstate.
 
 // -- Weighted skip-pressure model --
-// Mirrors audio.cpp's UNPLAYED_LOW_RELEASE/UNPLAYED_LOW_WATER breakpoints,
+// Mirrors OgcEmulatorAudio.cpp's UNPLAYED_LOW_RELEASE/UNPLAYED_LOW_WATER breakpoints,
 // but kept as its own constants: this is pacing policy deciding whether to
 // drop a render, not DRC policy deciding a sample rate, and the two are
 // allowed to diverge even though they agree today.
@@ -223,7 +223,7 @@ void systemFrame()
 		// only job here is to avoid spending GX_Render()/VSync time on
 		// frames nobody's watching; it does not bound the audio backlog
 		// (Sound.cpp's own overflow-drop policy in flush_samples() does
-		// that, independently, by design -- see audio.cpp's getDynamicRate()).
+		// that, independently, by design -- see OgcEmulatorAudio.cpp's getDynamicRate()).
 		if (skippedFrames < TURBO_MAX_FRAME_SKIP)
 		{
 			skippedFrames++;

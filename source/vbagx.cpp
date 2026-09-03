@@ -12,7 +12,7 @@
 #include "system.h"
 #include "vbasupport.h"
 #include "preferences.h"
-#include "audio.h"
+#include "drivers/Platform.h"
 #include "filebrowser.h"
 #include "fileop.h"
 #include "menu.h"
@@ -21,7 +21,10 @@
 #include "gamesettings.h"
 #include "memmanager.h"
 #include "drivers/ogc/videofilters.h"
+
+#ifdef HW_DOL
 #include "drivers/ogc/vm/vmpager.h"
+#endif
 
 #include "vba/gba/Globals.h"
 #include "vba/gba/Sound.h"
@@ -82,7 +85,7 @@ int main(int argc, char *argv[])
 			ResumeDeviceCheckingThread();
 
 			SwitchMemoryModeMenu();
-			SwitchAudioMode(1);
+			platform->getAudio()->startMenuAudio();
 
 			if(!ROMLoaded)
 				MainMenu(MENU_GAMESELECTION);
@@ -98,7 +101,7 @@ int main(int argc, char *argv[])
 		MenuRequested = false;
 		InitGameDimensionsAndBorder();
 		SwitchMemoryModeGame();
-		SwitchAudioMode(0);
+		platform->getAudio()->startEmulatorAudio();
 		SelectFilterMethod(GCSettings.videoUpscalingFilter); // Initialize / Re-evaluate active filter
 
 		// stop checking if devices were removed/inserted

@@ -3,11 +3,13 @@
  * Daryl Borth 2009-2026
  * WiiAudioDriver.cpp
  ***************************************************************************/
+#include <ogc/dsp.h>
 #include <ogcsys.h>
 #include <asndlib.h>
 #include <unistd.h>
 
 #include "WiiAudioDriver.h"
+#include "OgcEmulatorAudio.h"
 
 static WiiAudioDriver *instance = nullptr;
 
@@ -36,13 +38,25 @@ void WiiAudioDriver::init() {
 	streamVolume = 127;
 }
 
-void WiiAudioDriver::start() {
+void WiiAudioDriver::startEmulatorAudio() {
+	stopMenuAudio();
+	AudioReset();
+	AUDIO_RegisterDMACallback(AudioDMACallback);
+}
+
+void WiiAudioDriver::stopEmulatorAudio() {
+	AUDIO_StopDMA();
+	AUDIO_RegisterDMACallback(NULL);
+}
+
+void WiiAudioDriver::startMenuAudio() {
+	stopEmulatorAudio();
 	DSP_Unhalt();
 	ASND_Init();
 	ASND_Pause(0);
 }
 
-void WiiAudioDriver::stop() {
+void WiiAudioDriver::stopMenuAudio() {
 	ASND_Pause(1);
 	ASND_End();
 	AUDIO_StopDMA();

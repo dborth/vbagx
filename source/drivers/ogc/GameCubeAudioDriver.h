@@ -2,15 +2,16 @@
 
 #include <stdint.h>
 #include <ogc/audio.h>
+#include "OgcEmulatorAudio.h"
 #include "../AudioDriver.h"
 
 class GameCubeAudioDriver : public AudioDriver
 {
 	public:
 		void init() override { AUDIO_Init(NULL); AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ); }
-		void start() override {}
-		void stop() override {}
-		void shutdown() override {}
+		void startMenuAudio() override { AUDIO_StopDMA(); AUDIO_RegisterDMACallback(NULL); }
+		void startEmulatorAudio() override { AudioReset(); AUDIO_RegisterDMACallback(AudioDMACallback); }
+		void shutdown() override { AUDIO_StopDMA(); AUDIO_RegisterDMACallback(NULL); }
 
 		int32_t playVoice(const uint8_t* data, int32_t length, int volume) override { return -1; }
 		void stopVoice(int32_t voice) override {}
