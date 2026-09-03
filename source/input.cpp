@@ -52,96 +52,96 @@ void ResetControls(int wiiCtrl)
 	if(wiiCtrl == GUI_HW_GAMECUBE || wiiCtrl == -1)
 	{
 		i=0;
-		btnmap[GUI_HW_GAMECUBE][i++] = GUI_BTN_B;
-		btnmap[GUI_HW_GAMECUBE][i++] = GUI_BTN_A;
-		btnmap[GUI_HW_GAMECUBE][i++] = GUI_TRIGGER_ZR; // GC Z button
-		btnmap[GUI_HW_GAMECUBE][i++] = GUI_BTN_PLUS;   // GC Start
-		btnmap[GUI_HW_GAMECUBE][i++] = GUI_BTN_UP;
-		btnmap[GUI_HW_GAMECUBE][i++] = GUI_BTN_DOWN;
-		btnmap[GUI_HW_GAMECUBE][i++] = GUI_BTN_LEFT;
-		btnmap[GUI_HW_GAMECUBE][i++] = GUI_BTN_RIGHT;
-		btnmap[GUI_HW_GAMECUBE][i++] = GUI_TRIGGER_L;
-		btnmap[GUI_HW_GAMECUBE][i++] = GUI_TRIGGER_R;
+		btnmap[GUI_HW_GAMECUBE][i++] = INPUT_BTN_B;
+		btnmap[GUI_HW_GAMECUBE][i++] = INPUT_BTN_A;
+		btnmap[GUI_HW_GAMECUBE][i++] = INPUT_TRIGGER_ZR; // GC Z button
+		btnmap[GUI_HW_GAMECUBE][i++] = INPUT_BTN_PLUS;   // GC Start
+		btnmap[GUI_HW_GAMECUBE][i++] = INPUT_BTN_UP;
+		btnmap[GUI_HW_GAMECUBE][i++] = INPUT_BTN_DOWN;
+		btnmap[GUI_HW_GAMECUBE][i++] = INPUT_BTN_LEFT;
+		btnmap[GUI_HW_GAMECUBE][i++] = INPUT_BTN_RIGHT;
+		btnmap[GUI_HW_GAMECUBE][i++] = INPUT_TRIGGER_L;
+		btnmap[GUI_HW_GAMECUBE][i++] = INPUT_TRIGGER_R;
 	}
 
 	/*** Wiimote Padmap (Sideways) ***/
 	if(wiiCtrl == GUI_HW_WIIMOTE || wiiCtrl == -1)
 	{
 		i=0;
-		btnmap[GUI_HW_WIIMOTE][i++] = GUI_BTN_1;
-		btnmap[GUI_HW_WIIMOTE][i++] = GUI_BTN_2;
-		btnmap[GUI_HW_WIIMOTE][i++] = GUI_BTN_MINUS;
-		btnmap[GUI_HW_WIIMOTE][i++] = GUI_BTN_PLUS;
-		btnmap[GUI_HW_WIIMOTE][i++] = GUI_BTN_RIGHT;
-		btnmap[GUI_HW_WIIMOTE][i++] = GUI_BTN_LEFT;
-		btnmap[GUI_HW_WIIMOTE][i++] = GUI_BTN_UP;
-		btnmap[GUI_HW_WIIMOTE][i++] = GUI_BTN_DOWN;
-		btnmap[GUI_HW_WIIMOTE][i++] = GUI_BTN_B;
-		btnmap[GUI_HW_WIIMOTE][i++] = GUI_BTN_A;
+		btnmap[GUI_HW_WIIMOTE][i++] = INPUT_BTN_1;
+		btnmap[GUI_HW_WIIMOTE][i++] = INPUT_BTN_2;
+		btnmap[GUI_HW_WIIMOTE][i++] = INPUT_BTN_MINUS;
+		btnmap[GUI_HW_WIIMOTE][i++] = INPUT_BTN_PLUS;
+		btnmap[GUI_HW_WIIMOTE][i++] = INPUT_BTN_RIGHT;
+		btnmap[GUI_HW_WIIMOTE][i++] = INPUT_BTN_LEFT;
+		btnmap[GUI_HW_WIIMOTE][i++] = INPUT_BTN_UP;
+		btnmap[GUI_HW_WIIMOTE][i++] = INPUT_BTN_DOWN;
+		btnmap[GUI_HW_WIIMOTE][i++] = INPUT_BTN_B;
+		btnmap[GUI_HW_WIIMOTE][i++] = INPUT_BTN_A;
 	}
 
 	/*** Classic Controller Padmap ***/
 	if(wiiCtrl == GUI_HW_CLASSIC || wiiCtrl == -1)
 	{
 		i=0;
-		btnmap[GUI_HW_CLASSIC][i++] = GUI_BTN_Y;
-		btnmap[GUI_HW_CLASSIC][i++] = GUI_BTN_B;
-		btnmap[GUI_HW_CLASSIC][i++] = GUI_BTN_MINUS;
-		btnmap[GUI_HW_CLASSIC][i++] = GUI_BTN_PLUS;
-		btnmap[GUI_HW_CLASSIC][i++] = GUI_BTN_UP;
-		btnmap[GUI_HW_CLASSIC][i++] = GUI_BTN_DOWN;
-		btnmap[GUI_HW_CLASSIC][i++] = GUI_BTN_LEFT;
-		btnmap[GUI_HW_CLASSIC][i++] = GUI_BTN_RIGHT;
-		btnmap[GUI_HW_CLASSIC][i++] = GUI_TRIGGER_L;
-		btnmap[GUI_HW_CLASSIC][i++] = GUI_TRIGGER_R;
+		btnmap[GUI_HW_CLASSIC][i++] = INPUT_BTN_Y;
+		btnmap[GUI_HW_CLASSIC][i++] = INPUT_BTN_B;
+		btnmap[GUI_HW_CLASSIC][i++] = INPUT_BTN_MINUS;
+		btnmap[GUI_HW_CLASSIC][i++] = INPUT_BTN_PLUS;
+		btnmap[GUI_HW_CLASSIC][i++] = INPUT_BTN_UP;
+		btnmap[GUI_HW_CLASSIC][i++] = INPUT_BTN_DOWN;
+		btnmap[GUI_HW_CLASSIC][i++] = INPUT_BTN_LEFT;
+		btnmap[GUI_HW_CLASSIC][i++] = INPUT_BTN_RIGHT;
+		btnmap[GUI_HW_CLASSIC][i++] = INPUT_TRIGGER_L;
+		btnmap[GUI_HW_CLASSIC][i++] = INPUT_TRIGGER_R;
 	}
 
 	/*** Nunchuk + Wiimote Padmap ***/
 	if(wiiCtrl == GUI_HW_NUNCHUK || wiiCtrl == -1)
 	{
 		i=0;
-		btnmap[GUI_HW_NUNCHUK][i++] = GUI_TRIGGER_L;  // C mapped to L
-		btnmap[GUI_HW_NUNCHUK][i++] = GUI_TRIGGER_ZL; // Z mapped to ZL
-		btnmap[GUI_HW_NUNCHUK][i++] = GUI_BTN_MINUS;
-		btnmap[GUI_HW_NUNCHUK][i++] = GUI_BTN_PLUS;
-		btnmap[GUI_HW_NUNCHUK][i++] = GUI_BTN_UP;
-		btnmap[GUI_HW_NUNCHUK][i++] = GUI_BTN_DOWN;
-		btnmap[GUI_HW_NUNCHUK][i++] = GUI_BTN_LEFT;
-		btnmap[GUI_HW_NUNCHUK][i++] = GUI_BTN_RIGHT;
-		btnmap[GUI_HW_NUNCHUK][i++] = GUI_BTN_2;
-		btnmap[GUI_HW_NUNCHUK][i++] = GUI_BTN_1;
+		btnmap[GUI_HW_NUNCHUK][i++] = INPUT_TRIGGER_L;  // C mapped to L
+		btnmap[GUI_HW_NUNCHUK][i++] = INPUT_TRIGGER_ZL; // Z mapped to ZL
+		btnmap[GUI_HW_NUNCHUK][i++] = INPUT_BTN_MINUS;
+		btnmap[GUI_HW_NUNCHUK][i++] = INPUT_BTN_PLUS;
+		btnmap[GUI_HW_NUNCHUK][i++] = INPUT_BTN_UP;
+		btnmap[GUI_HW_NUNCHUK][i++] = INPUT_BTN_DOWN;
+		btnmap[GUI_HW_NUNCHUK][i++] = INPUT_BTN_LEFT;
+		btnmap[GUI_HW_NUNCHUK][i++] = INPUT_BTN_RIGHT;
+		btnmap[GUI_HW_NUNCHUK][i++] = INPUT_BTN_2;
+		btnmap[GUI_HW_NUNCHUK][i++] = INPUT_BTN_1;
 	}
 	
 	/*** Wii U Pro Controller Padmap ***/
 	if(wiiCtrl == GUI_HW_WUPC || wiiCtrl == -1)
 	{
 		i=0;
-		btnmap[GUI_HW_WUPC][i++] = GUI_BTN_Y;
-		btnmap[GUI_HW_WUPC][i++] = GUI_BTN_B;
-		btnmap[GUI_HW_WUPC][i++] = GUI_BTN_MINUS;
-		btnmap[GUI_HW_WUPC][i++] = GUI_BTN_PLUS;
-		btnmap[GUI_HW_WUPC][i++] = GUI_BTN_UP;
-		btnmap[GUI_HW_WUPC][i++] = GUI_BTN_DOWN;
-		btnmap[GUI_HW_WUPC][i++] = GUI_BTN_LEFT;
-		btnmap[GUI_HW_WUPC][i++] = GUI_BTN_RIGHT;
-		btnmap[GUI_HW_WUPC][i++] = GUI_TRIGGER_L;
-		btnmap[GUI_HW_WUPC][i++] = GUI_TRIGGER_R;
+		btnmap[GUI_HW_WUPC][i++] = INPUT_BTN_Y;
+		btnmap[GUI_HW_WUPC][i++] = INPUT_BTN_B;
+		btnmap[GUI_HW_WUPC][i++] = INPUT_BTN_MINUS;
+		btnmap[GUI_HW_WUPC][i++] = INPUT_BTN_PLUS;
+		btnmap[GUI_HW_WUPC][i++] = INPUT_BTN_UP;
+		btnmap[GUI_HW_WUPC][i++] = INPUT_BTN_DOWN;
+		btnmap[GUI_HW_WUPC][i++] = INPUT_BTN_LEFT;
+		btnmap[GUI_HW_WUPC][i++] = INPUT_BTN_RIGHT;
+		btnmap[GUI_HW_WUPC][i++] = INPUT_TRIGGER_L;
+		btnmap[GUI_HW_WUPC][i++] = INPUT_TRIGGER_R;
 	}
 	
 	/*** Wii U Gamepad (DRC) Padmap ***/
 	if(wiiCtrl == GUI_HW_DRC || wiiCtrl == -1)
 	{
 		i=0;
-		btnmap[GUI_HW_DRC][i++] = GUI_BTN_Y;
-		btnmap[GUI_HW_DRC][i++] = GUI_BTN_B;
-		btnmap[GUI_HW_DRC][i++] = GUI_BTN_MINUS;
-		btnmap[GUI_HW_DRC][i++] = GUI_BTN_PLUS;
-		btnmap[GUI_HW_DRC][i++] = GUI_BTN_UP;
-		btnmap[GUI_HW_DRC][i++] = GUI_BTN_DOWN;
-		btnmap[GUI_HW_DRC][i++] = GUI_BTN_LEFT;
-		btnmap[GUI_HW_DRC][i++] = GUI_BTN_RIGHT;
-		btnmap[GUI_HW_DRC][i++] = GUI_TRIGGER_L;
-		btnmap[GUI_HW_DRC][i++] = GUI_TRIGGER_R;
+		btnmap[GUI_HW_DRC][i++] = INPUT_BTN_Y;
+		btnmap[GUI_HW_DRC][i++] = INPUT_BTN_B;
+		btnmap[GUI_HW_DRC][i++] = INPUT_BTN_MINUS;
+		btnmap[GUI_HW_DRC][i++] = INPUT_BTN_PLUS;
+		btnmap[GUI_HW_DRC][i++] = INPUT_BTN_UP;
+		btnmap[GUI_HW_DRC][i++] = INPUT_BTN_DOWN;
+		btnmap[GUI_HW_DRC][i++] = INPUT_BTN_LEFT;
+		btnmap[GUI_HW_DRC][i++] = INPUT_BTN_RIGHT;
+		btnmap[GUI_HW_DRC][i++] = INPUT_TRIGGER_L;
+		btnmap[GUI_HW_DRC][i++] = INPUT_TRIGGER_R;
 	}
 }
 
@@ -164,7 +164,7 @@ void systemGameRumbleOnlyFor(int onlyRumbleForFrames) {
 uint32_t StandardMovement(unsigned short chan)
 {
 	if (!userInput[chan]) return 0;
-	const GuiInputPadData& pad = userInput[chan]->getPadData();
+	const InputPadData& pad = userInput[chan]->getPadData();
 	uint32_t J = 0;
 	
 	float sensitivity = (float)ANALOG_SENSITIVITY / 128.0f;
@@ -179,39 +179,39 @@ uint32_t StandardMovement(unsigned short chan)
 uint32_t StandardDPad(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = 0;
-	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
-	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
-	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_LEFT;
-	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_RIGHT;
+	if (data.buttons_h & INPUT_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & INPUT_BTN_DOWN) J |= VBA_DOWN;
+	if (data.buttons_h & INPUT_BTN_LEFT) J |= VBA_LEFT;
+	if (data.buttons_h & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
 	return J;
 }
 
 uint32_t StandardSideways(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = 0;
 
 	// Read directly from isolated Wiimote state
 	uint32_t wp = data.hw_buttons_h[GUI_HW_WIIMOTE];
 
-	if (wp & GUI_BTN_RIGHT) J |= VBA_UP;
-	else if (wp & GUI_BTN_LEFT) J |= VBA_DOWN;
-	if (wp & GUI_BTN_UP) J |= VBA_LEFT;
-	else if (wp & GUI_BTN_DOWN) J |= VBA_RIGHT;
+	if (wp & INPUT_BTN_RIGHT) J |= VBA_UP;
+	else if (wp & INPUT_BTN_LEFT) J |= VBA_DOWN;
+	if (wp & INPUT_BTN_UP) J |= VBA_LEFT;
+	else if (wp & INPUT_BTN_DOWN) J |= VBA_RIGHT;
 
-	if (wp & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (wp & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
-	if (wp & GUI_BTN_1) J |= VBA_BUTTON_B;
-	if (wp & GUI_BTN_2) J |= VBA_BUTTON_A;
+	if (wp & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (wp & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (wp & INPUT_BTN_1) J |= VBA_BUTTON_B;
+	if (wp & INPUT_BTN_2) J |= VBA_BUTTON_A;
 
 	if (cartridgeType == CARTRIDGE_GBA) {
-		if (wp & GUI_BTN_A) J |= VBA_BUTTON_R;
-		if (wp & GUI_BTN_B) J |= VBA_BUTTON_L;
+		if (wp & INPUT_BTN_A) J |= VBA_BUTTON_R;
+		if (wp & INPUT_BTN_B) J |= VBA_BUTTON_L;
 	} else {
-		if ((wp & GUI_BTN_B) || (wp & GUI_BTN_A)) J |= VBA_SPEED;
+		if ((wp & INPUT_BTN_B) || (wp & INPUT_BTN_A)) J |= VBA_SPEED;
 	}
 	return J;
 }
@@ -219,25 +219,25 @@ uint32_t StandardSideways(unsigned short pad)
 uint32_t StandardClassic(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = 0;
 
 	// Read isolated Classic Controller state
 	uint32_t wp = data.hw_buttons_h[GUI_HW_CLASSIC];
 
-	if (wp & GUI_BTN_RIGHT) J |= VBA_RIGHT;
-	else if (wp & GUI_BTN_LEFT) J |= VBA_LEFT;
-	if (wp & GUI_BTN_UP) J |= VBA_UP;
-	else if (wp & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (wp & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+	else if (wp & INPUT_BTN_LEFT) J |= VBA_LEFT;
+	if (wp & INPUT_BTN_UP) J |= VBA_UP;
+	else if (wp & INPUT_BTN_DOWN) J |= VBA_DOWN;
 
-	if (wp & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (wp & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
-	if ((wp & GUI_TRIGGER_L) || (wp & GUI_TRIGGER_ZL)) J |= VBA_BUTTON_L;
-	if ((wp & GUI_TRIGGER_R) || (wp & GUI_TRIGGER_ZR)) J |= VBA_BUTTON_R;
+	if (wp & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (wp & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if ((wp & INPUT_TRIGGER_L) || (wp & INPUT_TRIGGER_ZL)) J |= VBA_BUTTON_L;
+	if ((wp & INPUT_TRIGGER_R) || (wp & INPUT_TRIGGER_ZR)) J |= VBA_BUTTON_R;
 
-	if (wp & GUI_BTN_A) J |= VBA_BUTTON_A;
-	if (wp & GUI_BTN_B) J |= VBA_BUTTON_B;
-	if ((wp & GUI_BTN_Y) || (wp & GUI_BTN_X)) J |= VBA_SPEED;
+	if (wp & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (wp & INPUT_BTN_B) J |= VBA_BUTTON_B;
+	if ((wp & INPUT_BTN_Y) || (wp & INPUT_BTN_X)) J |= VBA_SPEED;
 
 	return J;
 }
@@ -251,7 +251,7 @@ uint32_t StandardClassic(unsigned short pad)
 static uint32_t DecodeJoy(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	CursorX = data.cursor_x;
 	CursorY = data.cursor_y;
@@ -479,13 +479,13 @@ bool isMenuRequested()
 {
 	for(int i=0; i<4; i++) {
 		if (!userInput[i]) continue;
-		const GuiInputPadData& pad = userInput[i]->getPadData();
+		const InputPadData& pad = userInput[i]->getPadData();
 
 		bool rightStickLeft = (pad.substickX < -0.55f);
-		bool homePressed = (pad.buttons_h & GUI_BTN_HOME);
-		bool lPlusRPlusStart = (pad.buttons_h & GUI_TRIGGER_L) &&
-							   (pad.buttons_h & GUI_TRIGGER_R) &&
-							   (pad.buttons_h & GUI_BTN_PLUS);
+		bool homePressed = (pad.buttons_h & INPUT_BTN_HOME);
+		bool lPlusRPlusStart = (pad.buttons_h & INPUT_TRIGGER_L) &&
+							   (pad.buttons_h & INPUT_TRIGGER_R) &&
+							   (pad.buttons_h & INPUT_BTN_PLUS);
 
 		if (rightStickLeft || lPlusRPlusStart || homePressed)
 		{

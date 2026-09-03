@@ -314,7 +314,7 @@ void ProgressOverlayState::update() {
 	}
 }
 
-static void ProcessGuiInput() {
+static void ProcessInputData() {
 	platform->getInput()->update();
 
 	menu->mainWindow.update(userInput[3]);
@@ -448,14 +448,14 @@ static void CreditsWindow()
 	// debounce - wait for button to be unpressed
 	while(buttonPressed())
 	{
-		ProcessGuiInput();
+		ProcessInputData();
 		DrawGui();
 	}
 
 	// credits open - wait for button to be pressed
 	while(!buttonPressed())
 	{
-		ProcessGuiInput();
+		ProcessInputData();
 		DrawGui();
 	}
 
@@ -467,7 +467,7 @@ static void CreditsWindow()
 	// credits closed - wait for button to be unpressed (so we don't just reopen credits)
 	while(buttonPressed())
 	{
-		ProcessGuiInput();
+		ProcessInputData();
 		DrawGui();
 	}
 	menu->mainWindow.setState(oldState);
@@ -523,7 +523,7 @@ static bool UpdateGui()
 	if(exiting)
 		return false;
 
-	ProcessGuiInput();
+	ProcessInputData();
 
 	menu->progressOverlayState.update();
 	ServicePendingWindowPromptRequest();
@@ -1023,7 +1023,7 @@ static int MenuGameSelection()
 	GuiImageData bgPreviewImg(bg_preview_png);
 
 	GuiTrigger trigHome;
-	trigHome.setButtonOnlyTrigger(-1, GUI_BTN_HOME);
+	trigHome.setButtonOnlyTrigger(-1, INPUT_BTN_HOME);
 
 	GuiText settingsBtnTxt("Settings", 22, (PixelColor){0, 0, 0, 255});
 	GuiImage settingsBtnIcon(&iconSettings);
@@ -1237,10 +1237,10 @@ static void PlayerMappingWindow(int chan)
 	w->setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 
 	GuiTrigger trigLeft;
-	trigLeft.setButtonOnlyInFocusTrigger(-1, GUI_BTN_LEFT);
+	trigLeft.setButtonOnlyInFocusTrigger(-1, INPUT_BTN_LEFT);
 
 	GuiTrigger trigRight;
-	trigLeft.setButtonOnlyInFocusTrigger(-1, GUI_BTN_RIGHT);
+	trigLeft.setButtonOnlyInFocusTrigger(-1, INPUT_BTN_RIGHT);
 
 	GuiImageData arrowLeft(button_arrow_left_png);
 	GuiImage arrowLeftImg(&arrowLeft);
@@ -1337,7 +1337,7 @@ static int MenuGame()
 	GuiImageData batteryBar(battery_bar_png);
 
 	GuiTrigger trigHome;
-	trigHome.setButtonOnlyTrigger(-1, GUI_BTN_HOME);
+	trigHome.setButtonOnlyTrigger(-1, INPUT_BTN_HOME);
 
 	int xOffset=125;
 	if (isBoktai) 
@@ -1865,7 +1865,7 @@ static int MenuGameSaves(int action)
 	GuiImageData btnCloseOutlineOver(button_small_over_png);
 
 	GuiTrigger trigHome;
-	trigHome.setButtonOnlyTrigger(-1, GUI_BTN_HOME);
+	trigHome.setButtonOnlyTrigger(-1, INPUT_BTN_HOME);
 
 	GuiText backBtnTxt("Go Back", 22, (PixelColor){0, 0, 0, 255});
 	GuiImage backBtnImg(&btnOutline);
@@ -2138,7 +2138,7 @@ static int MenuGameSettings()
 	GuiImageData btnCloseOutlineOver(button_small_over_png);
 
 	GuiTrigger trigHome;
-	trigHome.setButtonOnlyTrigger(-1, GUI_BTN_HOME);
+	trigHome.setButtonOnlyTrigger(-1, INPUT_BTN_HOME);
 
 	GuiText mappingBtnTxt("Button Mappings", 22, (PixelColor){0, 0, 0, 255});
 	mappingBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
@@ -2726,7 +2726,7 @@ static uint32_t ButtonMappingWindow()
 
 		if(!userInput[0]) continue;
 
-		const GuiInputPadData& pad = userInput[0]->getPadData();
+		const InputPadData& pad = userInput[0]->getPadData();
 
 		// Listen strictly to the specific hardware profile being mapped
 		pressed = pad.hw_buttons_d[mapMenuCtrl];
@@ -2737,13 +2737,13 @@ static uint32_t ButtonMappingWindow()
 			if(pad.hw_substickX[GUI_HW_GAMECUBE] < -0.55f || pad.hw_substickX[GUI_HW_GAMECUBE] > 0.55f ||
 			   pad.hw_substickY[GUI_HW_GAMECUBE] < -0.55f || pad.hw_substickY[GUI_HW_GAMECUBE] > 0.55f)
 			{
-				pressed = GUI_BTN_HOME;
+				pressed = INPUT_BTN_HOME;
 			}
 		}
 
 		// Normalize Home button press to clear mapping
-		if (pressed & GUI_BTN_HOME) {
-			pressed = GUI_BTN_HOME;
+		if (pressed & INPUT_BTN_HOME) {
+			pressed = INPUT_BTN_HOME;
 		}
 
 		// If no button was pressed on the target hardware, check if the user
@@ -2756,8 +2756,8 @@ static uint32_t ButtonMappingWindow()
 		}
 	}
 
-	// GUI_BTN_HOME explicitly clears the mapped button
-	if(pressed == GUI_BTN_HOME) {
+	// INPUT_BTN_HOME explicitly clears the mapped button
+	if(pressed == INPUT_BTN_HOME) {
 		pressed = 0;
 	}
 
@@ -2954,16 +2954,16 @@ static void ScreenZoomWindow()
 	w->setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 
 	GuiTrigger trigLeft;
-	trigLeft.setButtonOnlyInFocusTrigger(-1, GUI_BTN_LEFT);
+	trigLeft.setButtonOnlyInFocusTrigger(-1, INPUT_BTN_LEFT);
 
 	GuiTrigger trigRight;
-	trigLeft.setButtonOnlyInFocusTrigger(-1, GUI_BTN_RIGHT);
+	trigLeft.setButtonOnlyInFocusTrigger(-1, INPUT_BTN_RIGHT);
 
 	GuiTrigger trigUp;
-	trigUp.setButtonOnlyInFocusTrigger(-1, GUI_BTN_UP);
+	trigUp.setButtonOnlyInFocusTrigger(-1, INPUT_BTN_UP);
 
 	GuiTrigger trigDown;
-	trigDown.setButtonOnlyInFocusTrigger(-1, GUI_BTN_DOWN);
+	trigDown.setButtonOnlyInFocusTrigger(-1, INPUT_BTN_DOWN);
 
 	GuiImageData arrowLeft(button_arrow_left_png);
 	GuiImage arrowLeftImg(&arrowLeft);
@@ -3117,16 +3117,16 @@ static void ScreenPositionWindow()
 	w->setPosition(0, -10);
 
 	GuiTrigger trigLeft;
-	trigLeft.setButtonOnlyInFocusTrigger(-1, GUI_BTN_LEFT);
+	trigLeft.setButtonOnlyInFocusTrigger(-1, INPUT_BTN_LEFT);
 
 	GuiTrigger trigRight;
-	trigLeft.setButtonOnlyInFocusTrigger(-1, GUI_BTN_RIGHT);
+	trigLeft.setButtonOnlyInFocusTrigger(-1, INPUT_BTN_RIGHT);
 
 	GuiTrigger trigUp;
-	trigUp.setButtonOnlyInFocusTrigger(-1, GUI_BTN_UP);
+	trigUp.setButtonOnlyInFocusTrigger(-1, INPUT_BTN_UP);
 
 	GuiTrigger trigDown;
-	trigDown.setButtonOnlyInFocusTrigger(-1, GUI_BTN_DOWN);
+	trigDown.setButtonOnlyInFocusTrigger(-1, INPUT_BTN_DOWN);
 
 	GuiImageData arrowLeft(button_arrow_left_png);
 	GuiImage arrowLeftImg(&arrowLeft);
@@ -4545,7 +4545,7 @@ static int MenuPalette()
 	GuiImageData btnCloseOutlineOver(button_small_over_png);
 
 	GuiTrigger trigHome;
-	trigHome.setButtonOnlyTrigger(-1, GUI_BTN_HOME);
+	trigHome.setButtonOnlyTrigger(-1, INPUT_BTN_HOME);
 
 	GuiText bg0BtnTxt("BG 0", 24, GetCol(0));
 	GuiImage bg0BtnImg(&btnCloseOutline);

@@ -22,7 +22,7 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "libgui/GuiInputController.h"
+#include "drivers/InputController.h"
 
 #include "vba/gba/GBA.h"
 #include "vba/gba/bios.h"
@@ -41,7 +41,7 @@ void DebugPrintf(const char *format, ...) {
 
 uint32_t TMNTInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -51,73 +51,73 @@ uint32_t TMNTInput(unsigned short pad) {
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		Jump = (hw & GUI_BTN_A);
+		Jump = (hw & INPUT_BTN_A);
 		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
 		SpinKick = (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.5);
-		Roll = (hw & GUI_TRIGGER_ZL) || (hw & GUI_TRIGGER_L); // Z or C
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
+		Roll = (hw & INPUT_TRIGGER_ZL) || (hw & INPUT_TRIGGER_L); // Z or C
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
 		// Swap Turtles or super turtle summon
-		if (hw & GUI_BTN_B) {
+		if (hw & INPUT_BTN_B) {
 			if (data.hw_pitch[GUI_HW_NUNCHUK] < -35 && data.hw_pitch[GUI_HW_WIIMOTE] < -35)
 				J |= VBA_BUTTON_L | VBA_BUTTON_R;
 			else J |= VBA_BUTTON_R;
 		}
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
-		Jump = (hw & GUI_BTN_B);
-		Attack = (hw & GUI_BTN_A);
-		SpinKick = (hw & GUI_BTN_X);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		Roll = (hw & (GUI_TRIGGER_L | GUI_TRIGGER_R | GUI_TRIGGER_ZL | GUI_TRIGGER_ZR));
+		Jump = (hw & INPUT_BTN_B);
+		Attack = (hw & INPUT_BTN_A);
+		SpinKick = (hw & INPUT_BTN_X);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		Roll = (hw & (INPUT_TRIGGER_L | INPUT_TRIGGER_R | INPUT_TRIGGER_ZL | INPUT_TRIGGER_ZR));
 
-		if (hw & GUI_BTN_Y) {
+		if (hw & INPUT_BTN_Y) {
 			holdcount++;
 			if (holdcount > 20) J |= VBA_BUTTON_L | VBA_BUTTON_R;
 		}
-		if (data.hw_buttons_r[GUI_HW_CLASSIC] & GUI_BTN_Y) {
+		if (data.hw_buttons_r[GUI_HW_CLASSIC] & INPUT_BTN_Y) {
 			if (holdcount <= 20) J |= VBA_BUTTON_R;
 			holdcount = 0;
 		}
 	} else if (data.hw_connected[GUI_HW_WIIMOTE]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_WIIMOTE];
-		Jump = (hw & GUI_BTN_A);
+		Jump = (hw & INPUT_BTN_A);
 		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		if (hw & GUI_BTN_B) {
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		if (hw & INPUT_BTN_B) {
 			if (data.hw_pitch[GUI_HW_WIIMOTE] < -40)
 				J |= VBA_BUTTON_L | VBA_BUTTON_R;
 			else J |= VBA_BUTTON_R;
 		}
-		SpinKick = (hw & GUI_BTN_1);
-		Roll = (hw & GUI_BTN_2);
+		SpinKick = (hw & INPUT_BTN_1);
+		Roll = (hw & INPUT_BTN_2);
 	}
 
 	uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
 	uint32_t gc_r = data.hw_buttons_r[GUI_HW_GAMECUBE];
 
-	if (gc & GUI_BTN_UP) J |= VBA_UP;
-	if (gc & GUI_BTN_DOWN) J |= VBA_DOWN;
-	if (gc & GUI_BTN_LEFT) J |= VBA_LEFT;
-	if (gc & GUI_BTN_RIGHT) J |= VBA_RIGHT;
-	if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (gc & INPUT_BTN_UP) J |= VBA_UP;
+	if (gc & INPUT_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & INPUT_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
 
-	if (gc & GUI_BTN_B) {
+	if (gc & INPUT_BTN_B) {
 		holdcount++;
 		if (holdcount > 20) J |= VBA_BUTTON_L | VBA_BUTTON_R;
 	}
-	if (gc_r & GUI_BTN_B) {
+	if (gc_r & INPUT_BTN_B) {
 		if (holdcount <= 20) J |= VBA_BUTTON_R;
 		holdcount = 0;
 	}
 
-	if (gc & GUI_BTN_X) Attack = true;
-	if (gc & GUI_BTN_Y) SpinKick = true;
-	if (gc & GUI_BTN_PLUS) Pause = true;
-	if (gc & GUI_TRIGGER_ZR) Select = true; // Z Button
-	if ((gc & GUI_TRIGGER_L) || (gc & GUI_TRIGGER_R)) Roll = true;
+	if (gc & INPUT_BTN_X) Attack = true;
+	if (gc & INPUT_BTN_Y) SpinKick = true;
+	if (gc & INPUT_BTN_PLUS) Pause = true;
+	if (gc & INPUT_TRIGGER_ZR) Select = true; // Z Button
+	if ((gc & INPUT_TRIGGER_L) || (gc & INPUT_TRIGGER_R)) Roll = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack) J |= VBA_BUTTON_B;
@@ -138,7 +138,7 @@ uint32_t TMNTInput(unsigned short pad) {
 
 uint32_t TMNT1Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -146,41 +146,41 @@ uint32_t TMNT1Input(unsigned short pad) {
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		Jump = (hw & GUI_BTN_A);
+		Jump = (hw & INPUT_BTN_A);
 		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
 		SpinKick = (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.5);
-		Roll = (hw & GUI_TRIGGER_ZL) || (hw & GUI_TRIGGER_L);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
+		Roll = (hw & INPUT_TRIGGER_ZL) || (hw & INPUT_TRIGGER_L);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
-		Jump = (hw & GUI_BTN_B);
-		Attack = (hw & GUI_BTN_A);
-		SpinKick = (hw & GUI_BTN_X);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		Roll = (hw & (GUI_TRIGGER_L | GUI_TRIGGER_R | GUI_TRIGGER_ZL | GUI_TRIGGER_ZR));
+		Jump = (hw & INPUT_BTN_B);
+		Attack = (hw & INPUT_BTN_A);
+		SpinKick = (hw & INPUT_BTN_X);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		Roll = (hw & (INPUT_TRIGGER_L | INPUT_TRIGGER_R | INPUT_TRIGGER_ZL | INPUT_TRIGGER_ZR));
 	} else if (data.hw_connected[GUI_HW_WIIMOTE]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_WIIMOTE];
-		Jump = (hw & GUI_BTN_A);
+		Jump = (hw & INPUT_BTN_A);
 		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		SpinKick = (hw & GUI_BTN_1);
-		Roll = (hw & GUI_BTN_2);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		SpinKick = (hw & INPUT_BTN_1);
+		Roll = (hw & INPUT_BTN_2);
 	}
 
 	uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-	if (gc & GUI_BTN_UP) J |= VBA_UP;
-	if (gc & GUI_BTN_DOWN) J |= VBA_DOWN;
-	if (gc & GUI_BTN_LEFT) J |= VBA_LEFT;
-	if (gc & GUI_BTN_RIGHT) J |= VBA_RIGHT;
-	if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-	if (gc & GUI_BTN_X) Attack = true;
-	if (gc & GUI_BTN_Y) SpinKick = true;
-	if (gc & GUI_BTN_PLUS) Pause = true;
-	if (gc & GUI_TRIGGER_ZR) Select = true;
-	if ((gc & GUI_TRIGGER_L) || (gc & GUI_TRIGGER_R)) Roll = true;
+	if (gc & INPUT_BTN_UP) J |= VBA_UP;
+	if (gc & INPUT_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & INPUT_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (gc & INPUT_BTN_X) Attack = true;
+	if (gc & INPUT_BTN_Y) SpinKick = true;
+	if (gc & INPUT_BTN_PLUS) Pause = true;
+	if (gc & INPUT_TRIGGER_ZR) Select = true;
+	if ((gc & INPUT_TRIGGER_L) || (gc & INPUT_TRIGGER_R)) Roll = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack || SpinKick) J |= VBA_BUTTON_B;
@@ -199,7 +199,7 @@ uint32_t TMNT2Input(unsigned short pad) {
 
 uint32_t TMNT3Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -207,45 +207,45 @@ uint32_t TMNT3Input(unsigned short pad) {
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		Jump = (hw & GUI_BTN_A);
+		Jump = (hw & INPUT_BTN_A);
 		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
 		SpinKick = (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.5);
-		Roll = (hw & GUI_TRIGGER_ZL) || (hw & GUI_TRIGGER_L);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		if (hw & GUI_BTN_B) J |= VBA_BUTTON_START;
+		Roll = (hw & INPUT_TRIGGER_ZL) || (hw & INPUT_TRIGGER_L);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		if (hw & INPUT_BTN_B) J |= VBA_BUTTON_START;
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
-		Jump = (hw & GUI_BTN_B);
-		Attack = (hw & GUI_BTN_A);
-		SpinKick = (hw & GUI_BTN_X);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		Roll = (hw & (GUI_TRIGGER_L | GUI_TRIGGER_R | GUI_TRIGGER_ZL | GUI_TRIGGER_ZR));
-		if (hw & GUI_BTN_Y) J |= VBA_BUTTON_START;
+		Jump = (hw & INPUT_BTN_B);
+		Attack = (hw & INPUT_BTN_A);
+		SpinKick = (hw & INPUT_BTN_X);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		Roll = (hw & (INPUT_TRIGGER_L | INPUT_TRIGGER_R | INPUT_TRIGGER_ZL | INPUT_TRIGGER_ZR));
+		if (hw & INPUT_BTN_Y) J |= VBA_BUTTON_START;
 	} else if (data.hw_connected[GUI_HW_WIIMOTE]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_WIIMOTE];
-		Jump = (hw & GUI_BTN_A);
+		Jump = (hw & INPUT_BTN_A);
 		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		if (hw & GUI_BTN_B) J |= VBA_BUTTON_START;
-		SpinKick = (hw & GUI_BTN_1);
-		Roll = (hw & GUI_BTN_2);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		if (hw & INPUT_BTN_B) J |= VBA_BUTTON_START;
+		SpinKick = (hw & INPUT_BTN_1);
+		Roll = (hw & INPUT_BTN_2);
 	}
 
 	uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-	if (gc & GUI_BTN_UP) J |= VBA_UP;
-	if (gc & GUI_BTN_DOWN) J |= VBA_DOWN;
-	if (gc & GUI_BTN_LEFT) J |= VBA_LEFT;
-	if (gc & GUI_BTN_RIGHT) J |= VBA_RIGHT;
-	if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-	if (gc & GUI_BTN_B) J |= VBA_BUTTON_START;
-	if (gc & GUI_BTN_X) Attack = true;
-	if (gc & GUI_BTN_Y) SpinKick = true;
-	if (gc & GUI_BTN_PLUS) Pause = true;
-	if (gc & GUI_TRIGGER_ZR) Select = true;
-	if ((gc & GUI_TRIGGER_L) || (gc & GUI_TRIGGER_R)) Roll = true;
+	if (gc & INPUT_BTN_UP) J |= VBA_UP;
+	if (gc & INPUT_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & INPUT_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (gc & INPUT_BTN_B) J |= VBA_BUTTON_START;
+	if (gc & INPUT_BTN_X) Attack = true;
+	if (gc & INPUT_BTN_Y) SpinKick = true;
+	if (gc & INPUT_BTN_PLUS) Pause = true;
+	if (gc & INPUT_TRIGGER_ZR) Select = true;
+	if ((gc & INPUT_TRIGGER_L) || (gc & INPUT_TRIGGER_R)) Roll = true;
 
 	if (Jump || Roll) J |= VBA_BUTTON_A;
 	if (Attack || SpinKick) J |= VBA_BUTTON_B;
@@ -259,7 +259,7 @@ uint32_t TMNT3Input(unsigned short pad) {
 
 uint32_t TMNTGBAInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -267,41 +267,41 @@ uint32_t TMNTGBAInput(unsigned short pad) {
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		Jump = (hw & GUI_BTN_A);
-		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
+		Jump = (hw & INPUT_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & INPUT_BTN_B);
 		SpinKick = (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.5);
-		SpecialMove = (hw & GUI_TRIGGER_ZL);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
+		SpecialMove = (hw & INPUT_TRIGGER_ZL);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
-		Jump = (hw & GUI_BTN_B);
-		Attack = (hw & GUI_BTN_A);
-		SpinKick = (hw & GUI_BTN_X);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		SpecialMove = (hw & (GUI_TRIGGER_L | GUI_TRIGGER_R | GUI_TRIGGER_ZL | GUI_TRIGGER_ZR));
+		Jump = (hw & INPUT_BTN_B);
+		Attack = (hw & INPUT_BTN_A);
+		SpinKick = (hw & INPUT_BTN_X);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		SpecialMove = (hw & (INPUT_TRIGGER_L | INPUT_TRIGGER_R | INPUT_TRIGGER_ZL | INPUT_TRIGGER_ZR));
 	} else if (data.hw_connected[GUI_HW_WIIMOTE]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_WIIMOTE];
-		Jump = (hw & GUI_BTN_A);
-		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		SpinKick = (hw & GUI_BTN_1);
-		SpecialMove = (hw & GUI_BTN_2);
+		Jump = (hw & INPUT_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & INPUT_BTN_B);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		SpinKick = (hw & INPUT_BTN_1);
+		SpecialMove = (hw & INPUT_BTN_2);
 	}
 
 	uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-	if (gc & GUI_BTN_UP) J |= VBA_UP;
-	if (gc & GUI_BTN_DOWN) J |= VBA_DOWN;
-	if (gc & GUI_BTN_LEFT) J |= VBA_LEFT;
-	if (gc & GUI_BTN_RIGHT) J |= VBA_RIGHT;
-	if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-	if (gc & GUI_BTN_X) Attack = true;
-	if (gc & GUI_BTN_Y) SpinKick = true;
-	if (gc & GUI_BTN_PLUS) Pause = true;
-	if (gc & GUI_TRIGGER_ZR) Select = true;
-	if ((gc & GUI_TRIGGER_L) || (gc & GUI_TRIGGER_R)) SpecialMove = true;
+	if (gc & INPUT_BTN_UP) J |= VBA_UP;
+	if (gc & INPUT_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & INPUT_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (gc & INPUT_BTN_X) Attack = true;
+	if (gc & INPUT_BTN_Y) SpinKick = true;
+	if (gc & INPUT_BTN_PLUS) Pause = true;
+	if (gc & INPUT_TRIGGER_ZR) Select = true;
+	if ((gc & INPUT_TRIGGER_L) || (gc & INPUT_TRIGGER_R)) SpecialMove = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack) J |= VBA_BUTTON_B;
@@ -317,7 +317,7 @@ uint32_t TMNTGBAInput(unsigned short pad) {
 
 uint32_t TMNTGBA2Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -325,45 +325,45 @@ uint32_t TMNTGBA2Input(unsigned short pad) {
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		Jump = (hw & GUI_BTN_A);
-		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
+		Jump = (hw & INPUT_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & INPUT_BTN_B);
 		SpinKick = (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.5);
-		SpecialMove = (hw & GUI_TRIGGER_ZL);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		Look = (hw & GUI_TRIGGER_L);
+		SpecialMove = (hw & INPUT_TRIGGER_ZL);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		Look = (hw & INPUT_TRIGGER_L);
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
-		Jump = (hw & GUI_BTN_B);
-		Attack = (hw & GUI_BTN_A);
-		SpinKick = (hw & GUI_BTN_X);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		SpecialMove = (hw & (GUI_TRIGGER_L | GUI_TRIGGER_R | GUI_TRIGGER_ZR));
-		Look = (hw & GUI_TRIGGER_ZL);
+		Jump = (hw & INPUT_BTN_B);
+		Attack = (hw & INPUT_BTN_A);
+		SpinKick = (hw & INPUT_BTN_X);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		SpecialMove = (hw & (INPUT_TRIGGER_L | INPUT_TRIGGER_R | INPUT_TRIGGER_ZR));
+		Look = (hw & INPUT_TRIGGER_ZL);
 	} else if (data.hw_connected[GUI_HW_WIIMOTE]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_WIIMOTE];
-		Jump = (hw & GUI_BTN_A);
-		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
-		Pause = (hw & GUI_BTN_PLUS);
-		Select = (hw & GUI_BTN_MINUS);
-		if (hw & GUI_BTN_B) Look = true;
-		SpinKick = (hw & GUI_BTN_1);
-		SpecialMove = (hw & GUI_BTN_2);
+		Jump = (hw & INPUT_BTN_A);
+		Attack = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (hw & INPUT_BTN_B);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		if (hw & INPUT_BTN_B) Look = true;
+		SpinKick = (hw & INPUT_BTN_1);
+		SpecialMove = (hw & INPUT_BTN_2);
 	}
 
 	uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-	if (gc & GUI_BTN_UP) J |= VBA_UP;
-	if (gc & GUI_BTN_DOWN) J |= VBA_DOWN;
-	if (gc & GUI_BTN_LEFT) J |= VBA_LEFT;
-	if (gc & GUI_BTN_RIGHT) J |= VBA_RIGHT;
-	if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-	if (gc & GUI_BTN_B) Look = true;
-	if (gc & GUI_BTN_X) Attack = true;
-	if (gc & GUI_BTN_Y) SpinKick = true;
-	if (gc & GUI_BTN_PLUS) Pause = true;
-	if (gc & GUI_TRIGGER_ZR) Select = true;
-	if ((gc & GUI_TRIGGER_L) || (gc & GUI_TRIGGER_R)) SpecialMove = true;
+	if (gc & INPUT_BTN_UP) J |= VBA_UP;
+	if (gc & INPUT_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & INPUT_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (gc & INPUT_BTN_B) Look = true;
+	if (gc & INPUT_BTN_X) Attack = true;
+	if (gc & INPUT_BTN_Y) SpinKick = true;
+	if (gc & INPUT_BTN_PLUS) Pause = true;
+	if (gc & INPUT_TRIGGER_ZR) Select = true;
+	if ((gc & INPUT_TRIGGER_L) || (gc & INPUT_TRIGGER_R)) SpecialMove = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack) J |= VBA_BUTTON_B;
@@ -379,38 +379,38 @@ uint32_t TMNTGBA2Input(unsigned short pad) {
 
 uint32_t HarryPotter1GBCInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 
 	// Apply standard mapping for GameCube specifically as requested by legacy code
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	// Pause & Select
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
 	// Core actions
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
 
 	// Spells via gforce missing in generic unified state, access directly via wiimote state
 	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) J |= VBA_BUTTON_A;
 
-	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_L | VBA_BUTTON_R;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_BUTTON_L | VBA_BUTTON_R;
 
 	// Run
-	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_SPEED;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_ZL) J |= VBA_SPEED;
 	// Camera
-	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_BUTTON_SELECT;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_L) J |= VBA_BUTTON_SELECT;
 
 	return J;
 }
@@ -421,150 +421,150 @@ uint32_t HarryPotter2GBCInput(unsigned short pad) {
 
 uint32_t HarryPotter1Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	// Generic fallback logic across controllers
-	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_R;
-	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_BUTTON_L;
-	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
-	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (data.buttons_h & INPUT_BTN_RIGHT) J |= VBA_BUTTON_R;
+	if (data.buttons_h & INPUT_BTN_LEFT) J |= VBA_BUTTON_L;
+	if (data.buttons_h & INPUT_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & INPUT_BTN_DOWN) J |= VBA_DOWN;
 
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
 
 	// Spells via gforce
 	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) J |= VBA_BUTTON_B;
 
-	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & (GUI_BTN_1 | GUI_BTN_2)) J |= VBA_BUTTON_R;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & (INPUT_BTN_1 | INPUT_BTN_2)) J |= VBA_BUTTON_R;
 
 	// Run / Flute
-	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_SPEED;
-	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_ZL) J |= VBA_SPEED;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
 
 	return J;
 }
 
 uint32_t HarryPotter2Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
-	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_R;
-	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_BUTTON_L;
-	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
-	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (data.buttons_h & INPUT_BTN_RIGHT) J |= VBA_BUTTON_R;
+	if (data.buttons_h & INPUT_BTN_LEFT) J |= VBA_BUTTON_L;
+	if (data.buttons_h & INPUT_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & INPUT_BTN_DOWN) J |= VBA_DOWN;
 
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_B;
-	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_A;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_B;
+	if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_A;
 
 	// Spells via gforce
 	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) J |= VBA_BUTTON_A;
 
-	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & (GUI_BTN_1 | GUI_BTN_2)) J |= VBA_BUTTON_L;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & (INPUT_BTN_1 | INPUT_BTN_2)) J |= VBA_BUTTON_L;
 
 	// Sneak / Jump
-	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_BUTTON_B;
-	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_BUTTON_R;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_ZL) J |= VBA_BUTTON_B;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_L) J |= VBA_BUTTON_R;
 
 	return J;
 }
 
 uint32_t HarryPotter3Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
-	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_R;
-	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_BUTTON_L;
-	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
-	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (data.buttons_h & INPUT_BTN_RIGHT) J |= VBA_BUTTON_R;
+	if (data.buttons_h & INPUT_BTN_LEFT) J |= VBA_BUTTON_L;
+	if (data.buttons_h & INPUT_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & INPUT_BTN_DOWN) J |= VBA_DOWN;
 
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
 
 	// Spells via gforce
 	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) J |= VBA_BUTTON_B;
 
-	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_L;
-	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2) J |= VBA_BUTTON_R;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_BUTTON_L;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_2) J |= VBA_BUTTON_R;
 
-	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_SPEED;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_ZL) J |= VBA_SPEED;
 
 	return J;
 }
 
 uint32_t HarryPotter4Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
-	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_R;
-	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_BUTTON_L;
-	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
-	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (data.buttons_h & INPUT_BTN_RIGHT) J |= VBA_BUTTON_R;
+	if (data.buttons_h & INPUT_BTN_LEFT) J |= VBA_BUTTON_L;
+	if (data.buttons_h & INPUT_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & INPUT_BTN_DOWN) J |= VBA_DOWN;
 
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
 
 	// Spells via gforce
 	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) J |= VBA_BUTTON_A;
 
-	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+	if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
 
-	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_L;
-	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2) J |= VBA_BUTTON_R;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_BUTTON_L;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_2) J |= VBA_BUTTON_R;
 
-	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_SPEED;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_ZL) J |= VBA_SPEED;
 
 	return J;
 }
 
 uint32_t HarryPotter5Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	// Wand cursor via unified IR/Touch valid pointer
@@ -586,18 +586,18 @@ uint32_t HarryPotter5Input(unsigned short pad) {
 	oldcx = cx;
 	oldcy = cy;
 
-	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_R;
-	if (data.buttons_h & GUI_BTN_LEFT) J |= VBA_BUTTON_L;
-	if (data.buttons_h & GUI_BTN_UP) J |= VBA_UP;
-	if (data.buttons_h & GUI_BTN_DOWN) J |= VBA_DOWN;
+	if (data.buttons_h & INPUT_BTN_RIGHT) J |= VBA_BUTTON_R;
+	if (data.buttons_h & INPUT_BTN_LEFT) J |= VBA_BUTTON_L;
+	if (data.buttons_h & INPUT_BTN_UP) J |= VBA_UP;
+	if (data.buttons_h & INPUT_BTN_DOWN) J |= VBA_DOWN;
 
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
 
-	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_SPEED;
+	if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_ZL) J |= VBA_SPEED;
 
 	return J;
 }
@@ -605,24 +605,24 @@ uint32_t HarryPotter5Input(unsigned short pad) {
 // WarioWare Twisted
 uint32_t TwistedInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		TiltSideways = false;
 		J |= StandardDPad(pad);
 
-		if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+		if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & (GUI_BTN_1 | GUI_BTN_2)) J |= VBA_BUTTON_L | VBA_SPEED;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & (INPUT_BTN_1 | INPUT_BTN_2)) J |= VBA_BUTTON_L | VBA_SPEED;
 
-		if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+		if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
 
-		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_BUTTON_R;
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_ZL) J |= VBA_BUTTON_R;
 
-		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) {
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_L) {
 			CalibrateWario = true;
 		} else CalibrateWario = false;
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
@@ -631,7 +631,7 @@ uint32_t TwistedInput(unsigned short pad) {
 	} else {
 		TiltSideways = true;
 		J |= StandardSideways(pad);
-		if (data.buttons_h & GUI_BTN_B) {
+		if (data.buttons_h & INPUT_BTN_B) {
 			CalibrateWario = true;
 		} else CalibrateWario = false;
 	}
@@ -641,50 +641,50 @@ uint32_t TwistedInput(unsigned short pad) {
 
 uint32_t KirbyTntInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		TiltSideways = false;
 		J |= StandardDPad(pad);
-		if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
-		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_B;
-		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2) J |= VBA_BUTTON_A;
+		if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_BUTTON_B;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_2) J |= VBA_BUTTON_A;
 
-		if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_SPEED;
+		if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_L) J |= VBA_SPEED;
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		TiltSideways = false;
 		J |= StandardDPad(pad) | StandardClassic(pad);
-		if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+		if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
 	} else {
 		TiltSideways = true;
 		J |= StandardSideways(pad);
-		if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (data.buttons_h & GUI_BTN_B) J |= VBA_SPEED;
+		if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (data.buttons_h & INPUT_BTN_B) J |= VBA_SPEED;
 	}
 	return J;
 }
 
 uint32_t MohInfiltratorInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		if (hw & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (hw & GUI_BTN_MINUS) J |= VBA_BUTTON_L;
-		if (hw & GUI_BTN_A) J |= VBA_BUTTON_A | VBA_BUTTON_L;
-		if (hw & GUI_BTN_B) J |= VBA_BUTTON_A;
+		if (hw & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (hw & INPUT_BTN_MINUS) J |= VBA_BUTTON_L;
+		if (hw & INPUT_BTN_A) J |= VBA_BUTTON_A | VBA_BUTTON_L;
+		if (hw & INPUT_BTN_B) J |= VBA_BUTTON_A;
 
-		if (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.6 || (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_UP) || (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2)) J |= VBA_BUTTON_L;
+		if (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.6 || (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_UP) || (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_2)) J |= VBA_BUTTON_L;
 
-		if (hw & GUI_TRIGGER_L) J |= VBA_BUTTON_R;
-		if ((hw & GUI_BTN_LEFT) || (hw & GUI_BTN_RIGHT)) J |= VBA_BUTTON_B;
-		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_SPEED;
+		if (hw & INPUT_TRIGGER_L) J |= VBA_BUTTON_R;
+		if ((hw & INPUT_BTN_LEFT) || (hw & INPUT_BTN_RIGHT)) J |= VBA_BUTTON_B;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_SPEED;
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		J |= StandardClassic(pad);
 	} else {
@@ -695,7 +695,7 @@ uint32_t MohInfiltratorInput(unsigned short pad) {
 
 uint32_t MohUndergroundInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardClassic(pad) | StandardSideways(pad);
 	static bool crouched = false;
@@ -712,15 +712,15 @@ uint32_t MohUndergroundInput(unsigned short pad) {
 		}
 
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		if (data.hw_buttons_d[GUI_HW_NUNCHUK] & GUI_BTN_DOWN) crouched = !crouched; // Toggle
+		if (data.hw_buttons_d[GUI_HW_NUNCHUK] & INPUT_BTN_DOWN) crouched = !crouched; // Toggle
 
-		if (hw & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (hw & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (hw & GUI_BTN_B) J |= VBA_BUTTON_A;
+		if (hw & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (hw & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (hw & INPUT_BTN_B) J |= VBA_BUTTON_A;
 
-		if (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.6 || (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_UP) || (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2)) J |= VBA_BUTTON_SELECT;
-		if ((hw & GUI_BTN_LEFT) || (hw & GUI_BTN_RIGHT)) J |= VBA_BUTTON_B;
-		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_SPEED;
+		if (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.6 || (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_UP) || (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_2)) J |= VBA_BUTTON_SELECT;
+		if ((hw & INPUT_BTN_LEFT) || (hw & INPUT_BTN_RIGHT)) J |= VBA_BUTTON_B;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_SPEED;
 	} else {
 		CursorVisible = false;
 	}
@@ -733,22 +733,22 @@ uint32_t MohUndergroundInput(unsigned short pad) {
 
 uint32_t BoktaiInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	static bool GunRaised = false;
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
 
 	if ((-data.hw_pitch[GUI_HW_WIIMOTE]) > 45) {
 		GunRaised = true;
@@ -757,39 +757,39 @@ uint32_t BoktaiInput(unsigned short pad) {
 	}
 
 	if (GunRaised) J |= VBA_BUTTON_A;
-	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
-	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2) J |= VBA_BUTTON_R;
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_2) J |= VBA_BUTTON_R;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
-		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_BUTTON_R;
-		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_BUTTON_L;
-		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_SPEED;
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_L) J |= VBA_BUTTON_R;
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_ZL) J |= VBA_BUTTON_L;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_SPEED;
 	} else {
-		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_L;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_BUTTON_L;
 	}
 	return J;
 }
 
 uint32_t Boktai2Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	static bool GunRaised = false;
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
 
 	if ((-data.hw_pitch[GUI_HW_WIIMOTE]) > 45) {
 		GunRaised = true;
@@ -798,27 +798,27 @@ uint32_t Boktai2Input(unsigned short pad) {
 	}
 
 	if (GunRaised) J |= VBA_BUTTON_A;
-	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+	if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
 
 	if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.8) J |= VBA_BUTTON_B;
 
-	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2) J |= VBA_BUTTON_R;
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_2) J |= VBA_BUTTON_R;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
-		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_L) J |= VBA_BUTTON_R;
-		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & GUI_TRIGGER_ZL) J |= VBA_BUTTON_L;
-		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_SPEED;
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_L) J |= VBA_BUTTON_R;
+		if (data.hw_buttons_h[GUI_HW_NUNCHUK] & INPUT_TRIGGER_ZL) J |= VBA_BUTTON_L;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_SPEED;
 	} else {
-		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) J |= VBA_BUTTON_L;
+		if (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_BUTTON_L;
 	}
 	return J;
 }
 
 uint32_t OnePieceInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -828,26 +828,26 @@ uint32_t OnePieceInput(unsigned short pad) {
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		J |= StandardDPad(pad);
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		JumpButton = hw & GUI_BTN_B;
-		AttackButton = hw & GUI_BTN_A;
-		CharacterButton = hw & GUI_BTN_MINUS;
-		PauseButton = hw & GUI_BTN_PLUS;
-		DashButton = hw & GUI_TRIGGER_L;
-		GrabButton = hw & GUI_TRIGGER_ZL;
-		ViewButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1;
-		SpeedButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2;
+		JumpButton = hw & INPUT_BTN_B;
+		AttackButton = hw & INPUT_BTN_A;
+		CharacterButton = hw & INPUT_BTN_MINUS;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		DashButton = hw & INPUT_TRIGGER_L;
+		GrabButton = hw & INPUT_TRIGGER_ZL;
+		ViewButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1;
+		SpeedButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_2;
 	}
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
 		if (data.hw_substickX[GUI_HW_GAMECUBE] > 0.55f) J |= VBA_SPEED;
-		JumpButton = JumpButton || (gc & GUI_BTN_Y);
-		AttackButton = AttackButton || (gc & GUI_BTN_A);
-		GrabButton = GrabButton || (gc & GUI_BTN_B);
-		AttackUpButton = AttackUpButton || (gc & GUI_BTN_X);
-		DashButton = DashButton || (gc & GUI_TRIGGER_L);
-		PauseButton = PauseButton || (gc & GUI_BTN_PLUS);
-		CharacterButton = CharacterButton || (gc & GUI_TRIGGER_R);
+		JumpButton = JumpButton || (gc & INPUT_BTN_Y);
+		AttackButton = AttackButton || (gc & INPUT_BTN_A);
+		GrabButton = GrabButton || (gc & INPUT_BTN_B);
+		AttackUpButton = AttackUpButton || (gc & INPUT_BTN_X);
+		DashButton = DashButton || (gc & INPUT_TRIGGER_L);
+		PauseButton = PauseButton || (gc & INPUT_BTN_PLUS);
+		CharacterButton = CharacterButton || (gc & INPUT_TRIGGER_R);
 	}
 	
 	if (JumpButton) J |= VBA_BUTTON_A;
@@ -868,18 +868,18 @@ uint32_t OnePieceInput(unsigned short pad) {
 
 uint32_t HobbitInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	bool AbilityButton=0, AttackButton=0, UseButton=0, ChangeSkillButton=0, PauseButton=0, ItemsButton=0, SpeedButton=0;
@@ -887,12 +887,12 @@ uint32_t HobbitInput(unsigned short pad) {
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		J |= StandardDPad(pad);
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		AbilityButton = hw & GUI_BTN_B;
-		UseButton = hw & GUI_BTN_A;
-		PauseButton = hw & GUI_BTN_PLUS;
-		ItemsButton = hw & GUI_BTN_MINUS;
-		SpeedButton = hw & GUI_TRIGGER_L;
-		ChangeSkillButton = hw & GUI_TRIGGER_ZL;
+		AbilityButton = hw & INPUT_BTN_B;
+		UseButton = hw & INPUT_BTN_A;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		ItemsButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = hw & INPUT_TRIGGER_L;
+		ChangeSkillButton = hw & INPUT_TRIGGER_ZL;
 		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
 	}
 	
@@ -909,18 +909,18 @@ uint32_t HobbitInput(unsigned short pad) {
 
 uint32_t FellowshipOfTheRingInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	bool CancelButton=0, UseButton=0, ChangeCharButton=0, PauseButton=0, ItemsButton=0, SpeedButton=0, SelectButton=0;
@@ -928,14 +928,14 @@ uint32_t FellowshipOfTheRingInput(unsigned short pad) {
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		J |= StandardDPad(pad);
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		CancelButton = hw & GUI_BTN_B;
-		UseButton = hw & GUI_BTN_A;
-		PauseButton = hw & GUI_BTN_PLUS;
-		ItemsButton = hw & GUI_BTN_MINUS;
-		SpeedButton = hw & GUI_TRIGGER_L;
-		ChangeCharButton = hw & GUI_TRIGGER_ZL;
+		CancelButton = hw & INPUT_BTN_B;
+		UseButton = hw & INPUT_BTN_A;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		ItemsButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = hw & INPUT_TRIGGER_L;
+		ChangeCharButton = hw & INPUT_TRIGGER_ZL;
 		CancelButton = CancelButton || (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
-		SelectButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1;
+		SelectButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1;
 	}
 
 	if (UseButton) J |= VBA_BUTTON_A;
@@ -951,18 +951,18 @@ uint32_t FellowshipOfTheRingInput(unsigned short pad) {
 
 uint32_t ReturnOfTheKingInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	bool AbilityButton=0, AttackButton=0, UseButton=0, ChangeSkillButton=0, PauseButton=0, ItemsButton=0, SpeedButton=0;
@@ -970,12 +970,12 @@ uint32_t ReturnOfTheKingInput(unsigned short pad) {
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		J |= StandardDPad(pad);
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		AbilityButton = hw & GUI_BTN_B;
-		UseButton = hw & GUI_BTN_A;
-		PauseButton = hw & GUI_BTN_PLUS;
-		ItemsButton = hw & GUI_BTN_MINUS;
-		SpeedButton = hw & GUI_TRIGGER_L;
-		ChangeSkillButton = hw & GUI_TRIGGER_ZL;
+		AbilityButton = hw & INPUT_BTN_B;
+		UseButton = hw & INPUT_BTN_A;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		ItemsButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = hw & INPUT_TRIGGER_L;
+		ChangeSkillButton = hw & INPUT_TRIGGER_ZL;
 		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5);
 	}
 	
@@ -992,38 +992,38 @@ uint32_t ReturnOfTheKingInput(unsigned short pad) {
 
 uint32_t CastlevaniaAdventureInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	bool JumpButton=0, AttackButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0;
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
-		JumpButton = hw & GUI_TRIGGER_L;
-		GuardButton = hw & GUI_TRIGGER_ZL;
-		PauseButton = hw & GUI_BTN_PLUS;
-		SelectButton = hw & GUI_BTN_MINUS;
-		SpeedButton = (hw & GUI_BTN_A) && (hw & GUI_BTN_B);
+		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & INPUT_BTN_B);
+		JumpButton = hw & INPUT_TRIGGER_L;
+		GuardButton = hw & INPUT_TRIGGER_ZL;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		SelectButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = (hw & INPUT_BTN_A) && (hw & INPUT_BTN_B);
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
-		AttackButton = hw & GUI_BTN_B;
-		JumpButton = hw & GUI_TRIGGER_R;
-		GuardButton = hw & GUI_TRIGGER_L;
-		PauseButton = hw & GUI_BTN_PLUS;
-		SelectButton = hw & GUI_BTN_MINUS;
-		SpeedButton = hw & GUI_BTN_A;
+		AttackButton = hw & INPUT_BTN_B;
+		JumpButton = hw & INPUT_TRIGGER_R;
+		GuardButton = hw & INPUT_TRIGGER_L;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		SelectButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = hw & INPUT_BTN_A;
 	}
 	
 	if (JumpButton) J |= VBA_BUTTON_A;
@@ -1041,40 +1041,40 @@ uint32_t CastlevaniaAdventureInput(unsigned short pad) {
 
 uint32_t CastlevaniaBelmontInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0;
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		ShootButton = hw & GUI_BTN_A;
-		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
-		JumpButton = hw & GUI_TRIGGER_L;
-		GuardButton = hw & GUI_TRIGGER_ZL;
-		PauseButton = hw & GUI_BTN_PLUS;
-		SelectButton = hw & GUI_BTN_MINUS;
-		SpeedButton = (hw & GUI_BTN_A) && (hw & GUI_BTN_B);
+		ShootButton = hw & INPUT_BTN_A;
+		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & INPUT_BTN_B);
+		JumpButton = hw & INPUT_TRIGGER_L;
+		GuardButton = hw & INPUT_TRIGGER_ZL;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		SelectButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = (hw & INPUT_BTN_A) && (hw & INPUT_BTN_B);
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
-		ShootButton = hw & GUI_BTN_Y;
-		AttackButton = hw & GUI_BTN_B;
-		JumpButton = hw & GUI_TRIGGER_R;
-		GuardButton = hw & GUI_TRIGGER_L;
-		PauseButton = hw & GUI_BTN_PLUS;
-		SelectButton = hw & GUI_BTN_MINUS;
-		SpeedButton = hw & GUI_BTN_A;
+		ShootButton = hw & INPUT_BTN_Y;
+		AttackButton = hw & INPUT_BTN_B;
+		JumpButton = hw & INPUT_TRIGGER_R;
+		GuardButton = hw & INPUT_TRIGGER_L;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		SelectButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = hw & INPUT_BTN_A;
 	}
 	
 	if (JumpButton) J |= VBA_BUTTON_A;
@@ -1096,42 +1096,42 @@ uint32_t CastlevaniaBelmontInput(unsigned short pad) {
 
 uint32_t CastlevaniaLegendsInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, HyperButton=0;
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		ShootButton = hw & GUI_BTN_A;
-		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
-		JumpButton = hw & GUI_TRIGGER_L;
-		GuardButton = hw & GUI_TRIGGER_ZL;
-		PauseButton = hw & GUI_BTN_PLUS;
-		SelectButton = hw & GUI_BTN_MINUS;
-		SpeedButton = (hw & GUI_BTN_A) && (hw & GUI_BTN_B);
-		HyperButton = hw & GUI_BTN_DOWN;
+		ShootButton = hw & INPUT_BTN_A;
+		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & INPUT_BTN_B);
+		JumpButton = hw & INPUT_TRIGGER_L;
+		GuardButton = hw & INPUT_TRIGGER_ZL;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		SelectButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = (hw & INPUT_BTN_A) && (hw & INPUT_BTN_B);
+		HyperButton = hw & INPUT_BTN_DOWN;
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
-		ShootButton = hw & GUI_BTN_Y;
-		AttackButton = hw & GUI_BTN_B;
-		JumpButton = hw & GUI_TRIGGER_R;
-		GuardButton = hw & GUI_TRIGGER_L;
-		PauseButton = hw & GUI_BTN_PLUS;
-		SelectButton = hw & GUI_BTN_MINUS;
-		SpeedButton = hw & GUI_BTN_A;
-		HyperButton = hw & GUI_BTN_X;
+		ShootButton = hw & INPUT_BTN_Y;
+		AttackButton = hw & INPUT_BTN_B;
+		JumpButton = hw & INPUT_TRIGGER_R;
+		GuardButton = hw & INPUT_TRIGGER_L;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		SelectButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = hw & INPUT_BTN_A;
+		HyperButton = hw & INPUT_BTN_X;
 	}
 	
 	if (JumpButton) J |= VBA_BUTTON_A;
@@ -1154,18 +1154,18 @@ uint32_t CastlevaniaLegendsInput(unsigned short pad) {
 
 uint32_t CastlevaniaCircleMoonInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	bool JumpButton=0, AttackButton=0, ShootButton=0, GuardButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, HyperButton=0,
@@ -1173,29 +1173,29 @@ uint32_t CastlevaniaCircleMoonInput(unsigned short pad) {
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		ShootButton = hw & GUI_BTN_A;
-		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & GUI_BTN_B);
-		JumpButton = hw & GUI_TRIGGER_L;
-		GuardButton = hw & GUI_TRIGGER_ZL;
-		PauseButton = hw & GUI_BTN_PLUS;
-		SelectButton = hw & GUI_BTN_MINUS;
-		SpeedButton = (hw & GUI_BTN_A) && (hw & GUI_BTN_B);
-		HyperButton = hw & GUI_BTN_DOWN;
-		LButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1;
-		RButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2;
+		ShootButton = hw & INPUT_BTN_A;
+		AttackButton = (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5) || (fabs(data.hw_gforceY[GUI_HW_WIIMOTE]) > 1.5) || (hw & INPUT_BTN_B);
+		JumpButton = hw & INPUT_TRIGGER_L;
+		GuardButton = hw & INPUT_TRIGGER_ZL;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		SelectButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = (hw & INPUT_BTN_A) && (hw & INPUT_BTN_B);
+		HyperButton = hw & INPUT_BTN_DOWN;
+		LButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1;
+		RButton = data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_2;
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
-		ShootButton = hw & GUI_BTN_Y;
-		AttackButton = hw & GUI_BTN_B;
-		JumpButton = hw & GUI_TRIGGER_R;
-		GuardButton = hw & GUI_TRIGGER_L;
-		PauseButton = hw & GUI_BTN_PLUS;
-		SelectButton = hw & GUI_BTN_MINUS;
-		SpeedButton = hw & GUI_BTN_A;
-		HyperButton = hw & GUI_BTN_X;
-		// In driver layer, FULL_L and ZL are merged to GUI_TRIGGER_L, FULL_R and ZR to GUI_TRIGGER_R
-		LButton = hw & GUI_TRIGGER_L;
-		RButton = hw & GUI_TRIGGER_R;
+		ShootButton = hw & INPUT_BTN_Y;
+		AttackButton = hw & INPUT_BTN_B;
+		JumpButton = hw & INPUT_TRIGGER_R;
+		GuardButton = hw & INPUT_TRIGGER_L;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		SelectButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = hw & INPUT_BTN_A;
+		HyperButton = hw & INPUT_BTN_X;
+		// In driver layer, FULL_L and ZL are merged to INPUT_TRIGGER_L, FULL_R and ZR to INPUT_TRIGGER_R
+		LButton = hw & INPUT_TRIGGER_L;
+		RButton = hw & INPUT_TRIGGER_R;
 	}
 	
 	if (JumpButton) J |= VBA_BUTTON_A;
@@ -1266,40 +1266,40 @@ void KD_WeaponToMemory() {
 
 uint32_t KidDraculaInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[GUI_HW_GAMECUBE];
-		if (gc & GUI_BTN_A) J |= VBA_BUTTON_A;
-		if (gc & GUI_BTN_B) J |= VBA_BUTTON_B;
-		if (gc & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-		if (gc & GUI_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
-		if (gc & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-		if (gc & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+		if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+		if (gc & INPUT_BTN_B) J |= VBA_BUTTON_B;
+		if (gc & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+		if (gc & INPUT_TRIGGER_ZR) J |= VBA_BUTTON_SELECT;
+		if (gc & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+		if (gc & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	}
 
 	bool JumpButton=0, ShootButton=0, PauseButton=0, SelectButton=0, SpeedButton=0, NorButton=0, BatButton=0;
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_NUNCHUK];
-		JumpButton = hw & GUI_BTN_A;
-		ShootButton = hw & GUI_BTN_B;
-		PauseButton = hw & GUI_BTN_PLUS;
-		SelectButton = hw & GUI_BTN_MINUS;
-		SpeedButton = (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_1) || (data.hw_buttons_h[GUI_HW_WIIMOTE] & GUI_BTN_2);
-		NorButton = hw & GUI_TRIGGER_ZL;
-		BatButton = hw & GUI_TRIGGER_L;
+		JumpButton = hw & INPUT_BTN_A;
+		ShootButton = hw & INPUT_BTN_B;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		SelectButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_1) || (data.hw_buttons_h[GUI_HW_WIIMOTE] & INPUT_BTN_2);
+		NorButton = hw & INPUT_TRIGGER_ZL;
+		BatButton = hw & INPUT_TRIGGER_L;
 	} else if (data.hw_connected[GUI_HW_CLASSIC]) {
 		uint32_t hw = data.hw_buttons_h[GUI_HW_CLASSIC];
-		JumpButton = hw & (GUI_BTN_B | GUI_BTN_A);
-		ShootButton = hw & GUI_BTN_Y;
-		PauseButton = hw & GUI_BTN_PLUS;
-		SelectButton = hw & GUI_BTN_MINUS;
-		SpeedButton = hw & GUI_TRIGGER_L;
-		NorButton = hw & GUI_BTN_X;
-		BatButton = hw & GUI_TRIGGER_R;
+		JumpButton = hw & (INPUT_BTN_B | INPUT_BTN_A);
+		ShootButton = hw & INPUT_BTN_Y;
+		PauseButton = hw & INPUT_BTN_PLUS;
+		SelectButton = hw & INPUT_BTN_MINUS;
+		SpeedButton = hw & INPUT_TRIGGER_L;
+		NorButton = hw & INPUT_BTN_X;
+		BatButton = hw & INPUT_TRIGGER_R;
 	}
 
 	if (JumpButton) J |= VBA_BUTTON_A;

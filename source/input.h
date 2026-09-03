@@ -12,7 +12,7 @@
 #define _INPUT_H_
 
 #include <stdint.h>
-#include "libgui/GuiInput.h"
+#include "drivers/InputData.h"
 
 #define MAXJP 				10 // # of mappable controller buttons
 

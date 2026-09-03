@@ -119,7 +119,7 @@ void ZeldaDxSheathSword()
 uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint16_t ItemsAddr = 0xDB00;
 	static bool QuestScreen = false;
@@ -144,23 +144,23 @@ uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 	OldHealth = Health;
 
 	// 1. Unified hardware mapping.
-	bool ActionButton       = data.buttons_h & GUI_BTN_A;
-	bool SwordButton        = data.buttons_h & GUI_BTN_B;
-	bool ShieldButton       = data.buttons_h & (GUI_TRIGGER_L | GUI_TRIGGER_ZL);
-	bool PullButton         = data.buttons_h & (GUI_TRIGGER_R | GUI_TRIGGER_ZR);
-	bool MidnaButton        = (data.buttons_h & GUI_BTN_UP) || data.substickY > 0.55f;
-	bool UseLeftItemButton  = data.buttons_h & GUI_BTN_Y;
-	bool UseRightItemButton = data.buttons_h & GUI_BTN_X;
-	bool ItemsButton        = data.buttons_h & GUI_BTN_MINUS;
-	bool QuestButton        = data.buttons_h & GUI_BTN_PLUS;
-	bool MapButton          = data.buttons_h & GUI_BTN_RIGHT;
-	bool SpeedButton        = data.buttons_h & GUI_BTN_DOWN;
+	bool ActionButton       = data.buttons_h & INPUT_BTN_A;
+	bool SwordButton        = data.buttons_h & INPUT_BTN_B;
+	bool ShieldButton       = data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL);
+	bool PullButton         = data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR);
+	bool MidnaButton        = (data.buttons_h & INPUT_BTN_UP) || data.substickY > 0.55f;
+	bool UseLeftItemButton  = data.buttons_h & INPUT_BTN_Y;
+	bool UseRightItemButton = data.buttons_h & INPUT_BTN_X;
+	bool ItemsButton        = data.buttons_h & INPUT_BTN_MINUS;
+	bool QuestButton        = data.buttons_h & INPUT_BTN_PLUS;
+	bool MapButton          = data.buttons_h & INPUT_BTN_RIGHT;
+	bool SpeedButton        = data.buttons_h & INPUT_BTN_DOWN;
 
 	// D-Pad simulated items
 	bool LeftItemButton     = data.substickX < -0.55f;
 	bool DownItemButton     = data.substickY < -0.55f;
 	bool RightItemButton    = data.substickX > 0.55f;
-	bool BItemButton        = data.buttons_h & GUI_TRIGGER_R; // Fallback B-Item trigger
+	bool BItemButton        = data.buttons_h & INPUT_TRIGGER_R; // Fallback B-Item trigger
 
 	// Motion Control Mappings
 	if (data.hw_connected[GUI_HW_WIIMOTE]) {
@@ -376,7 +376,7 @@ uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 
 static uint32_t ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint16_t ItemsAddr;
 	if (Seasons) ItemsAddr = 0xC680;
@@ -405,23 +405,23 @@ static uint32_t ZeldaOracleInput(bool Seasons, unsigned short pad) {
 	bool OnItemScreen = (Subscreen == 1);
 
 	// 1. Unified hardware mapping.
-	bool ActionButton       = data.buttons_h & GUI_BTN_A;
-	bool SwordButton        = data.buttons_h & GUI_BTN_B;
-	bool ShieldButton       = data.buttons_h & (GUI_TRIGGER_L | GUI_TRIGGER_ZL);
-	bool PullButton         = data.buttons_h & (GUI_TRIGGER_R | GUI_TRIGGER_ZR);
-	bool MidnaButton        = (data.buttons_h & GUI_BTN_UP) || data.substickY > 0.55f;
-	bool UseLeftItemButton  = data.buttons_h & GUI_BTN_Y;
-	bool UseRightItemButton = data.buttons_h & GUI_BTN_X;
-	bool ItemsButton        = data.buttons_h & GUI_BTN_MINUS;
-	bool QuestButton        = data.buttons_h & GUI_BTN_PLUS;
-	bool MapButton          = data.buttons_h & GUI_BTN_RIGHT;
-	bool SpeedButton        = data.buttons_h & GUI_BTN_DOWN;
+	bool ActionButton       = data.buttons_h & INPUT_BTN_A;
+	bool SwordButton        = data.buttons_h & INPUT_BTN_B;
+	bool ShieldButton       = data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL);
+	bool PullButton         = data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR);
+	bool MidnaButton        = (data.buttons_h & INPUT_BTN_UP) || data.substickY > 0.55f;
+	bool UseLeftItemButton  = data.buttons_h & INPUT_BTN_Y;
+	bool UseRightItemButton = data.buttons_h & INPUT_BTN_X;
+	bool ItemsButton        = data.buttons_h & INPUT_BTN_MINUS;
+	bool QuestButton        = data.buttons_h & INPUT_BTN_PLUS;
+	bool MapButton          = data.buttons_h & INPUT_BTN_RIGHT;
+	bool SpeedButton        = data.buttons_h & INPUT_BTN_DOWN;
 
 	// D-Pad simulated items
 	bool LeftItemButton     = data.substickX < -0.55f;
 	bool DownItemButton     = data.substickY < -0.55f;
 	bool RightItemButton    = data.substickX > 0.55f;
-	bool BItemButton        = data.buttons_h & GUI_TRIGGER_R;
+	bool BItemButton        = data.buttons_h & INPUT_TRIGGER_R;
 
 	// Motion Control Mappings
 	static int SwordCount = 0;
@@ -644,7 +644,7 @@ uint32_t OracleOfSeasonsInput(unsigned short pad)
 uint32_t MinishCapInput(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
 
@@ -691,23 +691,23 @@ uint32_t MinishCapInput(unsigned short pad)
 	else ZTargetButton = 0;
 
 	// 1. Unified hardware mapping.
-	bool ActionButton       = data.buttons_h & GUI_BTN_A;
-	bool SwordButton        = data.buttons_h & GUI_BTN_B;
-	bool ShieldButton       = data.buttons_h & (GUI_TRIGGER_L | GUI_TRIGGER_ZL);
-	bool PullButton         = data.buttons_h & (GUI_TRIGGER_R | GUI_TRIGGER_ZR);
-	bool MidnaButton        = (data.buttons_h & GUI_BTN_UP) || data.substickY > 0.55f;
-	bool UseLeftItemButton  = data.buttons_h & GUI_BTN_Y;
-	bool UseRightItemButton = data.buttons_h & GUI_BTN_X;
-	bool ItemsButton        = data.buttons_h & GUI_BTN_MINUS;
-	bool QuestButton        = data.buttons_h & GUI_BTN_PLUS;
-	bool MapButton          = data.buttons_h & GUI_BTN_RIGHT;
-	bool SpeedButton        = data.buttons_h & GUI_BTN_DOWN;
+	bool ActionButton       = data.buttons_h & INPUT_BTN_A;
+	bool SwordButton        = data.buttons_h & INPUT_BTN_B;
+	bool ShieldButton       = data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL);
+	bool PullButton         = data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR);
+	bool MidnaButton        = (data.buttons_h & INPUT_BTN_UP) || data.substickY > 0.55f;
+	bool UseLeftItemButton  = data.buttons_h & INPUT_BTN_Y;
+	bool UseRightItemButton = data.buttons_h & INPUT_BTN_X;
+	bool ItemsButton        = data.buttons_h & INPUT_BTN_MINUS;
+	bool QuestButton        = data.buttons_h & INPUT_BTN_PLUS;
+	bool MapButton          = data.buttons_h & INPUT_BTN_RIGHT;
+	bool SpeedButton        = data.buttons_h & INPUT_BTN_DOWN;
 
 	// D-Pad simulated items
 	bool LeftItemButton     = data.substickX < -0.55f;
 	bool DownItemButton     = data.substickY < -0.55f;
 	bool RightItemButton    = data.substickX > 0.55f;
-	bool BItemButton        = data.buttons_h & GUI_TRIGGER_R;
+	bool BItemButton        = data.buttons_h & INPUT_TRIGGER_R;
 
 	bool OnItemScreen = (Subscreen==0x2c);
 	uint8_t RButtonAction = CPUReadByte(0x200af32);
@@ -1001,7 +1001,7 @@ uint32_t MinishCapInput(unsigned short pad)
 uint32_t ALinkToThePastInput(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
 	uint8_t Health = 0;
@@ -1012,21 +1012,21 @@ uint32_t ALinkToThePastInput(unsigned short pad)
 	OldHealth = Health;
 
 	// Talk to Midna / Menu
-	if ((data.buttons_h & GUI_BTN_UP) || (data.buttons_h & GUI_BTN_PLUS)) J |= VBA_BUTTON_START;
+	if ((data.buttons_h & INPUT_BTN_UP) || (data.buttons_h & INPUT_BTN_PLUS)) J |= VBA_BUTTON_START;
 	// Action
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_R;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_R;
 	// Use item
-	if ((data.buttons_h & GUI_BTN_B) || (data.buttons_h & GUI_BTN_LEFT) || (data.buttons_h & GUI_BTN_RIGHT) || (data.buttons_h & GUI_BTN_DOWN))
+	if ((data.buttons_h & INPUT_BTN_B) || (data.buttons_h & INPUT_BTN_LEFT) || (data.buttons_h & INPUT_BTN_RIGHT) || (data.buttons_h & INPUT_BTN_DOWN))
 		J |= VBA_BUTTON_A;
 	// Items
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 	// Map
-	if ((data.buttons_h & GUI_TRIGGER_L) || (data.buttons_h & GUI_TRIGGER_ZL)) J |= VBA_BUTTON_L;
+	if ((data.buttons_h & INPUT_TRIGGER_L) || (data.buttons_h & INPUT_TRIGGER_ZL)) J |= VBA_BUTTON_L;
 	// Camera (speed)
-	if ((data.buttons_h & GUI_TRIGGER_R) || (data.buttons_h & GUI_TRIGGER_ZR)) J |= VBA_SPEED;
+	if ((data.buttons_h & INPUT_TRIGGER_R) || (data.buttons_h & INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
 
 	// Sword Generic
-	if ((data.buttons_h & GUI_BTN_B) || (data.buttons_h & GUI_BTN_X) || (data.buttons_h & GUI_BTN_Y)) J |= VBA_BUTTON_B;
+	if ((data.buttons_h & INPUT_BTN_B) || (data.buttons_h & INPUT_BTN_X) || (data.buttons_h & INPUT_BTN_Y)) J |= VBA_BUTTON_B;
 
 	// Sword / Spin Attack Motion Controls
 	if (data.hw_connected[GUI_HW_NUNCHUK] && fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.6f) {
@@ -1043,7 +1043,7 @@ uint32_t ALinkToThePastInput(unsigned short pad)
 uint32_t Zelda1Input(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
 	uint8_t Health = 0;
@@ -1053,19 +1053,19 @@ uint32_t Zelda1Input(unsigned short pad)
 	OldHealth = Health;
 
 	// Action
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
 	// Use item
-	if ((data.buttons_h & GUI_BTN_B) || (data.buttons_h & GUI_BTN_LEFT) || (data.buttons_h & GUI_BTN_DOWN)) J |= VBA_BUTTON_B;
-	if (data.buttons_h & GUI_BTN_RIGHT) J |= VBA_BUTTON_A;
+	if ((data.buttons_h & INPUT_BTN_B) || (data.buttons_h & INPUT_BTN_LEFT) || (data.buttons_h & INPUT_BTN_DOWN)) J |= VBA_BUTTON_B;
+	if (data.buttons_h & INPUT_BTN_RIGHT) J |= VBA_BUTTON_A;
 
 	// Menu (like Quest Status)
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_SELECT;
 	// Items
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_START;
 	// Sword Generic
-	if ((data.buttons_h & GUI_BTN_B) || (data.buttons_h & GUI_BTN_X) || (data.buttons_h & GUI_BTN_Y)) J |= VBA_BUTTON_A;
+	if ((data.buttons_h & INPUT_BTN_B) || (data.buttons_h & INPUT_BTN_X) || (data.buttons_h & INPUT_BTN_Y)) J |= VBA_BUTTON_A;
 	// Camera (speed)
-	if ((data.buttons_h & GUI_TRIGGER_R) || (data.buttons_h & GUI_TRIGGER_ZR)) J |= VBA_SPEED;
+	if ((data.buttons_h & INPUT_TRIGGER_R) || (data.buttons_h & INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
 
 	// Sword Motion Controls
 	if (data.hw_connected[GUI_HW_NUNCHUK] && fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.6f) {
@@ -1082,7 +1082,7 @@ uint32_t Zelda1Input(unsigned short pad)
 uint32_t Zelda2Input(unsigned short pad)
 {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
 	uint8_t Health = 0;
@@ -1092,17 +1092,17 @@ uint32_t Zelda2Input(unsigned short pad)
 	OldHealth = Health;
 
 	// Jump
-	if (data.buttons_h & GUI_BTN_A) J |= VBA_BUTTON_A;
+	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
 	// Use item
-	if ((data.buttons_h & GUI_BTN_B) || (data.buttons_h & GUI_BTN_LEFT) || (data.buttons_h & GUI_BTN_RIGHT) || (data.buttons_h & GUI_BTN_DOWN))
+	if ((data.buttons_h & INPUT_BTN_B) || (data.buttons_h & INPUT_BTN_LEFT) || (data.buttons_h & INPUT_BTN_RIGHT) || (data.buttons_h & INPUT_BTN_DOWN))
 		J |= VBA_BUTTON_SELECT;
 	// Menu (like Quest Status)
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
 	// Items
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_START;
 
 	// Sword Generic
-	if ((data.buttons_h & GUI_BTN_B) || (data.buttons_h & GUI_BTN_X) || (data.buttons_h & GUI_BTN_Y)) J |= VBA_BUTTON_B;
+	if ((data.buttons_h & INPUT_BTN_B) || (data.buttons_h & INPUT_BTN_X) || (data.buttons_h & INPUT_BTN_Y)) J |= VBA_BUTTON_B;
 
 	// Sword / Spin Attack Motion Controls
 	if (data.hw_connected[GUI_HW_NUNCHUK] && fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.6f) {
@@ -1114,9 +1114,9 @@ uint32_t Zelda2Input(unsigned short pad)
 	}
 
 	// No shield control, just duck
-	if ((data.buttons_h & GUI_TRIGGER_ZL) || (data.buttons_h & GUI_TRIGGER_L)) J |= VBA_DOWN;
+	if ((data.buttons_h & INPUT_TRIGGER_ZL) || (data.buttons_h & INPUT_TRIGGER_L)) J |= VBA_DOWN;
 	// Camera (speed)
-	if ((data.buttons_h & GUI_TRIGGER_R) || (data.buttons_h & GUI_TRIGGER_ZR)) J |= VBA_SPEED;
+	if ((data.buttons_h & INPUT_TRIGGER_R) || (data.buttons_h & INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
 
 	return J;
 }

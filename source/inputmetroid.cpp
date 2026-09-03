@@ -23,7 +23,7 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "libgui/GuiInputController.h"
+#include "drivers/InputController.h"
 
 #include "vba/gba/GBA.h"
 #include "vba/gba/bios.h"
@@ -31,7 +31,7 @@
 
 uint32_t MetroidZeroInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	uint8_t BallState = CPUReadByte(0x30015df); // 0 = stand, 1 = crouch, 2 = ball
@@ -48,18 +48,18 @@ uint32_t MetroidZeroInput(unsigned short pad) {
 	if (BallState == 2) J &= ~VBA_UP;
 	if (BallState == 1) J &= ~VBA_DOWN;
 
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
 	// Jump & Fire (with accelerometer support for ball jump)
-	if ((data.buttons_h & GUI_BTN_A) && BallState != 2) J |= VBA_BUTTON_A;
+	if ((data.buttons_h & INPUT_BTN_A) && BallState != 2) J |= VBA_BUTTON_A;
 	else if (BallState == 2 && fabs(data.gforceY) > 1.5f) J |= VBA_BUTTON_A;
 
-	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+	if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
 
 	// Aiming (Button based)
-	if (data.buttons_h & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-	if (data.buttons_h & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+	if (data.buttons_h & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+	if (data.buttons_h & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 
 	// Aiming (Pitch based)
 	if (data.pitch < -45 && BallState != 2) {
@@ -76,10 +76,10 @@ uint32_t MetroidZeroInput(unsigned short pad) {
 	}
 
 	// Missiles
-	if (data.buttons_h & (GUI_BTN_X | GUI_BTN_Y)) MissileCount = 1;
+	if (data.buttons_h & (INPUT_BTN_X | INPUT_BTN_Y)) MissileCount = 1;
 
 	// Morph Ball
-	if (data.buttons_h & GUI_TRIGGER_ZL) {
+	if (data.buttons_h & INPUT_TRIGGER_ZL) {
 		if (BallState == 2) Morph = -1;
 		else if (BallState == 1) Morph = 2;
 		else Morph = 1;
@@ -146,7 +146,7 @@ uint32_t MetroidZeroInput(unsigned short pad) {
 
 uint32_t MetroidFusionInput(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	uint8_t BallState = CPUReadByte(0x3001329); // 0 = stand, 2 = crouch, 5 = ball
@@ -163,16 +163,16 @@ uint32_t MetroidFusionInput(unsigned short pad) {
 	if (BallState == 5) J &= ~VBA_UP;
 	if (BallState == 2) J &= ~VBA_DOWN;
 
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if ((data.buttons_h & GUI_BTN_A) && BallState != 5) J |= VBA_BUTTON_A;
+	if ((data.buttons_h & INPUT_BTN_A) && BallState != 5) J |= VBA_BUTTON_A;
 	else if (BallState == 5 && fabs(data.gforceY) > 1.5f) J |= VBA_BUTTON_A;
 
-	if (data.buttons_h & GUI_BTN_B) J |= VBA_BUTTON_B;
+	if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
 
-	if (data.buttons_h & GUI_TRIGGER_L) J |= VBA_BUTTON_L;
-	if (data.buttons_h & GUI_TRIGGER_R) J |= VBA_BUTTON_R;
+	if (data.buttons_h & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+	if (data.buttons_h & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 
 	if (data.pitch < -45 && BallState != 5) {
 		J |= VBA_UP;
@@ -187,9 +187,9 @@ uint32_t MetroidFusionInput(unsigned short pad) {
 		AimCount = 0;
 	}
 
-	if (data.buttons_h & (GUI_BTN_X | GUI_BTN_Y)) MissileCount = 1;
+	if (data.buttons_h & (INPUT_BTN_X | INPUT_BTN_Y)) MissileCount = 1;
 
-	if (data.buttons_h & GUI_TRIGGER_ZL) {
+	if (data.buttons_h & INPUT_TRIGGER_ZL) {
 		if (BallState == 5) Morph = -1;
 		else if (BallState == 2) Morph = 2;
 		else Morph = 1;
@@ -258,7 +258,7 @@ uint32_t MetroidFusionInput(unsigned short pad) {
 
 uint32_t Metroid1Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	uint8_t BallState = CPUReadByte(0x3007500); // 3 = ball, other = stand
@@ -274,26 +274,26 @@ uint32_t Metroid1Input(unsigned short pad) {
 	if (BallState == 3) J &= ~VBA_UP;
 	if (BallState != 3) J &= ~VBA_DOWN;
 
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if ((data.buttons_h & GUI_BTN_A) && BallState != 5) J |= VBA_BUTTON_A;
+	if ((data.buttons_h & INPUT_BTN_A) && BallState != 5) J |= VBA_BUTTON_A;
 	else if (BallState == 5 && fabs(data.gforceY) > 1.5f) J |= VBA_BUTTON_A;
 
-	if (data.buttons_h & GUI_BTN_B) {
+	if (data.buttons_h & INPUT_BTN_B) {
 		if (MissileState) J |= VBA_BUTTON_SELECT;
 		else J |= VBA_BUTTON_B;
 	}
 
-	if (data.buttons_h & (GUI_BTN_X | GUI_BTN_Y | GUI_TRIGGER_R)) {
+	if (data.buttons_h & (INPUT_BTN_X | INPUT_BTN_Y | INPUT_TRIGGER_R)) {
 		if (!MissileState) J |= VBA_BUTTON_SELECT;
 		else J |= VBA_BUTTON_B;
 	}
 	
-	if (data.buttons_h & GUI_TRIGGER_L) J |= VBA_UP; // Aim Up natively
+	if (data.buttons_h & INPUT_TRIGGER_L) J |= VBA_UP; // Aim Up natively
 	if (data.pitch < -45 && BallState != 3) J |= VBA_UP; // Aim Up tilt
 
-	if (data.buttons_h & GUI_TRIGGER_ZL) {
+	if (data.buttons_h & INPUT_TRIGGER_ZL) {
 		if (BallState == 3) Morph = -1;
 		else Morph = 2;
 	}
@@ -313,7 +313,7 @@ uint32_t Metroid1Input(unsigned short pad) {
 
 uint32_t Metroid2Input(unsigned short pad) {
 	if (!userInput[pad]) return 0;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	uint8_t BallState = gbReadMemory(0xD020); // 4 = crouch, 5 = ball, other = stand
@@ -331,23 +331,23 @@ uint32_t Metroid2Input(unsigned short pad) {
 	if (BallState == 5) J &= ~VBA_UP;
 	if (BallState == 4) J &= ~VBA_DOWN;
 
-	if (data.buttons_h & GUI_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & GUI_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if ((data.buttons_h & GUI_BTN_A) && BallState != 5) J |= VBA_BUTTON_A;
+	if ((data.buttons_h & INPUT_BTN_A) && BallState != 5) J |= VBA_BUTTON_A;
 	else if (BallState == 5 && fabs(data.gforceY) > 1.5f) J |= VBA_BUTTON_A;
 
-	if (data.buttons_h & GUI_BTN_B) {
+	if (data.buttons_h & INPUT_BTN_B) {
 		if (MissileState & 8) J |= VBA_BUTTON_SELECT;
 		else J |= VBA_BUTTON_B;
 	}
 	
-	if (data.buttons_h & (GUI_BTN_X | GUI_BTN_Y | GUI_TRIGGER_R)) {
+	if (data.buttons_h & (INPUT_BTN_X | INPUT_BTN_Y | INPUT_TRIGGER_R)) {
 		if (!(MissileState & 8)) J |= VBA_BUTTON_SELECT;
 		else J |= VBA_BUTTON_B;
 	}
 
-	if (data.buttons_h & GUI_TRIGGER_L) J |= VBA_UP;
+	if (data.buttons_h & INPUT_TRIGGER_L) J |= VBA_UP;
 
 	if (data.pitch < -45 && BallState != 5) {
 		J |= VBA_UP;
@@ -358,7 +358,7 @@ uint32_t Metroid2Input(unsigned short pad) {
 		AimCount = 0;
 	}
 
-	if (data.buttons_h & GUI_TRIGGER_ZL) {
+	if (data.buttons_h & INPUT_TRIGGER_ZL) {
 		if (BallState == 5) Morph = -1;
 		else if (BallState == 4) Morph = 2;
 		else Morph = 1;

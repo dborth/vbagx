@@ -23,7 +23,7 @@
 #include "input.h"
 #include "gameinput.h"
 #include "vbasupport.h"
-#include "libgui/GuiInputController.h"
+#include "drivers/InputController.h"
 
 #include "vba/gba/GBA.h"
 #include "vba/gba/bios.h"
@@ -120,24 +120,24 @@ uint32_t GetMKInput(unsigned short pad, int rumbleTime=4) {
     HP=0;LP=0;HK=0;LK=0;BL=0;Throw=0;CS=0;F=0;B=0;Select=0;Start=0;SpecialMove=0;
 
 	if (!userInput[pad]) return J;
-	const GuiInputPadData& data = userInput[pad]->getPadData();
+	const InputPadData& data = userInput[pad]->getPadData();
 
 	// Rumble when they lose health!
 	if (OurHealth < OurOldHealth) systemGameRumble(rumbleTime);
 	OurOldHealth = OurHealth;
 		
 	// Unified mappings abstracting the HW dependencies
-	if (data.buttons_h & GUI_BTN_Y) LP = true;
-	if (data.buttons_h & GUI_BTN_X) HP = true;
-	if (data.buttons_h & GUI_BTN_B) LK = true;
-	if (data.buttons_h & GUI_BTN_A) HK = true;
-	if (data.buttons_h & (GUI_TRIGGER_R | GUI_TRIGGER_ZR)) BL = true;
-	if (data.buttons_h & GUI_TRIGGER_ZR) Throw = true; // GC Z button
-	if (data.buttons_h & (GUI_TRIGGER_L | GUI_TRIGGER_ZL)) CS = true;
-	if (data.buttons_h & GUI_BTN_MINUS) Select = true;
-	if (data.buttons_h & GUI_BTN_PLUS) Start = true;
+	if (data.buttons_h & INPUT_BTN_Y) LP = true;
+	if (data.buttons_h & INPUT_BTN_X) HP = true;
+	if (data.buttons_h & INPUT_BTN_B) LK = true;
+	if (data.buttons_h & INPUT_BTN_A) HK = true;
+	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) BL = true;
+	if (data.buttons_h & INPUT_TRIGGER_ZR) Throw = true; // GC Z button
+	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) CS = true;
+	if (data.buttons_h & INPUT_BTN_MINUS) Select = true;
+	if (data.buttons_h & INPUT_BTN_PLUS) Start = true;
 	// Special move is safely tied to basic logic
-	if (data.buttons_h & GUI_BTN_PLUS) SpecialMove = true;
+	if (data.buttons_h & INPUT_BTN_PLUS) SpecialMove = true;
 
 	// Check which side they are on
 	if (OurX < OpponentX) {
