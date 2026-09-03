@@ -33,12 +33,11 @@ void ResetCB() { ResetRequested = 1; }
 #endif
 
 bool isWiiVC = false;
-extern int emulating;
 
 OgcInputDriver::OgcInputDriver() {
 	for (int i = 0; i < 4; i++) {
-		rumbleCount[i] = 0;
-		rumbleRequest[i] = false;
+		rumbleRequest[i] = continuousRumble[i] = false;
+		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = 0;
 	}
 }
 
@@ -73,15 +72,27 @@ void OgcInputDriver::shutdown() {
 		WPAD_Rumble(i, 0);
 		#endif
 		PAD_ControlMotor(i, PAD_MOTOR_STOP);
-		rumbleCount[i] = 0;
-		rumbleRequest[i] = false;
+		rumbleRequest[i] = continuousRumble[i] = false;
+		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = 0;
 	}
 }
 
 void OgcInputDriver::setRumble(int channel, bool rumble) {
-	if (channel >= 0 && channel < 4) {
-		rumbleRequest[channel] = rumble;
-	}
+    if (channel >= 0 && channel < 4) rumbleRequest[channel] = rumble;
+}
+
+void OgcInputDriver::setGameRumble(int channel, int frames) {
+    if (channel >= 0 && channel < 4) gameRumbleFrames[channel] = frames;
+}
+
+void OgcInputDriver::ensureGameRumble(int channel, int frames) {
+    if (channel >= 0 && channel < 4) {
+        if (frames > gameRumbleFrames[channel]) gameRumbleFrames[channel] = frames;
+    }
+}
+
+void OgcInputDriver::setContinuousRumble(int channel, bool continuous) {
+    if (channel >= 0 && channel < 4) continuousRumble[channel] = continuous;
 }
 
 static inline float clampf(float v, float lo, float hi) {
@@ -344,32 +355,42 @@ void OgcInputDriver::update() {
 		// Push the finalized, merged payload to the controller abstraction
 		userInput[i]->update(padData, platform->getVideo()->getDeltaTime());
 		
-		if(!emulating) {
-			bool doRumble = rumbleRequest[i] && allowRumble;
+		// Rumble Handling
+		if (rumbleRequest[i]) {
+			menuRumbleFrames[i] = 3;
+			rumbleRequest[i] = false;
+		}
 
-			if (doRumble && rumbleCount[i] < 3) {
-				#ifdef HW_RVL
-				WPAD_Rumble(i, 1);
-				#endif
+		if (menuRumbleFrames[i] > 0) menuRumbleFrames[i]--;
+		if (gameRumbleFrames[i] > 0) gameRumbleFrames[i]--;
 
-				if (gamecubeActive) {
-					PAD_ControlMotor(i, PAD_MOTOR_RUMBLE);
+		bool wantRumble = (menuRumbleFrames[i] > 0) || (gameRumbleFrames[i] > 0) || continuousRumble[i];
+		bool motorOn = false;
+
+		// Apply hardware safety constraints
+		if (silenceFrames[i] > 0) {
+			silenceFrames[i]--;
+			continuousRumbleCount[i] = 0;
+		} else {
+			if (wantRumble && allowRumble) {
+				continuousRumbleCount[i]++;
+				if (continuousRumbleCount[i] > 70) {
+					silenceFrames[i] = 5;
+					continuousRumbleCount[i] = 0;
+				} else {
+					motorOn = true;
 				}
-
-				rumbleCount[i]++;
-			} else if (doRumble) {
-				rumbleCount[i] = 12;
-				rumbleRequest[i] = false;
 			} else {
-				if (rumbleCount[i]) rumbleCount[i]--;
-
-				#ifdef HW_RVL
-				WPAD_Rumble(i, 0);
-				#endif
-
-				PAD_ControlMotor(i, PAD_MOTOR_STOP);
-				rumbleRequest[i] = false; // ensure flag clears if toggled off mid-rumble
+				continuousRumbleCount[i] = 0;
 			}
+		}
+
+		#ifdef HW_RVL
+		WPAD_Rumble(i, motorOn ? 1 : 0);
+		#endif
+
+		if (gamecubeActive) {
+			PAD_ControlMotor(i, motorOn ? PAD_MOTOR_RUMBLE : PAD_MOTOR_STOP);
 		}
 	}
 }

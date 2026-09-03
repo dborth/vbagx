@@ -36,7 +36,6 @@ extern uint32_t btnmap[GUI_HW_MAX][MAXJP];
 void ResetControls(int wc = -1);
 void systemGameRumble(int RumbleForFrames);
 void systemGameRumbleOnlyFor(int OnlyRumbleForFrames);
-void updateRumbleFrame();
 uint32_t GetJoy(int which);
 bool isMenuRequested();
 

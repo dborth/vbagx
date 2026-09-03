@@ -28,6 +28,9 @@ class InputDriver
 		
 		//! Requests a rumble event on the specified controller channel
 		virtual void setRumble(int channel, bool rumble) = 0;
+		virtual void setGameRumble(int channel, int frames) = 0;
+		virtual void ensureGameRumble(int channel, int frames) = 0;
+		virtual void setContinuousRumble(int channel, bool continuous) = 0;
 		
 		void setRumbleEnabled(bool enabled) { rumbleEnabled = enabled; }
 		bool isRumbleEnabled() const { return rumbleEnabled; }

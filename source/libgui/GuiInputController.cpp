@@ -6,6 +6,8 @@
 
 #include <cmath>
 #include "Gui.h"
+#include "../drivers/Platform.h"
+#include "../drivers/InputDriver.h"
 
 GuiInputController* userInput[4] = {nullptr, nullptr, nullptr, nullptr};
 
@@ -98,4 +100,16 @@ bool GuiInputController::left() const {
 bool GuiInputController::right() const {
 	uint32_t targetBtn = sideways ? GUI_BTN_DOWN : GUI_BTN_RIGHT;
 	return processDirection(targetBtn, currentData.stickX, true);
+}
+
+void GuiInputController::setGameRumble(int frames) {
+	platform->getInput()->setGameRumble(channel, frames);
+}
+
+void GuiInputController::ensureGameRumble(int frames) {
+	platform->getInput()->ensureGameRumble(channel, frames);
+}
+
+void GuiInputController::setContinuousRumble(bool continuous) {
+	platform->getInput()->setContinuousRumble(channel, continuous);
 }

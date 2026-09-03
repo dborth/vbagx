@@ -12,8 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <wiiuse/wpad.h>
-#include <ogc/lwp_watchdog.h>
 
 #include "vbagx.h"
 #include "button_mapping.h"
@@ -29,9 +27,6 @@
 #define ANALOG_SENSITIVITY 30
 
 int playerMapping[4] = {0,1,2,3};
-
-static bool cartridgeRumble = false, possibleCartridgeRumble = false;
-static int gameRumbleCount = 0, menuRumbleCount = 0, rumbleCountAlready = 0;
 
 static unsigned int vbapadmap[MAXJP]; // VBA controller buttons
 uint32_t btnmap[GUI_HW_MAX][MAXJP]; // button mapping
@@ -150,76 +145,20 @@ void ResetControls(int wiiCtrl)
 	}
 }
 
-static int SilenceNeeded = 0;
-
-static void updateRumble()
-{
-	if(!GCSettings.Rumble) return;
-
-	bool r = false;
-	if (MenuRequested) r = (menuRumbleCount > 0);
-	else r = cartridgeRumble || possibleCartridgeRumble || (gameRumbleCount > 0) || (menuRumbleCount > 0);
-
-	if (SilenceNeeded > 0)
-	{
-		if (r)
-		{
-			SilenceNeeded = 5;
-			// It will always be greater than 0 after that!
-			r = false;
-		}
-		else
-		{
-			if (--SilenceNeeded > 0) r = false;
-		}
-	}
-
-#ifdef HW_RVL
-	// Rumble wii remote 0
-	WPAD_Rumble(0, r);
-#endif
-	PAD_ControlMotor(PAD_CHAN0, r?PAD_MOTOR_RUMBLE:PAD_MOTOR_STOP);
+void systemPossibleCartridgeRumble(bool rumbleOn) {
+	if (userInput[0]) userInput[0]->setContinuousRumble(rumbleOn);
 }
 
-void updateRumbleFrame()
-{
-	if(!GCSettings.Rumble) return;
-
-	// If we already rumbled continuously for more than 50 frames,
-	// then disable rumbling for a while.
-	if (rumbleCountAlready > 70) {
-		SilenceNeeded = 5;
-		rumbleCountAlready = 0;
-	} else if (MenuRequested) {
-		if (menuRumbleCount>0) ++rumbleCountAlready;
-		else rumbleCountAlready=0;
-	} else {
-		if (gameRumbleCount>0 || menuRumbleCount>0 || possibleCartridgeRumble)
-			++rumbleCountAlready;
-		else rumbleCountAlready=0;
-	}
-	updateRumble();
-	if (gameRumbleCount>0 && !MenuRequested) --gameRumbleCount;
-	if (menuRumbleCount>0) --menuRumbleCount;
+void systemCartridgeRumble(bool rumbleOn) {
+	if (userInput[0]) userInput[0]->setContinuousRumble(rumbleOn);
 }
 
-void systemPossibleCartridgeRumble(bool RumbleOn) {
-	possibleCartridgeRumble = RumbleOn;
-	updateRumble();
+void systemGameRumble(int rumbleForFrames) {
+	if (userInput[0]) userInput[0]->ensureGameRumble(rumbleForFrames);
 }
 
-void systemCartridgeRumble(bool RumbleOn) {
-	cartridgeRumble = RumbleOn;
-	possibleCartridgeRumble = false;
-	updateRumble();
-}
-
-void systemGameRumble(int RumbleForFrames) {
-	if (RumbleForFrames > gameRumbleCount) gameRumbleCount = RumbleForFrames;
-}
-
-void systemGameRumbleOnlyFor(int OnlyRumbleForFrames) {
-	gameRumbleCount = OnlyRumbleForFrames;
+void systemGameRumbleOnlyFor(int onlyRumbleForFrames) {
+	if (userInput[0]) userInput[0]->setGameRumble(onlyRumbleForFrames);
 }
 
 uint32_t StandardMovement(unsigned short chan)
@@ -572,7 +511,6 @@ uint32_t GetJoy(int pad)
 	if (isMenuRequested())
 	{
 		MenuRequested = true;
-		updateRumbleFrame();
 		return 0;
 	}
 
@@ -584,7 +522,6 @@ uint32_t GetJoy(int pad)
 		J &= ~16;
 	if ((J & 192) == 192)
 		J &= ~128;
-	updateRumbleFrame();
 
 	return J;
 }

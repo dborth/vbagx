@@ -50,6 +50,10 @@ public:
 	bool left() const;
 	bool right() const;
 
+	void setGameRumble(int frames);
+	void ensureGameRumble(int frames);
+	void setContinuousRumble(bool continuous);
+
 private:
 	int channel;
 	bool sideways;
