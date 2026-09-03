@@ -33,6 +33,7 @@ void ResetCB() { ResetRequested = 1; }
 #endif
 
 bool isWiiVC = false;
+extern int emulating;
 
 OgcInputDriver::OgcInputDriver() {
 	for (int i = 0; i < 4; i++) {
@@ -201,7 +202,7 @@ static float NormalizeWPADAnalog(int pos, int min, int max, int center) {
 }
 #endif
 
-void OgcInputDriver::update(float deltaTime) {
+void OgcInputDriver::update() {
 	#ifdef HW_RVL
 	WPAD_ScanPads();
 	WiiDRC_ScanPads();
@@ -341,32 +342,34 @@ void OgcInputDriver::update(float deltaTime) {
 		}
 
 		// Push the finalized, merged payload to the controller abstraction
-		userInput[i]->update(padData, deltaTime);
+		userInput[i]->update(padData, platform->getVideo()->getDeltaTime());
 		
-		bool doRumble = rumbleRequest[i] && allowRumble;
+		if(!emulating) {
+			bool doRumble = rumbleRequest[i] && allowRumble;
 
-		if (doRumble && rumbleCount[i] < 3) {
-			#ifdef HW_RVL
-			WPAD_Rumble(i, 1);
-			#endif
+			if (doRumble && rumbleCount[i] < 3) {
+				#ifdef HW_RVL
+				WPAD_Rumble(i, 1);
+				#endif
 
-			if (gamecubeActive) {
-				PAD_ControlMotor(i, PAD_MOTOR_RUMBLE);
+				if (gamecubeActive) {
+					PAD_ControlMotor(i, PAD_MOTOR_RUMBLE);
+				}
+
+				rumbleCount[i]++;
+			} else if (doRumble) {
+				rumbleCount[i] = 12;
+				rumbleRequest[i] = false;
+			} else {
+				if (rumbleCount[i]) rumbleCount[i]--;
+
+				#ifdef HW_RVL
+				WPAD_Rumble(i, 0);
+				#endif
+
+				PAD_ControlMotor(i, PAD_MOTOR_STOP);
+				rumbleRequest[i] = false; // ensure flag clears if toggled off mid-rumble
 			}
-
-			rumbleCount[i]++;
-		} else if (doRumble) {
-			rumbleCount[i] = 12;
-			rumbleRequest[i] = false;
-		} else {
-			if (rumbleCount[i]) rumbleCount[i]--;
-
-			#ifdef HW_RVL
-			WPAD_Rumble(i, 0);
-			#endif
-
-			PAD_ControlMotor(i, PAD_MOTOR_STOP);
-			rumbleRequest[i] = false; // ensure flag clears if toggled off mid-rumble
 		}
 	}
 }

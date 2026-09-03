@@ -19,8 +19,54 @@
 
 extern Mtx GXmodelView2D;
 
+static uint32_t systemFrameTimer = 0;
+
+uint32_t OgcVideoDriver::getFrameTimer()
+{
+    return systemFrameTimer;
+}
+
+void OgcVideoDriver::setFrameTimer(uint32_t frameTimer)
+{
+	systemFrameTimer = frameTimer;
+}
+
+/****************************************************************************
+ * setupVideoMode
+ *
+ * Applies the given video mode to the VI
+ ***************************************************************************/
+void OgcVideoDriver::setupVideoMode(GXRModeObj * mode)
+{
+	
+}
+
+/****************************************************************************
+ * findVideoMode
+ *
+ * Finds the optimal video mode, or uses the user-specified one
+ ***************************************************************************/
+GXRModeObj* OgcVideoDriver::findVideoMode()
+{
+	return nullptr;
+}
+
+void OgcVideoDriver::startMenuVideo()
+{
+	
+}
+
+void OgcVideoDriver::waitForBufferReady()
+{
+
+}
+
+void OgcVideoDriver::presentBuffer()
+{
+
+}
+
 OgcVideoDriver::OgcVideoDriver()
-    : screenWidth(0), screenHeight(0), glyphRenderer(nullptr), imageRenderer(nullptr)
 {
 
 }
@@ -35,8 +81,11 @@ void OgcVideoDriver::init(int width, int height)
 {
 	screenWidth = width;
 	screenHeight = height;
-
+	
 	InitializeVideo();
+	
+	emulatorVideo = new OgcEmulatorVideo();
+	emulatorVideo->init(this);
 
 	imageRenderer = new OgcImageRenderer();
 	glyphRenderer = new OgcGlyphRenderer();
@@ -51,7 +100,7 @@ void OgcVideoDriver::shutdown()
 	VIDEO_Flush();
 }
 
-void OgcVideoDriver::render()
+void OgcVideoDriver::renderMenu()
 {
 	Menu_Render();
 }

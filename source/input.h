@@ -12,9 +12,8 @@
 #define _INPUT_H_
 
 #include <stdint.h>
+#include "libgui/GuiInput.h"
 
-#define PADCAL				50
-#define WIIDRCCAL			20
 #define MAXJP 				10 // # of mappable controller buttons
 
 #define VBA_BUTTON_A		1
@@ -32,7 +31,7 @@
 
 extern int rumbleRequest[4];
 extern int playerMapping[4];
-extern uint32_t btnmap[6][10];
+extern uint32_t btnmap[GUI_HW_MAX][MAXJP];
 
 void ResetControls(int wc = -1);
 void systemGameRumble(int RumbleForFrames);
@@ -40,6 +39,5 @@ void systemGameRumbleOnlyFor(int OnlyRumbleForFrames);
 void updateRumbleFrame();
 uint32_t GetJoy(int which);
 bool isMenuRequested();
-void UpdatePads();
 
 #endif

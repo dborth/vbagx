@@ -696,7 +696,7 @@ SoundDriver * systemSoundInit()
 ****************************************************************************/
 bool systemReadJoypads()
 {
-	UpdatePads();
+	platform->getInput()->update();
 	return true;
 }
 

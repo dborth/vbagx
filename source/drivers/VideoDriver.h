@@ -22,6 +22,7 @@ typedef struct {
 
 class ImageRenderer;
 class GlyphRenderer;
+class EmulatorVideoDriver;
 
 class VideoDriver
 {
@@ -31,8 +32,10 @@ class VideoDriver
 		virtual void init(int width, int height) = 0;
 		virtual void shutdown() = 0;
 
+		virtual void startMenuVideo() = 0;
+
 		//! Flushes the current frame to the screen and swaps buffers
-		virtual void render() = 0;
+		virtual void renderMenu() = 0;
 
 		//! Clears the current frame buffer
 		virtual void clearScreen(const PixelColor& color) = 0;
@@ -40,9 +43,13 @@ class VideoDriver
 		virtual int getScreenWidth() const = 0;
 		virtual int getScreenHeight() const = 0;
 		virtual uint32_t getFrameTimer() = 0;
+		virtual void setFrameTimer(uint32_t frameTimer) = 0;
+		virtual int getRefreshRate() const = 0;
+		virtual float getDeltaTime() const = 0;
 
 		virtual ImageRenderer* getImageRenderer() = 0;
 		virtual GlyphRenderer* getGlyphRenderer() = 0;
+		virtual EmulatorVideoDriver* getEmulatorVideo() = 0;
 };
 
 //!Platform image/texture backend GuiImageData and GuiImage delegate to.
