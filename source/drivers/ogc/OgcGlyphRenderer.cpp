@@ -4,8 +4,7 @@
  * OgcGlyphRenderer.cpp
  ***************************************************************************/
 #include "OgcVideoDriver.h"
-#include <malloc.h>
-#include <string.h>
+#include "../../memmanager.h"
 
 #define ALIGN8(x) (((x) + 7) & ~7)
 
@@ -32,7 +31,7 @@ void* OgcGlyphRenderer::createTexture(uint16_t width, uint16_t height) {
 
 	uint32_t glyphSize = (width * height) >> 1;
 
-	void* texture = memalign(32, glyphSize);
+	void* texture = memspace_malloc(glyphSize);
 	if (texture) {
 		memset(texture, 0x00, glyphSize);
 	}
@@ -82,7 +81,7 @@ void OgcGlyphRenderer::loadTextureData(void* texture, FT_Bitmap* bitmap) {
 
 void OgcGlyphRenderer::destroyTexture(void* texture) {
 	if (texture) {
-		free(texture);
+		memspace_free(texture);
 	}
 }
 

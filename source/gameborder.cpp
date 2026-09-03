@@ -100,7 +100,7 @@ char * BorderManager::getPNGBorderPath(const char* title) {
 	}
 
 	size_t length = strlen(method) + strlen(folder) + strlen(title_buffer) + 6;
-	char* path = (char*)mem1_malloc(length);
+	char* path = (char*)memspace_malloc(length);
 	if (path) sprintf(path, "%s%s/%s.png", method, folder, title_buffer);
 	return path;
 }
@@ -140,7 +140,7 @@ static uint16_t * TileRGBA8ToRGB555(const uint8_t *rgba, int width, int height)
 }
 
 uint16_t* BorderManager::load(const char *title, const char *fallback, int &outWidth, int &outHeight) {
-	void *png_tmp_buf = mem1_malloc(1024 * 1024);
+	void *png_tmp_buf = memspace_malloc(1024 * 1024);
 	char *borderPath = getPNGBorderPath(title);
 	int imgWidth = 0, imgHeight = 0;
 	uint8_t *rgba = nullptr;
@@ -149,7 +149,7 @@ uint16_t* BorderManager::load(const char *title, const char *fallback, int &outW
 	bool borderLoaded = LoadFile((char*) png_tmp_buf, borderPath, 0, 1024 * 1024, SILENT);
 	if (!borderLoaded && fallback) {
 		if (borderPath)
-			mem1_free(borderPath);
+			memspace_free(borderPath);
 		borderPath = getPNGBorderPath(fallback);
 		borderLoaded = LoadFile((char*) png_tmp_buf, borderPath, 0, 1024 * 1024, SILENT);
 	}
@@ -174,11 +174,11 @@ uint16_t* BorderManager::load(const char *title, const char *fallback, int &outW
 
 cleanup:
 	if (rgba)
-		mem1_free(rgba);
+		memspace_free(rgba);
 	if (png_tmp_buf)
-		mem1_free(png_tmp_buf);
+		memspace_free(png_tmp_buf);
 	if (borderPath)
-		mem1_free(borderPath);
+		memspace_free(borderPath);
 
 	return newBorder;
 }
@@ -210,7 +210,7 @@ void BorderManager::save(const void* buffer) {
 	f = fopen(borderPath, "wb");
 	if (!f) goto cleanup;
 
-	rgb24 = (uint8_t*) mem1_malloc(SGB_FRAME_WIDTH * SGB_FRAME_HEIGHT * 3);
+	rgb24 = (uint8_t*) memspace_malloc(SGB_FRAME_WIDTH * SGB_FRAME_HEIGHT * 3);
 	if (!rgb24) goto cleanup;
 
 	// buffer is the raw, linear (not GX-tiled) SGB framebuffer capture,
@@ -235,10 +235,10 @@ void BorderManager::save(const void* buffer) {
 	fwrite(png, 1, pngSize, f);
 
 	cleanup:
-	if (borderPath) mem1_free(borderPath);
+	if (borderPath) memspace_free(borderPath);
 	if (f) fclose(f);
-	if (rgb24) mem1_free(rgb24);
-	if (png) mem1_free(png);
+	if (rgb24) memspace_free(rgb24);
+	if (png) memspace_free(png);
 }
 
 GameBorder::GameBorder() :

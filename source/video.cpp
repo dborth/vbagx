@@ -11,7 +11,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
 #include <string.h>
 #include <unistd.h>
 #include <ogc/timesupp.h>
@@ -923,7 +922,7 @@ static long long int* ProcessFrameAndGetDest(void* textureBase, const uint16_t* 
 void ClearScreenshot()
 {
 	if(gameScreenPng.buffer) {
-		mem1_free(gameScreenPng.buffer);
+		memspace_free(gameScreenPng.buffer);
 		gameScreenPng.buffer = nullptr;
 	}
 	gameScreenPng.size = 0;

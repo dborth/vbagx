@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
 #include <ogc/machine/processor.h>
@@ -16,11 +15,12 @@
 #include "OgcVideoDriver.h"
 #include "../../libgui/Gui.h"
 #include "../../video.h"
+#include "../../memmanager.h"
 
 extern Mtx GXmodelView2D;
 
 OgcVideoDriver::OgcVideoDriver()
-    : screenWidth(0), screenHeight(0)
+    : screenWidth(0), screenHeight(0), glyphRenderer(nullptr), imageRenderer(nullptr)
 {
 
 }
@@ -68,7 +68,7 @@ void* OgcImageRenderer::createTexture(int width, int height)
 	int padHeight = height + (4 - height % 4) % 4;
 	int len = (padWidth * padHeight) * 4;
 	if (len % 32) len += (32 - len % 32);
-	return memalign(32, len);
+	return memspace_malloc(len);
 }
 
 void OgcImageRenderer::loadTextureData(void* texture, const uint8_t* rgba, int width, int height)
@@ -101,7 +101,7 @@ void OgcImageRenderer::loadTextureData(void* texture, const uint8_t* rgba, int w
 void OgcImageRenderer::destroyTexture(void * texture)
 {
 	if(texture)
-		free(texture);
+		memspace_free(texture);
 }
 
 void OgcImageRenderer::drawTexture(void * texture, float xpos, float ypos, uint16_t width, uint16_t height, float degrees, float scaleX, float scaleY, uint8_t alpha)

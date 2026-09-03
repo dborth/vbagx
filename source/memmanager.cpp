@@ -62,7 +62,7 @@ union CoreMemoryOverlay {
 
 alignas(32) union CoreMemoryOverlay coreMem;
 uint8_t *romPtr;
-static mspace mem1_space = nullptr;
+static mspace memspace_ptr = nullptr;
 static mspace extmem_space = nullptr;
 static int memoryMode = -1;
 
@@ -79,19 +79,19 @@ void InitMemManager ()
 #endif
 }
 
-void* mem1_malloc(uint32_t size)
+void* memspace_malloc(uint32_t size)
 {
-	if(!mem1_space) return nullptr;
-	return mspace_malloc(mem1_space, size);
+	if(!memspace_ptr) return nullptr;
+	return mspace_malloc(memspace_ptr, size);
 }
 
-char* mem1_strdup(const char *s)
+char* memspace_strdup(const char *s)
 {
-    if (!mem1_space || !s)
+    if (!memspace_ptr || !s)
         return nullptr;
 
     size_t len = strlen(s) + 1;
-    char *dup = (char *)mem1_malloc(len);
+    char *dup = (char *)memspace_malloc(len);
 
     if (dup)
         memcpy(dup, s, len);
@@ -99,16 +99,16 @@ char* mem1_strdup(const char *s)
     return dup;
 }
 
-void mem1_free(void *ptr)
+void memspace_free(void *ptr)
 {
-	if(!mem1_space || !ptr) return;
-	mspace_free(mem1_space, ptr);
+	if(!memspace_ptr || !ptr) return;
+	mspace_free(memspace_ptr, ptr);
 }
 
-int mem1_size_free()
+int memspace_size_free()
 {
-	if(!mem1_space) return 0;
-	struct mallinfo info = mspace_mallinfo(mem1_space);
+	if(!memspace_ptr) return 0;
+	struct mallinfo info = mspace_mallinfo(memspace_ptr);
 	return info.fordblks;
 }
 
@@ -139,8 +139,8 @@ static bool ChangeMode(int mode) {
 
 	browserList = nullptr;
 	savebuffer = nullptr;
-	if(mem1_space) destroy_mspace(mem1_space);
-	mem1_space = nullptr;
+	if(memspace_ptr) destroy_mspace(memspace_ptr);
+	memspace_ptr = nullptr;
 	texturemem = nullptr;
 	jitCache.destroy();
 	memoryMode = mode;
@@ -148,9 +148,9 @@ static bool ChangeMode(int mode) {
 }
 
 static void CreateMem1Space(uint8_t *heapSpace, uint32_t size) {
-	mem1_space = create_mspace_with_base(heapSpace, size, 0);
-	mspace_set_footprint_limit(mem1_space, size);
-	savebuffer = (uint8_t *)mem1_malloc(SAVEBUFFERSIZE);
+	memspace_ptr = create_mspace_with_base(heapSpace, size, 0);
+	mspace_set_footprint_limit(memspace_ptr, size);
+	savebuffer = (uint8_t *)memspace_malloc(SAVEBUFFERSIZE);
 }
 
 void SwitchMemoryModeMenu() {
@@ -159,8 +159,8 @@ void SwitchMemoryModeMenu() {
 	CreateMem1Space(coreMem.menu.heapSpace, sizeof(coreMem.menu.heapSpace));
 
 	MutexLock scratchGuard(GuiImageData::scratchLock());
-	void * decodeScratch = mem1_malloc(IMAGE_DECODE_SCRATCH_SIZE);
-	GuiImageData::setDecodeScratch(decodeScratch, decodeScratch ? IMAGE_DECODE_SCRATCH_SIZE : 0);
+	void * decodeScratch = memspace_malloc(IMAGE_DECODE_SCRATCH_SIZE);
+	GuiImageData::setDecodeScratch(decodeScratch, IMAGE_DECODE_SCRATCH_SIZE);
 }
 
 static void SwitchMemoryModeGB() {

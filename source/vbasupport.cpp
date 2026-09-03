@@ -1322,7 +1322,7 @@ int LoadROMToVM(const char* filepath) {
 			ShowProgress("Loading...", 0, preload_size);
 
 			size_t offset = 0;
-			uint8_t* chunk_buf = (uint8_t*)memalign(32, 65536);
+			uint8_t* chunk_buf = (uint8_t*)memspace_malloc(65536);
 
 			size_t readsize;
 
@@ -1343,7 +1343,7 @@ int LoadROMToVM(const char* filepath) {
 				ShowProgress("Loading...", offset, preload_size);
 			}
 
-			free(chunk_buf);
+			memspace_free(chunk_buf);
 
 			if (offset == size) {
 				// <= 16MB file. Everything is in ARAM. We don't need file access so nothing more to do.

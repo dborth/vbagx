@@ -115,9 +115,9 @@ uint8_t * DecodePNGToRGBA8(const uint8_t *src, int width, int height)
 
 	if(setjmp(png_jmpbuf(png_ptr)))
 	{
-		if(rowPointers) mem1_free(rowPointers);
-		if(rowScratch) mem1_free(rowScratch);
-		if(dst) mem1_free(dst);
+		if(rowPointers) memspace_free(rowPointers);
+		if(rowScratch) memspace_free(rowScratch);
+		if(dst) memspace_free(dst);
 		png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
 		return nullptr;
 	}
@@ -154,17 +154,17 @@ uint8_t * DecodePNGToRGBA8(const uint8_t *src, int width, int height)
 	png_read_update_info(png_ptr, info_ptr);
 	unsigned int rowBytes = png_get_rowbytes(png_ptr, info_ptr);
 
-	dst = static_cast<uint8_t *>(mem1_malloc(static_cast<uint32_t>(width) * height * 4));
+	dst = static_cast<uint8_t *>(memspace_malloc(static_cast<uint32_t>(width) * height * 4));
 	if(!dst)
 	{
 		png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
 		return nullptr;
 	}
 
-	rowPointers = static_cast<png_bytep *>(mem1_malloc(sizeof(png_bytep) * height));
+	rowPointers = static_cast<png_bytep *>(memspace_malloc(sizeof(png_bytep) * height));
 	if(!rowPointers)
 	{
-		mem1_free(dst);
+		memspace_free(dst);
 		png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
 		return nullptr;
 	}
@@ -181,11 +181,11 @@ uint8_t * DecodePNGToRGBA8(const uint8_t *src, int width, int height)
 	{
 		// Unexpected row padding - decode via a scratch buffer, then
 		// compact each row down into the tightly-packed destination
-		rowScratch = static_cast<uint8_t *>(mem1_malloc(static_cast<size_t>(rowBytes) * height));
+		rowScratch = static_cast<uint8_t *>(memspace_malloc(static_cast<size_t>(rowBytes) * height));
 		if(!rowScratch)
 		{
-			mem1_free(rowPointers);
-			mem1_free(dst);
+			memspace_free(rowPointers);
+			memspace_free(dst);
 			png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
 			return nullptr;
 		}
@@ -198,11 +198,11 @@ uint8_t * DecodePNGToRGBA8(const uint8_t *src, int width, int height)
 		for(int y = 0; y < height; y++)
 			memcpy(dst + static_cast<size_t>(y) * width * 4, rowScratch + static_cast<size_t>(y) * rowBytes, width * 4);
 
-		mem1_free(rowScratch);
+		memspace_free(rowScratch);
 		rowScratch = nullptr;
 	}
 
-	mem1_free(rowPointers);
+	memspace_free(rowPointers);
 	rowPointers = nullptr;
 
 	png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
@@ -232,7 +232,7 @@ uint8_t * EncodePNGFromRGB24(uint32_t width, uint32_t height, const void *rgb, u
 	// generous upper bound (raw RGB size, plus the zlib/PNG filter/chunk
 	// overhead, which can never make the output bigger than the input)
 	uint32_t bufSize = width * height * 3 + (height * 16) + 8192;
-	uint8_t *buffer = static_cast<uint8_t *>(mem1_malloc(bufSize));
+	uint8_t *buffer = static_cast<uint8_t *>(memspace_malloc(bufSize));
 	if(!buffer)
 	{
 		png_destroy_write_struct(&png_ptr, &info_ptr);
@@ -243,8 +243,8 @@ uint8_t * EncodePNGFromRGB24(uint32_t width, uint32_t height, const void *rgb, u
 
 	if(setjmp(png_jmpbuf(png_ptr)))
 	{
-		if(rowPointers) mem1_free(rowPointers);
-		mem1_free(buffer);
+		if(rowPointers) memspace_free(rowPointers);
+		memspace_free(buffer);
 		png_destroy_write_struct(&png_ptr, &info_ptr);
 		return nullptr;
 	}
@@ -255,10 +255,10 @@ uint8_t * EncodePNGFromRGB24(uint32_t width, uint32_t height, const void *rgb, u
 	png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGB,
 		PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
-	rowPointers = static_cast<png_bytep *>(mem1_malloc(sizeof(png_bytep) * height));
+	rowPointers = static_cast<png_bytep *>(memspace_malloc(sizeof(png_bytep) * height));
 	if(!rowPointers)
 	{
-		mem1_free(buffer);
+		memspace_free(buffer);
 		png_destroy_write_struct(&png_ptr, &info_ptr);
 		return nullptr;
 	}
@@ -271,7 +271,7 @@ uint8_t * EncodePNGFromRGB24(uint32_t width, uint32_t height, const void *rgb, u
 	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, nullptr);
 	png_write_end(png_ptr, nullptr);
 
-	mem1_free(rowPointers);
+	memspace_free(rowPointers);
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 
 	if(outSize) *outSize = writer.cursor;

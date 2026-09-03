@@ -1079,7 +1079,7 @@ static int MenuGameSelection()
 	preview.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	preview.setPosition(174, -8);
 
-	std::unique_ptr<uint8_t, decltype(&mem1_free)> pngFileBuffer((uint8_t *)mem1_malloc(PNG_FILE_BUFFER_SIZE), mem1_free);
+	std::unique_ptr<uint8_t, decltype(&memspace_free)> pngFileBuffer((uint8_t *)memspace_malloc(PNG_FILE_BUFFER_SIZE), memspace_free);
 
 	int  previousBrowserIndex = -1;
 	char imagePath[MAXJOLIET + 1];
@@ -5007,9 +5007,9 @@ static uint8_t * CreateBlurredGameTexture() {
 	int blurAmount = 4; // blur amount
 	PixelColor blurOverlayColor = (PixelColor){50, 50, 50, 160};
 
-	uint8_t * dst = (uint8_t *)mem1_malloc(IMAGE_BUFFER_SIZE);
+	uint8_t * dst = (uint8_t *)memspace_malloc(IMAGE_BUFFER_SIZE);
 	if(!dst) {
-		mem1_free(src);
+		memspace_free(src);
 		return nullptr;
 	}
 
@@ -5018,8 +5018,8 @@ static uint8_t * CreateBlurredGameTexture() {
 
 	// Failsafe for invalid scale metrics
 	if (scaledWidth <= 0 || scaledHeight <= 0) {
-		mem1_free(src);
-		mem1_free(dst);
+		memspace_free(src);
+		memspace_free(dst);
 		return nullptr;
 	}
 
@@ -5045,8 +5045,8 @@ static uint8_t * CreateBlurredGameTexture() {
 
 	// Failsafe if the image is pushed entirely off-screen
 	if (cropWidth <= 0 || cropHeight <= 0) {
-		mem1_free(src);
-		mem1_free(dst);
+		memspace_free(src);
+		memspace_free(dst);
 		return nullptr;
 	}
 
@@ -5055,14 +5055,14 @@ static uint8_t * CreateBlurredGameTexture() {
 	int cropStartY = trueOffsetY < 0 ? -trueOffsetY : 0;
 
 	// Allocate scratch space ONLY for the viewable cropped portion
-	uint8_t *scaledImg = (uint8_t *)mem1_malloc(cropWidth * cropHeight * 4);
-	uint8_t *rowBuf    = (uint8_t *)mem1_malloc(cropWidth * 4);
+	uint8_t *scaledImg = (uint8_t *)memspace_malloc(cropWidth * cropHeight * 4);
+	uint8_t *rowBuf    = (uint8_t *)memspace_malloc(cropWidth * 4);
 
 	if (!scaledImg || !rowBuf) {
-		if (scaledImg) mem1_free(scaledImg);
-		if (rowBuf) mem1_free(rowBuf);
-		mem1_free(src);
-		mem1_free(dst);
+		if (scaledImg) memspace_free(scaledImg);
+		if (rowBuf) memspace_free(rowBuf);
+		memspace_free(src);
+		memspace_free(dst);
 		return nullptr;
 	}
 
@@ -5194,9 +5194,9 @@ static uint8_t * CreateBlurredGameTexture() {
 
 	DCFlushRange(dst, platform->getVideo()->getScreenWidth() * platform->getVideo()->getScreenHeight() * 4);
 
-	mem1_free(scaledImg);
-	mem1_free(rowBuf);
-	mem1_free(src);
+	memspace_free(scaledImg);
+	memspace_free(rowBuf);
+	memspace_free(src);
 	return dst;
 }
 

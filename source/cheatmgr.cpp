@@ -375,7 +375,7 @@ void LoadCheatFile() {
 		return;
 	}
 
-	TempCheatInfo* tempCheats = (TempCheatInfo*)mem1_malloc(MAX_CHEATS * sizeof(TempCheatInfo));
+	TempCheatInfo* tempCheats = (TempCheatInfo*)memspace_malloc(MAX_CHEATS * sizeof(TempCheatInfo));
 
 	if (!tempCheats) {
 		FreeSaveBuffer();
@@ -425,14 +425,14 @@ void LoadCheatFile() {
 	}
 
 	if (poolSize == 0) {
-		mem1_free(tempCheats);
+		memspace_free(tempCheats);
 		FreeSaveBuffer();
 		return;
 	}
 
 	stringPool = (char*)malloc(poolSize);
 	if (!stringPool) {
-		mem1_free(tempCheats);
+		memspace_free(tempCheats);
 		FreeSaveBuffer();
 		return;
 	}
@@ -458,6 +458,6 @@ void LoadCheatFile() {
 		}
 	}
 
-	mem1_free(tempCheats);
+	memspace_free(tempCheats);
 	FreeSaveBuffer();
 }
