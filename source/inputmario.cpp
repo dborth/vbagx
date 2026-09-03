@@ -30,8 +30,8 @@
 #include "vba/gba/GBAinline.h"
 
 uint32_t MarioKartInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 	static uint32_t frame = 0;
 
@@ -73,8 +73,8 @@ uint32_t MarioKartInput(unsigned short pad) {
 }
 
 uint32_t Mario1DXInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	// Pause & Select
@@ -109,8 +109,8 @@ uint32_t MarioLand1Input(unsigned short pad) {
 }
 
 uint32_t MarioLand2Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
@@ -132,8 +132,8 @@ uint32_t MarioLand2Input(unsigned short pad) {
 }
 
 uint32_t Mario2Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
@@ -152,8 +152,8 @@ uint32_t Mario2Input(unsigned short pad) {
 }
 
 uint32_t MarioWorldInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	uint8_t FallState = CPUReadByte(0x3003FA1); // 0B = jump, 24 = fall
@@ -193,8 +193,8 @@ uint32_t Mario3Input(unsigned short pad) {
 }
 
 uint32_t YoshiIslandInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
@@ -213,8 +213,8 @@ uint32_t YoshiIslandInput(unsigned short pad) {
 }
 
 uint32_t UniversalGravitationInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	TiltScreen = true;
 	TiltSideways = false;
 	uint32_t J = StandardMovement(pad);

@@ -40,8 +40,8 @@ void DebugPrintf(const char *format, ...) {
 }
 
 uint32_t TMNTInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -137,8 +137,8 @@ uint32_t TMNTInput(unsigned short pad) {
 }
 
 uint32_t TMNT1Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -198,8 +198,8 @@ uint32_t TMNT2Input(unsigned short pad) {
 }
 
 uint32_t TMNT3Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -258,8 +258,8 @@ uint32_t TMNT3Input(unsigned short pad) {
 }
 
 uint32_t TMNTGBAInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -316,8 +316,8 @@ uint32_t TMNTGBAInput(unsigned short pad) {
 }
 
 uint32_t TMNTGBA2Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -378,8 +378,8 @@ uint32_t TMNTGBA2Input(unsigned short pad) {
 }
 
 uint32_t HarryPotter1GBCInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
 
@@ -420,8 +420,8 @@ uint32_t HarryPotter2GBCInput(unsigned short pad) {
 }
 
 uint32_t HarryPotter1Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
 
@@ -460,8 +460,8 @@ uint32_t HarryPotter1Input(unsigned short pad) {
 }
 
 uint32_t HarryPotter2Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
@@ -498,8 +498,8 @@ uint32_t HarryPotter2Input(unsigned short pad) {
 }
 
 uint32_t HarryPotter3Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_GAMECUBE]) {
@@ -535,8 +535,8 @@ uint32_t HarryPotter3Input(unsigned short pad) {
 }
 
 uint32_t HarryPotter4Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.buttons_h & INPUT_BTN_RIGHT) J |= VBA_BUTTON_R;
@@ -563,8 +563,8 @@ uint32_t HarryPotter4Input(unsigned short pad) {
 }
 
 uint32_t HarryPotter5Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	// Wand cursor via unified IR/Touch valid pointer
@@ -604,8 +604,8 @@ uint32_t HarryPotter5Input(unsigned short pad) {
 
 // WarioWare Twisted
 uint32_t TwistedInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
@@ -640,8 +640,8 @@ uint32_t TwistedInput(unsigned short pad) {
 }
 
 uint32_t KirbyTntInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
@@ -669,8 +669,8 @@ uint32_t KirbyTntInput(unsigned short pad) {
 }
 
 uint32_t MohInfiltratorInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = StandardMovement(pad);
 
 	if (data.hw_connected[GUI_HW_NUNCHUK]) {
@@ -694,8 +694,8 @@ uint32_t MohInfiltratorInput(unsigned short pad) {
 }
 
 uint32_t MohUndergroundInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardClassic(pad) | StandardSideways(pad);
 	static bool crouched = false;
@@ -732,8 +732,8 @@ uint32_t MohUndergroundInput(unsigned short pad) {
 }
 
 uint32_t BoktaiInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad) | StandardClassic(pad);
 
@@ -773,8 +773,8 @@ uint32_t BoktaiInput(unsigned short pad) {
 }
 
 uint32_t Boktai2Input(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad) | StandardClassic(pad);
 
@@ -817,8 +817,8 @@ uint32_t Boktai2Input(unsigned short pad) {
 }
 
 uint32_t OnePieceInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 	static uint32_t LastDir = VBA_RIGHT;
@@ -867,8 +867,8 @@ uint32_t OnePieceInput(unsigned short pad) {
 }
 
 uint32_t HobbitInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
@@ -908,8 +908,8 @@ uint32_t HobbitInput(unsigned short pad) {
 }
 
 uint32_t FellowshipOfTheRingInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
@@ -950,8 +950,8 @@ uint32_t FellowshipOfTheRingInput(unsigned short pad) {
 }
 
 uint32_t ReturnOfTheKingInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
@@ -991,8 +991,8 @@ uint32_t ReturnOfTheKingInput(unsigned short pad) {
 }
 
 uint32_t CastlevaniaAdventureInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
@@ -1040,8 +1040,8 @@ uint32_t CastlevaniaAdventureInput(unsigned short pad) {
 }
 
 uint32_t CastlevaniaBelmontInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
@@ -1095,8 +1095,8 @@ uint32_t CastlevaniaBelmontInput(unsigned short pad) {
 }
 
 uint32_t CastlevaniaLegendsInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
@@ -1153,8 +1153,8 @@ uint32_t CastlevaniaLegendsInput(unsigned short pad) {
 }
 
 uint32_t CastlevaniaCircleMoonInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 
@@ -1265,8 +1265,8 @@ void KD_WeaponToMemory() {
 }
 
 uint32_t KidDraculaInput(unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
 

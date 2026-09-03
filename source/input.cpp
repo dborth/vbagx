@@ -146,25 +146,25 @@ void ResetControls(int wiiCtrl)
 }
 
 void systemPossibleCartridgeRumble(bool rumbleOn) {
-	if (userInput[0]) userInput[0]->setContinuousRumble(rumbleOn);
+	if (controller[0]) controller[0]->setContinuousRumble(rumbleOn);
 }
 
 void systemCartridgeRumble(bool rumbleOn) {
-	if (userInput[0]) userInput[0]->setContinuousRumble(rumbleOn);
+	if (controller[0]) controller[0]->setContinuousRumble(rumbleOn);
 }
 
 void systemGameRumble(int rumbleForFrames) {
-	if (userInput[0]) userInput[0]->ensureGameRumble(rumbleForFrames);
+	if (controller[0]) controller[0]->ensureGameRumble(rumbleForFrames);
 }
 
 void systemGameRumbleOnlyFor(int onlyRumbleForFrames) {
-	if (userInput[0]) userInput[0]->setGameRumble(onlyRumbleForFrames);
+	if (controller[0]) controller[0]->setGameRumble(onlyRumbleForFrames);
 }
 
 uint32_t StandardMovement(unsigned short chan)
 {
-	if (!userInput[chan]) return 0;
-	const InputPadData& pad = userInput[chan]->getPadData();
+	if (!controller[chan]) return 0;
+	const InputPadData& pad = controller[chan]->getPadData();
 	uint32_t J = 0;
 	
 	float sensitivity = (float)ANALOG_SENSITIVITY / 128.0f;
@@ -178,8 +178,8 @@ uint32_t StandardMovement(unsigned short chan)
 
 uint32_t StandardDPad(unsigned short pad)
 {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = 0;
 	if (data.buttons_h & INPUT_BTN_UP) J |= VBA_UP;
 	if (data.buttons_h & INPUT_BTN_DOWN) J |= VBA_DOWN;
@@ -190,8 +190,8 @@ uint32_t StandardDPad(unsigned short pad)
 
 uint32_t StandardSideways(unsigned short pad)
 {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = 0;
 
 	// Read directly from isolated Wiimote state
@@ -218,8 +218,8 @@ uint32_t StandardSideways(unsigned short pad)
 
 uint32_t StandardClassic(unsigned short pad)
 {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = 0;
 
 	// Read isolated Classic Controller state
@@ -250,8 +250,8 @@ uint32_t StandardClassic(unsigned short pad)
  ****************************************************************************/
 static uint32_t DecodeJoy(unsigned short pad)
 {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	CursorX = data.cursor_x;
 	CursorY = data.cursor_y;
@@ -478,8 +478,8 @@ static uint32_t DecodeJoy(unsigned short pad)
 bool isMenuRequested()
 {
 	for(int i=0; i<4; i++) {
-		if (!userInput[i]) continue;
-		const InputPadData& pad = userInput[i]->getPadData();
+		if (!controller[i]) continue;
+		const InputPadData& pad = controller[i]->getPadData();
 
 		bool rightStickLeft = (pad.substickX < -0.55f);
 		bool homePressed = (pad.buttons_h & INPUT_BTN_HOME);

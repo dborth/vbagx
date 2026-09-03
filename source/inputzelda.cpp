@@ -118,8 +118,8 @@ void ZeldaDxSheathSword()
 
 uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint16_t ItemsAddr = 0xDB00;
 	static bool QuestScreen = false;
@@ -375,8 +375,8 @@ uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 }
 
 static uint32_t ZeldaOracleInput(bool Seasons, unsigned short pad) {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint16_t ItemsAddr;
 	if (Seasons) ItemsAddr = 0xC680;
@@ -643,8 +643,8 @@ uint32_t OracleOfSeasonsInput(unsigned short pad)
 
 uint32_t MinishCapInput(unsigned short pad)
 {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
 
@@ -1000,8 +1000,8 @@ uint32_t MinishCapInput(unsigned short pad)
 
 uint32_t ALinkToThePastInput(unsigned short pad)
 {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
 	uint8_t Health = 0;
@@ -1042,8 +1042,8 @@ uint32_t ALinkToThePastInput(unsigned short pad)
 
 uint32_t Zelda1Input(unsigned short pad)
 {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
 	uint8_t Health = 0;
@@ -1081,8 +1081,8 @@ uint32_t Zelda1Input(unsigned short pad)
 
 uint32_t Zelda2Input(unsigned short pad)
 {
-	if (!userInput[pad]) return 0;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	uint32_t J = StandardMovement(pad);
 	uint8_t Health = 0;

@@ -272,7 +272,7 @@ void OgcInputDriver::update() {
 					padData.cursor_angle = wpad->ir.angle;
 				}
 
-				userInput[i]->setSideways(fabs(wpad->gforce.x) > fabs(wpad->gforce.y));
+				controller[i]->setSideways(fabs(wpad->gforce.x) > fabs(wpad->gforce.y));
 			}
 			else if (exp_type == WPAD_EXP_NUNCHUK) {
 				padData.hw_buttons_d[GUI_HW_WIIMOTE] = MapWiimoteToGeneric(wpad->btns_d);
@@ -294,7 +294,7 @@ void OgcInputDriver::update() {
 				padData.hw_roll[GUI_HW_NUNCHUK]    = wpad->exp.nunchuk.orient.roll;
 				padData.hw_yaw[GUI_HW_NUNCHUK]     = wpad->exp.nunchuk.orient.yaw;
 				
-				userInput[i]->setSideways(false);
+				controller[i]->setSideways(false);
 			}
 			else if (exp_type == WPAD_EXP_CLASSIC) {
 				bool isWUPC = (wpad->exp.classic.type == 2);
@@ -311,10 +311,10 @@ void OgcInputDriver::update() {
 				padData.hw_stickY[hw] = NormalizeWPADAnalog(ljs->pos.y, ljs->min.y, ljs->max.y, ljs->center.y);
 				padData.hw_substickX[hw] = NormalizeWPADAnalog(rjs->pos.x, rjs->min.x, rjs->max.x, rjs->center.x);
 				padData.hw_substickY[hw] = NormalizeWPADAnalog(rjs->pos.y, rjs->min.y, rjs->max.y, rjs->center.y);
-				userInput[i]->setSideways(false);
+				controller[i]->setSideways(false);
 			}
 			else {
-				userInput[i]->setSideways(false);
+				controller[i]->setSideways(false);
 			}
 		}
 
@@ -353,7 +353,7 @@ void OgcInputDriver::update() {
 		}
 
 		// Push the finalized, merged payload to the controller abstraction
-		userInput[i]->update(padData, platform->getVideo()->getDeltaTime());
+		controller[i]->update(padData, platform->getVideo()->getDeltaTime());
 		
 		// Rumble Handling
 		if (rumbleRequest[i]) {

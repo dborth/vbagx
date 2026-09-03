@@ -119,8 +119,8 @@ uint32_t GetMKInput(unsigned short pad, int rumbleTime=4) {
 	uint32_t J = StandardMovement(pad);
     HP=0;LP=0;HK=0;LK=0;BL=0;Throw=0;CS=0;F=0;B=0;Select=0;Start=0;SpecialMove=0;
 
-	if (!userInput[pad]) return J;
-	const InputPadData& data = userInput[pad]->getPadData();
+	if (!controller[pad]) return J;
+	const InputPadData& data = controller[pad]->getPadData();
 
 	// Rumble when they lose health!
 	if (OurHealth < OurOldHealth) systemGameRumble(rumbleTime);
