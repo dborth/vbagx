@@ -20,7 +20,7 @@
 CtrlrMap ctrlr_def[6] = {
 // Gamecube controller btn def
 {
-	GUI_HW_GAMECUBE,
+	INPUT_HW_GAMECUBE,
 	13,
 	{
 		{INPUT_BTN_DOWN, "DOWN"},
@@ -42,7 +42,7 @@ CtrlrMap ctrlr_def[6] = {
 },
 // Wiimote btn def
 {
-	GUI_HW_WIIMOTE,
+	INPUT_HW_WIIMOTE,
 	11,
 	{
 		{INPUT_BTN_DOWN, "DOWN"},
@@ -64,7 +64,7 @@ CtrlrMap ctrlr_def[6] = {
 },
 // Nunchuk btn def
 {
-	GUI_HW_NUNCHUK,
+	INPUT_HW_NUNCHUK,
 	13,
 	{
 		{INPUT_BTN_DOWN, "DOWN"},
@@ -86,7 +86,7 @@ CtrlrMap ctrlr_def[6] = {
 },
 // Classic btn def
 {
-	GUI_HW_CLASSIC,
+	INPUT_HW_CLASSIC,
 	15,
 	{
 		{INPUT_BTN_DOWN, "DOWN"},
@@ -108,7 +108,7 @@ CtrlrMap ctrlr_def[6] = {
 },
 // Wii U Pro controller
 {
-	GUI_HW_WUPC,
+	INPUT_HW_WUPC,
 	15,
 	{
 		{INPUT_BTN_DOWN, "DOWN"},
@@ -130,7 +130,7 @@ CtrlrMap ctrlr_def[6] = {
 },
 // Wii U Gamepad btn def
 {
-	GUI_HW_DRC,
+	INPUT_HW_DRC,
 	15,
 	{
 		{INPUT_BTN_DOWN, "DOWN"},

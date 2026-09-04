@@ -31,7 +31,7 @@
 
 extern int rumbleRequest[4];
 extern int playerMapping[4];
-extern uint32_t btnmap[GUI_HW_MAX][MAXJP];
+extern uint32_t btnmap[INPUT_HW_MAX][MAXJP];
 
 void ResetControls(int wc = -1);
 void systemGameRumble(int RumbleForFrames);

@@ -163,18 +163,18 @@ uint32_t LinksAwakeningInput(unsigned short pad) // aka Zelda DX
 	bool BItemButton        = data.buttons_h & INPUT_TRIGGER_R; // Fallback B-Item trigger
 
 	// Motion Control Mappings
-	if (data.hw_connected[GUI_HW_WIIMOTE]) {
+	if (data.hw_connected[INPUT_HW_WIIMOTE]) {
 		// Sword (Wiimote Shake)
-		if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5f && !OnItemScreen) {
+		if (fabs(data.hw_gforceX[INPUT_HW_WIIMOTE]) > 1.5f && !OnItemScreen) {
 			if (ZeldaDxDrawSword()) {
 				if (SwordCount < 3) SwordCount = 3;
 			}
 			QuestScreen = false;
 		}
 	}
-	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+	if (data.hw_connected[INPUT_HW_NUNCHUK]) {
 		// Spin Attack (Nunchuk Shake)
-		if (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.6f && !OnItemScreen) {
+		if (fabs(data.hw_gforceX[INPUT_HW_NUNCHUK]) > 0.6f && !OnItemScreen) {
 			if (ZeldaDxDrawSword()) {
 				if (SwordCount < 60) SwordCount = 60;
 			}
@@ -425,13 +425,13 @@ static uint32_t ZeldaOracleInput(bool Seasons, unsigned short pad) {
 
 	// Motion Control Mappings
 	static int SwordCount = 0;
-	if (data.hw_connected[GUI_HW_WIIMOTE]) {
-		if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5f && !OnItemScreen) {
+	if (data.hw_connected[INPUT_HW_WIIMOTE]) {
+		if (fabs(data.hw_gforceX[INPUT_HW_WIIMOTE]) > 1.5f && !OnItemScreen) {
 			if (SwordCount < 3) SwordCount = 3;
 		}
 	}
-	if (data.hw_connected[GUI_HW_NUNCHUK]) {
-		if (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.6f && !OnItemScreen) {
+	if (data.hw_connected[INPUT_HW_NUNCHUK]) {
+		if (fabs(data.hw_gforceX[INPUT_HW_NUNCHUK]) > 0.6f && !OnItemScreen) {
 			if (SwordCount < 60) SwordCount = 60;
 		}
 	}
@@ -831,20 +831,20 @@ uint32_t MinishCapInput(unsigned short pad)
 
 	// Motion Control Mappings
 	static int SwordCount = 0;
-	if (data.hw_connected[GUI_HW_WIIMOTE]) {
-		if (fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5f && !OnItemScreen) {
+	if (data.hw_connected[INPUT_HW_WIIMOTE]) {
+		if (fabs(data.hw_gforceX[INPUT_HW_WIIMOTE]) > 1.5f && !OnItemScreen) {
 			if (SwordCount < 3) SwordCount = 3;
 		}
 	}
-	if (data.hw_connected[GUI_HW_NUNCHUK]) {
+	if (data.hw_connected[INPUT_HW_NUNCHUK]) {
 		// Throw gesture
 		if (RButtonAction == 0x03) {
-			if (fabs(data.hw_gforceY[GUI_HW_NUNCHUK]) > 0.6f) {
+			if (fabs(data.hw_gforceY[INPUT_HW_NUNCHUK]) > 0.6f) {
 				J |= VBA_BUTTON_R;
 				systemGameRumble(5);
 			}
 		// Spin attack
-		} else if (fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.6f && !OnItemScreen) {
+		} else if (fabs(data.hw_gforceX[INPUT_HW_NUNCHUK]) > 0.6f && !OnItemScreen) {
 			if (SwordCount < 60) SwordCount = 60;
 		}
 	}
@@ -1029,11 +1029,11 @@ uint32_t ALinkToThePastInput(unsigned short pad)
 	if ((data.buttons_h & INPUT_BTN_B) || (data.buttons_h & INPUT_BTN_X) || (data.buttons_h & INPUT_BTN_Y)) J |= VBA_BUTTON_B;
 
 	// Sword / Spin Attack Motion Controls
-	if (data.hw_connected[GUI_HW_NUNCHUK] && fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.6f) {
+	if (data.hw_connected[INPUT_HW_NUNCHUK] && fabs(data.hw_gforceX[INPUT_HW_NUNCHUK]) > 0.6f) {
 		J |= VBA_BUTTON_B;
 		systemGameRumble(20);
 	}
-	if (data.hw_connected[GUI_HW_WIIMOTE] && fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5f) {
+	if (data.hw_connected[INPUT_HW_WIIMOTE] && fabs(data.hw_gforceX[INPUT_HW_WIIMOTE]) > 1.5f) {
 		J |= VBA_BUTTON_B;
 	}
 
@@ -1068,11 +1068,11 @@ uint32_t Zelda1Input(unsigned short pad)
 	if ((data.buttons_h & INPUT_TRIGGER_R) || (data.buttons_h & INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
 
 	// Sword Motion Controls
-	if (data.hw_connected[GUI_HW_NUNCHUK] && fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.6f) {
+	if (data.hw_connected[INPUT_HW_NUNCHUK] && fabs(data.hw_gforceX[INPUT_HW_NUNCHUK]) > 0.6f) {
 		J |= VBA_BUTTON_A;
 		systemGameRumble(20);
 	}
-	if (data.hw_connected[GUI_HW_WIIMOTE] && fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5f) {
+	if (data.hw_connected[INPUT_HW_WIIMOTE] && fabs(data.hw_gforceX[INPUT_HW_WIIMOTE]) > 1.5f) {
 		J |= VBA_BUTTON_A;
 	}
 
@@ -1105,11 +1105,11 @@ uint32_t Zelda2Input(unsigned short pad)
 	if ((data.buttons_h & INPUT_BTN_B) || (data.buttons_h & INPUT_BTN_X) || (data.buttons_h & INPUT_BTN_Y)) J |= VBA_BUTTON_B;
 
 	// Sword / Spin Attack Motion Controls
-	if (data.hw_connected[GUI_HW_NUNCHUK] && fabs(data.hw_gforceX[GUI_HW_NUNCHUK]) > 0.6f) {
+	if (data.hw_connected[INPUT_HW_NUNCHUK] && fabs(data.hw_gforceX[INPUT_HW_NUNCHUK]) > 0.6f) {
 		J |= VBA_BUTTON_B;
 		systemGameRumble(20);
 	}
-	if (data.hw_connected[GUI_HW_WIIMOTE] && fabs(data.hw_gforceX[GUI_HW_WIIMOTE]) > 1.5f) {
+	if (data.hw_connected[INPUT_HW_WIIMOTE] && fabs(data.hw_gforceX[INPUT_HW_WIIMOTE]) > 1.5f) {
 		J |= VBA_BUTTON_B;
 	}
 
