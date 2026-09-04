@@ -36,7 +36,7 @@ CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 				-D__ppc__ -DNO_PNG -DHAVE_ZUTIL_H \
 				-DBLARGG_NONPORTABLE -DBLARGG_BIG_ENDIAN -DBLARGG_CPU_POWERPC \
 				-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
-				-fomit-frame-pointer -fno-strict-aliasing \
+				-flto=auto -fomit-frame-pointer -fno-strict-aliasing \
 				-Wno-unused-parameter -Wno-parentheses -Wno-format -Wno-stringop-truncation \
 				-Wno-maybe-uninitialized -Wno-unused-but-set-variable -Wno-stringop-overflow -Wno-narrowing \
 				-Wno-misleading-indentation -Wno-unused-function -Wno-sign-compare -Wno-unused-variable \
@@ -46,7 +46,7 @@ CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 CXXFLAGS	=	$(CFLAGS) -Wno-register -Wno-reorder -fno-exceptions -fno-rtti -fno-threadsafe-statics
 
 # Added -O3 and LTO directly to linker pipeline for global scope analysis optimization
-LDFLAGS		=	-g -O3 $(MACHDEP) -Wl,-Map,$(notdir $@).map
+LDFLAGS		=	-g -O3 -flto=auto $(MACHDEP) -Wl,-Map,$(notdir $@).map
 LDFLAGS		+=	-L../buildtools
 
 #---------------------------------------------------------------------------------
