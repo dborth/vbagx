@@ -13,11 +13,6 @@
 #include <sys/iosupport.h>
 #include <ogc/lwp_threads.h>
 
-#ifdef HW_RVL
-#include <di/di.h>
-#include <wiiuse/wpad.h>
-#endif
-
 #include "vbagx.h"
 #include "system.h"
 #include "video.h"

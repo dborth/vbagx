@@ -18,13 +18,6 @@
 #include <sys/stat.h>
 #include <memory>
 
-#ifdef HW_RVL
-#include <di/di.h>
-#include <wiiuse/wpad.h>
-#endif
-
-#include "drivers/ogc/wiidrc.h"
-
 #include "vbagx.h"
 #include "memmanager.h"
 #include "system.h"
@@ -2600,7 +2593,7 @@ static int MenuSettingsMappings()
 #ifdef HW_RVL
 	w.append(&wiimoteBtn);
 	
-	if(WiiDRC_Inited() && WiiDRC_Connected()) {
+	if(controller[0]->getPadData().hw_connected[GUI_HW_DRC]) {
 		gamecubeBtn.setPosition(-200, 120);
 		wiimoteBtn.setPosition(0, 120);
 		w.append(&drcBtn);

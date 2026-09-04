@@ -5,7 +5,7 @@
  *
  * input.cpp
  *
- * Wii/Gamecube controller management
+ * Controller management
  ***************************************************************************/
 
 #include <stdio.h>
