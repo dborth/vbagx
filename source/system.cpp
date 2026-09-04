@@ -141,7 +141,7 @@ void SystemInit() {
 
 	platform->init(640, 480);
 	SwitchMemoryModeMenu();
-	InitFPSFontData();
+	platform->getVideo()->getEmulatorVideo()->initFPSFontData();
 
 	InitFileOpThreads();
 	MountAllFAT(); // Initialize libFAT for SD and USB

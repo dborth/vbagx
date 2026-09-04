@@ -16,6 +16,7 @@ class EmulatorVideoDriver
 
 		virtual void init(VideoDriver* videoDriver) = 0;
 		virtual void resetVideo() = 0;
+		virtual void initFPSFontData() = 0;
 		virtual void presentFrame(int width, int height) = 0;
 		virtual void readFrameRGB24(uint8_t* dst) = 0;
 };

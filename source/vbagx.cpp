@@ -13,6 +13,7 @@
 #include "vbasupport.h"
 #include "preferences.h"
 #include "drivers/Platform.h"
+#include "drivers/EmulatorVideoDriver.h"
 #include "filebrowser.h"
 #include "fileop.h"
 #include "menu.h"
@@ -47,7 +48,7 @@ int main(int argc, char *argv[])
 	DefaultSettings();
 	SystemInit();
 	ApplySettings();
-	ResetVideo_Menu(); // change to menu video mode
+	platform->getVideo()->startMenuVideo(); // change to menu video mode
 	
 	#ifdef HW_RVL
 	// store path app was loaded from
@@ -108,7 +109,7 @@ int main(int argc, char *argv[])
 		// since we're starting emulation again
 		HaltDeviceCheckingThread();
 		ResetTiltAndCursor();
-		ResetVideo_Emu();
+		platform->getVideo()->getEmulatorVideo()->resetVideo();
 
 		// GB colorizing - set palette
 		if(IsGameboyGame())
@@ -138,7 +139,7 @@ int main(int argc, char *argv[])
 				SwitchMemoryModeMenu();
 				TakeScreenshot(tempBuffer);
 				free(tempBuffer);
-				ResetVideo_Menu();
+				platform->getVideo()->startMenuVideo();
 
 				#ifdef HW_DOL
 				VMPager_Pause();

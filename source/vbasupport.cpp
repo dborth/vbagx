@@ -25,6 +25,7 @@
 #include "fileop.h"
 #include "filebrowser.h"
 #include "drivers/ogc/OgcEmulatorAudio.h"
+#include "drivers/ogc/OgcEmulatorVideo.h"
 #include "input.h"
 #include "cheatmgr.h"
 #include "gameinput.h"
@@ -143,9 +144,9 @@ void systemGbBorderOn() {}
  */
 void systemResetPacer()
 {
-	FrameTimer = 0;
+	platform->getVideo()->setFrameTimer(0);
 
-	if(vmode_60hz) // Video mode matches ROM timing - use vblanks
+	if(platform->getVideo()->getRefreshRate() == 60) // Video mode matches ROM timing - use vblanks
 		timerstyle = 0;
 	else // use timing windows with usleep
 		timerstyle = 1;
@@ -220,7 +221,7 @@ void systemFrame()
 	if (turboMode)
 	{
 		// Turbo: no real-time throttle at all -- run flat out. Frameskip's
-		// only job here is to avoid spending GX_Render()/VSync time on
+		// only job here is to avoid spending presentFrame()/VSync time on
 		// frames nobody's watching; it does not bound the audio backlog
 		// (Sound.cpp's own overflow-drop policy in flush_samples() does
 		// that, independently, by design -- see OgcEmulatorAudio.cpp's getDynamicRate()).
@@ -238,7 +239,7 @@ void systemFrame()
 		// Keep the non-turbo clocks sane for whenever turbo lets go, so we
 		// don't inherit stale debt/VBlank-count and read as "behind" the
 		// instant turbo turns off.
-		FrameTimer = 0;
+		platform->getVideo()->setFrameTimer(0);
 		return;
 	}
 
@@ -256,13 +257,13 @@ void systemFrame()
 
 	if (timerstyle == 0)
 	{
-		// V-sync-driven pacing. GX_Render() blocks on the real hardware
+		// V-sync-driven pacing. presentFrame() blocks on the real hardware
 		// VSync whenever we render, so a fast JIT core is automatically
 		// capped at the display's own refresh rate the instant every
 		// frame renders -- no separate software throttle is needed here.
 		// This naturally satisfies "never exceed true GBA rate" for
 		// scenario 2 without any extra code.
-		uint32_t pendingFrames = FrameTimer;
+		uint32_t pendingFrames = platform->getVideo()->getFrameTimer();
 
 		// SKIP PRESSURE: blend how far behind real vblanks we are with
 		// how urgently audio needs this frame's CPU time
@@ -271,7 +272,7 @@ void systemFrame()
 
 		if (pendingFrames > skipFrms)
 		{
-			FrameTimer = skipFrms;
+			platform->getVideo()->setFrameTimer(skipFrms);
 			pendingFrames = skipFrms;
 		}
 
@@ -288,15 +289,15 @@ void systemFrame()
 			// forgive the VBlank debt rather than let it sit at max and
 			// bias the next frame's decision toward skipping anyway
 			if (behindSchedule)
-				FrameTimer = GCSettings.gbaFrameskip ? 1 : 0;
+				platform->getVideo()->setFrameTimer(GCSettings.gbaFrameskip ? 1 : 0);
 
 			skippedFrames = 0;
 			frameToRender = true;
 			PROFILER_COMMIT_FRAMESKIP();
 		}
 
-		if (FrameTimer > 0)
-			FrameTimer--;
+		if (platform->getVideo()->getFrameTimer() > 0)
+			platform->getVideo()->setFrameTimer(platform->getVideo()->getFrameTimer() - 1);
 	}
 	else
 	{
@@ -879,15 +880,7 @@ static int srcHeight = 0;
 
 void systemDrawScreen()
 {
-	uint8_t* renderBuffer = pix;
-
-	// Advance pointer by 484 bytes (240 pixels * 2 bpp + 4 byte pitch pad)
-	// to skip the uninitialized top row without runtime multiplication stalls
-	if (cartridgeType == CARTRIDGE_GBA) {
-		renderBuffer += 484;
-	}
-
-	GX_Render(srcWidth, srcHeight, renderBuffer);
+	platform->getVideo()->getEmulatorVideo()->presentFrame(srcWidth, srcHeight);
 
 	renderFrameCount++;
 	if (renderFrameCount >= 60)
@@ -1220,10 +1213,11 @@ void InitGameDimensionsAndBorder() {
 		}
 	}
 
+	OgcEmulatorVideo* emulatorVideo = static_cast<OgcEmulatorVideo*>(platform->getVideo()->getEmulatorVideo());
 	if (gameBorder.hasBorder()) {
-		GX_Render_Init(gameBorder.getWidth(), gameBorder.getHeight());
+		emulatorVideo->renderInit(gameBorder.getWidth(), gameBorder.getHeight());
 	} else {
-		GX_Render_Init(srcWidth, srcHeight);
+		emulatorVideo->renderInit(srcWidth, srcHeight);
 	}
 }
 

@@ -464,7 +464,7 @@ void ApplySettings() {
 	platform->getInput()->setRumbleEnabled(GCSettings.Rumble);
 	GuiSound::setDefaultVolume(SOUND::OGG, GCSettings.MusicVolume);
 	GuiSound::setDefaultVolume(SOUND::PCM, GCSettings.SFXVolume);
-	ResetVideo_Menu();
+	platform->getVideo()->startMenuVideo();
 	ChangeLanguage();
 	InitialisePalette();
 }

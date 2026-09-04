@@ -19,24 +19,14 @@
 #define TEX_HEIGHT 480
 #define TEXTUREMEM_SIZE 	TEX_WIDTH*TEX_HEIGHT*2
 
-void InitializeVideo ();
-void GX_Render_Init(int width, int height);
-void GX_Render(int gbWidth, int gbHeight, u8 * buffer);
-void ResetVideo_Emu();
-void ResetVideo_Menu();
 void TakeScreenshot(u8 * gameTexture);
 void ClearScreenshot();
-void Menu_Render();
-void InitFPSFontData();
 
-extern GXRModeObj *vmode;
 extern s32 CursorX, CursorY;
 extern bool CursorVisible;
 extern bool CursorValid;
 extern bool TiltScreen;
 extern float TiltAngle;
-extern u32 FrameTimer;
-extern bool vmode_60hz;
 
 typedef struct
 {
