@@ -27,7 +27,6 @@
 
 #pragma once
 
-#include <gccore.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>

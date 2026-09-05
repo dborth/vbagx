@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <network.h>
 #include <smb.h>
+#include <ogc/lwp.h>
 
 #include "vbagx.h"
 #include "menu.h"

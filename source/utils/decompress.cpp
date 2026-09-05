@@ -51,8 +51,8 @@ PKZIPHEADER;
  * Zip files are stored little endian
  * Support functions for short and int types
  */
-static u32
-FLIP32 (u32 b)
+static uint32_t
+FLIP32 (uint32_t b)
 {
 	unsigned int c;
 
@@ -238,9 +238,9 @@ GetFirstZipFilename ()
 typedef struct _SzFileInStream
 {
    ISzInStream InStream;
-   u64 offset; // offset of the file
+   uint64_t offset; // offset of the file
    unsigned int len; // length of the file
-   u64 pos;  // current position of the file pointer
+   uint64_t pos;  // current position of the file pointer
 } SzFileInStream;
 
 // 7zip error list

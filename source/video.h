@@ -9,20 +9,19 @@
  * Video routines
  ***************************************************************************/
 
-#ifndef _GCVIDEOH_
-#define _GCVIDEOH_
+#ifndef _VIDEO_H_
+#define _VIDEO_H_
 
-#include <ogcsys.h>
-#include "libgui/Gui.h"
+#include <stdint.h>
 
 #define TEX_WIDTH 640
 #define TEX_HEIGHT 480
 #define TEXTUREMEM_SIZE 	TEX_WIDTH*TEX_HEIGHT*2
 
-void TakeScreenshot(u8 * gameTexture);
+void TakeScreenshot(uint8_t * gameTexture);
 void ClearScreenshot();
 
-extern s32 CursorX, CursorY;
+extern int32_t CursorX, CursorY;
 extern bool CursorVisible;
 extern bool CursorValid;
 extern bool TiltScreen;
@@ -30,7 +29,7 @@ extern float TiltAngle;
 
 typedef struct
 {
-	u8 * buffer;
+	uint8_t * buffer;
 	int size;
 	int width;
 	int height;
@@ -40,7 +39,7 @@ typedef struct
 	int yoffset;
 } GameScreenPng;
 
-extern u8* texturemem;
+extern uint8_t * texturemem;
 extern GameScreenPng gameScreenPng;
 
 #endif

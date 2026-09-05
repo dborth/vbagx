@@ -20,9 +20,9 @@
 #include "drivers/ogc/OgcEmulatorVideo.h"
 #include "utils/pngcodec.h"
 
-u8* texturemem = nullptr;
+uint8_t* texturemem = nullptr;
 
-s32 CursorX, CursorY;
+int32_t CursorX, CursorY;
 bool CursorVisible;
 bool CursorValid;
 bool TiltScreen = false;
@@ -47,12 +47,12 @@ void ClearScreenshot()
  *
  * Copies the current texturemem screen into a PNG buffer
  ***************************************************************************/
-void TakeScreenshot(u8 * gameTexture)
+void TakeScreenshot(uint8_t * gameTexture)
 {
 	AllocSaveBuffer();
 	OgcEmulatorVideo* emulatorVideo = static_cast<OgcEmulatorVideo*>(platform->getVideo()->getEmulatorVideo());
 	emulatorVideo->untileRGB5A3ToRGB24(gameTexture, gameScreenPng.width, gameScreenPng.height, savebuffer);
-	u32 size = 0;
+	uint32_t size = 0;
 	gameScreenPng.buffer = EncodePNGFromRGB24(gameScreenPng.width, gameScreenPng.height, savebuffer, 0, &size);
 	gameScreenPng.size = (int) size;
 	FreeSaveBuffer();

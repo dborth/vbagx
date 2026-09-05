@@ -184,7 +184,6 @@
 **/
 
 #ifdef HW_DOL
-#include <gccore.h>
 #include <stdlib.h>
 #include <malloc.h>
 #include <errno.h>
@@ -192,8 +191,12 @@
 #include <string.h>
 #include <ogc/machine/processor.h>
 #include <ogc/aram.h>
+#include <ogc/arqueue.h>
 #include <ogc/cache.h>
 #include <ogc/context.h>
+#include <ogc/lwp.h>
+#include <ogc/mutex.h>
+#include <ogc/system.h>
 #include "vm.h"
 #include "vmpager.h"
 
@@ -222,49 +225,49 @@
 // keeps a record of each currently mapped page
 typedef union
 {
-	u32 data;
+	uint32_t data;
 	struct
 	{
-		u32 valid      :  1;
-		u32 locked     :  1;
-		u32 dirty      :  1;
-		u32 pte_index  : 13;
-		u32 page_index : 16;
+		uint32_t valid      :  1;
+		uint32_t locked     :  1;
+		uint32_t dirty      :  1;
+		uint32_t pte_index  : 13;
+		uint32_t page_index : 16;
 	};
 } p_map;
 
-// Bookkeeping for one virtual page. Kept as two full u16 fields rather
+// Bookkeeping for one virtual page. Kept as two full uint16_t fields rather
 // than a single packed bitfield so a write to one member is always its
 // own independent store, never a read-modify-write that also touches
 // the other member's bits.
 typedef struct
 {
-	u16 committed;
-	u16 p_map_index;
+	uint16_t committed;
+	uint16_t p_map_index;
 } vm_map;
 
 typedef union
 {
-	u32 data[2];
+	uint32_t data[2];
 	struct
 	{
-		u32 valid  :  1;
-		u32 VSID   : 24;
-		u32 hash   :  1;
-		u32 API    :  6;
+		uint32_t valid  :  1;
+		uint32_t VSID   : 24;
+		uint32_t hash   :  1;
+		uint32_t API    :  6;
 
-		u32 RPN    : 20;
-		u32 pad0   :  3;
-		u32 R      :  1;
-		u32 C      :  1;
-		u32 WIMG   :  4;
-		u32 pad1   :  1;
-		u32 PP     :  2;
+		uint32_t RPN    : 20;
+		uint32_t pad0   :  3;
+		uint32_t R      :  1;
+		uint32_t C      :  1;
+		uint32_t WIMG   :  4;
+		uint32_t pad1   :  1;
+		uint32_t PP     :  2;
 	};
 } PTE;
 typedef PTE* PTEG;
 
-typedef u8 vm_page[PAGE_SIZE];
+typedef uint8_t vm_page[PAGE_SIZE];
 
 // --- Tier 2: MEM1 physical-frame bookkeeping ---
 static p_map phys_map[2048+(PTE_SIZE/PAGE_SIZE)];
@@ -272,24 +275,24 @@ static p_map phys_map[2048+(PTE_SIZE/PAGE_SIZE)];
 // ROM file" (see header note above), independent of where that data
 // currently resides (MEM1 frame, ARAM cache slot, or nowhere yet) ---
 static vm_map virt_map[65536];
-static u16 pmap_max, pmap_head;
+static uint16_t pmap_max, pmap_head;
 
 static PTE* HTABORG;
 static vm_page* VM_Base;
 static vm_page* MEM_Base = NULL;
 
 static mutex_t vm_mutex = LWP_MUTEX_NULL;
-static u32 VMSize = 0;
-static u32 MEMSize = 0;
+static uint32_t VMSize = 0;
+static uint32_t MEMSize = 0;
 static bool vm_initialized = 0;
 
 // --- Tier 1: ARAM write-back cache indirection tables ---
 // Tracks which v_index currently resides in each ARAM slot
-static u16 aram_map[ARAM_MAX_SLOTS];
+static uint16_t aram_map[ARAM_MAX_SLOTS];
 // Tracks which ARAM slot holds a given v_index
-static u16 v_to_aram[65536];
+static uint16_t v_to_aram[65536];
 // Simple FIFO clock hand for eviction
-static u16 aram_head = 0;
+static uint16_t aram_head = 0;
 
 // Flushes an updated PTE from CPU cache to physical memory so the
 // PowerPC hardware page-table walker - which reads HTABORG directly out
@@ -328,9 +331,9 @@ static __inline__ void tlbie(void* p)
 // having already populated `phys_map` with a full set of valid frame
 // descriptors at startup (see the note there); if that seeding were ever
 // skipped or incomplete, this would spin indefinitely on the first fault.
-static u16 locate_oldest(void)
+static uint16_t locate_oldest(void)
 {
-	u16 head = pmap_head;
+	uint16_t head = pmap_head;
 
 	for(;;++head)
 	{
@@ -368,7 +371,7 @@ static u16 locate_oldest(void)
 		// be cleared before the frame is handed back for reuse, or a
 		// later ClearMEM1Mapping() on that old v_index would tear down
 		// whatever new page ends up owning this frame's PTE next.
-		u16 old_v = phys_map[head].page_index;
+		uint16_t old_v = phys_map[head].page_index;
 		if (old_v < 65536 && virt_map[old_v].p_map_index == head)
 		{
 			virt_map[old_v].p_map_index = pmap_max;
@@ -382,7 +385,7 @@ static u16 locate_oldest(void)
 // Writes one PTE into the given PTEG (primary or secondary hash bucket),
 // returning a pointer to the slot used, or NULL if all 8 ways in that
 // PTEG are already occupied (caller then tries the other hash).
-static PTE* StorePTE(PTEG pteg, u32 virtualmem, u32 physical, u8 WIMG, u8 PP, int secondary)
+static PTE* StorePTE(PTEG pteg, uint32_t virtualmem, uint32_t physical, uint8_t WIMG, uint8_t PP, int secondary)
 {
 	int i;
 	PTE p = {{0}};
@@ -414,11 +417,11 @@ static PTE* StorePTE(PTEG pteg, u32 virtualmem, u32 physical, u8 WIMG, u8 PP, in
 // Computes the physical address of the primary or secondary PTEG (page
 // table entry group / hash bucket) for a given virtual address, per the
 // standard PowerPC hashed-page-table addressing scheme.
-static PTEG CalcPTEG(u32 virtualmem, int secondary)
+static PTEG CalcPTEG(uint32_t virtualmem, int secondary)
 {
 	uint32_t segment_index = (virtualmem >> 12) & 0xFFFF;
-	u32 ptr = MEM_VIRTUAL_TO_PHYSICAL(HTABORG);
-	u32 hash = segment_index ^ VM_VSID;
+	uint32_t ptr = MEM_VIRTUAL_TO_PHYSICAL(HTABORG);
+	uint32_t hash = segment_index ^ VM_VSID;
 
 	if (secondary) hash = ~hash;
 
@@ -438,11 +441,11 @@ static PTEG CalcPTEG(u32 virtualmem, int secondary)
 // unlinked (its phys_map entry invalidated and its virt_map
 // back-reference cleared) so the slot can be safely reused for the new
 // mapping. Never returns NULL.
-static PTE* insert_pte(u16 index, u32 physical, u8 WIMG, u8 PP)
+static PTE* insert_pte(uint16_t index, uint32_t physical, uint8_t WIMG, uint8_t PP)
 {
 	PTE *pte;
 	int i;
-	u32 virtualmem = (u32)(VM_Base + index);
+	uint32_t virtualmem = (uint32_t)(VM_Base + index);
 
 	for (i = 0; i < 2; i++)
 	{
@@ -454,14 +457,14 @@ static PTE* insert_pte(u16 index, u32 physical, u8 WIMG, u8 PP)
 
 	PTEG pteg = CalcPTEG(virtualmem, 0);
 	pte = &pteg[0];
-	u16 target_pte_idx = pte - HTABORG;
+	uint16_t target_pte_idx = pte - HTABORG;
 
 	// Unlink whichever frame currently owns this PTE slot so we don't
 	// end up with two physical frames pointing at the same PTE.
 	for (i = 0; i < pmap_max; i++) {
 		if (phys_map[i].valid && phys_map[i].pte_index == target_pte_idx) {
 			phys_map[i].valid = 0;
-			u16 old_v = phys_map[i].page_index;
+			uint16_t old_v = phys_map[i].page_index;
 			if (old_v < 65536 && virt_map[old_v].p_map_index == i) {
 				virt_map[old_v].p_map_index = pmap_max;
 			}
@@ -503,7 +506,7 @@ extern "C" {
 /* This definition is wrong, pHndl does not take frame_context* as a parameter,
  * it has to adjust the stack pointer and finish filling frame_context itself
  */
-void __exception_sethandler(u32 nExcept, void (*pHndl)(frame_context*));
+void __exception_sethandler(uint32_t nExcept, void (*pHndl)(frame_context*));
 extern void default_exceptionhandler(frame_context*);
 // use our own exception stub because libogc stupidly requires it
 extern void vm_dsi_handler_stub(frame_context*);
@@ -524,8 +527,8 @@ extern void vm_dsi_handler_stub(frame_context*);
 // since eviction already set its p_map_index to pmap_max) guarantees the
 // next access re-fetches clean data from the SD ROM file rather than
 // reading stale/inconsistent state from either tier.
-static void ClearMEM1Mapping(u16 v_index) {
-	u16 p_index = virt_map[v_index].p_map_index;
+static void ClearMEM1Mapping(uint16_t v_index) {
+	uint16_t p_index = virt_map[v_index].p_map_index;
 	if (p_index != pmap_max) {
 		PTE *p = HTABORG + phys_map[p_index].pte_index;
 		p->data[0] = 0;
@@ -573,23 +576,23 @@ void VM_Clear(void) {
 	memset(MEM_Base, 0, MEMSize);
 	AR_Clear(AR_ARAMINTUSER);
 
-	for (u32 j = 0; j < ARAM_MAX_SLOTS; j++)
+	for (uint32_t j = 0; j < ARAM_MAX_SLOTS; j++)
 		aram_map[j] = 0xFFFF;
 
-	for (u32 j = 0; j < 65536; j++)
+	for (uint32_t j = 0; j < 65536; j++)
 		v_to_aram[j] = 0xFFFF;
 
 	aram_head = 0;
 
 	tlbia();
 	DCZeroRange(MEM_Base, MEMSize);
-	HTABORG = (PTE*)(((u32)MEM_Base + 0xFFFF) & ~0xFFFF);
+	HTABORG = (PTE*)(((uint32_t)MEM_Base + 0xFFFF) & ~0xFFFF);
 
 	// Mandatory phys_map/PTE seeding for locate_oldest() - see the
 	// VM_Clear function comment above. Not an optional preload.
 	// map pmap_max pages to fill PTEs with valid RPNs
-	u32 i;
-	u16 index, v_index;
+	uint32_t i;
+	uint16_t index, v_index;
 
 	for (index = 0, v_index = 0; index < pmap_max; ++index, ++v_index)
 	{
@@ -615,13 +618,13 @@ void VM_Clear(void) {
 	// Mark every remaining virtual page (from wherever the loop above
 	// left off, through the top of the 16-bit index space) as
 	// uncommitted and unmapped. Uses an explicit 32-bit loop counter
-	// rather than comparing the u16 `v_index` directly against 65536,
-	// since 65536 does not fit in a u16 and would force an always-true
+	// rather than comparing the uint16_t `v_index` directly against 65536,
+	// since 65536 does not fit in a uint16_t and would force an always-true
 	// comparison after integer promotion.
-	for (u32 vi = v_index; vi < 65536; ++vi)
+	for (uint32_t vi = v_index; vi < 65536; ++vi)
 	{
-		virt_map[(u16)vi].committed = 0;
-		virt_map[(u16)vi].p_map_index = pmap_max;
+		virt_map[(uint16_t)vi].committed = 0;
+		virt_map[(uint16_t)vi].p_map_index = pmap_max;
 	}
 
 	pmap_head = 0;
@@ -635,7 +638,7 @@ void VM_Clear(void) {
 // subsystem, then delegates state population to VM_Clear() so the same
 // reset logic can be re-run later by VMPager_LoadROM(). Finally wires up
 // SDR1/segment registers and installs the DSI handler stub.
-void* VM_Init(u32 reqVMSize, u32 reqMEMSize)
+void* VM_Init(uint32_t reqVMSize, uint32_t reqMEMSize)
 {
 	if (vm_initialized)
 		return VM_Base;
@@ -689,7 +692,7 @@ void* VM_Init(u32 reqVMSize, u32 reqMEMSize)
 // been loaded from the SD ROM file yet (see the "committed" redefinition
 // note in the file header). Used by the pager thread to skip re-fetching
 // a page that's already been serviced by an earlier, wider read-ahead.
-bool VM_IsCommitted(u16 v_index)
+bool VM_IsCommitted(uint16_t v_index)
 {
 	return virt_map[v_index].committed == 1;
 }
@@ -698,7 +701,7 @@ bool VM_IsCommitted(u16 v_index)
 // game thread, spin-waiting in vm_dsi_handler) polling VM_IsCommitted /
 // virt_map[].committed for this v_index. Called by the pager thread once
 // its fread()+memcpy() for the page has actually completed.
-void VM_SetCommitted(u16 v_index) {
+void VM_SetCommitted(uint16_t v_index) {
 	LWP_MutexLock(vm_mutex);
 	virt_map[v_index].committed = 1;
 	LWP_MutexUnlock(vm_mutex);
@@ -751,12 +754,12 @@ void VM_Deinit(void)
 //           (the pager thread's memcpy will overwrite it with real data
 //           immediately afterward on the committed=0 path).
 //        d. Map the frame to v_index's virtual address via insert_pte.
-int vm_dsi_handler(u32 DSISR, u32 DAR)
+int vm_dsi_handler(uint32_t DSISR, uint32_t DAR)
 {
-	u16 v_index;
-	u16 p_index;
+	uint16_t v_index;
+	uint16_t p_index;
 
-	if (DAR < (u32)VM_Base || DAR >= 0x80000000)
+	if (DAR < (uint32_t)VM_Base || DAR >= 0x80000000)
 		return 0;
 	if ((DSISR & ~0x02000000) != 0x40000000)
 		return 0;
@@ -775,7 +778,7 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 		// relative priorities.
 		if (LWP_GetSelf() != VMPager_GetThread() && !VMPager_IsPreloading()) {
 
-			u32 msr;
+			uint32_t msr;
 			asm volatile("mfmsr %0" : "=r"(msr));
 			asm volatile("mtmsr %0" :: "r"(msr | MSR_EE)); // Must enable before queue block
 
@@ -791,16 +794,16 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 
 	// Evict dirty MEM1 page back to ARAM (L2 Cache Management)
 	if (phys_map[p_index].dirty) {
-		u16 evict_v_index = phys_map[p_index].page_index;
+		uint16_t evict_v_index = phys_map[p_index].page_index;
 
 		// Find an existing ARAM slot or allocate the oldest frame
-		u16 target_slot = v_to_aram[evict_v_index];
+		uint16_t target_slot = v_to_aram[evict_v_index];
 		if (target_slot == 0xFFFF) {
 			target_slot = aram_head;
 			aram_head = (aram_head + 1) % ARAM_MAX_SLOTS;
 
 			// If we are stealing a slot, invalidate the old L2 occupant
-			u16 old_occupant = aram_map[target_slot];
+			uint16_t old_occupant = aram_map[target_slot];
 			if (old_occupant != 0xFFFF) {
 				v_to_aram[old_occupant] = 0xFFFF;
 				ClearMEM1Mapping(old_occupant);
@@ -810,10 +813,10 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 			v_to_aram[evict_v_index] = target_slot;
 		}
 
-		u32 aram_offset = target_slot * PAGE_SIZE;
+		uint32_t aram_offset = target_slot * PAGE_SIZE;
 
 		DCFlushRange(MEM_Base + p_index, PAGE_SIZE);
-		AR_StartDMA(AR_MRAMTOARAM, (u32)(MEM_Base + p_index), aram_offset, PAGE_SIZE);
+		AR_StartDMA(AR_MRAMTOARAM, (uint32_t)(MEM_Base + p_index), aram_offset, PAGE_SIZE);
 		while(AR_GetDMAStatus());
 
 		virt_map[evict_v_index].committed = 1;
@@ -824,9 +827,9 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 	// Fetch v_index if it has been previously committed to ARAM
 	if (virt_map[v_index].committed && v_to_aram[v_index] != 0xFFFF)
 	{
-		u32 aram_offset = v_to_aram[v_index] * PAGE_SIZE;
+		uint32_t aram_offset = v_to_aram[v_index] * PAGE_SIZE;
 		DCInvalidateRange(MEM_Base + p_index, PAGE_SIZE);
-		AR_StartDMA(AR_ARAMTOMRAM, (u32)(MEM_Base + p_index), aram_offset, PAGE_SIZE);
+		AR_StartDMA(AR_ARAMTOMRAM, (uint32_t)(MEM_Base + p_index), aram_offset, PAGE_SIZE);
 		while(AR_GetDMAStatus());
 	}
 	else {

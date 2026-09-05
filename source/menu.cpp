@@ -15,6 +15,9 @@
 #include <sys/stat.h>
 #include <memory>
 
+#include <ogc/ios.h>
+#include <ogc/cache.h>
+
 #include "vbagx.h"
 #include "memmanager.h"
 #include "system.h"

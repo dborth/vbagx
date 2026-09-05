@@ -17,6 +17,8 @@
 #include "fileop.h"
 #include "video.h"
 #include "vba/gba/JITCache.h"
+#include "drivers/ThreadDriver.h"
+#include "libgui/GuiImageData.h"
 
 #ifdef HW_DOL
 #include "drivers/ogc/vm/vm.h"

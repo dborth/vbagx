@@ -106,7 +106,7 @@
  * - `pager_queue` (an `mqbox_t` message queue) is the sole hand-off point
  *   between requesting threads (the game thread, via
  *   `VMPager_RequestAndWaitPage`) and the pager
- *   thread. Sending a `u32` page index (or the sentinel `-1` for
+ *   thread. Sending a `uint32_t` page index (or the sentinel `-1` for
  *   shutdown) is the entire request protocol - no request payload
  *   beyond the page index is needed since the pager re-derives
  *   everything else (aligned block bounds, byte offset/size) itself.
@@ -147,7 +147,7 @@ static char romFilepath[1024] = { 0 };
 // ROM's byte offset 0 corresponds to. Writes through this pointer are
 // what actually populate GBA-visible ROM memory, and are themselves
 // subject to vm.c's software paging (see REENTRANT FAULT note above).
-static u8* vmRomPtr = NULL;
+static uint8_t* vmRomPtr = NULL;
 
 static lwp_t pager_thread = LWP_THREAD_NULL;
 static mqbox_t pager_queue = MQ_BOX_NULL;
@@ -165,7 +165,7 @@ static bool is_preloading = false;
 #define PAGE_BUFFER_SIZE (PREFETCH_PAGES * PAGE_SIZE)
 #define PAGER_STACK_SIZE (64 * 1024)
 
-static u8* pager_stack = NULL;
+static uint8_t* pager_stack = NULL;
 // Staging buffer the pager thread fread()s a batch into before copying
 // it (page by page, via the reentrant-faulting memcpy) into the live VM
 // region - keeps the SD read itself as one contiguous I/O op regardless
@@ -173,7 +173,7 @@ static u8* pager_stack = NULL;
 // into fread()/memcpy() against this buffer is clamped to
 // PAGE_BUFFER_SIZE (see VMPager_ThreadFunc) since this is the buffer's
 // hard physical capacity.
-static u8* page_buffer = NULL;
+static uint8_t* page_buffer = NULL;
 
 // Identity accessor used by vm.c's DSI handler to detect "is the thread
 // that just faulted the pager thread itself?" - see the REENTRANT FAULT
@@ -205,9 +205,9 @@ static void* VMPager_ThreadFunc(void* arg) {
 
 		if (MQ_Receive(pager_queue, &msg, MQ_MSG_BLOCK) == FALSE) continue;
 
-		if ((s32)(u32)msg == -1 || !pager_running) break; // Shutdown signal
+		if ((s32)(uint32_t)msg == -1 || !pager_running) break; // Shutdown signal
 
-		u16 req_v_index = (u16)(u32)msg;
+		u16 req_v_index = (u16)(uint32_t)msg;
 		if (VM_IsCommitted(req_v_index)) {
 			VMPager_Notify();
 			continue;
@@ -236,16 +236,16 @@ static void* VMPager_ThreadFunc(void* arg) {
 		u16 end_v_index = start_v_index + PREFETCH_PAGES;
 		if (end_v_index > max_pages) end_v_index = max_pages;
 
-		u32 offset = (u32)start_v_index * PAGE_SIZE;
-		u32 readSize = (u32)(end_v_index - start_v_index) * PAGE_SIZE;
-		if (offset + readSize > (u32)fileSize) readSize = (u32)fileSize - offset;
+		uint32_t offset = (uint32_t)start_v_index * PAGE_SIZE;
+		uint32_t readSize = (uint32_t)(end_v_index - start_v_index) * PAGE_SIZE;
+		if (offset + readSize > (uint32_t)fileSize) readSize = (uint32_t)fileSize - offset;
 
 		// readSize can never legitimately exceed the staging buffer's
 		// capacity; clamp explicitly right before it's handed to
 		// fread(), which has no awareness of page_buffer's true size.
 		if (readSize > PAGE_BUFFER_SIZE) readSize = PAGE_BUFFER_SIZE;
 
-		u32 pages_in_block = (u32)(end_v_index - start_v_index);
+		uint32_t pages_in_block = (uint32_t)(end_v_index - start_v_index);
 
 		if (romFile == NULL || fileSize == 0) {
 			VMPager_CloseFile(); // Ensure internal state is reset if fileSize is 0 but handle is open
@@ -272,16 +272,16 @@ static void* VMPager_ThreadFunc(void* arg) {
 			}
 
 			// Only commit as many pages as were actually backed by real file data.
-			u32 pages_read = (u32)(bytesRead + PAGE_SIZE - 1) / PAGE_SIZE;
+			uint32_t pages_read = (uint32_t)(bytesRead + PAGE_SIZE - 1) / PAGE_SIZE;
 			if (pages_read > pages_in_block) pages_read = pages_in_block;
 
-			for (u32 i = 0; i < pages_read; i++) {
+			for (uint32_t i = 0; i < pages_read; i++) {
 				VM_SetCommitted(start_v_index + i);
 			}
 			// A short/truncated read (SD hiccup, EOF landing mid-block, etc.) still needs the rest
 			// of the block published as committed, so a waiter on any page in the tail is never left
 			// blocked indefinitely. Worst case here is stale/zeroed data for those trailing pages.
-			for (u32 i = pages_read; i < pages_in_block; i++) {
+			for (uint32_t i = pages_read; i < pages_in_block; i++) {
 				VM_SetCommitted(start_v_index + i);
 			}
 		} else {
@@ -303,11 +303,11 @@ static void* VMPager_ThreadFunc(void* arg) {
 // that ROM offset 0 maps to; it is stashed as `vmRomPtr` for every
 // subsequent read to write through. Idempotent: a no-op if the pager is
 // already running.
-void VMPager_Init(u8 *ptr) {
+void VMPager_Init(uint8_t *ptr) {
 	if (pager_running) return;
 
-	pager_stack = (u8*)memalign(32, PAGER_STACK_SIZE);
-	page_buffer = (u8*)memalign(32, PAGE_BUFFER_SIZE);
+	pager_stack = (uint8_t*)memalign(32, PAGER_STACK_SIZE);
+	page_buffer = (uint8_t*)memalign(32, PAGE_BUFFER_SIZE);
 
 	MQ_Init(&pager_queue, 128);
 	LWP_MutexInit(&pager_mutex, false);
@@ -358,7 +358,7 @@ void VMPager_Shutdown(void) {
 void VMPager_RequestAndWaitPage(u16 v_index) {
 	if (!pager_running || pager_queue == MQ_BOX_NULL) return;
 
-	MQ_Send(pager_queue, (mqmsg_t)(u32)v_index, MQ_MSG_BLOCK);
+	MQ_Send(pager_queue, (mqmsg_t)(uint32_t)v_index, MQ_MSG_BLOCK);
 
 	LWP_MutexLock(pager_mutex);
 	while (!VM_IsCommitted(v_index) && pager_running) {
@@ -402,10 +402,10 @@ void VMPager_StartPreload() {
 // - normally none, since is_preloading routes faults away from that
 // path during a preload, but this makes no assumption about that -
 // wakes promptly rather than waiting on an unrelated future event.
-void VMPager_CommitPageRange(u32 start_page, u32 end_page) {
+void VMPager_CommitPageRange(uint32_t start_page, uint32_t end_page) {
 	if (end_page > 65536) end_page = 65536;
 
-	for (u32 i = start_page; i < end_page; i++) {
+	for (uint32_t i = start_page; i < end_page; i++) {
 		VM_SetCommitted((u16)i);
 	}
 
@@ -421,7 +421,7 @@ void VMPager_EndPreload() {
 	is_preloading = false;
 }
 
-void VMPager_EndPreloadWithFile(FILE* file, u32 size, const char* path) {
+void VMPager_EndPreloadWithFile(FILE* file, uint32_t size, const char* path) {
 	romFile = file;
 	fileSize = (int)size;
 	snprintf(romFilepath, 1024, "%s", path);
