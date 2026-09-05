@@ -14,7 +14,6 @@
 #include <string.h>
 #include <wiiuse/wpad.h>
 #include <malloc.h>
-#include <ogc/lwp_watchdog.h>
 
 #include <sys/stat.h>
 #include <errno.h>
@@ -36,6 +35,7 @@
 #include "gbaoverrides.h"
 #include "gameborder.h"
 #include "preferences.h"
+#include "drivers/Time.h"
 
 #ifdef HW_DOL
 #include "drivers/ogc/vm/vm.h"
@@ -90,12 +90,12 @@ static int renderFrameCount = 0;
 static int coreFrameCount = 0;
 static float renderFPS = 0.0f;
 static float coreFPS = 0.0f;
-static u64 lastFPS = 0;
+static Ticks lastFPS = 0;
 
 // Frame timing
-static u64 lastRenderFrameTime = 0;
+static Ticks lastRenderFrameTime = 0;
 
-static u64 start;
+static Ticks start;
 int cartridgeType = CARTRIDGE_NONE;
 int GBAROMSize = 0;
 uint32_t RomIdCode;
@@ -129,8 +129,8 @@ struct EmulatedSystem emulator =
 
 uint32_t systemGetClock(void)
 {
-    const u64 now = gettime();
-    return (uint32_t)(ticks_to_microsecs(now - start) / 1000);
+    const Ticks now = SystemTime::now();
+    return SystemTime::diffMillisecs(start, now);
 }
 
 void systemGbBorderOn() {}
@@ -159,8 +159,8 @@ void systemResetPacer()
 
 	renderFrameCount = 0;
 	renderFPS        = 0.0f;
-	lastRenderFrameTime = gettime();
-	lastFPS = gettime();
+	lastRenderFrameTime = SystemTime::now();
+	lastFPS = SystemTime::now();
 }
 
 float systemGetRenderFPS(void) { return renderFPS; }
@@ -304,7 +304,7 @@ void systemFrame()
 		// Time-driven pacing. Nothing here blocks on real hardware, so
 		// this is the only thing standing between a fast JIT core and
 		// running ahead of true GBA time.
-		uint32_t usecSinceLastFrame = diff_usec(lastRenderFrameTime, gettime());
+		uint32_t usecSinceLastFrame = SystemTime::diffMicrosecs(lastRenderFrameTime, SystemTime::now());
 
 		// SKIP PRESSURE: blend how far behind real time we are with audio urgency
 		float wallDeficit = clampf((float)usecSinceLastFrame / (float)MAX_PACE_DEBT_US, 0.0f, 1.0f);
@@ -333,7 +333,7 @@ void systemFrame()
 			{
 				if (usecSinceLastFrame > THREAD_SLEEP) {
 					usleep(THREAD_SLEEP);
-					usecSinceLastFrame = diff_usec(lastRenderFrameTime, gettime());
+					usecSinceLastFrame = SystemTime::diffMicrosecs(lastRenderFrameTime, SystemTime::now());
 				}
 				else {
 					break;
@@ -885,18 +885,18 @@ void systemDrawScreen()
 	renderFrameCount++;
 	if (renderFrameCount >= 60)
 	{
-		uint32_t elapsedUs = diff_usec(lastFPS, gettime());
+		uint32_t elapsedUs = SystemTime::diffMicrosecs(lastFPS, SystemTime::now());
 		if (elapsedUs > 0) {
 			renderFPS = ((float)renderFrameCount * (float)USEC_PER_SEC) / (float)elapsedUs;
 			coreFPS    = ((float)coreFrameCount * (float)USEC_PER_SEC) / (float)elapsedUs;
 		}
-		lastFPS = gettime();
+		lastFPS = SystemTime::now();
 		renderFrameCount = 0;
 		coreFrameCount = 0;
 		PROFILER_LOG_FPS(coreFPS, renderFPS);
 	}
 
-	lastRenderFrameTime = gettime();
+	lastRenderFrameTime = SystemTime::now();
 	PROFILER_MARK_FRAME();
 }
 
@@ -1634,7 +1634,7 @@ bool LoadVBAROM()
 
 	emulating = 1;
 	// Start system clock
-	start = gettime();
+	start = SystemTime::now();
 	return true;
 }
 
