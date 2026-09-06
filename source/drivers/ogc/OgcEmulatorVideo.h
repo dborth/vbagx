@@ -21,7 +21,8 @@ class OgcEmulatorVideo : public EmulatorVideoDriver
 		void init(VideoDriver* videoDriver) override;
 		void resetVideo() override;
 		void presentFrame(int width, int height) override;
-		void readFrameRGB24(uint8_t* dst) override;
+		//! Un-swizzles a 4x4-tiled GX_TF_RGB5A3 texture into packed RGB24
+		void readFrameRGB24(const void* src, int width, int height, uint8_t* dst) override;
 
 		//! Sets the initial console dimensions, before the first presentFrame() call
 		void renderInit(int width, int height);
@@ -29,10 +30,11 @@ class OgcEmulatorVideo : public EmulatorVideoDriver
 		//! Loads the FPS overlay font into texture memory. Must be called at startup.
 		void initFPSFontData();
 
-		//! Un-swizzles a 4x4-tiled GX_TF_RGB5A3 texture into packed RGB24
-		void untileRGB5A3ToRGB24(const void * tiledTexture, int width, int height, uint8_t* dst);
-
 	private:
+		long long int* processFrameAndGetDest(void* textureBase, const uint16_t* frameBuffer, int gbWidth, int gbHeight);
+		void writeFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height);
+		void* applyBorderToGxTexture(void *textureBase, int gbWidth, int gbHeight);
+		void tileRGBA8ToGxTexture(const uint8_t *rgba, int width, int height, void *dst);
 		void initScanlineTexture();
 		void setupScanlineFilterTEV();
 		void initFPSFontTexture();

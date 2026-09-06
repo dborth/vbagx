@@ -634,25 +634,95 @@ void OgcEmulatorVideo::recalculateScaling()
 	updateScaling = 0;
 }
 
-static long long int* ProcessFrameAndGetDest(void* textureBase, const uint16_t* frameBuffer, int gbWidth, int gbHeight) {
+// Converts flat, row-major RGBA8 pixels into GX's native 4x4-tiled
+// GX_TF_RGB5A3 layout, opaque/RGB555-mode (bit15 set), writing directly into
+// a caller-supplied destination (the live GX texture memory).
+
+void OgcEmulatorVideo::tileRGBA8ToGxTexture(const uint8_t *rgba, int width, int height, void *dst)
+{
+	int padWidth = (width + 3) & ~3;
+	int padHeight = (height + 3) & ~3;
+
+	uint16_t *tiled = (uint16_t *) dst;
+
+	for (int y = 0; y < padHeight; y++) {
+		int tile_y = y / 4;
+		int in_tile_y = y % 4;
+		for (int x = 0; x < padWidth; x++) {
+			int tile_x = x / 4;
+			int in_tile_x = x % 4;
+			int idx = (tile_y * (padWidth / 4) + tile_x) * 16 + (in_tile_y * 4 + in_tile_x);
+
+			uint16_t color = 0x8000; // RGB555 mode, opaque
+			if (x < width && y < height) {
+				const uint8_t *px = rgba + (y * width + x) * 4;
+				uint8_t r5 = px[0] >> 3;
+				uint8_t g5 = px[1] >> 3;
+				uint8_t b5 = px[2] >> 3;
+				color |= (r5 << 10) | (g5 << 5) | b5;
+			}
+			tiled[idx] = color;
+		}
+	}
+}
+
+// GX-specific border compositor. Syncs gameBorder's platform-agnostic RGBA8
+// pixels into the live tiled GX texture once (when dirty), then returns the
+// tile-aligned destination pointer the console's own frame should be written
+// to, centered inside the border.
+
+void* OgcEmulatorVideo::applyBorderToGxTexture(void *textureBase, int gbWidth, int gbHeight) {
+	if (!gameBorder.hasBorder()) {
+		return textureBase; // Borderless fallback
+	}
+
+	int width = gameBorder.getWidth();
+	int height = gameBorder.getHeight();
+
+	// One-time GX texture sync if the border just changed
+	if (gameBorder.needsSync()) {
+		tileRGBA8ToGxTexture(gameBorder.getPixelsRGBA8(), width, height, textureBase);
+		DCStoreRange(textureBase, width * height * 2);
+		gameBorder.markSynced();
+	}
+
+	// Calculate exact center offset for the game viewport
+	int offsetX = (width - gbWidth) / 2;
+	int offsetY = (height - gbHeight) / 2;
+
+	// Align the offset to 4x4 hardware tiles.
+	// If a user loads a bizarrely sized PNG, this bitwise operation forces
+	// the start pointer to the nearest tile boundary, preventing swizzle tearing
+	offsetX &= ~3;
+	offsetY &= ~3;
+
+	// Calculate the hardware offset in bytes.
+	// A 4x4 RGB5A3 tile is 32 bytes.
+	int tileRowBytes = (width / 4) * 32;
+	int offsetBytes = (offsetY / 4) * tileRowBytes + (offsetX / 4) * 32;
+
+	return (uint8_t*)textureBase + offsetBytes;
+}
+
+long long int* OgcEmulatorVideo::processFrameAndGetDest(void* textureBase, const uint16_t* frameBuffer, int gbWidth, int gbHeight) {
     if (sgbBorderExtractor.processFrame(frameBuffer, gbWidth, gbHeight)) {
         // Scraper succeeded - load the PNG it just created
         int bw = 0, bh = 0;
-        uint16_t* borderPixels = BorderManager::load(nullptr, nullptr, bw, bh);
+        uint8_t* borderPixels = BorderManager::load(nullptr, nullptr, bw, bh);
         if (borderPixels) {
             gameBorder.setBorder(borderPixels, bw, bh);
         }
     }
 
-    return (long long int*)gameBorder.applyToTexture(textureBase, gbWidth, gbHeight);
+    return (long long int*)applyBorderToGxTexture(textureBase, gbWidth, gbHeight);
 }
 
 // Un-swizzles a 4x4-tiled GX_TF_RGB5A3 texture
-void OgcEmulatorVideo::untileRGB5A3ToRGB24(const void * tiledTexture, int width, int height, uint8_t* dst)
+void OgcEmulatorVideo::readFrameRGB24(const void* src, int width, int height, uint8_t* dst)
 {
 	int padded_width = (width + 3) & ~3;
 
-	const uint16_t * tex16 = (const uint16_t *) tiledTexture;
+	const uint16_t * tex16 = (const uint16_t *) src;
 
 	for(int y = 0; y < height; y++) {
 		int tile_y = y / 4;
@@ -675,11 +745,6 @@ void OgcEmulatorVideo::untileRGB5A3ToRGB24(const void * tiledTexture, int width,
 			dst[out_idx + 2] = (b << 3) | (b >> 2);
 		}
 	}
-}
-
-void OgcEmulatorVideo::readFrameRGB24(uint8_t* dst)
-{
-	untileRGB5A3ToRGB24(texturemem, gameScreenPng.width, gameScreenPng.height, dst);
 }
 
 /****************************************************************************
@@ -881,11 +946,11 @@ static void MakeTextureVBA_Dynamic(const void *src, void *dst, s32 width, s32 he
 }
 
 /****************************************************************************
- * WriteFrameToTextureMemory
+ * writeFrameToTextureMemory
  ****************************************************************************/
-static void WriteFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height)
+void OgcEmulatorVideo::writeFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height)
 {
-	long long int* dst_ptr = ProcessFrameAndGetDest(textureBase, (const uint16_t*)srcBuffer, width, height);
+	long long int* dst_ptr = processFrameAndGetDest(textureBase, (const uint16_t*)srcBuffer, width, height);
 
 	int targetWidth  = gameBorder.hasBorder() ? gameBorder.getWidth()  : width;
 	int targetHeight = gameBorder.hasBorder() ? gameBorder.getHeight() : height;
@@ -1005,7 +1070,7 @@ void OgcEmulatorVideo::presentFrame(int consoleWidth, int consoleHeight)
 		DCStoreRange(texturemem, padded_width * padded_height * 2);
 	}
 	else {
-		WriteFrameToTextureMemory(buffer, texturemem, consoleWidth, consoleHeight);
+		writeFrameToTextureMemory(buffer, texturemem, consoleWidth, consoleHeight);
 	}
 
 	GX_InvalidateTexAll();

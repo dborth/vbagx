@@ -47,15 +47,18 @@ public:
 
 class BorderManager {
 public:
-	static uint16_t* load(const char* title, const char* fallback, int& outWidth, int& outHeight);
+	// Returns flat, row-major RGBA8 pixels (decoded straight from the PNG,
+	// no platform texture layout applied). Ownership passes to the caller.
+	static uint8_t* load(const char* title, const char* fallback, int& outWidth, int& outHeight);
 	static void save(const void* buffer);
 private:
 	static char* getPNGBorderPath(const char* title);
 };
 
+// Platform-agnostic border state: just the decoded RGBA8 pixels.
 class GameBorder {
 private:
-	uint16_t* pixels;
+	uint8_t* pixels; // RGBA8, width * height * 4 bytes
 	int width;
 	int height;
 	bool needsTextureSync;
@@ -67,16 +70,22 @@ public:
 	// Wipes active memory during menu teardowns
 	void clear();
 
-	// Takes ownership of a newly loaded border
-	void setBorder(uint16_t* newPixels, int newWidth, int newHeight);
+	// Takes ownership of newly loaded/decoded RGBA8 pixels
+	void setBorder(uint8_t* newPixels, int newWidth, int newHeight);
 
 	bool hasBorder() const;
 
 	int getWidth() const { return width; }
 	int getHeight() const { return height; }
 
-	// The core compositor. Syncs GX texture once, returns centered destination pointer.
-	void* applyToTexture(void* textureBase, int gbWidth, int gbHeight);
+	// Raw RGBA8 source pixels. Callers own converting/uploading these into
+	// their own platform texture representation.
+	const uint8_t* getPixelsRGBA8() const { return pixels; }
+
+	// One-shot flag: true until the driver holding the live texture has
+	// synced these pixels into it. The driver clears it via markSynced().
+	bool needsSync() const { return needsTextureSync; }
+	void markSynced() { needsTextureSync = false; }
 };
 
 extern SgbBorderExtractor sgbBorderExtractor;

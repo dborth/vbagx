@@ -1178,7 +1178,7 @@ void InitGameDimensionsAndBorder() {
 	if(GCSettings.SGBBorder == SGBBORDER_FROMPNG) {
 		int bw = 0, bh = 0;
 		const char* fallback = (cartridgeType == CARTRIDGE_GBA) ? "defaultgba" : "default";
-		uint16_t* borderPixels = BorderManager::load(nullptr, fallback, bw, bh);
+		uint8_t* borderPixels = BorderManager::load(nullptr, fallback, bw, bh);
 
 		if (borderPixels) {
 			gameBorder.setBorder(borderPixels, bw, bh);

@@ -10,7 +10,6 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
-#include <ogc/cache.h>
 #include "vbagx.h"
 #include "gameborder.h"
 #include "vbasupport.h"
@@ -105,46 +104,12 @@ char * BorderManager::getPNGBorderPath(const char* title) {
 	return path;
 }
 
-// Converts flat, row-major RGBA8 pixels into a newly allocated 4x4-tiled
-// GX_TF_RGB5A3 buffer, opaque/RGB555-mode (bit15 set)
-static uint16_t * TileRGBA8ToRGB555(const uint8_t *rgba, int width, int height)
-{
-	int padWidth = (width + 3) & ~3;
-	int padHeight = (height + 3) & ~3;
-
-	uint16_t *tiled = (uint16_t *) malloc(padWidth * padHeight * 2);
-	if (!tiled)
-		return nullptr;
-
-	for (int y = 0; y < padHeight; y++) {
-		int tile_y = y / 4;
-		int in_tile_y = y % 4;
-		for (int x = 0; x < padWidth; x++) {
-			int tile_x = x / 4;
-			int in_tile_x = x % 4;
-			int idx = (tile_y * (padWidth / 4) + tile_x) * 16 + (in_tile_y * 4 + in_tile_x);
-
-			uint16_t color = 0x8000; // RGB555 mode, opaque
-			if (x < width && y < height) {
-				const uint8_t *px = rgba + (y * width + x) * 4;
-				uint8_t r5 = px[0] >> 3;
-				uint8_t g5 = px[1] >> 3;
-				uint8_t b5 = px[2] >> 3;
-				color |= (r5 << 10) | (g5 << 5) | b5;
-			}
-			tiled[idx] = color;
-		}
-	}
-
-	return tiled;
-}
-
-uint16_t* BorderManager::load(const char *title, const char *fallback, int &outWidth, int &outHeight) {
+uint8_t* BorderManager::load(const char *title, const char *fallback, int &outWidth, int &outHeight) {
 	void *png_tmp_buf = memspace_malloc(1024 * 1024);
 	char *borderPath = getPNGBorderPath(title);
 	int imgWidth = 0, imgHeight = 0;
 	uint8_t *rgba = nullptr;
-	uint16_t *newBorder = nullptr;
+	uint8_t *newBorder = nullptr;
 
 	bool borderLoaded = LoadFile((char*) png_tmp_buf, borderPath, 0, 1024 * 1024, SILENT);
 	if (!borderLoaded && fallback) {
@@ -165,12 +130,14 @@ uint16_t* BorderManager::load(const char *title, const char *fallback, int &outW
 	if (!rgba)
 		goto cleanup;
 
-	newBorder = TileRGBA8ToRGB555(rgba, imgWidth, imgHeight);
+	// we need the border in non-shared memory because it will cross the menu <> emulator boundary
+	newBorder = (uint8_t*)malloc(imgWidth * imgHeight * 4);
 	if (!newBorder)
 		goto cleanup;
 
 	outWidth = imgWidth;
 	outHeight = imgHeight;
+	memcpy(newBorder, rgba, imgWidth * imgHeight * 4);
 
 cleanup:
 	if (rgba)
@@ -259,7 +226,7 @@ void GameBorder::clear() {
 	needsTextureSync = false;
 }
 
-void GameBorder::setBorder(uint16_t *newPixels, int newWidth, int newHeight) {
+void GameBorder::setBorder(uint8_t *newPixels, int newWidth, int newHeight) {
 	clear();
 	if (newPixels) {
 		pixels = newPixels;
@@ -271,34 +238,4 @@ void GameBorder::setBorder(uint16_t *newPixels, int newWidth, int newHeight) {
 
 bool GameBorder::hasBorder() const {
 	return pixels != nullptr;
-}
-
-void* GameBorder::applyToTexture(void *textureBase, int gbWidth, int gbHeight) {
-	if (!pixels) {
-		return textureBase; // Borderless fallback
-	}
-
-	// One-time GX texture sync if the border just changed
-	if (needsTextureSync) {
-		memcpy(textureBase, pixels, width * height * 2);
-		DCStoreRange(textureBase, width * height * 2);
-		needsTextureSync = false;
-	}
-
-	// Calculate exact center offset for the game viewport
-	int offsetX = (width - gbWidth) / 2;
-	int offsetY = (height - gbHeight) / 2;
-
-	// Align the offset to 4x4 hardware tiles.
-	// If a user loads a bizarrely sized PNG, this bitwise operation forces
-	// the start pointer to the nearest tile boundary, preventing swizzle tearing
-	offsetX &= ~3;
-	offsetY &= ~3;
-
-	// Calculate the hardware offset in bytes.
-	// A 4x4 RGB5A3 tile is 32 bytes.
-	int tileRowBytes = (width / 4) * 32;
-	int offsetBytes = (offsetY / 4) * tileRowBytes + (offsetX / 4) * 32;
-
-	return (uint8_t*)textureBase + offsetBytes;
 }
