@@ -24,7 +24,7 @@
 #include "fileop.h"
 #include "filebrowser.h"
 #include "drivers/ogc/OgcEmulatorAudio.h"
-#include "drivers/ogc/OgcEmulatorVideo.h"
+#include "drivers/EmulatorVideoDriver.h"
 #include "input.h"
 #include "cheatmgr.h"
 #include "gameinput.h"
@@ -1213,11 +1213,10 @@ void InitGameDimensionsAndBorder() {
 		}
 	}
 
-	OgcEmulatorVideo* emulatorVideo = static_cast<OgcEmulatorVideo*>(platform->getVideo()->getEmulatorVideo());
 	if (gameBorder.hasBorder()) {
-		emulatorVideo->renderInit(gameBorder.getWidth(), gameBorder.getHeight());
+		platform->getVideo()->getEmulatorVideo()->renderInit(gameBorder.getWidth(), gameBorder.getHeight());
 	} else {
-		emulatorVideo->renderInit(srcWidth, srcHeight);
+		platform->getVideo()->getEmulatorVideo()->renderInit(srcWidth, srcHeight);
 	}
 }
 
