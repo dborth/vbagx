@@ -27,5 +27,5 @@ class EmulatorVideoDriver
 		virtual void readFrameRGB24(const void* src, int width, int height, uint8_t* dst) = 0;
 
 		//! Sets the initial console dimensions, before the first presentFrame() call
-		void renderInit(int width, int height);
+		virtual void renderInit(int width, int height) = 0;
 };
