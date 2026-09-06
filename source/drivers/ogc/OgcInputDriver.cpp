@@ -6,7 +6,6 @@
  * Wii/GameCube controller management and normalization
  ***************************************************************************/
 
-#include <gccore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,23 +13,20 @@
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
-#include <ogc/conf.h>
 
 #include "OgcInputDriver.h"
 #include "../Platform.h"
-#include "wiidrc.h"
-#include "../../system.h"
 #include "../InputController.h"
+
+#ifdef HW_RVL
+#include "wiidrc.h"
+#include "WiiSystemEvents.h"
+#endif
 
 extern "C" {
 s32 __STM_Close();
 s32 __STM_Init();
 }
-
-#ifdef HW_RVL
-void ShutdownCB() { ShutdownRequested = 1; }
-void ResetCB() { ResetRequested = 1; }
-#endif
 
 bool isWiiVC = false;
 
@@ -52,15 +48,14 @@ void OgcInputDriver::init() {
 	// Wii Power/Reset buttons
 	__STM_Close();
 	__STM_Init();
-	SYS_SetPowerCallback(ShutdownCB);
-	SYS_SetResetCallback(ResetCB);
+	SYS_SetPowerCallback(NotifyWiiShutdownRequested);
 
 	WiiDRC_Init();
 	isWiiVC = WiiDRC_Inited();
 	WPAD_Init();
 	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
 	WPAD_SetVRes(WPAD_CHAN_ALL, platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
-	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
+	WPAD_SetPowerButtonCallback((WPADShutdownCallback)NotifyWiiShutdownRequested);
 	#endif
 
 	InitUserInputControllers();

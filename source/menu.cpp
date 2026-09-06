@@ -20,9 +20,7 @@
 
 #include "vbagx.h"
 #include "memmanager.h"
-#include "system.h"
 #include "vbasupport.h"
-#include "drivers/ogc/videofilters.h"
 #include "video.h"
 #include "filebrowser.h"
 #include "utils/decompress.h"
@@ -36,13 +34,18 @@
 #include "menu.h"
 #include "gamesettings.h"
 #include "libgui/Gui.h"
-#include "drivers/ogc/vm/vmpager.h"
 #include "vba/gb/gb.h"
 #include "utils/pngcodec.h"
 #include "drivers/Time.h"
 #include "drivers/Thread.h"
 #include "drivers/Mutex.h"
 #include "drivers/Cond.h"
+
+#include "drivers/ogc/videofilters.h"
+#include "drivers/ogc/WiiPlatform.h"
+#include "drivers/ogc/GameCubePlatform.h"
+
+#include "drivers/ogc/vm/vmpager.h"
 
 #define THREAD_SLEEP 100
 
@@ -415,8 +418,8 @@ static void CreditsWindow()
 	char consoleDetails[40];
 	char memoryFreeInfo[50];
 
-	sprintf(consoleDetails, getConsoleDetails());
-	sprintf(memoryFreeInfo, getMemoryFreeInfo());
+	sprintf(consoleDetails, platform->getConsoleDetails());
+	sprintf(memoryFreeInfo, platform->getMemoryFreeInfo());
 
 	txt[i] = new GuiText(consoleDetails, 14, (PixelColor){0, 0, 0, 255});
 	txt[i]->setAlignment(ALIGN_H::RIGHT, ALIGN_V::BOTTOM);
@@ -530,7 +533,7 @@ static bool UpdateGui()
 
 	DrawGui();
 
-	if(ExitRequested || ShutdownRequested)
+	if(appRequest == AppRequest::EXIT || platform->getSystemEvent() == SystemEvent::ShutdownRequested)
 	{
 		for(int a = 0; a <= 255; a += 15)
 		{
@@ -1192,7 +1195,7 @@ static int MenuGameSelection()
 		if(settingsBtn.getState() == STATE::CLICKED)
 			selection = MENU_SETTINGS;
 		else if(exitBtn.getState() == STATE::CLICKED)
-			ExitRequested = 1;
+			appRequest = AppRequest::EXIT;
 	}
 
 	HaltParseThread(); // halt parsing

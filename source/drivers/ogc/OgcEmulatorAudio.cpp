@@ -13,7 +13,6 @@
 
 #include "OgcEmulatorAudio.h"
 #include "../../vbagx.h"
-#include "../../system.h"
 #include "../../vba/gba/Debug.h"
 
 extern bool turboMode;
@@ -197,7 +196,7 @@ SoundWii::SoundWii()
 
 bool SoundWii::canWrite()
 {
-    if (MenuRequested)
+    if (appRequest == AppRequest::MENU)
     {
         AUDIO_StopDMA();
         AudioReset();

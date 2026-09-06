@@ -9,11 +9,8 @@
  ***************************************************************************/
 
 #include "vbagx.h"
-#include "system.h"
 #include "vbasupport.h"
 #include "preferences.h"
-#include "drivers/Platform.h"
-#include "drivers/EmulatorVideoDriver.h"
 #include "filebrowser.h"
 #include "fileop.h"
 #include "menu.h"
@@ -21,20 +18,35 @@
 #include "video.h"
 #include "gamesettings.h"
 #include "memmanager.h"
+#include "font_ttf.h"
+#include "libgui/Gui.h"
+#include "drivers/Platform.h"
+#include "drivers/EmulatorVideoDriver.h"
+
+#include "vba/gba/Globals.h"
+#include "vba/gba/Sound.h"
+#include "vba/gba/JIT.h"
+
 #include "drivers/ogc/videofilters.h"
 
 #ifdef HW_DOL
 #include "drivers/ogc/vm/vmpager.h"
 #endif
 
-#include "vba/gba/Globals.h"
-#include "vba/gba/Sound.h"
-#include "vba/gba/JIT.h"
+#ifdef HW_DOL
+#include "drivers/ogc/GameCubePlatform.h"
+static GameCubePlatform platformInstance;
+#else
+#include "drivers/ogc/WiiPlatform.h"
+static WiiPlatform platformInstance;
+#endif
+Platform* platform = &platformInstance;
 
 extern int emulating;
 void StopColorizing();
 void gbSetPalette(u32 RRGGBB[]);
-bool MenuRequested = false;
+
+AppRequest appRequest = AppRequest::NONE;
 char appPath[1024] = { 0 };
 static bool autoboot = false;
 
@@ -45,10 +57,21 @@ static bool autoboot = false;
 ****************************************************************************/
 int main(int argc, char *argv[])
 {
+	InitMemManager();
+	platform->init(640, 480);
+	SwitchMemoryModeMenu();
+	platform->getVideo()->getEmulatorVideo()->initFPSFontData();
+
+	InitFileOpThreads();
+	MountAllFAT();
+
+	fontSystem = new GuiTextRenderer(font_ttf, font_ttf_size, platform->getVideo()->getGlyphRenderer());
+	textTranslator = new GuiTextTranslator();
+	textTranslator->loadLanguage(en_lang, en_lang_size);
+
 	DefaultSettings();
-	SystemInit();
 	ApplySettings();
-	platform->getVideo()->startMenuVideo(); // change to menu video mode
+	platform->getVideo()->startMenuVideo();
 	
 	#ifdef HW_RVL
 	// store path app was loaded from
@@ -78,7 +101,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	while (!ExitRequested && !ShutdownRequested) // main loop
+	while (appRequest != AppRequest::EXIT && platform->getSystemEvent() != SystemEvent::ShutdownRequested) // main loop
 	{
 		if(!autoboot) {
 			// go back to checking if devices were inserted/removed
@@ -94,12 +117,12 @@ int main(int argc, char *argv[])
 				MainMenu(MENU_GAME);
 		}
 
-		if(ExitRequested || ShutdownRequested) {
+		if(appRequest == AppRequest::EXIT || platform->getSystemEvent() == SystemEvent::ShutdownRequested) {
 			break;
 		}
 
 		autoboot = false;
-		MenuRequested = false;
+		appRequest = AppRequest::NONE;
 		InitGameDimensionsAndBorder();
 		SwitchMemoryModeGame();
 		platform->getAudio()->startEmulatorAudio();
@@ -122,18 +145,21 @@ int main(int argc, char *argv[])
 		DEBUG_RESET_LOGS();
 
 		systemResetPacer();
-		while (emulating && !MenuRequested && !ExitRequested && !ShutdownRequested) // emulation loop
+		while (emulating && appRequest == AppRequest::NONE) // emulation loop
 		{
+			SystemEvent event = platform->getSystemEvent(); // poll exactly once per iteration - see WiiPlatform::getSystemEvent()
+			if(event == SystemEvent::ShutdownRequested)
+				break;
+
 			emulator.emuMain(emulator.emuCount);
 
-			if(ResetRequested)
+			if(event == SystemEvent::ResetRequested)
 			{
 				emulator.emuReset(); // reset game
-				ResetRequested = 0;
 			}
-			if(MenuRequested)
+			if(appRequest == AppRequest::MENU)
 			{
-				MenuRequested = false;
+				appRequest = AppRequest::NONE;
 				uint8_t *tempBuffer = (uint8_t *)malloc(TEXTUREMEM_SIZE); // this one needs to stay malloc because we're switching modes!
 				memcpy(tempBuffer, texturemem, TEXTUREMEM_SIZE);
 				SwitchMemoryModeMenu();
@@ -158,8 +184,9 @@ void ExitApp()
 	SwitchMemoryModeMenu();
 	SavePrefs();
 
-	if (ROMLoaded && !MenuRequested && GCSettings.AutoSave == AUTOSAVE_SRAM)
+	if (ROMLoaded && appRequest != AppRequest::MENU && GCSettings.AutoSave == AUTOSAVE_SRAM)
 		SaveBatteryOrStateAuto(FILE_SRAM, SILENT);
 
-	SystemExit(GCSettings.ExitAction, autoboot);
+	HaltDeviceCheckingThread();
+	platform->requestExit(GCSettings.ExitAction, autoboot);
 }

@@ -510,7 +510,7 @@ uint32_t GetJoy(int pad)
 	// request to go back to menu
 	if (isMenuRequested())
 	{
-		MenuRequested = true;
+		appRequest = AppRequest::MENU;
 		return 0;
 	}
 

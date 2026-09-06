@@ -957,7 +957,7 @@ uint32_t MinishCapInput(unsigned short pad)
 	} else if (Subscreen==0x2c) {
 	} else if (Subscreen==0x38 && SelBox==4) { // Sleep button returns to menu instead of sleep
 		if (ActionButton) {
-			MenuRequested = true;
+			appRequest = AppRequest::MENU;
 			return 0;
 		}
 	} else if (Subscreen==0x38) {
