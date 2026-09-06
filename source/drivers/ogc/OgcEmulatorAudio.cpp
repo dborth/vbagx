@@ -17,13 +17,6 @@
 
 extern bool turboMode;
 
-// One DMA frame is 3200 bytes (800 stereo 16-bit frames).
-#define DMA_BYTES 3200
-
-// BUFFERCOUNT must be a power of two so the ring index can advance with a cheap bitwise mask
-#define BUFFERCOUNT 16
-#define MAX_QUEUED_BUFFERS 12 // Leave a 4-buffer safety zone to prevent input lag
-
 /** Dynamic Rate Control (Hysteresis Pitch Bending) **/
 #define UNPLAYED_HIGH_WATER 8       // Above this we are building latency, slow down
 #define UNPLAYED_HIGH_RELEASE 6     // Stay slow until the queue drains back to here
@@ -38,54 +31,49 @@ extern bool turboMode;
 #define RATE_EMERGENCY_SLOW_DOWN 1.015 // mirrors RATE_EMERGENCY_SPEED_UP's 3x-normal-correction magnitude
 #define RATE_NEUTRAL 1.0
 
-enum RateState {
-    RATE_STATE_NEUTRAL,
-    RATE_STATE_DRAINING,  // running slow to shrink an over-full queue
-    RATE_STATE_FILLING,   // running fast to grow an under-full queue
-};
+// The single OgcEmulatorAudio instance currently registered with the DMA
+// callback trampoline below. There is only ever one emulator audio backend
+// alive at a time.
+static OgcEmulatorAudio* instance = nullptr;
 
-// Number of stereo frames over which we ramp to/from zero when the ring
-// runs genuinely dry. Long enough to remove the audible click of a hard
-// jump to silence, short enough (~2ms) to add no perceptible latency.
-#define FADE_FRAMES 96
-
-/** Globals **/
-static u8 soundbuffer[BUFFERCOUNT][DMA_BYTES] ATTRIBUTE_ALIGN(32);
-static u8 silence[DMA_BYTES] ATTRIBUTE_ALIGN(32);
-static u8 fadeBuffer[DMA_BYTES] ATTRIBUTE_ALIGN(32);
-
-// Volatile indices crossing thread/ISR boundaries (MUST bypass registers)
-static volatile int playab = 0;
-static volatile int nextab = 0;
-
-// Main thread variables (No volatile overhead needed)
-static bool dma_started = false;
-static RateState rateState = RATE_STATE_NEUTRAL;
-
-// Declick state -- tracks the tail of the last real audio actually queued,
-// so a starvation event can ramp down from where the waveform really was
-// instead of snapping to zero, and ramp back in the same way on recovery.
-static s16 lastL = 0;
-static s16 lastR = 0;
-static bool wasStarved = false;
-
-/** Inline Ring Buffer Helpers **/
-static inline int nextIndex(int current) {
-    return (current + 1) & (BUFFERCOUNT - 1);
+/****************************************************************************
+ * AudioDMACallback (ISR)
+ *
+ * Hardware DMA callback trampoline - forwards into the live instance.
+ * Executes entirely in interrupt context.
+ ***************************************************************************/
+void AudioDMACallback()
+{
+	if (instance)
+		instance->dmaCallback();
 }
 
-static inline int getUnplayed() {
-    return (nextab - playab + BUFFERCOUNT) & (BUFFERCOUNT - 1);
+OgcEmulatorAudio::OgcEmulatorAudio() :
+	playab(0), nextab(0), dma_started(false), rateState(RATE_STATE_NEUTRAL),
+	lastL(0), lastR(0), wasStarved(false)
+{
+	memset(soundbuffer, 0, sizeof(soundbuffer));
+	memset(silence, 0, sizeof(silence));
+	memset(fadeBuffer, 0, sizeof(fadeBuffer));
+	DCFlushRange(soundbuffer, sizeof(soundbuffer));
+	DCFlushRange(silence, sizeof(silence));
+	instance = this;
+}
+
+OgcEmulatorAudio::~OgcEmulatorAudio()
+{
+	if (instance == this)
+		instance = nullptr;
 }
 
 /****************************************************************************
- * BuildFadeOutBuffer / ApplyFadeIn
+ * buildFadeOutBuffer / applyFadeIn
  *
  * Turn a hard jump to/from zero into a short linear ramp. Both run in
  * interrupt context; the work is a ~96-sample loop, cheap relative to a
  * DMA period.
  ***************************************************************************/
-static void BuildFadeOutBuffer()
+void OgcEmulatorAudio::buildFadeOutBuffer()
 {
 	s16* out = (s16*)fadeBuffer;
 	int const frames = DMA_BYTES / 4; // stereo 16-bit frames per DMA period
@@ -102,7 +90,7 @@ static void BuildFadeOutBuffer()
 	DCFlushRange(fadeBuffer, DMA_BYTES);
 }
 
-static void ApplyFadeIn(u8* buf)
+void OgcEmulatorAudio::applyFadeIn(u8* buf)
 {
 	s16* s = (s16*)buf;
 	int const frames = DMA_BYTES / 4;
@@ -120,26 +108,21 @@ static void ApplyFadeIn(u8* buf)
 // rather than react to a fixed threshold. Returns -1 before DMA has
 // primed -- there's nothing to starve yet, so callers should treat a
 // negative reading as "audio has no opinion right now."
-int AudioGetUnplayed()
+int OgcEmulatorAudio::getUnplayed()
 {
-    if (!dma_started) return -1;
-    return getUnplayed();
+	if (!dma_started) return -1;
+	return getUnplayedInternal();
 }
 
-/****************************************************************************
- * AudioDMACallback (ISR)
- *
- * Hardware DMA callback. Executes entirely in interrupt context.
- ***************************************************************************/
-void AudioDMACallback()
+void OgcEmulatorAudio::dmaCallback()
 {
-	int unplayed = getUnplayed();
+	int unplayed = getUnplayedInternal();
 
 	if (unplayed == 0) {
 
 		if (!wasStarved) {
 			PROFILER_LOG_AUDIO_STARVATION();
-			BuildFadeOutBuffer();
+			buildFadeOutBuffer();
 			wasStarved = true;
 		}
 		AUDIO_InitDMA((u32)fadeBuffer, DMA_BYTES);
@@ -150,7 +133,7 @@ void AudioDMACallback()
 		if (wasStarved) {
 			// Coming back from a dry spell: fade the front of this real
 			// buffer up from zero instead of snapping straight to it.
-			ApplyFadeIn(buf);
+			applyFadeIn(buf);
 			wasStarved = false;
 		}
 
@@ -168,38 +151,30 @@ void AudioDMACallback()
 }
 
 /****************************************************************************
- * AudioReset
+ * resetAudio
  *
  * Called to cleanly kick off the Audio Queue and reset hysteresis state
  ***************************************************************************/
-void AudioReset()
+void OgcEmulatorAudio::resetAudio()
 {
-    nextab = 0;
-    playab = 0;
-    dma_started = false;
-    rateState = RATE_STATE_NEUTRAL;
-    wasStarved = false;
-    lastL = 0;
-    lastR = 0;
+	nextab = 0;
+	playab = 0;
+	dma_started = false;
+	rateState = RATE_STATE_NEUTRAL;
+	wasStarved = false;
+	lastL = 0;
+	lastR = 0;
 }
 
 /****************************************************************************
- * SoundDriver
+ * Sound-output contract the VBA core mixes samples through
  ***************************************************************************/
-SoundWii::SoundWii()
-{
-    memset(soundbuffer, 0, sizeof(soundbuffer));
-	memset(silence, 0, sizeof(silence));
-	DCFlushRange(soundbuffer, sizeof(soundbuffer));
-	DCFlushRange(silence, sizeof(silence));
-}
-
-bool SoundWii::canWrite()
+bool OgcEmulatorAudio::canWrite()
 {
     if (appRequest == AppRequest::MENU)
     {
         AUDIO_StopDMA();
-        AudioReset();
+        resetAudio();
         return false;
     }
 
@@ -208,7 +183,7 @@ bool SoundWii::canWrite()
     return getUnplayed() < MAX_QUEUED_BUFFERS;
 }
 
-double SoundWii::getDynamicRate()
+double OgcEmulatorAudio::getDynamicRate()
 {
 	// Fast-forward: don't pitch-bend. Turbo audio isn't expected to sound
 	// "correct" -- Sound.cpp's own turbo-aware policy in flush_samples()
@@ -218,7 +193,7 @@ double SoundWii::getDynamicRate()
 		return RATE_NEUTRAL;
 	}
 
-	int unplayed = getUnplayed();
+	int unplayed = getUnplayedInternal();
 
 	// Process Hysteresis Release
 	if(rateState == RATE_STATE_DRAINING && unplayed <= UNPLAYED_HIGH_RELEASE) {
@@ -254,24 +229,24 @@ double SoundWii::getDynamicRate()
 	return RATE_NEUTRAL;
 }
 
-u16* SoundWii::getWriteBuffer()
+u16* OgcEmulatorAudio::getWriteBuffer()
 {
-    // Pass the actual DMA-aligned ring buffer address
-    return (u16*)soundbuffer[nextab];
+	// Pass the actual DMA-aligned ring buffer address
+	return (u16*)soundbuffer[nextab];
 }
 
-void SoundWii::commitWrite()
+void OgcEmulatorAudio::commitWrite()
 {
-    // Publish buffer to the ISR
-    DCFlushRange(soundbuffer[nextab], DMA_BYTES);
-    nextab = nextIndex(nextab);
+	// Publish buffer to the ISR
+	DCFlushRange(soundbuffer[nextab], DMA_BYTES);
+	nextab = nextIndex(nextab);
 
-    // Handle initial DMA pre-roll and starvation recovery
-    if (!dma_started && getUnplayed() >= UNPLAYED_START_LEVEL)
-    {
-        AUDIO_InitDMA((u32)soundbuffer[playab], DMA_BYTES);
-        playab = nextIndex(playab);
-        AUDIO_StartDMA();
-        dma_started = true;
-    }
+	// Handle initial DMA pre-roll and starvation recovery
+	if (!dma_started && getUnplayedInternal() >= UNPLAYED_START_LEVEL)
+	{
+		AUDIO_InitDMA((u32)soundbuffer[playab], DMA_BYTES);
+		playab = nextIndex(playab);
+		AUDIO_StartDMA();
+		dma_started = true;
+	}
 }

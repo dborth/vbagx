@@ -11,7 +11,8 @@
 #include "../apu/Gb_Apu.h"
 #include "../apu/Multi_Buffer.h"
 
-#include "../common/SoundDriver.h"
+#include "../../drivers/EmulatorAudioDriver.h"
+#include "../../drivers/Platform.h"
 
 #define NR10 0x60
 #define NR11 0x62
@@ -35,7 +36,7 @@
 #define NR51 0x81
 #define NR52 0x84
 
-SoundDriver * soundDriver = 0;
+EmulatorAudioDriver * soundDriver = 0;
 
 int const SOUND_CLOCK_TICKS_ = 167772; // 1/100 second
 
@@ -548,11 +549,9 @@ static void remake_stereo_buffer()
 
 void soundShutdown()
 {
-	if (soundDriver)
-	{
-		delete soundDriver;
-		soundDriver = 0;
-	}
+	// soundDriver is owned by the platform audio driver (WiiAudioDriver /
+	// GameCubeAudioDriver), not by Sound.cpp - just drop our reference.
+	soundDriver = 0;
 }
 
 void soundPause()
@@ -601,10 +600,11 @@ void soundReset()
 bool soundInit()
 {
 	soundShutdown();
-	soundDriver = systemSoundInit();
+	soundDriver = platform->getAudio()->getEmulatorAudio();
 	if ( !soundDriver )
 		return false;
 
+	soundDriver->resetAudio();
 	soundPaused = true;
 	return true;
 }

@@ -8,10 +8,14 @@
 class GameCubeAudioDriver : public AudioDriver
 {
 	public:
-		void init() override { AUDIO_Init(NULL); AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ); }
+		~GameCubeAudioDriver() override { delete emulatorAudio; }
+
+		void init() override { AUDIO_Init(NULL); AUDIO_SetDSPSampleRate(AI_SAMPLERATE_48KHZ); emulatorAudio = new OgcEmulatorAudio(); emulatorAudio->init(); }
 		void startMenuAudio() override { AUDIO_StopDMA(); AUDIO_RegisterDMACallback(NULL); }
-		void startEmulatorAudio() override { AudioReset(); AUDIO_RegisterDMACallback(AudioDMACallback); }
+		void startEmulatorAudio() override { emulatorAudio->resetAudio(); AUDIO_RegisterDMACallback(AudioDMACallback); }
 		void shutdown() override { AUDIO_StopDMA(); AUDIO_RegisterDMACallback(NULL); }
+
+		OgcEmulatorAudio* getEmulatorAudio() override { return emulatorAudio; }
 
 		int32_t playVoice(const uint8_t* data, int32_t length, int volume) override { return -1; }
 		void stopVoice(int32_t voice) override {}
@@ -26,4 +30,7 @@ class GameCubeAudioDriver : public AudioDriver
 		void resumeStream() override {}
 		bool isStreamPlaying() override { return false; }
 		void setStreamVolume(int volume) override {}
+
+	private:
+		OgcEmulatorAudio* emulatorAudio = nullptr;
 };

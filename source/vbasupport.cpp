@@ -23,7 +23,7 @@
 #include "memmanager.h"
 #include "fileop.h"
 #include "filebrowser.h"
-#include "drivers/ogc/OgcEmulatorAudio.h"
+#include "drivers/EmulatorAudioDriver.h"
 #include "drivers/EmulatorVideoDriver.h"
 #include "input.h"
 #include "cheatmgr.h"
@@ -253,7 +253,7 @@ void systemFrame()
 	int skipFrms = MAX_FRAME_SKIP;
 
 	// Audio urgency, as a continuous 0..1 reading rather than two booleans
-	float audioDeficit = AudioDeficit(AudioGetUnplayed());
+	float audioDeficit = AudioDeficit(platform->getAudio()->getEmulatorAudio()->getUnplayed());
 
 	if (timerstyle == 0)
 	{
@@ -680,16 +680,6 @@ bool SavePreviewImg(char * filepath, bool silent)
 	if(!silent)
 		InfoPrompt ("Save successful");
 	return true;
-}
-
-/****************************************************************************
-* Sound
-****************************************************************************/
-
-SoundDriver * systemSoundInit()
-{
-	soundShutdown();
-	return new SoundWii();
 }
 
 /****************************************************************************

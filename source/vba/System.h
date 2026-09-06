@@ -5,8 +5,6 @@
 
 #include <zlib.h>
 
-class SoundDriver;
-
 struct EmulatedSystem {
   // main emulation function
   void (*emuMain)(int);
@@ -40,7 +38,6 @@ extern void updateRumbleFrame();
 extern u32 systemGetClock();
 extern void systemMessage(int, const char *, ...);
 extern void systemSetTitle(const char *);
-extern SoundDriver * systemSoundInit();
 extern void systemScreenMessage(const char *);
 extern void systemUpdateMotionSensor();
 extern int  systemGetSensorX();
