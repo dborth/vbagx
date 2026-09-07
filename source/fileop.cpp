@@ -20,7 +20,9 @@
 #include "memmanager.h"
 #include "vbasupport.h"
 #include "fileop.h"
-#include "networkop.h"
+#if defined(HW_RVL) || defined(HW_DOL)
+#include "drivers/ogc/networkop.h"
+#endif
 #include "menu.h"
 #include "filebrowser.h"
 #include "utils/decompress.h"
@@ -329,8 +331,10 @@ bool ChangeInterface(int device, bool silent)
 	if(device == DEVICE_AUTO)
 		return false;
 
+#if defined(HW_RVL) || defined(HW_DOL)
 	if(device == DEVICE_SMB)
 		return ConnectShare(silent); // network share, not part of the storage driver
+#endif
 
 	if(device == DEVICE_DVD)
 		ShowAction("Loading DVD...");

@@ -29,7 +29,9 @@
 
 #include "drivers/ogc/WiiPlatform.h"
 #include "drivers/ogc/GameCubePlatform.h"
+#if defined(HW_RVL) || defined(HW_DOL)
 #include "drivers/ogc/videofilters.h"
+#endif
 
 struct SGCSettings GCSettings;
 static gamePalette *palettes = nullptr;
@@ -647,8 +649,10 @@ void FixInvalidSettings()
 		GCSettings.language = LANG_ENGLISH;
 	if(!(GCSettings.videoHardwareSoften >= VIDEO_HW_SOFTEN_OFF && GCSettings.videoHardwareSoften < VIDEO_HW_SOFTEN_LENGTH))
 		GCSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_AUTO;
+#if defined(HW_RVL) || defined(HW_DOL)
 	if(!(GCSettings.videoUpscalingFilter >= FILTER_NONE && GCSettings.videoUpscalingFilter <= NUM_FILTERS))
 		GCSettings.videoUpscalingFilter = FILTER_NONE;
+#endif
 	if(!(GCSettings.videoAspectRatioCorrection >= SCALING_MAINTAIN_ASPECT && GCSettings.videoAspectRatioCorrection < SCALING_LENGTH))
 		GCSettings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
 	if(!(GCSettings.videoMode >= VIDEOMODE_AUTO && GCSettings.videoMode < VIDEOMODE_LENGTH))
@@ -692,7 +696,11 @@ void DefaultSettings()
 	GCSettings.videoMode = VIDEOMODE_AUTO;
 	GCSettings.videoBilinearFilter = true;
 	GCSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_SHARP;
+#if defined(HW_RVL) || defined(HW_DOL)
 	GCSettings.videoUpscalingFilter = FILTER_NONE;
+#else
+	GCSettings.videoUpscalingFilter = 0;
+#endif
 	GCSettings.videoAspectRatioCorrection = SCALING_PARTIAL_STRETCH;
 	GCSettings.WiiControls = false; // Match Wii Game
 

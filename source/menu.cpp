@@ -24,7 +24,9 @@
 #include "video.h"
 #include "filebrowser.h"
 #include "utils/decompress.h"
-#include "networkop.h"
+#if defined(HW_RVL) || defined(HW_DOL)
+#include "drivers/ogc/networkop.h"
+#endif
 #include "fileop.h"
 #include "preferences.h"
 #include "cheatmgr.h"
@@ -41,7 +43,9 @@
 #include "drivers/Mutex.h"
 #include "drivers/Cond.h"
 
+#if defined(HW_RVL) || defined(HW_DOL)
 #include "drivers/ogc/videofilters.h"
+#endif
 #include "drivers/ogc/WiiPlatform.h"
 #include "drivers/ogc/GameCubePlatform.h"
 
@@ -3224,7 +3228,11 @@ static int MenuSettingsVideo()
 	sprintf(options.name[i++], "Aspect Ratio Correction");
 	sprintf(options.name[i++], "Bilinear Filtering");
 	sprintf(options.name[i++], "Hardware Softening");
+#if defined(HW_RVL) || defined(HW_DOL)
 	sprintf(options.name[i++], "Upscaling");
+#else
+	options.name[i++][0] = 0; // upscaling filters not available on this platform
+#endif
 	sprintf(options.name[i++], "Scanline Overlay");
 
 	if(IsGBAGame()) {
@@ -3310,11 +3318,13 @@ static int MenuSettingsVideo()
 					GCSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_OFF;
 				break;
 
+#if defined(HW_RVL) || defined(HW_DOL)
 			case 4:
 				GCSettings.videoUpscalingFilter++;
 				if (GCSettings.videoUpscalingFilter >= NUM_FILTERS)
 					GCSettings.videoUpscalingFilter = FILTER_NONE;
 				break;
+#endif
 
 			case 5:
 				GCSettings.videoScanlines = !GCSettings.videoScanlines;
@@ -3386,7 +3396,9 @@ static int MenuSettingsVideo()
 					sprintf (options.value[3], "Soft"); break;
 			}
 
+#if defined(HW_RVL) || defined(HW_DOL)
 			sprintf (options.value[4], "%s", GetFilterName(GCSettings.videoUpscalingFilter));
+#endif
 			sprintf (options.value[5], "%s", GCSettings.videoScanlines ? "On" : "Off");
 
 			int fixed;
@@ -4313,7 +4325,9 @@ static int MenuSettingsNetwork()
 			selection = MENU_SETTINGS;
 		}
 	}
+#if defined(HW_RVL) || defined(HW_DOL)
 	CloseShare();
+#endif
 	return selection;
 }
 

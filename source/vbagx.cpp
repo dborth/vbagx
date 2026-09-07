@@ -27,7 +27,9 @@
 #include "vba/gba/Sound.h"
 #include "vba/gba/JIT.h"
 
+#if defined(HW_RVL) || defined(HW_DOL)
 #include "drivers/ogc/videofilters.h"
+#endif
 
 #ifdef HW_DOL
 #include "drivers/ogc/vm/vmpager.h"
@@ -126,7 +128,9 @@ int main(int argc, char *argv[])
 		InitGameDimensionsAndBorder();
 		SwitchMemoryModeGame();
 		platform->getAudio()->startEmulatorAudio();
+#if defined(HW_RVL) || defined(HW_DOL)
 		SelectFilterMethod(GCSettings.videoUpscalingFilter); // Initialize / Re-evaluate active filter
+#endif
 
 		// stop checking if devices were removed/inserted
 		// since we're starting emulation again

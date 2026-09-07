@@ -6,6 +6,7 @@
  * networkop.h
  *
  * Network and SMB support routines
+ * Wii/GameCube only for now - SMB on Wii U is a later goal.
  ****************************************************************************/
 
 #ifndef _NETWORKOP_H_
