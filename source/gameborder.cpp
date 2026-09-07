@@ -19,7 +19,7 @@
 #include "goomba/goombarom.h"
 #include "vba/gba/Globals.h"
 #include "vba/gb/gbGlobals.h"
-#include <ogc/system.h>
+
 SgbBorderExtractor sgbBorderExtractor;
 GameBorder gameBorder;
 
@@ -103,62 +103,35 @@ char * BorderManager::getPNGBorderPath(const char* title) {
 	if (path) sprintf(path, "%s%s/%s.png", method, folder, title_buffer);
 	return path;
 }
-static int g_borderAllocCount = 0;
-uint8_t* BorderManager::load(const char *title, const char *fallback, int &outWidth, int &outHeight) {
-	SYS_Report("[BorderManager::load] Entry | title: '%s' | fallback: '%s'\n",
-		title ? title : "null", fallback ? fallback : "null");
 
+uint8_t* BorderManager::load(const char *title, const char *fallback, int &outWidth, int &outHeight) {
 	void *png_tmp_buf = memspace_malloc(1024 * 1024);
 	char *borderPath = getPNGBorderPath(title);
 	int imgWidth = 0, imgHeight = 0;
 	uint8_t *rgba = nullptr;
 	uint8_t *newBorder = nullptr;
 
-	SYS_Report("[BorderManager::load] png_tmp_buf: %p | primary borderPath: %p (%s)\n",
-		png_tmp_buf, borderPath, borderPath ? borderPath : "null");
-
 	bool borderLoaded = LoadFile((char*) png_tmp_buf, borderPath, 0, 1024 * 1024, SILENT);
 	if (!borderLoaded && fallback) {
-		SYS_Report("[BorderManager::load] Primary file load failed. Attempting fallback...\n");
 		if (borderPath)
 			memspace_free(borderPath);
 		borderPath = getPNGBorderPath(fallback);
-		SYS_Report("[BorderManager::load] fallback borderPath: %p (%s)\n",
-			borderPath, borderPath ? borderPath : "null");
 		borderLoaded = LoadFile((char*) png_tmp_buf, borderPath, 0, 1024 * 1024, SILENT);
 	}
-
-	if (!borderLoaded) {
-		SYS_Report("[BorderManager::load] Failed to load border file into tmp buffer.\n");
+	if (!borderLoaded)
 		goto cleanup;
-	}
 
-	if (!PNGGetImageSize((const uint8_t*) png_tmp_buf, &imgWidth, &imgHeight)) {
-		SYS_Report("[BorderManager::load] Failed PNGGetImageSize.\n");
+	if (!PNGGetImageSize((const uint8_t*) png_tmp_buf, &imgWidth, &imgHeight))
 		goto cleanup;
-	}
-
-	if (imgWidth > 640 || imgHeight > 480) {
-		SYS_Report("[BorderManager::load] Image dimensions (%dx%d) exceed max allowed (640x480).\n",
-			imgWidth, imgHeight);
+	if (imgWidth > 640 || imgHeight > 480)
 		goto cleanup;
-	}
 
 	rgba = DecodePNGToRGBA8((const uint8_t*) png_tmp_buf, imgWidth, imgHeight);
-	SYS_Report("[BorderManager::load] DecodePNGToRGBA8 decoded rgba ptr: %p | dims: %dx%d\n",
-		rgba, imgWidth, imgHeight);
-
 	if (!rgba)
 		goto cleanup;
 
-	// We need the border in non-shared memory because it will cross the menu <> emulator boundary
+	// we need the border in non-shared memory because it will cross the menu <> emulator boundary
 	newBorder = (uint8_t*)malloc(imgWidth * imgHeight * 4);
-	if (newBorder) {
-	    g_borderAllocCount++;
-	    printf("[border] alloc #%d size=%d ptr=%p (outstanding=%d)\n",
-	           g_borderAllocCount, imgWidth*imgHeight*4, newBorder, g_borderAllocCount);
-	}
-
 	if (!newBorder)
 		goto cleanup;
 
@@ -167,9 +140,6 @@ uint8_t* BorderManager::load(const char *title, const char *fallback, int &outWi
 	memcpy(newBorder, rgba, imgWidth * imgHeight * 4);
 
 cleanup:
-	SYS_Report("[BorderManager::load] Cleanup | freeing rgba: %p, png_tmp_buf: %p, borderPath: %p | returning newBorder: %p\n",
-		rgba, png_tmp_buf, borderPath, newBorder);
-
 	if (rgba)
 		memspace_free(rgba);
 	if (png_tmp_buf)
@@ -247,12 +217,7 @@ GameBorder::~GameBorder() {
 }
 
 void GameBorder::clear() {
-	SYS_Report("[GameBorder::clear] freeing ptr: %p | size: %d B (%dx%d)\n",
-		pixels, width * height * 4, width, height);
-
 	if (pixels) {
-		g_borderAllocCount--;
-		printf("[border] free ptr=%p (outstanding=%d)\n", pixels, g_borderAllocCount);
 		free(pixels);
 		pixels = nullptr;
 	}
@@ -262,9 +227,6 @@ void GameBorder::clear() {
 }
 
 void GameBorder::setBorder(uint8_t *newPixels, int newWidth, int newHeight) {
-	SYS_Report("[GameBorder::setBorder] prior ptr: %p | incoming newPixels: %p | size: %d B (%dx%d)\n",
-		pixels, newPixels, newWidth * newHeight * 4, newWidth, newHeight);
-
 	clear();
 	if (newPixels) {
 		pixels = newPixels;

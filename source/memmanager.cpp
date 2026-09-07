@@ -81,6 +81,11 @@ void InitMemManager ()
 #endif
 }
 
+void* memspace_malloc(uint32_t size)
+{
+	if(!memspace_ptr) return nullptr;
+	return mspace_malloc(memspace_ptr, size);
+}
 
 char* memspace_strdup(const char *s)
 {
@@ -96,50 +101,10 @@ char* memspace_strdup(const char *s)
     return dup;
 }
 
-void* memspace_malloc(uint32_t size)
-{
-	if(!memspace_ptr) return nullptr;
-	void *ptr = mspace_malloc(memspace_ptr, size);
-
-	struct mallinfo mi = mallinfo();
-	int mem1Free = mi.fordblks;
-	int mem1Ord = mi.ordblks;
-
-	int mem2Free = extmem_size_free();
-
-	struct mallinfo msInfo = mspace_mallinfo(memspace_ptr);
-	int mspaceFree = msInfo.fordblks;
-	int mspaceOrd = msInfo.ordblks;
-
-	SYS_Report("[memspace_malloc] req: %u B | ptr: %p | MEM1 free: %.2f MB (%d B, ord: %d) | MEM2 free: %.2f MB (%d B) | memspace free: %.2f MB (%d B, ord: %d)\n",
-		size, ptr,
-		(float)mem1Free / (1024.0f * 1024.0f), mem1Free, mem1Ord,
-		(float)mem2Free / (1024.0f * 1024.0f), mem2Free,
-		(float)mspaceFree / (1024.0f * 1024.0f), mspaceFree, mspaceOrd);
-
-	return ptr;
-}
-
 void memspace_free(void *ptr)
 {
 	if(!memspace_ptr || !ptr) return;
 	mspace_free(memspace_ptr, ptr);
-
-	struct mallinfo mi = mallinfo();
-	int mem1Free = mi.fordblks;
-	int mem1Ord = mi.ordblks;
-
-	int mem2Free = extmem_size_free();
-
-	struct mallinfo msInfo = mspace_mallinfo(memspace_ptr);
-	int mspaceFree = msInfo.fordblks;
-	int mspaceOrd = msInfo.ordblks;
-
-	SYS_Report("[memspace_free] freed: %p | MEM1 free: %.2f MB (%d B, ord: %d) | MEM2 free: %.2f MB (%d B) | memspace free: %.2f MB (%d B, ord: %d)\n",
-		ptr,
-		(float)mem1Free / (1024.0f * 1024.0f), mem1Free, mem1Ord,
-		(float)mem2Free / (1024.0f * 1024.0f), mem2Free,
-		(float)mspaceFree / (1024.0f * 1024.0f), mspaceFree, mspaceOrd);
 }
 
 int memspace_size_free()
