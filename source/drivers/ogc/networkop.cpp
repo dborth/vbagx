@@ -6,7 +6,6 @@
  * networkop.cpp
  *
  * Network and SMB support routines
- * Wii/GameCube only for now - SMB on Wii U is a later goal.
  ****************************************************************************/
 
 #include <errno.h>
