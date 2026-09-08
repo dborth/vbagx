@@ -14,7 +14,7 @@
 #include <sys/param.h>
 
 #include "drivers/InputDriver.h"
-#include "drivers/ogc/OgcDeviceTypes.h"
+#include "drivers/FileSystemDriver.h"
 #include "filelist.h"
 
 #define APPNAME 		"Visual Boy Advance GX"

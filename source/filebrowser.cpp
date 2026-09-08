@@ -22,6 +22,8 @@
 #include "fileop.h"
 #include "input.h"
 #include "utils/decompress.h"
+#include "drivers/Platform.h"
+#include "drivers/FileSystemDriver.h"
 
 extern "C" {
 extern char* strcasestr(const char *, const char *);
@@ -37,20 +39,10 @@ bool inSz = false;
 char ROMFilename[512]= "";
 bool ROMLoaded = false;
 
-#ifdef HW_RVL
-	static const int numLoadDevices = 5;
-	static const int numSaveDevices = 4;
-	static const int loadDevices[5] = { DEVICE_AUTO, DEVICE_SD, DEVICE_USB, DEVICE_DVD, DEVICE_SMB };
-	static const int saveDevices[4] = { DEVICE_AUTO, DEVICE_SD, DEVICE_USB, DEVICE_SMB };
-#else
-	static const int numLoadDevices = 7;
-	static const int numSaveDevices = 6;
-	static const int loadDevices[7] = { DEVICE_AUTO, DEVICE_SD_SLOTA, DEVICE_SD_SLOTB, DEVICE_SD_PORT2, DEVICE_SD_GCLOADER, DEVICE_DVD, DEVICE_SMB };
-	static const int saveDevices[6] = { DEVICE_AUTO, DEVICE_SD_SLOTA, DEVICE_SD_SLOTB, DEVICE_SD_PORT2, DEVICE_SD_GCLOADER, DEVICE_SMB };
-#endif
-
 bool isValidLoadDevice(int device)
 {
+	int numLoadDevices;
+	const int * loadDevices = platform->getFileSystem()->getValidLoadDevices(numLoadDevices);
 	for (int i = 0; i < numLoadDevices; i++) {
 		if (loadDevices[i] == device) {
 			return true;
@@ -61,6 +53,8 @@ bool isValidLoadDevice(int device)
 
 bool isValidSaveDevice(int device)
 {
+	int numSaveDevices;
+	const int * saveDevices = platform->getFileSystem()->getValidSaveDevices(numSaveDevices);
 	for (int i = 0; i < numSaveDevices; i++) {
 		if (saveDevices[i] == device) {
 			return true;
@@ -71,6 +65,8 @@ bool isValidSaveDevice(int device)
 
 int getNextLoadDevice(int device)
 {
+	int numLoadDevices;
+	const int * loadDevices = platform->getFileSystem()->getValidLoadDevices(numLoadDevices);
 	for (int i = 0; i < numLoadDevices; i++) {
 		if (loadDevices[i] == device) {
 			return loadDevices[(i + 1) % numLoadDevices];
@@ -81,6 +77,8 @@ int getNextLoadDevice(int device)
 
 int getNextSaveDevice(int device)
 {
+	int numSaveDevices;
+	const int * saveDevices = platform->getFileSystem()->getValidSaveDevices(numSaveDevices);
 	for (int i = 0; i < numSaveDevices; i++) {
 		if (saveDevices[i] == device) {
 			return saveDevices[(i + 1) % numSaveDevices];
@@ -105,6 +103,9 @@ int autoLoadMethod()
 	int device = DEVICE_AUTO;
 
 	GetDefaultFolderPath(defaultFolderPath, loadFolder[LOADFOLDER_ROMS].name);
+
+	int numLoadDevices;
+	const int * loadDevices = platform->getFileSystem()->getValidLoadDevices(numLoadDevices);
 
 	// look for default roms folder first
 	for (int i = 1; i < numLoadDevices; i++) {
@@ -149,6 +150,9 @@ int autoSaveMethod()
 	int device = DEVICE_AUTO;
 
 	GetDefaultFolderPath(defaultFolderPath, saveFolder[SAVEFOLDER_SAVES].name);
+
+	int numSaveDevices;
+	const int * saveDevices = platform->getFileSystem()->getValidSaveDevices(numSaveDevices);
 
 	// look for default saves folder first
 	for (int i = 1; i < numSaveDevices; i++) {
@@ -314,7 +318,7 @@ void GetDefaultFolderPath(char *folderPath, const char *folderName) {
 }
 
 void MakeFilePathForFolderPath(char *fullPath, int device, const char *folder) {
-	sprintf(fullPath, "%s%s", pathPrefix[device], folder);
+	platform->getFileSystem()->getPath(fullPath, MAXPATHLEN, device, folder);
 }
 
 bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
@@ -347,14 +351,16 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 		if (loadedname == nullptr) loadedname = loadedpath;
 		
 		// Check path length
-		if ((strlen(pathPrefix[GCSettings.LoadMethod]) + strlen(GCSettings.BorderFolder) + strlen(loadedname)) >= MAXPATHLEN) {
+		if ((strlen(platform->getFileSystem()->getMountPath(GCSettings.LoadMethod)) + strlen(GCSettings.BorderFolder) + strlen(loadedname)) >= MAXPATHLEN) {
 			ErrorPrompt("Maximum filepath length reached!");
 			filepath[0] = 0;
 			return false;
 		}
 		
 		StripExt(file, loadedname);
-		sprintf(temppath, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], GCSettings.BorderFolder, file);
+		char borderFile[MAXPATHLEN];
+		snprintf(borderFile, sizeof(borderFile), "%s.png", file);
+		platform->getFileSystem()->getPath(temppath, GCSettings.LoadMethod, GCSettings.BorderFolder, borderFile);
 	}
 	else
 	{
@@ -397,7 +403,7 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 				sprintf(file, "%s.cht", ROMFilename);
 				break;
 		}
-		sprintf (temppath, "%s%s/%s", pathPrefix[GCSettings.SaveMethod], folder, file);
+		platform->getFileSystem()->getPath(temppath, GCSettings.SaveMethod, folder, file);
 	}
 	CleanupPath(temppath); // cleanup path
 	snprintf(filepath, MAXPATHLEN, "%s", temppath);
@@ -753,13 +759,13 @@ OpenGameList ()
 
 	if(device > 0 && ChangeInterface(device, NOTSILENT)) {
 		// change current dir to roms directory
-		sprintf(browser.dir, "%s%s/", pathPrefix[device], GCSettings.LoadFolder);
+		platform->getFileSystem()->getPath(browser.dir, device, GCSettings.LoadFolder, "");
 
 		if(strlen(GCSettings.LoadFolder) > 0) {
 			DIR *dir = opendir(browser.dir);
 
 			if(dir == nullptr) {
-				sprintf(browser.dir, "%s", pathPrefix[device]);
+				platform->getFileSystem()->getPath(browser.dir, device, "");
 			}
 			else {
 				closedir(dir);

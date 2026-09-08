@@ -1180,7 +1180,9 @@ static int MenuGameSelection()
 
 			if(browser.dir[0] != 0 && GCSettings.LoadMethod > 0 && browser.numEntries > 0 && browser.selIndex > 0 && browser.selIndex < browser.numEntries)
 			{
-				snprintf(imagePath, MAXJOLIET, "%s%s/%s.png", pathPrefix[GCSettings.LoadMethod], getImageFolder(), browserList[browser.selIndex].displayname);
+				char imageFile[MAXJOLIET + 1];
+				snprintf(imageFile, sizeof(imageFile), "%s.png", browserList[browser.selIndex].displayname);
+				platform->getFileSystem()->getPath(imagePath, GCSettings.LoadMethod, getImageFolder(), imageFile);
 
 				if(ChangeInterface(imagePath, SILENT) &&
 				   LoadFile((char *)pngFileBuffer.get(), imagePath, 0, PNG_FILE_BUFFER_SIZE, SILENT) &&
@@ -1908,7 +1910,7 @@ static int MenuGameSaves(int action)
 	menu->mainWindow.appendWithAutoRemove(&w);
 	menu->mainWindow.appendWithAutoRemove(&titleTxt);
 
-	sprintf(browser.dir, "%s%s", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder);
+	platform->getFileSystem()->getPath(browser.dir, GCSettings.SaveMethod, GCSettings.SaveFolder);
 	ParseDirectory(true, false);
 
 	len = strlen(ROMFilename);
@@ -1942,7 +1944,9 @@ static int MenuGameSaves(int action)
 
 			if(saves.type[j] == FILE_STATE)
 			{
-				sprintf(scrfile, "%s%s/%s.png", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, tmp);
+				char scrname[MAXJOLIET+1];
+				snprintf(scrname, sizeof(scrname), "%s.png", tmp);
+				platform->getFileSystem()->getPath(scrfile, GCSettings.SaveMethod, GCSettings.SaveFolder, scrname);
 
 				memset(savebuffer, 0, SAVEBUFFERSIZE);
 				if(LoadFile(scrfile, SILENT)) {
@@ -1951,7 +1955,7 @@ static int MenuGameSaves(int action)
 						saves.previewImg[j] = std::move(thumb);
 				}
 			}
-			snprintf(filepath, 1024, "%s%s/%s", pathPrefix[GCSettings.SaveMethod], GCSettings.SaveFolder, saves.filename[j]);
+			platform->getFileSystem()->getPath(filepath, GCSettings.SaveMethod, GCSettings.SaveFolder, saves.filename[j]);
 			if (stat(filepath, &filestat) == 0)
 			{
 				timeinfo = localtime(&filestat.st_mtime);
@@ -2327,7 +2331,7 @@ static int MenuGameSettings()
 		{
 			if (WindowPrompt("Preview Screenshot", "Save a new Preview Screenshot? Current Screenshot image will be overwritten.", "OK", "Cancel"))
 			{
-				snprintf(filepath, 1024, "%s%s/%s", pathPrefix[GCSettings.LoadMethod], GCSettings.ScreenshotsFolder, ROMFilename);
+				platform->getFileSystem()->getPath(filepath, GCSettings.LoadMethod, GCSettings.ScreenshotsFolder, ROMFilename);
 				SavePreviewImg(filepath, SILENT); 
 			}
 		}

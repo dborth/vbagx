@@ -19,6 +19,8 @@
 #include "goomba/goombarom.h"
 #include "vba/gba/Globals.h"
 #include "vba/gb/gbGlobals.h"
+#include "drivers/Platform.h"
+#include "drivers/FileSystemDriver.h"
 
 SgbBorderExtractor sgbBorderExtractor;
 GameBorder gameBorder;
@@ -80,7 +82,7 @@ bool SgbBorderExtractor::processFrame(const uint16_t *buffer, int gbWidth, int g
 }
 
 char * BorderManager::getPNGBorderPath(const char* title) {
-	const char* method = pathPrefix[GCSettings.LoadMethod];
+	const char* method = platform->getFileSystem()->getMountPath(GCSettings.LoadMethod);
 	const char* folder = GCSettings.BorderFolder;
 
 	char title_buffer[16] = {0};
