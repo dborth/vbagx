@@ -50,7 +50,7 @@
 #include "drivers/ogc/GameCubePlatform.h"
 #endif
 
-#ifdef HW_RVL
+#ifdef HW_DOL
 #include "drivers/ogc/vm/vmpager.h"
 #endif
 

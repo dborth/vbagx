@@ -14,8 +14,10 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <mxml.h>
+#if defined(HW_RVL) || defined(HW_DOL)
 #include <ogc/conf.h>
 #include <ogc/system.h>
+#endif
 
 #include "vbagx.h"
 #include "menu.h"
@@ -27,9 +29,9 @@
 #include "button_mapping.h"
 #include "gamesettings.h"
 
+#if defined(HW_RVL) || defined(HW_DOL)
 #include "drivers/ogc/WiiPlatform.h"
 #include "drivers/ogc/GameCubePlatform.h"
-#if defined(HW_RVL) || defined(HW_DOL)
 #include "drivers/ogc/videofilters.h"
 #endif
 
@@ -218,7 +220,9 @@ preparePrefsData ()
 #ifdef HW_RVL
 	createXMLSetting("wiimoteOrientation", "Wiimote Orientation", toStr(GCSettings.wiimoteOrientation));
 #endif
+#if defined(HW_RVL) || defined(HW_DOL)
 	createXMLSetting("ExitAction", "Exit Action", toStr(GCSettings.ExitAction));
+#endif
 	createXMLSetting("MusicVolume", "Music Volume", toStr(GCSettings.MusicVolume));
 	createXMLSetting("SFXVolume", "Sound Effects Volume", toStr(GCSettings.SFXVolume));
 	createXMLSetting("Rumble", "Rumble", BtoStr(GCSettings.Rumble));
@@ -535,7 +539,9 @@ decodePrefsData ()
 #ifdef HW_RVL
 	loadXMLSetting(&GCSettings.wiimoteOrientation, "WiimoteOrientation");
 #endif
+#if defined(HW_RVL) || defined(HW_DOL)
 	loadXMLSetting(&GCSettings.ExitAction, "ExitAction");
+#endif
 	loadXMLSetting(&GCSettings.MusicVolume, "MusicVolume");
 	loadXMLSetting(&GCSettings.SFXVolume, "SFXVolume");
 	loadXMLSetting(&GCSettings.Rumble, "Rumble");
@@ -715,7 +721,7 @@ void DefaultSettings()
 	GCSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_AUTO;
 #ifdef HW_RVL
 	GCSettings.ExitAction = EXITACTION_WII_AUTO;
-#else
+#elif HW_DOL
 	GCSettings.ExitAction = EXITACTION_GC_RETURN_TO_LOADER;
 #endif
 	GCSettings.AutoloadGame = false;
@@ -731,7 +737,7 @@ void DefaultSettings()
 
 	if(GCSettings.language == LANG_TRAD_CHINESE)
 		GCSettings.language = LANG_SIMP_CHINESE;
-#else
+#elif HW_DOL
 	GCSettings.language = SYS_GetLanguage() + LANG_ENGLISH;
 #endif
 	GCSettings.OffsetMinutesUTC = 0;
@@ -858,7 +864,7 @@ bool LoadPrefs()
 	sprintf(filepath[2], "usb:/apps/%s", APPFOLDER);
 	sprintf(filepath[3], "sd:/%s", APPFOLDER);
 	sprintf(filepath[4], "usb:/%s", APPFOLDER);
-#else
+#elif HW_DOL
 	numDevices = 4;
 	sprintf(filepath[0], "carda:/%s", APPFOLDER);
 	sprintf(filepath[1], "cardb:/%s", APPFOLDER);

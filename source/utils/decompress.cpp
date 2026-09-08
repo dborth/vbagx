@@ -21,9 +21,9 @@
 #include "decompress.h"
 
 extern "C" {
-#include "utils/sz/7zCrc.h"
-#include "utils/sz/7zIn.h"
-#include "utils/sz/7zExtract.h"
+#include "sz/7zCrc.h"
+#include "sz/7zIn.h"
+#include "sz/7zExtract.h"
 }
 
 #define ZIPCHUNK 2048
