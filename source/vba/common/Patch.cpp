@@ -142,12 +142,9 @@ bool patchApplyIPS(MFILE *f, u8 **r, int *s)
         b= -1;
       // check if we need to reallocate our ROM
       if((offset + len) >= size) {
-#ifdef GEKKO
+
         size = offset + len;
-#else
-        size *= 2;
-        rom = (u8 *)realloc(rom, size);
-#endif
+
         *r = rom;
         *s = size;
       }
@@ -219,9 +216,6 @@ bool patchApplyUPS(MFILE *f, u8 **rom, int *size)
     return false;
   }
   if (dataSize > *size) {
-#ifndef GEKKO
-	*rom = (u8*)realloc(*rom, dataSize);
-#endif
     memset(*rom + *size, 0, dataSize - *size);
     *size = dataSize;
   }
