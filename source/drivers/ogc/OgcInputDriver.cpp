@@ -42,7 +42,7 @@ OgcInputDriver::~OgcInputDriver() {
 }
 
 #ifdef HW_RVL
-static void WiimotePowerButtonCallback(s32 chan) { NotifyWiiShutdownRequested(); }
+static void WiimotePowerButtonCallback(s32) { NotifyWiiShutdownRequested(); }
 #endif
 
 void OgcInputDriver::init() {
