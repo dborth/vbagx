@@ -21,6 +21,7 @@
 #include "font_ttf.h"
 #include "libgui/Gui.h"
 #include "drivers/Platform.h"
+#include "drivers/Thread.h"
 #include "drivers/EmulatorVideoDriver.h"
 
 #include "vba/gba/Globals.h"
@@ -192,5 +193,11 @@ void ExitApp()
 		SaveBatteryOrStateAuto(FILE_SRAM, SILENT);
 
 	HaltDeviceCheckingThread();
+
+	// Generic safety net: stop and join every Thread still outstanding
+	// (device/parse/worker) before any driver it might touch gets torn
+	// down inside requestExit()/shutdown().
+	Thread::JoinAll();
+
 	platform->requestExit(GCSettings.ExitAction, autoboot);
 }

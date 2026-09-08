@@ -59,6 +59,7 @@ void WiiAudioDriver::startMenuAudio() {
 }
 
 void WiiAudioDriver::stopMenuAudio() {
+	stopStream();
 	ASND_Pause(1);
 	ASND_End();
 	AUDIO_StopDMA();
@@ -67,10 +68,9 @@ void WiiAudioDriver::stopMenuAudio() {
 }
 
 void WiiAudioDriver::shutdown() {
-	stopStream();
-	ASND_Pause(1);
-	ASND_End();
-	AUDIO_StopDMA();
+	// Stop both audio paths regardless of which was last active
+	stopEmulatorAudio();
+	stopMenuAudio();
 	instance = nullptr;
 }
 
