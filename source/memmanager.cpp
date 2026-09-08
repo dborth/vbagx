@@ -8,7 +8,9 @@
  * Memory manager
  ***************************************************************************/
 
+#ifdef GEKKO
 #include <ogc/system.h>
+#endif
 #include <malloc.h>
 #include "vbagx.h"
 #include "vbasupport.h"
@@ -75,12 +77,35 @@ void InitMemManager ()
 	extmem_space = create_mspace_with_base(mem2_heap_ptr, MEM2_SIZE, 0);
 	mspace_set_footprint_limit(extmem_space, MEM2_SIZE);
 	romPtr = (uint8_t *)extmem_malloc(MAX_GBA_ROM_SIZE); // allocate 32 MB to GBA ROM
-#else
+#elif HW_DOL
 	romPtr = (uint8_t *)VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024); // 2MB MEM1 + 16 ARAM + SD backing for GB/GBA ROM
 	VMPager_Init(romPtr);
+#else
+	romPtr = (uint8_t *)malloc(MAX_GBA_ROM_SIZE * 2);
+	savebuffer = (uint8_t *)malloc(SAVEBUFFERSIZE);
+	GuiImageData::setDecodeScratch(malloc(IMAGE_DECODE_SCRATCH_SIZE), IMAGE_DECODE_SCRATCH_SIZE);
+	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY) * MAX_BROWSER_SIZE);
+	texturemem = coreMem.gba.texturemem;
+	jitCache.initialize(
+		(uint32_t*)coreMem.gba.jitArena,
+		(BasicBlock*)coreMem.gba.blockTable,
+		(BasicBlock**)coreMem.gba.smcRegistry,
+		(uint8_t*)coreMem.gba.smcPageFlags
+	);
 #endif
 }
 
+#if (!defined(HW_RVL) && !defined(HW_DOL))
+void* memspace_malloc(uint32_t size) { return malloc(size); }
+char* memspace_strdup(const char *s) { return strdup(s); }
+void memspace_free(void *ptr) { free(ptr); }
+int memspace_size_free() { return 0; }
+void* extmem_malloc(uint32_t size) { return malloc(size); }
+void extmem_free(void *ptr) { free(ptr); }
+int extmem_size_free() { return 0; }
+void SwitchMemoryModeMenu() { }
+void SwitchMemoryModeGame() { }
+#else
 void* memspace_malloc(uint32_t size)
 {
 	if(!memspace_ptr) return nullptr;
@@ -191,3 +216,4 @@ void SwitchMemoryModeGame() {
 	}
 	memset(texturemem, 0, TEXTUREMEM_SIZE);
 }
+#endif
