@@ -66,9 +66,12 @@ union CoreMemoryOverlay {
 
 alignas(32) union CoreMemoryOverlay coreMem;
 uint8_t *romPtr;
+
+#if (defined(HW_RVL) || defined(HW_DOL))
 static mspace memspace_ptr = nullptr;
 static mspace extmem_space = nullptr;
 static int memoryMode = -1;
+#endif
 
 void InitMemManager ()
 {

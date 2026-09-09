@@ -12,11 +12,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wiiuse/wpad.h>
 #include <malloc.h>
-
 #include <sys/stat.h>
 #include <errno.h>
+
+#ifdef HW_RVL
+#include <wiiuse/wpad.h>
+#endif
 
 #include "vbagx.h"
 #include "vbasupport.h"
@@ -1369,10 +1371,10 @@ bool LoadGBROM()
 		if(!MakeFilePath(filepath, FILE_ROM))
 			return false;
 
-		#ifdef HW_RVL
-		gbRomSize = LoadFile ((char *)gbRom, filepath, 0, (1024*1024*8), NOTSILENT);
-		#else
+		#ifdef HW_DOL
 		gbRomSize = LoadROMToVM(filepath);
+		#else
+		gbRomSize = LoadFile ((char *)gbRom, filepath, 0, (1024*1024*8), NOTSILENT);
 		#endif
 	}
 	else
@@ -1481,10 +1483,10 @@ static int GBAROMLoad()
 		if(!MakeFilePath(filepath, FILE_ROM))
 			return 0;
 
-		#ifdef HW_RVL
-		GBAROMSize = LoadFile ((char *)rom, filepath, 0, MAX_GBA_ROM_SIZE, NOTSILENT);
-		#else
+		#ifdef HW_DOL
 		GBAROMSize = LoadROMToVM(filepath);
+		#else
+		GBAROMSize = LoadFile ((char *)rom, filepath, 0, MAX_GBA_ROM_SIZE, NOTSILENT);
 		#endif
 	}
 	else
