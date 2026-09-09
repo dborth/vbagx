@@ -40,7 +40,6 @@
  * executed).
  ***************************************************************************/
 
-#include <ogc/cache.h>
 #include "JIT.h"
 #include "GBAinline.h"
 #include "GBAcpu.h"

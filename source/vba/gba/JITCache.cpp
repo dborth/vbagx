@@ -37,7 +37,6 @@
  *     this to stay correct.
  ***************************************************************************/
 
-#include <ogc/cache.h>
 #include "JIT.h"
 
 JITCache jitCache;

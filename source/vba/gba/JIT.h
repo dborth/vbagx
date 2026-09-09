@@ -55,6 +55,13 @@
 
 #ifndef JIT_H
 #define JIT_H
+
+#ifdef __WIIU__
+#include <coreinit/cache.h>
+#else
+#include <ogc/cache.h>
+#endif
+
 #include "Debug.h"
 #include "GBA.h"
 #include "JITCache.h"

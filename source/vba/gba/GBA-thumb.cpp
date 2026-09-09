@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <ogc/timesupp.h>
 
 #include "vbagx.h"
 #include "GBA.h"
