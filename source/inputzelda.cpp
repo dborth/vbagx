@@ -823,9 +823,6 @@ uint32_t MinishCapInput(unsigned short pad)
 		}
 	}
 
-	OldCursorRow = CursorRow;
-	OldCursorCol = CursorCol;
-
 	// Motion Control Mappings
 	static int SwordCount = 0;
 	if (data.hw_connected[INPUT_HW_WIIMOTE]) {
