@@ -64,9 +64,6 @@ uint8_t pointerTexture[4][96 * 96 * 4] __attribute__((aligned(32)));
 
 static GuiTrigger * trigA = nullptr;
 
-#ifndef HW_DOL
-static GuiButton * batteryBtn[4];
-#endif
 static void * gameScreenTexture = nullptr;
 static GuiImage * gameScreenImg = nullptr;
 static GuiSound * bgMusic = nullptr;
@@ -360,7 +357,6 @@ static void DrawGui() {
 
 static void CreditsWindow()
 {
-	bool exit = false;
 	int i = 0;
 	int y = 20;
 
@@ -3946,9 +3942,6 @@ static int MenuSettingsFile()
 
 static bool LoadLanguage()
 {
-	char line[200];
-	char *lastID = nullptr;
-
 	const uint8_t *buffer;
 	size_t size;
 
@@ -4555,7 +4548,8 @@ PixelColor GetCol(int i) {
 static int MenuPalette()
 {
 	// We are now using a custom palette
-	strncpy(CurrentPalette.gameName, RomTitle, 17);
+	strncpy(CurrentPalette.gameName, RomTitle, sizeof(CurrentPalette.gameName) - 1);
+	CurrentPalette.gameName[sizeof(CurrentPalette.gameName) - 1] = 0;
 
 	int selection = MENU_NONE;
 

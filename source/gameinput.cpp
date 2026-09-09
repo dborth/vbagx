@@ -570,8 +570,6 @@ uint32_t HarryPotter5Input(unsigned short pad) {
 	// Wand cursor via unified IR/Touch valid pointer
 	int cx = 0;
 	int cy = 0;
-	static int oldcx = 0;
-	static int oldcy = 0;
 	uint8_t WandOut = CPUReadByte(0x200e0dd);
 	if (WandOut && data.validPointer) {
 		cx = (data.cursor_x * 268) / 640;
@@ -583,9 +581,6 @@ uint32_t HarryPotter5Input(unsigned short pad) {
 		CPUWriteByte(0x200e0fe, cx);
 		CPUWriteByte(0x200e102, cy);
 	}
-	oldcx = cx;
-	oldcy = cy;
-
 	if (data.buttons_h & INPUT_BTN_RIGHT) J |= VBA_BUTTON_R;
 	if (data.buttons_h & INPUT_BTN_LEFT) J |= VBA_BUTTON_L;
 	if (data.buttons_h & INPUT_BTN_UP) J |= VBA_UP;

@@ -272,7 +272,7 @@ void systemFrame()
 		float wallDeficit = clampf((float)pendingFrames / (float)skipFrms, 0.0f, 1.0f);
 		bool behindSchedule = SkipPressureCrossed(audioDeficit, wallDeficit);
 
-		if (pendingFrames > skipFrms)
+		if (pendingFrames > static_cast<uint32_t>(skipFrms))
 		{
 			platform->getVideo()->setFrameTimer(skipFrms);
 			pendingFrames = skipFrms;
@@ -349,11 +349,11 @@ void systemFrame()
 * System
 ****************************************************************************/
 
-void systemGbPrint(uint8_t *data,int pages,int feed,int palette, int contrast) {}
+void systemGbPrint(uint8_t *,int,int,int, int) {}
 
 static char lastSystemMessage[128];
 
-void systemMessage(int num, const char *msg, ...) {
+void systemMessage(int, const char *msg, ...) {
     va_list args;
     va_start(args, msg);
     vsnprintf(lastSystemMessage, sizeof(lastSystemMessage), msg, args);
@@ -1121,8 +1121,8 @@ void LoadPatch()
 
 	char patchpath[2][512];
 	memset(patchpath, 0, sizeof(patchpath));
-	sprintf(patchpath[0], "%s%s.ips",browser.dir,ROMFilename);
-	sprintf(patchpath[1], "%s%s.ups",browser.dir,ROMFilename);
+	snprintf(patchpath[0], sizeof(patchpath[0]), "%s%s.ips",browser.dir,ROMFilename);
+	snprintf(patchpath[1], sizeof(patchpath[1]), "%s%s.ups",browser.dir,ROMFilename);
 
 	for(; patchtype<2; patchtype++)
 	{

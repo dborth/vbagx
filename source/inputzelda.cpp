@@ -444,8 +444,7 @@ static uint32_t ZeldaOracleInput(bool Seasons, unsigned short pad) {
 		SwordCount--;
 	}
 
-	static int OldDesiredSubscreen = -1, DelayCount = 0;
-	OldDesiredSubscreen = DesiredSubscreen;
+	static int DelayCount = 0;
 
 	// Items
 	if (ItemsButton) {
@@ -714,8 +713,6 @@ uint32_t MinishCapInput(unsigned short pad)
 
 	// Wii Pointer selection on item screen
 	int cx, cy, SelRow, SelCol, CursorRow = 0xFF, CursorCol = 0xFF;
-	static int OldCursorRow = 0xFF;
-	static int OldCursorCol = 0xFF;
 
 	CursorVisible = data.validPointer && ((Subscreen != 0 && Subscreen != 0x64) || LoadMenu == 2);
 	if (CursorVisible) {

@@ -980,7 +980,6 @@ uint32_t MKAInput(unsigned short pad)
 
 	static int MenuChar = 0;
 	static int MenuSubchar = 0;
-	static bool WasInMenu = false;
 	static uint8_t OurOldChar = 255;
 	static uint8_t OriginalColour = 0;
 	static bool OldCostumeButton = false;
@@ -1015,7 +1014,6 @@ uint32_t MKAInput(unsigned short pad)
 		}
 		OurOldChar=CPUReadByte(0x2000025);
 	}
-	WasInMenu = InMenu;
 
 	uint32_t J = GetMKInput(pad);
 	if (LK || HK) J |= VBA_BUTTON_A;

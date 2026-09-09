@@ -338,8 +338,8 @@ void GuiSaveBrowser::update(InputController * controller)
 
 			if(saveBtn[0]->getState() == STATE::DISABLED)
 				saveBtn[0]->setState(STATE::DEFAULT);
-				if(saveBtn[1]->getState() == STATE::DISABLED)
-					saveBtn[1]->setState(STATE::DEFAULT);
+			if(saveBtn[1]->getState() == STATE::DISABLED)
+				saveBtn[1]->setState(STATE::DEFAULT);
 		}
 		else if(listOffset+i < saves->length)
 		{

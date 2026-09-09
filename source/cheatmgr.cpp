@@ -261,10 +261,10 @@ static void SanitizeCheatString(const char* raw, char* outBuffer, int maxOutLen)
 						// CodeBreaker GBA: Formatted as XXXXXXXX YYYY
 						if (outLen + 14 < maxOutLen) {
 							if (outLen > 0) { outBuffer[outLen++] = '+'; }
-							strncpy(outBuffer + outLen, hexAcc, 8);
+							memcpy(outBuffer + outLen, hexAcc, 8);
 							outLen += 8;
 							outBuffer[outLen++] = ' ';
-							strncpy(outBuffer + outLen, hexAcc + 8, 4);
+							memcpy(outBuffer + outLen, hexAcc + 8, 4);
 							outLen += 4;
 							outBuffer[outLen] = '\0';
 						}
@@ -290,10 +290,10 @@ static void SanitizeCheatString(const char* raw, char* outBuffer, int maxOutLen)
 						// Game Boy Game Genie 6-digit: XXX-YYY
 						if (outLen + 8 < maxOutLen) {
 							if (outLen > 0) { outBuffer[outLen++] = '+'; }
-							strncpy(outBuffer + outLen, hexAcc, 3);
+							memcpy(outBuffer + outLen, hexAcc, 3);
 							outLen += 3;
 							outBuffer[outLen++] = '-';
-							strncpy(outBuffer + outLen, hexAcc + 3, 3);
+							memcpy(outBuffer + outLen, hexAcc + 3, 3);
 							outLen += 3;
 							outBuffer[outLen] = '\0';
 						}
@@ -303,13 +303,13 @@ static void SanitizeCheatString(const char* raw, char* outBuffer, int maxOutLen)
 						// Game Boy Game Genie 9-digit: XXX-YYY-ZZZ
 						if (outLen + 12 < maxOutLen) {
 							if (outLen > 0) { outBuffer[outLen++] = '+'; }
-							strncpy(outBuffer + outLen, hexAcc, 3);
+							memcpy(outBuffer + outLen, hexAcc, 3);
 							outLen += 3;
 							outBuffer[outLen++] = '-';
-							strncpy(outBuffer + outLen, hexAcc + 3, 3);
+							memcpy(outBuffer + outLen, hexAcc + 3, 3);
 							outLen += 3;
 							outBuffer[outLen++] = '-';
-							strncpy(outBuffer + outLen, hexAcc + 6, 3);
+							memcpy(outBuffer + outLen, hexAcc + 6, 3);
 							outLen += 3;
 							outBuffer[outLen] = '\0';
 						}

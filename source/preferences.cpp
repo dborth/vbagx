@@ -395,7 +395,8 @@ static void loadXMLPaletteFromSection(gamePalette &pal)
 {
 	if (section)
 	{
-		strncpy(pal.gameName, mxmlElementGetAttr(section, "name"), 17);
+		strncpy(pal.gameName, mxmlElementGetAttr(section, "name"), sizeof(pal.gameName) - 1);
+		pal.gameName[sizeof(pal.gameName) - 1] = 0;
 		item = mxmlFindElement(section, xml, "bkgr", nullptr, nullptr, MXML_DESCEND);
 		if (item)
 		{
@@ -759,12 +760,12 @@ bool SavePrefs()
 	int device = DEVICE_AUTO;
 	
 	if(prefpath[0] != 0) {
-		sprintf(filepath, "%s/%s", prefpath, PREF_FILE_NAME);
+		snprintf(filepath, sizeof(filepath), "%s/%s", prefpath, PREF_FILE_NAME);
 		FindDevice(filepath, &device);
 	}
 	else if(appPath[0] != 0)
 	{
-		sprintf(filepath, "%s/%s", appPath, PREF_FILE_NAME);
+		snprintf(filepath, sizeof(filepath), "%s/%s", appPath, PREF_FILE_NAME);
 		strcpy(prefpath, appPath);
 		FindDevice(filepath, &device);
 	}
@@ -953,7 +954,7 @@ bool SavePalettes(bool silent)
 	if(prefpath[0] == 0)
 		return false;
 
-	sprintf(filepath, "%s/%s", prefpath, PAL_FILE_NAME);
+	snprintf(filepath, sizeof(filepath), "%s/%s", prefpath, PAL_FILE_NAME);
 
 	// Now create the XML palette file
 
@@ -986,7 +987,8 @@ static void AddPalette(gamePalette pal, const char *gameName, bool overwrite)
 			if (overwrite)
 			{
 				palettes[i] = pal;
-				strncpy(palettes[i].gameName, gameName, 17);
+				strncpy(palettes[i].gameName, gameName, sizeof(palettes[i].gameName) - 1);
+				palettes[i].gameName[sizeof(palettes[i].gameName) - 1] = 0;
 				return;
 			}
 			else
@@ -997,7 +999,8 @@ static void AddPalette(gamePalette pal, const char *gameName, bool overwrite)
 
 	palettes = (gamePalette *)realloc(palettes, sizeof(gamePalette)*(loadedPalettes+1));
 	palettes[loadedPalettes] = pal;
-	strncpy(palettes[loadedPalettes].gameName, gameName, 17);
+	strncpy(palettes[loadedPalettes].gameName, gameName, sizeof(palettes[loadedPalettes].gameName) - 1);
+	palettes[loadedPalettes].gameName[sizeof(palettes[loadedPalettes].gameName) - 1] = 0;
 	loadedPalettes++;
 }
 
@@ -1018,7 +1021,7 @@ bool LoadPalettes()
 
 	AllocSaveBuffer ();
 
-	sprintf(filepath, "%s/%s", prefpath, PAL_FILE_NAME);
+	snprintf(filepath, sizeof(filepath), "%s/%s", prefpath, PAL_FILE_NAME);
 	offset = LoadFile(filepath, SILENT);
 
 	if (offset > 0)
