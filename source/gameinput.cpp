@@ -193,8 +193,57 @@ uint32_t TMNT1Input(unsigned short pad) {
 }
 
 uint32_t TMNT2Input(unsigned short pad) {
-	// Functionally matches TMNT1 specific layout, using unified architecture
-	return TMNT1Input(pad);
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
+
+	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
+	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
+
+	if (data.hw_connected[INPUT_HW_NUNCHUK]) {
+		uint32_t hw = data.hw_buttons_h[INPUT_HW_NUNCHUK];
+		Jump = (hw & INPUT_BTN_A);
+		Attack = (fabs(data.hw_gforceX[INPUT_HW_WIIMOTE]) > 1.5);
+		SpinKick = (fabs(data.hw_gforceX[INPUT_HW_NUNCHUK]) > 0.5);
+		Roll = (hw & INPUT_TRIGGER_ZL) || (hw & INPUT_TRIGGER_L);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
+		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+		Jump = (hw & INPUT_BTN_B);
+		Attack = (hw & INPUT_BTN_A);
+		SpinKick = (hw & INPUT_BTN_X);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		Roll = (hw & (INPUT_TRIGGER_L | INPUT_TRIGGER_R | INPUT_TRIGGER_ZL | INPUT_TRIGGER_ZR));
+	} else if (data.hw_connected[INPUT_HW_WIIMOTE]) {
+		uint32_t hw = data.hw_buttons_h[INPUT_HW_WIIMOTE];
+		Jump = (hw & INPUT_BTN_A);
+		Attack = (fabs(data.hw_gforceX[INPUT_HW_WIIMOTE]) > 1.5);
+		Pause = (hw & INPUT_BTN_PLUS);
+		Select = (hw & INPUT_BTN_MINUS);
+		SpinKick = (hw & INPUT_BTN_1);
+		Roll = (hw & INPUT_BTN_2);
+	}
+
+	uint32_t gc = data.hw_buttons_h[INPUT_HW_GAMECUBE];
+	if (gc & INPUT_BTN_UP) J |= VBA_UP;
+	if (gc & INPUT_BTN_DOWN) J |= VBA_DOWN;
+	if (gc & INPUT_BTN_LEFT) J |= VBA_LEFT;
+	if (gc & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+	if (gc & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (gc & INPUT_BTN_X) Attack = true;
+	if (gc & INPUT_BTN_Y) SpinKick = true;
+	if (gc & INPUT_BTN_PLUS) Pause = true;
+	if (gc & INPUT_TRIGGER_ZR) Select = true;
+	if ((gc & INPUT_TRIGGER_L) || (gc & INPUT_TRIGGER_R)) Roll = true;
+
+	if (Jump) J |= VBA_BUTTON_A;
+	if (Attack) J |= VBA_BUTTON_B;
+	if (SpinKick || Roll) J |= VBA_BUTTON_B | VBA_BUTTON_A;
+	if (Pause) J |= VBA_BUTTON_START;
+	if (Select) J |= VBA_BUTTON_SELECT;
+
+	return J;
 }
 
 uint32_t TMNT3Input(unsigned short pad) {
