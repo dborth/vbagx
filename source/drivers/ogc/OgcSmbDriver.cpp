@@ -204,7 +204,7 @@ bool OgcSmbDriver::ensureNetworkUp()
 SmbConnectResult OgcSmbDriver::connect(const SmbShareInfo & info)
 {
 	if(info.host[0] == '\0' || info.share[0] == '\0')
-		return SmbConnectResult::InvalidEmuSettings;
+		return SmbConnectResult::InvalidSettings;
 
 	if(connected)
 	{
@@ -246,7 +246,7 @@ const char * OgcSmbDriver::connectResultMessage(SmbConnectResult result) const
 	switch(result)
 	{
 		case SmbConnectResult::Success:            return "Connected.";
-		case SmbConnectResult::InvalidEmuSettings:    return "Network share host/name is blank.";
+		case SmbConnectResult::InvalidSettings:    return "Network share host/name is blank.";
 		case SmbConnectResult::NetworkUnavailable: return "Unable to initialize network!";
 		case SmbConnectResult::ConnectFailed:      return "Failed to connect to network share.";
 		default:                                   return "Unknown network share error.";

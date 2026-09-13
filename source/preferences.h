@@ -11,7 +11,7 @@
 bool SavePrefs();
 bool LoadPrefs();
 void CreateMissingDirectories();
-void FixInvalidEmuSettings();
+void FixInvalidSettings();
 void DefaultEmuSettings();
 void ApplyEmuSettings();
 bool SavePalettes(bool silent);

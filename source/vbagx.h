@@ -217,10 +217,7 @@ struct SEmuSettings
 	char	ArtworkFolder[MAXPATHLEN]; 	//Path to artwork files
 	char	BorderFolder[MAXPATHLEN];  // Path to Super Game Boy border files
 
-	char	smbip[80];
-	char	smbuser[20];
-	char	smbpwd[20];
-	char	smbshare[20];
+	SmbShareInfo smbShare; // host/share/user/password for DEVICE_SMB
 };
 
 void ExitApp();

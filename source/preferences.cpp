@@ -193,10 +193,10 @@ preparePrefsData ()
 
 	createXMLSection("Network", "Network EmuSettings");
 
-	createXMLSetting("smbip", "Share Computer IP", EmuSettings.smbip);
-	createXMLSetting("smbshare", "Share Name", EmuSettings.smbshare);
-	createXMLSetting("smbuser", "Share Username", EmuSettings.smbuser);
-	createXMLSetting("smbpwd", "Share Password", EmuSettings.smbpwd);
+	createXMLSetting("smbip", "Share Computer IP", EmuSettings.smbShare.host);
+	createXMLSetting("smbshare", "Share Name", EmuSettings.smbShare.share);
+	createXMLSetting("smbuser", "Share Username", EmuSettings.smbShare.user);
+	createXMLSetting("smbpwd", "Share Password", EmuSettings.smbShare.password);
 
 	createXMLSection("Video", "Video EmuSettings");
 
@@ -513,10 +513,10 @@ decodePrefsData ()
 
 	// Network EmuSettings
 
-	loadXMLSetting(EmuSettings.smbip, "smbip", sizeof(EmuSettings.smbip));
-	loadXMLSetting(EmuSettings.smbshare, "smbshare", sizeof(EmuSettings.smbshare));
-	loadXMLSetting(EmuSettings.smbuser, "smbuser", sizeof(EmuSettings.smbuser));
-	loadXMLSetting(EmuSettings.smbpwd, "smbpwd", sizeof(EmuSettings.smbpwd));
+	loadXMLSetting(EmuSettings.smbShare.host, "smbip", sizeof(EmuSettings.smbShare.host));
+	loadXMLSetting(EmuSettings.smbShare.share, "smbshare", sizeof(EmuSettings.smbShare.share));
+	loadXMLSetting(EmuSettings.smbShare.user, "smbuser", sizeof(EmuSettings.smbShare.user));
+	loadXMLSetting(EmuSettings.smbShare.password, "smbpwd", sizeof(EmuSettings.smbShare.password));
 
 	// Video EmuSettings
 
@@ -615,19 +615,19 @@ decodePalsData ()
 }
 
 /****************************************************************************
- * FixInvalidEmuSettings
+ * FixInvalidSettings
  *
  * Attempts to correct at least some invalid settings - the ones that
  * might cause crashes
  ***************************************************************************/
-void FixInvalidEmuSettings()
+void FixInvalidSettings()
 {
 	if(!isValidLoadDevice(EmuSettings.LoadMethod))
 		EmuSettings.LoadMethod = DEVICE_AUTO;
 	if(!isValidSaveDevice(EmuSettings.SaveMethod))
 		EmuSettings.SaveMethod = DEVICE_AUTO;
 
-	if(strlen(EmuSettings.smbshare) == 0 || strlen(EmuSettings.smbip) == 0) {
+	if(strlen(EmuSettings.smbShare.share) == 0 || strlen(EmuSettings.smbShare.host) == 0) {
 		if(EmuSettings.LoadMethod == DEVICE_SMB) {
 			EmuSettings.LoadMethod = DEVICE_AUTO;
 		}
@@ -790,7 +790,7 @@ bool SavePrefs()
 	if(device == DEVICE_AUTO)
 		return false;
 
-	FixInvalidEmuSettings();
+	FixInvalidSettings();
 
 	AllocSaveBuffer ();
 	datasize = preparePrefsData ();
@@ -884,7 +884,7 @@ bool LoadPrefs()
 		return false;
 	}
 
-	FixInvalidEmuSettings();
+	FixInvalidSettings();
 	ApplyEmuSettings();
 
 #ifdef HW_RVL
