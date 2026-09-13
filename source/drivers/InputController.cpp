@@ -1,6 +1,6 @@
 /****************************************************************************
- * libgui
- * Daryl Borth 2009-2026
+ * Platform Abstraction Layer
+ * Daryl Borth 2026
  * InputController.cpp
  ***************************************************************************/
 
@@ -100,7 +100,6 @@ bool InputController::right() const {
 	uint32_t targetBtn = sideways ? INPUT_BTN_DOWN : INPUT_BTN_RIGHT;
 	return processDirection(targetBtn, currentData.stickX, true);
 }
-
 void InputController::setGameRumble(int frames) {
 	platform->getInput()->setGameRumble(channel, frames);
 }

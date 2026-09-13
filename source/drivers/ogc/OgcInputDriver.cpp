@@ -1,8 +1,8 @@
 /****************************************************************************
- * libgui - drivers/ogc
+ * Platform Abstraction Layer (OGC driver)
  * Daryl Borth 2009-2026
  * OgcInputDriver.cpp
- * Hardware Translation Layer (Driver)
+ *
  * Wii/GameCube controller management and normalization
  ***************************************************************************/
 
@@ -13,6 +13,7 @@
 #include <ogcsys.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
+#include <ogc/conf.h>
 
 #include "OgcInputDriver.h"
 #include "../Platform.h"
@@ -20,7 +21,7 @@
 
 #ifdef HW_RVL
 #include "wiidrc.h"
-#include "WiiSystemEvents.h"
+#include "WiiPlatform.h"
 #endif
 
 extern "C" {
