@@ -30,7 +30,7 @@ struct SmbShareInfo
 enum class SmbConnectResult
 {
 	Success,
-	InvalidSettings,     //!< host or share is empty - nothing to try
+	InvalidEmuSettings,     //!< host or share is empty - nothing to try
 	NetworkUnavailable,  //!< no usable network connection at all
 	ConnectFailed        //!< network's up but the server/share/credentials didn't work
 };

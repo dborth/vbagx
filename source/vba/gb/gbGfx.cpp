@@ -47,7 +47,7 @@ u8 gbInvertTab[256] = {
 u16 gbLineMix[160];
 u16 gbWindowColor[160];
 extern int inUseRegister_WY;
-extern int layerSettings;
+extern int layerEmuSettings;
 
 void gbRenderLine()
 {
@@ -110,7 +110,7 @@ void gbRenderLine()
   int tile_pattern_address = tile_pattern + tile * 16 + by*2;
 
   if(register_LCDC & 0x80) {
-    if((register_LCDC & 0x01 || gbCgbMode) && (layerSettings & 0x0100)) {
+    if((register_LCDC & 0x01 || gbCgbMode) && (layerEmuSettings & 0x0100)) {
       while(x < 160) {
 
 
@@ -241,7 +241,7 @@ void gbRenderLine()
     // (tested on real hardware)
     // This fixes Last Bible II & Zankurou Musouken
     if((register_LCDC & 0x01 || gbCgbMode) && (register_LCDC & 0x20) &&
-        (layerSettings & 0x2000) && (gbWindowLine != -2)) {
+        (layerEmuSettings & 0x2000) && (gbWindowLine != -2)) {
       int i = 0;
       // Fix (accurate emulation) for most of the window display problems
       // (ie. Zen - Intergalactic Ninja, Urusei Yatsura...).
@@ -598,7 +598,7 @@ void gbDrawSprites(bool draw)
   if(!(register_LCDC & 0x80))
     return;
 
-  if((register_LCDC & 2) && (layerSettings & 0x1000)) {
+  if((register_LCDC & 2) && (layerEmuSettings & 0x1000)) {
     int yc = register_LY;
 
     int address = 0;

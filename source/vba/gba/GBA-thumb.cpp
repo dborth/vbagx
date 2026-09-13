@@ -1365,7 +1365,7 @@ int thumbExecute() {
 
     bool useJIT = false;
 
-    if(Settings.DynamicRecompilation) {
+    if(EmuSettings.DynamicRecompilation) {
     	// Default to true upon entering the loop. This ensures that if the
     	// scheduler previously yielded for an interrupt, the interrupt handler
     	// (a valid Trace Header) is allowed to be JIT compiled.
@@ -1483,7 +1483,7 @@ int thumbExecute() {
 		JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, clockTicks);
 		PROFILER_ADD_TIME(timeSpentFallback, execFallbackStart);
 
-		if(Settings.DynamicRecompilation) {
+		if(EmuSettings.DynamicRecompilation) {
 			// Discontinuity Check
 			// If the instruction modified the PC non-linearly, a branch occurred.
 			// This marks the beginning of a new logical block boundary.

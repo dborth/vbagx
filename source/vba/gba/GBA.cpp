@@ -729,7 +729,7 @@ static bool CPUReadState(gzFile gzFile)
   }
 
   // set pointers!
-  layerEnable = layerSettings & DISPCNT;
+  layerEnable = layerEmuSettings & DISPCNT;
 
   CPUUpdateRender();
   CPUUpdateRenderBuffers(true);
@@ -1335,7 +1335,7 @@ void CPUCompareVCOUNT()
   if (layerEnableDelay > 0) {
       --layerEnableDelay;
       if (layerEnableDelay == 1)
-          layerEnable = layerSettings & DISPCNT;
+          layerEnable = layerEmuSettings & DISPCNT;
   }
 }
 
@@ -1594,9 +1594,9 @@ void CPUUpdateRegister(u32 address, u16 value)
 
       if(changeBGon) {
         layerEnableDelay = 4;
-        layerEnable = layerSettings & value & (~changeBGon);
+        layerEnable = layerEmuSettings & value & (~changeBGon);
       } else {
-        layerEnable = layerSettings & value;
+        layerEnable = layerEmuSettings & value;
         // CPUUpdateTicks();
       }
 
@@ -2445,7 +2445,7 @@ void CPUReset()
   windowOn = false;
   frameCount = 0;
   saveType = 0;
-  layerEnable = DISPCNT & layerSettings;
+  layerEnable = DISPCNT & layerEmuSettings;
 
   CPUUpdateRenderBuffers(true);
 

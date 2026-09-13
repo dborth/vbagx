@@ -11,9 +11,9 @@
 bool SavePrefs();
 bool LoadPrefs();
 void CreateMissingDirectories();
-void FixInvalidSettings();
-void DefaultSettings();
-void ApplySettings();
+void FixInvalidEmuSettings();
+void DefaultEmuSettings();
+void ApplyEmuSettings();
 bool SavePalettes(bool silent);
 bool LoadPalettes();
 void SetPalette(const char *gameName);

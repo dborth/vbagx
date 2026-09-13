@@ -94,8 +94,8 @@ int getNextSaveDevice(int device)
 ****************************************************************************/
 int autoLoadMethod()
 {
-	if(Settings.LoadMethod > DEVICE_AUTO && isValidLoadDevice(Settings.LoadMethod)) {
-		return Settings.LoadMethod;
+	if(EmuSettings.LoadMethod > DEVICE_AUTO && isValidLoadDevice(EmuSettings.LoadMethod)) {
+		return EmuSettings.LoadMethod;
 	}
 
 	char defaultFolderPath[MAXPATHLEN];
@@ -129,7 +129,7 @@ int autoLoadMethod()
 		}
 	}
 
-	Settings.LoadMethod = device; // load device found for later use
+	EmuSettings.LoadMethod = device; // load device found for later use
 	CancelAction();
 	return device;
 }
@@ -141,8 +141,8 @@ int autoLoadMethod()
 ****************************************************************************/
 int autoSaveMethod()
 {
-	if(Settings.SaveMethod > DEVICE_AUTO && isValidSaveDevice(Settings.SaveMethod)) {
-		return Settings.SaveMethod;
+	if(EmuSettings.SaveMethod > DEVICE_AUTO && isValidSaveDevice(EmuSettings.SaveMethod)) {
+		return EmuSettings.SaveMethod;
 	}
 
 	char defaultFolderPath[MAXPATHLEN];
@@ -176,7 +176,7 @@ int autoSaveMethod()
 		}
 	}
 
-	Settings.SaveMethod = device; // save device found for later use
+	EmuSettings.SaveMethod = device; // save device found for later use
 
 	CancelAction();
 	return device;
@@ -288,8 +288,8 @@ int UpdateDirName()
 	
 			/* remove last subdirectory name */
 			size = strlen(browser.dir) - size - 1;
-			strncpy(Settings.LastFileLoaded, &browser.dir[size], strlen(browser.dir) - size - 1); //set as loaded file the previous dir
-			Settings.LastFileLoaded[strlen(browser.dir) - size - 1] = 0;
+			strncpy(EmuSettings.LastFileLoaded, &browser.dir[size], strlen(browser.dir) - size - 1); //set as loaded file the previous dir
+			EmuSettings.LastFileLoaded[strlen(browser.dir) - size - 1] = 0;
 			browser.dir[size] = 0;
 		}
 
@@ -351,7 +351,7 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 		if (loadedname == nullptr) loadedname = loadedpath;
 		
 		// Check path length
-		if ((strlen(platform->getFileSystem()->getMountPath(Settings.LoadMethod)) + strlen(Settings.BorderFolder) + strlen(loadedname)) >= MAXPATHLEN) {
+		if ((strlen(platform->getFileSystem()->getMountPath(EmuSettings.LoadMethod)) + strlen(EmuSettings.BorderFolder) + strlen(loadedname)) >= MAXPATHLEN) {
 			ErrorPrompt("Maximum filepath length reached!");
 			filepath[0] = 0;
 			return false;
@@ -360,18 +360,18 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 		StripExt(file, loadedname);
 		char borderFile[MAXPATHLEN];
 		snprintf(borderFile, sizeof(borderFile), "%s.png", file);
-		platform->getFileSystem()->getPath(temppath, Settings.LoadMethod, Settings.BorderFolder, borderFile);
+		platform->getFileSystem()->getPath(temppath, EmuSettings.LoadMethod, EmuSettings.BorderFolder, borderFile);
 	}
 	else
 	{
-		if(Settings.SaveMethod == DEVICE_AUTO)
+		if(EmuSettings.SaveMethod == DEVICE_AUTO)
 			return false;
 
 		switch(type)
 		{
 			case FILE_SRAM:
 			case FILE_STATE:
-				sprintf(folder, Settings.SaveFolder);
+				sprintf(folder, EmuSettings.SaveFolder);
 
 				if(type == FILE_SRAM) sprintf(ext, "sav");
 				else sprintf(ext, "sgm");
@@ -381,7 +381,7 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 					if(filenum == -1)
 						snprintf(file, sizeof(file), "%s.%s", filename, ext);
 					else if(filenum == 0)
-						if (!Settings.AppendAuto)
+						if (!EmuSettings.AppendAuto)
 						{
 							snprintf(file, sizeof(file), "%s.%s", filename, ext);
 						}
@@ -399,11 +399,11 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 				break;
 			case FILE_CHEAT:
 				if(strlen(ROMFilename) == 0) return false;
-				sprintf(folder, Settings.CheatFolder);
+				sprintf(folder, EmuSettings.CheatFolder);
 				snprintf(file, sizeof(file), "%s.cht", ROMFilename);
 				break;
 		}
-		platform->getFileSystem()->getPath(temppath, Settings.SaveMethod, folder, file);
+		platform->getFileSystem()->getPath(temppath, EmuSettings.SaveMethod, folder, file);
 	}
 	CleanupPath(temppath); // cleanup path
 	snprintf(filepath, MAXPATHLEN, "%s", temppath);
@@ -593,7 +593,7 @@ int BrowserLoadFile()
 
 	// store the filename (w/o ext) - used for sram/freeze naming
 	StripExt(ROMFilename, browserList[browser.selIndex].filename);
-	snprintf(Settings.LastFileLoaded, MAXPATHLEN, "%s", browserList[browser.selIndex].filename);
+	snprintf(EmuSettings.LastFileLoaded, MAXPATHLEN, "%s", browserList[browser.selIndex].filename);
 
 	ROMLoaded = LoadVBAROM();
 
@@ -608,9 +608,9 @@ int BrowserLoadFile()
 	}
 	else
 	{
-		if (Settings.AutoLoad == AUTOLOAD_SRAM)
+		if (EmuSettings.AutoLoad == AUTOLOAD_SRAM)
 			LoadBatteryOrStateAuto(FILE_SRAM, SILENT);
-		else if (Settings.AutoLoad == AUTOLOAD_STATE)
+		else if (EmuSettings.AutoLoad == AUTOLOAD_STATE)
 			LoadBatteryOrStateAuto(FILE_STATE, SILENT);
 
 		LoadCheatFile();
@@ -736,15 +736,15 @@ int BrowserChangeFolder()
 	
 	if(browser.dir[0] == 0)
 	{
-		Settings.LoadFolder[0] = 0;
-		Settings.LoadMethod = DEVICE_AUTO;
+		EmuSettings.LoadFolder[0] = 0;
+		EmuSettings.LoadMethod = DEVICE_AUTO;
 	}
 	else
 	{
 		char * path = StripDevice(browser.dir);
 		if(path != nullptr)
-			strcpy(Settings.LoadFolder, path);
-		FindDevice(browser.dir, &Settings.LoadMethod);
+			strcpy(EmuSettings.LoadFolder, path);
+		FindDevice(browser.dir, &EmuSettings.LoadMethod);
 	}
 
 	return browser.numEntries;
@@ -757,13 +757,13 @@ int BrowserChangeFolder()
 int
 OpenGameList ()
 {
-	int device = Settings.LoadMethod;
+	int device = EmuSettings.LoadMethod;
 
 	if(device > 0 && ChangeInterface(device, NOTSILENT)) {
 		// change current dir to roms directory
-		platform->getFileSystem()->getPath(browser.dir, device, Settings.LoadFolder, "");
+		platform->getFileSystem()->getPath(browser.dir, device, EmuSettings.LoadFolder, "");
 
-		if(strlen(Settings.LoadFolder) > 0) {
+		if(strlen(EmuSettings.LoadFolder) > 0) {
 			DIR *dir = opendir(browser.dir);
 
 			if(dir == nullptr) {
@@ -799,7 +799,7 @@ bool AutoloadGame(char* filepath, char* filename) {
 	}
 
 	const char *dirPtr = colon + 2;
-	snprintf(Settings.LoadFolder, sizeof(Settings.LoadFolder), "%s", dirPtr);
+	snprintf(EmuSettings.LoadFolder, sizeof(EmuSettings.LoadFolder), "%s", dirPtr);
 
 	OpenGameList();
 

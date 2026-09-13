@@ -431,7 +431,7 @@ void gbSetObj1Palette(u8 value, bool ColoursChanged = false) {
 }
 
 bool StartColorizing() {
-  if ((!Settings.colorize) || gbSgbMode || gbCgbMode) return false;
+  if ((!EmuSettings.colorize) || gbSgbMode || gbCgbMode) return false;
   if (ColorizeGameboy) return true;
   ColorizeGameboy = true;
   gbSetBGPalette(oldBgp);

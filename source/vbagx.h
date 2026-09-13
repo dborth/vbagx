@@ -165,7 +165,7 @@ enum {
 	LANG_LENGTH
 };
 
-struct SSettings
+struct SEmuSettings
 {
 	int		AutoLoad;
 	int		AutoSave;
@@ -224,7 +224,7 @@ struct SSettings
 };
 
 void ExitApp();
-extern struct SSettings Settings;
+extern struct SEmuSettings EmuSettings;
 enum class AppRequest { NONE, MENU };
 extern AppRequest appRequest;
 extern char appPath[];

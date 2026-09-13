@@ -35,7 +35,7 @@
 #include "drivers/ogc/videofilters.h"
 #endif
 
-struct SSettings Settings;
+struct SEmuSettings EmuSettings;
 static gamePalette *palettes = nullptr;
 static int loadedPalettes = 0;
 
@@ -175,78 +175,78 @@ preparePrefsData ()
 	mxmlElementSetAttr(data, "app", APPNAME);
 	mxmlElementSetAttr(data, "version", APPVERSION);
 
-	createXMLSection("File", "File Settings");
+	createXMLSection("File", "File EmuSettings");
 
-	createXMLSetting("AutoLoad", "Auto Load", toStr(Settings.AutoLoad));
-	createXMLSetting("AutoSave", "Auto Save", toStr(Settings.AutoSave));
-	createXMLSetting("LoadMethod", "Load Method", toStr(Settings.LoadMethod));
-	createXMLSetting("SaveMethod", "Save Method", toStr(Settings.SaveMethod));
-	createXMLSetting("LoadFolder", "Load Folder", Settings.LoadFolder);
-	createXMLSetting("LastFileLoaded", "Last File Loaded", Settings.LastFileLoaded);
-	createXMLSetting("SaveFolder", "Save Folder", Settings.SaveFolder);
-	createXMLSetting("AppendAuto", "Append Auto to .SAV Files", BtoStr(Settings.AppendAuto));
-	createXMLSetting("CheatFolder", "Cheats Folder", Settings.CheatFolder);
-	createXMLSetting("ScreenshotsFolder", "Screenshots Folder", Settings.ScreenshotsFolder);
-	createXMLSetting("BorderFolder", "SGB Borders Folder", Settings.BorderFolder);
-	createXMLSetting("CoverFolder", "Covers Folder", Settings.CoverFolder);
-	createXMLSetting("ArtworkFolder", "Artwork Folder", Settings.ArtworkFolder);
+	createXMLSetting("AutoLoad", "Auto Load", toStr(EmuSettings.AutoLoad));
+	createXMLSetting("AutoSave", "Auto Save", toStr(EmuSettings.AutoSave));
+	createXMLSetting("LoadMethod", "Load Method", toStr(EmuSettings.LoadMethod));
+	createXMLSetting("SaveMethod", "Save Method", toStr(EmuSettings.SaveMethod));
+	createXMLSetting("LoadFolder", "Load Folder", EmuSettings.LoadFolder);
+	createXMLSetting("LastFileLoaded", "Last File Loaded", EmuSettings.LastFileLoaded);
+	createXMLSetting("SaveFolder", "Save Folder", EmuSettings.SaveFolder);
+	createXMLSetting("AppendAuto", "Append Auto to .SAV Files", BtoStr(EmuSettings.AppendAuto));
+	createXMLSetting("CheatFolder", "Cheats Folder", EmuSettings.CheatFolder);
+	createXMLSetting("ScreenshotsFolder", "Screenshots Folder", EmuSettings.ScreenshotsFolder);
+	createXMLSetting("BorderFolder", "SGB Borders Folder", EmuSettings.BorderFolder);
+	createXMLSetting("CoverFolder", "Covers Folder", EmuSettings.CoverFolder);
+	createXMLSetting("ArtworkFolder", "Artwork Folder", EmuSettings.ArtworkFolder);
 
-	createXMLSection("Network", "Network Settings");
+	createXMLSection("Network", "Network EmuSettings");
 
-	createXMLSetting("smbip", "Share Computer IP", Settings.smbip);
-	createXMLSetting("smbshare", "Share Name", Settings.smbshare);
-	createXMLSetting("smbuser", "Share Username", Settings.smbuser);
-	createXMLSetting("smbpwd", "Share Password", Settings.smbpwd);
+	createXMLSetting("smbip", "Share Computer IP", EmuSettings.smbip);
+	createXMLSetting("smbshare", "Share Name", EmuSettings.smbshare);
+	createXMLSetting("smbuser", "Share Username", EmuSettings.smbuser);
+	createXMLSetting("smbpwd", "Share Password", EmuSettings.smbpwd);
 
-	createXMLSection("Video", "Video Settings");
+	createXMLSection("Video", "Video EmuSettings");
 
-	createXMLSetting("videoMode", "Output Mode", toStr(Settings.videoMode));
-	createXMLSetting("videoAspectRatioCorrection", "Aspect Ratio Correction", toStr(Settings.videoAspectRatioCorrection));
-	createXMLSetting("videoBilinearFilter", "Bilinear Filtering", BtoStr(Settings.videoBilinearFilter));
-	createXMLSetting("videoHardwareSoften", "Hardware Soften", toStr(Settings.videoHardwareSoften));
-	createXMLSetting("videoScanlines", "Scanlines", BtoStr(Settings.videoScanlines));
-	createXMLSetting("videoUpscalingFilter", "Upscaling Filter Method", toStr(Settings.videoUpscalingFilter));
-	createXMLSetting("gbaZoomHor", "GBA Horizontal Zoom Level", FtoStr(Settings.gbaZoomHor));
-	createXMLSetting("gbaZoomVert", "GBA Vertical Zoom Level", FtoStr(Settings.gbaZoomVert));
-	createXMLSetting("gbZoomHor", "GB Horizontal Zoom Level", FtoStr(Settings.gbZoomHor));
-	createXMLSetting("gbZoomVert", "GB Vertical Zoom Level", FtoStr(Settings.gbZoomVert));
-	createXMLSetting("gbFixed", "GB Fixed Pixel Ratio", toStr(Settings.gbFixed));
-	createXMLSetting("gbaFixed", "GBA Fixed Pixel Ratio", toStr(Settings.gbaFixed));
-	createXMLSetting("videoXshift", "Horizontal Video Shift", toStr(Settings.videoXshift));
-	createXMLSetting("videoYshift", "Vertical Video Shift", toStr(Settings.videoYshift));
+	createXMLSetting("videoMode", "Output Mode", toStr(EmuSettings.videoMode));
+	createXMLSetting("videoAspectRatioCorrection", "Aspect Ratio Correction", toStr(EmuSettings.videoAspectRatioCorrection));
+	createXMLSetting("videoBilinearFilter", "Bilinear Filtering", BtoStr(EmuSettings.videoBilinearFilter));
+	createXMLSetting("videoHardwareSoften", "Hardware Soften", toStr(EmuSettings.videoHardwareSoften));
+	createXMLSetting("videoScanlines", "Scanlines", BtoStr(EmuSettings.videoScanlines));
+	createXMLSetting("videoUpscalingFilter", "Upscaling Filter Method", toStr(EmuSettings.videoUpscalingFilter));
+	createXMLSetting("gbaZoomHor", "GBA Horizontal Zoom Level", FtoStr(EmuSettings.gbaZoomHor));
+	createXMLSetting("gbaZoomVert", "GBA Vertical Zoom Level", FtoStr(EmuSettings.gbaZoomVert));
+	createXMLSetting("gbZoomHor", "GB Horizontal Zoom Level", FtoStr(EmuSettings.gbZoomHor));
+	createXMLSetting("gbZoomVert", "GB Vertical Zoom Level", FtoStr(EmuSettings.gbZoomVert));
+	createXMLSetting("gbFixed", "GB Fixed Pixel Ratio", toStr(EmuSettings.gbFixed));
+	createXMLSetting("gbaFixed", "GBA Fixed Pixel Ratio", toStr(EmuSettings.gbaFixed));
+	createXMLSetting("videoXshift", "Horizontal Video Shift", toStr(EmuSettings.videoXshift));
+	createXMLSetting("videoYshift", "Vertical Video Shift", toStr(EmuSettings.videoYshift));
 
-	createXMLSection("Menu", "Menu Settings");
+	createXMLSection("Menu", "Menu EmuSettings");
 
 #ifdef HW_RVL
-	createXMLSetting("wiimoteOrientation", "Wiimote Orientation", toStr(Settings.wiimoteOrientation));
+	createXMLSetting("wiimoteOrientation", "Wiimote Orientation", toStr(EmuSettings.wiimoteOrientation));
 #endif
 #if defined(HW_RVL) || defined(HW_DOL)
-	createXMLSetting("ExitAction", "Exit Action", toStr(Settings.ExitAction));
+	createXMLSetting("ExitAction", "Exit Action", toStr(EmuSettings.ExitAction));
 #endif
-	createXMLSetting("MusicVolume", "Music Volume", toStr(Settings.MusicVolume));
-	createXMLSetting("SFXVolume", "Sound Effects Volume", toStr(Settings.SFXVolume));
-	createXMLSetting("Rumble", "Rumble", BtoStr(Settings.Rumble));
-	createXMLSetting("language", "Language", toStr(Settings.language));
-	createXMLSetting("PreviewImage", "Preview Image", toStr(Settings.PreviewImage));
+	createXMLSetting("MusicVolume", "Music Volume", toStr(EmuSettings.MusicVolume));
+	createXMLSetting("SFXVolume", "Sound Effects Volume", toStr(EmuSettings.SFXVolume));
+	createXMLSetting("Rumble", "Rumble", BtoStr(EmuSettings.Rumble));
+	createXMLSetting("language", "Language", toStr(EmuSettings.language));
+	createXMLSetting("PreviewImage", "Preview Image", toStr(EmuSettings.PreviewImage));
 
-	createXMLSection("Emulation", "Emulation Settings");
+	createXMLSection("Emulation", "Emulation EmuSettings");
 
-	createXMLSetting("DynamicRecompilation", "Dynamic Recompilation (JIT)", BtoStr(Settings.DynamicRecompilation));
-	createXMLSetting("gbaFrameskip", "GBA Frameskip", BtoStr(Settings.gbaFrameskip));
+	createXMLSetting("DynamicRecompilation", "Dynamic Recompilation (JIT)", BtoStr(EmuSettings.DynamicRecompilation));
+	createXMLSetting("gbaFrameskip", "GBA Frameskip", BtoStr(EmuSettings.gbaFrameskip));
 
-	createXMLSetting("GBHardware", "Hardware (GB/GBC)", toStr(Settings.GBHardware));
-	createXMLSetting("SGBBorder", "Border (GB/GBC)", toStr(Settings.SGBBorder));
-	createXMLSetting("BasicPalette", "Basic Color Palette for GB", toStr(Settings.BasicPalette));
-	createXMLSetting("colorize", "Colorize Mono Gameboy", BtoStr(Settings.colorize));
+	createXMLSetting("GBHardware", "Hardware (GB/GBC)", toStr(EmuSettings.GBHardware));
+	createXMLSetting("SGBBorder", "Border (GB/GBC)", toStr(EmuSettings.SGBBorder));
+	createXMLSetting("BasicPalette", "Basic Color Palette for GB", toStr(EmuSettings.BasicPalette));
+	createXMLSetting("colorize", "Colorize Mono Gameboy", BtoStr(EmuSettings.colorize));
 
-	createXMLSetting("DisplayFrameRate", "Show Framerate", toStr(Settings.DisplayFrameRate));
-	createXMLSetting("TurboModeEnabled", "Turbo Mode Enabled", BtoStr(Settings.TurboModeEnabled));
-	createXMLSetting("OffsetMinutesUTC", "Offset from UTC (minutes)", toStr(Settings.OffsetMinutesUTC));
+	createXMLSetting("DisplayFrameRate", "Show Framerate", toStr(EmuSettings.DisplayFrameRate));
+	createXMLSetting("TurboModeEnabled", "Turbo Mode Enabled", BtoStr(EmuSettings.TurboModeEnabled));
+	createXMLSetting("OffsetMinutesUTC", "Offset from UTC (minutes)", toStr(EmuSettings.OffsetMinutesUTC));
 
-	createXMLSection("Controller", "Controller Settings");
+	createXMLSection("Controller", "Controller EmuSettings");
 
 	createXMLController(btnmap[INPUT_HW_GAMECUBE], "gcpadmapping", "GameCube Pad");
-	createXMLSetting("WiiControls", "Match Wii Game", BtoStr(Settings.WiiControls));
+	createXMLSetting("WiiControls", "Match Wii Game", BtoStr(EmuSettings.WiiControls));
 	createXMLController(btnmap[INPUT_HW_WIIMOTE], "wmpadmapping", "Wiimote");
 	createXMLController(btnmap[INPUT_HW_CLASSIC], "ccpadmapping", "Classic Controller");
 	createXMLController(btnmap[INPUT_HW_NUNCHUK], "ncpadmapping", "Nunchuk");
@@ -470,11 +470,11 @@ static void loadXMLPaletteFromSection(gamePalette &pal)
 	}
 }
 
-void ApplySettings() {
-	platform->getInput()->setWiimoteOrientation(Settings.wiimoteOrientation);
-	platform->getInput()->setRumbleEnabled(Settings.Rumble);
-	GuiSound::setDefaultVolume(SOUND::OGG, Settings.MusicVolume);
-	GuiSound::setDefaultVolume(SOUND::PCM, Settings.SFXVolume);
+void ApplyEmuSettings() {
+	platform->getInput()->setWiimoteOrientation(EmuSettings.wiimoteOrientation);
+	platform->getInput()->setRumbleEnabled(EmuSettings.Rumble);
+	GuiSound::setDefaultVolume(SOUND::OGG, EmuSettings.MusicVolume);
+	GuiSound::setDefaultVolume(SOUND::PCM, EmuSettings.SFXVolume);
 	platform->getVideo()->startMenuVideo();
 	ChangeLanguage();
 	InitialisePalette();
@@ -495,83 +495,83 @@ decodePrefsData ()
 		return false;
 	}
 
-	// File Settings
+	// File EmuSettings
 
-	loadXMLSetting(&Settings.AutoLoad, "AutoLoad");
-	loadXMLSetting(&Settings.AutoSave, "AutoSave");
-	loadXMLSetting(&Settings.LoadMethod, "LoadMethod");
-	loadXMLSetting(&Settings.SaveMethod, "SaveMethod");
-	loadXMLSetting(Settings.LoadFolder, "LoadFolder", sizeof(Settings.LoadFolder));
-	loadXMLSetting(Settings.LastFileLoaded, "LastFileLoaded", sizeof(Settings.LastFileLoaded));
-	loadXMLSetting(Settings.SaveFolder, "SaveFolder", sizeof(Settings.SaveFolder));
-	loadXMLSetting(&Settings.AppendAuto, "AppendAuto");
-	loadXMLSetting(Settings.CheatFolder, "CheatFolder", sizeof(Settings.CheatFolder));
-	loadXMLSetting(Settings.ScreenshotsFolder, "ScreenshotsFolder", sizeof(Settings.ScreenshotsFolder));
-	loadXMLSetting(Settings.BorderFolder, "BorderFolder", sizeof(Settings.BorderFolder));
-	loadXMLSetting(Settings.CoverFolder, "CoverFolder", sizeof(Settings.CoverFolder));
-	loadXMLSetting(Settings.ArtworkFolder, "ArtworkFolder", sizeof(Settings.ArtworkFolder));
+	loadXMLSetting(&EmuSettings.AutoLoad, "AutoLoad");
+	loadXMLSetting(&EmuSettings.AutoSave, "AutoSave");
+	loadXMLSetting(&EmuSettings.LoadMethod, "LoadMethod");
+	loadXMLSetting(&EmuSettings.SaveMethod, "SaveMethod");
+	loadXMLSetting(EmuSettings.LoadFolder, "LoadFolder", sizeof(EmuSettings.LoadFolder));
+	loadXMLSetting(EmuSettings.LastFileLoaded, "LastFileLoaded", sizeof(EmuSettings.LastFileLoaded));
+	loadXMLSetting(EmuSettings.SaveFolder, "SaveFolder", sizeof(EmuSettings.SaveFolder));
+	loadXMLSetting(&EmuSettings.AppendAuto, "AppendAuto");
+	loadXMLSetting(EmuSettings.CheatFolder, "CheatFolder", sizeof(EmuSettings.CheatFolder));
+	loadXMLSetting(EmuSettings.ScreenshotsFolder, "ScreenshotsFolder", sizeof(EmuSettings.ScreenshotsFolder));
+	loadXMLSetting(EmuSettings.BorderFolder, "BorderFolder", sizeof(EmuSettings.BorderFolder));
+	loadXMLSetting(EmuSettings.CoverFolder, "CoverFolder", sizeof(EmuSettings.CoverFolder));
+	loadXMLSetting(EmuSettings.ArtworkFolder, "ArtworkFolder", sizeof(EmuSettings.ArtworkFolder));
 
-	// Network Settings
+	// Network EmuSettings
 
-	loadXMLSetting(Settings.smbip, "smbip", sizeof(Settings.smbip));
-	loadXMLSetting(Settings.smbshare, "smbshare", sizeof(Settings.smbshare));
-	loadXMLSetting(Settings.smbuser, "smbuser", sizeof(Settings.smbuser));
-	loadXMLSetting(Settings.smbpwd, "smbpwd", sizeof(Settings.smbpwd));
+	loadXMLSetting(EmuSettings.smbip, "smbip", sizeof(EmuSettings.smbip));
+	loadXMLSetting(EmuSettings.smbshare, "smbshare", sizeof(EmuSettings.smbshare));
+	loadXMLSetting(EmuSettings.smbuser, "smbuser", sizeof(EmuSettings.smbuser));
+	loadXMLSetting(EmuSettings.smbpwd, "smbpwd", sizeof(EmuSettings.smbpwd));
 
-	// Video Settings
+	// Video EmuSettings
 
-	loadXMLSetting(&Settings.videoMode, "videoMode");
-	loadXMLSetting(&Settings.videoAspectRatioCorrection, "videoAspectRatioCorrection");
-	loadXMLSetting(&Settings.videoBilinearFilter, "videoBilinearFilter");
-	loadXMLSetting(&Settings.videoHardwareSoften, "videoHardwareSoften");
-	loadXMLSetting(&Settings.videoUpscalingFilter, "videoUpscalingFilter");
-	loadXMLSetting(&Settings.videoScanlines, "videoScanlines");
-	loadXMLSetting(&Settings.gbaZoomHor, "gbaZoomHor");
-	loadXMLSetting(&Settings.gbaZoomVert, "gbaZoomVert");
-	loadXMLSetting(&Settings.gbZoomHor, "gbZoomHor");
-	loadXMLSetting(&Settings.gbZoomVert, "gbZoomVert");
-	loadXMLSetting(&Settings.gbaFixed, "gbaFixed");
-	loadXMLSetting(&Settings.gbFixed, "gbFixed");
-	loadXMLSetting(&Settings.videoXshift, "videoXshift");
-	loadXMLSetting(&Settings.videoYshift, "videoYshift");
+	loadXMLSetting(&EmuSettings.videoMode, "videoMode");
+	loadXMLSetting(&EmuSettings.videoAspectRatioCorrection, "videoAspectRatioCorrection");
+	loadXMLSetting(&EmuSettings.videoBilinearFilter, "videoBilinearFilter");
+	loadXMLSetting(&EmuSettings.videoHardwareSoften, "videoHardwareSoften");
+	loadXMLSetting(&EmuSettings.videoUpscalingFilter, "videoUpscalingFilter");
+	loadXMLSetting(&EmuSettings.videoScanlines, "videoScanlines");
+	loadXMLSetting(&EmuSettings.gbaZoomHor, "gbaZoomHor");
+	loadXMLSetting(&EmuSettings.gbaZoomVert, "gbaZoomVert");
+	loadXMLSetting(&EmuSettings.gbZoomHor, "gbZoomHor");
+	loadXMLSetting(&EmuSettings.gbZoomVert, "gbZoomVert");
+	loadXMLSetting(&EmuSettings.gbaFixed, "gbaFixed");
+	loadXMLSetting(&EmuSettings.gbFixed, "gbFixed");
+	loadXMLSetting(&EmuSettings.videoXshift, "videoXshift");
+	loadXMLSetting(&EmuSettings.videoYshift, "videoYshift");
 
-	// Menu Settings
+	// Menu EmuSettings
 
 #ifdef HW_RVL
-	loadXMLSetting(&Settings.wiimoteOrientation, "WiimoteOrientation");
+	loadXMLSetting(&EmuSettings.wiimoteOrientation, "WiimoteOrientation");
 #endif
 #if defined(HW_RVL) || defined(HW_DOL)
-	loadXMLSetting(&Settings.ExitAction, "ExitAction");
+	loadXMLSetting(&EmuSettings.ExitAction, "ExitAction");
 #endif
-	loadXMLSetting(&Settings.MusicVolume, "MusicVolume");
-	loadXMLSetting(&Settings.SFXVolume, "SFXVolume");
-	loadXMLSetting(&Settings.Rumble, "Rumble");
-	loadXMLSetting(&Settings.language, "language");
-	loadXMLSetting(&Settings.PreviewImage, "PreviewImage");
+	loadXMLSetting(&EmuSettings.MusicVolume, "MusicVolume");
+	loadXMLSetting(&EmuSettings.SFXVolume, "SFXVolume");
+	loadXMLSetting(&EmuSettings.Rumble, "Rumble");
+	loadXMLSetting(&EmuSettings.language, "language");
+	loadXMLSetting(&EmuSettings.PreviewImage, "PreviewImage");
 
-	// Controller Settings
+	// Controller EmuSettings
 
 	loadXMLController(btnmap[INPUT_HW_GAMECUBE], "gcpadmapping");
-	loadXMLSetting(&Settings.WiiControls, "WiiControls");
+	loadXMLSetting(&EmuSettings.WiiControls, "WiiControls");
 	loadXMLController(btnmap[INPUT_HW_WIIMOTE], "wmpadmapping");
 	loadXMLController(btnmap[INPUT_HW_CLASSIC], "ccpadmapping");
 	loadXMLController(btnmap[INPUT_HW_NUNCHUK], "ncpadmapping");
 	loadXMLController(btnmap[INPUT_HW_WUPC], "wupcpadmapping");
 	loadXMLController(btnmap[INPUT_HW_DRC], "drcpadmapping");
 
-	// Emulation Settings
+	// Emulation EmuSettings
 
-	loadXMLSetting(&Settings.DynamicRecompilation, "DynamicRecompilation");
-	loadXMLSetting(&Settings.gbaFrameskip, "gbaFrameskip");
+	loadXMLSetting(&EmuSettings.DynamicRecompilation, "DynamicRecompilation");
+	loadXMLSetting(&EmuSettings.gbaFrameskip, "gbaFrameskip");
 
-	loadXMLSetting(&Settings.GBHardware, "GBHardware");
-	loadXMLSetting(&Settings.SGBBorder, "SGBBorder");
-	loadXMLSetting(&Settings.colorize, "colorize");
-	loadXMLSetting(&Settings.BasicPalette, "BasicPalette");
+	loadXMLSetting(&EmuSettings.GBHardware, "GBHardware");
+	loadXMLSetting(&EmuSettings.SGBBorder, "SGBBorder");
+	loadXMLSetting(&EmuSettings.colorize, "colorize");
+	loadXMLSetting(&EmuSettings.BasicPalette, "BasicPalette");
 
-	loadXMLSetting(&Settings.DisplayFrameRate, "DisplayFrameRate");
-	loadXMLSetting(&Settings.TurboModeEnabled, "TurboModeEnabled");
-	loadXMLSetting(&Settings.OffsetMinutesUTC, "OffsetMinutesUTC");
+	loadXMLSetting(&EmuSettings.DisplayFrameRate, "DisplayFrameRate");
+	loadXMLSetting(&EmuSettings.TurboModeEnabled, "TurboModeEnabled");
+	loadXMLSetting(&EmuSettings.OffsetMinutesUTC, "OffsetMinutesUTC");
 
 	mxmlDelete(xml);
 	return true;
@@ -615,135 +615,135 @@ decodePalsData ()
 }
 
 /****************************************************************************
- * FixInvalidSettings
+ * FixInvalidEmuSettings
  *
  * Attempts to correct at least some invalid settings - the ones that
  * might cause crashes
  ***************************************************************************/
-void FixInvalidSettings()
+void FixInvalidEmuSettings()
 {
-	if(!isValidLoadDevice(Settings.LoadMethod))
-		Settings.LoadMethod = DEVICE_AUTO;
-	if(!isValidSaveDevice(Settings.SaveMethod))
-		Settings.SaveMethod = DEVICE_AUTO;
+	if(!isValidLoadDevice(EmuSettings.LoadMethod))
+		EmuSettings.LoadMethod = DEVICE_AUTO;
+	if(!isValidSaveDevice(EmuSettings.SaveMethod))
+		EmuSettings.SaveMethod = DEVICE_AUTO;
 
-	if(strlen(Settings.smbshare) == 0 || strlen(Settings.smbip) == 0) {
-		if(Settings.LoadMethod == DEVICE_SMB) {
-			Settings.LoadMethod = DEVICE_AUTO;
+	if(strlen(EmuSettings.smbshare) == 0 || strlen(EmuSettings.smbip) == 0) {
+		if(EmuSettings.LoadMethod == DEVICE_SMB) {
+			EmuSettings.LoadMethod = DEVICE_AUTO;
 		}
-		if(Settings.SaveMethod == DEVICE_SMB) {
-			Settings.SaveMethod = DEVICE_AUTO;
+		if(EmuSettings.SaveMethod == DEVICE_SMB) {
+			EmuSettings.SaveMethod = DEVICE_AUTO;
 		}
 	}
 
-	if(!(Settings.gbaZoomHor >= 0.5 && Settings.gbaZoomHor <= 1.6))
-		Settings.gbaZoomHor = 1.0;
-	if(!(Settings.gbaZoomVert >= 0.5 && Settings.gbaZoomVert <= 1.6))
-		Settings.gbaZoomVert = 1.0;
-	if(!(Settings.gbZoomHor >= 0.5 && Settings.gbZoomHor <= 1.6))
-		Settings.gbZoomHor = 1.0;
-	if(!(Settings.gbZoomVert >= 0.5 && Settings.gbZoomVert <= 1.6))
-		Settings.gbZoomVert = 1.0;
-	if(!(Settings.videoXshift > -50 && Settings.videoXshift < 50))
-		Settings.videoXshift = 0;
-	if(!(Settings.videoYshift > -50 && Settings.videoYshift < 50))
-		Settings.videoYshift = 0;
-	if(!(Settings.MusicVolume >= 0 && Settings.MusicVolume <= 100))
-		Settings.MusicVolume = 20;
-	if(!(Settings.SFXVolume >= 0 && Settings.SFXVolume <= 100))
-		Settings.SFXVolume = 40;
-	if(Settings.language < LANG_JAPANESE || Settings.language >= LANG_LENGTH)
-		Settings.language = LANG_ENGLISH;
-	if(!(Settings.videoHardwareSoften >= VIDEO_HW_SOFTEN_OFF && Settings.videoHardwareSoften < VIDEO_HW_SOFTEN_LENGTH))
-		Settings.videoHardwareSoften = VIDEO_HW_SOFTEN_AUTO;
+	if(!(EmuSettings.gbaZoomHor >= 0.5 && EmuSettings.gbaZoomHor <= 1.6))
+		EmuSettings.gbaZoomHor = 1.0;
+	if(!(EmuSettings.gbaZoomVert >= 0.5 && EmuSettings.gbaZoomVert <= 1.6))
+		EmuSettings.gbaZoomVert = 1.0;
+	if(!(EmuSettings.gbZoomHor >= 0.5 && EmuSettings.gbZoomHor <= 1.6))
+		EmuSettings.gbZoomHor = 1.0;
+	if(!(EmuSettings.gbZoomVert >= 0.5 && EmuSettings.gbZoomVert <= 1.6))
+		EmuSettings.gbZoomVert = 1.0;
+	if(!(EmuSettings.videoXshift > -50 && EmuSettings.videoXshift < 50))
+		EmuSettings.videoXshift = 0;
+	if(!(EmuSettings.videoYshift > -50 && EmuSettings.videoYshift < 50))
+		EmuSettings.videoYshift = 0;
+	if(!(EmuSettings.MusicVolume >= 0 && EmuSettings.MusicVolume <= 100))
+		EmuSettings.MusicVolume = 20;
+	if(!(EmuSettings.SFXVolume >= 0 && EmuSettings.SFXVolume <= 100))
+		EmuSettings.SFXVolume = 40;
+	if(EmuSettings.language < LANG_JAPANESE || EmuSettings.language >= LANG_LENGTH)
+		EmuSettings.language = LANG_ENGLISH;
+	if(!(EmuSettings.videoHardwareSoften >= VIDEO_HW_SOFTEN_OFF && EmuSettings.videoHardwareSoften < VIDEO_HW_SOFTEN_LENGTH))
+		EmuSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_AUTO;
 #if defined(HW_RVL) || defined(HW_DOL)
-	if(!(Settings.videoUpscalingFilter >= FILTER_NONE && Settings.videoUpscalingFilter <= NUM_FILTERS))
-		Settings.videoUpscalingFilter = FILTER_NONE;
+	if(!(EmuSettings.videoUpscalingFilter >= FILTER_NONE && EmuSettings.videoUpscalingFilter <= NUM_FILTERS))
+		EmuSettings.videoUpscalingFilter = FILTER_NONE;
 #endif
-	if(!(Settings.videoAspectRatioCorrection >= SCALING_MAINTAIN_ASPECT && Settings.videoAspectRatioCorrection < SCALING_LENGTH))
-		Settings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
-	if(!(Settings.videoMode >= VIDEOMODE_AUTO && Settings.videoMode < VIDEOMODE_LENGTH))
-		Settings.videoMode = VIDEOMODE_AUTO;
-	if(!(Settings.DisplayFrameRate >= FRAMERATE_OFF && Settings.DisplayFrameRate < FRAMERATE_LENGTH))
-		Settings.DisplayFrameRate = FRAMERATE_OFF;
-	if(!(Settings.wiimoteOrientation >= WIIMOTE_ORIENTATION_AUTO && Settings.wiimoteOrientation < WIIMOTE_ORIENTATION_LENGTH))
-		Settings.wiimoteOrientation = WIIMOTE_ORIENTATION_AUTO;
+	if(!(EmuSettings.videoAspectRatioCorrection >= SCALING_MAINTAIN_ASPECT && EmuSettings.videoAspectRatioCorrection < SCALING_LENGTH))
+		EmuSettings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
+	if(!(EmuSettings.videoMode >= VIDEOMODE_AUTO && EmuSettings.videoMode < VIDEOMODE_LENGTH))
+		EmuSettings.videoMode = VIDEOMODE_AUTO;
+	if(!(EmuSettings.DisplayFrameRate >= FRAMERATE_OFF && EmuSettings.DisplayFrameRate < FRAMERATE_LENGTH))
+		EmuSettings.DisplayFrameRate = FRAMERATE_OFF;
+	if(!(EmuSettings.wiimoteOrientation >= WIIMOTE_ORIENTATION_AUTO && EmuSettings.wiimoteOrientation < WIIMOTE_ORIENTATION_LENGTH))
+		EmuSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_AUTO;
 }
 
 /****************************************************************************
- * DefaultSettings
+ * DefaultEmuSettings
  *
  * Sets all the defaults!
  ***************************************************************************/
-void DefaultSettings()
+void DefaultEmuSettings()
 {
-	memset (&Settings, 0, sizeof (Settings));
+	memset (&EmuSettings, 0, sizeof (EmuSettings));
 	ResetControls(); // controller button mappings
 
-	Settings.LoadMethod = DEVICE_AUTO;
-	Settings.SaveMethod = DEVICE_AUTO;
-	sprintf (Settings.LoadFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_ROMS].name); // Path to game files
-	sprintf (Settings.SaveFolder, "%s/%s", APPFOLDER, saveFolder[SAVEFOLDER_SAVES].name); // Path to save files
-	sprintf (Settings.CheatFolder, "%s/%s", APPFOLDER, saveFolder[SAVEFOLDER_CHEATS].name); // Path to cheat files
-	sprintf (Settings.ScreenshotsFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_SCREENSHOTS].name); // Path to screenshots files
-	sprintf (Settings.BorderFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_BORDERS].name); // Path to border files
-	sprintf (Settings.CoverFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_COVERS].name); // Path to cover files
-	sprintf (Settings.ArtworkFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_ARTWORK].name); // Path to artwork files
+	EmuSettings.LoadMethod = DEVICE_AUTO;
+	EmuSettings.SaveMethod = DEVICE_AUTO;
+	sprintf (EmuSettings.LoadFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_ROMS].name); // Path to game files
+	sprintf (EmuSettings.SaveFolder, "%s/%s", APPFOLDER, saveFolder[SAVEFOLDER_SAVES].name); // Path to save files
+	sprintf (EmuSettings.CheatFolder, "%s/%s", APPFOLDER, saveFolder[SAVEFOLDER_CHEATS].name); // Path to cheat files
+	sprintf (EmuSettings.ScreenshotsFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_SCREENSHOTS].name); // Path to screenshots files
+	sprintf (EmuSettings.BorderFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_BORDERS].name); // Path to border files
+	sprintf (EmuSettings.CoverFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_COVERS].name); // Path to cover files
+	sprintf (EmuSettings.ArtworkFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_ARTWORK].name); // Path to artwork files
 
-	Settings.AutoLoad = true;
-	Settings.AutoSave = true;
-	Settings.AppendAuto = true;
+	EmuSettings.AutoLoad = true;
+	EmuSettings.AutoSave = true;
+	EmuSettings.AppendAuto = true;
 
-	Settings.gbaZoomHor = 1.0; // GBA horizontal zoom level
-	Settings.gbaZoomVert = 1.0; // GBA vertical zoom level
-	Settings.gbZoomHor = 1.0; // GBA horizontal zoom level
-	Settings.gbZoomVert = 1.0; // GBA vertical zoom level
-	Settings.gbFixed = 0; // not fixed - use zoom level
-	Settings.gbaFixed = 0; // not fixed - use zoom level
-	Settings.videoMode = VIDEOMODE_AUTO;
-	Settings.videoBilinearFilter = true;
-	Settings.videoHardwareSoften = VIDEO_HW_SOFTEN_SHARP;
+	EmuSettings.gbaZoomHor = 1.0; // GBA horizontal zoom level
+	EmuSettings.gbaZoomVert = 1.0; // GBA vertical zoom level
+	EmuSettings.gbZoomHor = 1.0; // GBA horizontal zoom level
+	EmuSettings.gbZoomVert = 1.0; // GBA vertical zoom level
+	EmuSettings.gbFixed = 0; // not fixed - use zoom level
+	EmuSettings.gbaFixed = 0; // not fixed - use zoom level
+	EmuSettings.videoMode = VIDEOMODE_AUTO;
+	EmuSettings.videoBilinearFilter = true;
+	EmuSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_SHARP;
 #if defined(HW_RVL) || defined(HW_DOL)
-	Settings.videoUpscalingFilter = FILTER_NONE;
+	EmuSettings.videoUpscalingFilter = FILTER_NONE;
 #else
-	Settings.videoUpscalingFilter = 0;
+	EmuSettings.videoUpscalingFilter = 0;
 #endif
-	Settings.videoAspectRatioCorrection = SCALING_PARTIAL_STRETCH;
-	Settings.WiiControls = false; // Match Wii Game
+	EmuSettings.videoAspectRatioCorrection = SCALING_PARTIAL_STRETCH;
+	EmuSettings.WiiControls = false; // Match Wii Game
 
-	Settings.videoXshift = 0; // horizontal video shift
-	Settings.videoYshift = 0; // vertical video shift
-	Settings.colorize = false; // Colorize mono gameboy games
-	Settings.DynamicRecompilation = true;
-	Settings.DisplayFrameRate = FRAMERATE_OFF;
-	Settings.gbaFrameskip = true; // Turn auto-frameskip on for GBA games
-	Settings.TurboModeEnabled = true; // Enabled by default
+	EmuSettings.videoXshift = 0; // horizontal video shift
+	EmuSettings.videoYshift = 0; // vertical video shift
+	EmuSettings.colorize = false; // Colorize mono gameboy games
+	EmuSettings.DynamicRecompilation = true;
+	EmuSettings.DisplayFrameRate = FRAMERATE_OFF;
+	EmuSettings.gbaFrameskip = true; // Turn auto-frameskip on for GBA games
+	EmuSettings.TurboModeEnabled = true; // Enabled by default
 
-	Settings.wiimoteOrientation = WIIMOTE_ORIENTATION_AUTO;
+	EmuSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_AUTO;
 #ifdef HW_RVL
-	Settings.ExitAction = EXITACTION_WII_AUTO;
+	EmuSettings.ExitAction = EXITACTION_WII_AUTO;
 #elif HW_DOL
-	Settings.ExitAction = EXITACTION_GC_RETURN_TO_LOADER;
+	EmuSettings.ExitAction = EXITACTION_GC_RETURN_TO_LOADER;
 #endif
-	Settings.AutoloadGame = false;
-	Settings.MusicVolume = 20;
-	Settings.SFXVolume = 40;
-	Settings.Rumble = true;
-	Settings.PreviewImage = PREVIEWIMAGE_COVER;
+	EmuSettings.AutoloadGame = false;
+	EmuSettings.MusicVolume = 20;
+	EmuSettings.SFXVolume = 40;
+	EmuSettings.Rumble = true;
+	EmuSettings.PreviewImage = PREVIEWIMAGE_COVER;
 	
-	Settings.BasicPalette = BASICPALETTE_GREEN;
+	EmuSettings.BasicPalette = BASICPALETTE_GREEN;
 	
 #ifdef HW_RVL
-	Settings.language = CONF_GetLanguage();
+	EmuSettings.language = CONF_GetLanguage();
 
-	if(Settings.language == LANG_TRAD_CHINESE)
-		Settings.language = LANG_SIMP_CHINESE;
+	if(EmuSettings.language == LANG_TRAD_CHINESE)
+		EmuSettings.language = LANG_SIMP_CHINESE;
 #elif HW_DOL
-	Settings.language = SYS_GetLanguage() + LANG_ENGLISH;
+	EmuSettings.language = SYS_GetLanguage() + LANG_ENGLISH;
 #endif
-	Settings.OffsetMinutesUTC = 0;
-	Settings.GBHardware = GBHARDWARE_AUTO;
-	Settings.SGBBorder = SGBBORDER_OFF;
+	EmuSettings.OffsetMinutesUTC = 0;
+	EmuSettings.GBHardware = GBHARDWARE_AUTO;
+	EmuSettings.SGBBorder = SGBBORDER_OFF;
 }
 
 
@@ -772,7 +772,7 @@ bool SavePrefs()
 	else
 	{
 		autoSaveMethod();
-		device = Settings.SaveMethod;
+		device = EmuSettings.SaveMethod;
 
 		if(!ChangeInterface(device, true)) {
 			return false;
@@ -790,7 +790,7 @@ bool SavePrefs()
 	if(device == DEVICE_AUTO)
 		return false;
 
-	FixInvalidSettings();
+	FixInvalidEmuSettings();
 
 	AllocSaveBuffer ();
 	datasize = preparePrefsData ();
@@ -884,8 +884,8 @@ bool LoadPrefs()
 		return false;
 	}
 
-	FixInvalidSettings();
-	ApplySettings();
+	FixInvalidEmuSettings();
+	ApplyEmuSettings();
 
 #ifdef HW_RVL
 	bg_music = (uint8_t * )bg_music_ogg;
@@ -904,42 +904,42 @@ void CreatePathWithPrefix(int device, const char* folder) {
 void CreateMissingDirectories() {
     char defaultFolder[MAXPATHLEN];
 
-    if (Settings.SaveMethod > DEVICE_AUTO && ChangeInterface(Settings.SaveMethod, NOTSILENT)) {
-        const char* savePointers[] = { Settings.SaveFolder, Settings.CheatFolder };
+    if (EmuSettings.SaveMethod > DEVICE_AUTO && ChangeInterface(EmuSettings.SaveMethod, NOTSILENT)) {
+        const char* savePointers[] = { EmuSettings.SaveFolder, EmuSettings.CheatFolder };
 
         for (int i = 0; i < SAVEFOLDER_LENGTH; i++) {
             const char* currentPath = savePointers[i];
 
             if (strncmp(currentPath, APPFOLDER, strlen(APPFOLDER)) == 0) {
-                CreatePathWithPrefix(Settings.SaveMethod, APPFOLDER);
+                CreatePathWithPrefix(EmuSettings.SaveMethod, APPFOLDER);
             }
 
             GetDefaultFolderPath(defaultFolder, saveFolder[i].name);
             if (strcmp(currentPath, defaultFolder) == 0) {
-                CreatePathWithPrefix(Settings.SaveMethod, currentPath);
+                CreatePathWithPrefix(EmuSettings.SaveMethod, currentPath);
             }
         }
     }
 
-    if (Settings.LoadMethod > DEVICE_AUTO && Settings.LoadMethod != DEVICE_DVD && ChangeInterface(Settings.LoadMethod, NOTSILENT)) {
+    if (EmuSettings.LoadMethod > DEVICE_AUTO && EmuSettings.LoadMethod != DEVICE_DVD && ChangeInterface(EmuSettings.LoadMethod, NOTSILENT)) {
         const char* loadPointers[] = {
-            Settings.LoadFolder,
-            Settings.ScreenshotsFolder,
-            Settings.CoverFolder,
-            Settings.ArtworkFolder,
-			Settings.BorderFolder
+            EmuSettings.LoadFolder,
+            EmuSettings.ScreenshotsFolder,
+            EmuSettings.CoverFolder,
+            EmuSettings.ArtworkFolder,
+			EmuSettings.BorderFolder
         };
 
         for (int i = 0; i < LOADFOLDER_LENGTH; i++) {
             const char* currentPath = loadPointers[i];
 
             if (strncmp(currentPath, APPFOLDER, strlen(APPFOLDER)) == 0) {
-                CreatePathWithPrefix(Settings.LoadMethod, APPFOLDER);
+                CreatePathWithPrefix(EmuSettings.LoadMethod, APPFOLDER);
             }
 
             GetDefaultFolderPath(defaultFolder, loadFolder[i].name);
             if (strcmp(currentPath, defaultFolder) == 0) {
-                CreatePathWithPrefix(Settings.LoadMethod, currentPath);
+                CreatePathWithPrefix(EmuSettings.LoadMethod, currentPath);
             }
         }
     }
