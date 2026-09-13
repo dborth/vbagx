@@ -25,9 +25,6 @@
 #include "video.h"
 #include "filebrowser.h"
 #include "utils/decompress.h"
-#if defined(HW_RVL) || defined(HW_DOL)
-#include "drivers/ogc/networkop.h"
-#endif
 #include "fileop.h"
 #include "preferences.h"
 #include "cheatmgr.h"
