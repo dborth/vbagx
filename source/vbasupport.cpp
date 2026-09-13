@@ -278,7 +278,7 @@ void systemFrame()
 			pendingFrames = skipFrms;
 		}
 
-		if (GCSettings.gbaFrameskip && behindSchedule && (skippedFrames < skipFrms))
+		if (Settings.gbaFrameskip && behindSchedule && (skippedFrames < skipFrms))
 		{
 			skippedFrames++;
 			frameToRender = false;
@@ -291,7 +291,7 @@ void systemFrame()
 			// forgive the VBlank debt rather than let it sit at max and
 			// bias the next frame's decision toward skipping anyway
 			if (behindSchedule)
-				platform->getVideo()->setFrameTimer(GCSettings.gbaFrameskip ? 1 : 0);
+				platform->getVideo()->setFrameTimer(Settings.gbaFrameskip ? 1 : 0);
 
 			skippedFrames = 0;
 			frameToRender = true;
@@ -315,7 +315,7 @@ void systemFrame()
 		if(behindSchedule) {
 			// 1. Should we drop a render to catch up?
 			// We ONLY drop if the skip pressure crossed the threshold (behindSchedule).
-			if (GCSettings.gbaFrameskip && behindSchedule && (skippedFrames < skipFrms))
+			if (Settings.gbaFrameskip && behindSchedule && (skippedFrames < skipFrms))
 			{
 				skippedFrames++;
 				frameToRender = false;
@@ -530,7 +530,7 @@ bool LoadBatteryOrStateAuto(int action, bool silent)
 		if (LoadBatteryOrState(filepath, action, SILENT))
 			return true;
 
-		if (!GCSettings.AppendAuto)
+		if (!Settings.AppendAuto)
 			return false;
 
 		// look for file with no number or Auto appended
@@ -988,7 +988,7 @@ static void gbApplyPerImagePreferences()
 	// (or if a Super Gameboy game, but the palette will be ignored later in that case)
 	if ((Colour != 0x80) && (Colour != 0xC0))
 	{
-		if (GCSettings.colorize && strcmp(RomTitle, "MEGAMAN") != 0)
+		if (Settings.colorize && strcmp(RomTitle, "MEGAMAN") != 0)
 			SetPalette(RomTitle);
 		else
 			StopColorizing();
@@ -1167,7 +1167,7 @@ static void ResetGameBorder() {
 void InitGameDimensionsAndBorder() {
 	gameBorder.clear();
 
-	if(GCSettings.SGBBorder == SGBBORDER_FROMPNG) {
+	if(Settings.SGBBorder == SGBBORDER_FROMPNG) {
 		int bw = 0, bh = 0;
 		const char* fallback = (cartridgeType == CARTRIDGE_GBA) ? "defaultgba" : "default";
 		uint8_t* borderPixels = BorderManager::load(nullptr, fallback, bw, bh);
@@ -1177,7 +1177,7 @@ void InitGameDimensionsAndBorder() {
 		}
 	}
 
-	bool wantSgbCapture = (cartridgeType == CARTRIDGE_GB) && gbSgbMode && (GCSettings.SGBBorder == SGBBORDER_FROMGAME);
+	bool wantSgbCapture = (cartridgeType == CARTRIDGE_GB) && gbSgbMode && (Settings.SGBBorder == SGBBORDER_FROMGAME);
 	sgbBorderExtractor.reset(wantSgbCapture, gameBorder.hasBorder());
 
 	if(cartridgeType == CARTRIDGE_GBA) {
@@ -1185,7 +1185,7 @@ void InitGameDimensionsAndBorder() {
 		srcHeight = 160;
 	}
 	else {
-		gbBorderOn = (GCSettings.SGBBorder == SGBBORDER_FROMGAME);
+		gbBorderOn = (Settings.SGBBorder == SGBBORDER_FROMGAME);
 
 		if(gbBorderOn)
 		{
@@ -1517,7 +1517,7 @@ static int GBAROMLoad()
 }
 
 void InitGBGame() {
-	gbEmulatorType = GCSettings.GBHardware;
+	gbEmulatorType = Settings.GBHardware;
 	gbGetHardwareType();
 	gbApplyPerImagePreferences();
 
@@ -1639,7 +1639,7 @@ void InitialisePalette()
 	// Build GBPalette
 	for( i = 0; i < 24; )
 	{
-		if (GCSettings.BasicPalette == BASICPALETTE_GREEN) //Greenish color
+		if (Settings.BasicPalette == BASICPALETTE_GREEN) //Greenish color
 		{
 			systemGbPalette[i++] = (0x1c) | (0x1e << 5) | (0x1c << 10);
 			systemGbPalette[i++] = (0x10) | (0x17 << 5) | (0x0b << 10);

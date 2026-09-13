@@ -36,7 +36,7 @@ void JITDebugStateLog::Init() {
 
 	char logType[10] = "";
 
-	if(GCSettings.DynamicRecompilation)
+	if(Settings.DynamicRecompilation)
 		sprintf(logType, "jit");
 	else
 		sprintf(logType, "interp");

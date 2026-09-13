@@ -82,8 +82,8 @@ bool SgbBorderExtractor::processFrame(const uint16_t *buffer, int gbWidth, int g
 }
 
 char * BorderManager::getPNGBorderPath(const char* title) {
-	const char* method = platform->getFileSystem()->getMountPath(GCSettings.LoadMethod);
-	const char* folder = GCSettings.BorderFolder;
+	const char* method = platform->getFileSystem()->getMountPath(Settings.LoadMethod);
+	const char* folder = Settings.BorderFolder;
 
 	char title_buffer[16] = {0};
 

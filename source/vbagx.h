@@ -165,7 +165,7 @@ enum {
 	LANG_LENGTH
 };
 
-struct SGCSettings
+struct SSettings
 {
 	int		AutoLoad;
 	int		AutoSave;
@@ -224,7 +224,7 @@ struct SGCSettings
 };
 
 void ExitApp();
-extern struct SGCSettings GCSettings;
+extern struct SSettings Settings;
 enum class AppRequest { NONE, MENU };
 extern AppRequest appRequest;
 extern char appPath[];

@@ -166,7 +166,7 @@ void OgcEmulatorVideo::setupScanlineFilterTEV() {
  ****************************************************************************/
 void OgcEmulatorVideo::configureTEV()
 {
-	if(GCSettings.videoUpscalingFilter == FILTER_SCANLINES) {
+	if(Settings.videoUpscalingFilter == FILTER_SCANLINES) {
 		setupScanlineFilterTEV();
 	}
 	else {
@@ -228,7 +228,7 @@ void OgcEmulatorVideo::drawSquare()
 	GX_LoadPosMtxImm(mv, GX_PNMTX0);
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
 
-	if(GCSettings.videoUpscalingFilter == FILTER_SCANLINES) {
+	if(Settings.videoUpscalingFilter == FILTER_SCANLINES) {
 		// Calculate physical dimensions of the rendering quad in EFB pixels
 		// We use the static 'square' array which holds the final scaled/zoomed screen footprint
 		// square[3] and square[0] are the Right and Left X bounds
@@ -270,7 +270,7 @@ void OgcEmulatorVideo::drawSquare()
 	}
 	GX_End();
 
-	if(GCSettings.videoUpscalingFilter == FILTER_SCANLINES) {
+	if(Settings.videoUpscalingFilter == FILTER_SCANLINES) {
 		// force identity matrix to ensure texture mapping is pristine and devoid of stray scaling
 		Mtx texMtx;
 		guMtxIdentity(texMtx);
@@ -431,12 +431,12 @@ void OgcEmulatorVideo::resetVideo()
 	u8 sharp[7] = {0,0,21,22,21,0,0};
 	u8 soft[7] = {8,8,10,12,10,8,8};
 	u8* vfilter =
-			GCSettings.videoHardwareSoften == VIDEO_HW_SOFTEN_SHARP ? sharp
-			: GCSettings.videoHardwareSoften == VIDEO_HW_SOFTEN_SOFT ? soft
+			Settings.videoHardwareSoften == VIDEO_HW_SOFTEN_SHARP ? sharp
+			: Settings.videoHardwareSoften == VIDEO_HW_SOFTEN_SOFT ? soft
 			: rmode->vfilter;
 
 	// Enable the copy filter if not in SF mode, OR if the user explicitly selected a filter
-	u8 vf_enable = (rmode->xfbMode != VI_XFBMODE_SF || GCSettings.videoHardwareSoften != VIDEO_HW_SOFTEN_OFF) ? GX_TRUE : GX_FALSE;
+	u8 vf_enable = (rmode->xfbMode != VI_XFBMODE_SF || Settings.videoHardwareSoften != VIDEO_HW_SOFTEN_OFF) ? GX_TRUE : GX_FALSE;
 	GX_SetCopyFilter(rmode->aa, rmode->sample_pattern, vf_enable, vfilter);
 
 	GX_SetFieldMode (rmode->field_rendering, ((rmode->viHeight == 2 * rmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
@@ -477,9 +477,9 @@ void OgcEmulatorVideo::recalculateScaling()
 	float GameboyAspectRatio;
 	float MaxStretchRatio = 1.6f;
 
-	if (GCSettings.videoAspectRatioCorrection == SCALING_PARTIAL_STRETCH)
+	if (Settings.videoAspectRatioCorrection == SCALING_PARTIAL_STRETCH)
 		MaxStretchRatio = 1.3f;
-	else if (GCSettings.videoAspectRatioCorrection == SCALING_STRETCH_TO_FIT)
+	else if (Settings.videoAspectRatioCorrection == SCALING_STRETCH_TO_FIT)
 		MaxStretchRatio = 1.6f;
 	else
 		MaxStretchRatio = 1.0f;
@@ -490,7 +490,7 @@ void OgcEmulatorVideo::recalculateScaling()
 	else
 		TvAspectRatio = 4.0f/3.0f;
 	#else
-	if (GCSettings.videoAspectRatioCorrection == SCALING_WIDESCREEN_CORRECTION)
+	if (Settings.videoAspectRatioCorrection == SCALING_WIDESCREEN_CORRECTION)
 		TvAspectRatio = 16.0f/9.0f;
 	else
 		TvAspectRatio = 4.0f/3.0f;
@@ -520,15 +520,15 @@ void OgcEmulatorVideo::recalculateScaling()
 	int fixed;
 	if (cartridgeType == CARTRIDGE_GBA)
 	{
-		zoomHor = GCSettings.gbaZoomHor;
-		zoomVert = GCSettings.gbaZoomVert;
-		fixed = GCSettings.gbaFixed;
+		zoomHor = Settings.gbaZoomHor;
+		zoomVert = Settings.gbaZoomVert;
+		fixed = Settings.gbaFixed;
 	}
 	else
 	{
-		zoomHor = GCSettings.gbZoomHor;
-		zoomVert = GCSettings.gbZoomVert;
-		fixed = GCSettings.gbFixed;
+		zoomHor = Settings.gbZoomHor;
+		zoomVert = Settings.gbZoomVert;
+		fixed = Settings.gbFixed;
 	}
 
 	if (fixed) {
@@ -540,10 +540,10 @@ void OgcEmulatorVideo::recalculateScaling()
 	}
 
 	// Set new aspect
-	square[0] = square[9]  = -xscale + GCSettings.videoXshift;
-	square[3] = square[6]  =  xscale + GCSettings.videoXshift;
-	square[1] = square[4]  =  yscale - GCSettings.videoYshift;
-	square[7] = square[10] = -yscale - GCSettings.videoYshift;
+	square[0] = square[9]  = -xscale + Settings.videoXshift;
+	square[3] = square[6]  =  xscale + Settings.videoXshift;
+	square[1] = square[4]  =  yscale - Settings.videoYshift;
+	square[7] = square[10] = -yscale - Settings.videoYshift;
 	DCFlushRange (square, 32); // update memory BEFORE the GPU accesses it!
 
 	drawInit ();
@@ -565,7 +565,7 @@ void OgcEmulatorVideo::recalculateScaling()
 		float vh = vheight * ratio;
 
 		// 240p adjustment
-		if (GCSettings.videoMode == VIDEOMODE_240P || GCSettings.videoMode == VIDEOMODE_EURGB_240P) vw *= 2;
+		if (Settings.videoMode == VIDEOMODE_240P || Settings.videoMode == VIDEOMODE_EURGB_240P) vw *= 2;
 
 		float vx = (vmode->fbWidth - vw) / 2;
 		float vy = (vmode->efbHeight - vh) / 2;
@@ -599,8 +599,8 @@ void OgcEmulatorVideo::recalculateScaling()
 
 	// Calculate the EFB center coordinates, accounting for user X/Y shifting.
 	// Base center X is +xshift, Y is -yshift mapped against 640x480
-	float efbCenterX = vpX + vpW * ((320.0f + GCSettings.videoXshift) / 640.0f);
-	float efbCenterY = vpY + vpH * ((240.0f + GCSettings.videoYshift) / 480.0f);
+	float efbCenterX = vpX + vpW * ((320.0f + Settings.videoXshift) / 640.0f);
+	float efbCenterY = vpY + vpH * ((240.0f + Settings.videoYshift) / 480.0f);
 
 	// 3. Map EFB pixels to Physical TV (VI) pixels
 	// The copy stretches the full EFB to the physical VI dimensions
@@ -1040,17 +1040,17 @@ void OgcEmulatorVideo::presentFrame(int consoleWidth, int consoleHeight)
 
 		GX_InitTexObj(&texobj, texturemem, vwidth * fscale, vheight * fscale, GX_TF_RGB5A3, GX_CLAMP, GX_CLAMP, GX_FALSE);
 
-		if (!GCSettings.videoBilinearFilter)
+		if (!Settings.videoBilinearFilter)
 			GX_InitTexObjFilterMode(&texobj,GX_NEAR,GX_NEAR);
 		else
 			GX_InitTexObjFilterMode(&texobj,GX_LINEAR,GX_LINEAR);
 
 		GX_LoadTexObj(&texobj, GX_TEXMAP0);
 
-		if(GCSettings.videoUpscalingFilter == FILTER_SCANLINES)
+		if(Settings.videoUpscalingFilter == FILTER_SCANLINES)
 			initScanlineTexture();
 
-		if(GCSettings.DisplayFrameRate)
+		if(Settings.DisplayFrameRate)
 			initFPSFontTexture();
 
 		#ifdef HW_RVL
@@ -1077,7 +1077,7 @@ void OgcEmulatorVideo::presentFrame(int consoleWidth, int consoleHeight)
 
 	drawSquare(); // render textured quad
 
-	if(GCSettings.DisplayFrameRate) {
+	if(Settings.DisplayFrameRate) {
 		static u32 lastFpsTime = 0;
 		static char fpsStr[16] = "FPS: 60.0";
 
@@ -1085,7 +1085,7 @@ void OgcEmulatorVideo::presentFrame(int consoleWidth, int consoleHeight)
 
 		// Only calculate and format the string once per second
 		if (currentTime - lastFpsTime >= 1000) {
-			if(GCSettings.DisplayFrameRate == FRAMERATE_CORE)
+			if(Settings.DisplayFrameRate == FRAMERATE_CORE)
 				sprintf(fpsStr, "FPS: %.1f", systemGetCoreFPS());
 			else
 				sprintf(fpsStr, "FPS: %.1f", systemGetRenderFPS());

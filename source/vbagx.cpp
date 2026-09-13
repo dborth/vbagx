@@ -89,18 +89,18 @@ int main(int argc, char *argv[])
 		LoadPrefs();
 		if(strncmp(argv[1], "sd", 2) == 0)
 		{
-			GCSettings.SaveMethod = DEVICE_SD;
-			GCSettings.LoadMethod = DEVICE_SD;
+			Settings.SaveMethod = DEVICE_SD;
+			Settings.LoadMethod = DEVICE_SD;
 		}
 		else if(strncmp(argv[1], "usb", 3) == 0)
 		{
-			GCSettings.SaveMethod = DEVICE_USB;
-			GCSettings.LoadMethod = DEVICE_USB;
+			Settings.SaveMethod = DEVICE_USB;
+			Settings.LoadMethod = DEVICE_USB;
 		}
 		SavePrefs();
 
-		GCSettings.AutoloadGame = AutoloadGame(argv[1], argv[2]);
-		autoboot = GCSettings.AutoloadGame;
+		Settings.AutoloadGame = AutoloadGame(argv[1], argv[2]);
+		autoboot = Settings.AutoloadGame;
 	}
 #endif
 
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 		SwitchMemoryModeGame();
 		platform->getAudio()->startEmulatorAudio();
 #if defined(HW_RVL) || defined(HW_DOL)
-		SelectFilterMethod(GCSettings.videoUpscalingFilter); // Initialize / Re-evaluate active filter
+		SelectFilterMethod(Settings.videoUpscalingFilter); // Initialize / Re-evaluate active filter
 #endif
 
 		// stop checking if devices were removed/inserted
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 		// GB colorizing - set palette
 		if(IsGameboyGame())
 		{
-			if(GCSettings.colorize && strcmp(RomTitle, "MEGAMAN") != 0)
+			if(Settings.colorize && strcmp(RomTitle, "MEGAMAN") != 0)
 				gbSetPalette(CurrentPalette.palette);
 			else
 				StopColorizing();
@@ -189,7 +189,7 @@ void ExitApp()
 	SwitchMemoryModeMenu();
 	SavePrefs();
 
-	if (ROMLoaded && appRequest != AppRequest::MENU && GCSettings.AutoSave == AUTOSAVE_SRAM)
+	if (ROMLoaded && appRequest != AppRequest::MENU && Settings.AutoSave == AUTOSAVE_SRAM)
 		SaveBatteryOrStateAuto(FILE_SRAM, SILENT);
 
 	HaltDeviceCheckingThread();
@@ -199,5 +199,5 @@ void ExitApp()
 	// down inside requestExit()/shutdown().
 	Thread::JoinAll();
 
-	platform->requestExit(GCSettings.ExitAction, autoboot);
+	platform->requestExit(Settings.ExitAction, autoboot);
 }
