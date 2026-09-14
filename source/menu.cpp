@@ -1450,7 +1450,7 @@ static int MenuGame()
 	gameSettingsBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
 	GuiImage gameSettingsBtnImg(&btnLargeOutline);
 	GuiImage gameSettingsBtnImgOver(&btnLargeOutlineOver);
-	GuiImage gameSettingsBtnIcon(&iconGameEmuSettings);
+	GuiImage gameSettingsBtnIcon(&iconGameSettings);
 	GuiButton gameSettingsBtn(btnLargeOutline.getWidth(), btnLargeOutline.getHeight());
 	gameSettingsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	gameSettingsBtn.setPosition(-xOffset, 250);
