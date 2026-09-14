@@ -887,7 +887,7 @@ bool LoadPrefs()
 	FixInvalidSettings();
 	ApplyEmuSettings();
 
-#ifdef HW_RVL
+#ifndef HW_DOL
 	bg_music = (uint8_t * )bg_music_ogg;
 	bg_music_size = bg_music_ogg_size;
 	LoadBgMusic();

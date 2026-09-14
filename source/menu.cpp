@@ -2396,7 +2396,7 @@ static int MenuGameCheats()
 
 	options.length = i;
 
-	GuiText titleTxt("Game EmuSettings - Cheats", 26, (PixelColor){255, 255, 255, 255});
+	GuiText titleTxt("Game Settings - Cheats", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -2462,7 +2462,7 @@ static int MenuEmuSettingsMappings()
 {
 	int selection = MENU_NONE;
 
-	GuiText titleTxt("Game EmuSettings - Button Mappings", 26, (PixelColor){255, 255, 255, 255});
+	GuiText titleTxt("Game Settings - Button Mappings", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -2781,7 +2781,7 @@ static int MenuEmuSettingsMappingsMap()
 
 	char menuTitle[100];
 	char menuSubtitle[100];
-	sprintf(menuTitle, "Game EmuSettings - Button Mappings");
+	sprintf(menuTitle, "Game Settings - Button Mappings");
 
 	GuiText titleTxt(menuTitle, 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
@@ -3249,7 +3249,7 @@ static int MenuEmuSettingsVideo()
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 
-	GuiText titleTxt("Game EmuSettings - Video", 26, (PixelColor){255, 255, 255, 255});
+	GuiText titleTxt("Game Settings - Video", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -3472,7 +3472,7 @@ static int MenuEmuSettingsEmulation()
 		options.value[j][0] = '\0';
 	}
 	
-	GuiText titleTxt("Game EmuSettings - Emulation", 26, (PixelColor){255, 255, 255, 255});
+	GuiText titleTxt("Game Settings - Emulation", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -3791,7 +3791,7 @@ static int MenuEmuSettingsFile()
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 
-	GuiText titleTxt("EmuSettings - Saving & Loading", 26, (PixelColor){255, 255, 255, 255});
+	GuiText titleTxt("Settings - Saving & Loading", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -4056,7 +4056,7 @@ static int MenuEmuSettingsMenu()
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 
-	GuiText titleTxt("EmuSettings - Menu", 26, (PixelColor){255, 255, 255, 255});
+	GuiText titleTxt("Settings - Menu", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -4253,7 +4253,7 @@ static int MenuEmuSettingsNetwork()
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 
-	GuiText titleTxt("EmuSettings - Network", 26, (PixelColor){255, 255, 255, 255});
+	GuiText titleTxt("Settings - Network", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
