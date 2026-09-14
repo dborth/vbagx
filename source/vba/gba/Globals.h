@@ -33,7 +33,7 @@ extern bool synchronize;
 extern bool cpuDisableSfx;
 extern bool cpuIsMultiBoot;
 extern bool parseDebug;
-extern int layerEmuSettings;
+extern int layerSettings;
 extern int layerEnable;
 extern bool speedHack;
 extern int cpuSaveType;
