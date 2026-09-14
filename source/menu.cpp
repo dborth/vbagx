@@ -1027,7 +1027,7 @@ static int MenuGameSelection()
 	trigHome.setButtonOnlyTrigger(-1, INPUT_BTN_HOME);
 
 	GuiText settingsBtnTxt("Settings", 22, (PixelColor){0, 0, 0, 255});
-	GuiImage settingsBtnIcon(&iconEmuSettings);
+	GuiImage settingsBtnIcon(&iconSettings);
 	settingsBtnIcon.setAlignment(ALIGN_H::LEFT, ALIGN_V::MIDDLE);
 	settingsBtnIcon.setPosition(14,0);
 	GuiImage settingsBtnImg(&btnOutline);
