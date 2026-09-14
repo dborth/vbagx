@@ -175,7 +175,7 @@ preparePrefsData ()
 	mxmlElementSetAttr(data, "app", APPNAME);
 	mxmlElementSetAttr(data, "version", APPVERSION);
 
-	createXMLSection("File", "File EmuSettings");
+	createXMLSection("File", "File Settings");
 
 	createXMLSetting("AutoLoad", "Auto Load", toStr(EmuSettings.AutoLoad));
 	createXMLSetting("AutoSave", "Auto Save", toStr(EmuSettings.AutoSave));
@@ -191,14 +191,14 @@ preparePrefsData ()
 	createXMLSetting("CoverFolder", "Covers Folder", EmuSettings.CoverFolder);
 	createXMLSetting("ArtworkFolder", "Artwork Folder", EmuSettings.ArtworkFolder);
 
-	createXMLSection("Network", "Network EmuSettings");
+	createXMLSection("Network", "Network Settings");
 
 	createXMLSetting("smbip", "Share Computer IP", EmuSettings.smbShare.host);
 	createXMLSetting("smbshare", "Share Name", EmuSettings.smbShare.share);
 	createXMLSetting("smbuser", "Share Username", EmuSettings.smbShare.user);
 	createXMLSetting("smbpwd", "Share Password", EmuSettings.smbShare.password);
 
-	createXMLSection("Video", "Video EmuSettings");
+	createXMLSection("Video", "Video Settings");
 
 	createXMLSetting("videoMode", "Output Mode", toStr(EmuSettings.videoMode));
 	createXMLSetting("videoAspectRatioCorrection", "Aspect Ratio Correction", toStr(EmuSettings.videoAspectRatioCorrection));
@@ -215,7 +215,7 @@ preparePrefsData ()
 	createXMLSetting("videoXshift", "Horizontal Video Shift", toStr(EmuSettings.videoXshift));
 	createXMLSetting("videoYshift", "Vertical Video Shift", toStr(EmuSettings.videoYshift));
 
-	createXMLSection("Menu", "Menu EmuSettings");
+	createXMLSection("Menu", "Menu Settings");
 
 #ifdef HW_RVL
 	createXMLSetting("wiimoteOrientation", "Wiimote Orientation", toStr(EmuSettings.wiimoteOrientation));
@@ -229,7 +229,7 @@ preparePrefsData ()
 	createXMLSetting("language", "Language", toStr(EmuSettings.language));
 	createXMLSetting("PreviewImage", "Preview Image", toStr(EmuSettings.PreviewImage));
 
-	createXMLSection("Emulation", "Emulation EmuSettings");
+	createXMLSection("Emulation", "Emulation Settings");
 
 	createXMLSetting("DynamicRecompilation", "Dynamic Recompilation (JIT)", BtoStr(EmuSettings.DynamicRecompilation));
 	createXMLSetting("gbaFrameskip", "GBA Frameskip", BtoStr(EmuSettings.gbaFrameskip));
@@ -243,7 +243,7 @@ preparePrefsData ()
 	createXMLSetting("TurboModeEnabled", "Turbo Mode Enabled", BtoStr(EmuSettings.TurboModeEnabled));
 	createXMLSetting("OffsetMinutesUTC", "Offset from UTC (minutes)", toStr(EmuSettings.OffsetMinutesUTC));
 
-	createXMLSection("Controller", "Controller EmuSettings");
+	createXMLSection("Controller", "Controller Settings");
 
 	createXMLController(btnmap[INPUT_HW_GAMECUBE], "gcpadmapping", "GameCube Pad");
 	createXMLSetting("WiiControls", "Match Wii Game", BtoStr(EmuSettings.WiiControls));
@@ -470,7 +470,7 @@ static void loadXMLPaletteFromSection(gamePalette &pal)
 	}
 }
 
-void ApplyEmuSettings() {
+void ApplySettings() {
 	platform->getInput()->setWiimoteOrientation(EmuSettings.wiimoteOrientation);
 	platform->getInput()->setRumbleEnabled(EmuSettings.Rumble);
 	GuiSound::setDefaultVolume(SOUND::OGG, EmuSettings.MusicVolume);
@@ -495,7 +495,7 @@ decodePrefsData ()
 		return false;
 	}
 
-	// File EmuSettings
+	// File Settings
 
 	loadXMLSetting(&EmuSettings.AutoLoad, "AutoLoad");
 	loadXMLSetting(&EmuSettings.AutoSave, "AutoSave");
@@ -511,14 +511,14 @@ decodePrefsData ()
 	loadXMLSetting(EmuSettings.CoverFolder, "CoverFolder", sizeof(EmuSettings.CoverFolder));
 	loadXMLSetting(EmuSettings.ArtworkFolder, "ArtworkFolder", sizeof(EmuSettings.ArtworkFolder));
 
-	// Network EmuSettings
+	// Network Settings
 
 	loadXMLSetting(EmuSettings.smbShare.host, "smbip", sizeof(EmuSettings.smbShare.host));
 	loadXMLSetting(EmuSettings.smbShare.share, "smbshare", sizeof(EmuSettings.smbShare.share));
 	loadXMLSetting(EmuSettings.smbShare.user, "smbuser", sizeof(EmuSettings.smbShare.user));
 	loadXMLSetting(EmuSettings.smbShare.password, "smbpwd", sizeof(EmuSettings.smbShare.password));
 
-	// Video EmuSettings
+	// Video Settings
 
 	loadXMLSetting(&EmuSettings.videoMode, "videoMode");
 	loadXMLSetting(&EmuSettings.videoAspectRatioCorrection, "videoAspectRatioCorrection");
@@ -535,7 +535,7 @@ decodePrefsData ()
 	loadXMLSetting(&EmuSettings.videoXshift, "videoXshift");
 	loadXMLSetting(&EmuSettings.videoYshift, "videoYshift");
 
-	// Menu EmuSettings
+	// Menu Settings
 
 #ifdef HW_RVL
 	loadXMLSetting(&EmuSettings.wiimoteOrientation, "WiimoteOrientation");
@@ -549,7 +549,7 @@ decodePrefsData ()
 	loadXMLSetting(&EmuSettings.language, "language");
 	loadXMLSetting(&EmuSettings.PreviewImage, "PreviewImage");
 
-	// Controller EmuSettings
+	// Controller Settings
 
 	loadXMLController(btnmap[INPUT_HW_GAMECUBE], "gcpadmapping");
 	loadXMLSetting(&EmuSettings.WiiControls, "WiiControls");
@@ -559,7 +559,7 @@ decodePrefsData ()
 	loadXMLController(btnmap[INPUT_HW_WUPC], "wupcpadmapping");
 	loadXMLController(btnmap[INPUT_HW_DRC], "drcpadmapping");
 
-	// Emulation EmuSettings
+	// Emulation Settings
 
 	loadXMLSetting(&EmuSettings.DynamicRecompilation, "DynamicRecompilation");
 	loadXMLSetting(&EmuSettings.gbaFrameskip, "gbaFrameskip");
@@ -671,11 +671,11 @@ void FixInvalidSettings()
 }
 
 /****************************************************************************
- * DefaultEmuSettings
+ * DefaultSettings
  *
  * Sets all the defaults!
  ***************************************************************************/
-void DefaultEmuSettings()
+void DefaultSettings()
 {
 	memset (&EmuSettings, 0, sizeof (EmuSettings));
 	ResetControls(); // controller button mappings
@@ -885,7 +885,7 @@ bool LoadPrefs()
 	}
 
 	FixInvalidSettings();
-	ApplyEmuSettings();
+	ApplySettings();
 
 #ifndef HW_DOL
 	bg_music = (uint8_t * )bg_music_ogg;

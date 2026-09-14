@@ -1018,7 +1018,7 @@ static int MenuGameSelection()
 	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND::PCM);
 	GuiSound btnSoundClick(button_click_pcm, button_click_pcm_size, SOUND::PCM);
 	GuiImageData iconHome(icon_home_png);
-	GuiImageData iconEmuSettings(icon_settings_png);
+	GuiImageData iconSettings(icon_settings_png);
 	GuiImageData btnOutline(button_long_png);
 	GuiImageData btnOutlineOver(button_long_over_png);
 	GuiImageData bgPreviewImg(bg_preview_png);
@@ -1026,7 +1026,7 @@ static int MenuGameSelection()
 	GuiTrigger trigHome;
 	trigHome.setButtonOnlyTrigger(-1, INPUT_BTN_HOME);
 
-	GuiText settingsBtnTxt("EmuSettings", 22, (PixelColor){0, 0, 0, 255});
+	GuiText settingsBtnTxt("Settings", 22, (PixelColor){0, 0, 0, 255});
 	GuiImage settingsBtnIcon(&iconEmuSettings);
 	settingsBtnIcon.setAlignment(ALIGN_H::LEFT, ALIGN_V::MIDDLE);
 	settingsBtnIcon.setPosition(14,0);
@@ -1329,7 +1329,7 @@ static int MenuGame()
 	GuiImageData btnCloseOutlineOver(button_small_over_png);
 	GuiImageData btnLargeOutline(button_large_png);
 	GuiImageData btnLargeOutlineOver(button_large_over_png);
-	GuiImageData iconGameEmuSettings(icon_game_settings_png);
+	GuiImageData iconGameSettings(icon_game_settings_png);
 	GuiImageData iconLoad(icon_game_load_png);
 	GuiImageData iconSave(icon_game_save_png);
 	GuiImageData iconDelete(icon_game_delete_png);
@@ -1446,22 +1446,22 @@ static int MenuGame()
 	resetBtn.setTrigger(trigA);
 	resetBtn.setEffectGrow();
 
-	GuiText gameEmuSettingsBtnTxt("Game EmuSettings", 22, (PixelColor){0, 0, 0, 255});
-	gameEmuSettingsBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
-	GuiImage gameEmuSettingsBtnImg(&btnLargeOutline);
-	GuiImage gameEmuSettingsBtnImgOver(&btnLargeOutlineOver);
-	GuiImage gameEmuSettingsBtnIcon(&iconGameEmuSettings);
-	GuiButton gameEmuSettingsBtn(btnLargeOutline.getWidth(), btnLargeOutline.getHeight());
-	gameEmuSettingsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	gameEmuSettingsBtn.setPosition(-xOffset, 250);
-	gameEmuSettingsBtn.setLabel(&gameEmuSettingsBtnTxt);
-	gameEmuSettingsBtn.setImage(&gameEmuSettingsBtnImg);
-	gameEmuSettingsBtn.setImageOver(&gameEmuSettingsBtnImgOver);
-	gameEmuSettingsBtn.setIcon(&gameEmuSettingsBtnIcon);
-	gameEmuSettingsBtn.setSoundOver(&btnSoundOver);
-	gameEmuSettingsBtn.setSoundClick(&btnSoundClick);
-	gameEmuSettingsBtn.setTrigger(trigA);
-	gameEmuSettingsBtn.setEffectGrow();
+	GuiText gameSettingsBtnTxt("Game Settings", 22, (PixelColor){0, 0, 0, 255});
+	gameSettingsBtnTxt.setWrap(true, btnLargeOutline.getWidth()-30);
+	GuiImage gameSettingsBtnImg(&btnLargeOutline);
+	GuiImage gameSettingsBtnImgOver(&btnLargeOutlineOver);
+	GuiImage gameSettingsBtnIcon(&iconGameEmuSettings);
+	GuiButton gameSettingsBtn(btnLargeOutline.getWidth(), btnLargeOutline.getHeight());
+	gameSettingsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	gameSettingsBtn.setPosition(-xOffset, 250);
+	gameSettingsBtn.setLabel(&gameSettingsBtnTxt);
+	gameSettingsBtn.setImage(&gameSettingsBtnImg);
+	gameSettingsBtn.setImageOver(&gameSettingsBtnImgOver);
+	gameSettingsBtn.setIcon(&gameSettingsBtnIcon);
+	gameSettingsBtn.setSoundOver(&btnSoundOver);
+	gameSettingsBtn.setSoundClick(&btnSoundClick);
+	gameSettingsBtn.setTrigger(trigA);
+	gameSettingsBtn.setEffectGrow();
 
 	GuiText mainmenuBtnTxt("Main Menu", 22, (PixelColor){0, 0, 0, 255});
 	if(EmuSettings.AutoloadGame) {
@@ -1546,7 +1546,7 @@ static int MenuGame()
 	w.append(&loadBtn);
 	w.append(&deleteBtn);
 	w.append(&resetBtn);
-	w.append(&gameEmuSettingsBtn);
+	w.append(&gameSettingsBtn);
 	if (isBoktai)
 		w.append(sunBtn);
 
@@ -1683,7 +1683,7 @@ static int MenuGame()
 				resetBtn.resetState();
 			}
 		}
-		else if(gameEmuSettingsBtn.getState() == STATE::CLICKED)
+		else if(gameSettingsBtn.getState() == STATE::CLICKED)
 		{
 			selection = MENU_GAMESETTINGS;
 		}
@@ -2112,15 +2112,15 @@ static int MenuGameSaves(int action)
 }
 
 /****************************************************************************
- * MenuGameEmuSettings
+ * MenuGameSettings
  ***************************************************************************/
-static int MenuGameEmuSettings()
+static int MenuGameSettings()
 {
 	int selection = MENU_NONE;
 	char s[4];
 	char filepath[1024];
 
-	GuiText titleTxt("Game EmuSettings", 26, (PixelColor){255, 255, 255, 255});
+	GuiText titleTxt("Game Settings", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -3589,7 +3589,7 @@ static int MenuSettings()
 {
 	int selection = MENU_NONE;
 
-	GuiText titleTxt("EmuSettings", 26, (PixelColor){255, 255, 255, 255});
+	GuiText titleTxt("Settings", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -3691,7 +3691,7 @@ static int MenuSettings()
 	backBtn.setTrigger(trigA);
 	backBtn.setEffectGrow();
 
-	GuiText resetBtnTxt("Reset EmuSettings", 22, (PixelColor){0, 0, 0, 255});
+	GuiText resetBtnTxt("Reset Settings", 22, (PixelColor){0, 0, 0, 255});
 	GuiImage resetBtnImg(&btnOutline);
 	GuiImage resetBtnImgOver(&btnOutlineOver);
 	GuiButton resetBtn(btnOutline.getWidth(), btnOutline.getHeight());
@@ -3747,14 +3747,14 @@ static int MenuSettings()
 			resetBtn.resetState();
 
 			int choice = WindowPrompt(
-				"Reset EmuSettings",
+				"Reset Settings",
 				"Are you sure that you want to reset your settings?",
 				"Yes",
 				"No");
 
 			if(choice == 1) {
-				DefaultEmuSettings();
-				ApplyEmuSettings();
+				DefaultSettings();
+				ApplySettings();
 				autoSaveMethod();
 				autoLoadMethod();
 			}
@@ -5318,7 +5318,7 @@ void MainMenu (int selection)
 				currentMenu = MenuGameSaves(2);
 				break;	
 			case MENU_GAMESETTINGS:
-				currentMenu = MenuGameEmuSettings();
+				currentMenu = MenuGameSettings();
 				break;
 			case MENU_GAMESETTINGS_MAPPINGS:
 				currentMenu = MenuSettingsMappings();

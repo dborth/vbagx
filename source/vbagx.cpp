@@ -72,8 +72,8 @@ int main(int argc, char *argv[])
 	textTranslator = new GuiTextTranslator();
 	textTranslator->loadLanguage(en_lang, en_lang_size);
 
-	DefaultEmuSettings();
-	ApplyEmuSettings();
+	DefaultSettings();
+	ApplySettings();
 	platform->getVideo()->startMenuVideo();
 	
 	#ifdef HW_RVL
