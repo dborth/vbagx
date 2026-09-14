@@ -184,8 +184,7 @@ static void * devicecallback (void *)
 		if(deviceThread.stopRequested())
 			break;
 
-		// if halted, block here until ResumeDeviceCheckingThread (or a stop
-		// request) wakes us
+		// if halted, block here until ResumeDeviceCheckingThread (or a stop request) wakes us
 		if(deviceCheckingHalt)
 		{
 			DeviceSync().mutex.lock();
