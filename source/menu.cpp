@@ -2456,9 +2456,9 @@ static int MenuGameCheats()
 }
 
 /****************************************************************************
- * MenuEmuSettingsMappings
+ * MenuSettingsMappings
  ***************************************************************************/
-static int MenuEmuSettingsMappings()
+static int MenuSettingsMappings()
 {
 	int selection = MENU_NONE;
 
@@ -2772,7 +2772,7 @@ static uint32_t ButtonMappingWindow()
 	return pressed;
 }
 
-static int MenuEmuSettingsMappingsMap()
+static int MenuSettingsMappingsMap()
 {
 	int selection = MENU_NONE;
 	int ret,i,j;
@@ -2918,7 +2918,7 @@ static int MenuEmuSettingsMappingsMap()
 }
 
 /****************************************************************************
- * MenuEmuSettingsVideo
+ * MenuSettingsVideo
  ***************************************************************************/
 
 static void ScreenZoomWindowUpdate(void * ptr, float h, float v)
@@ -3216,7 +3216,7 @@ static void ScreenPositionWindow()
 	delete(settingText);
 }
 
-static int MenuEmuSettingsVideo()
+static int MenuSettingsVideo()
 {
 	int selection = MENU_NONE;
 	int ret;
@@ -3432,7 +3432,7 @@ static int MenuEmuSettingsVideo()
 	return selection;
 }
 
-static int MenuEmuSettingsEmulation()
+static int MenuSettingsEmulation()
 {
 	int selection = MENU_NONE;
 	int ret;
@@ -3583,9 +3583,9 @@ static int MenuEmuSettingsEmulation()
 }
 
 /****************************************************************************
- * MenuEmuSettings
+ * MenuSettings
  ***************************************************************************/
-static int MenuEmuSettings()
+static int MenuSettings()
 {
 	int selection = MENU_NONE;
 
@@ -3765,10 +3765,10 @@ static int MenuEmuSettings()
 }
 
 /****************************************************************************
- * MenuEmuSettingsFile
+ * MenuSettingsFile
  ***************************************************************************/
 
-static int MenuEmuSettingsFile()
+static int MenuSettingsFile()
 {
 	int selection = MENU_NONE;
 	int ret;
@@ -4028,9 +4028,9 @@ void ChangeLanguage() {
 }
 
 /****************************************************************************
- * MenuEmuSettingsMenu
+ * MenuSettingsMenu
  ***************************************************************************/
-static int MenuEmuSettingsMenu()
+static int MenuSettingsMenu()
 {
 	int selection = MENU_NONE;
 	int ret;
@@ -4235,9 +4235,9 @@ static int MenuEmuSettingsMenu()
 }
 
 /****************************************************************************
- * MenuEmuSettingsNetwork
+ * MenuSettingsNetwork
  ***************************************************************************/
-static int MenuEmuSettingsNetwork()
+static int MenuSettingsNetwork()
 {
 	int selection = MENU_NONE;
 	int ret;
@@ -5321,16 +5321,16 @@ void MainMenu (int selection)
 				currentMenu = MenuGameEmuSettings();
 				break;
 			case MENU_GAMESETTINGS_MAPPINGS:
-				currentMenu = MenuEmuSettingsMappings();
+				currentMenu = MenuSettingsMappings();
 				break;
 			case MENU_GAMESETTINGS_MAPPINGS_MAP:
-				currentMenu = MenuEmuSettingsMappingsMap();
+				currentMenu = MenuSettingsMappingsMap();
 				break;
 			case MENU_GAMESETTINGS_VIDEO:
-				currentMenu = MenuEmuSettingsVideo();
+				currentMenu = MenuSettingsVideo();
 				break;
 			case MENU_GAMESETTINGS_EMULATION:
-				currentMenu = MenuEmuSettingsEmulation();
+				currentMenu = MenuSettingsEmulation();
 				break;
 			case MENU_GAMESETTINGS_PALETTE:
 				currentMenu = MenuPalette();
@@ -5339,16 +5339,16 @@ void MainMenu (int selection)
 				currentMenu = MenuGameCheats();
 				break;
 			case MENU_SETTINGS:
-				currentMenu = MenuEmuSettings();
+				currentMenu = MenuSettings();
 				break;
 			case MENU_SETTINGS_FILE:
-				currentMenu = MenuEmuSettingsFile();
+				currentMenu = MenuSettingsFile();
 				break;
 			case MENU_SETTINGS_MENU:
-				currentMenu = MenuEmuSettingsMenu();
+				currentMenu = MenuSettingsMenu();
 				break;
 			case MENU_SETTINGS_NETWORK:
-				currentMenu = MenuEmuSettingsNetwork();
+				currentMenu = MenuSettingsNetwork();
 				break;
 			default: // unrecognized menu
 				currentMenu = MenuGameSelection();
