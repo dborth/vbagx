@@ -715,12 +715,34 @@ long long int* OgcEmulatorVideo::processFrameAndGetDest(void* textureBase, const
     return (long long int*)applyBorderToGxTexture(textureBase, gbWidth, gbHeight);
 }
 
-// Un-swizzles a 4x4-tiled GX_TF_RGB5A3 texture
-void OgcEmulatorVideo::readFrameRGB24(const void* src, int width, int height, uint8_t* dst)
+// texturemem lives in the mode-specific mspace, which SwitchMemoryModeMenu()
+// destroys - so it must be copied out to a plain malloc()'d buffer
+// (survives the switch) before that happens.
+void OgcEmulatorVideo::snapshotFrame()
 {
+	if(screenshotSnapshot)
+	{
+		free(screenshotSnapshot);
+		screenshotSnapshot = nullptr;
+	}
+
+	if(!texturemem)
+		return;
+
+	screenshotSnapshot = (uint8_t *)malloc(TEXTUREMEM_SIZE);
+	if(screenshotSnapshot)
+		memcpy(screenshotSnapshot, texturemem, TEXTUREMEM_SIZE);
+}
+
+// Un-swizzles the 4x4-tiled GX_TF_RGB5A3 buffer snapshotFrame() captured
+void OgcEmulatorVideo::readFrameRGB24(int width, int height, uint8_t* dst)
+{
+	if(!screenshotSnapshot)
+		return;
+
 	int padded_width = (width + 3) & ~3;
 
-	const uint16_t * tex16 = (const uint16_t *) src;
+	const uint16_t * tex16 = (const uint16_t *) screenshotSnapshot;
 
 	for(int y = 0; y < height; y++) {
 		int tile_y = y / 4;
@@ -743,6 +765,9 @@ void OgcEmulatorVideo::readFrameRGB24(const void* src, int width, int height, ui
 			dst[out_idx + 2] = (b << 3) | (b >> 2);
 		}
 	}
+
+	free(screenshotSnapshot);
+	screenshotSnapshot = nullptr;
 }
 
 /****************************************************************************

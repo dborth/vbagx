@@ -7,6 +7,7 @@
 
 #include <gccore.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "../EmulatorVideoDriver.h"
 
 class OgcVideoDriver;
@@ -15,12 +16,17 @@ class OgcEmulatorVideo : public EmulatorVideoDriver
 {
 	public:
 		OgcEmulatorVideo() : videoDriver(nullptr) {}
+		~OgcEmulatorVideo() override { free(screenshotSnapshot); }
 
 		void init(VideoDriver* videoDriver) override;
 		void resetVideo() override;
 		void presentFrame(int width, int height) override;
-		//! Un-swizzles a 4x4-tiled GX_TF_RGB5A3 texture into packed RGB24
-		void readFrameRGB24(const void* src, int width, int height, uint8_t* dst) override;
+		//! Copies the live (4x4-tiled GX_TF_RGB5A3) texturemem contents into
+		//! a driver-owned buffer, since texturemem itself lives in the
+		//! mspace SwitchMemoryModeMenu() is about to tear down.
+		void snapshotFrame() override;
+		//! Un-swizzles the buffer snapshotFrame() captured into packed RGB24
+		void readFrameRGB24(int width, int height, uint8_t* dst) override;
 
 		//! Sets the initial console dimensions, before the first presentFrame() call
 		void renderInit(int width, int height);
@@ -29,6 +35,10 @@ class OgcEmulatorVideo : public EmulatorVideoDriver
 		void initFPSFontData();
 
 	private:
+		//! One-shot: allocated by snapshotFrame(), consumed and freed by
+		//! the next readFrameRGB24() call.
+		uint8_t* screenshotSnapshot = nullptr;
+
 		long long int* processFrameAndGetDest(void* textureBase, const uint16_t* frameBuffer, int gbWidth, int gbHeight);
 		void writeFrameToTextureMemory(u8* srcBuffer, void* textureBase, int width, int height);
 		void* applyBorderToGxTexture(void *textureBase, int gbWidth, int gbHeight);

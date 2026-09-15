@@ -3,13 +3,26 @@
  * Daryl Borth 2026
  * WutEmulatorVideo.cpp
  ***************************************************************************/
+#include <stdio.h>
+#include <string.h>
+#include <malloc.h>
+
 #include <coreinit/memdefaultheap.h>
+#include <coreinit/time.h>
+#include <gx2/mem.h>
 #include <whb/gfx.h>
 
 #include "WutEmulatorVideo.h"
 #include "WutVideoDriver.h"
 #include "shaders/Texture2DShader.h"
 #include "../../vbagx.h"
+#include "../../vbasupport.h"
+#include "../../gameborder.h"
+#include "../../video.h"
+#include "../../menu.h"
+#include "../../vba/gba/Globals.h"
+
+#include "fps_font_png.h"
 
 namespace
 {
@@ -30,14 +43,25 @@ namespace
 
 WutEmulatorVideo::WutEmulatorVideo()
 	: videoDriver(nullptr), texture(nullptr)
+	, vwidth(0), vheight(0), oldvwidth(0), oldvheight(0)
+	, checkVideo(1)
 	, quadX(0), quadY(0), quadWidth(0), quadHeight(0)
+	, fpsFont(nullptr), fpsGlyphTexCoords(nullptr), lastFpsTime(0)
+	, screenshotSnapshot(nullptr), screenshotWidth(0), screenshotHeight(0), screenshotPitch(0)
 {
+	fpsStr[0] = '\0';
+
 	GX2InitSampler(&sampler, GX2_TEX_CLAMP_MODE_CLAMP, GX2_TEX_XY_FILTER_MODE_LINEAR);
+	GX2InitSampler(&fontSampler, GX2_TEX_CLAMP_MODE_CLAMP, GX2_TEX_XY_FILTER_MODE_POINT);
+	GX2InitSampler(&uiSampler, GX2_TEX_CLAMP_MODE_CLAMP, GX2_TEX_XY_FILTER_MODE_LINEAR);
 }
 
 WutEmulatorVideo::~WutEmulatorVideo()
 {
 	destroyTexture();
+	delete fpsFont;
+	free(fpsGlyphTexCoords);
+	free(screenshotSnapshot);
 }
 
 void WutEmulatorVideo::init(VideoDriver* driver)
@@ -48,11 +72,91 @@ void WutEmulatorVideo::init(VideoDriver* driver)
 /****************************************************************************
  * resetVideo
  *
- * Recomputes the on-screen placement of the game quad.
+ * Recomputes the on-screen placement of the game quad, in design-canvas
+ * (640x480) pixels, from the current vwidth/vheight and EmuSettings'
+ * aspect ratio / zoom / fixed-scale options, and gameScreenPng's
+ * scale/offset. GX2/PixelRectToNdc maps design-canvas pixels
+ * straight to NDC against the real screen resolution. gameScreenPng's
+ * scale/offset fall out of quadWidth/quadHeight/quadX/quadY directly
+ * instead of needing their own physical-pixel remapping.
  ***************************************************************************/
 void WutEmulatorVideo::resetVideo()
 {
+	if (vwidth <= 0 || vheight <= 0)
+		return;
 
+	float tvAspectRatio = (EmuSettings.videoAspectRatioCorrection == SCALING_WIDESCREEN_CORRECTION)
+		? (16.0f / 9.0f) : (4.0f / 3.0f);
+
+	float maxStretchRatio =
+		(EmuSettings.videoAspectRatioCorrection == SCALING_PARTIAL_STRETCH) ? 1.3f :
+		(EmuSettings.videoAspectRatioCorrection == SCALING_STRETCH_TO_FIT)  ? 1.6f : 1.0f;
+
+	float consoleAspectRatio = (float)vwidth / (float)vheight;
+
+	float xscale, yscale;
+	if (tvAspectRatio > consoleAspectRatio)
+	{
+		yscale = 240.0f; // half of the 640x480 design canvas
+		float stretchRatio = tvAspectRatio / consoleAspectRatio;
+		if (stretchRatio > maxStretchRatio)
+			stretchRatio = maxStretchRatio;
+		xscale = 240.0f * consoleAspectRatio * stretchRatio * ((4.0f / 3.0f) / tvAspectRatio);
+	}
+	else
+	{
+		xscale = 320.0f;
+		float stretchRatio = consoleAspectRatio / tvAspectRatio;
+		if (stretchRatio > maxStretchRatio)
+			stretchRatio = maxStretchRatio;
+		yscale = 320.0f / consoleAspectRatio * stretchRatio / ((4.0f / 3.0f) / tvAspectRatio);
+	}
+
+	float zoomHor, zoomVert;
+	int fixed;
+	if (cartridgeType == CARTRIDGE_GBA)
+	{
+		zoomHor  = EmuSettings.gbaZoomHor;
+		zoomVert = EmuSettings.gbaZoomVert;
+		fixed    = EmuSettings.gbaFixed;
+	}
+	else
+	{
+		zoomHor  = EmuSettings.gbZoomHor;
+		zoomVert = EmuSettings.gbZoomVert;
+		fixed    = EmuSettings.gbFixed;
+	}
+
+	if (fixed)
+	{
+		// Pixel-exact integer multiple of the console's native resolution,
+		// same "ratio"/"widescreen bit".
+		int ratio = fixed % 10;
+		bool widescreen = fixed / 10;
+
+		float vw = (float)vwidth * ratio;
+		if (widescreen)
+			vw /= (4.0f / 3.0f);
+		float vh = (float)vheight * ratio;
+
+		quadWidth  = vw;
+		quadHeight = vh;
+	}
+	else
+	{
+		quadWidth  = 2.0f * xscale * zoomHor;
+		quadHeight = 2.0f * yscale * zoomVert;
+	}
+
+	quadX = (videoDriver->getScreenWidth()  - quadWidth)  * 0.5f + EmuSettings.videoXshift;
+	quadY = (videoDriver->getScreenHeight() - quadHeight) * 0.5f + EmuSettings.videoYshift;
+
+	gameScreenPng.width  = vwidth;
+	gameScreenPng.height = vheight;
+	gameScreenPng.scaleX = quadWidth  / (float)vwidth;
+	gameScreenPng.scaleY = quadHeight / (float)vheight;
+	gameScreenPng.xoffset = (quadX + quadWidth  * 0.5f) - (videoDriver->getScreenWidth()  * 0.5f);
+	gameScreenPng.yoffset = (quadY + quadHeight * 0.5f) - (videoDriver->getScreenHeight() * 0.5f);
 }
 
 /****************************************************************************
@@ -96,17 +200,85 @@ void WutEmulatorVideo::rebuildTexture(int width, int height)
 
 /****************************************************************************
  * uploadFrame
+ *
+ * Converts the console's raw RGB555 framebuffer into an RGBA8 GX2 texture.
+ *
+ * gbWidth/gbHeight are the dimensions of the incoming frame actually
+ * sitting in 'pix' this call (the raw parameter presentFrame() received),
+ * which is *not* necessarily the same as vwidth/vheight: when gameBorder
+ * holds a border, vwidth/vheight describe the larger bordered canvas the 
+ * quad/texture are sized to, and the console's own frame is composited 
+ * centered inside it.
  ***************************************************************************/
-void WutEmulatorVideo::uploadFrame()
+void WutEmulatorVideo::uploadFrame(int gbWidth, int gbHeight)
 {
-	if (!texture || !texture->surface.image)
+	if (!texture || !texture->surface.image || gbWidth <= 0 || gbHeight <= 0)
 		return;
 
+	const uint8_t* buffer = pix;
+	if (cartridgeType == CARTRIDGE_GBA)
+		buffer += 484; // skip the uninitialized top row
 
+	uint8_t* dst = static_cast<uint8_t*>(texture->surface.image);
+	const uint32_t dstStride = texture->surface.pitch * 4; // bytes/row, RGBA8
+
+	int offsetX = 0;
+	int offsetY = 0;
+
+	bool useBorder = gameBorder.hasBorder();
+	if (useBorder)
+	{
+		// One-time (or whenever dirty) sync of the border's own RGBA8
+		// pixels into the texture, before the console frame is blitted
+		// on top of the middle of it.
+		if (gameBorder.needsSync())
+		{
+			const uint8_t* borderRgba = gameBorder.getPixelsRGBA8();
+			int bw = gameBorder.getWidth();
+			int bh = gameBorder.getHeight();
+			for (int y = 0; y < bh; y++)
+				memcpy(dst + y * dstStride, borderRgba + y * bw * 4, bw * 4);
+			gameBorder.markSynced();
+		}
+
+		offsetX = (gameBorder.getWidth()  - gbWidth)  / 2;
+		offsetY = (gameBorder.getHeight() - gbHeight) / 2;
+	}
+
+	// VBA-M core pitch: 2 bytes/pixel plus a 4-byte pad
+	const int gbPitch = gbWidth * 2 + 4;
+
+	for (int y = 0; y < gbHeight; y++)
+	{
+		const uint16_t* srcRow = reinterpret_cast<const uint16_t*>(buffer + y * gbPitch);
+		uint8_t* dstRow = dst + (offsetY + y) * dstStride + offsetX * 4;
+
+		for (int x = 0; x < gbWidth; x++)
+		{
+			uint16_t px = srcRow[x];
+
+			// RGB555 (bit 15 unused/opaque marker)
+			uint8_t r5 = (px >> 10) & 0x1F;
+			uint8_t g5 = (px >> 5)  & 0x1F;
+			uint8_t b5 =  px        & 0x1F;
+
+			uint8_t* out = dstRow + x * 4;
+			out[0] = (r5 << 3) | (r5 >> 2);
+			out[1] = (g5 << 3) | (g5 >> 2);
+			out[2] = (b5 << 3) | (b5 >> 2);
+			out[3] = 0xFF;
+		}
+	}
+
+	GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, texture->surface.image, texture->surface.imageSize);
 }
 
 /****************************************************************************
  * drawQuad
+ *
+ * Baseline upscaling note: this draws one quad, sized/positioned in
+ * design-canvas (640x480) pixels via PixelRectToNdc, into whatever render
+ * target WHBGfxBeginRenderTV()/BeginRenderDRC() is currently bound to.
  ***************************************************************************/
 void WutEmulatorVideo::drawQuad()
 {
@@ -143,16 +315,138 @@ void WutEmulatorVideo::drawQuad()
 }
 
 /****************************************************************************
+ * drawFpsOverlay
+ ***************************************************************************/
+void WutEmulatorVideo::drawFpsOverlay()
+{
+	if (!EmuSettings.DisplayFrameRate || !videoDriver->isForeground())
+		return;
+
+	if (!fpsFont || !fpsGlyphTexCoords)
+		return;
+
+	GX2Texture* fontTex = static_cast<GX2Texture*>(fpsFont->getTexture());
+	if (!fontTex)
+		return;
+
+	uint32_t nowMs = (uint32_t)OSTicksToMilliseconds(OSGetTime());
+	if (fpsStr[0] == '\0' || nowMs - lastFpsTime >= 1000)
+	{
+		float fps = (EmuSettings.DisplayFrameRate == FRAMERATE_CORE) ? systemGetCoreFPS() : systemGetRenderFPS();
+		snprintf(fpsStr, sizeof(fpsStr), "FPS: %.1f", fps);
+		lastFpsTime = nowMs;
+	}
+
+	const float atlasWidth = (float)fpsFont->getWidth();
+	const float glyphW = atlasWidth / 16.0f; // 16 cells across the atlas
+	const float glyphH = (float)fpsFont->getHeight();
+	const float startX = 480.0f, startY = 420.0f; // bottom-right-ish
+	const float advance = 14.0f; // tight visual kerning
+
+	Texture2DShader* shader = Texture2DShader::instance();
+	float colorIntensity[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+	float cursorX = startX;
+	for (int i = 0; fpsStr[i] != '\0'; i++)
+	{
+		char c = fpsStr[i];
+		int texIdx = 15; // default: blank cell
+		if (c >= '0' && c <= '9') texIdx = c - '0';
+		else if (c == '.') texIdx = 10;
+		else if (c == 'F') texIdx = 11;
+		else if (c == 'P') texIdx = 12;
+		else if (c == 'S') texIdx = 13;
+		else if (c == ':') texIdx = 14;
+
+		float u0 = (texIdx * glyphW) / atlasWidth;
+		float u1 = ((texIdx + 1) * glyphW) / atlasWidth;
+
+		fpsGlyphTexCoords[0] = u0; fpsGlyphTexCoords[1] = 1.0f;
+		fpsGlyphTexCoords[2] = u1; fpsGlyphTexCoords[3] = 1.0f;
+		fpsGlyphTexCoords[4] = u1; fpsGlyphTexCoords[5] = 0.0f;
+		fpsGlyphTexCoords[6] = u0; fpsGlyphTexCoords[7] = 0.0f;
+		GX2Invalidate(GX2_INVALIDATE_MODE_CPU_ATTRIBUTE_BUFFER, fpsGlyphTexCoords, 8 * sizeof(float));
+
+		float offset[3], scale[3];
+		PixelRectToNdc(cursorX, startY, glyphW, glyphH, videoDriver->getScreenWidth(), videoDriver->getScreenHeight(), offset, scale);
+
+		auto drawPass = [&]() {
+			shader->setShaders();
+			shader->setAttributeBuffer();
+			VertexShader::setAttributeBuffer(1, 8 * sizeof(float), Shader::cuTexCoordAttrSize, fpsGlyphTexCoords);
+			shader->setAngle(0.0f);
+			shader->setOffset(offset);
+			shader->setScale(scale);
+			shader->setColorIntensity(colorIntensity);
+			shader->clearBlur();
+			shader->setTextureAndSampler(fontTex, &fontSampler);
+			shader->draw(GX2_PRIMITIVE_MODE_QUADS, 4);
+		};
+
+		WHBGfxBeginRenderTV(); drawPass();
+		WHBGfxBeginRenderDRC(); drawPass();
+
+		cursorX += advance;
+	}
+}
+
+/****************************************************************************
+ * drawCursorOverlay
+ ***************************************************************************/
+void WutEmulatorVideo::drawCursorOverlay()
+{
+	if (!CursorVisible || !CursorValid || !videoDriver->isForeground())
+		return;
+
+	GuiImageData* cursorImg = pointer[0];
+	if (!cursorImg)
+		return;
+
+	GX2Texture* cursorTex = static_cast<GX2Texture*>(cursorImg->getTexture());
+	if (!cursorTex)
+		return;
+
+	const float w = (float)cursorImg->getWidth();
+	const float h = (float)cursorImg->getHeight();
+
+	float offset[3], scale[3];
+	PixelRectToNdc((float)CursorX - w * 0.5f, (float)CursorY - h * 0.5f, w, h,
+		videoDriver->getScreenWidth(), videoDriver->getScreenHeight(), offset, scale);
+
+	float colorIntensity[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	Texture2DShader* shader = Texture2DShader::instance();
+
+	auto drawPass = [&]() {
+		shader->setShaders();
+		shader->setAttributeBuffer();
+		shader->setAngle(0.0f);
+		shader->setOffset(offset);
+		shader->setScale(scale);
+		shader->setColorIntensity(colorIntensity);
+		shader->clearBlur();
+		shader->setTextureAndSampler(cursorTex, &uiSampler);
+		shader->draw(GX2_PRIMITIVE_MODE_QUADS, 4);
+	};
+
+	WHBGfxBeginRenderTV(); drawPass();
+	WHBGfxBeginRenderDRC(); drawPass();
+}
+
+/****************************************************************************
  * presentFrame
+ *
+ * width/height are the raw console frame dimensions for *this* call
+ * When gameBorder holds a border, the target is sized to the border instead
  ***************************************************************************/
 void WutEmulatorVideo::presentFrame(int width, int height)
 {
-	vwidth = width;
-	vheight = height;
+	bool useBorder = gameBorder.hasBorder();
+	vwidth  = useBorder ? gameBorder.getWidth()  : width;
+	vheight = useBorder ? gameBorder.getHeight() : height;
 
-	if (checkVideo) // if we get back from the menu, and have rendered at least 1 frame
+	if (checkVideo || vwidth != oldvwidth || vheight != oldvheight)
 	{
-		resetVideo(); // reset scaling to emulator rendering settings
+		resetVideo(); // recompute quad placement for the (possibly new) target size
 		rebuildTexture(vwidth, vheight);
 
 		oldvwidth = vwidth;
@@ -160,29 +454,95 @@ void WutEmulatorVideo::presentFrame(int width, int height)
 		checkVideo = 0;
 	}
 
-	uploadFrame();
+	uploadFrame(width, height);
 	drawQuad();
+	drawFpsOverlay();
+	drawCursorOverlay();
 
 	videoDriver->presentBuffer();
 }
 
 /****************************************************************************
- * readFrameRGB24
- *
- * Converts straight from the emulator's raw framebuffer (same source as
- * uploadFrame) rather than reading back the GX2 texture - simpler, and
- * avoids depending on GX2 surface padding/pitch for a CPU readback.
+ * snapshotFrame / readFrameRGB24
  ***************************************************************************/
-void WutEmulatorVideo::readFrameRGB24(const void* src, int width, int height, uint8_t* dst)
+void WutEmulatorVideo::snapshotFrame()
 {
+	if (screenshotSnapshot)
+	{
+		free(screenshotSnapshot);
+		screenshotSnapshot = nullptr;
+	}
 
+	if (!texture || !texture->surface.image)
+		return;
+
+	screenshotSnapshot = (uint8_t*)malloc(texture->surface.imageSize);
+	if (!screenshotSnapshot)
+		return;
+
+	memcpy(screenshotSnapshot, texture->surface.image, texture->surface.imageSize);
+	screenshotWidth  = vwidth;
+	screenshotHeight = vheight;
+	screenshotPitch  = texture->surface.pitch;
 }
 
+void WutEmulatorVideo::readFrameRGB24(int width, int height, uint8_t* dst)
+{
+	if (!screenshotSnapshot || !dst)
+		return;
+
+	// width/height come from gameScreenPng
+	if (width != screenshotWidth || height != screenshotHeight)
+	{
+		free(screenshotSnapshot);
+		screenshotSnapshot = nullptr;
+		return;
+	}
+
+	const uint32_t srcStride = screenshotPitch * 4; // bytes/row, RGBA8
+
+	for (int y = 0; y < height; y++)
+	{
+		const uint8_t* srcRow = screenshotSnapshot + y * srcStride;
+		uint8_t* dstRow = dst + y * width * 3;
+
+		for (int x = 0; x < width; x++)
+		{
+			dstRow[x * 3 + 0] = srcRow[x * 4 + 0];
+			dstRow[x * 3 + 1] = srcRow[x * 4 + 1];
+			dstRow[x * 3 + 2] = srcRow[x * 4 + 2];
+		}
+	}
+
+	free(screenshotSnapshot);
+	screenshotSnapshot = nullptr;
+}
+
+/****************************************************************************
+ * renderInit
+ *
+ * Sets the initial (possibly border-inclusive) target dimensions, ahead of
+ * the first presentFrame() call, and forces the next presentFrame() to
+ * rebuild the texture and re-run resetVideo() regardless of whether the
+ * size happens to match whatever was already there.
+ ***************************************************************************/
 void WutEmulatorVideo::renderInit(int width, int height)
 {
-
+	vwidth = width;
+	vheight = height;
+	checkVideo = 1;
 }
 
-void WutEmulatorVideo::initFPSFontData() {
+/****************************************************************************
+ * initFPSFontData
+ *
+ * Called once at startup (before any memory-mode switching happens).
+ ***************************************************************************/
+void WutEmulatorVideo::initFPSFontData()
+{
+	if (!fpsFont)
+		fpsFont = new GuiImageData(fps_font_png);
 
+	if (!fpsGlyphTexCoords)
+		fpsGlyphTexCoords = static_cast<float*>(memalign(GX2_VERTEX_BUFFER_ALIGNMENT, 4 * 2 * sizeof(float)));
 }

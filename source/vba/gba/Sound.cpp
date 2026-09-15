@@ -421,6 +421,7 @@ void flush_samples(Multi_Buffer * buffer)
 				pos += step;
 			}
 
+			#if defined(HW_RVL) || defined(HW_DOL)
 			// Align & Swap L/R Channels via 32-bit packed frame operations
 			u32* wave32 = (u32*)target_buf;
 			for (int i = 0; i < out_frames; i++)
@@ -428,6 +429,7 @@ void flush_samples(Multi_Buffer * buffer)
 				u32 frame = wave32[i];
 				wave32[i] = (frame << 16) | (frame >> 16);
 			}
+			#endif
 
 			soundDriver->commitWrite();
 		}

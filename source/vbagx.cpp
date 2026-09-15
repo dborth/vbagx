@@ -168,11 +168,11 @@ int main(int argc, char *argv[])
 			if(appRequest == AppRequest::MENU)
 			{
 				appRequest = AppRequest::NONE;
-				uint8_t *tempBuffer = (uint8_t *)malloc(TEXTUREMEM_SIZE); // this one needs to stay malloc because we're switching modes!
-				memcpy(tempBuffer, texturemem, TEXTUREMEM_SIZE);
+				// snapshotFrame() must run before the mode switch - it may otherwise
+				// be reading out of memory that switch is about to tear down
+				platform->getVideo()->getEmulatorVideo()->snapshotFrame();
 				SwitchMemoryModeMenu();
-				TakeScreenshot(tempBuffer);
-				free(tempBuffer);
+				TakeScreenshot();
 				platform->getVideo()->startMenuVideo();
 
 				#ifdef HW_DOL

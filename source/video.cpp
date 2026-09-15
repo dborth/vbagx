@@ -45,13 +45,15 @@ void ClearScreenshot()
 /****************************************************************************
  * TakeScreenshot
  *
- * Copies the current texturemem screen into a PNG buffer
+ * Encodes whatever the emulator video driver most recently snapshotFrame()'d
+ * into a PNG buffer. snapshotFrame() must have been called first, before 
+ * switching memory modes.
  ***************************************************************************/
-void TakeScreenshot(uint8_t * gameTexture)
+void TakeScreenshot()
 {
 	AllocSaveBuffer();
 	EmulatorVideoDriver* emulatorVideo = platform->getVideo()->getEmulatorVideo();
-	emulatorVideo->readFrameRGB24(gameTexture, gameScreenPng.width, gameScreenPng.height, savebuffer);
+	emulatorVideo->readFrameRGB24(gameScreenPng.width, gameScreenPng.height, savebuffer);
 	uint32_t size = 0;
 	gameScreenPng.buffer = EncodePNGFromRGB24(gameScreenPng.width, gameScreenPng.height, savebuffer, 0, &size);
 	gameScreenPng.size = (int) size;

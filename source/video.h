@@ -18,7 +18,7 @@
 #define TEX_HEIGHT 480
 #define TEXTUREMEM_SIZE 	TEX_WIDTH*TEX_HEIGHT*2
 
-void TakeScreenshot(uint8_t * gameTexture);
+void TakeScreenshot();
 void ClearScreenshot();
 
 extern int32_t CursorX, CursorY;
