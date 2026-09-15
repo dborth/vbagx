@@ -1,8 +1,6 @@
 /****************************************************************************
  * Visual Boy Advance GX
- *
  * Daryl Borth 2026
- *
  * WutEmulatorVideo.h
  *
  * EmulatorVideoDriver implementation for Wii U: uploads the raw GB/GBA
