@@ -1,5 +1,5 @@
 /****************************************************************************
- * libgui - drivers/ogc
+ * Platform Abstraction Layer
  * Daryl Borth 2009-2026
  * WiiAudioDriver.cpp
  ***************************************************************************/
@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #include "WiiAudioDriver.h"
-#include "OgcEmulatorAudio.h"
+#include "../OgcEmulatorAudio.h"
 
 static WiiAudioDriver *instance = nullptr;
 

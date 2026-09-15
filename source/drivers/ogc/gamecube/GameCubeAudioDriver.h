@@ -1,9 +1,14 @@
+/****************************************************************************
+ * Platform Abstraction Layer
+ * Daryl Borth 2026
+ * GameCubeAudioDriver.h
+ ***************************************************************************/
 #pragma once
 
 #include <stdint.h>
 #include <ogc/audio.h>
-#include "OgcEmulatorAudio.h"
-#include "../AudioDriver.h"
+#include "../OgcEmulatorAudio.h"
+#include "../../AudioDriver.h"
 
 class GameCubeAudioDriver : public AudioDriver
 {

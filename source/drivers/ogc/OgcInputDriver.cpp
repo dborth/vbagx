@@ -20,8 +20,8 @@
 #include "../InputController.h"
 
 #ifdef HW_RVL
-#include "wiidrc.h"
-#include "WiiPlatform.h"
+#include "wii/wiidrc.h"
+#include "wii/WiiPlatform.h"
 #endif
 
 extern "C" {

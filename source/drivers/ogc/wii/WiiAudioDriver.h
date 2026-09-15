@@ -1,14 +1,14 @@
 /****************************************************************************
- * libgui - drivers/ogc
+ * Platform Abstraction Layer
  * Daryl Borth 2009-2026
  * WiiAudioDriver.h
  ***************************************************************************/
 #pragma once
 
 #include <stdint.h>
-#include "../AudioDriver.h"
-#include "OgcEmulatorAudio.h"
-#include "../../libgui/GuiSoundOggPlayer.h"
+#include "../../AudioDriver.h"
+#include "../OgcEmulatorAudio.h"
+#include "../../../libgui/GuiSoundOggPlayer.h"
 
 class WiiAudioDriver : public AudioDriver
 {
@@ -17,8 +17,8 @@ class WiiAudioDriver : public AudioDriver
 
 		void init() override;
 		void shutdown() override;
-		void startEmulatorAudio() override;
 		void startMenuAudio() override;
+		void startEmulatorAudio() override;
 
 		OgcEmulatorAudio* getEmulatorAudio() override { return emulatorAudio; }
 

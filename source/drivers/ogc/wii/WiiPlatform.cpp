@@ -8,8 +8,8 @@
 #include <stdio.h>
 
 #include "WiiPlatform.h"
-#include "../../vbagx.h"
-#include "../../memmanager.h"
+#include "../../../vbagx.h"
+#include "../../../memmanager.h"
 
 extern "C" {
 extern void __exception_setreload(int t);
