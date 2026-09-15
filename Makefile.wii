@@ -21,7 +21,7 @@ TARGET		:=	vbagx-wii
 TARGETDIR   :=  executables
 BUILD		:=	build_wii
 SOURCES		:=	source source/libgui source/utils source/utils/sz \
-				source/drivers source/drivers/ogc \
+				source/drivers source/drivers/ogc source/drivers/ogc/wii \
 				source/vba source/vba/apu source/vba/common \
 				source/vba/gb source/vba/gba source/goomba source/goomba/minilzo-2.06
 DATA		:=	data/images data/fonts data/lang data/sounds
@@ -31,7 +31,7 @@ INCLUDES 	:=  source source/vba
 # options for code generation
 #---------------------------------------------------------------------------------
 
-# -fno-strict-aliasing: critical for GCC 16 pointer casting inside Memory.cpp
+# -fno-strict-aliasing: critical for GCC pointer casting inside Memory.cpp
 CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 				-D__ppc__ -DNO_PNG -DHAVE_ZUTIL_H \
 				-DBLARGG_NONPORTABLE -DBLARGG_BIG_ENDIAN -DBLARGG_CPU_POWERPC \
@@ -80,7 +80,6 @@ export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 #---------------------------------------------------------------------------------
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-CPPFILES	:=	$(filter-out GameCubeFileSystemDriver.cpp GameCubePlatform.cpp, $(CPPFILES))
 sFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 SFILES		:=	$(filter-out vmdsihandler.S, $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S))))
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.ttf) \
