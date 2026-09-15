@@ -48,7 +48,7 @@
 #endif
 
 #ifdef HW_DOL
-#include "drivers/ogc/vm/vmpager.h"
+#include "drivers/ogc/gamecube/vm/vmpager.h"
 #endif
 
 #define THREAD_SLEEP 100
