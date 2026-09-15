@@ -1,5 +1,5 @@
 /****************************************************************************
- * Visual Boy Advance GX - drivers/ogc
+ * Visual Boy Advance GX
  * Daryl Borth 2008-2026
  * OgcEmulatorAudio.h
  *

@@ -1,11 +1,11 @@
 /****************************************************************************
- * Snes9x GX
+ * Visual Boy Advance GX
  *
  * Daryl Borth 2026
  *
  * WutEmulatorVideo.h
  *
- * EmulatorVideoDriver implementation for Wii U: uploads the raw SNES
+ * EmulatorVideoDriver implementation for Wii U: uploads the raw GB/GBA
  * framebuffer into a linear GX2 texture and draws it with the shared
  * Texture2DShader.
  ***************************************************************************/
@@ -27,8 +27,13 @@ class WutEmulatorVideo : public EmulatorVideoDriver
 		void init(VideoDriver* videoDriver) override;
 		void resetVideo() override;
 		void presentFrame(int width, int height) override;
-		void readFrameRGB24(uint8_t* dst) override;
-		void forceVideoUpdate() override;
+		void readFrameRGB24(const void* src, int width, int height, uint8_t* dst) override;
+
+		//! Sets the initial console dimensions, before the first presentFrame() call
+		void renderInit(int width, int height);
+
+		//! Loads the FPS overlay font into texture memory. Must be called at startup.
+		void initFPSFontData();
 
 	private:
 		void rebuildTexture(int width, int height);

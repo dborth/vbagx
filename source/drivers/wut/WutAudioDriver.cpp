@@ -11,8 +11,6 @@
 #include "../Platform.h"
 #include "WutAudioDriver.h"
 
-#include "snes9x/apu/apu.h"
-
 static WutAudioDriver *instance = nullptr;
 
 // Once the OS has taken the foreground away from us (HOME menu overlay,
@@ -96,11 +94,10 @@ WutAudioDriver::~WutAudioDriver() {
 void WutAudioDriver::startEmulatorAudio() {
 	stopMenuAudio();
 	emulatorAudio->resetAudio();
-	S9xSetSamplesAvailableCallback(S9xAudioCallback, NULL);
 }
 
 void WutAudioDriver::stopEmulatorAudio() {
-	S9xSetSamplesAvailableCallback(NULL, NULL);
+
 }
 
 void WutAudioDriver::startMenuAudio() {

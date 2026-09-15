@@ -181,6 +181,20 @@ void WutInputDriver::setRumble(int channel, bool rumble) {
 	}
 }
 
+void WutInputDriver::setGameRumble(int channel, int frames) {
+    if (channel >= 0 && channel < 4) gameRumbleFrames[channel] = frames;
+}
+
+void WutInputDriver::ensureGameRumble(int channel, int frames) {
+    if (channel >= 0 && channel < 4) {
+        if (frames > gameRumbleFrames[channel]) gameRumbleFrames[channel] = frames;
+    }
+}
+
+void WutInputDriver::setContinuousRumble(int channel, bool continuous) {
+    if (channel >= 0 && channel < 4) continuousRumble[channel] = continuous;
+}
+
 void WutInputDriver::update() {
 	float screenWidth = (float)platform->getVideo()->getScreenWidth();
 	float screenHeight = (float)platform->getVideo()->getScreenHeight();
