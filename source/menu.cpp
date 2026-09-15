@@ -57,10 +57,12 @@
 
 #define THREAD_SLEEP 100
 
-#ifndef HW_DOL
+#ifdef CURSOR_SUPPORT
 GuiImageData * pointer[4];
 GuiImage cursorImg[4];
+#ifdef HW_RVL
 uint8_t pointerTexture[4][96 * 96 * 4] __attribute__((aligned(32)));
+#endif
 #endif
 
 static GuiTrigger * trigA = nullptr;
@@ -333,7 +335,7 @@ static void ProcessInputData() {
 static void DrawGui() {
 	menu->mainWindow.draw();
 
-	#ifndef HW_DOL
+	#ifdef CURSOR_SUPPORT
 	int i = 3;
 	do
 	{
@@ -681,17 +683,25 @@ static int WindowPrompt(const char *title, const char *msg, const char *btn1Labe
  ***************************************************************************/
 void InitGUI()
 {
-	#ifndef HW_DOL
+	#ifdef CURSOR_SUPPORT
+	#ifdef HW_RVL
 	pointer[0] = new GuiImageData(player1_point_png, pointerTexture[0]);
 	pointer[1] = new GuiImageData(player2_point_png, pointerTexture[1]);
 	pointer[2] = new GuiImageData(player3_point_png, pointerTexture[2]);
 	pointer[3] = new GuiImageData(player4_point_png, pointerTexture[3]);
+	#else
+	pointer[0] = new GuiImageData(player1_point_png);
+	pointer[1] = new GuiImageData(player2_point_png);
+	pointer[2] = new GuiImageData(player3_point_png);
+	pointer[3] = new GuiImageData(player4_point_png);
+	#endif
+	
 	for(int i = 0; i < 4; i++)
 		cursorImg[i].setImage(pointer[i]);
 	#endif
 
 	trigA = new GuiTrigger;
-	trigA->setPrimaryTrigger();;
+	trigA->setPrimaryTrigger();
 
 	mainThreadId = ThreadId::current();
 
@@ -5256,11 +5266,7 @@ static void * CreateBlurredGameTexture() {
  * MainMenu
  ***************************************************************************/
 static int FirstRunTask(void * arg) {
-	LoadPrefs();
-	autoSaveMethod();
-	autoLoadMethod();
-	CreateMissingDirectories();
-	SavePrefs();
+	
 	return 0;
 }
 
