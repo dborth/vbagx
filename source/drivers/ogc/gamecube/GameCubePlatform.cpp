@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "GameCubePlatform.h"
-#include "../../memmanager.h"
+#include "../../../memmanager.h"
 
 extern "C" {
 extern void __exception_setreload(int t);
