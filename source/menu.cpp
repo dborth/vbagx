@@ -5266,7 +5266,11 @@ static void * CreateBlurredGameTexture() {
  * MainMenu
  ***************************************************************************/
 static int FirstRunTask(void * arg) {
-	
+	LoadPrefs();
+	autoSaveMethod();
+	autoLoadMethod();
+	CreateMissingDirectories();
+	SavePrefs();
 	return 0;
 }
 
