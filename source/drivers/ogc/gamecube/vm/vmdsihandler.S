@@ -25,7 +25,6 @@
 .extern default_exceptionhandler
 
 FUNC_START(vm_dsi_handler_stub)
-
 	stwu        sp,-EXCEPTION_FRAME_END(sp)
 	stw         r6,GPR6_OFFSET(sp)
 	stw         r7,GPR7_OFFSET(sp)
@@ -34,13 +33,12 @@ FUNC_START(vm_dsi_handler_stub)
 	stw         r10,GPR10_OFFSET(sp)
 	stw         r11,GPR11_OFFSET(sp)
 	stw         r12,GPR12_OFFSET(sp)
-	mfdsisr     r4
-	mfmsr       r3
-	ori         r3,r3,MSR_RI
-	mtmsr       r3
+	mfdsisr     r3
+	mfdar       r4
+	mfmsr       r0
+	ori         r0,r0,MSR_RI
+	mtmsr       r0
 	
-	mfdsisr		r3
-	mfdar		r4
 	bl          vm_dsi_handler
 	
 	# check if it was handled correctly
@@ -55,9 +53,9 @@ FUNC_START(vm_dsi_handler_stub)
 	lwz         r12,GPR12_OFFSET(sp)
 
 	# clear MSR_RI
-	mfmsr       r3
-	rlwinm      r3,r3,0,31,29
-	mtmsr       r3
+	mfmsr       r0
+	rlwinm      r0,r0,0,31,29
+	mtmsr       r0
 
 	bne         1f
 	

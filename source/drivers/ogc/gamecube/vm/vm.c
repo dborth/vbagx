@@ -754,20 +754,20 @@ void VM_Deinit(void)
 //           (the pager thread's memcpy will overwrite it with real data
 //           immediately afterward on the committed=0 path).
 //        d. Map the frame to v_index's virtual address via insert_pte.
-int vm_dsi_handler(uint32_t DSISR, uint32_t DAR)
+int vm_dsi_handler(uint32_t dsisr, uint32_t dar)
 {
 	uint16_t v_index;
 	uint16_t p_index;
 
-	if (DAR < (uint32_t)VM_Base || DAR >= 0x80000000)
+	if (dar < (uint32_t)VM_Base || dar >= 0x80000000)
 		return 0;
-	if ((DSISR & ~0x02000000) != 0x40000000)
+	if ((dsisr & ~0x02000000) != 0x40000000)
 		return 0;
 	if (!vm_initialized)
 		return 0;
 
-	DAR &= ~0xFFF;
-	v_index = (vm_page*)DAR - VM_Base;
+	dar &= ~0xFFF;
+	v_index = (vm_page*)dar - VM_Base;
 
 	if (!virt_map[v_index].committed) {
 		// Page has never been loaded at all: hand off to the pager and
