@@ -23,7 +23,8 @@ InputController::InputController(int ch) :
 	channel(ch),
 	sideways(false),
 	scrollTimer(0.0f),
-	internalScrollTimer(0.0f)
+	internalScrollTimer(0.0f),
+	holdDuration(0.0f)
 {}
 
 void InputController::update(const InputPadData& data, float deltaTime) {
@@ -32,11 +33,16 @@ void InputController::update(const InputPadData& data, float deltaTime) {
 	// Advance the scroll timer
 	internalScrollTimer += deltaTime;
 
-	// If no directional inputs are held, reset the scroll timer completely
-	if (currentData.buttons_h == 0 &&
-		std::abs(currentData.stickX) < STICK_DEADZONE &&
-		std::abs(currentData.stickY) < STICK_DEADZONE) {
+	bool anyDirectionHeld = (currentData.buttons_h != 0) ||
+		std::abs(currentData.stickX) >= STICK_DEADZONE ||
+		std::abs(currentData.stickY) >= STICK_DEADZONE;
+
+	if (anyDirectionHeld) {
+		holdDuration += deltaTime;
+	} else {
+		// Nothing directional held - reset both timers completely
 		internalScrollTimer = 0.0f;
+		holdDuration = 0.0f;
 	}
 }
 
@@ -54,8 +60,17 @@ bool InputController::processDirection(uint32_t logicalButtonMask, float stickAx
 	// If it's held down (or stick pushed), evaluate the repeat delay
 	if (isHeld || isStickActive) {
 		if (internalScrollTimer >= SCROLL_DELAY_INITIAL) {
+			// Accelerate the repeat rate the longer this has been continuously
+			// held, ramping from SCROLL_DELAY_LOOP_START down to
+			// SCROLL_DELAY_LOOP_MIN over SCROLL_ACCEL_RAMP_TIME seconds.
+			float heldPastInitial = holdDuration - SCROLL_DELAY_INITIAL;
+			float t = heldPastInitial / SCROLL_ACCEL_RAMP_TIME;
+			if (t < 0.0f) t = 0.0f;
+			if (t > 1.0f) t = 1.0f;
+			float loopDelay = SCROLL_DELAY_LOOP_START + (SCROLL_DELAY_LOOP_MIN - SCROLL_DELAY_LOOP_START) * t;
+
 			// Re-trigger and step back the timer by the loop amount so it triggers again soon
-			internalScrollTimer -= SCROLL_DELAY_LOOP;
+			internalScrollTimer -= loopDelay;
 			return true;
 		}
 	}
