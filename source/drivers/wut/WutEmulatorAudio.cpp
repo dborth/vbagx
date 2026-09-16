@@ -240,18 +240,18 @@ void WutEmulatorAudio::commitWrite()
 	// transient underrun, ramp back up now that there's real signal again.
 	if (ducked && queryUnplayedFrames() >= COMMIT_FRAMES)
 	{
-		rampVolume(voiceL, AX_MAX_VOLUME);
-		rampVolume(voiceR, AX_MAX_VOLUME);
+		rampVolume(voiceL, 0, AX_MAX_VOLUME);
+		rampVolume(voiceR, 0, AX_MAX_VOLUME);
 		ducked = false;
 	}
 }
 
-void WutEmulatorAudio::rampVolume(AXVoice* v, int16_t targetVolume)
+void WutEmulatorAudio::rampVolume(AXVoice* v, uint16_t startVolume, uint16_t targetVolume)
 {
 	if (!v) return;
 	AXVoiceVeData ve;
-	ve.volume = (uint16_t)v->volume;
-	ve.delta = (int16_t)(((int32_t)targetVolume - (int32_t)ve.volume) / DUCK_RAMP_SAMPLES);
+	ve.volume = startVolume;
+	ve.delta = (int16_t)(((int32_t)targetVolume - (int32_t)startVolume) / DUCK_RAMP_SAMPLES);
 	AXSetVoiceVe(v, &ve);
 }
 
@@ -276,8 +276,8 @@ void WutEmulatorAudio::frameTick()
 		// native volume envelope rather than an abrupt state-stop (which
 		// pops), and let commitWrite() ramp back up once fresh samples
 		// build back up past a chunk's worth.
-		rampVolume(voiceL, 0);
-		rampVolume(voiceR, 0);
+		rampVolume(voiceL, AX_MAX_VOLUME, 0);
+		rampVolume(voiceR, AX_MAX_VOLUME, 0);
 		ducked = true;
 	}
 }

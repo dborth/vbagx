@@ -71,7 +71,7 @@ class WutEmulatorAudio : public EmulatorAudioDriver
 		// a transient starvation instead of an abrupt AXSetVoiceState
 		// stop (which pops). Values are a starting point, not verified
 		// against real hardware timing yet -- worth confirming by ear.
-		static constexpr int16_t AX_MAX_VOLUME = (int16_t)0x7FFF;
+		static constexpr uint16_t AX_MAX_VOLUME = 0x8000;
 		static constexpr int DUCK_RAMP_SAMPLES = 64; // ~1.3ms at 48kHz
 
 		// AXSetVoiceDeviceMix output channel counts (TV/DRC)
@@ -83,7 +83,7 @@ class WutEmulatorAudio : public EmulatorAudioDriver
 		void configureVoice(AXVoice* v, int16_t* ringBuf, bool isLeft);
 		void writeFrames(const int16_t* interleavedSrc, uint32_t frames);
 		uint32_t queryUnplayedFrames();
-		void rampVolume(AXVoice* v, int16_t targetVolume);
+		void rampVolume(AXVoice* v, uint16_t startVolume, uint16_t targetVolume);
 
 		AXVoice* voiceL = nullptr;
 		AXVoice* voiceR = nullptr;
