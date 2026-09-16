@@ -74,6 +74,10 @@ class WutEmulatorAudio : public EmulatorAudioDriver
 		static constexpr int16_t AX_MAX_VOLUME = (int16_t)0x7FFF;
 		static constexpr int DUCK_RAMP_SAMPLES = 64; // ~1.3ms at 48kHz
 
+		// AXSetVoiceDeviceMix output channel counts (TV/DRC)
+		static constexpr int AX_TV_CHANNELS = 6;
+		static constexpr int AX_DRC_CHANNELS = 4;
+
 		enum RateState { RATE_STATE_NEUTRAL, RATE_STATE_DRAINING, RATE_STATE_FILLING };
 
 		void configureVoice(AXVoice* v, int16_t* ringBuf, bool isLeft);

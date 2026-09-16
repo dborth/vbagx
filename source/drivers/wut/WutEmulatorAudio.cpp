@@ -36,12 +36,16 @@ void WutEmulatorAudio::configureVoice(AXVoice* v, int16_t* ringBuf, bool isLeft)
 	AXVoiceBegin(v);
 	AXSetVoiceType(v, 0);
 
-	AXVoiceDeviceMixData mix;
-	memset(&mix, 0, sizeof(mix));
-	mix.bus[0].volume = isLeft ? AX_MAX_VOLUME : 0;
-	mix.bus[1].volume = isLeft ? 0 : AX_MAX_VOLUME;
-	AXSetVoiceDeviceMix(v, AX_DEVICE_TYPE_TV, 0, &mix);
-	AXSetVoiceDeviceMix(v, AX_DEVICE_TYPE_DRC, 0, &mix);
+	AXVoiceDeviceMixData tvMix[AX_TV_CHANNELS];
+	AXVoiceDeviceMixData drcMix[AX_DRC_CHANNELS];
+	memset(tvMix, 0, sizeof(tvMix));
+	memset(drcMix, 0, sizeof(drcMix));
+	tvMix[0].bus[0].volume = isLeft ? AX_MAX_VOLUME : 0;
+	tvMix[1].bus[0].volume = isLeft ? 0 : AX_MAX_VOLUME;
+	drcMix[0].bus[0].volume = isLeft ? AX_MAX_VOLUME : 0;
+	drcMix[1].bus[0].volume = isLeft ? 0 : AX_MAX_VOLUME;
+	AXSetVoiceDeviceMix(v, AX_DEVICE_TYPE_TV, 0, tvMix);
+	AXSetVoiceDeviceMix(v, AX_DEVICE_TYPE_DRC, 0, drcMix);
 
 	AXVoiceSrc src;
 	memset(&src, 0, sizeof(src));
