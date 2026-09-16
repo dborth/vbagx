@@ -29,7 +29,6 @@ class WutInputDriver : public InputDriver {
 		void openHomeButtonOverlay();
 
 	private:
-		int rumbleCount[4];
 		bool rumbleRequest[4];
 		int menuRumbleFrames[4];
 		int gameRumbleFrames[4];

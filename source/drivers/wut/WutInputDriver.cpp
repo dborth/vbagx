@@ -135,8 +135,8 @@ static constexpr float IR_BETA = 0.015f;
 
 WutInputDriver::WutInputDriver() : drcTouchedPrev(false), drcLastTouchX(0.0f), drcLastTouchY(0.0f) {
 	for (int i = 0; i < 4; i++) {
-		rumbleCount[i] = 0;
-		rumbleRequest[i] = false;
+		rumbleRequest[i] = continuousRumble[i] = false;
+		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = 0;
 		irFilterX[i].setParams(IR_MIN_CUTOFF, IR_BETA);
 		irFilterY[i].setParams(IR_MIN_CUTOFF, IR_BETA);
 		irSmoothInit[i] = false;
@@ -162,8 +162,8 @@ void WutInputDriver::init() {
 void WutInputDriver::shutdown() {
 	for (int i = 0; i < 4; i++) {
 		WPADControlMotor((WPADChan)i, FALSE);
-		rumbleCount[i] = 0;
-		rumbleRequest[i] = false;
+		rumbleRequest[i] = continuousRumble[i] = false;
+		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = 0;
 	}
 	VPADStopMotor(VPAD_CHAN_0);
 
@@ -198,6 +198,8 @@ void WutInputDriver::setContinuousRumble(int channel, bool continuous) {
 void WutInputDriver::update() {
 	float screenWidth = (float)platform->getVideo()->getScreenWidth();
 	float screenHeight = (float)platform->getVideo()->getScreenHeight();
+
+	bool allowRumble = isRumbleEnabled();
 
 	for (int i = 3; i >= 0; i--) {
 		InputPadData padData;
@@ -409,24 +411,44 @@ void WutInputDriver::update() {
 		// Update logical controller state
 		controller[i]->update(padData, platform->getVideo()->getDeltaTime());
 
-		// Rumble Lifecycle Management
-		if (rumbleRequest[i] && rumbleCount[i] < 3) {
-			if (padData.hw_connected[INPUT_HW_WIIMOTE] || padData.hw_connected[INPUT_HW_WUPC]) {
-				WPADControlMotor((WPADChan)i, TRUE);
-			}
-			if (i == 0 && padData.hw_connected[INPUT_HW_DRC]) {
-				VPADControlMotor(VPAD_CHAN_0, vpadRumblePattern, sizeof(vpadRumblePattern));
-			}
-			rumbleCount[i]++;
-		} else if (rumbleRequest[i]) {
-			rumbleCount[i] = 12;
+		// Rumble Handling
+		if (rumbleRequest[i]) {
+			menuRumbleFrames[i] = 3;
 			rumbleRequest[i] = false;
+		}
+
+		if (menuRumbleFrames[i] > 0) menuRumbleFrames[i]--;
+		if (gameRumbleFrames[i] > 0) gameRumbleFrames[i]--;
+
+		bool wantRumble = (menuRumbleFrames[i] > 0) || (gameRumbleFrames[i] > 0) || continuousRumble[i];
+		bool motorOn = false;
+
+		// Apply hardware safety constraints
+		if (silenceFrames[i] > 0) {
+			silenceFrames[i]--;
+			continuousRumbleCount[i] = 0;
 		} else {
-			if (rumbleCount[i]) rumbleCount[i]--;
-			if (padData.hw_connected[INPUT_HW_WIIMOTE] || padData.hw_connected[INPUT_HW_WUPC]) {
-				WPADControlMotor((WPADChan)i, FALSE);
+			if (wantRumble && allowRumble) {
+				continuousRumbleCount[i]++;
+				if (continuousRumbleCount[i] > 70) {
+					silenceFrames[i] = 5;
+					continuousRumbleCount[i] = 0;
+				} else {
+					motorOn = true;
+				}
+			} else {
+				continuousRumbleCount[i] = 0;
 			}
-			if (i == 0) {
+		}
+
+		if (padData.hw_connected[INPUT_HW_WIIMOTE] || padData.hw_connected[INPUT_HW_WUPC]) {
+			WPADControlMotor((WPADChan)i, motorOn ? TRUE : FALSE);
+		}
+
+		if (i == 0 && padData.hw_connected[INPUT_HW_DRC]) {
+			if (motorOn) {
+				VPADControlMotor(VPAD_CHAN_0, vpadRumblePattern, sizeof(vpadRumblePattern));
+			} else {
 				VPADStopMotor(VPAD_CHAN_0);
 			}
 		}
