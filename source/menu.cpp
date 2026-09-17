@@ -51,7 +51,7 @@
 #include "drivers/ogc/gamecube/vm/vmpager.h"
 #endif
 
-#ifdef __WUT__
+#ifdef __WIIU__
 #include "drivers/wut/WutInputDriver.h"
 #endif
 
@@ -1110,7 +1110,7 @@ static int MenuGameSelection()
 	buttonWindow.append(&settingsBtn);
 	buttonWindow.append(&exitBtn);
 
-	#ifdef __WUT__
+	#ifdef __WIIU__
 	GuiButton hiddenHomeBtn;
 	hiddenHomeBtn.setTrigger(&trigHome);
 	buttonWindow.append(&hiddenHomeBtn);
@@ -1233,7 +1233,7 @@ static int MenuGameSelection()
 		else if(exitBtn.getState() == STATE::CLICKED)
 			platform->triggerExit();
 
-		#ifdef __WUT__
+		#ifdef __WIIU__
 		if(hiddenHomeBtn.getState() == STATE::CLICKED) {
 			hiddenHomeBtn.resetState();
 			static_cast<WutInputDriver*>(platform->getInput())->openHomeButtonOverlay();
