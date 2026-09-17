@@ -123,9 +123,15 @@ int main(int argc, char *argv[])
 				MainMenu(MENU_GAME);
 		}
 
+		platform->getAudio()->stopMenuAudio();
+
 		if(platform->shouldExit()) {
 			break;
 		}
+
+		// stop checking if devices were removed/inserted
+		// since we're starting emulation again
+		HaltDeviceCheckingThread();
 
 		autoboot = false;
 		appRequest = AppRequest::NONE;
@@ -136,9 +142,6 @@ int main(int argc, char *argv[])
 		SelectFilterMethod(EmuSettings.videoUpscalingFilter); // Initialize / Re-evaluate active filter
 #endif
 
-		// stop checking if devices were removed/inserted
-		// since we're starting emulation again
-		HaltDeviceCheckingThread();
 		ResetTiltAndCursor();
 		platform->getVideo()->getEmulatorVideo()->resetVideo();
 
@@ -162,25 +165,20 @@ int main(int argc, char *argv[])
 			emulator.emuMain(emulator.emuCount);
 
 			if(event == SystemEvent::ResetRequested)
-			{
 				emulator.emuReset(); // reset game
-			}
-			if(appRequest == AppRequest::MENU)
-			{
-				appRequest = AppRequest::NONE;
-				// snapshotFrame() must run before the mode switch - it may otherwise
-				// be reading out of memory that switch is about to tear down
-				platform->getVideo()->getEmulatorVideo()->snapshotFrame();
-				SwitchMemoryModeMenu();
-				TakeScreenshot();
-				platform->getVideo()->startMenuVideo();
-
-				#ifdef HW_DOL
-				VMPager_Pause();
-				#endif
-				break; // leave emulation loop
-			}
 		} // emulation loop
+
+		platform->getAudio()->stopEmulatorAudio();
+		// snapshotFrame() must run before the mode switch - it may otherwise
+		// be reading out of memory that switch is about to tear down
+		platform->getVideo()->getEmulatorVideo()->snapshotFrame();
+		SwitchMemoryModeMenu();
+		TakeScreenshot();
+		platform->getVideo()->startMenuVideo();
+
+		#ifdef HW_DOL
+		VMPager_Pause();
+		#endif
 
 		DEBUG_OUTPUT_LOGS();
 	} // main loop

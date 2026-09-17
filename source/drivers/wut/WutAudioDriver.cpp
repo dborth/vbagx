@@ -101,22 +101,24 @@ WutAudioDriver::~WutAudioDriver() {
 	delete emulatorAudio;
 }
 
+void WutAudioDriver::startMenuAudio() {
+	
+}
+
+void WutAudioDriver::stopMenuAudio() {
+	stopStream();
+
+	for (int i = 0; i < 16; i++)
+		stopVoice(i);
+}
+
 void WutAudioDriver::startEmulatorAudio() {
-	stopMenuAudio();
 	emulatorAudio->resetAudio();
 	emulatorAudio->start();
 }
 
 void WutAudioDriver::stopEmulatorAudio() {
 	emulatorAudio->stop();
-}
-
-void WutAudioDriver::startMenuAudio() {
-	stopEmulatorAudio();
-}
-
-void WutAudioDriver::stopMenuAudio() {
-	stopStream();
 }
 
 void WutAudioDriver::shutdown() {
