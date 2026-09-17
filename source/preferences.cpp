@@ -538,7 +538,7 @@ decodePrefsData ()
 	// Menu Settings
 
 #ifdef HW_RVL
-	loadXMLSetting(&EmuSettings.wiimoteOrientation, "WiimoteOrientation");
+	loadXMLSetting(&EmuSettings.wiimoteOrientation, "wiimoteOrientation");
 #endif
 #if defined(HW_RVL) || defined(HW_DOL)
 	loadXMLSetting(&EmuSettings.ExitAction, "ExitAction");
