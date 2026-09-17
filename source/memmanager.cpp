@@ -77,7 +77,7 @@ void InitMemManager ()
 {
 #ifdef HW_RVL
 	void *mem2_heap_ptr = SYS_AllocArenaMem2Hi(MEM2_SIZE, 32);
-	extmem_space = create_mspace_with_base(mem2_heap_ptr, MEM2_SIZE, 0);
+	extmem_space = create_mspace_with_base(mem2_heap_ptr, MEM2_SIZE, 1);
 	mspace_set_footprint_limit(extmem_space, MEM2_SIZE);
 	romPtr = (uint8_t *)extmem_malloc(MAX_GBA_ROM_SIZE); // allocate 32 MB to GBA ROM
 #elif HW_DOL
@@ -117,21 +117,13 @@ void* memspace_malloc(uint32_t size)
 
 char* memspace_strdup(const char *s)
 {
-    if (!memspace_ptr || !s)
-        return nullptr;
-
-    size_t len = strlen(s) + 1;
-    char *dup = (char *)memspace_malloc(len);
-
-    if (dup)
-        memcpy(dup, s, len);
-
-    return dup;
+	if(!memspace_ptr) return nullptr;
+	return mspace_strdup(memspace_ptr, s);
 }
 
 void memspace_free(void *ptr)
 {
-	if(!memspace_ptr || !ptr) return;
+	if(!memspace_ptr) return;
 	mspace_free(memspace_ptr, ptr);
 }
 
