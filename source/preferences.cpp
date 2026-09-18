@@ -25,6 +25,7 @@
 #include "video.h"
 #include "filebrowser.h"
 #include "vbasupport.h"
+#include "memmanager.h"
 #include "input.h"
 #include "button_mapping.h"
 #include "gamesettings.h"
@@ -478,6 +479,7 @@ void ApplySettings() {
 	platform->getVideo()->startMenuVideo();
 	ChangeLanguage();
 	InitialisePalette();
+	EnforceJitSetting();
 }
 
 /****************************************************************************
@@ -668,6 +670,8 @@ void FixInvalidSettings()
 		EmuSettings.DisplayFrameRate = FRAMERATE_OFF;
 	if(!(EmuSettings.wiimoteOrientation >= WIIMOTE_ORIENTATION_VERTICAL && EmuSettings.wiimoteOrientation < WIIMOTE_ORIENTATION_LENGTH))
 		EmuSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_VERTICAL;
+		
+	RemapUsbPathsIfNeeded();
 }
 
 /****************************************************************************
@@ -1066,8 +1070,6 @@ bool LoadPrefs()
 	if(!prefFound) {
 		return false;
 	}
-
-	RemapUsbPathsIfNeeded();
 
 	FixInvalidSettings();
 	ApplySettings();

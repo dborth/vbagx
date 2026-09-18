@@ -25,6 +25,14 @@ extern uint8_t* romPtr;
 void InitJitWiiU();
 #endif
 
+// True if this platform can run the GBA JIT at all
+bool JitIsAvailable();
+
+// Clears EmuSettings.DynamicRecompilation if JIT is not available
+void EnforceJitSetting();
+
+void EnforceJitSettingForGame();
+
 void InitMemManager();
 void SwitchMemoryModeMenu();
 void SwitchMemoryModeGame();

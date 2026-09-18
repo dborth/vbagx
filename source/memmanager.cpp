@@ -97,6 +97,8 @@ void InitMemManager ()
 }
 
 #ifdef __WIIU__
+static bool jitProbed = false;
+
 void InitJitWiiU() {
 	uint32_t *arena = WutCodegenAcquire(JIT_ARENA_SIZE);
 	if (arena) {
@@ -105,8 +107,38 @@ void InitJitWiiU() {
 	        (BasicBlock**)coreMem.gba.smcRegistry,
 	        (uint8_t*)coreMem.gba.smcPageFlags);
 	}
+	jitProbed = true;
 }
 #endif
+
+bool JitIsAvailable()
+{
+#ifdef __WIIU__
+	return jitCache.isReady();
+#else
+	return true;
+#endif
+}
+
+void EnforceJitSetting()
+{
+	if(!EmuSettings.DynamicRecompilation)
+		return;
+#ifdef __WIIU__
+	if(!jitProbed)
+		return;
+#endif
+	if(!JitIsAvailable())
+		EmuSettings.DynamicRecompilation = false;
+}
+
+void EnforceJitSettingForGame()
+{
+	EnforceJitSetting();
+
+	if(EmuSettings.DynamicRecompilation && IsGBAGame() && !jitCache.isReady())
+		EmuSettings.DynamicRecompilation = false;
+}
 
 #if (!defined(HW_RVL) && !defined(HW_DOL))
 void* memspace_malloc(uint32_t size) { return malloc(size); }

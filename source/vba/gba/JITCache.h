@@ -70,6 +70,8 @@ class JITCache {
 		u32* linkerReturnAddress;
 		u8* smcPageFlags;
 
+		inline bool isReady() const { return isInitialized; }
+
 		void initialize(u32* arenaPtr, BasicBlock* blockPtr, BasicBlock** smcRegPtr, u8* smcFlagsPtr);
 		void destroy();
 

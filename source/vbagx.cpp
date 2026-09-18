@@ -109,6 +109,7 @@ int main(int argc, char *argv[])
 
 	#ifdef __WIIU__
 	InitJitWiiU();
+	EnforceJitSetting(); // codegen availability is now known; clear the (default-on) setting if it's unavailable
 	#endif
 
 	while (!platform->shouldExit()) // main loop
@@ -141,6 +142,7 @@ int main(int argc, char *argv[])
 		appRequest = AppRequest::NONE;
 		InitGameDimensionsAndBorder();
 		SwitchMemoryModeGame();
+		EnforceJitSettingForGame();
 		platform->getAudio()->startEmulatorAudio();
 #if defined(HW_RVL) || defined(HW_DOL)
 		SelectFilterMethod(EmuSettings.videoUpscalingFilter); // Initialize / Re-evaluate active filter
