@@ -3575,7 +3575,14 @@ static int MenuSettingsEmulation()
 
 		if (ret >= 0 && ret < options.length) {
 			switch (optionMap[ret]) {
-				case SET_DYNAREC:    EmuSettings.DynamicRecompilation ^= 1; break;
+				case SET_DYNAREC:
+					if (!JitIsAvailable()) {
+						EmuSettings.DynamicRecompilation = false;
+						InfoPrompt("JIT compiler is not available.");
+					} else {
+						EmuSettings.DynamicRecompilation ^= 1;
+					}
+					break;
 				case SET_FRAMESKIP:  EmuSettings.gbaFrameskip = !EmuSettings.gbaFrameskip; break;
 				case SET_HW:
 					if (++EmuSettings.GBHardware >= GBHARDWARE_LENGTH) EmuSettings.GBHardware = GBHARDWARE_AUTO;
@@ -3606,7 +3613,7 @@ static int MenuSettingsEmulation()
 				char* val = options.value[j];
 
 				switch (optionMap[j]) {
-					case SET_DYNAREC:    sprintf(val, "%s", EmuSettings.DynamicRecompilation ? "On" : "Off"); break;
+					case SET_DYNAREC:    EnforceJitSetting(); sprintf(val, "%s", EmuSettings.DynamicRecompilation ? "On" : "Off"); break;
 					case SET_FRAMESKIP:  sprintf(val, "%s", EmuSettings.gbaFrameskip ? "On" : "Off"); break;
 					case SET_HW:         sprintf(val, "%s", hwNames[EmuSettings.GBHardware]); break;
 					case SET_SGB_BORDER: sprintf(val, "%s", borderNames[EmuSettings.SGBBorder]); break;
