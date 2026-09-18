@@ -52,7 +52,7 @@ LDFLAGS		+=	-L../buildtools
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with
 #---------------------------------------------------------------------------------
-LIBS	:=	-lpng -lmxml -ltinysmb -lbba -lfat -liso9660 -lz -logc $(FREETYPE_LIBS)
+LIBS	:=	-lpng -lmxml -lsmb2 -lbba -lfat -liso9660 -lz -logc $(FREETYPE_LIBS)
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
