@@ -11,7 +11,8 @@
 #ifndef _FILEBROWSER_H_
 #define _FILEBROWSER_H_
 
-#include <sys/param.h>
+#include <unistd.h>
+#include <stdint.h>
 #include "vbagx.h"
 
 #define MAXJOLIET 255
@@ -43,6 +44,7 @@ typedef struct
 extern BROWSERINFO browser;
 extern BROWSERENTRY * browserList;
 extern bool browserDeviceListChanged;
+extern volatile uint32_t removedDeviceMask;
 extern char ROMFilename[512];
 extern bool ROMLoaded;
 extern char szpath[MAXPATHLEN];

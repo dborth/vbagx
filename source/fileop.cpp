@@ -175,7 +175,15 @@ static void * devicecallback (void *)
 		platform->getFileSystem()->pollStorageDevices(removed, removedCount, deviceListChanged);
 
 		if(removedCount > 0)
+		{
 			parseHalt = true; // abort any in-progress dir parse if a device it's using just disappeared
+
+			for(int i = 0; i < removedCount; i++)
+			{
+				if(removed[i] >= 0 && removed[i] < 32)
+					removedDeviceMask |= (1u << removed[i]);
+			}
+		}
 
 		// sleep ~1 sec in 100us steps so we can react to a halt/stop request quickly
 		for(int i = 0; i < 10000 && !deviceCheckingHalt && !deviceThread.stopRequested(); i++)
