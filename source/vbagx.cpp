@@ -107,6 +107,10 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	#ifdef __WIIU__
+	InitJitWiiU();
+	#endif
+
 	while (!platform->shouldExit()) // main loop
 	{
 		if(!autoboot) {

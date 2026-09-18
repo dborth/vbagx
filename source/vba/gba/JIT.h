@@ -68,6 +68,23 @@
 
 #define JIT_TRACE_MAX_INSTRUCTIONS 42
 
+#ifdef __WIIU__
+#include "../../drivers/wut/WutCodegen.h"
+#define JIT_CODE_BEGIN_WRITE()     WutCodegenBeginWrite()
+#define JIT_CODE_MARK_DIRTY(p, n)  WutCodegenMarkDirty((p), (n))
+#define JIT_CODE_END_WRITE()       WutCodegenEndWrite()
+#else
+#define JIT_CODE_BEGIN_WRITE()     ((void)0)
+#define JIT_CODE_MARK_DIRTY(p, n)  do { DCStoreRange((void*)(p), (n)); \
+                                        ICInvalidateRange((void*)(p), (n)); } while (0)
+#define JIT_CODE_END_WRITE()       ((void)0)
+#endif
+
+struct JITWriteScope {
+    JITWriteScope()  { JIT_CODE_BEGIN_WRITE(); }
+    ~JITWriteScope() { JIT_CODE_END_WRITE(); }
+};
+
 struct JITResult {
     u32 cycles;
     u32 nextPC;

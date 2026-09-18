@@ -21,6 +21,10 @@ extern "C" {
 
 extern uint8_t* romPtr;
 
+#ifdef __WIIU__
+void InitJitWiiU();
+#endif
+
 void InitMemManager();
 void SwitchMemoryModeMenu();
 void SwitchMemoryModeGame();

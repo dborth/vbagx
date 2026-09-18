@@ -162,6 +162,8 @@ void JITCache::flushCache() {
 	PROFILER_CACHE_FLUSH_START();
 	JIT_LOG_CACHE_FLUSH();
 
+	JITWriteScope scope;
+
 	arenaOffset = 0;
 
 	memset(blockTable, 0, HASH_TABLE_SIZE * sizeof(BasicBlock));
@@ -201,6 +203,7 @@ void JITCache::flushCache() {
 		u32* branchFailBlock = emitPtr;
 		*emitPtr++ = PPC_BEQ(0);
 
+#ifndef __WIIU__
 		// 6. DIRECT PATCHING (Only runs for valid, executable JIT blocks!)
 		*emitPtr++ = PPC_MFLR(PPC_R10);
 		*emitPtr++ = PPC_ADDI(PPC_R10, PPC_R10, -4);
@@ -215,6 +218,7 @@ void JITCache::flushCache() {
 		*emitPtr++ = PPC_ICBI(0, PPC_R10);
 		*emitPtr++ = PPC_SYNC();
 		*emitPtr++ = PPC_ISYNC();
+#endif
 
 		// 8. Execute Target Block
 		*emitPtr++ = PPC_MTCTR(PPC_R12);
@@ -245,6 +249,8 @@ void JITCache::flushCache() {
 
 // SMC eviction handler
 void JITCache::invalidateSMCTarget(u32 targetEA) {
+	JITWriteScope scope;
+
 	// Maximum trace length is (JIT_TRACE_MAX_INSTRUCTIONS+1)*2 bytes. Maximum write size is 36 bytes.
 	// Branchless minimum boundary clamping at 0
 	s32 offsetDiff = (s32)(targetEA - ((JIT_TRACE_MAX_INSTRUCTIONS + 1) * 2));

@@ -103,6 +103,8 @@ struct SMCBailoutPatch {
 };
 
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
+	JITWriteScope scope;
+
 	DeferredBailout bailouts[MAX_BAILOUTS];
 	u32 bailoutCount = 0;
 	SMCBailoutPatch smcBailoutList[MAX_SMC_BAILOUTS];
@@ -2393,8 +2395,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	JIT_LOG_ARENA(startPC, arenaOffsetStart, MAX_WORDS, emittedWords, rewindAmount / sizeof(u32));
 
 	cache.rewindJITMemory(rewindAmount);
-	DCStoreRange(blockStart, actualBytes);
-	ICInvalidateRange(blockStart, actualBytes);
+	JIT_CODE_MARK_DIRTY(blockStart, actualBytes);
 
 	return cache.registerBlock(startPC, instrCount, (JITBlockFunc)blockStart);
 }

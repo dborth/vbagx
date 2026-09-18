@@ -27,6 +27,10 @@
 #include "drivers/ogc/gamecube/vm/vmpager.h"
 #endif
 
+#ifdef __WIIU__
+#include "drivers/wut/WutCodegen.h"
+#endif
+
 #define MEM2_SIZE		(42*1024*1024)
 
 enum {
@@ -89,14 +93,20 @@ void InitMemManager ()
 	GuiImageData::setDecodeScratch(malloc(IMAGE_DECODE_SCRATCH_SIZE), IMAGE_DECODE_SCRATCH_SIZE);
 	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY) * MAX_BROWSER_SIZE);
 	texturemem = coreMem.gba.texturemem;
-	jitCache.initialize(
-		(uint32_t*)coreMem.gba.jitArena,
-		(BasicBlock*)coreMem.gba.blockTable,
-		(BasicBlock**)coreMem.gba.smcRegistry,
-		(uint8_t*)coreMem.gba.smcPageFlags
-	);
 #endif
 }
+
+#ifdef __WIIU__
+void InitJitWiiU() {
+	uint32_t *arena = WutCodegenAcquire(JIT_ARENA_SIZE);
+	if (arena) {
+	    jitCache.initialize(arena,
+	        (BasicBlock*)coreMem.gba.blockTable,
+	        (BasicBlock**)coreMem.gba.smcRegistry,
+	        (uint8_t*)coreMem.gba.smcPageFlags);
+	}
+}
+#endif
 
 #if (!defined(HW_RVL) && !defined(HW_DOL))
 void* memspace_malloc(uint32_t size) { return malloc(size); }
