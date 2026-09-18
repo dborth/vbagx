@@ -121,10 +121,6 @@ void WutEmulatorAudio::start()
 	if (started || !voiceL || !voiceR)
 		return;
 
-	// Pre-roll already sitting in the ring (written by commitWrite() before
-	// this was called) starts at offset 0; arm both voices back-to-back.
-	AXSetVoiceCurrentOffset(voiceL, 0);
-	AXSetVoiceCurrentOffset(voiceR, 0);
 	AXSetVoiceState(voiceL, AX_VOICE_STATE_PLAYING);
 	AXSetVoiceState(voiceR, AX_VOICE_STATE_PLAYING);
 	started = true;
@@ -156,7 +152,7 @@ bool WutEmulatorAudio::canWrite()
 {
 	if (appRequest == AppRequest::MENU)
 	{
-		resetAudio();
+		stop();
 		return false;
 	}
 	return queryUnplayedFrames() < MAX_QUEUED_FRAMES;

@@ -167,14 +167,25 @@ void OgcEmulatorAudio::resetAudio()
 }
 
 /****************************************************************************
+ * stopAudio
+ *
+ * Non-destructive stop: halts DMA and resyncs dma_started, but leaves
+ * soundbuffer/nextab/playab exactly as they are.
+ ***************************************************************************/
+void OgcEmulatorAudio::stopAudio()
+{
+	AUDIO_StopDMA();
+	dma_started = false;
+}
+
+/****************************************************************************
  * Sound-output contract the VBA core mixes samples through
  ***************************************************************************/
 bool OgcEmulatorAudio::canWrite()
 {
     if (appRequest == AppRequest::MENU)
     {
-        AUDIO_StopDMA();
-        resetAudio();
+        stopAudio();
         return false;
     }
 

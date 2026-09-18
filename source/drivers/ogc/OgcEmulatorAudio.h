@@ -23,6 +23,11 @@ class OgcEmulatorAudio : public EmulatorAudioDriver
 
 		void init() override {}
 		void resetAudio() override;
+
+		//! Halts DMA and resyncs dma_started so the pre-roll logic in
+		//! commitWrite() correctly re-arms on the next entry
+		void stopAudio();
+
 		int getUnplayed() override;
 
 		double getDynamicRate() override;
