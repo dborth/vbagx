@@ -670,8 +670,6 @@ void FixInvalidSettings()
 		EmuSettings.DisplayFrameRate = FRAMERATE_OFF;
 	if(!(EmuSettings.wiimoteOrientation >= WIIMOTE_ORIENTATION_VERTICAL && EmuSettings.wiimoteOrientation < WIIMOTE_ORIENTATION_LENGTH))
 		EmuSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_VERTICAL;
-		
-	RemapUsbPathsIfNeeded();
 }
 
 /****************************************************************************
@@ -1070,6 +1068,8 @@ bool LoadPrefs()
 	if(!prefFound) {
 		return false;
 	}
+
+	RemapUsbPathsIfNeeded();
 
 	FixInvalidSettings();
 	ApplySettings();
