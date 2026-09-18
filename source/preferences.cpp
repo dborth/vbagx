@@ -473,8 +473,8 @@ static void loadXMLPaletteFromSection(gamePalette &pal)
 void ApplySettings() {
 	platform->getInput()->setWiimoteOrientation(EmuSettings.wiimoteOrientation);
 	platform->getInput()->setRumbleEnabled(EmuSettings.Rumble);
-	GuiSound::setDefaultVolume(SOUND::OGG, EmuSettings.MusicVolume);
-	GuiSound::setDefaultVolume(SOUND::PCM, EmuSettings.SFXVolume);
+	GuiSound::setDefaultVolume(VOLUME_TYPE::MUSIC, EmuSettings.MusicVolume);
+	GuiSound::setDefaultVolume(VOLUME_TYPE::SFX, EmuSettings.SFXVolume);
 	platform->getVideo()->startMenuVideo();
 	ChangeLanguage();
 	InitialisePalette();
@@ -666,8 +666,8 @@ void FixInvalidSettings()
 		EmuSettings.videoMode = VIDEOMODE_AUTO;
 	if(!(EmuSettings.DisplayFrameRate >= FRAMERATE_OFF && EmuSettings.DisplayFrameRate < FRAMERATE_LENGTH))
 		EmuSettings.DisplayFrameRate = FRAMERATE_OFF;
-	if(!(EmuSettings.wiimoteOrientation >= WIIMOTE_ORIENTATION_AUTO && EmuSettings.wiimoteOrientation < WIIMOTE_ORIENTATION_LENGTH))
-		EmuSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_AUTO;
+	if(!(EmuSettings.wiimoteOrientation >= WIIMOTE_ORIENTATION_VERTICAL && EmuSettings.wiimoteOrientation < WIIMOTE_ORIENTATION_LENGTH))
+		EmuSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_VERTICAL;
 }
 
 /****************************************************************************
@@ -719,7 +719,7 @@ void DefaultSettings()
 	EmuSettings.gbaFrameskip = true; // Turn auto-frameskip on for GBA games
 	EmuSettings.TurboModeEnabled = true; // Enabled by default
 
-	EmuSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_AUTO;
+	EmuSettings.wiimoteOrientation = WIIMOTE_ORIENTATION_VERTICAL;
 #ifdef HW_RVL
 	EmuSettings.ExitAction = EXITACTION_WII_AUTO;
 #elif HW_DOL

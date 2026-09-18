@@ -9,8 +9,7 @@
 #pragma once
 
 enum {
-	WIIMOTE_ORIENTATION_AUTO = 0,
-	WIIMOTE_ORIENTATION_VERTICAL,
+	WIIMOTE_ORIENTATION_VERTICAL = 0,
 	WIIMOTE_ORIENTATION_HORIZONTAL,
 	WIIMOTE_ORIENTATION_LENGTH
 };
@@ -28,9 +27,6 @@ class InputDriver
 		
 		//! Requests a rumble event on the specified controller channel
 		virtual void setRumble(int channel, bool rumble) = 0;
-		virtual void setGameRumble(int channel, int frames) = 0;
-		virtual void ensureGameRumble(int channel, int frames) = 0;
-		virtual void setContinuousRumble(int channel, bool continuous) = 0;
 		
 		void setRumbleEnabled(bool enabled) { rumbleEnabled = enabled; }
 		bool isRumbleEnabled() const { return rumbleEnabled; }
@@ -39,5 +35,5 @@ class InputDriver
 	
 	protected:
 		bool rumbleEnabled = true;
-		int wiimoteOrientation = WIIMOTE_ORIENTATION_AUTO;
+		int wiimoteOrientation = WIIMOTE_ORIENTATION_VERTICAL;
 };
