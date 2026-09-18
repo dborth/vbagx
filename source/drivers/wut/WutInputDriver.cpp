@@ -15,10 +15,17 @@
 #include <cmath>
 #include <algorithm>
 
+// Full-strength pattern for real game/continuous rumble (force feedback).
 static uint8_t vpadRumblePattern[15] = {
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+};
+
+// Lighter, shorter pattern for menu-hover ticks only - a light tap rather
+// than a full-strength buzz, since VPAD supports variable amplitude
+static uint8_t vpadMenuRumblePattern[6] = {
+	0x60, 0x60, 0x60, 0x60, 0x60, 0x60
 };
 
 static inline float clampf(float v, float lo, float hi) {
@@ -136,7 +143,7 @@ static constexpr float IR_BETA = 0.015f;
 WutInputDriver::WutInputDriver() : drcTouchedPrev(false), drcLastTouchX(0.0f), drcLastTouchY(0.0f) {
 	for (int i = 0; i < 4; i++) {
 		rumbleRequest[i] = continuousRumble[i] = false;
-		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = 0;
+		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = menuRumbleGapFrames[i] = 0;
 		irFilterX[i].setParams(IR_MIN_CUTOFF, IR_BETA);
 		irFilterY[i].setParams(IR_MIN_CUTOFF, IR_BETA);
 		irSmoothInit[i] = false;
@@ -163,7 +170,7 @@ void WutInputDriver::shutdown() {
 	for (int i = 0; i < 4; i++) {
 		WPADControlMotor((WPADChan)i, FALSE);
 		rumbleRequest[i] = continuousRumble[i] = false;
-		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = 0;
+		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = menuRumbleGapFrames[i] = 0;
 	}
 	VPADStopMotor(VPAD_CHAN_0);
 
@@ -411,16 +418,30 @@ void WutInputDriver::update() {
 		// Update logical controller state
 		controller[i]->update(padData, platform->getVideo()->getDeltaTime());
 
-		// Rumble Handling
+		// Menu (hover) rumble: a short tick with an enforced silent gap afterward
+		static constexpr int kMenuRumbleOnFrames = 2;   // ~33ms motor-on burst
+		static constexpr int kMenuRumbleGapFrames = 6;  // ~100ms enforced silence after a tick
+
 		if (rumbleRequest[i]) {
-			menuRumbleFrames[i] = 3;
 			rumbleRequest[i] = false;
+			if (menuRumbleFrames[i] == 0 && menuRumbleGapFrames[i] == 0) {
+				menuRumbleFrames[i] = kMenuRumbleOnFrames;
+			}
 		}
 
-		if (menuRumbleFrames[i] > 0) menuRumbleFrames[i]--;
+		bool menuWantRumble = menuRumbleFrames[i] > 0;
+
+		if (menuRumbleFrames[i] > 0) {
+			menuRumbleFrames[i]--;
+			if (menuRumbleFrames[i] == 0) menuRumbleGapFrames[i] = kMenuRumbleGapFrames;
+		} else if (menuRumbleGapFrames[i] > 0) {
+			menuRumbleGapFrames[i]--;
+		}
+
 		if (gameRumbleFrames[i] > 0) gameRumbleFrames[i]--;
 
-		bool wantRumble = (menuRumbleFrames[i] > 0) || (gameRumbleFrames[i] > 0) || continuousRumble[i];
+		bool gameOrContinuousWantRumble = (gameRumbleFrames[i] > 0) || continuousRumble[i];
+		bool wantRumble = menuWantRumble || gameOrContinuousWantRumble;
 		bool motorOn = false;
 
 		// Apply hardware safety constraints
@@ -447,7 +468,11 @@ void WutInputDriver::update() {
 
 		if (i == 0 && padData.hw_connected[INPUT_HW_DRC]) {
 			if (motorOn) {
-				VPADControlMotor(VPAD_CHAN_0, vpadRumblePattern, sizeof(vpadRumblePattern));
+				if (gameOrContinuousWantRumble) {
+					VPADControlMotor(VPAD_CHAN_0, vpadRumblePattern, sizeof(vpadRumblePattern));
+				} else {
+					VPADControlMotor(VPAD_CHAN_0, vpadMenuRumblePattern, sizeof(vpadMenuRumblePattern));
+				}
 			} else {
 				VPADStopMotor(VPAD_CHAN_0);
 			}

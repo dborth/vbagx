@@ -34,7 +34,7 @@ bool isWiiVC = false;
 OgcInputDriver::OgcInputDriver() {
 	for (int i = 0; i < 4; i++) {
 		rumbleRequest[i] = continuousRumble[i] = false;
-		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = 0;
+		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = menuRumbleGapFrames[i] = 0;
 	}
 }
 
@@ -73,7 +73,7 @@ void OgcInputDriver::shutdown() {
 		#endif
 		PAD_ControlMotor(i, PAD_MOTOR_STOP);
 		rumbleRequest[i] = continuousRumble[i] = false;
-		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = 0;
+		menuRumbleFrames[i] = gameRumbleFrames[i] = continuousRumbleCount[i] = silenceFrames[i] = menuRumbleGapFrames[i] = 0;
 	}
 }
 
@@ -355,16 +355,29 @@ void OgcInputDriver::update() {
 		// Push the finalized, merged payload to the controller abstraction
 		controller[i]->update(padData, platform->getVideo()->getDeltaTime());
 		
-		// Rumble Handling
+		// Menu (hover) rumble: a short tick with an enforced silent gap afterward
+		static constexpr int kMenuRumbleOnFrames = 2;   // ~33ms motor-on burst
+		static constexpr int kMenuRumbleGapFrames = 6;  // ~100ms enforced silence after a tick
+
 		if (rumbleRequest[i]) {
-			menuRumbleFrames[i] = 3;
 			rumbleRequest[i] = false;
+			if (menuRumbleFrames[i] == 0 && menuRumbleGapFrames[i] == 0) {
+				menuRumbleFrames[i] = kMenuRumbleOnFrames;
+			}
 		}
 
-		if (menuRumbleFrames[i] > 0) menuRumbleFrames[i]--;
+		bool menuWantRumble = menuRumbleFrames[i] > 0;
+
+		if (menuRumbleFrames[i] > 0) {
+			menuRumbleFrames[i]--;
+			if (menuRumbleFrames[i] == 0) menuRumbleGapFrames[i] = kMenuRumbleGapFrames;
+		} else if (menuRumbleGapFrames[i] > 0) {
+			menuRumbleGapFrames[i]--;
+		}
+
 		if (gameRumbleFrames[i] > 0) gameRumbleFrames[i]--;
 
-		bool wantRumble = (menuRumbleFrames[i] > 0) || (gameRumbleFrames[i] > 0) || continuousRumble[i];
+		bool wantRumble = menuWantRumble || (gameRumbleFrames[i] > 0) || continuousRumble[i];
 		bool motorOn = false;
 
 		// Apply hardware safety constraints

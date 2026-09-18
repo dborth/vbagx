@@ -31,6 +31,7 @@ class WutInputDriver : public InputDriver {
 	private:
 		bool rumbleRequest[4];
 		int menuRumbleFrames[4];
+		int menuRumbleGapFrames[4];  // enforced silent gap after a menu tick
 		int gameRumbleFrames[4];
 		bool continuousRumble[4];
 		int continuousRumbleCount[4];
