@@ -68,9 +68,18 @@ WutEmulatorVideo::WutEmulatorVideo()
 WutEmulatorVideo::~WutEmulatorVideo()
 {
 	destroyTexture();
-	delete fpsFont;
-	free(fpsGlyphTexCoords);
-	free(screenshotSnapshot);
+	if(fpsFont) {
+		delete fpsFont;
+		fpsFont = nullptr;
+	}
+	if(fpsGlyphTexCoords) {
+		free(fpsGlyphTexCoords);
+		fpsGlyphTexCoords = nullptr;
+	}
+	if(screenshotSnapshot) {
+		free(screenshotSnapshot);
+		screenshotSnapshot = nullptr;
+	}
 }
 
 void WutEmulatorVideo::init(VideoDriver* driver)
