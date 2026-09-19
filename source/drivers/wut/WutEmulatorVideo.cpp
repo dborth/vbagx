@@ -26,6 +26,15 @@
 
 namespace
 {
+	// FPS atlas layout: 16 equal-width cells across (0-9, '.', 'F', 'P', 'S', ':', blank).
+	// Each cell's UV rect lives in its own immutable slot, padded to
+	// GX2_VERTEX_BUFFER_ALIGNMENT so every slot's address is a legal
+	// GX2SetAttribBuffer() pointer.
+	const int      fpsGlyphCells      = 16;
+	const uint32_t fpsGlyphUvSize     = 4 * Shader::cuTexCoordAttrSize;
+	const uint32_t fpsGlyphSlotSize   = GX2_VERTEX_BUFFER_ALIGNMENT;
+	const uint32_t fpsGlyphSlotFloats = fpsGlyphSlotSize / sizeof(float);
+
 	void PixelRectToNdc(float x, float y, float w, float h, int designWidth, int designHeight, float offset[3], float scale[3])
 	{
 		float centerPxX = x + w * 0.5f;
@@ -358,14 +367,9 @@ void WutEmulatorVideo::drawFpsOverlay()
 		else if (c == 'S') texIdx = 13;
 		else if (c == ':') texIdx = 14;
 
-		float u0 = (texIdx * glyphW) / atlasWidth;
-		float u1 = ((texIdx + 1) * glyphW) / atlasWidth;
-
-		fpsGlyphTexCoords[0] = u0; fpsGlyphTexCoords[1] = 1.0f;
-		fpsGlyphTexCoords[2] = u1; fpsGlyphTexCoords[3] = 1.0f;
-		fpsGlyphTexCoords[4] = u1; fpsGlyphTexCoords[5] = 0.0f;
-		fpsGlyphTexCoords[6] = u0; fpsGlyphTexCoords[7] = 0.0f;
-		GX2Invalidate(GX2_INVALIDATE_MODE_CPU_ATTRIBUTE_BUFFER, fpsGlyphTexCoords, 8 * sizeof(float));
+		// Each glyph has its own pre-baked UV slot. GX2 draws are asynchronous, so any CPU write
+		// made after this draw is recorded would be seen by it.
+		const float* glyphUvs = fpsGlyphTexCoords + texIdx * fpsGlyphSlotFloats;
 
 		float offset[3], scale[3];
 		PixelRectToNdc(cursorX, startY, glyphW, glyphH, videoDriver->getScreenWidth(), videoDriver->getScreenHeight(), offset, scale);
@@ -373,7 +377,7 @@ void WutEmulatorVideo::drawFpsOverlay()
 		auto drawPass = [&]() {
 			shader->setShaders();
 			shader->setAttributeBuffer();
-			VertexShader::setAttributeBuffer(1, 8 * sizeof(float), Shader::cuTexCoordAttrSize, fpsGlyphTexCoords);
+			VertexShader::setAttributeBuffer(1, fpsGlyphUvSize, Shader::cuTexCoordAttrSize, glyphUvs);
 			shader->setAngle(0.0f);
 			shader->setOffset(offset);
 			shader->setScale(scale);
@@ -544,5 +548,30 @@ void WutEmulatorVideo::initFPSFontData()
 		fpsFont = new GuiImageData(fps_font_png);
 
 	if (!fpsGlyphTexCoords)
-		fpsGlyphTexCoords = static_cast<float*>(memalign(GX2_VERTEX_BUFFER_ALIGNMENT, 4 * 2 * sizeof(float)));
+	{
+		const uint32_t totalSize = fpsGlyphCells * fpsGlyphSlotSize;
+		fpsGlyphTexCoords = static_cast<float*>(memalign(GX2_VERTEX_BUFFER_ALIGNMENT, totalSize));
+		if (!fpsGlyphTexCoords)
+			return;
+
+		memset(fpsGlyphTexCoords, 0, totalSize);
+
+		// Cells are equal-width across the atlas, so cell i spans [i/16, (i+1)/16]
+		// in U regardless of the atlas' pixel width. Same vertex order and V flip
+		// as the default unit quad (BL, BR, TR, TL).
+		for (int i = 0; i < fpsGlyphCells; i++)
+		{
+			float* uv = fpsGlyphTexCoords + i * fpsGlyphSlotFloats;
+			const float u0 = (float)i / (float)fpsGlyphCells;
+			const float u1 = (float)(i + 1) / (float)fpsGlyphCells;
+
+			uv[0] = u0; uv[1] = 1.0f;
+			uv[2] = u1; uv[3] = 1.0f;
+			uv[4] = u1; uv[5] = 0.0f;
+			uv[6] = u0; uv[7] = 0.0f;
+		}
+
+		// Written once, read-only from here on
+		GX2Invalidate(GX2_INVALIDATE_MODE_CPU_ATTRIBUTE_BUFFER, fpsGlyphTexCoords, totalSize);
+	}
 }

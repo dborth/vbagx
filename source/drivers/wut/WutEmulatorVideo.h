@@ -70,11 +70,9 @@ class WutEmulatorVideo : public EmulatorVideoDriver
 
 		// FPS overlay. fpsFont owns its own GX2Texture (allocated through
 		// the normal WutImageRenderer path, from the OS default heap - NOT
-		// game-mode mspace memory). fpsGlyphTexCoords is a
-		// small GX2-visible scratch buffer this class owns, used to
-		// temporarily override Texture2DShader's texcoord attribute buffer
-		// with a single glyph's UV sub-rect for one draw call at a time -
-		// see drawFpsOverlay().
+		// game-mode mspace memory). fpsGlyphTexCoords is a GX2-visible
+		// table this class owns: one UV sub-rect per atlas cell, each in its
+		// own GX2_VERTEX_BUFFER_ALIGNMENT-padded slot.
 		GuiImageData* fpsFont;
 		float* fpsGlyphTexCoords;
 		uint32_t lastFpsTime;
