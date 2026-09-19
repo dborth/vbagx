@@ -100,6 +100,10 @@ void InitMemManager ()
 static bool jitProbed = false;
 
 void InitJitWiiU() {
+#ifndef WIIU_JIT
+	jitProbed = true;
+	return;
+#endif
 	uint32_t *arena = WutCodegenAcquire(JIT_ARENA_SIZE);
 	if (arena) {
 	    jitCache.initialize(arena,
@@ -113,10 +117,12 @@ void InitJitWiiU() {
 
 bool JitIsAvailable()
 {
-#ifdef __WIIU__
+#if (defined(HW_RVL) || defined(HW_DOL))
+	return true;
+#elif __WIIU__
 	return jitCache.isReady();
 #else
-	return true;
+	return false;
 #endif
 }
 
