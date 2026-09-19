@@ -102,7 +102,7 @@ WutAudioDriver::~WutAudioDriver() {
 }
 
 void WutAudioDriver::startMenuAudio() {
-	
+
 }
 
 void WutAudioDriver::stopMenuAudio() {
@@ -219,6 +219,7 @@ void WutAudioDriver::playStream(const uint8_t *data, int32_t length, bool loop, 
 	// reconcile the hardware voice state against isForeground() - the same
 	// self-healing pattern WutEmulatorAudio::playSound() already uses for
 	// the emulator's ring buffer voice.
+	streamPriming = true;
 	stopStream();
 	streamVolume = volume;
 
@@ -296,9 +297,14 @@ void WutAudioDriver::playStream(const uint8_t *data, int32_t length, bool loop, 
 			AXSetVoiceState(streamVoiceR, 1);
 		}
 	}
+
+	streamPriming = false;
 }
 
 void WutAudioDriver::handleStreamCallback() {
+	if (streamPriming)
+		return;
+
 	if (!isForeground()) {
 		// Lost (or don't yet have) the foreground - hold the hardware voices stopped directly
 		if (streamVoiceL) AXSetVoiceState(streamVoiceL, 0);
