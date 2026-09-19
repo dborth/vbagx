@@ -14,6 +14,7 @@
 #include <malloc.h>
 #include <zlib.h>
 #include <sys/stat.h>
+#include <memory>
 
 #include "vbagx.h"
 #include "fileop.h"
