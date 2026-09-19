@@ -88,10 +88,10 @@ void InitMemManager ()
 	romPtr = (uint8_t *)VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024); // 2MB MEM1 + 16 ARAM + SD backing for GB/GBA ROM
 	VMPager_Init(romPtr);
 #else
-	romPtr = (uint8_t *)malloc(MAX_GBA_ROM_SIZE * 2);
-	savebuffer = (uint8_t *)malloc(SAVEBUFFERSIZE);
-	GuiImageData::setDecodeScratch(malloc(IMAGE_DECODE_SCRATCH_SIZE), IMAGE_DECODE_SCRATCH_SIZE);
-	browserList = (BROWSERENTRY *)malloc(sizeof(BROWSERENTRY) * MAX_BROWSER_SIZE);
+	romPtr = (uint8_t *)memalign(FILE_BUFFER_ALIGN, MAX_GBA_ROM_SIZE * 2);
+	savebuffer = (uint8_t *)memalign(FILE_BUFFER_ALIGN, SAVEBUFFERSIZE);
+	GuiImageData::setDecodeScratch(memalign(FILE_BUFFER_ALIGN, IMAGE_DECODE_SCRATCH_SIZE), IMAGE_DECODE_SCRATCH_SIZE);
+	browserList = (BROWSERENTRY *)memalign(FILE_BUFFER_ALIGN, sizeof(BROWSERENTRY) * MAX_BROWSER_SIZE);
 	texturemem = coreMem.gba.texturemem;
 #endif
 }
@@ -147,11 +147,11 @@ void EnforceJitSettingForGame()
 }
 
 #if (!defined(HW_RVL) && !defined(HW_DOL))
-void* memspace_malloc(uint32_t size) { return malloc(size); }
+void* memspace_malloc(uint32_t size) { return memalign(FILE_BUFFER_ALIGN, size); }
 char* memspace_strdup(const char *s) { return strdup(s); }
 void memspace_free(void *ptr) { free(ptr); }
 int memspace_size_free() { return 0; }
-void* extmem_malloc(uint32_t size) { return malloc(size); }
+void* extmem_malloc(uint32_t size) { return memalign(FILE_BUFFER_ALIGN, size); }
 void extmem_free(void *ptr) { free(ptr); }
 int extmem_size_free() { return 0; }
 void SwitchMemoryModeMenu() { }
