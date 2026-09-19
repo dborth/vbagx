@@ -1045,6 +1045,42 @@ static int ChangeInterfaceTask(void * arg) {
 	return ChangeInterface(a->device, a->silent) ? 1 : 0;
 }
 
+static int OpenGameListTask(void *) { return OpenGameList(); }
+
+static int AutoDetectDevicesTask(void *) { AutoDetectDevices(); return 0; }
+
+/****************************************************************************
+ * RunWithGuiUpdates
+ * Runs a task on the worker thread while the GUI keeps drawing (and the main
+ * window ignores input).
+ * \return false if the app was asked to quit while waiting.
+ ***************************************************************************/
+static bool RunWithGuiUpdates(BgTaskFn task, int * result = nullptr)
+{
+	menu->mainWindow.setState(STATE::DISABLED);
+
+	int r;
+	if(RunOnWorkerThread(task))
+	{
+		while(!IsWorkerThreadFinished())
+		{
+			if(!UpdateGui()) return false;
+		}
+		r = GetWorkerThreadResult();
+	}
+	else
+	{
+		r = task(nullptr);
+	}
+
+	menu->mainWindow.setState(STATE::DEFAULT);
+
+	if(result)
+		*result = r;
+
+	return true;
+}
+
 static int MenuGameSelection()
 {
 	int selection = MENU_NONE;
@@ -1144,7 +1180,7 @@ static int MenuGameSelection()
 
 	// populate initial directory listing
 	selectLoadedFile = 1;
-	OpenGameList();
+	if(!RunWithGuiUpdates(OpenGameListTask)) return MENU_EXIT;
 
 	gameBrowser.resetState();
 	gameBrowser.fileList[0]->setState(STATE::SELECTED);
@@ -3832,7 +3868,7 @@ static int MenuSettings()
 			if(choice == 1) {
 				DefaultSettings();
 				ApplySettings();
-				AutoDetectDevices();
+				RunWithGuiUpdates(AutoDetectDevicesTask);
 			}
 		}
 	}
@@ -4006,7 +4042,7 @@ static int MenuSettingsFile()
 		if(backBtn.getState() == STATE::CLICKED)
 		{
 			selection = MENU_SETTINGS;
-			AutoDetectDevices();
+			RunWithGuiUpdates(AutoDetectDevicesTask);
 		}
 	}
 	return selection;
