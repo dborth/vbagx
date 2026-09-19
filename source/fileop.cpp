@@ -33,6 +33,8 @@
 
 #define THREAD_SLEEP 100
 
+#define PARSE_BATCH_SIZE MAX_BROWSER_SIZE
+
 static ThreadSync & DeviceSync() { static ThreadSync s; return s; }
 static ThreadSync & ParseSync()  { static ThreadSync s; return s; }
 static ThreadSync & WorkerSync() { static ThreadSync s; return s; }
@@ -47,6 +49,8 @@ static Thread parseThread;
 static DIR *dir = nullptr;
 static volatile bool parseHalt = true;
 static bool parseFilter = true;
+static char parsePrefix[MAXJOLIET + 1] = { 0 }; // if set, only entries whose name starts with this are listed
+static size_t parsePrefixLen = 0;
 static bool ParseDirEntries();
 int selectLoadedFile = 0;
 
@@ -70,8 +74,6 @@ static bool deviceIdle = false; // protected by DeviceSync().mutex
 /****************************************************************************
  * Background worker thread
  ***************************************************************************/
-
-typedef int (*BgTaskFn)(void *arg);
 
 // worker thread synchronization - WorkerSync().workCond signals main -> worker:
 // task available; WorkerSync().idleCond signals worker -> main: now idle
@@ -164,10 +166,25 @@ static void WakeWorkerThread()
  *
  * This checks our devices for changes (SD/USB/DVD removed)
  ***************************************************************************/
-static void * devicecallback (void *)
+static void * devicecallback(void *)
 {
 	while (!deviceThread.stopRequested())
 	{
+		// if halted, block here until ResumeDeviceCheckingThread (or a stop request) wakes us
+		if(deviceCheckingHalt)
+		{
+			DeviceSync().mutex.lock();
+			deviceIdle = true;
+			DeviceSync().idleCond.signal(); // tell HaltDeviceCheckingThread we've stopped
+			while(deviceCheckingHalt && !deviceThread.stopRequested())
+				DeviceSync().workCond.wait(DeviceSync().mutex);
+			deviceIdle = false;
+			DeviceSync().mutex.unlock();
+		}
+
+		if(deviceThread.stopRequested())
+			break;
+
 		int removed[MAX_STORAGE_DEVICES];
 		int removedCount = 0;
 		bool deviceListChanged = false;
@@ -185,24 +202,12 @@ static void * devicecallback (void *)
 			}
 		}
 
+		if(deviceListChanged)
+			browserDeviceListChanged = true; // signal the menu loop to refresh the device listing if it's on screen
+
 		// sleep ~1 sec in 100us steps so we can react to a halt/stop request quickly
 		for(int i = 0; i < 10000 && !deviceCheckingHalt && !deviceThread.stopRequested(); i++)
 			usleep(THREAD_SLEEP);
-
-		if(deviceThread.stopRequested())
-			break;
-
-		// if halted, block here until ResumeDeviceCheckingThread (or a stop request) wakes us
-		if(deviceCheckingHalt)
-		{
-			DeviceSync().mutex.lock();
-			deviceIdle = true;
-			DeviceSync().idleCond.signal(); // tell HaltDeviceCheckingThread we've stopped
-			while(deviceCheckingHalt && !deviceThread.stopRequested())
-				DeviceSync().workCond.wait(DeviceSync().mutex);
-			deviceIdle = false;
-			DeviceSync().mutex.unlock();
-		}
 	}
 	return nullptr;
 }
@@ -506,7 +511,7 @@ void CreateAppPath(char * origpath)
 
 	int pos = 0;
 
-	// replace fat:/ or sd1:/ with sd:/
+	// replace fat:/ with sd:/
 	if(strncmp(path, "fat:/", 5) == 0 || strncmp(path, "sd1:/", 5) == 0)
 	{
 		pos++;
@@ -577,20 +582,21 @@ static bool ParseDirEntries()
 	char *ext;
 	struct dirent *entry = nullptr;
 	int isdir;
+	bool listFull = false;
 
 	int i = 0;
 
-	while(i < 20 && !parseHalt)
+	while(i < PARSE_BATCH_SIZE && !parseHalt)
 	{
 		entry = readdir(dir);
 
 		if(entry == nullptr)
 			break;
 
-		// skip hidden entries, and skip ".." here - the "Up One Level" entry is
-		// added statically in ParseDirectory() instead, since some devices/
-		// filesystems don't return a ".." entry from readdir() at all
 		if(entry->d_name[0] == '.')
+			continue;
+
+		if(parsePrefixLen > 0 && strncmp(entry->d_name, parsePrefix, parsePrefixLen) != 0)
 			continue;
 
 		if(entry->d_type==DT_DIR)
@@ -617,7 +623,7 @@ static bool ParseDirEntries()
 
 		if(!AddBrowserEntry())
 		{
-			parseHalt = true;
+			listFull = true; // out of room - keep (and sort) what fits, ignore the rest
 			break;
 		}
 
@@ -645,7 +651,7 @@ static bool ParseDirEntries()
 		browser.numEntries += i;
 	}
 
-	if(entry == nullptr || parseHalt)
+	if(entry == nullptr || parseHalt || listFull)
 	{
 		closedir(dir); // close directory
 		dir = nullptr;
@@ -658,11 +664,13 @@ static bool ParseDirEntries()
 /***************************************************************************
  * Browse subdirectories
  **************************************************************************/
-int ParseDirectory(bool waitParse, bool filter)
+int ParseDirectory(bool waitParse, bool filter, const char * namePrefix)
 {
 	int retry = 1;
 	bool mounted = false;
 	parseFilter = filter;
+	snprintf(parsePrefix, sizeof(parsePrefix), "%s", namePrefix ? namePrefix : "");
+	parsePrefixLen = strlen(parsePrefix);
 	
 	ResetBrowser(); // reset browser
 	
@@ -716,7 +724,7 @@ int ParseDirectory(bool waitParse, bool filter)
 	browser.numEntries++;
 
 	parseHalt = false;
-	ParseDirEntries(); // index first 20 entries
+	ParseDirEntries(); // index the first batch of entries
 
 	// signal parse thread to continue indexing remaining entries
 	ParseSync().mutex.lock();
@@ -865,11 +873,7 @@ size_t LoadFile (char * rbuffer, char *filepath, size_t length, size_t buffersiz
 
 			if (IsZipFile (zipbuffer))
 			{
-				size = UnZipBuffer ((unsigned char *)rbuffer, buffersize);
-
-				if(size == 0) {
-					ErrorPrompt("Error unzipping file!");
-				}
+				size = UnZipBuffer ((unsigned char *)rbuffer, buffersize); // unzip
 			}
 			else
 			{
@@ -883,8 +887,12 @@ size_t LoadFile (char * rbuffer, char *filepath, size_t length, size_t buffersiz
 				else {
 					while(!feof(file))
 					{
+						size_t chunk = buffersize - offset; // never read past the end of the caller's buffer
+						if(chunk > FILE_READ_CHUNK)
+							chunk = FILE_READ_CHUNK;
+
 						ShowProgress ("Loading...", offset, size);
-						readsize = fread (rbuffer + offset, 1, 4096, file); // read in next chunk
+						readsize = fread (rbuffer + offset, 1, chunk, file); // read in next chunk
 
 						if(readsize <= 0)
 							break; // reading finished (or failed)
@@ -1022,7 +1030,7 @@ size_t SaveFile (char * buffer, char *filepath, size_t datasize, bool silent)
 
 		while(written < datasize)
 		{
-			if(datasize - written > 4096) nextwrite=4096;
+			if(datasize - written > FILE_WRITE_CHUNK) nextwrite=FILE_WRITE_CHUNK;
 			else nextwrite = datasize-written;
 			writesize = fwrite (buffer+written, 1, nextwrite, file);
 			if(writesize != nextwrite) break; // write failure
