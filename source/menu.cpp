@@ -532,10 +532,12 @@ static void ServicePendingWindowPromptRequest()
  * must stop immediately and return control up the call stack
  ***************************************************************************/
 
+// Set once the OS has asked the app to quit and the fade-out has played
+static bool guiExiting = false;
+
 static bool UpdateGui()
 {
-	static bool exiting = false;
-	if(exiting)
+	if(guiExiting)
 		return false;
 
 	ProcessInputData();
@@ -554,7 +556,7 @@ static bool UpdateGui()
 			platform->getVideo()->getImageRenderer()->drawRectangle(0,0,platform->getVideo()->getScreenWidth(),platform->getVideo()->getScreenHeight(),(PixelColor){0, 0, 0, (uint8_t)a});
 			platform->getVideo()->renderMenu();
 		}
-		exiting = true;
+		guiExiting = true;
 		return false;
 	}
 
@@ -5586,7 +5588,7 @@ void MainMenu (int selection)
 		}
 		lastMenu = currentMenu;
 
-		if(!UpdateGui())
+		if(guiExiting)
 			break;
 	}
 
