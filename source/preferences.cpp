@@ -1114,7 +1114,8 @@ void CreateMissingDirectories() {
 			EmuSettings.LoadFolder,
 			EmuSettings.ScreenshotsFolder,
 			EmuSettings.CoverFolder,
-			EmuSettings.ArtworkFolder
+			EmuSettings.ArtworkFolder,
+			EmuSettings.BorderFolder
 		};
 		bool appFolderChecked = false; // only hit the device once per pass
 
