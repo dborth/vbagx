@@ -49,23 +49,23 @@ jobs:
     - name: Copy Wii artifacts
       if: ${{ matrix.image == 'Wii' }}
       run: |
-        mkdir -p dist/VisualBoyAdvanceGX/apps/vbagx
-        mkdir -p dist/VisualBoyAdvanceGX/vbagx/roms
-        mkdir dist/VisualBoyAdvanceGX/vbagx/cheats
-        mkdir dist/VisualBoyAdvanceGX/vbagx/saves
-        touch dist/VisualBoyAdvanceGX/vbagx/roms/romsdir
-        touch dist/VisualBoyAdvanceGX/vbagx/cheats/cheatsdir
-        touch dist/VisualBoyAdvanceGX/vbagx/saves/savesdir
-        cp hbc/* dist/VisualBoyAdvanceGX/apps/vbagx/
-        cp executables/vbagx-wii.dol dist/VisualBoyAdvanceGX/apps/vbagx/boot.dol
+        mkdir -p dist/VisualBoyAdvanceGX-Wii/apps/vbagx
+        mkdir -p dist/VisualBoyAdvanceGX-Wii/vbagx/roms
+        mkdir dist/VisualBoyAdvanceGX-Wii/vbagx/cheats
+        mkdir dist/VisualBoyAdvanceGX-Wii/vbagx/saves
+        touch dist/VisualBoyAdvanceGX-Wii/vbagx/roms/romsdir
+        touch dist/VisualBoyAdvanceGX-Wii/vbagx/cheats/cheatsdir
+        touch dist/VisualBoyAdvanceGX-Wii/vbagx/saves/savesdir
+        cp hbc/* dist/VisualBoyAdvanceGX-Wii/apps/vbagx/
+        cp executables/vbagx-wii.dol dist/VisualBoyAdvanceGX-Wii/apps/vbagx/boot.dol
 
     - name: Upload Wii artifacts
       uses: actions/upload-artifact@v4
       if: ${{ matrix.image == 'Wii' }}
       with:
-        name: VisualBoyAdvanceGX
+        name: VisualBoyAdvanceGX-Wii
         path: |
-          dist/VisualBoyAdvanceGX/
+          dist/VisualBoyAdvanceGX-Wii/
 
     - name: Build GameCube
       if: ${{ matrix.image == 'GameCube' }}
@@ -91,6 +91,20 @@ jobs:
       run: |
         make -f Makefile.wiiu -j3
 
+    - name: Copy Wii U artifact
+      if: ${{ matrix.image == 'WiiU' }}
+      run: |
+        mkdir -p dist/VisualBoyAdvanceGX-WiiU
+        cp executables/vbagx-wiiu.wuhb dist/VisualBoyAdvanceGX-WiiU/
+
+    - name: Upload Wii U artifact
+      uses: actions/upload-artifact@v4
+      if: ${{ matrix.image == 'WiiU' }}
+      with:
+        name: VisualBoyAdvanceGX-WiiU
+        path: |
+          dist/VisualBoyAdvanceGX-WiiU/
+
   release:
     name: Release
     runs-on: ubuntu-latest
@@ -110,11 +124,11 @@ jobs:
 
     - name: Re-zip artifacts
       run: |
-        cd dist/VisualBoyAdvanceGX
+        cd dist/VisualBoyAdvanceGX-Wii
         rm -r vbagx/cheats/*
         rm -r vbagx/roms/*
         rm -r vbagx/saves/*
-        zip -r ../VisualBoyAdvanceGX.zip *
+        zip -r ../VisualBoyAdvanceGX-Wii.zip *
         cd ../VisualBoyAdvanceGX-GameCube
         zip -r ../VisualBoyAdvanceGX-GameCube.zip *
 
