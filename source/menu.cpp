@@ -1006,24 +1006,24 @@ SettingWindow(const char * title, GuiWindow * w)
  ***************************************************************************/
 static char* getImageFolder()
 {
-	switch(EmuSettings.PreviewImage)
+	switch(EmuSettings.previewImage)
 	{
-		case PREVIEWIMAGE_SCREENSHOT : return EmuSettings.ScreenshotsFolder;
-		case PREVIEWIMAGE_COVER : return EmuSettings.CoverFolder;
-		case PREVIEWIMAGE_ARTWORK : return EmuSettings.ArtworkFolder;
-		default : return EmuSettings.CoverFolder;
+		case PREVIEWIMAGE_SCREENSHOT : return EmuSettings.screenshotsFolder;
+		case PREVIEWIMAGE_COVER : return EmuSettings.coverFolder;
+		case PREVIEWIMAGE_ARTWORK : return EmuSettings.artworkFolder;
+		default : return EmuSettings.coverFolder;
 	}
 }
 
 static bool ResolvePreviewImagePath(void *, int index, char * outPath, size_t outPathSize)
 {
-	if(browser.dir[0] == 0 || EmuSettings.LoadMethod <= 0 ||
+	if(browser.dir[0] == 0 || EmuSettings.loadDevice <= 0 ||
 	   browser.numEntries <= 0 || index <= 0 || index >= browser.numEntries)
 		return false;
 
 	char imageFile[MAXJOLIET + 1];
 	snprintf(imageFile, sizeof(imageFile), "%s.png", browserList[index].displayname);
-	platform->getFileSystem()->getPath(outPath, outPathSize, EmuSettings.LoadMethod, getImageFolder(), imageFile);
+	platform->getFileSystem()->getPath(outPath, outPathSize, EmuSettings.loadDevice, getImageFolder(), imageFile);
 	return true;
 }
 
@@ -1120,16 +1120,16 @@ static bool AutoSave()
 	autoSaveArgs.state = false;
 	autoSaveArgs.silent = NOTSILENT;
 
-	if (EmuSettings.AutoSave == AUTOSAVE_SRAM)
+	if (EmuSettings.autoSave == AUTOSAVE_SRAM)
 	{
 		autoSaveArgs.sram = true;
 		autoSaveArgs.silent = SILENT;
 	}
-	else if (EmuSettings.AutoSave == AUTOSAVE_STATE)
+	else if (EmuSettings.autoSave == AUTOSAVE_STATE)
 	{
 		autoSaveArgs.state = WindowPrompt("Save", "Save State?", "Save", "Don't Save");
 	}
-	else if (EmuSettings.AutoSave == AUTOSAVE_BOTH)
+	else if (EmuSettings.autoSave == AUTOSAVE_BOTH)
 	{
 		if (WindowPrompt("Save", "Save SRAM and State?", "Save", "Don't Save") )
 		{
@@ -1633,7 +1633,7 @@ static int MenuGame()
 	gameSettingsBtn.setEffectGrow();
 
 	GuiText mainmenuBtnTxt("Main Menu", 22, (PixelColor){0, 0, 0, 255});
-	if(EmuSettings.AutoloadGame) {
+	if(EmuSettings.autoloadGame) {
 		mainmenuBtnTxt.setText("Exit");
 	}
 	GuiImage mainmenuBtnImg(&btnOutline);
@@ -1869,7 +1869,7 @@ static int MenuGame()
 				ClearScreenshot();
 				RomCleanup();
 				ROMFilename[0] = '\0';
-				if(EmuSettings.AutoloadGame) {
+				if(EmuSettings.autoloadGame) {
 					ExitApp();
 				}
 				else {
@@ -1991,7 +1991,7 @@ static int SaveListTask(void * arg)
 
 	int len = strlen(ROMFilename);
 
-	platform->getFileSystem()->getPath(browser.dir, EmuSettings.SaveMethod, EmuSettings.SaveFolder);
+	platform->getFileSystem()->getPath(browser.dir, EmuSettings.saveDevice, EmuSettings.saveFolder);
 	ParseDirectory(true, false, ROMFilename); // only this game's files - the folder holds every game's saves
 
 	// find matching files
@@ -2025,13 +2025,13 @@ static int SaveListTask(void * arg)
 			{
 				char scrname[MAXJOLIET+1];
 				snprintf(scrname, sizeof(scrname), "%s.png", tmp);
-				platform->getFileSystem()->getPath(scrfile, EmuSettings.SaveMethod, EmuSettings.SaveFolder, scrname);
+				platform->getFileSystem()->getPath(scrfile, EmuSettings.saveDevice, EmuSettings.saveFolder, scrname);
 
 				memset(savebuffer, 0, SAVEBUFFERSIZE);
 				if(LoadFile(scrfile, SILENT))
 					data->thumbs[j] = GuiImageData::decodeToRgba(savebuffer, 64, 48);
 			}
-			platform->getFileSystem()->getPath(filepath, EmuSettings.SaveMethod, EmuSettings.SaveFolder, saves.filename[j]);
+			platform->getFileSystem()->getPath(filepath, EmuSettings.saveDevice, EmuSettings.saveFolder, saves.filename[j]);
 			if (stat(filepath, &filestat) == 0)
 			{
 				timeinfo = localtime(&filestat.st_mtime);
@@ -2128,7 +2128,7 @@ static int MenuGameSaves(int action)
 	char filepath[1024];
 
 	static ChangeInterfaceArgs ciArgs;
-	ciArgs.device = EmuSettings.SaveMethod;
+	ciArgs.device = EmuSettings.saveDevice;
 	ciArgs.silent = NOTSILENT;
 	bool changeOk = false;
 
@@ -2432,7 +2432,7 @@ static int MenuGameSettings()
 	#else
 	GuiText wiiControlsBtnTxt1("Match GC Controls", 22, (PixelColor){0, 0, 0, 255});
 	#endif
-	if (EmuSettings.WiiControls) sprintf(s, "ON");
+	if (EmuSettings.wiiControls) sprintf(s, "ON");
 	else sprintf(s, "OFF");
 	GuiText wiiControlsBtnTxt2(s, 18, (PixelColor){0, 0, 0, 255});
 	wiiControlsBtnTxt1.setPosition(0, -10);
@@ -2547,8 +2547,8 @@ static int MenuGameSettings()
 		}
 		else if(wiiControlsBtn.getState() == STATE::CLICKED)
 		{
-			EmuSettings.WiiControls = !EmuSettings.WiiControls;
-			if (EmuSettings.WiiControls) sprintf(s, "ON");
+			EmuSettings.wiiControls = !EmuSettings.wiiControls;
+			if (EmuSettings.wiiControls) sprintf(s, "ON");
 			else sprintf(s, "OFF");
 			wiiControlsBtnTxt2.setText(s);
 			wiiControlsBtn.resetState();
@@ -2557,7 +2557,7 @@ static int MenuGameSettings()
 		{
 			if (WindowPrompt("Preview Screenshot", "Save a new Preview Screenshot? Current Screenshot image will be overwritten.", "OK", "Cancel"))
 			{
-				platform->getFileSystem()->getPath(filepath, EmuSettings.LoadMethod, EmuSettings.ScreenshotsFolder, ROMFilename);
+				platform->getFileSystem()->getPath(filepath, EmuSettings.loadDevice, EmuSettings.screenshotsFolder, ROMFilename);
 				SavePreviewImg(filepath, SILENT); 
 			}
 		}
@@ -3748,8 +3748,8 @@ static int MenuSettingsEmulation()
 	const char* borderNames[] = {"Off", "From game (SGB only)", "From .png file"};
 	const char* fpsNames[]    = {"Off", "Actual", "Core (Unbound)"};
 
-	int initialGBHardware = EmuSettings.GBHardware;
-	int initialBasicPalette = EmuSettings.BasicPalette;
+	int initialGBHardware = EmuSettings.gbHardware;
+	int initialBasicPalette = EmuSettings.basicPalette;
 
 	while(selection == MENU_NONE)
 	{
@@ -3760,29 +3760,29 @@ static int MenuSettingsEmulation()
 			switch (optionMap[ret]) {
 				case SET_DYNAREC:
 					if (!JitIsAvailable()) {
-						EmuSettings.DynamicRecompilation = false;
+						EmuSettings.dynamicRecompilation = false;
 						InfoPrompt("JIT compiler is not available.");
 					} else {
-						EmuSettings.DynamicRecompilation ^= 1;
+						EmuSettings.dynamicRecompilation ^= 1;
 					}
 					break;
-				case SET_FRAMESKIP:  EmuSettings.gbaFrameskip = !EmuSettings.gbaFrameskip; break;
+				case SET_FRAMESKIP:  EmuSettings.gbaFrameSkip = !EmuSettings.gbaFrameSkip; break;
 				case SET_HW:
-					if (++EmuSettings.GBHardware >= GBHARDWARE_LENGTH) EmuSettings.GBHardware = GBHARDWARE_AUTO;
+					if (++EmuSettings.gbHardware >= GBHARDWARE_LENGTH) EmuSettings.gbHardware = GBHARDWARE_AUTO;
 					break;
 				case SET_SGB_BORDER:
-					if (++EmuSettings.SGBBorder >= SGBBORDER_LENGTH) EmuSettings.SGBBorder = SGBBORDER_OFF;
+					if (++EmuSettings.sgbBorder >= SGBBORDER_LENGTH) EmuSettings.sgbBorder = SGBBORDER_OFF;
 					break;
 				case SET_CUSTOM_PAL: selection = MENU_GAMESETTINGS_PALETTE; break;
-				case SET_MONO_PAL:   EmuSettings.BasicPalette ^= 1; break;
+				case SET_MONO_PAL:   EmuSettings.basicPalette ^= 1; break;
 				case SET_MONO_COLOR: EmuSettings.colorize = !EmuSettings.colorize; break;
-				case SET_TURBO:      EmuSettings.TurboModeEnabled = !EmuSettings.TurboModeEnabled; break;
+				case SET_TURBO:      EmuSettings.turboModeEnabled = !EmuSettings.turboModeEnabled; break;
 				case SET_FPS:
-					if (++EmuSettings.DisplayFrameRate >= FRAMERATE_LENGTH) EmuSettings.DisplayFrameRate = FRAMERATE_OFF;
+					if (++EmuSettings.displayFrameRate >= FRAMERATE_LENGTH) EmuSettings.displayFrameRate = FRAMERATE_OFF;
 					break;
 				case SET_UTC:
-					EmuSettings.OffsetMinutesUTC += 15;
-					if (EmuSettings.OffsetMinutesUTC > 60*14) EmuSettings.OffsetMinutesUTC = -60*12;
+					EmuSettings.offsetMinutesUtc += 15;
+					if (EmuSettings.offsetMinutesUtc > 60*14) EmuSettings.offsetMinutesUtc = -60*12;
 					break;
 				default: break;
 			}
@@ -3796,16 +3796,16 @@ static int MenuSettingsEmulation()
 				char* val = options.value[j];
 
 				switch (optionMap[j]) {
-					case SET_DYNAREC:    EnforceJitSetting(); sprintf(val, "%s", EmuSettings.DynamicRecompilation ? "On" : "Off"); break;
-					case SET_FRAMESKIP:  sprintf(val, "%s", EmuSettings.gbaFrameskip ? "On" : "Off"); break;
-					case SET_HW:         sprintf(val, "%s", hwNames[EmuSettings.GBHardware]); break;
-					case SET_SGB_BORDER: sprintf(val, "%s", borderNames[EmuSettings.SGBBorder]); break;
+					case SET_DYNAREC:    EnforceJitSetting(); sprintf(val, "%s", EmuSettings.dynamicRecompilation ? "On" : "Off"); break;
+					case SET_FRAMESKIP:  sprintf(val, "%s", EmuSettings.gbaFrameSkip ? "On" : "Off"); break;
+					case SET_HW:         sprintf(val, "%s", hwNames[EmuSettings.gbHardware]); break;
+					case SET_SGB_BORDER: sprintf(val, "%s", borderNames[EmuSettings.sgbBorder]); break;
 					case SET_CUSTOM_PAL: sprintf(val, "%s", strcmp(CurrentPalette.gameName, "default") ? "Custom" : "Default"); break;
-					case SET_MONO_PAL:   sprintf(val, "%s", (EmuSettings.BasicPalette == BASICPALETTE_GREEN) ? "Green Screen" : "Monochrome Screen"); break;
+					case SET_MONO_PAL:   sprintf(val, "%s", (EmuSettings.basicPalette == BASICPALETTE_GREEN) ? "Green Screen" : "Monochrome Screen"); break;
 					case SET_MONO_COLOR: sprintf(val, "%s", EmuSettings.colorize ? "On" : "Off"); break;
-					case SET_TURBO:      sprintf(val, "%s", EmuSettings.TurboModeEnabled ? "On" : "Off"); break;
-					case SET_FPS:        sprintf(val, "%s", fpsNames[EmuSettings.DisplayFrameRate]); break;
-					case SET_UTC:        sprintf(val, "%+.2f", EmuSettings.OffsetMinutesUTC / 60.0); break;
+					case SET_TURBO:      sprintf(val, "%s", EmuSettings.turboModeEnabled ? "On" : "Off"); break;
+					case SET_FPS:        sprintf(val, "%s", fpsNames[EmuSettings.displayFrameRate]); break;
+					case SET_UTC:        sprintf(val, "%+.2f", EmuSettings.offsetMinutesUtc / 60.0); break;
 					default: break;
 				}
 			}
@@ -3820,7 +3820,7 @@ static int MenuSettingsEmulation()
 
 	InitialisePalette();
 
-	if (EmuSettings.GBHardware != initialGBHardware || EmuSettings.BasicPalette != initialBasicPalette) {
+	if (EmuSettings.gbHardware != initialGBHardware || EmuSettings.basicPalette != initialBasicPalette) {
 		InitGBGame();
 	}
 
@@ -4078,51 +4078,51 @@ static int MenuSettingsFile()
 		switch (ret)
 		{
 			case 0:
-				EmuSettings.LoadMethod = getNextLoadDevice(EmuSettings.LoadMethod);
+				EmuSettings.loadDevice = getNextLoadDevice(EmuSettings.loadDevice);
 				break;
 
 			case 1:
-				EmuSettings.SaveMethod = getNextSaveDevice(EmuSettings.SaveMethod);
+				EmuSettings.saveDevice = getNextSaveDevice(EmuSettings.saveDevice);
 				break;
 
 			case 2:
-				OnScreenKeyboard(EmuSettings.LoadFolder, MAXPATHLEN);
+				OnScreenKeyboard(EmuSettings.loadFolder, MAXPATHLEN);
 				break;
 
 			case 3:
-				OnScreenKeyboard(EmuSettings.SaveFolder, MAXPATHLEN);
+				OnScreenKeyboard(EmuSettings.saveFolder, MAXPATHLEN);
 				break;
 
 			case 4:
-				OnScreenKeyboard(EmuSettings.CheatFolder, MAXPATHLEN);
+				OnScreenKeyboard(EmuSettings.cheatFolder, MAXPATHLEN);
 				break;
 
 			case 5:
-				OnScreenKeyboard(EmuSettings.ScreenshotsFolder, MAXPATHLEN);
+				OnScreenKeyboard(EmuSettings.screenshotsFolder, MAXPATHLEN);
 				break;
 
 			case 6:
-				OnScreenKeyboard(EmuSettings.CoverFolder, MAXPATHLEN);
+				OnScreenKeyboard(EmuSettings.coverFolder, MAXPATHLEN);
 				break;
 
 			case 7:
-				OnScreenKeyboard(EmuSettings.ArtworkFolder, MAXPATHLEN);
+				OnScreenKeyboard(EmuSettings.artworkFolder, MAXPATHLEN);
 				break;
 			
 			case 8:
-				EmuSettings.AutoLoad++;
-				if (EmuSettings.AutoLoad > AUTOLOAD_STATE)
-					EmuSettings.AutoLoad = AUTOLOAD_OFF;
+				EmuSettings.autoLoad++;
+				if (EmuSettings.autoLoad > AUTOLOAD_STATE)
+					EmuSettings.autoLoad = AUTOLOAD_OFF;
 				break;
 
 			case 9:
-				EmuSettings.AutoSave++;
-				if (EmuSettings.AutoSave > AUTOSAVE_BOTH)
-					EmuSettings.AutoSave = AUTOSAVE_OFF;
+				EmuSettings.autoSave++;
+				if (EmuSettings.autoSave > AUTOSAVE_BOTH)
+					EmuSettings.autoSave = AUTOSAVE_OFF;
 				break;
 
 			case 10:
-				EmuSettings.AppendAuto = !EmuSettings.AppendAuto;
+				EmuSettings.appendAuto = !EmuSettings.appendAuto;
 				break;
 		}
 
@@ -4130,42 +4130,42 @@ static int MenuSettingsFile()
 		{
 			firstRun = false;
 
-			if (EmuSettings.LoadMethod == DEVICE_AUTO) sprintf (options.value[0],"Auto Detect");
-			else if (EmuSettings.LoadMethod == DEVICE_SD) sprintf (options.value[0],"SD");
-			else if (EmuSettings.LoadMethod == DEVICE_USB) sprintf (options.value[0],"USB");
-			else if (EmuSettings.LoadMethod == DEVICE_DVD) sprintf (options.value[0],"DVD");
-			else if (EmuSettings.LoadMethod == DEVICE_SMB) sprintf (options.value[0],"Network Share");
-			else if (EmuSettings.LoadMethod == DEVICE_SD_SLOTA) sprintf (options.value[0],"SD Gecko Slot A");
-			else if (EmuSettings.LoadMethod == DEVICE_SD_SLOTB) sprintf (options.value[0],"SD Gecko Slot B");
-			else if (EmuSettings.LoadMethod == DEVICE_SD_PORT2) sprintf (options.value[0],"SD in SP2");
-			else if (EmuSettings.LoadMethod == DEVICE_SD_GCLOADER) sprintf (options.value[0],"GC Loader");
+			if (EmuSettings.loadDevice == DEVICE_AUTO) sprintf (options.value[0],"Auto Detect");
+			else if (EmuSettings.loadDevice == DEVICE_SD) sprintf (options.value[0],"SD");
+			else if (EmuSettings.loadDevice == DEVICE_USB) sprintf (options.value[0],"USB");
+			else if (EmuSettings.loadDevice == DEVICE_DVD) sprintf (options.value[0],"DVD");
+			else if (EmuSettings.loadDevice == DEVICE_SMB) sprintf (options.value[0],"Network Share");
+			else if (EmuSettings.loadDevice == DEVICE_SD_SLOTA) sprintf (options.value[0],"SD Gecko Slot A");
+			else if (EmuSettings.loadDevice == DEVICE_SD_SLOTB) sprintf (options.value[0],"SD Gecko Slot B");
+			else if (EmuSettings.loadDevice == DEVICE_SD_PORT2) sprintf (options.value[0],"SD in SP2");
+			else if (EmuSettings.loadDevice == DEVICE_SD_GCLOADER) sprintf (options.value[0],"GC Loader");
 
-			if (EmuSettings.SaveMethod == DEVICE_AUTO) sprintf (options.value[1],"Auto Detect");
-			else if (EmuSettings.SaveMethod == DEVICE_SD) sprintf (options.value[1],"SD");
-			else if (EmuSettings.SaveMethod == DEVICE_USB) sprintf (options.value[1],"USB");
-			else if (EmuSettings.SaveMethod == DEVICE_SMB) sprintf (options.value[1],"Network Share");
-			else if (EmuSettings.SaveMethod == DEVICE_SD_SLOTA) sprintf (options.value[1],"SD Gecko Slot A");
-			else if (EmuSettings.SaveMethod == DEVICE_SD_SLOTB) sprintf (options.value[1],"SD Gecko Slot B");
-			else if (EmuSettings.SaveMethod == DEVICE_SD_PORT2) sprintf (options.value[1],"SD in SP2");
-			else if (EmuSettings.SaveMethod == DEVICE_SD_GCLOADER) sprintf (options.value[1],"GC Loader");
+			if (EmuSettings.saveDevice == DEVICE_AUTO) sprintf (options.value[1],"Auto Detect");
+			else if (EmuSettings.saveDevice == DEVICE_SD) sprintf (options.value[1],"SD");
+			else if (EmuSettings.saveDevice == DEVICE_USB) sprintf (options.value[1],"USB");
+			else if (EmuSettings.saveDevice == DEVICE_SMB) sprintf (options.value[1],"Network Share");
+			else if (EmuSettings.saveDevice == DEVICE_SD_SLOTA) sprintf (options.value[1],"SD Gecko Slot A");
+			else if (EmuSettings.saveDevice == DEVICE_SD_SLOTB) sprintf (options.value[1],"SD Gecko Slot B");
+			else if (EmuSettings.saveDevice == DEVICE_SD_PORT2) sprintf (options.value[1],"SD in SP2");
+			else if (EmuSettings.saveDevice == DEVICE_SD_GCLOADER) sprintf (options.value[1],"GC Loader");
 
-			snprintf (options.value[2], 35, "%s", EmuSettings.LoadFolder);
-			snprintf (options.value[3], 35, "%s", EmuSettings.SaveFolder);
-			snprintf (options.value[4], 35, "%s", EmuSettings.CheatFolder);
-			snprintf (options.value[5], 35, "%s", EmuSettings.ScreenshotsFolder);
-			snprintf (options.value[6], 35, "%s", EmuSettings.CoverFolder);
-			snprintf (options.value[7], 35, "%s", EmuSettings.ArtworkFolder);
+			snprintf (options.value[2], 35, "%s", EmuSettings.loadFolder);
+			snprintf (options.value[3], 35, "%s", EmuSettings.saveFolder);
+			snprintf (options.value[4], 35, "%s", EmuSettings.cheatFolder);
+			snprintf (options.value[5], 35, "%s", EmuSettings.screenshotsFolder);
+			snprintf (options.value[6], 35, "%s", EmuSettings.coverFolder);
+			snprintf (options.value[7], 35, "%s", EmuSettings.artworkFolder);
 			
-			if (EmuSettings.AutoLoad == AUTOLOAD_OFF) sprintf (options.value[8],"Off");
-			else if (EmuSettings.AutoLoad == AUTOLOAD_SRAM) sprintf (options.value[8],"SRAM");
-			else if (EmuSettings.AutoLoad == AUTOLOAD_STATE) sprintf (options.value[8],"State");
+			if (EmuSettings.autoLoad == AUTOLOAD_OFF) sprintf (options.value[8],"Off");
+			else if (EmuSettings.autoLoad == AUTOLOAD_SRAM) sprintf (options.value[8],"SRAM");
+			else if (EmuSettings.autoLoad == AUTOLOAD_STATE) sprintf (options.value[8],"State");
 
-			if (EmuSettings.AutoSave == AUTOSAVE_OFF) sprintf (options.value[9],"Off");
-			else if (EmuSettings.AutoSave == AUTOSAVE_SRAM) sprintf (options.value[9],"SRAM");
-			else if (EmuSettings.AutoSave == AUTOSAVE_STATE) sprintf (options.value[9],"State");
-			else if (EmuSettings.AutoSave == AUTOSAVE_BOTH) sprintf (options.value[9],"Both");
+			if (EmuSettings.autoSave == AUTOSAVE_OFF) sprintf (options.value[9],"Off");
+			else if (EmuSettings.autoSave == AUTOSAVE_SRAM) sprintf (options.value[9],"SRAM");
+			else if (EmuSettings.autoSave == AUTOSAVE_STATE) sprintf (options.value[9],"State");
+			else if (EmuSettings.autoSave == AUTOSAVE_BOTH) sprintf (options.value[9],"Both");
 
-			if (!EmuSettings.AppendAuto) sprintf (options.value[10],"Off");
+			if (!EmuSettings.appendAuto) sprintf (options.value[10],"Off");
 			else sprintf (options.value[10],"On");
 
 			optionBrowser.triggerUpdate();
@@ -4342,13 +4342,13 @@ static int MenuSettingsMenu()
 		switch (ret)
 		{
 			case 0:
-				EmuSettings.ExitAction++;
+				EmuSettings.exitAction++;
 				#ifdef HW_RVL
-				if(EmuSettings.ExitAction >= EXITACTION_WII_LENGTH)
-					EmuSettings.ExitAction = EXITACTION_WII_AUTO;
+				if(EmuSettings.exitAction >= EXITACTION_WII_LENGTH)
+					EmuSettings.exitAction = EXITACTION_WII_AUTO;
 				#elif HW_DOL
-				if(EmuSettings.ExitAction >= EXITACTION_GC_LENGTH)
-					EmuSettings.ExitAction = EXITACTION_GC_RETURN_TO_LOADER;
+				if(EmuSettings.exitAction >= EXITACTION_GC_LENGTH)
+					EmuSettings.exitAction = EXITACTION_GC_RETURN_TO_LOADER;
 				#endif
 				break;
 			case 1:
@@ -4358,20 +4358,20 @@ static int MenuSettingsMenu()
 				platform->getInput()->setWiimoteOrientation(EmuSettings.wiimoteOrientation);
 				break;
 			case 2:
-				EmuSettings.MusicVolume += 10;
-				if(EmuSettings.MusicVolume > 100)
-					EmuSettings.MusicVolume = 0;
-				GuiSound::setDefaultVolume(VOLUME_TYPE::MUSIC, EmuSettings.MusicVolume);
+				EmuSettings.musicVolume += 10;
+				if(EmuSettings.musicVolume > 100)
+					EmuSettings.musicVolume = 0;
+				GuiSound::setDefaultVolume(VOLUME_TYPE::MUSIC, EmuSettings.musicVolume);
 				break;
 			case 3:
-				EmuSettings.SFXVolume += 10;
-				if(EmuSettings.SFXVolume > 100)
-					EmuSettings.SFXVolume = 0;
-				GuiSound::setDefaultVolume(VOLUME_TYPE::SFX, EmuSettings.SFXVolume);
+				EmuSettings.sfxVolume += 10;
+				if(EmuSettings.sfxVolume > 100)
+					EmuSettings.sfxVolume = 0;
+				GuiSound::setDefaultVolume(VOLUME_TYPE::SFX, EmuSettings.sfxVolume);
 				break;
 			case 4:
-				EmuSettings.Rumble = !EmuSettings.Rumble;
-				platform->getInput()->setRumbleEnabled(EmuSettings.Rumble);
+				EmuSettings.rumble = !EmuSettings.rumble;
+				platform->getInput()->setRumbleEnabled(EmuSettings.rumble);
 				break;
 			case 5:
 				EmuSettings.language++;
@@ -4382,9 +4382,9 @@ static int MenuSettingsMenu()
 					EmuSettings.language = LANG_JAPANESE;
 				break;			
 			case 6:
-				EmuSettings.PreviewImage++;
-				if(EmuSettings.PreviewImage >= PREVIEWIMAGE_LENGTH)
-					EmuSettings.PreviewImage = PREVIEWIMAGE_SCREENSHOT;
+				EmuSettings.previewImage++;
+				if(EmuSettings.previewImage >= PREVIEWIMAGE_LENGTH)
+					EmuSettings.previewImage = PREVIEWIMAGE_SCREENSHOT;
 				break;
 		}
 
@@ -4393,16 +4393,16 @@ static int MenuSettingsMenu()
 			firstRun = false;
 
 			#ifdef HW_RVL
-			if (EmuSettings.ExitAction == EXITACTION_WII_RETURN_TO_MENU)
+			if (EmuSettings.exitAction == EXITACTION_WII_RETURN_TO_MENU)
 				sprintf (options.value[0], "Return to Wii Menu");
-			else if (EmuSettings.ExitAction == EXITACTION_WII_POWER_OFF)
+			else if (EmuSettings.exitAction == EXITACTION_WII_POWER_OFF)
 				sprintf (options.value[0], "Power off Wii");
-			else if (EmuSettings.ExitAction == EXITACTION_WII_RETURN_TO_LOADER)
+			else if (EmuSettings.exitAction == EXITACTION_WII_RETURN_TO_LOADER)
 				sprintf (options.value[0], "Return to Loader");
 			else
 				sprintf (options.value[0], "Auto");
 			#elif HW_DOL // GameCube
-			if (EmuSettings.ExitAction == EXITACTION_GC_RETURN_TO_LOADER)
+			if (EmuSettings.exitAction == EXITACTION_GC_RETURN_TO_LOADER)
 				sprintf (options.value[0], "Return to Loader");
 			else
 				sprintf (options.value[0], "Reboot");
@@ -4417,17 +4417,17 @@ static int MenuSettingsMenu()
 			else
 				sprintf (options.value[1], "Vertical");
 
-			if(EmuSettings.MusicVolume > 0)
-				sprintf(options.value[2], "%d%%", EmuSettings.MusicVolume);
+			if(EmuSettings.musicVolume > 0)
+				sprintf(options.value[2], "%d%%", EmuSettings.musicVolume);
 			else
 				sprintf(options.value[2], "Mute");
 
-			if(EmuSettings.SFXVolume > 0)
-				sprintf(options.value[3], "%d%%", EmuSettings.SFXVolume);
+			if(EmuSettings.sfxVolume > 0)
+				sprintf(options.value[3], "%d%%", EmuSettings.sfxVolume);
 			else
 				sprintf(options.value[3], "Mute");
 
-			if (EmuSettings.Rumble)
+			if (EmuSettings.rumble)
 				sprintf (options.value[4], "Enabled");
 			else
 				sprintf (options.value[4], "Disabled");
@@ -4451,7 +4451,7 @@ static int MenuSettingsMenu()
 				case LANG_SWEDISH:		sprintf(options.value[5], "Swedish"); break;
 			}
 	
-			switch(EmuSettings.PreviewImage)
+			switch(EmuSettings.previewImage)
 			{
 				case 0:	
 					sprintf(options.value[6], "Screenshots"); 
