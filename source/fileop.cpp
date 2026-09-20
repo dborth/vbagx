@@ -615,7 +615,7 @@ void FindAndSelectLastLoadedFile ()
 	
 	for(int j=1; j < browser.numEntries; j++)
 	{
-		if(strcmp(browserList[j].filename, EmuSettings.LastFileLoaded) == 0)
+		if(strcmp(browserList[j].filename, EmuSettings.lastFileLoaded) == 0)
 		{
 			indexFound = j;
 			break;
