@@ -404,12 +404,7 @@ static inline void CPUWriteMemory(u32 address, u32 value) {
 	address &= ~0x03;
 	u8 pageIdx = address >> 24;
 
-	if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
-		u32 page = (address >> 10) & 0xFFFF;
-		if (jitCache.smcPageFlags[page]) {
-			jitCache.invalidateSMCTarget(address);
-		}
-	}
+	JIT_SMC_GUARD(address, pageIdx);
 	u8 *base = gbaWritePagePtrs[pageIdx];
 
 	// FAST PATH
@@ -472,12 +467,7 @@ static inline void CPUWriteHalfWord(u32 address, u16 value) {
 	address &= ~0x01;
 	u8 pageIdx = address >> 24;
 
-	if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
-		u32 page = (address >> 10) & 0xFFFF;
-		if (jitCache.smcPageFlags[page]) {
-			jitCache.invalidateSMCTarget(address);
-		}
-	}
+	JIT_SMC_GUARD(address, pageIdx);
 	u8 *base = gbaWritePagePtrs[pageIdx];
 
 	// FAST PATH
@@ -545,12 +535,7 @@ static inline void CPUWriteByte(u32 address, u8 b) {
 	JIT_RECORD_MEMORY_WRITE(address, b, 1);
 	u8 pageIdx = address >> 24;
 
-	if (UNLIKELY((pageIdx == 2) | (pageIdx == 3))) {
-		u32 page = (address >> 10) & 0xFFFF;
-		if (jitCache.smcPageFlags[page]) {
-			jitCache.invalidateSMCTarget(address);
-		}
-	}
+	JIT_SMC_GUARD(address, pageIdx);
 	u8 *base = gbaWritePagePtrs[pageIdx];
 
 	// FAST PATH

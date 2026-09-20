@@ -39,13 +39,22 @@
 
 #include "JIT.h"
 
+#if defined(__WIIU__) && VBA_JIT
+// CPUWrite*() consults smcPageFlags[] on every EWRAM/IWRAM write without first
+// asking whether the JIT is up, so the pointer must never be null.
+static u8 smcPageFlagsIdle[SMC_MAP_SIZE];
+#define SMC_PAGE_FLAGS_IDLE smcPageFlagsIdle
+#else
+#define SMC_PAGE_FLAGS_IDLE nullptr
+#endif
+
 JITCache jitCache;
 
 JITCache::JITCache() {
 	jitArena = nullptr;
 	blockTable = nullptr;
 	smcRegistry = nullptr;
-	smcPageFlags = nullptr;
+	smcPageFlags = SMC_PAGE_FLAGS_IDLE;
 	linkerStubAddress = nullptr;
 	linkerReturnAddress = nullptr;
 	arenaOffset = 0;
@@ -72,7 +81,7 @@ void JITCache::destroy() {
 	jitArena = nullptr;
 	blockTable = nullptr;
 	smcRegistry = nullptr;
-	smcPageFlags = nullptr;
+	smcPageFlags = SMC_PAGE_FLAGS_IDLE;
 	arenaOffset = 0;
 	isInitialized = false;
 }

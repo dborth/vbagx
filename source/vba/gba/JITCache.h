@@ -37,6 +37,20 @@
 #include "JITPPCEmitter.h"
 #include "Debug.h"
 
+// -------------------------------------------------------------------------
+// BUILD-TIME JIT AVAILABILITY
+//
+// VBA_JIT is 1 only in builds that can ever run the trace JIT: GameCube, Wii,
+// and Wii U when built with -DWIIU_JIT. Everywhere else the JIT hooks in the
+// interpreter (JIT_SMC_GUARD below, the dispatch loop in thumbExecute()) are
+// preprocessed out entirely.
+// -------------------------------------------------------------------------
+#if defined(HW_RVL) || defined(HW_DOL) || (defined(__WIIU__) && defined(WIIU_JIT))
+#define VBA_JIT 1
+#else
+#define VBA_JIT 0
+#endif
+
 #define JIT_ARENA_SIZE					(1024 * 1024 * 8) // 8 MB
 #define HASH_TABLE_SIZE					65536
 #define SMC_MAP_SIZE                    65536 // 64K pages (1KB page granularity across 64MB)
@@ -96,5 +110,21 @@ class JITCache {
 };
 
 extern JITCache jitCache;
+
+// Self-modifying-code guard for a guest write to EWRAM/IWRAM (pageIdx 2/3):
+// if a compiled block lives on the written 1KB page, invalidate it.
+#if VBA_JIT
+#define JIT_SMC_GUARD(address, pageIdx) \
+	do { \
+		if (UNLIKELY(((pageIdx) == 2) | ((pageIdx) == 3))) { \
+			u32 page = ((address) >> 10) & 0xFFFF; \
+			if (jitCache.smcPageFlags[page]) { \
+				jitCache.invalidateSMCTarget(address); \
+			} \
+		} \
+	} while (0)
+#else
+#define JIT_SMC_GUARD(address, pageIdx) ((void)0)
+#endif
 
 #endif

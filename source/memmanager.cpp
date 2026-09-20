@@ -100,10 +100,7 @@ void InitMemManager ()
 static bool jitProbed = false;
 
 void InitJitWiiU() {
-#ifndef WIIU_JIT
-	jitProbed = true;
-	return;
-#endif
+#if VBA_JIT
 	uint32_t *arena = WutCodegenAcquire(JIT_ARENA_SIZE);
 	if (arena) {
 	    jitCache.initialize(arena,
@@ -111,18 +108,19 @@ void InitJitWiiU() {
 	        (BasicBlock**)coreMem.gba.smcRegistry,
 	        (uint8_t*)coreMem.gba.smcPageFlags);
 	}
+#endif
 	jitProbed = true;
 }
 #endif
 
 bool JitIsAvailable()
 {
-#if (defined(HW_RVL) || defined(HW_DOL))
-	return true;
-#elif __WIIU__
+#if !VBA_JIT
+	return false;
+#elif defined(__WIIU__)
 	return jitCache.isReady();
 #else
-	return false;
+	return true;
 #endif
 }
 

@@ -1510,7 +1510,7 @@ static int GBAROMLoad()
 	if(GBAROMSize) {
 		flashInit();
 		eepromInit();
-		CPUUpdateRenderBuffers( true );
+		CPUUpdateRenderBuffers(true);
 		return 1;
 	}
 	return 0;

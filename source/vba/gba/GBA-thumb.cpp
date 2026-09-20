@@ -1363,6 +1363,7 @@ int thumbExecute() {
     PROFILER_START_TIMER(thumbTimeStart);
     PROFILER_DECLARE_BAILOUT_FLAG();
 
+#if VBA_JIT
     bool useJIT = false;
 
     if(EmuSettings.DynamicRecompilation) {
@@ -1371,10 +1372,12 @@ int thumbExecute() {
     	// (a valid Trace Header) is allowed to be JIT compiled.
     	useJIT = true;
     }
+#endif
 
     do {
 		u32 pc = armNextPC;
 
+#if VBA_JIT
 		if (useJIT) {
 			BasicBlock* block = jitCache.getBlock(pc);
 
@@ -1446,6 +1449,9 @@ int thumbExecute() {
 		} else {
 			PROFILER_CLEAR_BAILOUT_FLAG();
 		}
+#else
+		PROFILER_CLEAR_BAILOUT_FLAG();
+#endif
 		// ========================================================================
 		// LEGACY C++ FALLBACK PATH
 		// ========================================================================
@@ -1483,6 +1489,7 @@ int thumbExecute() {
 		JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, clockTicks);
 		PROFILER_ADD_TIME(timeSpentFallback, execFallbackStart);
 
+#if VBA_JIT
 		if(EmuSettings.DynamicRecompilation) {
 			// Discontinuity Check
 			// If the instruction modified the PC non-linearly, a branch occurred.
@@ -1491,6 +1498,7 @@ int thumbExecute() {
 				useJIT = true;
 			}
 		}
+#endif
     } while (cpuTotalTicks < cpuNextEvent && !armState && !holdState && !SWITicks);
 
     PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart);
