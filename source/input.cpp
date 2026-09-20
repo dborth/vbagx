@@ -258,7 +258,7 @@ static uint32_t DecodeJoy(unsigned short pad)
 	CursorValid = data.validPointer;
 
 	// check for games that should have special Wii controls
-	if (EmuSettings.WiiControls) {
+	if (EmuSettings.wiiControls) {
 		switch (RomIdCode & 0xFFFFFF) {
 			// Zelda
 			case ZELDA1:
@@ -443,7 +443,7 @@ static uint32_t DecodeJoy(unsigned short pad)
 	uint32_t J = StandardMovement(pad);
 
 	// Evaluate Turbo (C-Stick Right / Right Stick Right)
-	if (EmuSettings.TurboModeEnabled)
+	if (EmuSettings.turboModeEnabled)
 	{
 		if (data.substickX > 0.55f) {
 			J |= VBA_SPEED;

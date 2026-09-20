@@ -126,22 +126,22 @@ bool JitIsAvailable()
 
 void EnforceJitSetting()
 {
-	if(!EmuSettings.DynamicRecompilation)
+	if(!EmuSettings.dynamicRecompilation)
 		return;
 #ifdef __WIIU__
 	if(!jitProbed)
 		return;
 #endif
 	if(!JitIsAvailable())
-		EmuSettings.DynamicRecompilation = false;
+		EmuSettings.dynamicRecompilation = false;
 }
 
 void EnforceJitSettingForGame()
 {
 	EnforceJitSetting();
 
-	if(EmuSettings.DynamicRecompilation && IsGBAGame() && !jitCache.isReady())
-		EmuSettings.DynamicRecompilation = false;
+	if(EmuSettings.dynamicRecompilation && IsGBAGame() && !jitCache.isReady())
+		EmuSettings.dynamicRecompilation = false;
 }
 
 #if (!defined(HW_RVL) && !defined(HW_DOL))
