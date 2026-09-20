@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -394,10 +395,17 @@ static void loadXMLController(uint32_t controller[], const char * name)
 
 static void loadXMLPaletteFromSection(gamePalette &pal)
 {
+	memset(&pal, 0, sizeof(pal)); // anything the file doesn't specify must not be left as whatever malloc() returned
+
 	if (section)
 	{
-		strncpy(pal.gameName, mxmlElementGetAttr(section, "name"), sizeof(pal.gameName) - 1);
-		pal.gameName[sizeof(pal.gameName) - 1] = 0;
+		// a <game> without a name attribute is malformed - keep the (empty) name rather than passing NULL to strncpy
+		const char * gameName = mxmlElementGetAttr(section, "name");
+		if (gameName)
+		{
+			strncpy(pal.gameName, gameName, sizeof(pal.gameName) - 1);
+			pal.gameName[sizeof(pal.gameName) - 1] = 0;
+		}
 		item = mxmlFindElement(section, xml, "bkgr", nullptr, nullptr, MXML_DESCEND);
 		if (item)
 		{
@@ -487,9 +495,7 @@ void ApplySettings() {
  *
  * Decodes preferences - parses XML and loads preferences into the variables
  ***************************************************************************/
-
-static bool
-decodePrefsData ()
+static bool decodePrefsData ()
 {
 	xml = mxmlLoadString(nullptr, (char *)savebuffer, MXML_TEXT_CALLBACK);
 
@@ -579,8 +585,7 @@ decodePrefsData ()
 	return true;
 }
 
-static bool
-decodePalsData ()
+static bool decodePalsData ()
 {
 	xml = mxmlLoadString(nullptr, (char *) savebuffer, MXML_TEXT_CALLBACK);
 
@@ -602,7 +607,13 @@ decodePalsData ()
 	if (palettes)
 		free(palettes);
 
-	palettes = (gamePalette *)malloc(sizeof(gamePalette)*loadedPalettes);
+	palettes = (gamePalette *)calloc(loadedPalettes > 0 ? loadedPalettes : 1, sizeof(gamePalette));
+	if (!palettes)
+	{
+		loadedPalettes = 0;
+		mxmlDelete(xml);
+		return false;
+	}
 	// Load all palettes in file, hardcoded palettes are added later
 	int i = 0;
 	for (section = mxmlFindElement(item, xml, "game", nullptr, nullptr,
@@ -818,8 +829,22 @@ static int GetPrefsSubfolderCandidates(int device, const char * outFolders[2])
  * Save Preferences
  ***************************************************************************/
 static char prefpath[MAXPATHLEN] = { 0 };
+static uint32_t prefsHash = 0;
+static bool prefsHashKnown = false;
 
-bool SavePrefs()
+static uint32_t HashBytes(const void * data, size_t size)
+{
+	const uint8_t * bytes = (const uint8_t *)data;
+	uint32_t hash = 2166136261u; // FNV-1a
+	for(size_t i = 0; i < size; i++)
+	{
+		hash ^= bytes[i];
+		hash *= 16777619u;
+	}
+	return hash;
+}
+
+static bool SavePrefsNow()
 {
 	char filepath[MAXPATHLEN];
 	int datasize;
@@ -874,11 +899,20 @@ bool SavePrefs()
 
 	AllocSaveBuffer ();
 	datasize = preparePrefsData ();
-	offset = SaveFile(filepath, datasize, true);
+
+	uint32_t hash = HashBytes(savebuffer, datasize);
+	if(prefsHashKnown && hash == prefsHash)
+	{
+		offset = datasize; // unchanged - nothing to write
+	}
+	else
+	{
+		offset = SaveFile(filepath, datasize, true);
+		prefsHash = hash;
+		prefsHashKnown = (offset > 0); // if it failed, try again next time
+	}
 
 	FreeSaveBuffer ();
-
-	CancelAction();
 
 	if (offset > 0)
 	{
@@ -887,6 +921,32 @@ bool SavePrefs()
 		return true;
 	}
 	return false;
+}
+
+static int SavePrefsTask(void *)
+{
+	SavePrefsNow();
+	return 0;
+}
+
+// Asynchronous and silent: queued for the worker thread, so the caller never
+// waits on storage and nothing is shown. Saving again while a save is still
+// queued does nothing extra - it will save whatever the settings are by then.
+bool SavePrefs()
+{
+	if(QueueBackgroundTask(SavePrefsTask))
+		return true;
+
+	return SavePrefsNow(); // worker unavailable or queue full
+}
+
+// For exit: lets any queued save finish, then saves right here.
+bool SavePrefsAndWait()
+{
+	if(!FlushBackgroundTasks(15000)) // don't hang the exit forever on a stalled device
+		return false;
+
+	return SavePrefsNow();
 }
 
 /****************************************************************************
@@ -906,6 +966,12 @@ LoadPrefsFromMethod (char * path)
 
 	if (offset > 0)
 		retval = decodePrefsData ();
+
+	if(retval)
+	{
+		prefsHash = HashBytes(savebuffer, offset);
+		prefsHashKnown = true;
+	}
 
 	FreeSaveBuffer ();
 
@@ -1186,7 +1252,10 @@ static void AddPalette(gamePalette pal, const char *gameName, bool overwrite)
 			}
 		}
 
-	palettes = (gamePalette *)realloc(palettes, sizeof(gamePalette)*(loadedPalettes+1));
+	gamePalette * grown = (gamePalette *)realloc(palettes, sizeof(gamePalette)*(loadedPalettes+1));
+	if(!grown)
+		return; // out of memory - keep the palettes we have
+	palettes = grown;
 	palettes[loadedPalettes] = pal;
 	strncpy(palettes[loadedPalettes].gameName, gameName, sizeof(palettes[loadedPalettes].gameName) - 1);
 	palettes[loadedPalettes].gameName[sizeof(palettes[loadedPalettes].gameName) - 1] = 0;
@@ -1230,6 +1299,9 @@ bool LoadPalettes()
 
 void SetPalette(const char *gameName)
 {
+	if(!palettes || loadedPalettes <= 0)
+		return;
+
 	// Load existing palette
 	int snum = -1;
 	for (int i = 0; i < loadedPalettes; i++)

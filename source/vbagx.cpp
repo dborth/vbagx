@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
 void ExitApp()
 {
 	SwitchMemoryModeMenu();
-	SavePrefs();
+	SavePrefsAndWait(); // exit is the one time we wait for settings to reach the device
 
 	if (ROMLoaded && appRequest != AppRequest::MENU && EmuSettings.AutoSave == AUTOSAVE_SRAM)
 		SaveBatteryOrStateAuto(FILE_SRAM, SILENT);

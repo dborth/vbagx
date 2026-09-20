@@ -5469,6 +5469,7 @@ static int FirstRunTask(void * arg) {
 	LoadPrefs();
 	AutoDetectDevices();
 	CreateMissingDirectories();
+	LoadPalettes();
 	SavePrefs();
 	return 0;
 }
@@ -5523,8 +5524,6 @@ void MainMenu (int selection)
 		enterSound = new GuiSound(enter_ogg, enter_ogg_size, SOUND::OGG);
 		exitSound = new GuiSound(exit_ogg, exit_ogg_size, SOUND::OGG);
 		#endif
-
-		LoadPalettes();
 	}
 
 	if(currentMenu == MENU_GAMESELECTION)

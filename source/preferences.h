@@ -9,6 +9,7 @@
  ***************************************************************************/
 
 bool SavePrefs();
+bool SavePrefsAndWait();
 bool LoadPrefs();
 void CreateMissingDirectories();
 void FixInvalidSettings();
