@@ -92,18 +92,18 @@ int main(int argc, char *argv[])
 		LoadPrefs();
 		if(strncmp(argv[1], "sd", 2) == 0)
 		{
-			EmuSettings.SaveMethod = DEVICE_SD;
-			EmuSettings.LoadMethod = DEVICE_SD;
+			EmuSettings.saveDevice = DEVICE_SD;
+			EmuSettings.loadDevice = DEVICE_SD;
 		}
 		else if(strncmp(argv[1], "usb", 3) == 0)
 		{
-			EmuSettings.SaveMethod = DEVICE_USB;
-			EmuSettings.LoadMethod = DEVICE_USB;
+			EmuSettings.saveDevice = DEVICE_USB;
+			EmuSettings.loadDevice = DEVICE_USB;
 		}
 		SavePrefs();
 
-		EmuSettings.AutoloadGame = AutoloadGame(argv[1], argv[2]);
-		autoboot = EmuSettings.AutoloadGame;
+		EmuSettings.autoloadGame = AutoloadGame(argv[1], argv[2]);
+		autoboot = EmuSettings.autoloadGame;
 	}
 #endif
 
@@ -196,7 +196,7 @@ void ExitApp()
 	SwitchMemoryModeMenu();
 	SavePrefsAndWait(); // exit is the one time we wait for settings to reach the device
 
-	if (ROMLoaded && appRequest != AppRequest::MENU && EmuSettings.AutoSave == AUTOSAVE_SRAM)
+	if (ROMLoaded && appRequest != AppRequest::MENU && EmuSettings.autoSave == AUTOSAVE_SRAM)
 		SaveBatteryOrStateAuto(FILE_SRAM, SILENT);
 
 	HaltDeviceCheckingThread();
@@ -206,5 +206,5 @@ void ExitApp()
 	// down inside requestExit()/shutdown().
 	Thread::JoinAll();
 
-	platform->requestExit(EmuSettings.ExitAction, autoboot);
+	platform->requestExit(EmuSettings.exitAction, autoboot);
 }

@@ -167,11 +167,11 @@ enum {
 
 struct SEmuSettings
 {
-	int		AutoLoad;
-	int		AutoSave;
-	int		LoadMethod;    // For ROMS: Auto, SD, DVD, USB, Network Share
-	int		SaveMethod;    // For SRAM, Freeze, Prefs: Auto, SD, USB, Network Share
-	bool	AppendAuto;
+	int		autoLoad;
+	int		autoSave;
+	int		loadDevice;    // For ROMS: Auto, SD, DVD, USB, Network Share
+	int		saveDevice;    // For SRAM, Freeze, Prefs: Auto, SD, USB, Network Share
+	bool	appendAuto;
 
 	int		videoMode;
 	int		videoAspectRatioCorrection;
@@ -189,33 +189,33 @@ struct SEmuSettings
 	int		gbaFixed;
 
 	bool	colorize;      // colorize Mono Gameboy games
-	bool	DynamicRecompilation;
-	int		DisplayFrameRate;
-	bool	gbaFrameskip;  // turn on auto-frameskip for GBA games
-	bool	WiiControls;   // Match Wii Game
+	bool	dynamicRecompilation;
+	int		displayFrameRate;
+	bool	gbaFrameSkip;  // turn on auto-frameskip for GBA games
+	bool	wiiControls;   // Match Wii Game
 	int		wiimoteOrientation;
-	int		ExitAction;
-	int		MusicVolume;
-	int		SFXVolume;
-	bool	Rumble;
+	int		exitAction;
+	int		musicVolume;
+	int		sfxVolume;
+	bool	rumble;
 	int 	language;
-	int		PreviewImage;
-	bool	TurboModeEnabled; // 0 - disabled, 1 - enabled
-	bool	AutoloadGame;
+	int		previewImage;
+	bool	turboModeEnabled; // 0 - disabled, 1 - enabled
+	bool	autoloadGame;
 	
-	int		OffsetMinutesUTC; // Used for clock on MBC3 and TAMA5
-	int 	GBHardware;    // Mapped to gbEmulatorType in VBA
-	int 	SGBBorder;
-	int		BasicPalette;	// 0 - Green   1 - Monochrome
+	int		offsetMinutesUtc; // Used for clock on MBC3 and TAMA5
+	int 	gbHardware;    // Mapped to gbEmulatorType in VBA
+	int 	sgbBorder;
+	int		basicPalette;	// 0 - Green   1 - Monochrome
 	
-	char	LoadFolder[MAXPATHLEN];  // Path to game files
-	char	LastFileLoaded[MAXPATHLEN]; //Last file loaded filename
-	char	SaveFolder[MAXPATHLEN];  // Path to save files
-	char	CheatFolder[MAXPATHLEN]; 	// Path to cheat files
-	char	ScreenshotsFolder[MAXPATHLEN]; //Path to screenshots files
-	char	CoverFolder[MAXPATHLEN]; 	//Path to cover files
-	char	ArtworkFolder[MAXPATHLEN]; 	//Path to artwork files
-	char	BorderFolder[MAXPATHLEN];  // Path to Super Game Boy border files
+	char	loadFolder[MAXPATHLEN];  // Path to game files
+	char	lastFileLoaded[MAXPATHLEN]; //Last file loaded filename
+	char	saveFolder[MAXPATHLEN];  // Path to save files
+	char	cheatFolder[MAXPATHLEN]; 	// Path to cheat files
+	char	screenshotsFolder[MAXPATHLEN]; //Path to screenshots files
+	char	coverFolder[MAXPATHLEN]; 	//Path to cover files
+	char	artworkFolder[MAXPATHLEN]; 	//Path to artwork files
+	char	borderFolder[MAXPATHLEN];  // Path to Super Game Boy border files
 
 	SmbShareInfo smbShare; // host/share/user/password for DEVICE_SMB
 };

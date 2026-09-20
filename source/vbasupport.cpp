@@ -278,7 +278,7 @@ void systemFrame()
 			pendingFrames = skipFrms;
 		}
 
-		if (EmuSettings.gbaFrameskip && behindSchedule && (skippedFrames < skipFrms))
+		if (EmuSettings.gbaFrameSkip && behindSchedule && (skippedFrames < skipFrms))
 		{
 			skippedFrames++;
 			frameToRender = false;
@@ -291,7 +291,7 @@ void systemFrame()
 			// forgive the VBlank debt rather than let it sit at max and
 			// bias the next frame's decision toward skipping anyway
 			if (behindSchedule)
-				platform->getVideo()->setFrameTimer(EmuSettings.gbaFrameskip ? 1 : 0);
+				platform->getVideo()->setFrameTimer(EmuSettings.gbaFrameSkip ? 1 : 0);
 
 			skippedFrames = 0;
 			frameToRender = true;
@@ -315,7 +315,7 @@ void systemFrame()
 		if(behindSchedule) {
 			// 1. Should we drop a render to catch up?
 			// We ONLY drop if the skip pressure crossed the threshold (behindSchedule).
-			if (EmuSettings.gbaFrameskip && behindSchedule && (skippedFrames < skipFrms))
+			if (EmuSettings.gbaFrameSkip && behindSchedule && (skippedFrames < skipFrms))
 			{
 				skippedFrames++;
 				frameToRender = false;
@@ -530,7 +530,7 @@ bool LoadBatteryOrStateAuto(int action, bool silent)
 		if (LoadBatteryOrState(filepath, action, SILENT))
 			return true;
 
-		if (!EmuSettings.AppendAuto)
+		if (!EmuSettings.appendAuto)
 			return false;
 
 		// look for file with no number or Auto appended
@@ -1167,7 +1167,7 @@ static void ResetGameBorder() {
 void InitGameDimensionsAndBorder() {
 	gameBorder.clear();
 
-	if(EmuSettings.SGBBorder == SGBBORDER_FROMPNG) {
+	if(EmuSettings.sgbBorder == SGBBORDER_FROMPNG) {
 		int bw = 0, bh = 0;
 		const char* fallback = (cartridgeType == CARTRIDGE_GBA) ? "defaultgba" : "default";
 		uint8_t* borderPixels = BorderManager::load(nullptr, fallback, bw, bh);
@@ -1177,7 +1177,7 @@ void InitGameDimensionsAndBorder() {
 		}
 	}
 
-	bool wantSgbCapture = (cartridgeType == CARTRIDGE_GB) && gbSgbMode && (EmuSettings.SGBBorder == SGBBORDER_FROMGAME);
+	bool wantSgbCapture = (cartridgeType == CARTRIDGE_GB) && gbSgbMode && (EmuSettings.sgbBorder == SGBBORDER_FROMGAME);
 	sgbBorderExtractor.reset(wantSgbCapture, gameBorder.hasBorder());
 
 	if(cartridgeType == CARTRIDGE_GBA) {
@@ -1185,7 +1185,7 @@ void InitGameDimensionsAndBorder() {
 		srcHeight = 160;
 	}
 	else {
-		gbBorderOn = (EmuSettings.SGBBorder == SGBBORDER_FROMGAME);
+		gbBorderOn = (EmuSettings.sgbBorder == SGBBORDER_FROMGAME);
 
 		if(gbBorderOn)
 		{
@@ -1517,7 +1517,7 @@ static int GBAROMLoad()
 }
 
 void InitGBGame() {
-	gbEmulatorType = EmuSettings.GBHardware;
+	gbEmulatorType = EmuSettings.gbHardware;
 	gbGetHardwareType();
 	gbApplyPerImagePreferences();
 
@@ -1639,7 +1639,7 @@ void InitialisePalette()
 	// Build GBPalette
 	for( i = 0; i < 24; )
 	{
-		if (EmuSettings.BasicPalette == BASICPALETTE_GREEN) //Greenish color
+		if (EmuSettings.basicPalette == BASICPALETTE_GREEN) //Greenish color
 		{
 			systemGbPalette[i++] = (0x1c) | (0x1e << 5) | (0x1c << 10);
 			systemGbPalette[i++] = (0x10) | (0x17 << 5) | (0x0b << 10);
