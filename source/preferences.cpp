@@ -714,7 +714,7 @@ void DefaultSettings()
 	EmuSettings.gbFixed = 0; // not fixed - use zoom level
 	EmuSettings.gbaFixed = 0; // not fixed - use zoom level
 	EmuSettings.videoMode = VIDEOMODE_AUTO;
-	EmuSettings.videoBilinearFilter = true;
+	EmuSettings.videoBilinearFilter = false;
 	EmuSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_SHARP;
 #if defined(HW_RVL) || defined(HW_DOL)
 	EmuSettings.videoUpscalingFilter = FILTER_NONE;
