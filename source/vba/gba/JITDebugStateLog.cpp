@@ -36,7 +36,7 @@ void JITDebugStateLog::Init() {
 
 	char logType[10] = "";
 
-	if(EmuSettings.DynamicRecompilation)
+	if(EmuSettings.dynamicRecompilation)
 		sprintf(logType, "jit");
 	else
 		sprintf(logType, "interp");

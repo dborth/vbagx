@@ -1073,7 +1073,7 @@ void OgcEmulatorVideo::presentFrame(int consoleWidth, int consoleHeight)
 		if(EmuSettings.videoUpscalingFilter == FILTER_SCANLINES)
 			initScanlineTexture();
 
-		if(EmuSettings.DisplayFrameRate)
+		if(EmuSettings.displayFrameRate)
 			initFPSFontTexture();
 
 		#ifdef HW_RVL
@@ -1100,7 +1100,7 @@ void OgcEmulatorVideo::presentFrame(int consoleWidth, int consoleHeight)
 
 	drawSquare(); // render textured quad
 
-	if(EmuSettings.DisplayFrameRate) {
+	if(EmuSettings.displayFrameRate) {
 		static u32 lastFpsTime = 0;
 		static char fpsStr[16] = "FPS: 60.0";
 
@@ -1108,7 +1108,7 @@ void OgcEmulatorVideo::presentFrame(int consoleWidth, int consoleHeight)
 
 		// Only calculate and format the string once per second
 		if (currentTime - lastFpsTime >= 1000) {
-			if(EmuSettings.DisplayFrameRate == FRAMERATE_CORE)
+			if(EmuSettings.displayFrameRate == FRAMERATE_CORE)
 				sprintf(fpsStr, "FPS: %.1f", systemGetCoreFPS());
 			else
 				sprintf(fpsStr, "FPS: %.1f", systemGetRenderFPS());

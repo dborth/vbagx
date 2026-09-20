@@ -46,7 +46,7 @@ class WutEmulatorVideo : public EmulatorVideoDriver
 		//! texture, compositing gameBorder's RGBA8 pixels first if active.
 		void uploadFrame(int gbWidth, int gbHeight);
 		void drawQuad();
-		//! Draws EmuSettings.DisplayFrameRate's "FPS: NN.N" readout, one
+		//! Draws EmuSettings.displayFrameRate's "FPS: NN.N" readout, one
 		//! glyph-quad at a time out of fpsFont's character atlas.
 		void drawFpsOverlay();
 		//! Draws the shared menu pointer cursor at CursorX/CursorY when a 

@@ -1366,7 +1366,7 @@ int thumbExecute() {
 #if VBA_JIT
     bool useJIT = false;
 
-    if(EmuSettings.DynamicRecompilation) {
+    if(EmuSettings.dynamicRecompilation) {
     	// Default to true upon entering the loop. This ensures that if the
     	// scheduler previously yielded for an interrupt, the interrupt handler
     	// (a valid Trace Header) is allowed to be JIT compiled.
@@ -1490,7 +1490,7 @@ int thumbExecute() {
 		PROFILER_ADD_TIME(timeSpentFallback, execFallbackStart);
 
 #if VBA_JIT
-		if(EmuSettings.DynamicRecompilation) {
+		if(EmuSettings.dynamicRecompilation) {
 			// Discontinuity Check
 			// If the instruction modified the PC non-linearly, a branch occurred.
 			// This marks the beginning of a new logical block boundary.

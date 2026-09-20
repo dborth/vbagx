@@ -337,7 +337,7 @@ void WutEmulatorVideo::drawQuad()
  ***************************************************************************/
 void WutEmulatorVideo::drawFpsOverlay()
 {
-	if (!EmuSettings.DisplayFrameRate || !videoDriver->isForeground())
+	if (!EmuSettings.displayFrameRate || !videoDriver->isForeground())
 		return;
 
 	if (!fpsFont || !fpsGlyphTexCoords)
@@ -350,7 +350,7 @@ void WutEmulatorVideo::drawFpsOverlay()
 	uint32_t nowMs = (uint32_t)OSTicksToMilliseconds(OSGetTime());
 	if (fpsStr[0] == '\0' || nowMs - lastFpsTime >= 1000)
 	{
-		float fps = (EmuSettings.DisplayFrameRate == FRAMERATE_CORE) ? systemGetCoreFPS() : systemGetRenderFPS();
+		float fps = (EmuSettings.displayFrameRate == FRAMERATE_CORE) ? systemGetCoreFPS() : systemGetRenderFPS();
 		snprintf(fpsStr, sizeof(fpsStr), "FPS: %.1f", fps);
 		lastFpsTime = nowMs;
 	}
