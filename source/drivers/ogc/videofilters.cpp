@@ -19,7 +19,7 @@
 // Data Cache Block Touch for Gekko/Broadway (32-byte cache lines)
 #define DCBT(ptr) __builtin_prefetch((void*)(ptr), 0, 0)
 
-static UpscaleFilter UpscaleFilter = UPSCALE_NONE;
+static UpscaleFilter upscaleFilter = UPSCALE_NONE;
 TFilterMethod FilterMethod;
 
 // -------------------------------------------------------------------------
@@ -184,7 +184,7 @@ static TFilterMethod FilterToMethod (UpscaleFilter filterID)
 
 int GetFilterScale()
 {
-	switch(UpscaleFilter)
+	switch(upscaleFilter)
 	{
 		case UPSCALE_NONE:
 		case UPSCALE_SCANLINES:
@@ -245,8 +245,8 @@ static void InitFilterTables() {
 
 void SelectFilterMethod (int filterID)
 {
-	UpscaleFilter = (UpscaleFilter)filterID;
-	FilterMethod = FilterToMethod(UpscaleFilter);
+	upscaleFilter = (UpscaleFilter)filterID;
+	FilterMethod = FilterToMethod(upscaleFilter);
 
 	// Handle menu transition. Next frame will fully render
 	invalidate_hashes = true;
