@@ -6,6 +6,7 @@
 #pragma once
 
 #include "../InputDriver.h"
+#include "../InputData.h"
 #include "../OneEuroFilter.h"
 
 //!Wii U InputDriver: VPAD for the GamePad (stick, buttons, and touch,
@@ -30,8 +31,8 @@ class WutInputDriver : public InputDriver {
 
 	private:
 		bool rumbleRequest[4];
-		int menuRumbleFrames[4];
-		int menuRumbleGapFrames[4];  // enforced silent gap after a menu tick
+		int menuRumbleFrames[4];     // frames left in the current menu "tick" (0 = idle)
+		int menuRumbleGapFrames[4];  // frames left in the enforced silent gap after a tick
 		int gameRumbleFrames[4];
 		bool continuousRumble[4];
 		int continuousRumbleCount[4];
@@ -48,4 +49,10 @@ class WutInputDriver : public InputDriver {
 		OneEuroFilter irFilterX[4];
 		OneEuroFilter irFilterY[4];
 		bool irSmoothInit[4];
+
+		// VPADRead()/KPADReadEx() only report *new* wireless packets
+		// These caches hold the last known held/analog state per source so a
+		// "no new packet yet" tick can carry it forward
+		InputPadData drcCache;      // GamePad (VPAD), channel 0 only
+		InputPadData kpadCache[4];  // Wiimote/Nunchuk/Classic/Pro, per channel
 };
