@@ -2,7 +2,7 @@ msgid "&"
 msgstr "&"
 
 msgid "16:9 Correction"
-msgstr "16:9 수정"
+msgstr "16:9 보정"
 
 msgid "7z decompression failed: Archive contains too many files."
 msgstr "7z 압축 해제 실패: 압축 파일에 너무 많은 파일이 포함되었습니다."
@@ -35,13 +35,13 @@ msgid "Apr"
 msgstr "4월"
 
 msgid "Are you sure that you want to reset this game? Any unsaved progress will be lost."
-msgstr "이 게임을 재설정 하겠습니까? 저장되지 않는 진행은 손실됩니다."
+msgstr "이 게임을 재설정할까요? 저장되지 않는 진행은 손실됩니다."
 
 msgid "Are you sure that you want to reset your mappings?"
-msgstr "맵핑을 재설정 하겠습니까?"
+msgstr "매핑을 재설정할까요?"
 
 msgid "Are you sure that you want to reset your settings?"
-msgstr "설정을 재설정 하겠습니까?"
+msgstr "설정을 재설정할까요?"
 
 msgid "Artwork"
 msgstr "삽화"
@@ -83,10 +83,10 @@ msgid "Brazilian Portuguese"
 msgstr "브라질 포루투갈어"
 
 msgid "Button Mapping"
-msgstr "버튼 맵핑"
+msgstr "버튼 매핑"
 
 msgid "Button Mappings"
-msgstr "버튼 맵핑"
+msgstr "버튼 매핑"
 
 msgid "Cancel"
 msgstr "취소"
@@ -155,7 +155,7 @@ msgid "Delete Saves"
 msgstr "저장 삭제"
 
 msgid "Delete this save file? Deleted files can not be restored."
-msgstr "이 저장 파일을 삭제 하겠습니까? 삭제 파일은 복원할 수 없습니다."
+msgstr "이 저장 파일을 삭제할까요? 삭제 파일은 복원할 수 없습니다."
 
 msgid "Directory name is too long!"
 msgstr "폴더명이 너무 깁니다!"
@@ -212,10 +212,10 @@ msgid "Error saving file!"
 msgstr "파일 저장 오류!"
 
 msgid "Exit"
-msgstr "종료"
+msgstr "나가기
 
 msgid "Exit Action"
-msgstr "종료 작업"
+msgstr "작업 나가기"
 
 msgid "Failed to connect to network share."
 msgstr "네트워크 공유 접속에 실패하였습니다."
@@ -245,7 +245,7 @@ msgid "Game Settings"
 msgstr "게임 설정"
 
 msgid "Game Settings - Button Mappings"
-msgstr "게임 설정 - 버튼 맵핑"
+msgstr "게임 설정 - 버튼 매핑"
 
 msgid "Game Settings - Cheats"
 msgstr "게임 설정 - 치트"
@@ -374,7 +374,7 @@ msgid "New"
 msgstr "새로 만들기"
 
 msgid "No"
-msgstr "아니오"
+msgstr "아니요"
 
 msgid "No disc inserted!"
 msgstr "삽입된 디스크가 없습니다!"
@@ -389,10 +389,10 @@ msgid "NTSC (480i)"
 msgstr ""
 
 msgid "Nunchuk"
-msgstr "눈챠크"
+msgstr "눈차크"
 
 msgid "Nunchuk + Wiimote"
-msgstr "눈척 + 위모테"
+msgstr "눈차크 + 위모트"
 
 msgid "Oct"
 msgstr "10월"
@@ -467,7 +467,7 @@ msgid "Quit Game"
 msgstr "게임 종료"
 
 msgid "Quit this game? Any unsaved progress will be lost."
-msgstr "이 게임을 종료하겠습니까? 저장되지 않는 진행은 손실됩니다."
+msgstr "이 게임을 종료할까요? 저장되지 않는 진행은 손실됩니다."
 
 msgid "Reboot"
 msgstr "재부팅"
@@ -476,16 +476,16 @@ msgid "Rendering"
 msgstr "렌더링"
 
 msgid "Reset"
-msgstr "리셋"
+msgstr "재설정"
 
 msgid "Reset Game"
-msgstr "게임 리셋"
+msgstr "게임 재설정"
 
 msgid "Reset Mappings"
-msgstr "맵핑 리셋"
+msgstr "매핑 재설정"
 
 msgid "Reset Settings"
-msgstr "설정 리셋"
+msgstr "설정 재설정"
 
 msgid "Retry"
 msgstr "재시도"
@@ -512,7 +512,7 @@ msgid "Save"
 msgstr "저장하기"
 
 msgid "Save a new Preview Screenshot? Current Screenshot image will be overwritten."
-msgstr "새 스크린샷 미리보기를 저장하겠습니까? 현재 스크린샷 이미지를 덮어씁니다."
+msgstr "새 스크린샷 미리보기를 저장할까요? 현재 스크린샷 이미지를 덮어씁니다."
 
 msgid "Save Device"
 msgstr "저장 장치"
@@ -524,7 +524,7 @@ msgid "Save Game"
 msgstr "저장 게임"
 
 msgid "Save State?"
-msgstr "상태를 저장하겠습니까?"
+msgstr "상태를 저장할까요?"
 
 msgid "Save successful"
 msgstr "저장에 성공했습니다."
@@ -563,10 +563,10 @@ msgid "SD card not found!"
 msgstr "SD 카드를 찾을 수 없습니다!"
 
 msgid "SD Gecko Slot A"
-msgstr ""
+msgstr "SD 게코 슬롯 A"
 
 msgid "SD Gecko Slot B"
-msgstr ""
+msgstr "SD 게코 슬롯 B"
 
 msgid "SD in SP2"
 msgstr "SD 에 SP2"
@@ -725,7 +725,7 @@ msgid "GB Fixed Pixel Ratio"
 msgstr "GB 수정 픽셀 비율"
 
 msgid "GB Mono Colorization"
-msgstr "GB 모노 컬러라이제이션"
+msgstr "GB 모노 컬러화"
 
 msgid "GB Palette"
 msgstr "GB 팔레트"
@@ -734,7 +734,7 @@ msgid "GB Screen Palette"
 msgstr "GB 화면 팔레트"
 
 msgid "GB Screen Zoom"
-msgstr "GB 화면 확대"
+msgstr "GB 화면 확대/축소"
 
 msgid "GBA Fixed Pixel Ratio"
 msgstr "GBA 수정 픽셀 비율"
@@ -788,13 +788,13 @@ msgid "Partial Stretch"
 msgstr "부분 늘리기"
 
 msgid "Save SRAM and State?"
-msgstr "SRAM과 상태를 저장하겠습니까?"
+msgstr "SRAM과 상태를 저장할까요?"
 
 msgid "Stretch to Fit"
 msgstr "화면에 맞춤"
 
 msgid "Super Game Boy border"
-msgstr "슈퍼 게임 보이 테두리"
+msgstr "슈퍼 게임보이 테두리"
 
 msgid "This software is open source and may be copied,"
 msgstr "이 소프트웨어는 오픈 소스고 복사할 수 있습니다."
@@ -804,3 +804,66 @@ msgstr "터보 모드 활성화"
 
 msgid "Swedish"
 msgstr "스웨덴어"
+
+msgid "GBA Dynamic Recompilation"
+msgstr "GBA 동적 재컴파일"
+
+msgid "Game Boy Color"
+msgstr "게임보이 컬러"
+
+msgid "Super Game Boy"
+msgstr "슈퍼 게임보이"
+
+msgid "Game Boy"
+msgstr "게임보이"
+
+msgid "Game Boy Advance"
+msgstr "게임보이 어드밴스"
+
+msgid "Super Game Boy 2"
+msgstr "슈퍼 게임보이 2"
+
+msgid "Filtering"
+msgstr "필터링"
+
+msgid "None"
+msgstr "없음"
+
+msgid "hq2x"
+msgstr "고품질2배"
+
+msgid "hq2x Soft"
+msgstr "고품질 부드러움"
+
+msgid "hq2x Bolt"
+msgstr "고품질 두꺼움"
+
+msgid "Scale2x"
+msgstr "스케일2배율"
+
+msgid "TV Mode"
+msgstr "TV 모드"
+
+msgid "2xBR"
+msgstr "규칙기반2배율"
+
+msgid "2xBR-lv1"
+msgstr "규칙기반2배율-레벨1"
+
+msgid "DDT"
+msgstr "디지털 왜곡 방지 기술"
+
+msgid "Show Framerate"
+msgstr "프레임 표시"
+
+msgid "Load / Save"
+msgstr "불러오기 / 저장"
+
+msgid "VBA GameCube"
+msgstr "VBA 게임큐브"
+
+msgid "Visual Boy Advance - M"
+msgstr "비주얼보이 어드밴스-M"
+
+msgid "Visual Boy Advance"
+msgstr "비주얼보이 어드밴스"
