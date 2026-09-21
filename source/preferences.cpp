@@ -670,8 +670,8 @@ void FixInvalidSettings()
 	if(!(EmuSettings.videoHardwareSoften >= VIDEO_HW_SOFTEN_OFF && EmuSettings.videoHardwareSoften < VIDEO_HW_SOFTEN_LENGTH))
 		EmuSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_AUTO;
 #if defined(HW_RVL) || defined(HW_DOL)
-	if(!(EmuSettings.videoUpscalingFilter >= FILTER_NONE && EmuSettings.videoUpscalingFilter <= NUM_FILTERS))
-		EmuSettings.videoUpscalingFilter = FILTER_NONE;
+	if(!(EmuSettings.videoUpscalingFilter >= UPSCALE_NONE && EmuSettings.videoUpscalingFilter <= NUM_UPSCALE_FILTERS))
+		EmuSettings.videoUpscalingFilter = UPSCALE_NONE;
 #endif
 	if(!(EmuSettings.videoAspectRatioCorrection >= SCALING_MAINTAIN_ASPECT && EmuSettings.videoAspectRatioCorrection < SCALING_LENGTH))
 		EmuSettings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
@@ -717,7 +717,7 @@ void DefaultSettings()
 	EmuSettings.videoBilinearFilter = false;
 	EmuSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_SHARP;
 #if defined(HW_RVL) || defined(HW_DOL)
-	EmuSettings.videoUpscalingFilter = FILTER_NONE;
+	EmuSettings.videoUpscalingFilter = UPSCALE_NONE;
 #else
 	EmuSettings.videoUpscalingFilter = 0;
 #endif

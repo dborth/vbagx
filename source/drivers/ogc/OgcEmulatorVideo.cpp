@@ -164,7 +164,7 @@ void OgcEmulatorVideo::setupScanlineFilterTEV() {
  ****************************************************************************/
 void OgcEmulatorVideo::configureTEV()
 {
-	if(EmuSettings.videoUpscalingFilter == FILTER_SCANLINES) {
+	if(EmuSettings.videoUpscalingFilter == UPSCALE_SCANLINES) {
 		setupScanlineFilterTEV();
 	}
 	else {
@@ -226,7 +226,7 @@ void OgcEmulatorVideo::drawSquare()
 	GX_LoadPosMtxImm(mv, GX_PNMTX0);
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
 
-	if(EmuSettings.videoUpscalingFilter == FILTER_SCANLINES) {
+	if(EmuSettings.videoUpscalingFilter == UPSCALE_SCANLINES) {
 		// Calculate physical dimensions of the rendering quad in EFB pixels
 		// We use the static 'square' array which holds the final scaled/zoomed screen footprint
 		// square[3] and square[0] are the Right and Left X bounds
@@ -268,7 +268,7 @@ void OgcEmulatorVideo::drawSquare()
 	}
 	GX_End();
 
-	if(EmuSettings.videoUpscalingFilter == FILTER_SCANLINES) {
+	if(EmuSettings.videoUpscalingFilter == UPSCALE_SCANLINES) {
 		// force identity matrix to ensure texture mapping is pristine and devoid of stray scaling
 		Mtx texMtx;
 		guMtxIdentity(texMtx);
@@ -1070,7 +1070,7 @@ void OgcEmulatorVideo::presentFrame(int consoleWidth, int consoleHeight)
 
 		GX_LoadTexObj(&texobj, GX_TEXMAP0);
 
-		if(EmuSettings.videoUpscalingFilter == FILTER_SCANLINES)
+		if(EmuSettings.videoUpscalingFilter == UPSCALE_SCANLINES)
 			initScanlineTexture();
 
 		if(EmuSettings.displayFrameRate)
