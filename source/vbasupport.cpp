@@ -558,10 +558,95 @@ bool LoadBatteryOrStateAuto(int action, bool silent)
 * action = 1 - Save state
 ****************************************************************************/
 
+// Serializes the current game's battery (FILE_SRAM) or state into buffer, which
+// has to be SAVEBUFFERSIZE bytes.
+// \return size of the data written, or 0
+static int SerializeBatteryOrState(int action, unsigned char * buffer)
+{
+	int datasize = 0;
+
+	if(action == FILE_SRAM)
+	{
+		if(cartridgeType == CARTRIDGE_GB)
+			datasize = MemgbWriteBatteryFile((char *)buffer);
+		else
+			datasize = MemCPUWriteBatteryFile((char *)buffer);
+	}
+	else
+	{
+		if(emulator.emuWriteMemState((char *)buffer, SAVEBUFFERSIZE))
+			datasize = *((int *)(buffer+4)) + 8;
+	}
+	return datasize;
+}
+
+// A Game Boy battery save may have to go into an existing Goomba save file
+// rather than replace it. Merges the battery in the savebuffer (datasize bytes)
+// into that file if that is what's there.
+// The caller holds the savebuffer (AllocSaveBuffer).
+// \return the size of the data in the savebuffer to write, or 0 if it can't be saved
+static int MergeIntoGoombaSave(char * filepath, const char * romTitle, int datasize)
+{
+	const char* generic_goomba_error = "Cannot save SRAM in Goomba format (did not load correctly.)";
+	// check for goomba sram format
+	char* old_sram = (char*)malloc(GOOMBA_COLOR_SRAM_SIZE);
+	size_t br = LoadFile(old_sram, filepath, GOOMBA_COLOR_SRAM_SIZE, GOOMBA_COLOR_SRAM_SIZE, true);
+	if (br >= GOOMBA_COLOR_SRAM_SIZE && goomba_is_sram(old_sram)) {
+		void* cleaned = goomba_cleanup(old_sram);
+		if (cleaned == nullptr) {
+			ErrorPrompt(generic_goomba_error);
+			datasize = 0;
+		} else {
+			if (cleaned != old_sram) {
+				free(old_sram);
+				old_sram = (char*)cleaned;
+			}
+			stateheader* sh = stateheader_for(old_sram, romTitle);
+			if (sh == nullptr) {
+				// Game probably doesn't use SRAM
+				datasize = 0;
+			} else {
+				void* new_sram = goomba_new_sav(old_sram, sh, savebuffer, datasize);
+				if (new_sram == nullptr) {
+					ErrorPrompt(goomba_last_error());
+					datasize = 0;
+				} else {
+					memcpy(savebuffer, new_sram, GOOMBA_COLOR_SRAM_SIZE);
+					datasize = GOOMBA_COLOR_SRAM_SIZE;
+					free(new_sram);
+				}
+			}
+		}
+	}
+	free(old_sram);
+	return datasize;
+}
+
+// Writes datasize bytes of battery/state data to filepath
+static bool WriteBatteryOrStateData(char * filepath, char * data, int datasize, bool silent)
+{
+	bool result = false;
+
+	if(datasize > 0)
+	{
+		if(SaveFile(data, filepath, datasize, silent) > 0)
+		{
+			if(!silent)
+				InfoPrompt ("Save successful");
+			result = true;
+		}
+	}
+	else
+	{
+		if(!silent)
+			InfoPrompt("No data to save!");
+	}
+	return result;
+}
+
 bool SaveBatteryOrState(char * filepath, int action, bool silent)
 {
 	bool result = false;
-	int offset = 0;
 	int datasize = 0; // we need the actual size of the data written
 	int device;
 	
@@ -579,75 +664,132 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 	AllocSaveBuffer();
 
 	// put VBA memory into savebuffer, sets datasize to size of memory written
-	if(action == FILE_SRAM)
-	{
-		if(cartridgeType == CARTRIDGE_GB)
-			datasize = MemgbWriteBatteryFile((char *)savebuffer);
-		else
-			datasize = MemCPUWriteBatteryFile((char *)savebuffer);
-		
-		if (cartridgeType == CARTRIDGE_GB) {
-			const char* generic_goomba_error = "Cannot save SRAM in Goomba format (did not load correctly.)";
-			// check for goomba sram format
-			char* old_sram = (char*)malloc(GOOMBA_COLOR_SRAM_SIZE);
-			size_t br = LoadFile(old_sram, filepath, GOOMBA_COLOR_SRAM_SIZE, GOOMBA_COLOR_SRAM_SIZE, true);
-			if (br >= GOOMBA_COLOR_SRAM_SIZE && goomba_is_sram(old_sram)) {
-				void* cleaned = goomba_cleanup(old_sram);
-				if (cleaned == nullptr) {
-					ErrorPrompt(generic_goomba_error);
-					datasize = 0;
-				} else {
-					if (cleaned != old_sram) {
-						free(old_sram);
-						old_sram = (char*)cleaned;
-					}
-					stateheader* sh = stateheader_for(old_sram, RomTitle);
-					if (sh == nullptr) {
-						// Game probably doesn't use SRAM
-						datasize = 0;
-					} else {
-						void* new_sram = goomba_new_sav(old_sram, sh, savebuffer, datasize);
-						if (new_sram == nullptr) {
-							ErrorPrompt(goomba_last_error());
-							datasize = 0;
-						} else {
-							memcpy(savebuffer, new_sram, GOOMBA_COLOR_SRAM_SIZE);
-							datasize = GOOMBA_COLOR_SRAM_SIZE;
-							free(new_sram);
-						}
-					}
-				}
-			}
-			free(old_sram);
-		}
-	}
-	else
-	{
-		if(emulator.emuWriteMemState((char *)savebuffer, SAVEBUFFERSIZE))
-			datasize = *((int *)(savebuffer+4)) + 8;
-	}
+	datasize = SerializeBatteryOrState(action, savebuffer);
+
+	if(action == FILE_SRAM && cartridgeType == CARTRIDGE_GB)
+		datasize = MergeIntoGoombaSave(filepath, RomTitle, datasize);
 
 	// write savebuffer into file
-	if(datasize > 0)
-	{
-		offset = SaveFile(filepath, datasize, silent);
-
-		if(offset > 0)
-		{
-			if(!silent)
-				InfoPrompt ("Save successful");
-			result = true;
-		}
-	}
-	else
-	{
-		if(!silent)
-			InfoPrompt("No data to save!");
-	}
+	result = WriteBatteryOrStateData(filepath, (char *)savebuffer, datasize, silent);
 
 	FreeSaveBuffer();
 
 	return result;
+}
+
+/****************************************************************************
+* Deferred auto-save
+*
+* SnapshotBatteryOrStateAuto() copies everything that is needed (the data,
+* where it goes, and what the write depends on) so it can be called from the
+* main thread at the moment the game is left. WriteBatteryOrStateSnapshot()
+* then does the slow part - the device I/O - and can run whenever, on any
+* thread, even after another game has been loaded.
+****************************************************************************/
+struct BatteryOrStateSnapshot
+{
+	char path[MAXPATHLEN];
+	int action;
+	bool gb; // Game Boy (not Advance) battery: may need merging into a Goomba save
+	char romTitle[sizeof(RomTitle)];
+	unsigned char * data;
+	int size;
+	unsigned char * png; // state only: copy of the screenshot
+	int pngSize;
+};
+
+BatteryOrStateSnapshot * SnapshotBatteryOrStateAuto(int action)
+{
+	BatteryOrStateSnapshot * snapshot = (BatteryOrStateSnapshot *)calloc(1, sizeof(BatteryOrStateSnapshot));
+
+	if(!snapshot)
+		return nullptr;
+
+	snapshot->action = action;
+	snapshot->gb = (cartridgeType == CARTRIDGE_GB);
+	snprintf(snapshot->romTitle, sizeof(snapshot->romTitle), "%s", RomTitle);
+
+	if(!MakeFilePath(snapshot->path, action, ROMFilename, 0))
+	{
+		FreeBatteryOrStateSnapshot(snapshot);
+		return nullptr;
+	}
+
+	// serialize into the savebuffer, and keep only what was actually used
+	AllocSaveBuffer();
+
+	int datasize = SerializeBatteryOrState(action, savebuffer);
+
+	if(datasize > 0)
+	{
+		snapshot->data = (unsigned char *)malloc(datasize);
+
+		if(snapshot->data)
+		{
+			memcpy(snapshot->data, savebuffer, datasize);
+			snapshot->size = datasize;
+		}
+	}
+
+	FreeSaveBuffer();
+
+	if(!snapshot->data)
+	{
+		FreeBatteryOrStateSnapshot(snapshot);
+		return nullptr;
+	}
+
+	if(action == FILE_STATE && gameScreenPng.size > 0 && gameScreenPng.buffer)
+	{
+		snapshot->png = (unsigned char *)malloc(gameScreenPng.size);
+
+		if(snapshot->png)
+		{
+			memcpy(snapshot->png, gameScreenPng.buffer, gameScreenPng.size);
+			snapshot->pngSize = gameScreenPng.size;
+		}
+	}
+
+	return snapshot;
+}
+
+bool WriteBatteryOrStateSnapshot(BatteryOrStateSnapshot * snapshot, bool silent)
+{
+	int device;
+
+	if(!snapshot || !snapshot->data || !FindDevice(snapshot->path, &device))
+		return false;
+
+	if(snapshot->png)
+	{
+		char screenpath[1024];
+		StripExt(screenpath, snapshot->path);
+		strcat(screenpath, ".png");
+		SaveFile((char *)snapshot->png, screenpath, snapshot->pngSize, silent);
+	}
+
+	if(snapshot->action == FILE_SRAM && snapshot->gb)
+	{
+		// may be merged into an existing Goomba save, which is done in the savebuffer
+		AllocSaveBuffer();
+		memcpy(savebuffer, snapshot->data, snapshot->size);
+		int datasize = MergeIntoGoombaSave(snapshot->path, snapshot->romTitle, snapshot->size);
+		bool result = WriteBatteryOrStateData(snapshot->path, (char *)savebuffer, datasize, silent);
+		FreeSaveBuffer();
+		return result;
+	}
+
+	return WriteBatteryOrStateData(snapshot->path, (char *)snapshot->data, snapshot->size, silent);
+}
+
+void FreeBatteryOrStateSnapshot(BatteryOrStateSnapshot * snapshot)
+{
+	if(!snapshot)
+		return;
+
+	free(snapshot->png);
+	free(snapshot->data);
+	free(snapshot);
 }
 
 bool SaveBatteryOrStateAuto(int action, bool silent)
