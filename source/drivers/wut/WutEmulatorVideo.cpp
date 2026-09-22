@@ -14,6 +14,9 @@
 
 #include "WutEmulatorVideo.h"
 #include "WutVideoDriver.h"
+#include "WutScaleFX.h"
+#include "WutOutputFilter.h"
+#include "WutUpscaleFilters.h"
 #include "shaders/Texture2DShader.h"
 #include "../../vbagx.h"
 #include "../../vbasupport.h"
@@ -26,6 +29,9 @@
 
 namespace
 {
+	// Darkness of the scanline gaps (0..1) when Scanline Overlay is on
+	const float SCANLINE_STRENGTH = 0.5f;
+
 	// FPS atlas layout: 16 equal-width cells across (0-9, '.', 'F', 'P', 'S', ':', blank).
 	// Each cell's UV rect lives in its own immutable slot, padded to
 	// GX2_VERTEX_BUFFER_ALIGNMENT so every slot's address is a legal
@@ -55,6 +61,7 @@ WutEmulatorVideo::WutEmulatorVideo()
 	, vwidth(0), vheight(0), oldvwidth(0), oldvheight(0)
 	, checkVideo(1)
 	, quadX(0), quadY(0), quadWidth(0), quadHeight(0)
+	, placement{ {0, 0, 0, 0}, {0, 0, 0, 0} }
 	, fpsFont(nullptr), fpsGlyphTexCoords(nullptr), lastFpsTime(0)
 	, screenshotSnapshot(nullptr), screenshotWidth(0), screenshotHeight(0), screenshotPitch(0)
 {
@@ -168,6 +175,21 @@ void WutEmulatorVideo::resetVideo()
 
 	quadX = (videoDriver->getScreenWidth()  - quadWidth)  * 0.5f + EmuSettings.videoXshift;
 	quadY = (videoDriver->getScreenHeight() - quadHeight) * 0.5f + EmuSettings.videoYshift;
+
+	// Same quad in physical pixels of each target. The canvas is stretched onto
+	// every target independently per axis, so this is exactly where the
+	// canvas placement above lands on screen.
+	for (int i = 0; i < OUTPUT_TARGET_COUNT; i++)
+	{
+		const OutputTarget target = static_cast<OutputTarget>(i);
+		const float sx = (float) videoDriver->getTargetWidth(target)  / videoDriver->getScreenWidth();
+		const float sy = (float) videoDriver->getTargetHeight(target) / videoDriver->getScreenHeight();
+
+		placement[i].x = quadX * sx;
+		placement[i].y = quadY * sy;
+		placement[i].w = quadWidth * sx;
+		placement[i].h = quadHeight * sy;
+	}
 
 	gameScreenPng.width  = vwidth;
 	gameScreenPng.height = vheight;
@@ -294,9 +316,10 @@ void WutEmulatorVideo::uploadFrame(int gbWidth, int gbHeight)
 /****************************************************************************
  * drawQuad
  *
- * Baseline upscaling note: this draws one quad, sized/positioned in
- * design-canvas (640x480) pixels via PixelRectToNdc, into whatever render
- * target WHBGfxBeginRenderTV()/BeginRenderDRC() is currently bound to.
+ * Draws the game frame - plain, sharp-bilinear/scanline filtered, or
+ * ScaleFX-upscaled (TV only) - sized/positioned per render target via
+ * placement[]/placementNdc, into whatever render target
+ * WHBGfxBeginRenderTV()/BeginRenderDRC() is currently bound to.
  ***************************************************************************/
 void WutEmulatorVideo::drawQuad()
 {
@@ -308,15 +331,21 @@ void WutEmulatorVideo::drawQuad()
 	GX2InitSampler(&sampler, GX2_TEX_CLAMP_MODE_CLAMP,
 		EmuSettings.videoBilinearFilter ? GX2_TEX_XY_FILTER_MODE_LINEAR : GX2_TEX_XY_FILTER_MODE_POINT);
 
-	float offset[3];
-	float scale[3];
-	PixelRectToNdc(quadX, quadY, quadWidth, quadHeight, videoDriver->getScreenWidth(), videoDriver->getScreenHeight(), offset, scale);
-
 	float colorIntensity[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 	Texture2DShader* shader = Texture2DShader::instance();
 
-	auto drawPass = [&]() {
+	// NDC placement of the game quad on a target, from its physical-pixel rect
+	auto placementNdc = [&](OutputTarget target, float offset[3], float scale[3]) {
+		const TargetPlacement& p = placement[static_cast<int>(target)];
+		PixelRectToNdc(p.x, p.y, p.w, p.h, videoDriver->getTargetWidth(target), videoDriver->getTargetHeight(target), offset, scale);
+	};
+
+	auto drawPass = [&](OutputTarget target) {
+		float offset[3];
+		float scale[3];
+		placementNdc(target, offset, scale);
+
 		shader->setShaders();
 		shader->setAttributeBuffer();
 		shader->setAngle(0.0f);
@@ -328,8 +357,66 @@ void WutEmulatorVideo::drawQuad()
 		shader->draw(GX2_PRIMITIVE_MODE_QUADS, 4);
 	};
 
-	WHBGfxBeginRenderTV(); drawPass();
-	WHBGfxBeginRenderDRC(); drawPass();
+	const bool sharp = EmuSettings.videoUpscalingFilter == UPSCALE_SHARP_BILINEAR;
+	const float scanlines = EmuSettings.videoScanlines ? SCANLINE_STRENGTH : 0.0f;
+
+	// Output filter: sharp bilinear and/or scanlines. Returns false if it is unavailable.
+	auto outputFilterPass = [&](OutputTarget target, const GX2Texture* tex, bool linear, bool sharpSampling) {
+		const TargetPlacement& p = placement[static_cast<int>(target)];
+
+		WutOutputFilter::Params pp;
+		pp.texture = tex;
+		placementNdc(target, pp.offset, pp.scale);
+		pp.outWidth = p.w;
+		pp.outHeight = p.h;
+		pp.linear = linear;
+		pp.sharp = sharpSampling;
+		pp.scanlineStrength = scanlines;
+		pp.sourceLines = (float) texture->surface.height;
+		return WutOutputFilter::instance()->draw(pp);
+	};
+
+	// The frame texture on a target: plain textured quad, or the output filter when it has work to do
+	auto drawGame = [&](OutputTarget target) {
+		if ((sharp || scanlines > 0.0f) && outputFilterPass(target, texture, EmuSettings.videoBilinearFilter, sharp))
+			return;
+		drawPass(target);
+	};
+
+	// ScaleFX (TV output only)
+	WutScaleFX* scalefx = WutScaleFX::instance();
+	bool useScaleFX = false;
+
+	if (EmuSettings.videoUpscalingFilter == UPSCALE_SCALEFX)
+	{
+		if (scalefx->prepare(texture->surface.width, texture->surface.height))
+		{
+			scalefx->run(texture);
+			useScaleFX = true;
+		}
+	}
+	else
+	{
+		scalefx->release();
+	}
+
+	WHBGfxBeginRenderTV();
+	if (useScaleFX)
+	{
+		// Scanlines go through the output filter, otherwise the ScaleFX final stage draws it
+		if (scanlines <= 0.0f || !outputFilterPass(OutputTarget::TV, scalefx->outputTexture(), true, false))
+		{
+			float offset[3];
+			float scale[3];
+			placementNdc(OutputTarget::TV, offset, scale);
+			scalefx->drawTV(offset, scale);
+		}
+	}
+	else
+	{
+		drawGame(OutputTarget::TV);
+	}
+	WHBGfxBeginRenderDRC(); drawGame(OutputTarget::DRC);
 }
 
 /****************************************************************************

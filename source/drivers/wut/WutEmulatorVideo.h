@@ -14,6 +14,7 @@
 #include <gx2/sampler.h>
 #include <gx2/texture.h>
 #include "../EmulatorVideoDriver.h"
+#include "WutVideoDriver.h"
 
 class WutVideoDriver;
 class GuiImageData;
@@ -65,8 +66,17 @@ class WutEmulatorVideo : public EmulatorVideoDriver
 		int checkVideo;
 
 		// On-screen placement of the game quad, in design-canvas pixels
-		// (top-left x/y, size w/h) - recomputed by resetVideo().
+		// (top-left x/y, size w/h) - recomputed by resetVideo(). This is the
+		// source of truth for the zoom/shift/aspect settings, and the metrics
+		// the menu's game screenshot background (gameScreenPng) is drawn with.
 		float quadX, quadY, quadWidth, quadHeight;
+
+		// The same quad in physical pixels of each render target (top-left
+		// x/y, size w/h), derived from the canvas placement above by the
+		// canvas-to-target stretch. This is what actually gets drawn, and what
+		// scaling/filtering needs (source-to-output scale = size / vwidth,vheight).
+		struct TargetPlacement { float x, y, w, h; };
+		TargetPlacement placement[OUTPUT_TARGET_COUNT];
 
 		// FPS overlay. fpsFont owns its own GX2Texture (allocated through
 		// the normal WutImageRenderer path, from the OS default heap - NOT

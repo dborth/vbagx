@@ -19,6 +19,9 @@
 #include <ogc/conf.h>
 #include <ogc/system.h>
 #endif
+#ifdef __WIIU__
+#include "drivers/wut/WutUpscaleFilters.h"
+#endif
 
 #include "vbagx.h"
 #include "menu.h"
@@ -670,7 +673,7 @@ void FixInvalidSettings()
 	if(!(EmuSettings.videoHardwareSoften >= VIDEO_HW_SOFTEN_OFF && EmuSettings.videoHardwareSoften < VIDEO_HW_SOFTEN_LENGTH))
 		EmuSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_AUTO;
 #if defined(HW_RVL) || defined(HW_DOL)
-	if(!(EmuSettings.videoUpscalingFilter >= UPSCALE_NONE && EmuSettings.videoUpscalingFilter <= NUM_UPSCALE_FILTERS))
+	if(!(EmuSettings.videoUpscalingFilter >= UPSCALE_NONE && EmuSettings.videoUpscalingFilter < NUM_UPSCALE_FILTERS))
 		EmuSettings.videoUpscalingFilter = UPSCALE_NONE;
 #endif
 	if(!(EmuSettings.videoAspectRatioCorrection >= SCALING_MAINTAIN_ASPECT && EmuSettings.videoAspectRatioCorrection < SCALING_LENGTH))

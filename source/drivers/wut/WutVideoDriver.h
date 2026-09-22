@@ -7,8 +7,21 @@
 
 #include <gx2/sampler.h>
 #include <gx2/texture.h>
-#include "WutEmulatorVideo.h"
 #include "../VideoDriver.h"
+
+//!The two physical render targets every Wii U frame is submitted to.
+//!Their pixel dimensions are not fixed: the TV follows the console's output
+//!setting (480p/720p/1080p), the GamePad is always 854x480. See
+//!WutVideoDriver::getTargetWidth()/getTargetHeight().
+enum class OutputTarget
+{
+	TV = 0,
+	DRC = 1
+};
+
+static const int OUTPUT_TARGET_COUNT = 2;
+
+class WutEmulatorVideo;
 
 //!Wii U VideoDriver: GX2 + libwhb's WHBGfx* helpers. Every draw pass runs
 //!twice per frame - once for the TV, once for the GamePad - so the same
@@ -27,16 +40,23 @@ class WutVideoDriver : public VideoDriver
 
 		int getScreenWidth() const override { return screenWidth; }
 		int getScreenHeight() const override { return screenHeight; }
-		uint32_t getFrameTimer() override { return frameTimer; }
-		void setFrameTimer(uint32_t _frameTimer) override { frameTimer = _frameTimer; };
+		uint32_t getFrameTimer() override;
+		void setFrameTimer(uint32_t _frameTimer) override;
 
 		int getRefreshRate() const override;
 		float getDeltaTime() const override;
 		float getUIScale() const override { return uiScale; }
 
+		//!Physical pixel size of a render target (the TV follows the console's
+		//!output setting, the GamePad is always 854x480). Unrelated to the
+		//!design canvas returned by getScreenWidth()/getScreenHeight(), which
+		//!is stretched onto each target independently per axis.
+		int getTargetWidth(OutputTarget target) const { return targetWidth[(int)target]; }
+		int getTargetHeight(OutputTarget target) const { return targetHeight[(int)target]; }
+
 		ImageRenderer* getImageRenderer() override { return imageRenderer; }
 		GlyphRenderer* getGlyphRenderer() override { return glyphRenderer; }
-		WutEmulatorVideo* getEmulatorVideo() override { return emulatorVideo; }
+		EmulatorVideoDriver* getEmulatorVideo() override;
 
 		//!False once the OS has taken away the foreground (HOME menu overlay,
 		//!forced exit, etc.) - GX2 is off-limits at that point, so every
@@ -60,7 +80,8 @@ class WutVideoDriver : public VideoDriver
 		int screenWidth;
 		int screenHeight;
 		float uiScale = 1.0f;
-		uint32_t frameTimer;
+		int targetWidth[OUTPUT_TARGET_COUNT] = { 0, 0 };
+		int targetHeight[OUTPUT_TARGET_COUNT] = { 0, 0 };
 		PixelColor clearColor;
 
 		ImageRenderer * imageRenderer;

@@ -9,6 +9,8 @@
 #include <malloc.h>
 
 #include <coreinit/memdefaultheap.h>
+#include <coreinit/alarm.h>
+#include <coreinit/time.h>
 #include <gx2/clear.h>
 #include <gx2/context.h>
 #include <gx2/display.h>
@@ -24,6 +26,7 @@
 
 #include "../Platform.h"
 #include "WutVideoDriver.h"
+#include "WutEmulatorVideo.h"
 #include "shaders/Texture2DShader.h"
 #include "shaders/ColorShader.h"
 
@@ -76,6 +79,22 @@ namespace
 			corners[i * 2 + 1] = 1.0f - (py / designHeight) * 2.0f;
 		}
 	}
+
+	volatile uint32_t systemFrameTimer = 0;
+	OSAlarm frameTimerAlarm;
+
+	void FrameTimerAlarmHandler(OSAlarm *, OSContext *)
+	{
+		++systemFrameTimer;
+	}
+
+	OSTime FrameTimerInterval()
+	{
+		if(GX2GetSystemTVScanMode() == GX2_TV_SCAN_MODE_576I)
+			return OSSecondsToTicks(1) / 50;
+
+		return (OSSecondsToTicks(1) * 1001) / 60000;
+	}
 }
 
 /****************************************************************************
@@ -83,7 +102,7 @@ namespace
  ***************************************************************************/
 
 WutVideoDriver::WutVideoDriver()
-	: screenWidth(0), screenHeight(0), frameTimer(0), clearColor{0, 0, 0, 255}
+	: screenWidth(0), screenHeight(0), clearColor{0, 0, 0, 255}
 	, imageRenderer(nullptr), glyphRenderer(nullptr)
 {
 }
@@ -107,6 +126,14 @@ void WutVideoDriver::init(int width, int height)
 	screenWidth = width;
 	screenHeight = height;
 
+	// The colour buffers libwhb allocated are the authoritative physical target sizes
+	const GX2ColorBuffer * tvBuffer = WHBGfxGetTVColourBuffer();
+	const GX2ColorBuffer * drcBuffer = WHBGfxGetDRCColourBuffer();
+	targetWidth[(int)OutputTarget::TV] = tvBuffer->surface.width ? (int)tvBuffer->surface.width : width;
+	targetHeight[(int)OutputTarget::TV] = tvBuffer->surface.height ? (int)tvBuffer->surface.height : height;
+	targetWidth[(int)OutputTarget::DRC] = drcBuffer->surface.width ? (int)drcBuffer->surface.width : width;
+	targetHeight[(int)OutputTarget::DRC] = drcBuffer->surface.height ? (int)drcBuffer->surface.height : height;
+
 	computeUIScale();
 
 	imageRenderer = new WutImageRenderer(this);
@@ -114,6 +141,10 @@ void WutVideoDriver::init(int width, int height)
 
 	emulatorVideo = new WutEmulatorVideo();
 	emulatorVideo->init(this);
+
+	OSCreateAlarm(&frameTimerAlarm);
+	const OSTime interval = FrameTimerInterval();
+	OSSetPeriodicAlarm(&frameTimerAlarm, OSGetTime() + interval, interval, FrameTimerAlarmHandler);
 
 	prepareFrame();
 }
@@ -163,12 +194,19 @@ void WutVideoDriver::computeUIScale()
 
 void WutVideoDriver::shutdown()
 {
+	OSCancelAlarm(&frameTimerAlarm);
+
 	WHBGfxShutdown();
 }
 
 bool WutVideoDriver::isForeground() const
 {
 	return platform->getStatus() == Status::Running;
+}
+
+EmulatorVideoDriver* WutVideoDriver::getEmulatorVideo()
+{
+	return emulatorVideo;
 }
 
 void WutVideoDriver::prepareFrame()
@@ -215,9 +253,17 @@ void WutVideoDriver::presentBuffer()
 		WHBGfxFinishRender();
 	}
 
-	frameTimer++;
-
 	prepareFrame();
+}
+
+uint32_t WutVideoDriver::getFrameTimer()
+{
+	return systemFrameTimer;
+}
+
+void WutVideoDriver::setFrameTimer(uint32_t _frameTimer)
+{
+	systemFrameTimer = _frameTimer;
 }
 
 void WutVideoDriver::clearScreen(const PixelColor& color)

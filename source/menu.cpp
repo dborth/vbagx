@@ -54,6 +54,7 @@
 
 #ifdef __WIIU__
 #include "drivers/wut/WutInputDriver.h"
+#include "drivers/wut/WutUpscaleFilters.h"
 #endif
 
 #define THREAD_SLEEP 100
@@ -3526,7 +3527,7 @@ static int MenuSettingsVideo()
 #else
 	options.name[i++][0] = 0; // Hardware Softening is GameCube / Wii only
 #endif
-#if defined(HW_RVL) || defined(HW_DOL)
+#if defined(HW_RVL) || defined(HW_DOL) || defined(__WIIU__)
 	sprintf(options.name[i++], "Upscaling");
 #else
 	options.name[i++][0] = 0; // upscaling filters not available on this platform
@@ -3616,7 +3617,7 @@ static int MenuSettingsVideo()
 					EmuSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_OFF;
 				break;
 
-#if defined(HW_RVL) || defined(HW_DOL)
+#if defined(HW_RVL) || defined(HW_DOL) || defined(__WIIU__)
 			case 4:
 				EmuSettings.videoUpscalingFilter++;
 				if (EmuSettings.videoUpscalingFilter >= NUM_UPSCALE_FILTERS)
@@ -3680,6 +3681,11 @@ static int MenuSettingsVideo()
 			else if (EmuSettings.videoAspectRatioCorrection == SCALING_WIDESCREEN_CORRECTION)
 				sprintf (options.value[1], "16:9 Correction");
 
+#ifdef __WIIU__
+			if (EmuSettings.videoUpscalingFilter == UPSCALE_SHARP_BILINEAR)
+				sprintf (options.value[2], "N/A"); // Sharp Bilinear does its own filtering
+			else
+#endif
 			sprintf (options.value[2], "%s", EmuSettings.videoBilinearFilter ? "On" : "Off");
 
 			switch(EmuSettings.videoHardwareSoften)
@@ -3694,7 +3700,7 @@ static int MenuSettingsVideo()
 					sprintf (options.value[3], "Soft"); break;
 			}
 
-#if defined(HW_RVL) || defined(HW_DOL)
+#if defined(HW_RVL) || defined(HW_DOL) || defined(__WIIU__)
 			sprintf (options.value[4], "%s", GetUpscaleFilterName(EmuSettings.videoUpscalingFilter));
 #endif
 			sprintf (options.value[5], "%s", EmuSettings.videoScanlines ? "On" : "Off");
