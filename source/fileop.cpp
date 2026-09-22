@@ -191,7 +191,7 @@ static void * devicecallback(void *)
 			DeviceSync().mutex.unlock();
 		}
 
-		if(deviceThread.stopRequested())
+		if(!workerBusy && bgCount == 0 && workerThread.stopRequested())
 			break;
 
 		int removed[MAX_STORAGE_DEVICES];
