@@ -222,7 +222,7 @@ preparePrefsData ()
 
 	createXMLSection("Menu", "Menu Settings");
 
-#ifdef HW_RVL
+#if defined(HW_RVL) || defined(__WIIU__)
 	createXMLSetting("wiimoteOrientation", "Wiimote Orientation", toStr(EmuSettings.wiimoteOrientation));
 #endif
 #if defined(HW_RVL) || defined(HW_DOL)
@@ -548,7 +548,7 @@ static bool decodePrefsData ()
 
 	// Menu Settings
 
-#ifdef HW_RVL
+#if defined(HW_RVL) || defined(__WIIU__)
 	loadXMLSetting(&EmuSettings.wiimoteOrientation, "wiimoteOrientation");
 #endif
 #if defined(HW_RVL) || defined(HW_DOL)
@@ -672,7 +672,7 @@ void FixInvalidSettings()
 		EmuSettings.language = LANG_ENGLISH;
 	if(!(EmuSettings.videoHardwareSoften >= VIDEO_HW_SOFTEN_OFF && EmuSettings.videoHardwareSoften < VIDEO_HW_SOFTEN_LENGTH))
 		EmuSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_AUTO;
-#if defined(HW_RVL) || defined(HW_DOL)
+#if defined(HW_RVL) || defined(HW_DOL) || defined(__WIIU__)
 	if(!(EmuSettings.videoUpscalingFilter >= UPSCALE_NONE && EmuSettings.videoUpscalingFilter < NUM_UPSCALE_FILTERS))
 		EmuSettings.videoUpscalingFilter = UPSCALE_NONE;
 #endif
@@ -721,6 +721,8 @@ void DefaultSettings()
 	EmuSettings.videoHardwareSoften = VIDEO_HW_SOFTEN_SHARP;
 #if defined(HW_RVL) || defined(HW_DOL)
 	EmuSettings.videoUpscalingFilter = UPSCALE_NONE;
+#elif defined(__WIIU__)
+	EmuSettings.videoUpscalingFilter = UPSCALE_SHARP_BILINEAR;
 #else
 	EmuSettings.videoUpscalingFilter = 0;
 #endif
@@ -730,7 +732,11 @@ void DefaultSettings()
 	EmuSettings.videoXshift = 0; // horizontal video shift
 	EmuSettings.videoYshift = 0; // vertical video shift
 	EmuSettings.colorize = false; // Colorize mono gameboy games
+#if defined(HW_RVL) || defined(HW_DOL)
 	EmuSettings.dynamicRecompilation = true;
+#else
+	EmuSettings.dynamicRecompilation = false;
+#endif
 	EmuSettings.displayFrameRate = FRAMERATE_OFF;
 	EmuSettings.gbaFrameSkip = true; // Turn auto-frameskip on for GBA games
 	EmuSettings.turboModeEnabled = true; // Enabled by default
