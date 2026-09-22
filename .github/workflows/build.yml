@@ -131,6 +131,8 @@ jobs:
         zip -r ../VisualBoyAdvanceGX-Wii.zip *
         cd ../VisualBoyAdvanceGX-GameCube
         zip -r ../VisualBoyAdvanceGX-GameCube.zip *
+        cd ../VisualBoyAdvanceGX-WiiU
+        zip -r ../VisualBoyAdvanceGX-WiiU.zip *
 
     - name: Update Git Tag
       run: |

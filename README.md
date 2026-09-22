@@ -1,1407 +1,479 @@
 # Visual Boy Advance GX
-https://github.com/dborth/vbagx (Under GPL License)
 
-Visual Boy Advance GX is a modified port of VBA-M.
-With it you can play GBA/Game Boy Color/Game Boy games on your Wii/GameCube.
+[github.com/dborth/vbagx](https://github.com/dborth/vbagx) — GPL licensed
 
+Visual Boy Advance GX is a Game Boy / Game Boy Color / Game Boy Advance emulator for the **Nintendo GameCube** and **Wii**, built on [VBA-M](https://github.com/visualboyadvance-m/visualboyadvance-m) and the shared [`libgui`](https://github.com/dborth/libgui) UI/driver framework.
 
-## TABLE OF CONTENTS
- - [Nightly Builds](#nightly-builds)
- - [Features](#features)
- - [Update History](#update-history)
- - [Setup & Installation](#setup--installation)
- - [Instructions](#instructions)
- - [Credits](#credits)
- - [Links](#links)
+Visual Boy Advance GX is homebrew — it isn't signed by Nintendo, so your console needs to be set up to run unsigned code first. If you haven't done that yet, jump to **[Installation](#installation)** below; it links to a step-by-step guide for whichever console you have.
 
+## Table of Contents
 
-## NIGHTLY BUILDS
+- [Nightly Builds](#nightly-builds)
+- [Features](#features)
+- [Installation](#installation)
+  - [All Platforms: SD Card & Folder Layout](#all-platforms-sd-card--folder-layout)
+  - [Wii](#wii)
+  - [GameCube](#gamecube)
+  - [Wii U](#wii-u)
+    - [Native Wii U (Aroma)](#native-wii-u-aroma)
+    - [vWii (Wii Homebrew Channel, inside Wii U)](#vwii-wii-homebrew-channel-inside-wii-u)
+    - [vWii via VC-style injection (GamePad support)](#vwii-via-vc-style-injection-gamepad-support)
+- [Initial Setup](#initial-setup)
+- [Configuration](#configuration)
+  - [Button Mappings](#button-mappings)
+  - [Video](#video)
+  - [Emulation](#emulation)
+  - [Saving & Loading](#saving--loading)
+  - [Menu](#menu)
+  - [Language & Custom Fonts](#language--custom-fonts)
+  - [Artwork](#artwork)
+- [File Browser](#file-browser)
+- [Gameplay](#gameplay)
+- [Cheats](#cheats)
+- [Dynamic Recompilation (JIT)](#dynamic-recompilation-jit)
+- [Super Game Boy Borders](#super-game-boy-borders)
+- [Patches (IPS/UPS)](#patches-ipsups)
+- [Special Wii Controls](#special-wii-controls)
+- [Credits](#credits)
+- [Links](#links)
 
-### Download the latest builds from continuous integration:
+> 📜 Looking for old version notes? They've moved to **[CHANGELOG.md](CHANGELOG.md)**.
 
-| Name                             | Status                            | File                                     |
-|----------------------------------|-----------------------------------|------------------------------------------|
-| Visual Boy Advance GX Wii/Wii U  | [![Build Status][Build]][Actions] | [![Emulator][Download]][vbagx-wii]       |
-| Visual Boy Advance GX GameCube   | [![Build Status][Build]][Actions] | [![Emulator][Download]][vbagx-gamecube]  |
+---
+
+## Nightly Builds
+
+Every push builds automatically. Grab the latest continuous-integration build:
+
+| Platform                   | Status                             | Download                                    |
+|-----------------------------|-------------------------------------|-----------------------------------------------|
+| Wii / vWii                  | [![Build Status][Build]][Actions]  | [![Download][Download]][vbagx-wii]            |
+| GameCube                    | [![Build Status][Build]][Actions]  | [![Download][Download]][vbagx-gamecube]       |
+| Wii U (native, `.wuhb`)     | [![Build Status][Build]][Actions]  | [![Download][Download]][vbagx-wiiu]           |
 
 [Actions]: https://github.com/dborth/vbagx/actions/workflows/build.yml
 [Build]: https://github.com/dborth/vbagx/actions/workflows/build.yml/badge.svg
 [Download]: https://img.shields.io/badge/Download-blue
 [vbagx-wii]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX.zip
 [vbagx-gamecube]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX-GameCube.zip
+[vbagx-wiiu]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX-WiiU.zip
 
+> The Wii build also runs unmodified in **vWii** (the Wii U's built-in Wii-compatibility mode), including via VC-style injection for GamePad support. The Wii U build is a separate, **native** Wii U (Aroma) application — see [Wii U](#wii-u) below for how the three options compare.
 
-## FEATURES
-
-* Custom-built dynamic recompiler (JIT) for GBA games, built from the ground up specifically for VBA-GX, with 
-  excellent accuracy and enough headroom to run full-speed
-* ARAM/SD hybrid virtual memory pager on GameCube - ROM data is backed by ARAM/SD completely transparently
-* Native 48kHz audio output with no upsampling, dropout-resistant buffering, and smooth fades instead of clicks -
-  simply the best VBA-GX has ever sounded
-* Wiimote, Nunchuk, Classic, Wii U Pro, and Gamecube controller support
-* Wii U GamePad support (requires homebrew injection into Wii U VC title)
-* Rotation sensors, Solar sensors, and Rumble support
-* Optional special Wii controls built-in for some games
-* SRAM and State saving
-* Cheat code support (Libretro .cht format) for both GBA and GB/GBC games
-* IPS/UPS patch support
-* Custom controller configurations
-* SD, USB, DVD, SMB, Zip, and 7z support
-* Auto frame skip (optional) for those core heavy games (it's still recommended to leave enabled for audio timing,
-  even with JIT enabled)
-* Turbo speed, video zooming, widescreen, unfiltered, and 240p video options
-* Video filters - hq2x, Scale2x, Scanlines, 2xBR, DDT
-* Native loading/saving of ROMS and SRAM from Goomba (a GB emulator for GBA)
-* Screenshots can be displayed on the main menu
-* Fixed pixel ratio mode (1x, 2x, and 3x)
-* Borders (from Super Game Boy games or custom from .png)
-
-## UPDATE HISTORY
-
-[3.0.2 - August 12, 2026]
-
-* Fixed crash returning to the menu when set to non-English language
-* Fixed bug with Monochrome Screen setting not being applied consistently
-* Improved game compatibility with a new mechanism to automatically detect the proper settings
-* Fixed bugs with border handling code (refactored/rewritten)
-
-[3.0.1 - August 11, 2026]
-
-* Implemented a brand new Dynamic Recompilation (JIT) core for GBA games on both Wii and GameCube, built entirely from 
-  scratch. This is a from-the-ground-up addition, not a port - real GBA titles now run with plenty of headroom to  
-  run at full speed, well beyond what the interpreter core could sustain. Enable it from Settings > Emulation
-* Replaced GameCube's old ROM paging system with a new ARAM/SD hybrid virtual memory pager - ROM data now streams
-  transparently from SD into ARAM and MEM1 on demand instead of needing to fit entirely in memory ahead of time, 
-  allowing the JIT to be possible (since it doesn't have to be aware of backing data location)
-* Rewritten memory management for both Wii/GameCube, freeing up 8MB+ for a JIT Cache, while still allowing 32MB ROMs
-* Added cheat code support for both GBA and GB/GBC games, using the Libretro .cht file format
-* GB/GBA audio is cleaner and truer to the original hardware, with one less resampling step - it is now generated 
-  natively at 48kHz - instead of upsampled from 44100Hz (GBA) and 22050Hz (GB)
-* Audio samples are now written directly into the output buffer with no intermediate mixing buffer in between,
-  reducing audio latency
-* Smart dynamic audio rate control keeps playback speed correctly matched to real GBA hardware timing, with a
-  stronger correction kicking in only when actually needed to avoid a dropout - this means fewer, less noticeable
-  pitch adjustments during normal play
-* Buffer underruns (audio momentarily running dry) now fade smoothly to silence and back instead of producing a
-  hard click, and startup/resume is primed to avoid an initial stutter
-* Reworked frameskip and frame pacing so video timing is smoother and more consistent, especially when the JIT core 
-  is running well above 60fps, and skipped frames are spaced more evenly instead of clumping
-* Added FPS display option
-
-[3.0.0 - July 6, 2026]
-
-* Added video filters - hq2x, Scale2x, Scanlines, 2xBR, DDT
-* Optimized video rendering
-* Replaced C texture generation with optimized PPC ASM
-* Improved audio code
-* Refactored/improved synchronization and frameskip handling
-* Numerous VBA-M core performance optimizations
-* New blur effect when pausing a game
-* Rewritten in-game cursor
-* Reworked save/load device and preferences logic
-* Fixed crash when removing devices (eg: SD/USB)
-* Fixed flashes/artifacts/colors when switching video modes
-* Streamlined/enhanced build
-* General performance enhancements
-* Other general enhancements
-* Compiled with latest devkitPPC/libogc2
-
-[2.5.1 - April 13, 2026]
-
-* Compiled with latest devkitPPC/libogc2
-
-[2.5.0 - July 30, 2025]
-
-* Added GC Loader support (mrysav)
-* Compiled with latest devkitPPC/libogc2
-
-[2.4.9 - May 18, 2025]
-
-* Compiled with latest devkitPPC/libogc2
-* Updated MBC2 save handling (saulfabregwiivc)
-* Increased max zoom to 1.6 for GB/GBA
-
-[2.4.8 - March 30, 2024]
-
-* Added L+R+START for return to the menu for GCN controller (saulfabreg)
-* Fixed MBC2 data saving for F-1 Race, Kirby's Pinball Land, etc. (saulfabreg, based on fix from Steelskin)
-* Fixed MBC7 data saving for Kirby Tilt 'n' Tumble (saulfabreg, based on fix from Steelskin)
-* Compiled with latest devkitPPC/libogc
-* Added Swedish translation (IsakTheHacker)
-* Updated translations
-
-[2.4.7 - July 31, 2023]
+---
+
+## Features
+
+- Custom-built dynamic recompiler (JIT) for GBA games, written from the ground up for VBA-GX — see [Dynamic Recompilation (JIT)](#dynamic-recompilation-jit)
+- ARAM/SD hybrid virtual memory pager on GameCube — ROM data is backed by ARAM/SD completely transparently, which is what makes the JIT possible there
+- Native 48kHz audio output with no upsampling, dropout-resistant buffering, and smooth fades instead of clicks
+- Wiimote, Nunchuk, Wii Classic Controller, Wii U Pro Controller, and GameCube Controller support
+- **Wii U GamePad** support — full touch + buttons on the **native Wii U build**; buttons/sticks and display (no touch) on **vWii via VC-style injection** — see [Wii U](#wii-u)
+- Native Wii U build outputs up to **1080p**, with a **GX2 shader-based ScaleFX** upscaler built specifically for the Wii U's GPU
+- Rotation sensor, solar sensor (Boktai), and rumble support — on Wii U, GamePad rumble uses a shorter, reduced-amplitude pattern than the Wiimote
+- Special Wii-style motion/gesture controls built in for select games — see [Special Wii Controls](#special-wii-controls)
+- SRAM and Snapshot (save state) saving
+- Cheat code support (Libretro `.cht` format) for both GBA and GB/GBC games
+- IPS/UPS patch support
+- Fully customizable, per-controller button mappings, including "Match Wii Controls" per game
+- SD, USB, DVD, and SMB network share support (native Wii U build supports FAT32/exFAT/NTFS USB via Mocha), plus ZIP/7z archive loading
+- Turbo Mode, screen zoom, widescreen, unfiltered and 240p video options, fixed pixel ratio (1x/2x/3x)
+- Upscaling filters — hq2x, Scale2x, 2xBR, DDT on GameCube/Wii; ScaleFX on Wii U — plus scanlines
+- Native loading/saving of ROMs and SRAM from Goomba (a GB emulator for GBA)
+- Super Game Boy border support, loaded from the game itself or from custom `.png` files
+- Cover art / screenshot / artwork preview support
+- Open source
+
+---
+
+## Installation
+
+### All Platforms: SD Card & Folder Layout
+
+However you load Visual Boy Advance GX, it looks for its files in a `vbagx` folder at the root of your storage device. Format your SD card as **FAT32** — it's the most reliable, best-tested option across both consoles, and the one this guide assumes throughout. USB drives, DVD, and SMB network shares are also supported (see [Saving & Loading](#saving--loading)), but SD is the simplest starting point.
 
-* Compiled with latest devkitPPC/libogc
-* Switch to chosen video mode on first load if not automatic
-* Fixed a crash upon relaunching after removing a SD/USB device (InfiniteBlueGX)
+Once you've placed the loader files for your console (below), also create these folders and drop your content in:
 
-[2.4.6 - June 15, 2022]
+```text
+SD:/vbagx/
+├── roms/          ← your GB/GBC/GBA ROMs, or zipped/.7z
+├── saves/         ← SRAM and Snapshot save states
+├── cheats/        ← .cht cheat files (see Cheats)
+├── borders/       ← custom Super Game Boy border .png files
+├── screenshots/   ← in-game screenshots and/or screenshot preview images
+├── covers/        ← cover art preview images
+└── artwork/       ← artwork preview images
+```
 
-* Compiled with latest devkitPPC/libogc
-* Added "Enable Turbo Mode" toggle to the Video Settings menu (based on InfiniteBlueGX's code)
-* Updated translations
-* Improved forwarder support
+Only `roms/` needs anything in it to get started — the rest are created automatically the first time they're needed. You can point the emulator at different load/save folders later from [Saving & Loading](#saving--loading).
 
-[2.4.5 - March 23, 2021]
+### Wii
 
-* Added L+R+START for back to menu for Wii Classic Controller
-* Updated French translation (thanks Tanooki16!)
-* Fixed issue with displaying screenshots
+1. Follow the **[Wii Homebrew Guide](https://wii.hacks.guide/)** if you haven't already installed the Homebrew Channel. This is a one-time setup per console.
+2. Download the Wii build (`VisualBoyAdvanceGX.zip` above) and extract it to the root of your SD card. This adds two things:
+   - `apps/vbagx/boot.dol` (plus its icon/meta files) — this is what the Homebrew Channel launches.
+   - `vbagx/` — your ROMs and saves folder, per [above](#all-platforms-sd-card--folder-layout).
+3. Insert the SD card, open the **Homebrew Channel**, and launch **Visual Boy Advance GX**.
 
-[2.4.4 - February 6, 2021]
+Your SD card should look like this:
 
-* Fixed SD2SP2 / SD gecko issues (again)
+```text
+SD:/
+├── apps/
+│   └── vbagx/
+│       ├── boot.dol
+│       ├── icon.png
+│       └── meta.xml
+└── vbagx/
+    └── roms/
+        └── ...
+```
 
-[2.4.3 - January 31, 2021]
+### GameCube
 
-* Fixed SD2SP2 issues
-* Changed max game image dimensions to 640x480 to support screenshots
+GameCube doesn't have anything like the Wii's Homebrew Channel sitting on the console itself — instead you boot a **loader**, a small piece of software that then launches your `.dol`. The de facto standard today is **[Swiss](https://github.com/emukidid/swiss-gc)**, a GameCube loader/multitool that can read `.dol` files straight off an SD card (via an SD Gecko or SD2SP2 adapter) and handles most other loading methods too. This README assumes Swiss.
 
-[2.4.2 - January 18, 2021]
+Exactly how you get Swiss running (modchip, boot-disc exploit, Broadband Adapter, etc.) depends on your GameCube's hardware revision and what you already own — **[gc-forever.com](https://www.gc-forever.com/)** is the best community hub for GameCube homebrew and hardware guides matched to your exact setup; start there if you're not sure what applies to you.
 
-* Compiled with latest devkitPPC/libogc
-* Added ability to change the player mapped to a connected controller
-* Significant memory usage reductions (fonts and loading cover images)
-* Other minor fixes
+Once Swiss is running, the **recommended setup is an SD Gecko (or SD2SP2) memory-card-slot adapter**, using the same FAT32 SD card approach as Wii/Wii U — by far the most reliable and lowest-latency option.
 
-[2.4.1 - June 29, 2020]
+Visual Boy Advance GX also supports **GC Loader** and **DVD** (burned disc) loading, but be aware going in: both are noticeably rougher experiences than SD — GC Loader in particular has had more reported reliability issues in this port, and burned-disc loading is slow to start and inflexible to update. Use them only if SD Gecko/SD2SP2 genuinely isn't an option for your setup.
 
-* Compiled with latest devkitPPC/libogc
-* Fixed some 3rd party controllers with invalid calibration data
-* Translation updates
-* Added Wii U vWii Channel, widescreen patch, and now reports console/CPU speed
-* Added support for serial port 2 (SP2 / SD2SP2) on Gamecube
-* Fixed Wii U Pro controller button mapping not being used in one case
-* Fixed ZL button mapping for Wii U GamePad
-* Other minor fixes
-
-[2.4.0 - April 13, 2019]
-
-* Fixed crash when used as wiiflow plugin
-* Fixed crash on launch when using network shares
-* Fixed issues with on-screen keyboard
-* Updated Korean translation
-
-[2.3.9 - January 25, 2019]
-
-* Added ability to load external fonts and activated Japanese/Korean
-  translations. Simply put the ko.ttf or jp.ttf in the app directory
-* Added ability to customize background music. Simply put a bg_music.ogg
-  in the app directory
-* Added ability to change preview image source with + button (thanks Zalo!)
-* Fixed issue with resetting motion controls
-* Fixed issue with Mode 0 graphics transparency
-
-[2.3.8 - January 4, 2019]
-
-* Restored changes lost from 2.3.0 core upgrade (GameCube virtual memory,
-  optimizations from dancinninjac, GB color palettes, rotation/tilt for
-  WarioWare Twisted, in-game rumble)
-* Improved WiiFlow integration
-* Fixed controllers with no analog sticks
-* Added Wii U GamePad support (thanks Fix94!)
-
-[2.3.7 - August 28, 2018]
-
-* Allow loader to pass two arguments instead of three (libertyernie)
-* don't reset settings when going back to an older version
-* Fix a few potential crashes caused by the GUI
-* Other minor fixes/improvements
-* Compiled with latest libOGC/devkitPPC
-
-[2.3.6 - December 11, 2016]
-
-* Restored Wiiflow mode plugin by fix94
-* Restored fix filebrowser window overlapping
-* Change all files End Of Line to windows mode
-* Remove update check for updates
-
-[2.3.5 - December 10, 2016]
-
-* Hide saving dialog that pops up briefly when returning from a game
-
-[2.3.4 - September 15, 2016]
-
-* Added the delete save file (SRAM / Snapshot) option
-* Changed the box colors for the SRAM and Snapshots files to match the color
-  scheme of the emu GUI
-* Change the "Power off Wii" exit option to completely turn off the wii,
-  ignoring the WC24 settings
-* Updated settings file name in order to have it's own settings file name
-* Added an option to switch between screenshots, covers, or artwork images,
-  with their respective named folders at the device's root. You can set which
-  one to show, by going to Settings > Menu > Preview Image. The .PNG image file
-  needs to have the same name as the ROM (e.g.: Mother 3.png)
-* Removed sound from GUI (thanks to Askot)
-* Added option to switch between the Green or Monochrome GB color screen. You
-  can set which one to show by going to Settings > Emulation > GB Screen Palette
+1. Set up Swiss (or another loader of your choice) for your GameCube — see [gc-forever.com](https://www.gc-forever.com/) for hardware-specific guides.
+2. Download the GameCube build (`Snes9xGX-GameCube.zip` above) and extract it to the root of your SD card.
+3. Boot Swiss, launch `snes9xgx-gc.dol` from your SD Gecko/SD2SP2, and you should land in the same file browser as the other platforms.
 
-[2.3.3 - June 25, 2016]
-
-* Fixed the GC pad Down input on the File browser window
-* Added Koston's green gb color screen
-* Added the Screenshot Button
-* Increased and Centered the Screenshot image and reduce game list width
-* Added a background for the preview image
-* Added the WiiuPro Controller icon on the controller settings
-* Fix DSI error / Bug from Emulator Main Menu
+```text
+SD:/
+├── vbagx-gc.dol
+└── vbagx/
+    └── roms/
+        └── ...
+```
 
-[2.3.2 - March 4, 2015] - libertyernie
+Note that GameCube does **not** use the `apps/` folder convention that Wii does — the `.dol` sits at the SD card root (or wherever your loader expects it), while your ROMs/saves still live in `vbagx/`, same as on Wii.
 
-* Wii U: if widescreen is enabled in the Wii U setting, VBA GX will use a 16:9
-  aspect ratio, except while playing a game with fixed pixel mode turned on
-* There are now three options for border in the emulation settings menu (see
-  "Super Game Boy borders" section for details)
-  * PNG borders now supported for GBA games
-* Video mode "PAL (50Hz)" renamed to "PAL (576i)"
-* Video mode "PAL (60Hz)" renamed to "European RGB (480i)"
-* 240p support added (NTSC and European RGB modes)
-* All video modes now use a width of 704 for the best pixel aspect ratio
+### Wii U
 
-[2.3.1b - November 8, 2014] - Glitch
+Wii U support comes in **three genuinely different forms** — pick the one that matches what you've set up on your console:
 
-* Added FIX94's libwupc for WiiU Pro Controllers
-* Added tueidj's vWii Widescreen Fix
+|                     | vWii (Homebrew Channel) | vWii (VC-style injection) | Native Wii U build |
+|---------------------|--------------------------|-----------------------------|----------------------|
+| What it is          | The regular **Wii** build, run inside vWii | The same Wii build, launched as its own injected Virtual-Console-style channel | A dedicated Wii U (Aroma) app, `.wuhb` |
+| Requires            | Homebrew Channel *inside vWii* | Homebrew Channel *inside vWii*, plus a channel built with **[TeconMoon's WiiVC Injector Mod](https://github.com/timefox/TeconMoon-s-WiiVC-Injector-Mod)** | **Aroma** (Wii U homebrew environment) |
+| GamePad             | Not usable | Usable as an **extra controller** (buttons/sticks; no touch) | **Full support** — touch, buttons |
+| Output              | vWii-level, up to 480p | Same as plain vWii | Native, up to **1080p** |
+| Upscaling filters   | hq2x, Scale2x, 2xBR, DDT | Same as plain vWii | GX2 shader-based **ScaleFX** |
+| Which download      | `VisualBoyAdvanceGX.zip` (Wii build) | `VisualBoyAdvanceGX.zip` (Wii build) | `VisualBoyAdvanceGX-WiiU.zip` |
 
-[2.3.1 - October 14, 2014] - libertyernie
+If you're not sure which you want: the **native build** is the strongest experience on a console with Aroma installed — full GamePad touch, 1080p, and GPU-based ScaleFX upscaling. **VC injection** is the best you'll get out of vWii itself (a usable GamePad, at Wii-level output), and plain **Homebrew Channel vWii** is the simplest but weakest of the three.
 
-* Super Game Boy border support
-  * Borders can be loaded from (and are automatically saved to) PNG files
-  * Any border loaded from the game itself will override the custom PNG border
-* Custom palette support from 2.2.8 restored
-* Option added to select Game Boy hardware (GB/SGB/GBC/auto)
-* Fixed pixel ratio mode added
-  * Overrides zoom and aspect ratio settings
-  * To squish the picture so it appears correctly on a 16:9 TV, you can open
-    the settings.xml file and add 10 to the gbFixed/gbaFixed value. However,
-	setting your TV to 4:3 mode will yield a better picture.
-* Real-time clock fixes for GB/GBC games, including Pok�mon G/S/C
-  * RTC data in save file stored as little-endian
-  * Option added for UTC offset in the main menu (only required if you use the
-    same SRAM on other, time-zone-aware platforms)
-* New option for selecting "sharp" or "soft" filtering settings
-  * "Sharp" was the default for 480p, "soft" was the default for 480i
+#### Native Wii U (Aroma)
 
-[2.3.0 - September 10, 2014] - libertyernie
+1. Follow the **[Wii U Homebrew Guide](https://wiiu.hacks.guide/)** to install **Aroma** if you haven't already. One-time setup per console.
+2. Download the Wii U build (`VisualBoyAdvanceGX-WiiU.zip` above) and copy `vbagx.wuhb` to `wiiu/apps/` on your SD card, alongside your other Aroma apps. Also add the `vbagx/` folder from the same download to the SD card root.
+3. Insert the SD card and turn on your Wii U — with Aroma installed, **Visual Boy Advance GX shows up as its own icon directly on the Wii U Menu**, right alongside your other software. No separate app store or launcher step needed; just select it and go.
 
-* VBA-M core updated to r1231
-* Tiled rendering used for GBA games (new VBA-M feature, originally from
-  RetroArch) - provides a major speed boost!
-* Changes from cebolleto's version
-  * Screenshots can be displayed for each game on the menu
-  * Nicer 7-Zip support
-  * When you leave a folder, the folder you just left will be selected
-* New options available:
-  * Disable the " Auto" string being appended to save files
-  * Disable frameskip entirely on GBA
-* Keyboard fixed (from libwiigui r56)
-* GUI prompt is now purple instead of green (button colors more intuitive)
-* Goomba and Goomba Color ROM support:
-  * Any Game Boy ROM stored within a Goomba ROM can be loaded "natively" in
-    the Game Boy (Color) emulator (or the Goomba ROM can be loaded as GBA)
-  * Game Boy SRAM stored within Goomba SRAM is loaded and saved correctly
+```text
+SD:/
+├── wiiu/
+│   └── apps/
+│       └── vbagx.wuhb
+└── vbagx/
+    └── roms/
+        └── ...
+```
 
-[2.2.8 - July 29, 2012]
+Note the extra `wiiu/` nesting compared to Wii: the native Wii U app folder is kept separate from vWii's own `apps/` folder so the two can coexist on the same SD card without colliding.
 
-* Fixed lag with GameCube controllers
+> ⚠️ **Run the latest Aroma.** This build is only tested against, and only intended to work on, whatever the current Aroma release is at the time you're reading this. We can't promise it'll behave — or even boot — on an old Aroma build or an outdated Wii U system version. If something looks wrong, updating Aroma first is the right move before reporting it.
 
-[2.2.7 - July 7, 2012]
+**Recommended companions, installed through the same Wii U Homebrew Guide:**
 
-* Fixed PAL support
+- **[Mocha](https://github.com/wiiu-env/MochaPayload)** — an Aroma component that gives Cafe OS access to USB storage (FAT32/exFAT/NTFS). Without it, USB drives simply won't show up as a load/save option on the native build; SD still works fine either way.
+- **[Bloopair](https://github.com/GaryOderNichts/Bloopair)** — lets you pair non-Nintendo Bluetooth controllers (Switch Pro Controller, Joy-Con, DualShock/DualSense, Xbox controllers, and others) to your Wii U as if they were a Wii U Pro Controller. Handy if you don't have a GamePad or Pro Controller handy. Bloopair works at the system level within the native Wii U environment and doesn't apply inside vWii.
 
-[2.2.6 - July 6, 2012]
+#### vWii (Wii Homebrew Channel, inside Wii U)
 
-* Support for newer Wiimotes
-* Fixed missing audio channel bug (eg: in Mario & Luigi: Superstar Saga)
-* Improved controller behavior - allow two directions to be pressed simultaneously
-* Compiled with devkitPPC r26 and libogc 1.8.11
+1. Follow the **[Wii Homebrew Guide](https://wii.hacks.guide/)** to install the Homebrew Channel in vWii — the process runs from inside the Wii U's Wii mode and is otherwise the same as on a standalone Wii.
+2. Follow the [Wii instructions](#wii) above exactly, using the same SD card — the vWii build is the Wii build.
+3. Boot into vWii on your Wii U (from the Wii U Menu) and launch it from the Homebrew Channel, same as on Wii.
 
-[2.2.5 - May 15, 2011]
+This is the simplest Wii U path, but it's also the most limited one: no GamePad support at all. For GamePad support without going all the way to the native build, see VC-style injection below.
 
-* Added Turkish translation
+#### vWii via VC-style injection (GamePad support)
 
-[2.2.4 - March 23, 2011]
+Rather than launching Visual Boy Advance GX from the Homebrew Channel every time, you can package it as its **own injected channel** using **[TeconMoon's WiiVC Injector Mod](https://github.com/timefox/TeconMoon-s-WiiVC-Injector-Mod)**. This installs it as a Virtual-Console-style title in your vWii NAND rather than something launched through the Homebrew Channel, which is what lets you use the Wii U GamePad for display (without touch) and as an extra controller.
 
-* Fixed browser regressions with stability and speed
+At a high level:
 
-[2.2.3 - March 19, 2011]
+1. Install the Homebrew Channel in vWii first (see [vWii](#vwii-wii-homebrew-channel-inside-wii-u) above) — you'll still want it for updates and other homebrew.
+2. Download and run **TeconMoon's WiiVC Injector Mod** on a PC, and choose **Wii Homebrew Injection (DOL)** as the injection type.
+3. Point it at Visual Boy Advance GX's `boot.dol` (from the Wii build), and pick one of the available **GamePad Emulation** modes so the injector configures GamePad input for the resulting channel.
+4. Build the injected package and install it to your Wii U's vWii NAND with the tool of your choice (the injector's own documentation covers this step, since it depends on your existing vWii setup).
+5. Keep the `vbagx/` ROMs/saves folder on your SD card exactly as described [above](#all-platforms-sd-card--folder-layout) — the injected channel reads from the SD card the same way the Homebrew Channel version does.
 
-* Improved USB and controller compatibility (recompiled with latest libogc)
-* Enabled SMB on GameCube (thanks Extrems!)
-* Added Catalan translation
-* Translation updates
+Consult the injector's own documentation/thread for anything version-specific — like forwarder tooling, this is third-party software this README doesn't track closely.
 
-[2.2.2 - October 7, 2010]
+---
 
-* Fixed "blank listing" issue for SMB
-* Improved USB compatibility and speed
-* Added Portuguese and Brazilian Portuguese translations
-* Channel updated (improved USB compatibility)
-* Other minor changes
+## Initial Setup
 
-[2.2.1 - August 14, 2010]
+The first time you run Visual Boy Advance GX, it writes a new `settings.xml` next to the app (in `apps/vbagx/` on Wii, alongside `vbagx-gc.dol` on GameCube) to store your configuration. If you're upgrading from a previous version, the emulator may start with a message that your preferences have been reset — you'll need to set them again.
 
-* IOS 202 support removed
-* USB 2.0 support via IOS 58 added - requires that IOS58 be pre-installed
-* DVD support via AHBPROT - requires latest HBC
+On launch, the emulator drops you into the ROM browser. Navigate with the D-Pad or the Wiimote pointer, and select with the **A** button; press **B** to swap between controlling the list and controlling the buttons. Press **Home** at the main menu to exit — what exactly that does is configurable, see [Menu](#menu). Click the logo to see the credits.
 
-[2.2.0 - July 22, 2010]
+## Configuration
 
-* Fixed broken auto-update
+Press **A** on the **Settings** box from the main menu to open the settings screen. **Reset Settings** restores everything to defaults; **Go Back** returns to the ROM browser.
 
-[2.1.9 - July 20, 2010]
+### Button Mappings
 
-* Reverted USB2 changes
+Configure the GBA/GB controller independently for each input device you have connected (GameCube Controller, Wiimote, Nunchuk+Wiimote, Classic Controller, Wii U Pro Controller). Different controls are used depending on what's plugged into the Wii Remote — Nunchuk means Nunchuk + Wii Remote. GameCube controllers can be used at the same time as Wii Remotes, controlling the same player. Press **Home** while configuring to cancel.
 
-[2.1.8 - July 14, 2010]
+Game Boy and Game Boy Color games don't have L and R buttons — those only work in Game Boy Advance games.
 
-* Ability to use both USB ports (requires updated IOS 202 - WARNING: older
-  versions of IOS 202 are NO LONGER supported)
-* Hide non-ROM files
-* Other minor improvements
+Whatever controls you choose here can be overridden for certain games by turning on **Match Wii Controls** (or **Match GameCube Controls** on GameCube) with the appropriate expansion plugged in — see [Special Wii Controls](#special-wii-controls). Games without special Wii controls just use whatever you configured here.
 
-[2.1.7 - June 20, 2010]
+In addition to the controls you configure, these always apply:
 
-* USB improvements
-* GameCube improvements - audio, SD Gecko, show thumbnails for saves
-* Other minor changes
+| Input | Action |
+|---|---|
+| Home, Escape | Opens the emulator's in-game menu |
+| A+B, Spacebar, or right analog stick | Fast forward |
+| Right analog stick | Zoom (if enabled) |
+| + / - | Game Boy Start / Select |
 
-[2.1.6 - May 19, 2010]
+### Video
 
-* DVD support fixed
-* Fixed some potential hangs when returning to menu
-* Video/audio code changes
-* Fixed scrolling text bug
-* Other minor changes
+| Setting | Options |
+|---|---|
+| **Video Mode** | Several output modes are available; pick whichever matches your display |
+| **Aspect Ratio / Zoom** | Separate horizontal and vertical zoom, with separate settings for GB and GBA |
+| **Fixed Pixel Ratio** | 1x, 2x, or 3x — overrides zoom and aspect ratio settings for a crisp integer-scaled image |
+| **Filtering** | Unfiltered, Sharp, or Soft |
+| **Upscaling** | GameCube/Wii: hq2x, Scale2x, 2xBR, DDT · Wii U: ScaleFX (GX2 shader-based) |
+| **Scanline Overlay** | On/Off |
+| **Screen Position** | Nudge the output if it isn't centered on your display |
 
-[2.1.5 - April 9, 2010]
+### Emulation
 
-* Fix auto-save bug
+| Option | Notes |
+|---|---|
+| **GBA Dynamic Recompilation** | See [Dynamic Recompilation (JIT)](#dynamic-recompilation-jit) |
+| **GB Screen Palette** | Green or Monochrome — the classic Game Boy screen tint |
+| **GB Hardware** | GB, SGB, GBC, or Auto — forces Super Game Boy mode when set to SGB, even for Game Boy Color games |
+| **Super Game Boy Borders** | See [Super Game Boy Borders](#super-game-boy-borders) |
+| **Auto Frame Skip** | Recommended to leave on, even with the JIT enabled — it also helps keep audio timing steady on the heaviest games |
+| **Match Wii/GameCube Controls** | See [Special Wii Controls](#special-wii-controls) |
 
-[2.1.4 - April 9, 2010]
+### Saving & Loading
 
-* Fixed issue with saves (GBA) and snapshots (GB)
-* Most 3rd party controllers should work now (you're welcome!)
-* Translation updates (German and Dutch)
-* Other minor changes
+| Option | Options |
+|---|---|
+| **Load Method** | SD, USB, DVD, Network, Auto |
+| **Load Folder** | Opens an on-screen keyboard to set a custom ROM folder |
+| **Save Method** | SD, USB, Network, Auto |
+| **Save Folder** | Opens an on-screen keyboard to set a custom save folder |
 
-[2.1.3 - March 30, 2010]
+Visual Boy Advance GX has two kinds of saves: **SRAM**, the in-game battery save you'd get on real hardware, and **Snapshots**, real-time save states that capture exactly where you are. Loading a Snapshot may overwrite your "SRAM (Auto)", so be careful. SRAM saved by VBA-M on other platforms (Mac/PC/Linux) can be imported directly, and vice versa — just make sure the `.srm` filename matches your ROM's filename.
 
-* Fixed ROM allocation. Should solve some unexplained crashes
-* Numerous performance optimizations (thanks dancinninja!)
-* DVD / USB 2.0 support via IOS 202. DVDx support has been dropped. It is
-  highly recommended to install IOS 202 via the included installer
-* Multi-language support (only French translation is fully complete)
-* Thank you to everyone who submitted translations
-* SMB improvements/bug fixes
-* Minor video & input performance optimizations
-* Disabling rumble now also disables in-game rumbling
-* Fixed saving of GB screen position adjustment
+### Menu
 
-[2.1.2 - December 23, 2009]
+| Option | Options |
+|---|---|
+| **Exit Action** | Configurable — controls what pressing Home at the main menu does |
+| **Music Volume** / **Sound Effects Volume** | |
+| **Language** | See [Language & Custom Fonts](#language--custom-fonts) |
+| **Preview Image** | See [Artwork](#artwork) |
+| **Rumble** | Enabled/Disabled |
 
-* Numerous core optimizations (thanks dancinninjac!)
-* File browser now scrolls down to the last game when returning to browser
-* Auto update for those using USB now works
-* Fixed scrollbar up/down buttons
-* Minor optimizations
+### Language & Custom Fonts
 
-[2.1.1 - December 7, 2009]
+For Japanese or Korean, supply a matching font file yourself — `jp.ttf` or `ko.ttf` — placed in your app folder (`apps/vbagx/` on Wii, alongside `vbagx-gc.dol` on GameCube). Once the font file is in place, select that language from **Settings → Menu → Language** and it switches fonts automatically.
 
-* Save state corruption issues fixed
+You can also customize the menu's background music by dropping a `bg_music.ogg` into the same app folder.
 
-[2.1.0 - December 2, 2009]
+### Artwork
 
-* Fixed SMB (for real this time!)
-
-[2.0.9 - November 30, 2009]
-
-* Fixed SMB
-* Added separate horizontal/vertical zoom options, and separate GB/GBA ones
-* Improved scrolling timing - the more you scroll, the fast it goes
-* Fixed reset button on Wii console - now you can reset multiple times
-* APU optimization (dancinninjac)
-* Minor code optimizations
-* Reduce memory fragmentation - fixes out of memory crashes
-
-[2.0.8 - October 7, 2009]
-
-* Revamped filebrowser and file I/O
-* Fixed MBC2 saving/loading
-* Fixed some GB-Z80 instructions
-* DVD loading in GameCube should work now (untested and unsupported)
-* Many, many other bug fixes
-
-[2.0.7 - September 16, 2009]
-
-* Text rendering corrections
-* SMB improvements
-* Built with latest libraries
-* Video mode switching now works properly
-* Other minor bugfixes and cleanup
-
-[2.0.6 - July 22, 2009]
-
-* Fixed "No game saves found." message when there are actually saves.
-* Fixed shift key on keyboard
-* Text scrolling works again
-* Change default prompt window selection to "Cancel" button
-
-[2.0.5 - July 9, 2009]
-
-* Faster SMB/USB browsing
-* Last browsed folder is now remembered
-* Fixed controller mapping reset button
-* Fixed no sound on GameCube version
-* Directory names are no longer altered
-* Preferences now only saved on exit
-* Fixed on-screen keyboard glitches
-* SRAM auto-saved on power-off from within a game
-* Prevent 7z lockups, better 7z error messages
-
-[2.0.4 - June 30, 2009]
-
-* Fixed auto-update
-* Increased file browser listing to 10 entries, decreased font size
-* Added text scrolling on file browser
-* Added reset button for controller mappings
-* Settings are now loaded from USB when loading the app from USB on HBC
-* Fixed menu crashes caused by ogg player bugs
-* Fixed memory card saving verification bug
-* Fixed game savebrowser bugs
-* Miscellaneous code cleanup/corrections
-
-[2.0.3 - May 30, 2009]
-
-* Fixed SD/USB corruption bug
-* SMB works again
-* GUI bugs fixed, GUI behavioral improvements
-* GB Palette editing
-* More built-in palettes
-* Palettes now fade to white correctly instead of getting brighter
-* Can now turn off palette colorizing
-* Workaround for palette issue on Mega Man I GB - palette disabled
-* Star Wars, TMNT, Lord Of The Rings, Castlevania Wii Controls
-* Fix for WarioWare startup - Nunchuk C button or Wii Remote B button will now
-  make calibration easy by locking the gyroscope.
-* Fixed issues with constant rumbling
-
-[2.0.2 - May 26, 2009]
-
-* Improved stability
-* Fixed broken SDHC from HBC 1.0.2 update
-* Fixed issues with returning to menu from in-game
-* Add option to disable rumble
-* Auto-determines if HBC is present - returns to Wii menu otherwise
-* Unfiltered mode fixed
-* Miscellaneous bugfixes
-
-[2.0.1 - April 30, 2009]
-
-* Multiple state saves now working
-* Built with more stable libogc/libfat
-* Fixed settings saving glitches
-* Fixed Mortal Kombat GameCube controller bug
-* Fixed Zelda DX palette bug
-* Fixed Harry Potter 1-3 keyboard bug
-
-[2.0.0 - April 27, 2009]
-
-* New GX-based menu, with a completely redesigned layout. Has Wiimote IR
-  support, sounds, graphics, animation effects, and more
-* Thanks to the3seashells for designing some top-notch artwork, to
-  Peter de Man for composing the music, and a special thanks to shagkur for
-  fixing libogc bugs that would have otherwise prevented the release
-* Onscreen keyboard for changing save/load folders and network settings
-* Menu configuration options (configurable exit button, wiimote orientation,
-  volumes)
-* New save manager, allowing multiple saves and save browsing. Shows
-  screenshots for Snapshot saves, and save dates/times
-* Added video shifting option
-* Added video mode selection (recommended to leave on Automatic)
-* USB Mouse support (buttons only)
-* Keyboard shift key bug fixed
-* Built-in 14 colour palettes for some monochrome gameboy games (Magnetic
-  Soccer, Malibu Beach Volleyball, Marble Madness, Metroid 2, Mortal Kombat,
-  Mortal Kombat II, Mortal Kombat 3, Mr. Do!)
-* Rumble works in GBC games designed for rumble cartridges but shipped
-  without rumble cartridges, such as Disney's Tarzan for GBC
-* Improved Mortal Kombat Wii Controls
-* Mortal Kombat games now have many extra characters to choose
-* Wii Controls for more Teenage Mutant Ninja Turtles games
-* Improved Lego Star Wars controls
-* Boktai menu now tells you when there can't be sun because it is night
-* Minor bug fixes
-
-[1.0.9 - April 7, 2009]
-
-* Gamecube controller should no longer rumble constantly
-
-[1.0.8 - April 4, 2009]
-
-* "Match Wii Game" controls option! Games that have a Wii equivalent can be
-  played using the controls for that Wii game. For example all Zelda games
-  can be played with Twilight Princess controls. See the Instructions section
-  below for important details.
-* Rotation/Tilt sensor games all work
-* Solar sensors (Boktai 1/2/3)
-* Rumble (except for games that rely on Gameboy Player)
-* Keyboard
-* PAL support, finally!
-* New scaling options, choose how much stretching you want
-* Colourised games now partially work but still have distortion
-* "Corvette" no longer has a screwed up palette (but still crashes)
-* Triggers net reconnection on SMB failure
-* Source code refactored, and project file added
-* Instructions section added to this readme file
-
-[1.0.7 - January 27, 2009]
-
-* Updated to VBA-M r847
-* Corrected sound interpolation
-* Faster SD/USB - new read-ahead cache
-* Removed trigger of back to menu for Classic Controller right joystick
-* Fixed a bug with reading files < 2048 bytes
-* Fixed GBA games on GameCube
-* Fixed homebrew GBA games on GameCube
-* Fixed some memory leaks, buffer overflows, etc
-* Code cleanup, other general bugfixes
-
-[1.0.6 - December 24, 2008]
-
-* Fixed save state saving bug
-* Fixed unstable SD card access
-* Proper SD/USB hotswap (Wii only)
-* Auto-update feature (Wii only)
-* Rewritten SMB access - speed boost, NTLM now supported (Wii only)
-* Improved file access code
-* Resetting preferences now resets controls
-* Minor bug fixes
-
-[1.0.5 - November 19, 2008]
-
-* SDHC works now
-* Frameskipping tweaks
-* Fixed snapshot loading issue
-* Full widescreen support
-* Changed scaling
-* Zooming fixed (thanks eke-eke!)
-* PAL timing changes - EURGB60 mode forced
-* Wii - Added console/remote power button support
-* Wii - Added reset button support (resets game)
-* Wii - Settings file is now named settings.xml and is stored in the same
-  folder as the DOL (eg: apps/vbagx/settings.xml)
-* GameCube - Added DVD motor off option
-* GameCube - Fixed GBA loading issue
-
-[1.0.4 - October 28, 2008]
-
-* Complete port of VBA-M - now uses blaarg's new audio core, latest GB core
-* Frameskipping improvements
-* Sound processing improved - L-R channel reversal corrected, skipping fixed
-* Saving problems fixed, game compatibility improved
-* IPS/UPS/PPF patch support
-* SD/USB hot-swapping!
-* SDHC support
-* Zoom setting saved
-* Widescreen correction option
-* GameCube support is back, including Qoob support!
-
-[1.0.3 - October 15, 2008]
-
-* New timing / frameskip algorithm - should (hopefully) work 100% better!
-* Performance improvements - video threading, PPC core partly activated
-* Video zooming option
-* Unfiltered video option
-* 7z support
-* Loading progress bars added
-
-[1.0.2 - October 6, 2008]
-
-* New core! The core is now a custom combination of VBA-M and VBA 1.72
-* Added DVD, SMB, ZIP, GameCube MC support
-* Faster USB/SD speeds
-* Screen alignment and flickering problems fixed
-* 128K save support added
-* Better emulation speeds. Should now be nearly full speed all the time
-  for most games.
-* Turbo speed feature. Mapped to right C-stick (classic controller &
-  Gamecube controller), and A+B for wiimote
-* Controller mapping preferences bug fixed. Your preferences will reset
-  automatically to correct any problems in your preferences file
-* Many other tweaks behind the scenes
-
-[1.0.1 - September 18, 2008]
-
-* GBA games now run at full speed
-* Menu improvements, with spiffy new background
-* Fixed L/R buttons - they work now
-
-[1.0.0 - September 16, 2008]
-
-* Now compiles with devkitpro r15
-* One makefile to make all versions
-* Complete rewrite based on code from SNES9x GX
-* Now has a menu! ROM selector, preferences, controller mapping, etc
-* Wiimote, Nunchuk, and Classic controller support
-* Button mapping for all controller types
-* Full support for SD and USB
-* Load/save preference selector. ROMs, saves, and preferences are
-  saved/loaded according to these
-* 'Auto' settings for save/load - attempts to automatically determine
-  your load/save device(s) - SD, USB
-* Preferences are loaded and saved in XML format. You can open
-  VBAGX.xml edit all settings, including some not available within
-  the program
-
-
-## SETUP & INSTALLATION
-
-Unzip the archive. You will find the following folders inside:
-
-apps			Contains Homebrew Channel ready files
-				(see Homebrew Channel instructions below)
-
-vbagx			Contains the directory structure required for storing
-				roms and saves. By default, roms are loaded from
-				"vbagx/roms/" and saves / preferences are stored in
-				"vbagx/saves/".
-
-
-### Loading / Running the Emulator:
-
-#### Wii - Via Homebrew Channel:
-The most popular method of running homebrew on the Wii is through the Homebrew
-Channel. If you already have the channel installed, just copy over the apps folder
-included in the archive into the root of your SD card.
-
-Remember to also create the vbagx directory structure required. See above.
-
-If you haven't installed the Homebrew Channel yet, read about how to here:
-http://hbc.hackmii.com/
-
-#### Gamecube:
-You can load VBAGX via sdload and an SD card in slot A, or by streaming
-it to your Gamecube, or by booting a bootable DVD with VBAGX on it.
-This document doesn't cover how to do any of that.
-
-
-## INSTRUCTIONS
-
-If you have upgraded from a previous version, the emulator may start with a
-message that your preferences have been reset. You will need to set your
-preferences how you want them.
-
-Otherwise the emulator will start at the main menu, which is a list of game
-ROMs. There is also a settings button to choose how and where to load or
-save files, and to change menu settings.
-
-Navigate the menu with the D-Pad, or the Wiimote pointer, and select options
-with the A button. Press the B button to swap between controlling a list box
-and controlling the buttons. Pressing the Home button will exit from the
-main menu. You can choose what exiting will do by using the settings menu.
-
-Click on the logo to see the credits.
-
-When choosing a file, use left and right to go up or down a page.
-
-Once you choose a game, the game will start. But you can get back to a menu
-by pressing Home. This takes you to the in-game menu, where you can save,
-load, reset, or change settings. The settings apply to all games, not just
-the current one. These settings are different from the settings on the main
-menu. If you are playing a Boktai game with a solar sensor, there will also
-be a fifth button which lets you change the weather. The sunlight is based
-on the weather, the time of day, and the angle of your Wiimote.
-
-Saving and loading let you choose two kinds of save files. SRAM is the
-normal kind of saving and loading that you have on a real gameboy. It only
-saves up to the last checkpoint or savepoint in the game. Or you can save
-a better way by using the emulator's special "Snapshot" feature which
-saves the state of everything, exactly where you are up to. Loading a
-Snapshot may erase your "SRAM (Auto)" so be careful.
-
-From the game menu you can return to the game by pressing Home again, or by
-clicking on the "Close" button in the top right. Or to quit that game and
-choose a different game, click on the "Main Menu" button.
-
-If you don't want to load ROMs from the SD card, you can go to the
-settings menu and choose where to load from. You can load from SD cards,
-USB memory sticks/hard drives, DVD (if you installed DVDX), gamecube memory
-cards, or from shared folders over the network (this is called SMB).
-
-ROMs can be in ZIP files, but the ROM must be the first file in the ZIP. If
-not, you will get an error. ROMs can also be in .7z files, or ordinary rom
-files.
-
-Patches can be used to colourise a monochrome gameboy game, or to translate
-a game into your language, or to stop the game from needing special hardware.
-Search the internet for patches. Many games have been translated by fans.
-They can be in IPS or UPS format. You don't need to patch anything yourself.
-Just put the IPS or UPS file in the vbagx/roms folder along with the rom
-itself. The patch must have the same name as the rom. Patches can not be put
-inside the ZIP file. If a rom is zipped, you might need to check inside the
-zip for the actual rom filename.
-
-Colourised games still have some distortion in this version, but it is
-improved from the previous version, and better than VBA-M. Some unpatched
-monochrome gameboy games have built-in palettes in this emulator and will
-appear in colour.
-
-You must not use patched versions of Boktai roms! (Except for the translation
-patch for Boktai 3, which is highly recommended). The patches are for old
-emulators that don't support the solar sensor. VBA GX and NO$GBA support the
-solar sensor natively, and the patch will stop them from working.
-
-You must also not use patched versions of WarioWare Twisted, Kirby's Tilt n
-Tumble, or Yoshi's Universal Gravitation (Topsy Turvy). The original roms
-are fully supported, and the patch will stop them from working.
-
-#### Dynamic Recompilation (JIT)
-
-VBA-GX includes a dynamic recompiler (JIT) for GBA games, built entirely from
-scratch specifically for VBA-GX. Rather than interpreting GBA code one
-instruction at a time, it translates hot game code directly into native
-Broadway/Gekko CPU instructions, while carefully preserving the timing
-accuracy of the original interpreter core. The result is a major speed
-boost with excellent compatibility - even demanding GBA titles run with
-plenty of headroom to spare above a full, locked 60fps, rather than merely
-scraping by.
-
-It can be turned on or off from the main menu under Settings > Emulation >
-GBA Dynamic Recompilation. On Wii it's on solid ground and safe to leave on
-by default. On GameCube it's newly available as of this release, made
-possible by the new ARAM/SD hybrid ROM pager, and is offered as an option
-rather than the default while it gets more mileage across a wider range of
-games and ROM sizes.
-
-Dynamic Recompilation is very stable, but if you ever notice graphical
-glitches or other unexpected behavior in a specific game, try turning it off
-to see if the issue goes away with the standard interpreter core.
-
-#### Cheats
-
-VBA GX supports cheat codes for both GBA and GB/GBC games, loaded from
-Libretro-format .cht files. Cheat files must be named to match the ROM
-(e.g. "Pokemon Emerald.gba" needs "Pokemon Emerald.cht") and placed in the
-"vbagx/cheats" folder on your storage device. A .cht file is a simple text
-file with one description/code pair per cheat, numbered starting from 0:
-
-	cheat0_desc = "Infinite Health"
-	cheat0_code = "0203AD4C 00000063"
-	cheat1_desc = "Infinite Money"
-	cheat1_code = "83007CFC 270F"
-
-Quotes around the value are optional. The description is what's shown in
-the in-game Cheats menu; if it's left out, the cheat is just labelled
-"Unnamed Cheat".
-
-Once a matching .cht file is found, its cheats are loaded automatically
-when the ROM starts. Press Home during a game to bring up the in-game
-menu, then choose Cheats to see the list and toggle codes on or off.
-Toggling takes effect immediately, no reset needed.
-
-The following code types are recognized automatically based on the format
-of each code - you don't need to tell VBA GX which kind you're entering:
-
-GBA games:
-* CodeBreaker (12 hex digits, shown as "XXXXXXXX YYYY" or run together
-  as "XXXXXXXXYYYY")
-* GameShark GBA v3 (16 hex digits)
-
-GB/GBC games:
-* Game Boy Game Genie ("XXX-YYY" or "XXX-YYY-ZZZ")
-* Game Boy GameShark (8 hex digits)
-
-Spaces and hyphens inside a code are ignored, and hex digits are
-case-insensitive, so codes can be pasted in from most sources without
-reformatting. A single cheat entry can also chain multiple codes together
-by separating them with a "+" (some CodeBreaker/GameShark cheats require
-more than one line to work) - just put all the codes for that cheat on
-the cheat's "_code" line, joined with "+".
-
-#### Controls
-
-See the website at http://www.wiibrew.org/wiki/VBA for better control
-documentation, with illustrations and tables.
-
-The default controls are...
-
-+ = Gameboy Start Button
-- = Gameboy Select Button
-Home = Show emulator's game menu
-
-Wii Remote by itself:
-Hold the Wii Remote sideways.
-2 = Gameboy A Button
-1 = Gameboy B Button
-A = Gameboy R Button
-B = Gameboy L Button
-
-Wii Remote + Nunchuk:
-Hold the Nunchuk and ignore the Wii Remote.
-Z = Gameboy A Button
-C = Gameboy B Button
-
-Classic Controller:
-B = Gameboy A Button
-Y = Gameboy B Button
-R = Gameboy R Button
-L = Gameboy L Button
-
-You can configure the controls how you want from the controls menu. Different
-controls will be used depending on what you have plugged into the Wii Remote.
-Nunchuk means Nunchuk + Wii Remote. Gamecube controllers can
-be used at the same time as Wii Remotes and all control the same player.
-When configuring controls, press HOME to cancel.
-
-But the controls you choose will be overridden for certain games if you
-choose "Match Wii Game" (or "Match Gamecube Game" on a Gamecube) and you have
-the appropriate expansion plugged in. If the game does not have special Wii
-controls, then the controls you chose will be used.
-
-Gameboy and Gameboy colour games don't have L and R buttons. Those buttons
-only work in Gameboy Advance games.
-
-In addition to the controls you can configure, these other controls apply:
-
-HOME, Escape: returns you to the emulator's game menu. Then press B to go
-to the main menu and B again to return to the game.
-A+B, Spacebar, or right analog stick: fast forward
-Right analog stick: zoom (if enabled)
-
-#### Super Game Boy borders
-
-VBA-GX has supported Super Game Boy borders since 2.3.1. You can enable this
-feature in the Emulation settings on the main menu.
-
-Borders can be loaded from two locations:
-* PNG files in the borders folder (by default, /vbagx/borders)
-* The game itself
-
-Borders will only be loaded from the game itself when the emulator is running
-in Super Game Boy mode, and the border setting in Emulation settings is set to
-"From game (SGB only)". (You can also use the Emulation settings menu to
-force SGB mode even for Game Boy Color games.) If the borders folder exists,
-but no border for the game is present, the loaded Super Game Boy border will
-be written to a .png file, which can be loaded later in "From .png file" mode.
-
-In addition, if the borders folder exists but there is no border for the game,
-the first border loaded from the game will be written to a PNG file so it can
-be loaded in the future (even in Game Boy Color mode.) This means after you
-run a game once in SGB mode, you can then use the same border in GBC mode.
-
-If the border setting is set to "From .png file", borders will be loaded
-from the borders folder. Borders can be up to 640x480 and will work for both
-Game Boy (Color) and Game Boy Advance games.
-
-For both loading and saving, the PNG filename is [TITLE].png, where [TITLE]
-is the ROM title defined at 0x134 (for GB games) or 0xA0 (for GBA games). For
-example, POKEMON_SFXAAXE.png will be loaded for Pok�mon Silver. If no PNG file
-by that name exists, VBA-GX will try loading default.png (for GB games) or
-defaultgba.png (for GBA games) instead.
-
-Since the borders are rendered along with the video output of the game, the
-pixels in the border will be the same size as game pixels. This means that
-a Game Boy game will appear in the middle 160x144 pixels of the border, and a
-Game Boy Advance game will appear in the middle 240x160 pixels, regardless of
-the resolution of the border PNG image.
-
-#### Match Wii Controls
-
-Special Wii controls exist for the following games:
-
-These Zelda games can be played with Twilight Princess controls:
-The Legend Of Zelda, Zelda 2, A Link To The Past, Link's Awakening (DX),
-Oracle of Ages, Oracle of Seasons, Minish Cap
-
-These Mario games can be played with Mario Galaxy controls:
-Super Mario Bros., Super Mario Bros. DX, Super Mario 2, Super Mario (2)
-Advance, Super Mario 3, Super Mario World, Yoshi's Island,
-Yoshi's Universal Gravitation (Topsy Turvy)
-
-Mario Kart can be (sort of) played with Mario Kart wii controls, but it
-doesn't work very well.
-
-These Metroid games can be played with Metroid Prime 3 controls:
-Metroid Zero Mission, Metroid 1, Metroid 2, Metroid Fusion
-
-These Mortal Kombat games can be played with Mortal Kombat Armageddon controls:
-Mortal Kombat, Mortal Kombat II, Mortal Kombat 3, Mortal Kombat 4, Mortal
-Kombat Advance, Mortal Kombat Deadly Alliance, Mortal Kombat Tournament
-Edition
-
-These Lego games can be played with Lego Star Wars the Complete Saga
-controls:
-Lego Star Wars The Video Game, Lego Star Wars The Original Trilogy
-
-These Teenage Mutant Ninja Turtles games can be played with TMNT Wii controls:
-TMNT, Teenage Mutant Ninja Turtles, Fall of the Foot Clan, Back from the Sewers,
-Radical Rescue
-
-These Harry Potter games can be played with Harry Potter and the Order of
-the Phoenix Wii controls:
-Harry Potter 1, Harry Potter 1 GBC, Harry Potter 2, Harry Potter 2 GBC,
-Harry Potter 3, Harry Potter 4, Harry Potter 5
-
-These Medal Of Honour games can be played with Medal Of Honour Wii controls:
-Medal Of Honour Underground, Medal Of Honour Infiltrator
-
-One Piece can be played with One Piece Unlimited Adventure controls.
-
-Boktai 1, Boktai 2, Boktai 3, and Kirby's Tilt n Tumble, and WarioWare Twisted
-can be played with controls designed for them.
-
-#### Zelda, Match Wii Controls
-
-Turn "Match Wii Controls" ON to use these controls.
-
-All Zelda games use the same controls as Twilight Princess on the Wii or
-Gamecube. You can also connect a Classic Controller to use similar controls
-to the Ocarina Of Time for the Virtual Console, but with the R trigger
-acting as the B button and an inventory like Twilight Princess. With nothing
-plugged in to the Wii Remote, your configured controls are used instead.
-
-#### The Wii Zelda controls are:
-
-Swing your Wii Remote to draw or swing your sword. Press A to put your sword
-away again. The 2 handed sword can't be drawn this way, and must be drawn
-manually from the items menu, but you can swing it like normal.
-
-Shake your Nunchuk to do a spin attack.
-
-Use the Z Button to Z-Target and to draw and use your shield. While
-Z-Targetting you will sidestep in some games. If you have a Gust Jar
-equipped instead of a shield, it will be used for Z-Targetting.
-
-Use the A Button to perform an action, such as rolling, talking to people,
-reading signs, picking things up, throwing things, shrinking or growing,
-pulling things, etc. It will also put away your sword or shield. In Zelda 2,
-it will jump.
-
-Use the C Button to fast forward. It was originally the camera button in
-Twilight Princess.
-
-Press the B Button to use the currently selected item. 3 other items will be
-mapped to Left, Down, and Right D-Pad buttons. Swap the currently selected
-item with one of those items by pressing that D-Pad button. The three slots
-correspond to the first 3 slots in your inventory. In Minish Cap, the D-Pad
-buttons use the item directly instead of swapping it with the B Button, and
-the B Button is the same as the down button. In Minish Cap the left item is
-always the Kinstones and the down and right items correspond to the B and A
-slots.
-
-Up on the D-Pad talks to Midna, or to your hat. It will take you to the save
-screen in Link's Awakening, or to the secondary items screen in the Oracle
-games.
-
-The 1 Button goes to the Map screen.
-The - Button goes to the Items screen.
-The + Button goes to the Quest Status screen
-
-On the Items screen, choose an item and then press either the B Button or the
-D-Pad button to move it to that slot. The change may not be visible until you
-go to another screen and back. In Link's Awakening you can toggle Bomb
-Arrows by choosing the bombs and pressing Z. It will rumble for a short time
-when bomb arrows are deactivated, and for a long time when bomb arrows are
-activated. You still need to equip the bow to use bomb arrows. In Minish Cap
-you should be able to use the IR pointer function to select items.
-
-#### The Gamecube controller Zelda controls are:
-
-B is the sword button. Use it to draw or swing your sword. Hold B for a spin
-attack. Press A to put the sword away again. The 2 handed sword can't be
-drawn this way, and must be selected manually from the items screen, but can
-be swung with this (or any other) button.
-
-Use the L Trigger to L-Target and to draw and use your shield. While
-L-Targetting you will sidestep in some games. If you have a Gust Jar
-equipped instead of a shield, it will be used for L-Targetting.
-
-Use the A Button to perform an action, such as rolling, talking to people,
-reading signs, picking things up, throwing things, shrinking or growing,
-etc. It will also put away your sword or shield. In Zelda 2, it will jump.
-
-Use the R Trigger to pull on blocks or walls, or to lift things. You must
-have a bracelet or gloves to lift some objects. The bracelet or gloves will
-be equipped automatically. This feature is unique to the Gamecube controller.
-
-Use the right analog stick to fast forward. It was originally the camera
-control in Twilight Princess.
-
-Press the X or Y buttons to use the two equipped items. These two items both
-share the B slot, except in Minish Cap where one is in the A slot. The item
-that was not used last will be in the first slot in your inventory.
-
-Right on the D-Pad takes you to the map.
-Up on the D-Pad takes you to the items screen.
-Start takes you to the quest status screen.
-
-The Z trigger talks to Midna, or to your hat. It will take you to the save
-screen in Link's Awakening, or to the secondary items screen in the Oracle
-games.
-
-#### The Classic controller Zelda controls are:
-
-B is the sword button. Use it to draw or swing your sword. Hold B for a spin
-attack. Press A to put the sword away again. The 2 handed sword can't be
-drawn this way, and must be selected manually from the items screen, but can
-be swung with this (or any other) button.
-
-Use the L Trigger to L-Target and to draw and use your shield. While
-L-Targetting you will sidestep in some games. If you have a Gust Jar
-equipped instead of a shield, it will be used for L-Targetting.
-
-Use the A Button to perform an action, such as rolling, talking to people,
-reading signs, picking things up, throwing things, shrinking or growing,
-pulling, etc. It will also put away your sword or shield. In Zelda 2, it
-will jump.
-
-Use the ZL Button to fast forward.
-
-Press the R Button to use the currently selected item. 3 other items will be
-mapped to Left, Down, and Right on the right analog stick. They are also
-mapped to ZR, Y, and X. Swap the currently selected item with one of those
-items by pressing that button or direction. The three slots correspond to
-the first 3 slots in your inventory. In Minish Cap, the D-Pad buttons use the
-item directly instead of swapping it with the B Button, and the B Button is
-the same as the down button. In Minish Cap the left item is always the
-Kinstones and the down and right items correspond to the B and A slots.
-
-+ (Start) takes you to the subscreens.
-- (Select) takes you to the map or changes subscreens.
-
-Up on the analog stick talks to Midna, or to your hat.
-
-
-#### Mario, Match Wii Controls
-
-Turn "Match Wii Controls" ON to use these controls.
-
-All Mario or Yoshi games use the same controls as Super Mario Galaxy on the
-Wii. You can also connect a Classic Controller to use similar controls to
-Super Mario World on the SNES.
-
-#### The Wii Mario controls are:
-
-Shake the Wii Remote to do a spin attack, or to shoot fireballs when you are
-fire Mario. In some games that have a spin attack, you will need to use the
-B Button instead to shoot fireballs. You can also dismount Yoshi by shaking.
-
-Walk by moving the joystick a little, run by moving the joystick a lot.
-
-A = jump
-B = shoot, run, hold on to things, yoshi's tongue, etc.
-Z = crouch or lay egg. Press Z while in the air to butt stomp.
-C = camera. Hold C to look around with the joystick.
-D-Pad = look around, or walk in some games
-+ = pause
-1 = throw egg if you are Yoshi
-
-#### The Classic Controller Mario controls are:
-
-Walk by moving the joystick a little, run by moving the joystick a lot.
-
-B = jump
-A = spin attack
-X/Y = shoot, run, hold on to things, yoshi's tongue, etc.
-ZL or sometimes L = crouch or lay egg. Press in the air to butt stomp.
-+ = pause
-L/R = look around (if the game supports it)
-ZR = fast forward (8-bit Game Boy only)
-
-In Super Mario World and Super Mario Land 2, you can use the A or R
-buttons for a spin jump.
-
-#### Yoshi's Universal Gravitation (Topsy Turvy), Match Wii Controls
-
-Turn "Match Wii Controls" ON to use these controls.
-
-The controls are the same as all other Mario or Yoshi games, except that
-tilting the Wii Remote tilts the world and the screen. This affects
-everything in the world and also how you move.
-
-#### Metroid, Match Wii Controls
-
-Turn "Match Wii Controls" ON to use these controls.
-
-All Metroid games use the same controls as Metroid Prime 3: Corruption on
-the Wii. You aim up and down by pointing the Wii Remote up and down.
-
-#### The Wii Metroid controls are:
-
-Aim up and down by pointing the Wii Remote up and down.
-
-Flick the Wii remote up while in Morph Ball to spring jump.
-
-A = shoot
-B = jump
-Down on D-Pad = fire missile
-C = toggle Morph Ball
-- = start
-+ = toggle super missiles
-1 = map
-2 = hint
-
-#### TMNT, Match Wii Controls
-
-Turn "Match Wii Controls" ON to use these controls.
-
-The TMNT games (except Battle Nexus) use the same controls as TMNT on Wii,
-or GameCube. With a Classic Controller they use the same controls as on
-the Playstation version.
-
-#### The Wii TMNT controls are:
-
-Shake the Wii Remote to attack or to throw away a weapon if
-in the air. Also shake to pick up a weapon.
-
-Shake the Nunchuk to do a spin kick.
+Cover art, screenshots, or general artwork can be shown on the main menu when a game is highlighted. Pick which one to display under **Settings → Menu → Preview Image**. Each image lives in its matching folder (`vbagx/covers`, `vbagx/screenshots`, `vbagx/artwork`) and must be a PNG named exactly the same as the ROM (e.g. `Pokemon Emerald.png` for `Pokemon Emerald.gba`).
 
-A = jump
-B = swap turtle, or charge attack
-B while pointing up = super family move
-C = roll
-Z = special move
+---
 
-#### Boktai, Match Wii Controls
+## File Browser
 
-Turn "Match Wii Controls" ON to use these controls.
-
-The 3 Boktai games use special controls that I created. They are not based on
-anything, since the real game uses a solar sensor.
-
-The controls are the same with or without a Nunchuk.
+The File Browser loads automatically on startup and lists the contents of your `vbagx/roms` folder (or wherever you've pointed Load Folder — see [Saving & Loading](#saving--loading)). Click a game — uncompressed, or zipped in a `.zip`/`.7z` archive — to load it. When choosing a file, use left/right to page up or down. ROMs in a `.zip` must be the first file in the archive, or you'll get an error.
 
-#### The Wii Boktai controls are:
+## Gameplay
 
-Point your Wii Remote at the sky to quickly charge your Gun Del Sol. Point
-your Wii Remote at the ground to block the sunlight and prevent it from
-charging or overheating. Or hold it like normal to use it like normal.
+Once you choose a game, it starts. Press **Home** to return to the in-game menu, where you can save, load, reset, change controllers, or change settings — these apply to all games, not just the current one. If you're playing a Boktai game with the solar sensor active, a fifth button lets you set the in-game weather; sunlight is based on the weather, time of day, and the angle of your Wiimote. Note that if it's night time for real, there won't be any sun regardless of what you set the weather to.
 
-Press Home to set the real life weather in the emulator's game menu. Note
-that if it is night time in real life, there will not be any sun, regardless
-of what you set the weather to. Please set the weather honestly or it spoils
-the fun. Note that maximum sun is not actually the best, since it rots fruit,
-and overheats your gun. The weather must be set each time you play, it is not
-saved.
+- **Close** resumes play; **Main Menu** returns to the File Browser.
 
-Swing your Wii Remote to swing your sword or other weapon, if you have one.
+## Cheats
 
-D-Pad or Nunchuk joystick walks.
+Visual Boy Advance GX supports cheat codes for both GBA and GB/GBC games, loaded from Libretro-format `.cht` files. Cheat files must be named to match the ROM (e.g. `Pokemon Emerald.gba` needs `Pokemon Emerald.cht`) and placed in `vbagx/cheats`. A `.cht` file is a simple text file with one description/code pair per cheat, numbered starting from 0:
 
-Press B to fire your Gun Del Sol.
-
-A = read signs, open chests, talk to people
-C or 2 = look around, or change subscreen (R)
-+ = start
-- = select
-Z or 1 = change element, or change subscreen (L)
-1 (if Nunchuk plugged in) = fast forward
+```
+cheat0_desc = "Infinite Health"
+cheat0_code = "0203AD4C 00000063"
+cheat1_desc = "Infinite Money"
+cheat1_code = "83007CFC 270F"
+```
 
-#### WarioWare Twisted, Match Wii Controls
+Quotes around the value are optional. The description is what's shown in the in-game Cheats menu; if left out, the cheat is labelled "Unnamed Cheat". Once a matching `.cht` file is found, its cheats load automatically when the ROM starts — press **Home** during a game, then choose **Cheats** to see the list and toggle codes on or off. Toggling takes effect immediately, no reset needed.
 
-Turn "Match Wii Controls" ON to use these controls.
+Code formats are recognized automatically, so you don't need to tell Visual Boy Advance GX which kind you're entering:
 
-WarioWare Twisted uses similar controls to the Gameboy game.
+| Platform | Recognized formats |
+|---|---|
+| GBA | CodeBreaker (12 hex digits), GameShark GBA v3 (16 hex digits) |
+| GB/GBC | Game Boy Game Genie (`XXX-YYY` or `XXX-YYY-ZZZ`), Game Boy GameShark (8 hex digits) |
 
-#### The Wii WarioWare Twisted controls are:
+Spaces and hyphens inside a code are ignored, and hex digits are case-insensitive, so codes can be pasted in from most sources without reformatting. A single cheat entry can chain multiple codes together by joining them with `+` on the same `_code` line (some CodeBreaker/GameShark cheats need more than one line to work).
 
-Rotate the Wii Remote to rotate.
+## Dynamic Recompilation (JIT)
 
-Hold Z to lock the current menu item.
+Visual Boy Advance GX includes a dynamic recompiler (JIT) for GBA games, built entirely from scratch for VBA-GX. Rather than interpreting GBA code one instruction at a time, it translates hot game code directly into native Broadway/Gekko CPU instructions, while carefully preserving the timing accuracy of the original interpreter core. The result is a major speed boost with excellent compatibility — even demanding GBA titles run with plenty of headroom above a full, locked 60fps, rather than merely scraping by.
 
-A = Select
-B = Cancel
-+ = Start
+Turn it on or off from **Settings → Emulation → GBA Dynamic Recompilation**. On Wii it's on solid ground and safe to leave on by default. On GameCube it's newer, made possible by the ARAM/SD hybrid ROM pager, and is offered as an option rather than the default while it gets more mileage across a wider range of games and ROM sizes.
 
-#### Kirby's Tilt n Tumble, Match Wii Controls
+Dynamic Recompilation is very stable, but if you notice graphical glitches or other unexpected behavior in a specific game, try turning it off to see whether the issue goes away with the standard interpreter core.
 
-Turn "Match Wii Controls" ON to use these controls.
+## Super Game Boy Borders
 
-Kirby's Tilt n Tumble uses similar controls to the Gameboy game.
+Borders can be loaded from two places: PNG files in your `vbagx/borders` folder, or from the game itself when running in Super Game Boy mode (**Settings → Emulation** → border set to "From game (SGB only)"; you can also force SGB mode even for Game Boy Color games from the same menu).
 
-#### The Kirby Tilt n Tumble controls are:
+If the `borders/` folder exists but no border for the current game is present there yet, the border loaded from the game will automatically be written out to a `.png` — so after running a game once in SGB mode, you can reuse that same border in GBC mode. Set the border option to "From .png file" to load borders exclusively from the folder; PNGs can be up to 640×480 and work for both GB(C) and GBA games.
 
-Tilt the Wii Remote to tilt the world. Shake the Wii Remote to flick Kirby
-and the monsters up into the air.
+The PNG filename must be `[TITLE].png`, where `[TITLE]` is the ROM's internal title (at offset `0x134` for GB games, `0xA0` for GBA games) — for example, `POKEMON_SFXAAXE.png` for Pokémon Silver. If no file by that exact name exists, Visual Boy Advance GX falls back to `default.png` (GB) or `defaultgba.png` (GBA).
 
-A = shoot yourself out of holes in the ground, or jump from clouds.
+Borders render along with the game's video output, so border pixels are the same size as game pixels: a Game Boy game appears in the middle 160×144 of the border, and a Game Boy Advance game in the middle 240×160, regardless of the border image's actual resolution.
 
-#### Mortal Kombat, Match Wii Controls
+## Patches (IPS/UPS)
 
-Turn "Match Wii Controls" ON to use these controls.
+Patches — for colourizing a monochrome Game Boy game, translating it, or removing a special-hardware requirement — are widely available online in IPS or UPS format; you don't need to patch anything yourself. Drop the `.ips`/`.ups` file in `vbagx/roms` alongside the ROM, named exactly the same as the ROM (patches can't be applied to a ROM inside a `.zip`, so check the archive for the real filename first).
 
-All Mortal Kombat games use the same controls as Mortal Kombat Armaggedon
-for the Wii, except that special moves gestures are not implemented yet.
+Colourized/translated games may still show minor distortion, though it's improved over previous versions. Some unpatched monochrome games also have built-in color palettes and will appear in colour without any patch at all.
 
-#### The Mortal Kombat Wii controls are:
+> ⚠️ **Don't use patched Boktai ROMs** (except the Boktai 3 translation patch, which is fine) — the real game relies on a solar sensor that VBA GX supports natively, and old-emulator compatibility patches will break that support. The same goes for WarioWare Twisted, Kirby's Tilt 'n' Tumble, and Yoshi's Universal Gravitation (Topsy Turvy): use the original ROMs, which are already fully supported.
 
-Use the Nunchuk joystick to move and jump.
+## Special Wii Controls
 
-D-Pad left = Low Punch
-D-Pad up = High Punch
-D-Pad down = Low Kick
-D-Pad right = High Kick
-Z = block
-A = throw
-C = change style, run, change costume or character
-+ = pause
-- = change costume or character
+Turn **Match Wii Controls** (or **Match GameCube Controls**) on in [Button Mappings](#button-mappings) to use motion/gesture controls modeled after each game's Wii/GameCube counterpart, with a Wii Remote, Nunchuk, Classic Controller, or GameCube Controller plugged in. Games without an entry here just use your regular configured controls.
 
-#### Lego Star Wars, Match Wii Controls
+| Games | Modeled after |
+|---|---|
+| The Legend of Zelda, Zelda II, A Link to the Past, Link's Awakening (DX), Oracle of Ages, Oracle of Seasons, Minish Cap | *Twilight Princess* |
+| Super Mario Bros., Super Mario Bros. DX, Super Mario 2, Super Mario (2) Advance, Super Mario 3, Super Mario World, Yoshi's Island, Yoshi's Universal Gravitation (Topsy Turvy) | *Super Mario Galaxy* |
+| Mario Kart | *Mario Kart Wii* (rough fit — doesn't work especially well) |
+| Metroid Zero Mission, Metroid 1, Metroid 2, Metroid Fusion | *Metroid Prime 3: Corruption* |
+| TMNT, Teenage Mutant Ninja Turtles, Fall of the Foot Clan, Back from the Sewers, Radical Rescue | *TMNT* (Wii/GameCube); Classic Controller uses the PS2 control scheme instead |
+| Mortal Kombat, MK II, MK 3, MK 4, MK Advance, MK: Deadly Alliance, MK: Tournament Edition | *Mortal Kombat: Armageddon* |
+| Lego Star Wars: The Video Game, Lego Star Wars: The Original Trilogy | *Lego Star Wars: The Complete Saga* |
+| Harry Potter 1–5 (and GBC versions) | *Harry Potter and the Order of the Phoenix* (spell gestures not implemented) |
+| Medal of Honor: Underground, Medal of Honor: Infiltrator | Various Medal of Honor Wii games/modes |
+| One Piece | *One Piece: Unlimited Adventure* (Wii) / *One Piece: Grand Adventure* (GameCube) |
+| Boktai 1–3, Kirby's Tilt 'n' Tumble, WarioWare: Twisted | Custom controls designed specifically for VBA-GX (see below) |
 
-Turn "Match Wii Controls" ON to use these controls.
+<details>
+<summary><strong>Zelda</strong></summary>
 
-Both Lego Star Wars games use the same controls as Lego Star Wars: The
-Complete Saga for the Wii.
+**Wii Remote:** Swing to draw/swing your sword (A puts it away; the two-handed sword must be drawn from the items menu). Shake the Nunchuk for a spin attack. Z to Z-target and raise your shield (or Gust Jar, if equipped). A performs contextual actions (roll, talk, pick up, push, shrink/grow) and also sheathes your weapon; in Zelda II, A jumps. C fast-forwards. B uses the selected item, with three more mapped to D-Pad Left/Down/Right (swappable); in Minish Cap the D-Pad uses items directly instead of swapping. D-Pad Up talks to Midna/your hat, or opens the save screen (Link's Awakening) / secondary items (Oracle games). 1 = Map, - = Items, + = Quest Status. In Link's Awakening, select Bombs on the Items screen and press Z to toggle Bomb Arrows (equip the bow first).
 
-#### The Lego Star Wars Wii controls are:
+**GameCube Controller:** B draws/swings your sword (hold for spin attack), A sheathes it. L Trigger targets and raises your shield/Gust Jar. A performs contextual actions. R Trigger pulls/lifts objects (auto-equips bracelet/gloves) — unique to this controller. Right stick fast-forwards. X/Y use your two equipped items (share the B slot, except Minish Cap where one is in slot A). D-Pad Right = Map, D-Pad Up = Items, Start = Quest Status, Z = talk to Midna/hat.
 
-Swing the Wii Remote to swing your lightsaber.
-Flick the Wii Remote up to grapple.
+**Classic Controller:** Same sword/shield/action layout as GameCube (B/L/A), with ZL for fast-forward. R uses the selected item, with three more on the right stick directions (also mirrored to ZR/Y/X). + = subscreens, - = map/subscreens, stick-up talks to Midna/your hat.
 
-A = Jump
-B = Shoot
-Z = Use the force, build lego
-C = Change characters, talk to people
-- = force power, special ability
-+ = start
-1/2 = fast forward
+</details>
 
-#### Harry Potter, Match Wii Controls
+<details>
+<summary><strong>Mario &amp; Yoshi games</strong></summary>
 
-Turn "Match Wii Controls" ON to use these controls.
+**Wii Remote:** Shake to spin-attack or shoot fireballs as Fire Mario (some games use B for fireballs instead); shake to dismount Yoshi too. Move the stick a little to walk, a lot to run. A = jump, B = shoot/run/hold on/Yoshi's tongue, Z = crouch or lay an egg (press in the air to butt-stomp), C = hold to look around, D-Pad = look around or walk, + = pause, 1 = throw egg as Yoshi.
 
-All the Harry Potter games use the same controls as Harry Potter & The Order
-Of The Phoenix on the Wii. Spell gestures are not supported yet.
+**Classic Controller:** B = jump, A = spin attack, X/Y = shoot/run/hold on/tongue, ZL (sometimes L) = crouch/lay egg/butt-stomp, L/R = look around (where supported), ZR = fast-forward (8-bit Game Boy only), + = pause. In Super Mario World and Super Mario Land 2, A or R also perform a spin jump.
 
-#### The Harry Potter Wii controls are:
+Yoshi's Universal Gravitation (Topsy Turvy) uses the same scheme, except tilting the Wii Remote tilts the whole world and how you move within it.
 
-Wave the Wii Remote to cast a spell.
-Nunchuk joystick walks.
-D-Pad changes subscreen in the map and navigates menu.
-In Harry Potter and the Order of the Phoenix you must use the IR Pointer
-to select where to cast a spell.
+</details>
 
-A = Talk, open door, push button, interract, etc. / Jinx
-B = Use your wand / charm / cancel
-Z = run (fast forward) / sneak
-C = show location name / flute / jump
-- = Maurauders map / Tasks
-+ = pause / menu
-1/2 = change spells
+<details>
+<summary><strong>Metroid</strong></summary>
 
-#### Medal of Honour, Match Wii Controls
+Point the Wii Remote up/down to aim. Flick it up while in Morph Ball to spring-jump. A = shoot, B = jump, D-Pad Down = missile, C = toggle Morph Ball, - = start, + = toggle super missiles, 1 = map, 2 = hint.
 
-Turn "Match Wii Controls" ON to use these controls.
+</details>
 
-All the Medal of Honour games use the same controls as various
-Medal of Honour games and modes on the Wii.
+<details>
+<summary><strong>TMNT</strong></summary>
 
-#### The Medal of Honour Wii controls are:
+**Wii Remote:** Shake to attack, pick up a weapon, or throw one away mid-air. Shake the Nunchuk for a spin kick. A = jump, B = swap turtle / charge attack (hold up + B for the family super move), C = roll, Z = special move.
 
-In Medal of Honour Underground you turn by aiming with the Wii Remote IR
-pointer on the screen like any FPS game. In Medal of Honour Infiltrator,
-you don't.
+**Classic Controller:** Uses the PlayStation control scheme instead.
 
-Swing the Wiimote up to reload.
-Move with the Nunchuk joystick.
+</details>
 
-B = shoot
-- = use
-+ = pause, objectives, menu
-2 / D-Pad Up = reload
-D-Pad Left/Right = change weapons
-D-Pad Down = toggle crouch
-C = strafe
-1 = run
+<details>
+<summary><strong>Boktai (custom controls)</strong></summary>
 
-#### One Piece, Match Wii Controls
+Not based on any other game — designed specifically for VBA-GX's solar sensor emulation, and identical with or without a Nunchuk attached. Point the Wii Remote at the sky to quickly charge your Gun del Sol; point it at the ground to block sunlight and prevent overheating, or hold it normally for in-between. Press Home during play to set the in-game weather — sunlight depends on weather, time of day, and Wiimote angle (max sun isn't actually best, since it rots fruit and overheats your gun; weather must be reset every session). Swing to swing your sword/weapon; D-Pad or Nunchuk stick walks; B fires the Gun del Sol; A reads signs/opens chests/talks; C/2 looks around or changes subscreen (R); +/- = start/select; Z/1 changes element or subscreen (L); 1 (with Nunchuk) fast-forwards.
 
-Turn "Match Wii Controls" ON to use these controls.
+</details>
 
-One Piece uses the same controls as One Piece Unlimited Adventure on the Wii
-or One Piece Grand Adventure (and others) on the Gamecube.
+<details>
+<summary><strong>WarioWare: Twisted &amp; Kirby's Tilt 'n' Tumble</strong></summary>
 
-#### The One Piece Wii controls are:
+**WarioWare: Twisted:** Rotate the Wii Remote to rotate. Hold Z to lock the current menu item. A = select, B = cancel, + = start.
 
-A = attack
-B = jump
-- = change character
-+ = pause
-C = dash (double click and hold)
-Z = grab
-2 = fast forward
-1 = select (maybe does nothing)
+**Kirby's Tilt 'n' Tumble:** Tilt the Wii Remote to tilt the world; shake to flick Kirby and enemies into the air. A shoots you out of holes in the ground or off clouds.
 
-#### The One Piece Gamecube controls are:
+</details>
 
-A = attack
-X = attack up
-Y = jump
-B = grab
-R Trigger = change character
-start = pause
-L Trigger = dash (double click and hold)
-Z = grab
-right analog stick = fast forward
-1 = select (maybe does nothing)
+<details>
+<summary><strong>Mortal Kombat, Lego Star Wars, Harry Potter, Medal of Honor, One Piece, Kid Dracula</strong></summary>
 
-#### Kid Dracula, Match Wii Controls
+**Mortal Kombat** (Nunchuk stick to move/jump): D-Pad Left/Up/Down/Right = Low Punch/High Punch/Low Kick/High Kick, Z = block, A = throw, C = change style/run/costume/character, + = pause, - = costume/character.
 
-Turn "Match Wii Controls" ON to use these controls.
+**Lego Star Wars:** Swing to swing your lightsaber, flick up to grapple. A = jump, B = shoot, Z = use the Force / build Lego, C = change character/talk, - = force power, + = start, 1/2 = fast-forward.
 
-(There's no Kid Dracula game for the Wii, but this is a good opportunity to
-show off some fancy memory-swapping tricks. -libertyernie)
+**Harry Potter** (spell gestures not yet implemented): Wave to cast a spell. Nunchuk stick walks; D-Pad changes subscreen/navigates menus; the Order of the Phoenix game needs the IR pointer to aim spells. A = interact/Jinx, B = wand/charm/cancel, Z = run/sneak, C = location name/flute/jump, - = map/tasks, + = pause/menu, 1/2 = change spells.
 
-#### The Kid Dracula Wii controls (remote + nunchuk) are:
+**Medal of Honor** (Nunchuk stick to move): swing up to reload. In Underground you aim/turn with the IR pointer like an FPS; Infiltrator doesn't use pointer aiming. B = shoot, - = use, + = pause/objectives/menu, 2 or D-Pad Up = reload, D-Pad Left/Right = change weapon, D-Pad Down = crouch, C = strafe, 1 = run.
 
-A = jump
-B = use selected weapon
-Z = use NOR weapon (fireball)
-C = use BAT weapon (turn into bat for 5 sec)
-+ = pause
-- = switch item
-1/2 = fast forward
+**One Piece — Wii:** A = attack, B = jump, - = change character, + = pause, C (double-click, hold) = dash, Z = grab, 2 = fast-forward. **GameCube:** A = attack, X = attack up, Y = jump, B = grab, R = change character, Start = pause, L (double-click, hold) = dash, Z = grab, right stick = fast-forward.
 
-#### The Kid Dracula Classic Controller controls are:
+**Kid Dracula** (no Wii release of this game exists — controls are original to VBA-GX): pressing the fire button always shoots a small fireball; hold to charge and use your currently selected item instead. Switching back to your previous item is automatic unless you've since switched again.
+- *Wii Remote + Nunchuk:* A = jump, B = use item, Z = NOR weapon (fireball), C = BAT weapon (turn into bat, 5s), + = pause, - = switch item, 1/2 = fast-forward.
+- *Classic Controller:* A/B = jump, Y = use item, X = NOR weapon, R/ZR = BAT weapon, + = pause, - = switch item, 1/2 = fast-forward.
 
-A/B = jump
-Y = use selected weapon
-X = use NOR weapon (fireball)
-R/ZR = use BAT weapon (turn into bat for 5 sec)
-+ = pause
-- = switch item
-1/2 = fast forward
+</details>
 
-In Kid Dracula, pressing the "fire" button will always shoot a small fireball,
-but holding the button for a second or so to charge up the shoot lets you use
-whichever item is selected.
+---
 
-Pressing B (nunchuk) or Y (classic) will switch back to whatever item was
-selected before you pressed Z/C (nunchuk) or X/R/ZR (classic), unless you have
-switched items since then.
+## Credits
 
+| Role | Credit |
+|---|---|
+| Coding & menu design | Daryl Borth (Tantric) |
+| Additional coding | libertyernie, Carl Kenner, dancinninjac, cebolleto |
+| Menu artwork | the3seashells |
+| Menu sound | Peter de Man |
+| VBA GameCube/Wii | SoftDev, emukidid |
+| VBA-M | VBA-M Team |
+| Visual Boy Advance | Forgotten |
+| libogc / devkitPPC | shagkur & WinterMute |
 
-## CREDITS
+And many others who have contributed over the years!
 
-			Coding & menu design		Daryl Borth (Tantric)
-			Additional coding			libertyernie, Carl Kenner, 
-										dancinninjac, cebolleto
-			Menu artwork				the3seashells
-			Menu sound					Peter de Man
+## Links
 
-			VBA GameCube/Wii			SoftDev, emukidid
-
-			Visual Boy Advance - M	VBA-M Team
-			Visual Boy Advance		Forgotten
-			libogc/devkitPPC			shagkur & wintermute
-
-			And many others who have contributed over the years!
-
-## LINKS
-
-                                  VBA GX Web Site
-                          https://github.com/dborth/vbagx
-
+- [Visual Boy Advance GX Project Page](https://github.com/dborth/vbagx)
+- [Wii Homebrew Guide](https://wii.hacks.guide/)
+- [Wii U Homebrew Guide](https://wiiu.hacks.guide/)
+- [gc-forever.com — GameCube homebrew/hardware hub](https://www.gc-forever.com/)
+- [Swiss](https://github.com/emukidid/swiss-gc) — the recommended GameCube loader
+- [TeconMoon's WiiVC Injector Mod](https://github.com/timefox/TeconMoon-s-WiiVC-Injector-Mod)
+- [Mocha](https://github.com/wiiu-env/MochaPayload) — USB storage access for the native Wii U build
+- [Bloopair](https://github.com/GaryOderNichts/Bloopair) — Bluetooth controller pairing for the native Wii U build
+- [Change History (CHANGELOG.md)](CHANGELOG.md)
