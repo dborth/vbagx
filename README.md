@@ -37,7 +37,7 @@ Visual Boy Advance GX is homebrew — it isn't signed by Nintendo, so your conso
 - [Credits](#credits)
 - [Links](#links)
 
-> 📜 Looking for version notes? They've in the **[CHANGELOG.md](CHANGELOG.md)**.
+> 📜 Looking for version notes? They're in the **[CHANGELOG.md](CHANGELOG.md)**.
 
 ---
 
