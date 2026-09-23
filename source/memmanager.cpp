@@ -153,7 +153,11 @@ void* extmem_malloc(uint32_t size) { return memalign(FILE_BUFFER_ALIGN, size); }
 void extmem_free(void *ptr) { free(ptr); }
 int extmem_size_free() { return 0; }
 void SwitchMemoryModeMenu() { }
-void SwitchMemoryModeGame() { }
+void SwitchMemoryModeGame() {
+#ifdef __WIIU__
+	jitCache.flushCache();
+#endif
+}
 #else
 void* memspace_malloc(uint32_t size)
 {

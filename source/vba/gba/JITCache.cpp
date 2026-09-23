@@ -168,6 +168,7 @@ BasicBlock* JITCache::registerBlock(u32 pc, u32 length, JITBlockFunc execute) {
 }
 
 void JITCache::flushCache() {
+	if (!isInitialized) return;
 	PROFILER_CACHE_FLUSH_START();
 	JIT_LOG_CACHE_FLUSH();
 
