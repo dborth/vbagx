@@ -45,8 +45,8 @@ Visual Boy Advance GX is homebrew — it isn't signed by Nintendo, so your conso
 
 Every push builds automatically. Grab the latest continuous-integration build:
 
-| Platform                   | Status                             | Download                                    |
-|-----------------------------|-------------------------------------|-----------------------------------------------|
+| Platform                    | Status                             | Download                                      |
+|-----------------------------|------------------------------------|-----------------------------------------------|
 | Wii / vWii                  | [![Build Status][Build]][Actions]  | [![Download][Download]][vbagx-wii]            |
 | GameCube                    | [![Build Status][Build]][Actions]  | [![Download][Download]][vbagx-gamecube]       |
 | Wii U                       | [![Build Status][Build]][Actions]  | [![Download][Download]][vbagx-wiiu]           |
@@ -54,7 +54,7 @@ Every push builds automatically. Grab the latest continuous-integration build:
 [Actions]: https://github.com/dborth/vbagx/actions/workflows/build.yml
 [Build]: https://github.com/dborth/vbagx/actions/workflows/build.yml/badge.svg
 [Download]: https://img.shields.io/badge/Download-blue
-[vbagx-wii]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX.zip
+[vbagx-wii]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX-Wii.zip
 [vbagx-gamecube]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX-GameCube.zip
 [vbagx-wiiu]: https://github.com/dborth/vbagx/releases/download/Pre-release/VisualBoyAdvanceGX-WiiU.zip
 
@@ -110,7 +110,7 @@ Only `roms/` needs anything in it to get started — the rest are created automa
 ### Wii
 
 1. Follow the **[Wii Homebrew Guide](https://wii.hacks.guide/)** if you haven't already installed the Homebrew Channel. This is a one-time setup per console.
-2. Download the Wii build (`VisualBoyAdvanceGX.zip` above) and extract it to the root of your SD card. This adds two things:
+2. Download the Wii build (`VisualBoyAdvanceGX-Wii.zip` above) and extract it to the root of your SD card. This adds two things:
    - `apps/vbagx/boot.dol` (plus its icon/meta files) — this is what the Homebrew Channel launches.
    - `vbagx/` — your ROMs and saves folder, per [above](#all-platforms-sd-card--folder-layout).
 3. Insert the SD card, open the **Homebrew Channel**, and launch **Visual Boy Advance GX**.
@@ -164,7 +164,7 @@ Wii U support comes in **three genuinely different forms** — pick the one that
 | GamePad             | Not usable | Usable as an **extra controller** (buttons/sticks; no touch) | **Full support** — touch, buttons |
 | Output              | vWii-level, up to 480p | Same as plain vWii | Native, up to **1080p** |
 | Upscaling filters   | hq2x, Scale2x, 2xBR, DDT | Same as plain vWii | GX2 shader-based **ScaleFX** |
-| Which download      | `VisualBoyAdvanceGX.zip` (Wii build) | `VisualBoyAdvanceGX.zip` (Wii build) | `VisualBoyAdvanceGX-WiiU.zip` |
+| Which download      | `VisualBoyAdvanceGX-Wii.zip` (Wii build) | `VisualBoyAdvanceGX-Wii.zip` (Wii build) | `VisualBoyAdvanceGX-WiiU.zip` |
 
 If you're not sure which you want: the **native build** is the strongest experience on a console with Aroma installed — full GamePad touch, 1080p, and GPU-based ScaleFX upscaling. **VC injection** is the best you'll get out of vWii itself (a usable GamePad, at Wii-level output), and plain **Homebrew Channel vWii** is the simplest but weakest of the three.
 
