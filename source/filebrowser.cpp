@@ -780,14 +780,14 @@ int BrowserChangeFolder()
  * OpenROM
  * Displays a list of ROMS on load device
  ***************************************************************************/
-int
-OpenGameList ()
+int OpenGameList()
 {
 	int device = EmuSettings.loadDevice;
 
 	if(device > 0 && ChangeInterface(device, NOTSILENT)) {
 		// change current dir to roms directory
 		platform->getFileSystem()->getPath(browser.dir, device, EmuSettings.loadFolder, "");
+		CleanupPath(browser.dir);
 
 		if(strlen(EmuSettings.loadFolder) > 0) {
 			DIR *dir = opendir(browser.dir);
