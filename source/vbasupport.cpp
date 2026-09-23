@@ -1207,7 +1207,7 @@ static void ApplyPerImagePreferences()
 	{
 		// fallback logic / heuristics
 
-		// Pokémon mainline games (Ruby, Sapphire, Emerald, FireRed, LeafGreen)
+		// PokÃ©mon mainline games (Ruby, Sapphire, Emerald, FireRed, LeafGreen)
 		if ((gameId[0] == 'A' || gameId[0] == 'B') &&
 		    (gameId[1] == 'P' || gameId[1] == 'A') &&
 		    (gameId[2] == 'E' || gameId[2] == 'R' || gameId[2] == 'S' || gameId[2] == 'D' || gameId[2] == 'X'))
