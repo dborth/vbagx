@@ -1097,7 +1097,7 @@ static bool RunWithGuiUpdates(BgTaskFn task, int * result = nullptr, void * arg 
  ***************************************************************************/
 static bool WaitForQueuedTasks()
 {
-	while(!FlushBackgroundTasks(0))
+	while(!WaitForBackgroundTasks(0))
 	{
 		if(!UpdateGui()) return false;
 	}
