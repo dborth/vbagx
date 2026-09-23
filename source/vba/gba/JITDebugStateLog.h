@@ -14,7 +14,7 @@
  *
  * A single global instance (jitDebugStateLog) is used by both the JIT-enabled
  * and interpreter-only code paths via the JIT_LOG_STATE_CPP/JIT_LOG_STATE_JIT
- * macros in Debug.h — the `source` string ("[C++]" vs "[JIT]") distinguishes
+ * macros in Debug.h â€” the `source` string ("[C++]" vs "[JIT]") distinguishes
  * which path produced a given line, since the JIT path logs once per
  * compiled-block execution (not once per instruction, since a compiled block
  * has no per-instruction interpreter hook to attach to).

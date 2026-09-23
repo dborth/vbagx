@@ -19,7 +19,7 @@
  *     SMC registry first so no dangling pointer is left behind (this was
  *     the root cause of one strand of the original cold-boot bug).
  *   - flushCache(): resets the arena and block table, and re-emits the
- *     shared self-modifying linker stub fresh into the arena's start —
+ *     shared self-modifying linker stub fresh into the arena's start â€”
  *     every JIT exit branches into this one stub, which re-derives the
  *     hash bucket for the target PC and either patches the caller's branch
  *     directly to the target block (cache hit) or falls through to
@@ -29,7 +29,7 @@
  *     (smcRegistry[]/smcPageFlags[]) for every 1KB page the write could
  *     have touched, and for any block whose instruction range overlaps the
  *     write, surgically patches that block's first native instruction into
- *     an unconditional branch back to the C++ handler and marks it dead —
+ *     an unconditional branch back to the C++ handler and marks it dead â€”
  *     ensuring the *next* execution attempt (not the current one, which
  *     may already be mid-flight) safely bails instead of running stale
  *     compiled code. Every write path in the emulator (interpreter, DMA,

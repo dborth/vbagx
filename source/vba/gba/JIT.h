@@ -19,7 +19,7 @@
  *
  * A compiled block can exit several ways: falling off the end (default
  * epilogue), a taken conditional branch, a dynamic BX, a memory/SMC guard
- * failure (deferred bailout), or a scheduler quota yield — every exit
+ * failure (deferred bailout), or a scheduler quota yield â€” every exit
  * reports exact cycles-elapsed and a resume PC via JITResult, so JIT'd and
  * interpreted execution are interchangeable from the scheduler's point of
  * view. Where profitable, compiled blocks chain directly to one another
@@ -29,8 +29,8 @@
  * GBA registers and condition flags are allocated into host PowerPC
  * registers lazily and on demand (per block) rather than eagerly at every
  * call, so a block only pays for what it actually touches. Guest memory
- * access always follows the same guard template — bank check, page/mask
- * lookup, null-pointer guard, mask/align, access — and self-modifying code
+ * access always follows the same guard template â€” bank check, page/mask
+ * lookup, null-pointer guard, mask/align, access â€” and self-modifying code
  * is handled by tracking which compiled blocks' native code lives on which
  * guest memory page, patching any affected block to bail the moment a
  * guest write lands on top of it.
@@ -44,7 +44,7 @@
  * Top-level public interface for the THUMB trace JIT.
  *   - JITResult: the fixed-layout, 32-byte-aligned struct compiled traces
  *     write their output into (cycles elapsed, resume PC, instruction
- *     count, a bailedOut flag, and SMC-hit metadata/address) — this is the
+ *     count, a bailedOut flag, and SMC-hit metadata/address) â€” this is the
  *     handshake between JIT-emitted code and the C++ dispatch loop.
  *   - JITCompileThumbTrace(): forward declaration of the compiler entry
  *     point implemented in JITCompiler.cpp.

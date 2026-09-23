@@ -9,7 +9,7 @@
  * behind VBAGX_DEBUG. Everything here writes into one shared in-memory
  * text buffer (debugLogBuffer, allocated from MEM2 via mem2_malloc) rather
  * than touching the SD card per call, since SD I/O during emulation would
- * be far too slow — WriteDebugLogToFile() is the one place that actually
+ * be far too slow â€” WriteDebugLogToFile() is the one place that actually
  * flushes the accumulated buffer out to a timestamped file
  * (sd:/vbagx-debug-log-<timestamp>.txt) and frees it.
  *
@@ -28,7 +28,7 @@
  *   - DebugDumpFirstJITBlock(): one-time raw dump of the first successfully
  *     compiled block's native PowerPC bytes to an SD-card .bin file,
  *     scanning forward for a blr/bctr terminator to avoid dumping garbage
- *     past the block's actual end — meant to be fed to
+ *     past the block's actual end â€” meant to be fed to
  *     `powerpc-eabi-objdump -D -b binary -m powerpc -EB` for inspection.
  ***************************************************************************/
 
