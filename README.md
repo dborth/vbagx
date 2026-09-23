@@ -2,7 +2,7 @@
 
 [github.com/dborth/vbagx](https://github.com/dborth/vbagx) — GPL licensed
 
-Visual Boy Advance GX is a Game Boy / Game Boy Color / Game Boy Advance emulator for the **Nintendo GameCube** and **Wii**, built on [VBA-M](https://github.com/visualboyadvance-m/visualboyadvance-m) and the shared [`libgui`](https://github.com/dborth/libgui) UI/driver framework.
+Visual Boy Advance GX is a Game Boy / Game Boy Color / Game Boy Advance emulator for the **Nintendo GameCube**, **Wii**, and **Wii U**, built on [VBA-M](https://github.com/visualboyadvance-m/visualboyadvance-m) and the shared [`libgui`](https://github.com/dborth/libgui) UI/driver framework.
 
 Visual Boy Advance GX is homebrew — it isn't signed by Nintendo, so your console needs to be set up to run unsigned code first. If you haven't done that yet, jump to **[Installation](#installation)** below; it links to a step-by-step guide for whichever console you have.
 
@@ -15,9 +15,6 @@ Visual Boy Advance GX is homebrew — it isn't signed by Nintendo, so your conso
   - [Wii](#wii)
   - [GameCube](#gamecube)
   - [Wii U](#wii-u)
-    - [Native Wii U (Aroma)](#native-wii-u-aroma)
-    - [vWii (Wii Homebrew Channel, inside Wii U)](#vwii-wii-homebrew-channel-inside-wii-u)
-    - [vWii via VC-style injection (GamePad support)](#vwii-via-vc-style-injection-gamepad-support)
 - [Initial Setup](#initial-setup)
 - [Configuration](#configuration)
   - [Button Mappings](#button-mappings)
@@ -27,17 +24,20 @@ Visual Boy Advance GX is homebrew — it isn't signed by Nintendo, so your conso
   - [Menu](#menu)
   - [Language & Custom Fonts](#language--custom-fonts)
   - [Artwork](#artwork)
+  - [Network Shares (SMB)](#network-shares-smb)
 - [File Browser](#file-browser)
 - [Gameplay](#gameplay)
 - [Cheats](#cheats)
 - [Dynamic Recompilation (JIT)](#dynamic-recompilation-jit)
 - [Super Game Boy Borders](#super-game-boy-borders)
+- [Turbo Mode](#turbo-mode)
+- [Importing and Exporting SRAM](#importing-and-exporting-sram)
 - [Patches (IPS/UPS)](#patches-ipsups)
 - [Special Wii Controls](#special-wii-controls)
 - [Credits](#credits)
 - [Links](#links)
 
-> 📜 Looking for old version notes? They've moved to **[CHANGELOG.md](CHANGELOG.md)**.
+> 📜 Looking for version notes? They've moved to **[CHANGELOG.md](CHANGELOG.md)**.
 
 ---
 
@@ -49,7 +49,7 @@ Every push builds automatically. Grab the latest continuous-integration build:
 |-----------------------------|-------------------------------------|-----------------------------------------------|
 | Wii / vWii                  | [![Build Status][Build]][Actions]  | [![Download][Download]][vbagx-wii]            |
 | GameCube                    | [![Build Status][Build]][Actions]  | [![Download][Download]][vbagx-gamecube]       |
-| Wii U (native, `.wuhb`)     | [![Build Status][Build]][Actions]  | [![Download][Download]][vbagx-wiiu]           |
+| Wii U                       | [![Build Status][Build]][Actions]  | [![Download][Download]][vbagx-wiiu]           |
 
 [Actions]: https://github.com/dborth/vbagx/actions/workflows/build.yml
 [Build]: https://github.com/dborth/vbagx/actions/workflows/build.yml/badge.svg
@@ -140,8 +140,8 @@ Once Swiss is running, the **recommended setup is an SD Gecko (or SD2SP2) memory
 Visual Boy Advance GX also supports **GC Loader** and **DVD** (burned disc) loading, but be aware going in: both are noticeably rougher experiences than SD — GC Loader in particular has had more reported reliability issues in this port, and burned-disc loading is slow to start and inflexible to update. Use them only if SD Gecko/SD2SP2 genuinely isn't an option for your setup.
 
 1. Set up Swiss (or another loader of your choice) for your GameCube — see [gc-forever.com](https://www.gc-forever.com/) for hardware-specific guides.
-2. Download the GameCube build (`Snes9xGX-GameCube.zip` above) and extract it to the root of your SD card.
-3. Boot Swiss, launch `snes9xgx-gc.dol` from your SD Gecko/SD2SP2, and you should land in the same file browser as the other platforms.
+2. Download the GameCube build (`VisualBoyAdvanceGX-GameCube.zip` above) and extract it to the root of your SD card.
+3. Boot Swiss, launch `vbagx-gc.dol` from your SD Gecko/SD2SP2, and you should land in the same file browser as the other platforms.
 
 ```text
 SD:/
@@ -260,12 +260,16 @@ In addition to the controls you configure, these always apply:
 
 | Option | Notes |
 |---|---|
-| **GBA Dynamic Recompilation** | See [Dynamic Recompilation (JIT)](#dynamic-recompilation-jit) |
-| **GB Screen Palette** | Green or Monochrome — the classic Game Boy screen tint |
-| **GB Hardware** | GB, SGB, GBC, or Auto — forces Super Game Boy mode when set to SGB, even for Game Boy Color games |
-| **Super Game Boy Borders** | See [Super Game Boy Borders](#super-game-boy-borders) |
-| **Auto Frame Skip** | Recommended to leave on, even with the JIT enabled — it also helps keep audio timing steady on the heaviest games |
-| **Match Wii/GameCube Controls** | See [Special Wii Controls](#special-wii-controls) |
+| **Dynamic Recompilation** *(GBA only)* | See [Dynamic Recompilation (JIT)](#dynamic-recompilation-jit) |
+| **Frameskip** *(GBA only)* | On/Off |
+| **Hardware** *(GB/GBC only)* | GB, SGB, GBC, or Auto — forces Super Game Boy mode when set to SGB, even for Game Boy Color games |
+| **Super Game Boy Border** | See [Super Game Boy Borders](#super-game-boy-borders) |
+| **Custom Palette** *(GB only)* | Opens the palette editor |
+| **Mono Screen Palette** *(GB only)* | Green Screen or Monochrome Screen tint |
+| **Mono Colorization** *(GB only)* | On/Off — built-in color palettes for select unpatched monochrome games |
+| **Enable Turbo Mode** | On by default — see [Turbo Mode](#turbo-mode) |
+| **Show Framerate** | Displays an on-screen FPS counter |
+| **Offset from UTC (hours)** | For GB/GBC real-time-clock games — only needed if you share the same SRAM across time-zone-aware platforms |
 
 ### Saving & Loading
 
@@ -276,7 +280,7 @@ In addition to the controls you configure, these always apply:
 | **Save Method** | SD, USB, Network, Auto |
 | **Save Folder** | Opens an on-screen keyboard to set a custom save folder |
 
-Visual Boy Advance GX has two kinds of saves: **SRAM**, the in-game battery save you'd get on real hardware, and **Snapshots**, real-time save states that capture exactly where you are. Loading a Snapshot may overwrite your "SRAM (Auto)", so be careful. SRAM saved by VBA-M on other platforms (Mac/PC/Linux) can be imported directly, and vice versa — just make sure the `.srm` filename matches your ROM's filename.
+Visual Boy Advance GX has two kinds of saves: **SRAM**, the in-game battery save you'd get on real hardware, and **Snapshots**, real-time save states that capture exactly where you are. Loading a Snapshot may overwrite your "SRAM (Auto)", so be careful. See [Importing and Exporting SRAM](#importing-and-exporting-sram) for moving saves to/from other platforms.
 
 ### Menu
 
@@ -298,6 +302,14 @@ You can also customize the menu's background music by dropping a `bg_music.ogg` 
 
 Cover art, screenshots, or general artwork can be shown on the main menu when a game is highlighted. Pick which one to display under **Settings → Menu → Preview Image**. Each image lives in its matching folder (`vbagx/covers`, `vbagx/screenshots`, `vbagx/artwork`) and must be a PNG named exactly the same as the ROM (e.g. `Pokemon Emerald.png` for `Pokemon Emerald.gba`).
 
+### Network Shares (SMB)
+
+To load or save over your LAN, enter your SMB share settings under **Settings → Network**: **IP**, **Name** (the share name), **Username**, and **Password**.
+
+> 🔑 If your SMB share doesn't have a password, **leave the Password field blank** — don't type anything into it. An empty password connects as guest.
+
+Network Shares (SMB) uses `libsmb2` on all platforms, with the SMB dialect auto-negotiated (SMB2/3) rather than hardcoded — meaning it talks to modern Windows/Samba shares out of the box. One share can be connected at a time.
+
 ---
 
 ## File Browser
@@ -306,9 +318,15 @@ The File Browser loads automatically on startup and lists the contents of your `
 
 ## Gameplay
 
-Once you choose a game, it starts. Press **Home** to return to the in-game menu, where you can save, load, reset, change controllers, or change settings — these apply to all games, not just the current one. If you're playing a Boktai game with the solar sensor active, a fifth button lets you set the in-game weather; sunlight is based on the weather, time of day, and the angle of your Wiimote. Note that if it's night time for real, there won't be any sun regardless of what you set the weather to.
+Once you choose a game, it starts. Press **Home** to open the in-game menu (Save, Load, Reset, Controller, Cheats) — these settings apply to all games, not just the current one. Select **Main Menu** to return to the File Browser, or **Close** to resume play.
 
-- **Close** resumes play; **Main Menu** returns to the File Browser.
+- **Save** offers **New SRAM** and **New Snapshot**; click either to create a save, or click an existing save to overwrite it.
+- **Load** loads a saved SRAM or Snapshot.
+- **Reset** resets the current game.
+- **Controller** toggles which controller drives the game.
+- **Cheats** toggles your loaded cheat codes (below).
+
+If you're playing a Boktai game with the solar sensor active, a fifth button lets you set the in-game weather; sunlight is based on the weather, time of day, and the angle of your Wiimote. Note that if it's night time for real, there won't be any sun regardless of what you set the weather to.
 
 ## Cheats
 
@@ -349,6 +367,17 @@ If the `borders/` folder exists but no border for the current game is present th
 The PNG filename must be `[TITLE].png`, where `[TITLE]` is the ROM's internal title (at offset `0x134` for GB games, `0xA0` for GBA games) — for example, `POKEMON_SFXAAXE.png` for Pokémon Silver. If no file by that exact name exists, Visual Boy Advance GX falls back to `default.png` (GB) or `defaultgba.png` (GBA).
 
 Borders render along with the game's video output, so border pixels are the same size as game pixels: a Game Boy game appears in the middle 160×144 of the border, and a Game Boy Advance game in the middle 240×160, regardless of the border image's actual resolution.
+
+## Turbo Mode
+
+Hold **A+B**, **Spacebar**, or the **right analog stick** during play to fast-forward. Turbo Mode is on by default and can be turned off from **Settings → Emulation → Enable Turbo Mode** if you'd rather disable fast-forwarding entirely.
+
+## Importing and Exporting SRAM
+
+Visual Boy Advance GX can load SRAM saved by VBA-M on other platforms (Mac/PC/Linux/etc.), and vice versa.
+
+- **To import**, make sure the `.srm` file's name matches your ROM's filename (aside from the extension).
+- **To export**, copy the save from your console's `vbagx/saves` folder over to the other platform — you may need to rename it to whatever that VBA-M build expects.
 
 ## Patches (IPS/UPS)
 
