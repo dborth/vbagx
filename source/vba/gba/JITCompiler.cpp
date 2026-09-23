@@ -104,6 +104,7 @@ struct SMCBailoutPatch {
 
 BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	JITWriteScope scope;
+	PROFILER_INC(codegenScopesCompile);
 
 	DeferredBailout bailouts[MAX_BAILOUTS];
 	u32 bailoutCount = 0;

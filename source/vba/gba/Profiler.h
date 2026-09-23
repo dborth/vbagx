@@ -66,6 +66,28 @@ struct DebugStats {
 	u32 cacheMisses;
 	u32 cacheEvictions;
 
+	// Wii U codegen RW-/R-X toggle cost (WutCodegenBeginWrite/EndWrite)
+	u64 timeSpentCodegenToggle;
+	u32 codegenToggleCount;
+	u32 codegenScopesCompile; // JITWriteScope opened by JITCompileThumbTrace
+	u32 codegenScopesFlush;   // ...by JITCache::flushCache
+	u32 codegenScopesSMC;     // ...by JITCache::invalidateSMCTarget
+
+	// Self-modifying-code guard traffic. A "call" is one
+	// invalidateSMCTarget() invocation; "patched" means it actually found
+	// and evicted >=1 overlapping compiled block (as opposed to firing
+	// on a page flag with no real block collision on this specific EA).
+	u32 smcInvalidateCalls;
+	u32 smcInvalidateFromJIT;   // triggered by a JIT-emitted SMC guard bailout
+	u32 smcInvalidateFromWrite; // triggered by CPUWrite*() in the interpreter
+	u32 smcInvalidatePatched;
+
+	// JIT quota-shield yields (256-cycle trace budget hit mid-block).
+	// Heuristically identified in the dispatch loop (bailedOut &&
+	// !smcHit && instructions==0 && nextPC==entryPC) rather than a
+	// dedicated JITResult flag, so treat as approximate.
+	u32 quotaYields;
+
 	u64 thumbInvocations;
 	u64 armInvocations;
 	u64 swiInvocations;

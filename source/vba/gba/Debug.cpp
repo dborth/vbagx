@@ -11,7 +11,8 @@
  * than touching the SD card per call, since SD I/O during emulation would
  * be far too slow — WriteDebugLogToFile() is the one place that actually
  * flushes the accumulated buffer out to a timestamped file
- * (sd:/vbagx-debug-log-<timestamp>.txt) and frees it.
+ * (sd:/vbagx-debug-log-<timestamp>.txt), mirrors the same report line by
+ * line through drivers/Logger.h (when LOGGING_ENABLED), and frees it.
  *
  * Notable pieces:
  *   - InitDebugLog()/vLogDebugInternal()/LogDebug(): buffer lifecycle and
@@ -35,10 +36,14 @@
 #if VBAGX_DEBUG
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 #include <time.h>
 
 #include "JIT.h"
 #include "memmanager.h"
+#include "../../drivers/Logger.h"
+#include "../../drivers/Platform.h"
+#include "../../drivers/FileSystemDriver.h"
 
 // -----------------------------------------------------------------------------
 // Debug Logger Buffer & Utility Method
@@ -146,11 +151,26 @@ void WriteDebugLogToFile() {
     struct tm *t = localtime(&now);
     char logPath[128];
 
+#ifdef __WIIU__
+    static const int deviceCandidates[] = { DEVICE_SD };
+    const char * mountPath = (platform && platform->getFileSystem())
+        ? FindFirstMountedPath(platform->getFileSystem(), deviceCandidates, 1)
+        : "";
+
+    if (t != NULL) {
+        char stamp[64];
+        strftime(stamp, sizeof(stamp), "vbagx-debug-log-%Y%m%d-%H%M%S.txt", t);
+        snprintf(logPath, sizeof(logPath), "%s%s", mountPath, stamp);
+    } else {
+        snprintf(logPath, sizeof(logPath), "%svbagx-debug-log.txt", mountPath);
+    }
+#else
     if (t != NULL) {
         strftime(logPath, sizeof(logPath), "sd:/vbagx-debug-log-%Y%m%d-%H%M%S.txt", t);
     } else {
         snprintf(logPath, sizeof(logPath), "sd:/vbagx-debug-log.txt");
     }
+#endif
 
     FILE* logFile = fopen(logPath, "w");
     if (logFile != nullptr) {
@@ -159,6 +179,22 @@ void WriteDebugLogToFile() {
         fprintf(logFile, "--- DEBUG LOG END ---\n");
         fclose(logFile);
     }
+
+#if LOGGING_ENABLED
+	if (debugLogBuffer) {
+		LOG_INFO("--- DEBUG LOG START ---");
+		char* lineStart = debugLogBuffer;
+		while (lineStart && *lineStart) {
+			char* newline = strchr(lineStart, '\n');
+			if (newline) *newline = '\0';
+			if (*lineStart) // skip blank lines
+				LOG_INFO("%s", lineStart);
+			if (!newline) break;
+			lineStart = newline + 1;
+		}
+		LOG_INFO("--- DEBUG LOG END ---");
+	}
+#endif
 
 	// Clear buffer after writing
 	if (debugLogBuffer) {
@@ -182,11 +218,26 @@ void DebugDumpFirstJITBlock(BasicBlock* block) {
 		struct tm *t = localtime(&now);
 		char logPath[128];
 
+#ifdef __WIIU__
+		static const int deviceCandidates[] = { DEVICE_SD };
+		const char * mountPath = (platform && platform->getFileSystem())
+			? FindFirstMountedPath(platform->getFileSystem(), deviceCandidates, 1)
+			: "";
+
+		if (t != NULL) {
+			char stamp[64];
+			strftime(stamp, sizeof(stamp), "jit-trace-dump-%Y%m%d-%H%M%S.bin", t);
+			snprintf(logPath, sizeof(logPath), "%s%s", mountPath, stamp);
+		} else {
+			snprintf(logPath, sizeof(logPath), "%sjit-trace-dump.bin", mountPath);
+		}
+#else
 		if (t != NULL) {
 			strftime(logPath, sizeof(logPath), "sd:/jit-trace-dump-%Y%m%d-%H%M%S.bin", t);
 		} else {
 			snprintf(logPath, sizeof(logPath), "sd:/jit-trace-dump.bin");
 		}
+#endif
 
 		FILE* dumpFile = fopen(logPath, "wb");
 		if (dumpFile != nullptr) {

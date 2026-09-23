@@ -6,7 +6,7 @@
 DebugStats debugStats;
 
 void DebugStats::reset() {
-	timeTotalStart = gettime(); // Automatically drops anchor on DEBUG_RESET_LOGS()
+	timeTotalStart = SystemTime::now(); // Automatically drops anchor on DEBUG_RESET_LOGS()
 	timeTotalElapsed = 0;
 
 	minCoreFps = 999.0f; maxCoreFps = 0.0f; accumCoreFps = 0.0;
@@ -42,6 +42,19 @@ void DebugStats::reset() {
 	cacheHits = 0;
 	cacheMisses = 0;
 	cacheEvictions = 0;
+
+	timeSpentCodegenToggle = 0;
+	codegenToggleCount = 0;
+	codegenScopesCompile = 0;
+	codegenScopesFlush = 0;
+	codegenScopesSMC = 0;
+
+	smcInvalidateCalls = 0;
+	smcInvalidateFromJIT = 0;
+	smcInvalidateFromWrite = 0;
+	smcInvalidatePatched = 0;
+
+	quotaYields = 0;
 
     thumbInvocations = 0;
 	armInvocations = 0;
@@ -218,8 +231,8 @@ void DebugStats::print() {
 	DEBUG_LOG("----------------------------------------------------------\n");
 #endif
 
-    timeTotalElapsed = gettime() - timeTotalStart;
-    double totalSecs   = ticks_to_microsecs(timeTotalElapsed) / 1000000.0;
+    timeTotalElapsed = (u64)(SystemTime::now() - timeTotalStart);
+    double totalSecs   = SystemTime::ticksToMicrosecs(timeTotalElapsed) / 1000000.0;
 
 	DEBUG_LOG("Total Wall-Clock Time: %.3f seconds\n\n", totalSecs);
 #ifndef JIT_DIFFERENTIAL_TESTING
@@ -251,12 +264,13 @@ void DebugStats::print() {
 	}
 	DEBUG_LOG("-----------------------------------------\n");
 #endif
-    double thumbSecs   = ticks_to_microsecs(timeSpentThumb) / 1000000.0;
-    double armSecs     = ticks_to_microsecs(timeSpentARM) / 1000000.0;
-    double compileSecs = ticks_to_microsecs(timeSpentCompiling) / 1000000.0;
-    double jitSecs     = ticks_to_microsecs(timeSpentJIT) / 1000000.0;
-    double fallSecs    = ticks_to_microsecs(timeSpentFallback) / 1000000.0;
-    double flushSecs   = ticks_to_microsecs(timeSpentFlushing) / 1000000.0;
+    double thumbSecs   = SystemTime::ticksToMicrosecs(timeSpentThumb) / 1000000.0;
+    double armSecs     = SystemTime::ticksToMicrosecs(timeSpentARM) / 1000000.0;
+    double compileSecs = SystemTime::ticksToMicrosecs(timeSpentCompiling) / 1000000.0;
+    double jitSecs     = SystemTime::ticksToMicrosecs(timeSpentJIT) / 1000000.0;
+    double fallSecs    = SystemTime::ticksToMicrosecs(timeSpentFallback) / 1000000.0;
+    double flushSecs   = SystemTime::ticksToMicrosecs(timeSpentFlushing) / 1000000.0;
+    double codegenToggleSecs = SystemTime::ticksToMicrosecs(timeSpentCodegenToggle) / 1000000.0;
     double otherSecs   = totalSecs - (thumbSecs + armSecs);
 
     // Calculate Invocations Per Second rates
@@ -333,6 +347,28 @@ void DebugStats::print() {
 	u32 totalLookups = cacheHits + cacheMisses;
 	double hitRate = totalLookups > 0 ? ((double)cacheHits / totalLookups * 100.0) : 0.0;
 	DEBUG_LOG("Hit Rate:           %.2f%%\n", hitRate);
+	DEBUG_LOG("-----------------------------------------\n");
+
+	// 6b. Print codegen RW-/R-X toggle & SMC guard traffic (the Wii U
+	// JIT-regression suspects: syscall toggle cost, SMC false-positive
+	// bailouts, quota-shield yields, core pinning)
+	DEBUG_LOG("--- CODEGEN TOGGLE & SMC GUARD TRAFFIC ---\n");
+#ifdef __WIIU__
+	DEBUG_LOG("Codegen Core (OSGetCodegenCore): %d\n", (int)WutCodegenGetCore());
+	DEBUG_LOG("Emu Thread Confirmed Core:       %d\n", (int)WutCodegenGetPinnedCore());
+#endif
+	DEBUG_LOG("Write-Scope Opens:  %u (Compile: %u | Flush: %u | SMC: %u)\n",
+		codegenToggleCount, codegenScopesCompile, codegenScopesFlush, codegenScopesSMC);
+	DEBUG_LOG("Time in Toggle:     %.3f seconds (%.1f%% of Total)\n",
+		codegenToggleSecs, totalSecs > 0 ? (codegenToggleSecs / totalSecs * 100.0) : 0.0);
+	DEBUG_LOG("Avg Toggle Cost:    %.1f us\n",
+		codegenToggleCount > 0 ? (codegenToggleSecs * 1000000.0 / codegenToggleCount) : 0.0);
+	DEBUG_LOG("SMC Invalidate Calls: %u (From JIT guard: %u | From CPUWrite*: %u)\n",
+		smcInvalidateCalls, smcInvalidateFromJIT, smcInvalidateFromWrite);
+	DEBUG_LOG("  ...of which patched a real block: %u (%.1f%% - rest were page-flag false positives)\n",
+		smcInvalidatePatched,
+		smcInvalidateCalls > 0 ? ((double)smcInvalidatePatched / smcInvalidateCalls * 100.0) : 0.0);
+	DEBUG_LOG("Quota-Shield Yields (approx.): %u\n", quotaYields);
 	DEBUG_LOG("-----------------------------------------\n");
 
     // 7. Print Bailouts

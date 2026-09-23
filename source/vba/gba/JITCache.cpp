@@ -173,6 +173,7 @@ void JITCache::flushCache() {
 	JIT_LOG_CACHE_FLUSH();
 
 	JITWriteScope scope;
+	PROFILER_INC(codegenScopesFlush);
 
 	arenaOffset = 0;
 
@@ -260,6 +261,9 @@ void JITCache::flushCache() {
 // SMC eviction handler
 void JITCache::invalidateSMCTarget(u32 targetEA) {
 	JITWriteScope scope;
+	PROFILER_INC(codegenScopesSMC);
+	PROFILER_INC(smcInvalidateCalls);
+	bool didPatch = false;
 
 	// Maximum trace length is (JIT_TRACE_MAX_INSTRUCTIONS+1)*2 bytes. Maximum write size is 36 bytes.
 	// Branchless minimum boundary clamping at 0
@@ -290,6 +294,7 @@ void JITCache::invalidateSMCTarget(u32 targetEA) {
 					DCStoreRange(codePtr, 4);
 					ICInvalidateRange(codePtr, 4);
 					curr->execute = nullptr; // Mark execute as null to force cache miss on next lookup
+					didPatch = true;
 				}
 
 				// Remove block from the SMC bucket linked list
@@ -311,4 +316,6 @@ void JITCache::invalidateSMCTarget(u32 targetEA) {
 			smcPageFlags[page] = 0;
 		}
 	}
+
+	if (didPatch) PROFILER_INC(smcInvalidatePatched);
 }

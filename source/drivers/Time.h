@@ -69,4 +69,21 @@ class SystemTime
 			return diff_usec(start, end);
 			#endif
 		}
+
+		//!\return an already-elapsed raw tick COUNT (not two timestamps to
+		//!diff) converted to microseconds, as a 64-bit value. Unlike
+		//!diffMicrosecs() above, this is meant for converting an
+		//!accumulator that has been summing raw (end - start) tick deltas
+		//!across many samples - the accumulated total can exceed what
+		//!diffMicrosecs()'s 32-bit microsecond return can hold long before
+		//!any single sample would.
+		//!\param ticks an elapsed duration, in the same units as Ticks
+		static inline uint64_t ticksToMicrosecs(Ticks ticks)
+		{
+			#if defined(__WIIU__)
+			return (uint64_t)OSTicksToMicroseconds((int64_t)ticks);
+			#else
+			return (uint64_t)ticks_to_microsecs(ticks);
+			#endif
+		}
 };

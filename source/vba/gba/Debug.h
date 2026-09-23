@@ -48,7 +48,7 @@
 	//#define JIT_DEBUGSTATELOG 1
 	//#define JIT_DETAILED_LOG 1
 
-	#include <ogc/timesupp.h>
+	#include "../../drivers/Time.h"
 	#include "GBA.h"
 	#include "Profiler.h"
 	#include "JITDebugStateLog.h"
@@ -78,8 +78,8 @@
 		#define PROFILER_LOG_AUDIO_OVERFLOW()         debugStats.audioOverflowDrops++
 		#define PROFILER_LOG_DRC(unplayed, newState)  debugStats.updateDRC(unplayed, (int)newState)
 
-		#define PROFILER_START_TIMER(name) u64 name = gettime()
-		#define PROFILER_ADD_TIME(stat, name) debugStats.stat += (gettime() - (name))
+		#define PROFILER_START_TIMER(name) Ticks name = SystemTime::now()
+		#define PROFILER_ADD_TIME(stat, name) debugStats.stat += (u64)(SystemTime::now() - (name))
 		#define PROFILER_INC(stat) debugStats.stat++
 		#define PROFILER_ADD(stat, val) debugStats.stat += (val)
 		#define PROFILER_BIN_BLOCK(len) do { \
@@ -99,10 +99,10 @@
 				debugStats.cacheEvictions++; \
 			} \
 		} while(0)
-		#define PROFILER_CACHE_FLUSH_START() u64 __flushTimer = gettime()
+		#define PROFILER_CACHE_FLUSH_START() Ticks __flushTimer = SystemTime::now()
 		#define PROFILER_CACHE_FLUSH_END() do { \
 			debugStats.cacheFlushes++; \
-			debugStats.timeSpentFlushing += (gettime() - __flushTimer); \
+			debugStats.timeSpentFlushing += (u64)(SystemTime::now() - __flushTimer); \
 		} while(0)
 
 		#define PROFILER_MARK_FRAME() debugStats.framesRendered++

@@ -18,6 +18,11 @@
 // happen from it.
 uint32_t * WutCodegenAcquire(size_t wanted);
 
+// The core (0-2) codegen was granted to by OSGetCodegenVirtAddrRange(), and
+// the core the calling thread was pinned to as a result (diagnostic only)
+int32_t WutCodegenGetCore();
+int32_t WutCodegenGetPinnedCore();
+
 // Opens a write window: flips the codegen region RW-. Nestable - only
 // the outermost call actually toggles the mode, so a flushCache() that
 // happens to run while a compile's own JITWriteScope is already open

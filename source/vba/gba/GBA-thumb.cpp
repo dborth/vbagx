@@ -1429,11 +1429,18 @@ int thumbExecute() {
 				if (result.bailedOut) {
 					if (result.smcHit) {
 						jitCache.invalidateSMCTarget(result.smcAddress);
+						PROFILER_INC(smcInvalidateFromJIT);
+					}
+					else if (result.instructions == 0 && result.nextPC == pc) {
+						// Quota-shield signature: the yield stub writes
+						// EmitResultMetadata(0, bailedOut=1) and resumes at
+						// the block's own startPC.
+						PROFILER_INC(quotaYields);
 					}
 				}
 				else {
-					// Clean exit (e.g., quota shield). The next instruction is
-					// mathematically guaranteed to be a valid entry point.
+					// Clean exit: the block ran to its natural end without
+					// bailing (result.bailedOut == 0)
 					useJIT = true;
 					continue;
 				}

@@ -80,10 +80,21 @@
 #define JIT_CODE_END_WRITE()       ((void)0)
 #endif
 
+// Under PROFILING, times every outermost RW-/R-X toggle regardless of which
+// of the three call sites (JITCompileThumbTrace, JITCache::flushCache,
+// JITCache::invalidateSMCTarget) opened it
+#if PROFILING
+struct JITWriteScope {
+    Ticks scopeStart;
+    JITWriteScope()  { scopeStart = SystemTime::now(); JIT_CODE_BEGIN_WRITE(); PROFILER_INC(codegenToggleCount); }
+    ~JITWriteScope() { JIT_CODE_END_WRITE(); PROFILER_ADD(timeSpentCodegenToggle, (u64)(SystemTime::now() - scopeStart)); }
+};
+#else
 struct JITWriteScope {
     JITWriteScope()  { JIT_CODE_BEGIN_WRITE(); }
     ~JITWriteScope() { JIT_CODE_END_WRITE(); }
 };
+#endif
 
 struct JITResult {
     u32 cycles;

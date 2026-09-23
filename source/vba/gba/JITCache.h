@@ -119,6 +119,7 @@ extern JITCache jitCache;
 		if (UNLIKELY(((pageIdx) == 2) | ((pageIdx) == 3))) { \
 			u32 page = ((address) >> 10) & 0xFFFF; \
 			if (jitCache.smcPageFlags[page]) { \
+				PROFILER_INC(smcInvalidateFromWrite); \
 				jitCache.invalidateSMCTarget(address); \
 			} \
 		} \
