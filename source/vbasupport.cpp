@@ -1389,19 +1389,19 @@ int LoadROMToVM(const char* filepath) {
 		if(!ChangeInterface(device, NOTSILENT))
 			break;
 
-		file = fopen(filepath, "rb");
-		if(!file) {
+		FILE * fp = fopen(filepath, "rb");
+		if(!fp) {
 			retry = ErrorPromptRetry("Error opening file!");
 			continue;
 		}
 
 		if (utilIsZipFile(filepath)) {
-			size_t readsize = fread(zipbuffer, 1, 32, file);
+			size_t readsize = fread(zipbuffer, 1, 32, fp);
 			if(readsize < 32 || !IsZipFile(zipbuffer)) {
 				platform->getFileSystem()->invalidateStorageDevice(device);
 				retry = ErrorPromptRetry("Error reading file!");
-				fclose(file);
-				file = nullptr;
+				fclose(fp);
+				fp = nullptr;
 				continue;
 			}
 
@@ -1412,15 +1412,15 @@ int LoadROMToVM(const char* filepath) {
 
 			if(uncompSize > ARAM_SIZE) {
 				ErrorPrompt("Compressed ROM file is too large to decompress!");
-				fclose(file);
-				file = nullptr;
+				fclose(fp);
+				fp = nullptr;
 				ResumeDeviceCheckingThread();
 				CancelAction();
 				return 0;
 			}
 
 			VMPager_StartPreload();
-			size = UnZipBuffer((unsigned char*)romPtr, ARAM_SIZE);
+			size = UnZipBuffer(fp, (unsigned char*)romPtr, ARAM_SIZE);
 
 			if (size > 0 && (uint32_t)size == uncompSize) {
 				uint32_t pages = (size + 4095) / 4096;
@@ -1429,18 +1429,18 @@ int LoadROMToVM(const char* filepath) {
 			} else {
 				retry = ErrorPromptRetry("Error extracting ZIP file!");
 			}
-			fclose(file);
-			file = nullptr;
+			fclose(fp);
+			fp = nullptr;
 			VMPager_EndPreload();
 		} else {
-			fseeko(file, 0, SEEK_END);
-			size = ftello(file);
-			fseeko(file, 0, SEEK_SET);
+			fseeko(fp, 0, SEEK_END);
+			size = ftello(fp);
+			fseeko(fp, 0, SEEK_SET);
 
 			if (size > MAX_GBA_ROM_SIZE) {
 				ErrorPrompt("Unsupported file size!");
-				fclose(file);
-				file = nullptr;
+				fclose(fp);
+				fp = nullptr;
 				ResumeDeviceCheckingThread();
 				CancelAction();
 				return 0;
@@ -1460,7 +1460,7 @@ int LoadROMToVM(const char* filepath) {
 				size_t to_read = preload_size - offset;
 				if(to_read > 65536) to_read = 65536;
 
-				readsize = fread(chunk_buf, 1, to_read, file);
+				readsize = fread(chunk_buf, 1, to_read, fp);
 				if(readsize <= 0) break;
 
 				memcpy(romPtr + offset, chunk_buf, readsize);
@@ -1477,19 +1477,19 @@ int LoadROMToVM(const char* filepath) {
 
 			if (offset == size) {
 				// <= 16MB file. Everything is in ARAM. We don't need file access so nothing more to do.
-				fclose(file);
-				file = nullptr;
+				fclose(fp);
+				fp = nullptr;
 				VMPager_EndPreload();
 				retry = 0;
 			} else if (offset == preload_size) {
 				// > 16MB file (size > offset, but we loaded 16MB). Preload finished, but more data remains - so we pass a file handle
-				FILE* vm_file = file;
-				file = nullptr; // isolate the handle exclusively for the VM Pager (it will be responsible to close it)
+				FILE* vm_file = fp;
+				fp = nullptr; // isolate the handle exclusively for the VM Pager (it will be responsible to close it)
 				VMPager_EndPreloadWithFile(vm_file, size, filepath);
 				retry = 0;
 			} else {
-				fclose(file);
-				file = nullptr;
+				fclose(fp);
+				fp = nullptr;
 				VMPager_EndPreload();
 				retry = ErrorPromptRetry("Error reading uncompressed ROM data!");
 			}
