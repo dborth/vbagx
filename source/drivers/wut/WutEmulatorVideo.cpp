@@ -24,6 +24,7 @@
 #include "../../video.h"
 #include "../../menu.h"
 #include "../../vba/gba/Globals.h"
+#include "../../vba/gba/Debug.h"
 
 #include "fps_font_png.h"
 
@@ -554,8 +555,12 @@ void WutEmulatorVideo::presentFrame(int width, int height)
 		checkVideo = 0;
 	}
 
+	PROFILER_PHASE_START(phUpload);
 	uploadFrame(width, height);
+	PROFILER_PHASE_END(PHASE_UPLOAD, phUpload);
+	PROFILER_PHASE_START(phDraw);
 	drawQuad();
+	PROFILER_PHASE_END(PHASE_DRAW, phDraw);
 	drawFpsOverlay();
 	drawCursorOverlay();
 

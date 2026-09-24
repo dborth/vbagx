@@ -1462,7 +1462,9 @@ int thumbExecute() {
 		// ========================================================================
 		// LEGACY C++ FALLBACK PATH
 		// ========================================================================
+#ifdef PROFILE_FALLBACK_PER_INSN
 		PROFILER_START_TIMER(execFallbackStart);
+#endif
 
 		if (cheatsEnabled) cpuMasterCodeCheck();
 
@@ -1494,7 +1496,9 @@ int thumbExecute() {
 
 		cpuTotalTicks += clockTicks;
 		JIT_LOG_STATE_CPP(pc, armNextPC, cpuTotalTicks, clockTicks);
+#ifdef PROFILE_FALLBACK_PER_INSN
 		PROFILER_ADD_TIME(timeSpentFallback, execFallbackStart);
+#endif
 
 #if VBA_JIT
 		if(EmuSettings.dynamicRecompilation) {

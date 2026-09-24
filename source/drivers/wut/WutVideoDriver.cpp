@@ -22,6 +22,7 @@
 #include <gx2/surface.h>
 #include <gx2/texture.h>
 #include <whb/gfx.h>
+#include "../../vba/gba/Debug.h"
 #include <proc_ui/procui.h>
 
 #include "../Platform.h"
@@ -248,12 +249,19 @@ void WutVideoDriver::presentBuffer()
 {
 	if(isForeground())
 	{
+		PROFILER_PHASE_START(phCopy);
 		WHBGfxFinishRenderTV();
 		WHBGfxFinishRenderDRC();
+		PROFILER_PHASE_END(PHASE_SCANCOPY, phCopy);
+
+		PROFILER_PHASE_START(phSwap);
 		WHBGfxFinishRender();
+		PROFILER_PHASE_END(PHASE_SWAPWAIT, phSwap);
 	}
 
+	PROFILER_PHASE_START(phPrep);
 	prepareFrame();
+	PROFILER_PHASE_END(PHASE_PREPARE, phPrep);
 }
 
 uint32_t WutVideoDriver::getFrameTimer()

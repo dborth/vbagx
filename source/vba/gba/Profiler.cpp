@@ -100,6 +100,25 @@ void DebugStats::reset() {
 	memset(diffCheckedPCHash, 0, sizeof(diffCheckedPCHash));
     mismatchCount = 0;
     traceLogCount = 0;
+
+	// Phase / frame timing
+	for (int i = 0; i < PHASE_COUNT; i++) { ph[i].clear(); snapPh[i] = 0; }
+	coreFrames = 0;
+	lastCoreFrameTick = 0;
+	corePeriodMaxTicks = 0;
+	for (int i = 0; i < 8; i++) corePeriodBins[i] = 0;
+	presentEnterTick = 0;
+	lastPresentExitTick = 0;
+	skipsAtLastPresentExit = 0;
+	emuWorkTicks = emuWorkMaxTicks = ivEmuWorkMaxTicks = ivEmuWorkTicks = 0;
+	emuWorkSamples = ivEmuWorkSamples = 0;
+	for (int i = 0; i < 7; i++) emuWorkBins[i] = 0;
+	for (int i = 0; i < 4; i++) vsyncsPerRenderBins[i] = 0;
+	snapWallTick = SystemTime::now();
+	snapThumb = snapArm = snapJit = snapComp = 0;
+	snapCoreFrames = snapSkipped = snapAudioOverflow = 0;
+	intervalCount = 0;
+	vsyncUsHint = 16683;
 }
 
 void DebugStats::print() {
@@ -268,7 +287,16 @@ void DebugStats::print() {
     double armSecs     = SystemTime::ticksToMicrosecs(timeSpentARM) / 1000000.0;
     double compileSecs = SystemTime::ticksToMicrosecs(timeSpentCompiling) / 1000000.0;
     double jitSecs     = SystemTime::ticksToMicrosecs(timeSpentJIT) / 1000000.0;
+#ifdef PROFILE_FALLBACK_PER_INSN
     double fallSecs    = SystemTime::ticksToMicrosecs(timeSpentFallback) / 1000000.0;
+    const char* fallTag = "";
+#else
+    // Not timed per instruction (that costs 2 clock reads each): derived as
+    // thumb - jit - compile, so it also includes cache lookup + dispatch glue.
+    double fallSecs    = thumbSecs - jitSecs - compileSecs;
+    if (fallSecs < 0.0) fallSecs = 0.0;
+    const char* fallTag = " (derived)";
+#endif
     double flushSecs   = SystemTime::ticksToMicrosecs(timeSpentFlushing) / 1000000.0;
     double codegenToggleSecs = SystemTime::ticksToMicrosecs(timeSpentCodegenToggle) / 1000000.0;
     double otherSecs   = totalSecs - (thumbSecs + armSecs);
@@ -300,10 +328,11 @@ void DebugStats::print() {
 	DEBUG_LOG("THUMB Execution: %.3f seconds (%.1f%% of Total)\n", thumbSecs, thumbPct);
 	DEBUG_LOG("  Compiling JIT: %.3f seconds (%.1f%% of THUMB)\n", compileSecs, compPct);
 	DEBUG_LOG("  Executing JIT: %.3f seconds (%.1f%% of THUMB)\n", jitSecs, execPct);
-	DEBUG_LOG("  Interpreter:   %.3f seconds (%.1f%% of THUMB)\n", fallSecs, interpPct);
+	DEBUG_LOG("  Interpreter%s:   %.3f seconds (%.1f%% of THUMB)\n", fallTag, fallSecs, interpPct);
 
 	DEBUG_LOG("\nARM Execution:   %.3f seconds (%.1f%% of Total)\n", armSecs, armPct);
 	DEBUG_LOG("Other / Core:    %.3f seconds (%.1f%% of Total)\n", otherSecs, otherPct);
+	printPhases(totalSecs);
 	DEBUG_LOG("---------------------------------------------\n");
 
     // 4. Print Instruction & Hop Data
@@ -457,6 +486,8 @@ void DebugStats::recordFPS(float coreFPS, float renderFPS) {
 	else if (renderFPS < 59.0f) renderFpsBins[2]++;
 	else if (renderFPS <= 61.0f) renderFpsBins[3]++;
 	else renderFpsBins[4]++;
+
+	logInterval(coreFPS, renderFPS);
 }
 
 void DebugStats::commitFrameskip() {
@@ -492,4 +523,184 @@ void DebugStats::markPCChecked(u32 pc) {
 	}
 	diffCheckedPCHash[slot] = pc;
 }
+
+// -------------------------------------------------------------------------
+// Phase / frame timing: where the "Other / Core" bucket goes
+// -------------------------------------------------------------------------
+static inline double TicksToMs(u64 t) {
+	return (double)SystemTime::ticksToMicrosecs(t) / 1000.0;
+}
+
+static const char* const kPhaseNames[PHASE_COUNT] = {
+	"PPU line render",
+	"Sound tick (APU+resample)",
+	"Input",
+	"systemFrame() pacing",
+	"Present (total)",
+	"  upload RGB555->RGBA8",
+	"  drawQuad (TV+DRC)",
+	"  scan-buffer copy",
+	"  swap+flush+DrawDone",
+	"  prepareFrame",
+};
+
+void DebugStats::onCoreFrame() {
+	u64 now = (u64)SystemTime::now();
+	coreFrames++;
+	if (lastCoreFrameTick != 0) {
+		u64 dt = now - lastCoreFrameTick;
+		if (dt > corePeriodMaxTicks) corePeriodMaxTicks = dt;
+		double ms = TicksToMs(dt);
+		int bin;
+		if      (ms <  8.0) bin = 0;
+		else if (ms < 14.0) bin = 1;
+		else if (ms < 16.2) bin = 2;
+		else if (ms < 17.2) bin = 3; // on time (GBA frame = 16.74 ms)
+		else if (ms < 25.0) bin = 4;
+		else if (ms < 32.0) bin = 5;
+		else if (ms < 35.5) bin = 6; // ~2 vsyncs
+		else                bin = 7;
+		corePeriodBins[bin]++;
+	}
+	lastCoreFrameTick = now;
+}
+
+void DebugStats::onPresentBegin() {
+	presentEnterTick = (u64)SystemTime::now();
+
+	// Emulation work since the last present returned - only when no frame
+	// was skipped in between, so it is exactly one emulated frame's CPU +
+	// PPU + sound + input, with no present inside it.
+	if (lastPresentExitTick != 0 && framesSkippedTotal == skipsAtLastPresentExit) {
+		u64 dt = presentEnterTick - lastPresentExitTick;
+		emuWorkTicks += dt;   emuWorkSamples++;
+		ivEmuWorkTicks += dt; ivEmuWorkSamples++;
+		if (dt > emuWorkMaxTicks)   emuWorkMaxTicks = dt;
+		if (dt > ivEmuWorkMaxTicks) ivEmuWorkMaxTicks = dt;
+
+		u32 vs = vsyncUsHint ? vsyncUsHint : 16683;
+		u32 pct = (u32)((SystemTime::ticksToMicrosecs(dt) * 100) / vs); // % of one vsync
+		int bin = pct < 50 ? 0 : pct < 80 ? 1 : pct < 90 ? 2 : pct < 95 ? 3 : pct < 100 ? 4 : pct < 110 ? 5 : 6;
+		emuWorkBins[bin]++;
+	}
+}
+
+void DebugStats::onPresentEnd(u32 vsyncUs) {
+	u64 now = (u64)SystemTime::now();
+	vsyncUsHint = vsyncUs;
+	ph[PHASE_PRESENT].add(now - presentEnterTick);
+
+	if (lastPresentExitTick != 0) {
+		u32 vs = vsyncUs ? vsyncUs : 16683;
+		u32 n = (u32)((SystemTime::ticksToMicrosecs(now - lastPresentExitTick) + vs / 2) / vs);
+		vsyncsPerRenderBins[n <= 1 ? 0 : n == 2 ? 1 : n == 3 ? 2 : 3]++;
+	}
+	lastPresentExitTick = now;
+	skipsAtLastPresentExit = framesSkippedTotal;
+}
+
+// One time-series entry per FPS sample (every 60 rendered frames). All
+// figures are ms per emulated (core) frame over the interval, so they can be
+// read directly against the 16.7 ms budget.
+void DebugStats::logInterval(float coreFPS, float renderFPS) {
+	u64 now = (u64)SystemTime::now();
+	u32 frames = coreFrames - snapCoreFrames;
+	if (frames == 0) return;
+	double f = (double)frames;
+
+	double wallPF  = TicksToMs(now - snapWallTick) / f;
+	double thumbPF = TicksToMs(timeSpentThumb - snapThumb) / f;
+	double armPF   = TicksToMs(timeSpentARM - snapArm) / f;
+	double jitPF   = TicksToMs(timeSpentJIT - snapJit) / f;
+	double compPF  = TicksToMs(timeSpentCompiling - snapComp) / f;
+	double p[PHASE_COUNT];
+	for (int i = 0; i < PHASE_COUNT; i++) p[i] = TicksToMs(ph[i].ticks - snapPh[i]) / f;
+
+	double attributed = thumbPF + armPF + p[PHASE_PPU] + p[PHASE_SOUND] + p[PHASE_INPUT] + p[PHASE_SYSFRAME] + p[PHASE_PRESENT];
+	double emuAvg = ivEmuWorkSamples ? TicksToMs(ivEmuWorkTicks) / ivEmuWorkSamples : 0.0;
+	double t = TicksToMs(now - timeTotalStart) / 1000.0;
+
+	DEBUG_LOG("[T+%5.1fs #%u] core %4.1f / render %4.1f fps | %5.2f ms/frame = thumb %5.2f (jit %4.2f comp %4.2f) arm %4.2f ppu %4.2f snd %4.2f in %4.2f sysf %4.2f | present %5.2f [up %4.2f draw %4.2f copy %4.2f swap %5.2f prep %4.2f] | unattrib %5.2f\n",
+		t, intervalCount, coreFPS, renderFPS, wallPF, thumbPF, jitPF, compPF, armPF,
+		p[PHASE_PPU], p[PHASE_SOUND], p[PHASE_INPUT], p[PHASE_SYSFRAME], p[PHASE_PRESENT],
+		p[PHASE_UPLOAD], p[PHASE_DRAW], p[PHASE_SCANCOPY], p[PHASE_SWAPWAIT], p[PHASE_PREPARE],
+		wallPF - attributed);
+	DEBUG_LOG("                 emu-work/frame avg %5.2f max %5.2f ms | worst: swap %5.2f present %5.2f ppu-line %5.3f snd %5.2f ms | skips %u | audio ovf %u\n",
+		emuAvg, TicksToMs(ivEmuWorkMaxTicks),
+		TicksToMs(ph[PHASE_SWAPWAIT].ivMaxTicks), TicksToMs(ph[PHASE_PRESENT].ivMaxTicks),
+		TicksToMs(ph[PHASE_PPU].ivMaxTicks), TicksToMs(ph[PHASE_SOUND].ivMaxTicks),
+		framesSkippedTotal - snapSkipped, audioOverflowDrops - snapAudioOverflow);
+
+	// Roll the snapshot forward
+	snapWallTick = now;
+	snapThumb = timeSpentThumb; snapArm = timeSpentARM;
+	snapJit = timeSpentJIT;     snapComp = timeSpentCompiling;
+	for (int i = 0; i < PHASE_COUNT; i++) { snapPh[i] = ph[i].ticks; ph[i].ivMaxTicks = 0; }
+	snapCoreFrames = coreFrames;
+	snapSkipped = framesSkippedTotal;
+	snapAudioOverflow = audioOverflowDrops;
+	ivEmuWorkTicks = 0; ivEmuWorkSamples = 0; ivEmuWorkMaxTicks = 0;
+	intervalCount++;
+}
+
+static double CalibrateClockReadUs() {
+	const int N = 200000;
+	volatile u64 sink = 0;
+	u64 a = (u64)SystemTime::now();
+	for (int i = 0; i < N; i++) sink = sink + (u64)SystemTime::now();
+	u64 b = (u64)SystemTime::now();
+	(void)sink;
+	return (double)SystemTime::ticksToMicrosecs(b - a) / (double)N;
+}
+
+void DebugStats::printPhases(double totalSecs) {
+	double f = coreFrames ? (double)coreFrames : 1.0;
+	DEBUG_LOG("\n--- OTHER / CORE BREAKDOWN (phase timers) ---\n");
+	DEBUG_LOG("Core frames: %u | Presented: %u | ms/frame = total / core frames\n", coreFrames, framesRendered);
+
+	double topLevel = 0.0, subPhases = 0.0;
+	for (int i = 0; i < PHASE_COUNT; i++) {
+		u64 us = SystemTime::ticksToMicrosecs(ph[i].ticks);
+		double s = (double)us / 1000000.0;
+		double pct = totalSecs > 0 ? s / totalSecs * 100.0 : 0.0;
+		double avgUs = ph[i].calls ? (double)us / ph[i].calls : 0.0;
+		DEBUG_LOG("%-26s %8.3f s (%4.1f%%) %6.2f ms/frame | %8u calls, avg %8.1f us, max %7.2f ms\n",
+			kPhaseNames[i], s, pct, s * 1000.0 / f, ph[i].calls, avgUs, TicksToMs(ph[i].maxTicks));
+		if (i <= PHASE_PRESENT) topLevel += s; else subPhases += s;
+	}
+
+	double thumbSecs = (double)SystemTime::ticksToMicrosecs(timeSpentThumb) / 1000000.0;
+	double armSecs   = (double)SystemTime::ticksToMicrosecs(timeSpentARM) / 1000000.0;
+	double presentSecs = (double)SystemTime::ticksToMicrosecs(ph[PHASE_PRESENT].ticks) / 1000000.0;
+	double unattrib = totalSecs - (topLevel + thumbSecs + armSecs);
+	DEBUG_LOG("Present, other (overlays, resetVideo): %.3f s (%.2f ms/frame)\n", presentSecs - subPhases, (presentSecs - subPhases) * 1000.0 / f);
+	DEBUG_LOG("Unattributed (event dispatch, timers, DMA, halt, loop glue): %.3f s (%.1f%% of total, %.2f ms/frame)\n",
+		unattrib, totalSecs > 0 ? unattrib / totalSecs * 100.0 : 0.0, unattrib * 1000.0 / f);
+
+	DEBUG_LOG("\nCore frame period, ms (<8 | 8-14 | 14-16.2 | 16.2-17.2 | 17.2-25 | 25-32 | 32-35.5 | >35.5), max %.2f ms:\n",
+		TicksToMs(corePeriodMaxTicks));
+	DEBUG_LOG("  [%5u | %5u | %5u | %5u | %5u | %5u | %5u | %5u]\n",
+		corePeriodBins[0], corePeriodBins[1], corePeriodBins[2], corePeriodBins[3],
+		corePeriodBins[4], corePeriodBins[5], corePeriodBins[6], corePeriodBins[7]);
+
+	DEBUG_LOG("Emulation work per frame as %% of one vsync, no present inside (<50 | 50-80 | 80-90 | 90-95 | 95-100 | 100-110 | >110), avg %.2f max %.2f ms:\n",
+		emuWorkSamples ? TicksToMs(emuWorkTicks) / emuWorkSamples : 0.0, TicksToMs(emuWorkMaxTicks));
+	DEBUG_LOG("  [%5u | %5u | %5u | %5u | %5u | %5u | %5u]\n",
+		emuWorkBins[0], emuWorkBins[1], emuWorkBins[2], emuWorkBins[3], emuWorkBins[4], emuWorkBins[5], emuWorkBins[6]);
+
+	DEBUG_LOG("Vsyncs elapsed per presented frame (1 | 2 | 3 | 4+): [%5u | %5u | %5u | %5u]\n",
+		vsyncsPerRenderBins[0], vsyncsPerRenderBins[1], vsyncsPerRenderBins[2], vsyncsPerRenderBins[3]);
+
+	// Observer effect: what does the profiler itself cost?
+	double readUs = CalibrateClockReadUs();
+	u64 reads = 2ull * (thumbInvocations + armInvocations + jitInvocations + codegenScopesCompile + codegenToggleCount + cacheFlushes);
+#ifdef PROFILE_FALLBACK_PER_INSN
+	reads += 2ull * fallbackInstructionsExecuted;
+#endif
+	for (int i = 0; i < PHASE_COUNT; i++) reads += 2ull * ph[i].calls;
+	double overheadSecs = (double)reads * readUs / 1000000.0;
+	DEBUG_LOG("Profiler self-cost: SystemTime::now() = %.3f us/call (calibrated); ~%llu reads this run = ~%.3f s (%.1f%% of wall)\n",
+		readUs, reads, overheadSecs, totalSecs > 0 ? overheadSecs / totalSecs * 100.0 : 0.0);
+}
+
 #endif

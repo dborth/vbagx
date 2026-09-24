@@ -45,6 +45,7 @@
 // interpreter (JIT_SMC_GUARD below, the dispatch loop in thumbExecute()) are
 // preprocessed out entirely.
 // -------------------------------------------------------------------------
+#define WIIU_JIT 1
 #if defined(HW_RVL) || defined(HW_DOL) || (defined(__WIIU__) && defined(WIIU_JIT))
 #define VBA_JIT 1
 #else

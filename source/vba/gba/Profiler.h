@@ -23,6 +23,20 @@ enum BailoutReason {
 	BAILOUT_REASON_COUNT
 };
 
+enum PhaseId {
+	PHASE_PPU = 0,   // CPURenderLine_Wii(), per scanline
+	PHASE_SOUND,     // psoundTickfn(): APU synth + resample + ring write, per 1/100 s
+	PHASE_INPUT,     // joypad read + motion sensor, per frame
+	PHASE_SYSFRAME,  // systemFrame(): pacing/skip decision (+usleep in timer mode)
+	PHASE_PRESENT,   // systemDrawScreen() -> presentFrame() (everything below + overlays)
+	PHASE_UPLOAD,    //   uploadFrame(): RGB555 -> RGBA8 + GX2Invalidate
+	PHASE_DRAW,      //   drawQuad(): record TV + DRC draw commands
+	PHASE_SCANCOPY,  //   WHBGfxFinishRenderTV/DRC: copy to scan buffers
+	PHASE_SWAPWAIT,  //   WHBGfxFinishRender: SwapScanBuffers+Flush+DrawDone (GPU + vblank wait)
+	PHASE_PREPARE,   //   prepareFrame() for the next frame
+	PHASE_COUNT
+};
+
 struct DebugStats {
     u64 timeTotalStart;
     u64 timeTotalElapsed;
@@ -129,6 +143,49 @@ struct DebugStats {
 	int mismatchCount = 0;
 	int traceLogCount = 0;
 	u32 framesRendered = 0;
+
+	// ---- Phase timing (see PhaseId) ----
+	struct PhaseStat {
+		u64 ticks;      // run total
+		u64 maxTicks;   // worst single call, whole run
+		u64 ivMaxTicks; // worst single call, current log interval
+		u32 calls;
+		void clear() { ticks = 0; maxTicks = 0; ivMaxTicks = 0; calls = 0; }
+		void add(u64 dt) {
+			ticks += dt; calls++;
+			if (dt > maxTicks) maxTicks = dt;
+			if (dt > ivMaxTicks) ivMaxTicks = dt;
+		}
+	};
+	PhaseStat ph[PHASE_COUNT];
+
+	// ---- Frame-level timing ----
+	u32 coreFrames;             // every emulated frame (rendered or skipped)
+	u64 lastCoreFrameTick;
+	u64 corePeriodMaxTicks;
+	u32 corePeriodBins[8];      // ms between systemFrame() calls; edges in Profiler.cpp
+
+	// Time from the previous present returning to this present starting.
+	// Only sampled when no frame was skipped in between, so it is the cost
+	// of one full emulated frame (CPU+PPU+sound+input) with no present in it.
+	u64 presentEnterTick, lastPresentExitTick;
+	u32 skipsAtLastPresentExit;
+	u64 emuWorkTicks, emuWorkMaxTicks, ivEmuWorkMaxTicks, ivEmuWorkTicks;
+	u32 emuWorkSamples, ivEmuWorkSamples;
+	u32 emuWorkBins[7];         // as a fraction of the vsync period; edges in Profiler.cpp
+	u32 vsyncsPerRenderBins[4]; // present-return to present-return, in vsyncs: 1, 2, 3, 4+
+
+	// ---- Per-interval snapshot for the time-series log ----
+	u64 snapWallTick, snapThumb, snapArm, snapJit, snapComp, snapPh[PHASE_COUNT];
+	u32 snapCoreFrames, snapSkipped, snapAudioOverflow;
+	u32 intervalCount;
+	u32 vsyncUsHint;            // last vsync period passed to onPresentEnd()
+
+	void onCoreFrame();
+	void onPresentBegin();
+	void onPresentEnd(u32 vsyncUs);
+	void logInterval(float coreFPS, float renderFPS);
+	void printPhases(double totalSecs);
 
 	void reset();
 	void print();

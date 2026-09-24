@@ -214,6 +214,7 @@ static bool SkipPressureCrossed(float audioDeficit, float wallDeficit)
  */
 void systemFrame()
 {
+	PROFILER_CORE_FRAME();
 	coreFrameCount++;
 
 	if(cartridgeType == CARTRIDGE_GB) {
@@ -1014,7 +1015,9 @@ static int srcHeight = 0;
 
 void systemDrawScreen()
 {
+	PROFILER_PRESENT_BEGIN();
 	platform->getVideo()->getEmulatorVideo()->presentFrame(srcWidth, srcHeight);
+	PROFILER_PRESENT_END(platform->getVideo()->getRefreshRate() == 50 ? 20000u : 16683u);
 
 	renderFrameCount++;
 	if (renderFrameCount >= 60)

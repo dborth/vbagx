@@ -2759,13 +2759,17 @@ static void CPULoop_T(int ticks) {
 
             if(VCOUNT == 160) {
               ++count;
+              PROFILER_PHASE_START(phSysFrame);
               systemFrame();
+              PROFILER_PHASE_END(PHASE_SYSFRAME, phSysFrame);
               if(count == 60) count = 0;
 
+              PROFILER_PHASE_START(phInput);
               u32 joy = 0;
               if(systemReadJoypads()) joy = systemReadJoypad(-1);
               P1 = 0x03FF ^ (joy & 0x3FF);
               systemUpdateMotionSensor();
+              PROFILER_PHASE_END(PHASE_INPUT, phInput);
               WriteReg16(0x130, P1);
 
               u16 P1CNT = READ16LE(((u16 *)&ioMem[0x132]));
@@ -2805,7 +2809,9 @@ static void CPULoop_T(int ticks) {
 
           } else {
             if(frameToRender) {
+                PROFILER_PHASE_START(phPPU);
                 CPURenderLine_Wii(); // Execute decoupled render loop
+                PROFILER_PHASE_END(PHASE_PPU, phPPU);
             }
             DISPSTAT |= 2;
             WriteReg16(0x04, DISPSTAT);
@@ -2821,7 +2827,9 @@ static void CPULoop_T(int ticks) {
 
       soundTicks -= clockTicks;
       if(soundTicks <= 0) {
+        PROFILER_PHASE_START(phSound);
         psoundTickfn();
+        PROFILER_PHASE_END(PHASE_SOUND, phSound);
         soundTicks += SOUND_CLOCK_TICKS;
       }
 
