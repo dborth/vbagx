@@ -715,9 +715,13 @@ uint32_t MinishCapInput(unsigned short pad)
 	int cx, cy, SelRow, SelCol, CursorRow = 0xFF, CursorCol = 0xFF;
 
 	CursorVisible = data.validPointer && ((Subscreen != 0 && Subscreen != 0x64) || LoadMenu == 2);
-	if (CursorVisible) {
-		cx = (int)((data.cursor_x * 240.0f) / 640.0f);
-		cy = (int)((data.cursor_y * 160.0f) / 480.0f);
+	float pu, pv;
+	if (CursorVisible && GetPointerInGame(pad, &pu, &pv)) {
+		// GBA pixel under the pointer, through the game's real on-screen placement
+		cx = (int)(pu * 240.0f);
+		cy = (int)(pv * 160.0f);
+		if (cx > 239) cx = 239;
+		if (cy > 159) cy = 159;
 	} else {
 		cx = -1;
 		cy = -1;

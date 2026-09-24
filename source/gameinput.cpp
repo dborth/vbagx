@@ -612,6 +612,24 @@ uint32_t HarryPotter4Input(unsigned short pad) {
 	return J;
 }
 
+bool GetPointerInGame(unsigned short pad, float* u, float* v)
+{
+	if (!u || !v || !controller[pad]) return false;
+	const InputPadData& data = controller[pad]->getPadData();
+	if (!data.validPointer) return false;
+
+	EmulatorVideoDriver* emuVideo = platform->getVideo()->getEmulatorVideo();
+	if (emuVideo && emuVideo->mapPointerToUnit(data.cursor_x, data.cursor_y, u, v))
+		return true;
+
+	// assume the picture fills the whole canvas
+	float fx = data.cursor_x / (float)platform->getVideo()->getScreenWidth();
+	float fy = data.cursor_y / (float)platform->getVideo()->getScreenHeight();
+	*u = fx < 0.0f ? 0.0f : (fx > 1.0f ? 1.0f : fx);
+	*v = fy < 0.0f ? 0.0f : (fy > 1.0f ? 1.0f : fy);
+	return true;
+}
+
 uint32_t HarryPotter5Input(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
@@ -621,15 +639,9 @@ uint32_t HarryPotter5Input(unsigned short pad) {
 	int cx = 0;
 	int cy = 0;
 	uint8_t WandOut = CPUReadByte(0x200e0dd);
-	if (WandOut && data.validPointer) {
-		// Normalize through the game's real on-screen placement, then apply the
-		// game's own wand range. Falls back to a full-canvas mapping.
-		float u = data.cursor_x / (float)platform->getVideo()->getScreenWidth();
-		float v = data.cursor_y / (float)platform->getVideo()->getScreenHeight();
-		EmulatorVideoDriver* emuVideo = platform->getVideo()->getEmulatorVideo();
-		if (emuVideo)
-			emuVideo->mapPointerToUnit(data.cursor_x, data.cursor_y, &u, &v);
-
+	float u, v;
+	if (WandOut && GetPointerInGame(pad, &u, &v)) {
+		// Position within the game picture, scaled to the game's own wand range
 		cx = (int)(u * 268.0f);
 		cy = (int)(v * 187.0f);
 		if (cx<0x14) cx=0x14;
@@ -759,9 +771,12 @@ uint32_t MohUndergroundInput(unsigned short pad) {
 		J &= ~(VBA_LEFT | VBA_RIGHT);
 
 		CursorVisible = true;
-		if (data.validPointer) {
-			if (data.cursor_x < 320 - 40) J |= VBA_LEFT;
-			else if (data.cursor_x > 320 + 40) J |= VBA_RIGHT;
+		// Steer by pointing left/right of the middle of the game picture
+		float u, v;
+		if (GetPointerInGame(pad, &u, &v)) {
+			const float deadZone = 40.0f / 640.0f;
+			if (u < 0.5f - deadZone) J |= VBA_LEFT;
+			else if (u > 0.5f + deadZone) J |= VBA_RIGHT;
 		}
 
 		uint32_t hw = data.hw_buttons_h[INPUT_HW_NUNCHUK];

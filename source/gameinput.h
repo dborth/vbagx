@@ -122,6 +122,11 @@
 uint8_t gbReadMemory(uint16_t address);
 void gbWriteMemory(uint16_t address, uint8_t value);
 
+// Where the pad's IR pointer / touch is within the game picture, as 0..1 on each axis
+// (clamped to the picture's edges), following the game's actual on-screen placement
+// (aspect, zoom, fixed scale, shift). Returns false if the pad has no valid pointer.
+bool GetPointerInGame(unsigned short pad, float* u, float* v);
+
 uint32_t StandardDPad(unsigned short pad);
 uint32_t StandardMovement(unsigned short pad);
 uint32_t StandardSideways(unsigned short pad);
