@@ -629,7 +629,25 @@ void OgcEmulatorVideo::recalculateScaling()
 	gameScreenPng.xoffset = targetCenterX - (videoDriver->getScreenWidth() / 2.0f);
 	gameScreenPng.yoffset = targetCenterY - (videoDriver->getScreenHeight() / 2.0f);
 
+	// The game quad's rect on the canvas, for mapping the pointer to the picture
+	frameW = targetWidth;
+	frameH = targetHeight;
+	frameX = targetCenterX - targetWidth  * 0.5f;
+	frameY = targetCenterY - targetHeight * 0.5f;
+
 	updateScaling = 0;
+}
+
+bool OgcEmulatorVideo::mapPointerToUnit(float canvasX, float canvasY, float* u, float* v)
+{
+	if (!u || !v || frameW <= 0.0f || frameH <= 0.0f) // scaling hasn't been computed yet
+		return false;
+
+	float fx = (canvasX - frameX) / frameW;
+	float fy = (canvasY - frameY) / frameH;
+	*u = fx < 0.0f ? 0.0f : (fx > 1.0f ? 1.0f : fx);
+	*v = fy < 0.0f ? 0.0f : (fy > 1.0f ? 1.0f : fy);
+	return true;
 }
 
 // Converts flat, row-major RGBA8 pixels into GX's native 4x4-tiled

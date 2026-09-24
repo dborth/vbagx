@@ -30,6 +30,7 @@ class WutEmulatorVideo : public EmulatorVideoDriver
 		void presentFrame(int width, int height) override;
 		void snapshotFrame() override;
 		void readFrameRGB24(int width, int height, uint8_t* dst) override;
+		bool mapPointerToUnit(float canvasX, float canvasY, float* u, float* v) override;
 
 		//! Sets the initial console dimensions, before the first presentFrame() call
 		void renderInit(int width, int height);

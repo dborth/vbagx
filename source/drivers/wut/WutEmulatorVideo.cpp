@@ -201,6 +201,24 @@ void WutEmulatorVideo::resetVideo()
 }
 
 /****************************************************************************
+ * mapPointerToUnit
+ *
+ * The canvas is stretched onto every output target (TV and GamePad) in the
+ * same proportion, so the canvas rect is valid for both.
+ ***************************************************************************/
+bool WutEmulatorVideo::mapPointerToUnit(float canvasX, float canvasY, float* u, float* v)
+{
+	if (!u || !v || quadWidth <= 0.0f || quadHeight <= 0.0f) // resetVideo() hasn't run yet
+		return false;
+
+	float fx = (canvasX - quadX) / quadWidth;
+	float fy = (canvasY - quadY) / quadHeight;
+	*u = fx < 0.0f ? 0.0f : (fx > 1.0f ? 1.0f : fx);
+	*v = fy < 0.0f ? 0.0f : (fy > 1.0f ? 1.0f : fy);
+	return true;
+}
+
+/****************************************************************************
  * rebuildTexture / destroyTexture
  *
  * The game texture is recreated only when the emulator's rendered

@@ -32,4 +32,15 @@ class EmulatorVideoDriver
 
 		//! Sets the initial console dimensions, before the first presentFrame() call
 		virtual void renderInit(int width, int height) = 0;
+
+		//! Maps a UI-canvas pointer position (IR pointer / touch, in the same canvas
+		//! coordinates as InputPadData::cursor_x/y) to a normalized position (0..1 on
+		//! each axis, clamped) within the game picture, following its actual on-screen
+		//! placement (aspect, zoom, fixed scale, shift). Returns false until the
+		//! placement is known.
+		virtual bool mapPointerToUnit(float canvasX, float canvasY, float* u, float* v)
+		{
+			(void)canvasX; (void)canvasY; (void)u; (void)v;
+			return false;
+		}
 };

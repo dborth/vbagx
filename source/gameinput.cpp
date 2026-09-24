@@ -23,6 +23,7 @@
 #include "gameinput.h"
 #include "vbasupport.h"
 #include "drivers/InputController.h"
+#include "drivers/Platform.h"
 
 #include "vba/gba/GBA.h"
 #include "vba/gba/bios.h"
@@ -621,8 +622,16 @@ uint32_t HarryPotter5Input(unsigned short pad) {
 	int cy = 0;
 	uint8_t WandOut = CPUReadByte(0x200e0dd);
 	if (WandOut && data.validPointer) {
-		cx = (data.cursor_x * 268) / 640;
-		cy = (data.cursor_y * 187) / 480;
+		// Normalize through the game's real on-screen placement, then apply the
+		// game's own wand range. Falls back to a full-canvas mapping.
+		float u = data.cursor_x / (float)platform->getVideo()->getScreenWidth();
+		float v = data.cursor_y / (float)platform->getVideo()->getScreenHeight();
+		EmulatorVideoDriver* emuVideo = platform->getVideo()->getEmulatorVideo();
+		if (emuVideo)
+			emuVideo->mapPointerToUnit(data.cursor_x, data.cursor_y, &u, &v);
+
+		cx = (int)(u * 268.0f);
+		cy = (int)(v * 187.0f);
 		if (cx<0x14) cx=0x14;
 		else if (cx>0xf8) cx=0xf8;
 		if (cy<0x13) cy=0x13;
