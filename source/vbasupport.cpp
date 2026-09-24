@@ -1381,7 +1381,7 @@ int LoadROMToVM(const char* filepath) {
 	if(!FindDevice((char*)filepath, &device))
 		return 0;
 
-	PauseDeviceChecking();
+	HaltDeviceCheckingThread();
 	HaltParseThread();
 	VMPager_CloseFile();
 
@@ -1414,7 +1414,7 @@ int LoadROMToVM(const char* filepath) {
 				ErrorPrompt("Compressed ROM file is too large to decompress!");
 				fclose(fp);
 				fp = nullptr;
-				ResumeDeviceChecking();
+				ResumeDeviceCheckingThread();
 				CancelAction();
 				return 0;
 			}
@@ -1441,7 +1441,7 @@ int LoadROMToVM(const char* filepath) {
 				ErrorPrompt("Unsupported file size!");
 				fclose(fp);
 				fp = nullptr;
-				ResumeDeviceChecking();
+				ResumeDeviceCheckingThread();
 				CancelAction();
 				return 0;
 			}
@@ -1496,7 +1496,7 @@ int LoadROMToVM(const char* filepath) {
 		}
 	}
 
-	ResumeDeviceChecking();
+	ResumeDeviceCheckingThread();
 	CancelAction();
 
 	return size;

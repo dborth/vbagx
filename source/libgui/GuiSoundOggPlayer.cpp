@@ -84,7 +84,6 @@ bool GuiSoundOggPlayer::play(const uint8_t* data, int32_t length, int time_pos, 
 	threadRunning = true;
 	streamPaused = false;
 
-	decodeThread.setName("ogg-decode");
 	if (!decodeThread.start(threadEntry, this, 16384, ThreadPriority::High)) {
 		// Don't leave isPlaying() true with no decode thread behind it
 		threadRunning = false;
@@ -135,8 +134,6 @@ void* GuiSoundOggPlayer::threadEntry(void* arg) {
 
 void GuiSoundOggPlayer::threadLoop() {
 	while (threadRunning && !decodeThread.stopRequested()) {
-		decodeThread.checkpoint(); // parks here (no locks held) if background threads are parked
-
 		if (streamPaused) {
 			usleep(10000);
 			continue;
