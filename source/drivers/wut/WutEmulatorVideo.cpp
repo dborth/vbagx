@@ -559,14 +559,7 @@ void WutEmulatorVideo::drawCursorOverlay()
  ***************************************************************************/
 void WutEmulatorVideo::presentFrame(int width, int height)
 {
-	// The previous frame may still be on the GPU (present is pipelined - see
-	// WutVideoDriver::presentBuffer). Everything below writes things it
-	// reads (texture, vertex/uniform buffers, texture realloc), so wait for
-	// it to retire first. Normally already done: the GPU finishes ~3 ms
-	// after submit, well before the next frame gets here.
-	PROFILER_PHASE_START(phGpuWait);
-	videoDriver->waitGpuRetired();
-	PROFILER_PHASE_END(PHASE_GPUWAIT, phGpuWait);
+	videoDriver->prepareFrame();
 
 	bool useBorder = gameBorder.hasBorder();
 	vwidth  = useBorder ? gameBorder.getWidth()  : width;
@@ -582,16 +575,12 @@ void WutEmulatorVideo::presentFrame(int width, int height)
 		checkVideo = 0;
 	}
 
-	PROFILER_PHASE_START(phUpload);
 	uploadFrame(width, height);
-	PROFILER_PHASE_END(PHASE_UPLOAD, phUpload);
-	PROFILER_PHASE_START(phDraw);
 	drawQuad();
-	PROFILER_PHASE_END(PHASE_DRAW, phDraw);
 	drawFpsOverlay();
 	drawCursorOverlay();
 
-	videoDriver->presentBuffer(true); // emulator frames are always pipelined
+	videoDriver->presentBuffer();
 }
 
 /****************************************************************************

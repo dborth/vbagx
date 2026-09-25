@@ -213,7 +213,7 @@ EmulatorVideoDriver* WutVideoDriver::getEmulatorVideo()
 	return emulatorVideo;
 }
 
-void WutVideoDriver::prepareFrame(bool waitForFlip)
+void WutVideoDriver::prepareFrame()
 {
 	if(!isForeground())
 	{
@@ -221,10 +221,12 @@ void WutVideoDriver::prepareFrame(bool waitForFlip)
 		return;
 	}
 
-	// In sync mode this is the vsync wait. In pipelined mode it is skipped
-	// here and done just before the next scan-buffer copy (presentBuffer).
-	if(waitForFlip)
-		WHBGfxBeginRender();
+	if(gpuFramesInFlight)
+	{
+		if(GX2GetRetiredTimeStamp() < lastSubmitTimeStamp)
+			GX2WaitTimeStamp(lastSubmitTimeStamp);
+		gpuFramesInFlight = false;
+	}
 
 	auto drawPass = [&]() {
 		WHBGfxClearColor(clearColor.r / 255.0f, clearColor.g / 255.0f, clearColor.b / 255.0f, clearColor.a / 255.0f);
@@ -233,7 +235,7 @@ void WutVideoDriver::prepareFrame(bool waitForFlip)
 		GX2SetCullOnlyControl(GX2_FRONT_FACE_CCW, GX2_DISABLE, GX2_DISABLE);
 		GX2SetBlendControl(GX2_RENDER_TARGET_0, GX2_BLEND_MODE_SRC_ALPHA, GX2_BLEND_MODE_INV_SRC_ALPHA, GX2_BLEND_COMBINE_MODE_ADD, GX2_DISABLE, GX2_BLEND_MODE_SRC_ALPHA, GX2_BLEND_MODE_INV_SRC_ALPHA, GX2_BLEND_COMBINE_MODE_ADD);
 	};
-	
+
 	WHBGfxBeginRenderTV(); drawPass();
 	WHBGfxBeginRenderDRC();	drawPass();
 
@@ -247,6 +249,7 @@ void WutVideoDriver::prepareFrame(bool waitForFlip)
 void WutVideoDriver::renderMenu()
 {
 	presentBuffer();
+	prepareFrame();
 }
 
 void WutVideoDriver::startMenuVideo()
@@ -254,20 +257,6 @@ void WutVideoDriver::startMenuVideo()
 	// Leaving the emulator: make sure no pipelined frame is still in flight
 	// before the menu starts recording draws into shared GX2 buffers.
 	drainGpu();
-}
-
-void WutVideoDriver::waitGpuRetired()
-{
-	if(!gpuFramesInFlight)
-		return;
-	if(!isForeground())
-	{
-		gpuFramesInFlight = false;
-		return;
-	}
-	if(GX2GetRetiredTimeStamp() >= lastSubmitTimeStamp)
-		return;
-	GX2WaitTimeStamp(lastSubmitTimeStamp);
 }
 
 void WutVideoDriver::drainGpu()
@@ -282,49 +271,21 @@ void WutVideoDriver::drainGpu()
 	WHBGfxBeginRender(); // waits for the outstanding flip(s)
 }
 
-void WutVideoDriver::presentBuffer(bool pipelined)
+void WutVideoDriver::presentBuffer()
 {
-	if(isForeground())
-	{
-		if(pipelined)
-		{
-			// The previous swap must have flipped before we copy into the scan
-			// buffers again. This is the same wait WHBGfxBeginRender() used to do
-			// at the top of the frame; it now happens here so the emulation of
-			// this frame overlapped it.
-			PROFILER_PHASE_START(phFlip);
-			WHBGfxBeginRender();
-			PROFILER_PHASE_END(PHASE_FLIPWAIT, phFlip);
-		}
+	if(!isForeground())
+		return;
 
-		PROFILER_PHASE_START(phCopy);
-		WHBGfxFinishRenderTV();
-		WHBGfxFinishRenderDRC();
-		PROFILER_PHASE_END(PHASE_SCANCOPY, phCopy);
+	WHBGfxBeginRender();
+	WHBGfxFinishRenderTV();
+	WHBGfxFinishRenderDRC();
 
-		PROFILER_PHASE_START(phSwap);
-		if(pipelined)
-		{
-			// WHBGfxFinishRender() minus GX2DrawDone(): submit and return.
-			GX2SwapScanBuffers();
-			GX2Flush();
-			GX2SetTVEnable(TRUE);
-			GX2SetDRCEnable(TRUE);
-			lastSubmitTimeStamp = GX2GetLastSubmittedTimeStamp();
-			gpuFramesInFlight = true;
-		}
-		else
-		{
-			// SwapScanBuffers + Flush + DrawDone: waits for GPU completion
-			WHBGfxFinishRender();
-			gpuFramesInFlight = false;
-		}
-		PROFILER_PHASE_END(PHASE_SWAPWAIT, phSwap);
-	}
-
-	PROFILER_PHASE_START(phPrep);
-	prepareFrame(!pipelined);
-	PROFILER_PHASE_END(PHASE_PREPARE, phPrep);
+	GX2SwapScanBuffers();
+	GX2Flush();
+	GX2SetTVEnable(TRUE);
+	GX2SetDRCEnable(TRUE);
+	lastSubmitTimeStamp = GX2GetLastSubmittedTimeStamp();
+	gpuFramesInFlight = true;
 }
 
 uint32_t WutVideoDriver::getFrameTimer()
