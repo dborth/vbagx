@@ -52,9 +52,15 @@
 #define VBA_JIT 0
 #endif
 
+#if defined(HW_RVL) || defined(HW_DOL)
 #define JIT_ARENA_SIZE					(1024 * 1024 * 8) // 8 MB
 #define HASH_TABLE_SIZE					65536
 #define SMC_MAP_SIZE                    65536 // 64K pages (1KB page granularity across 64MB)
+#else
+#define JIT_ARENA_SIZE					(1024 * 1024 * 32) // 32 MB
+#define HASH_TABLE_SIZE					(1024 * 1024) // 1MB
+#define SMC_MAP_SIZE                    (1024 * 512) // 512K pages (1KB page granularity across 64MB)
+#endif
 
 // -------------------------------------------------------------------------
 // ENGINE DEFINITIONS
