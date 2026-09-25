@@ -215,6 +215,7 @@ static bool SkipPressureCrossed(float audioDeficit, float wallDeficit)
 void systemFrame()
 {
 	PROFILER_CORE_FRAME();
+	PROFILER_SET_FRAMESKIP(EmuSettings.gbaFrameSkip);
 	coreFrameCount++;
 
 	if(cartridgeType == CARTRIDGE_GB) {

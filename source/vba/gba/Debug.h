@@ -112,6 +112,7 @@
 		// local Ticks; PROFILER_PHASE_END(PHASE_x, name) adds the elapsed time to it.
 		#define PROFILER_PHASE_START(name) Ticks name = SystemTime::now()
 		#define PROFILER_PHASE_END(id, name) debugStats.ph[(id)].add((u64)(SystemTime::now() - (name)))
+		#define PROFILER_SET_FRAMESKIP(v)      (debugStats.frameskipOn = ((v) ? 1 : 0))
 		#define PROFILER_CORE_FRAME()          debugStats.onCoreFrame()
 		#define PROFILER_PRESENT_BEGIN()       debugStats.onPresentBegin()
 		#define PROFILER_PRESENT_END(vsyncUs)  debugStats.onPresentEnd((vsyncUs))
@@ -324,6 +325,9 @@
 #endif
 #ifndef PROFILER_PHASE_END
 #define PROFILER_PHASE_END(id, name)                ((void)0)
+#endif
+#ifndef PROFILER_SET_FRAMESKIP
+#define PROFILER_SET_FRAMESKIP(v)                   ((void)0)
 #endif
 #ifndef PROFILER_CORE_FRAME
 #define PROFILER_CORE_FRAME()                       ((void)0)

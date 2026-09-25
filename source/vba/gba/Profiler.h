@@ -33,7 +33,9 @@ enum PhaseId {
 	PHASE_DRAW,      //   drawQuad(): record TV + DRC draw commands
 	PHASE_SCANCOPY,  //   WHBGfxFinishRenderTV/DRC: copy to scan buffers
 	PHASE_SWAPWAIT,  //   WHBGfxFinishRender: SwapScanBuffers+Flush+DrawDone (GPU + vblank wait)
-	PHASE_PREPARE,   //   prepareFrame() for the next frame
+	PHASE_PREPARE,   //   prepareFrame() for the next frame (holds the flip wait in sync mode)
+	PHASE_GPUWAIT,   //   pipelined: wait for the GPU to retire the previous frame before CPU writes
+	PHASE_FLIPWAIT,  //   pipelined: wait for the previous swap to flip (the vsync wait)
 	PHASE_COUNT
 };
 
@@ -178,7 +180,10 @@ struct DebugStats {
 	// ---- Per-interval snapshot for the time-series log ----
 	u64 snapWallTick, snapThumb, snapArm, snapJit, snapComp, snapPh[PHASE_COUNT];
 	u32 snapCoreFrames, snapSkipped, snapAudioOverflow;
+	u64 snapJitInstr, snapFbInstr, snapJitHops;
+	u32 snapCompiles, snapFlushes, snapEvictions, snapSmc, snapSmcPatched;
 	u32 intervalCount;
+	u8  frameskipOn;            // EmuSettings.gbaFrameSkip, sampled in systemFrame()
 	u32 vsyncUsHint;            // last vsync period passed to onPresentEnd()
 
 	void onCoreFrame();

@@ -16,10 +16,12 @@
 #include <gx2/display.h>
 #include <gx2/draw.h>
 #include <gx2/enum.h>
+#include <gx2/event.h>
 #include <gx2/mem.h>
 #include <gx2/registers.h>
 #include <gx2/sampler.h>
 #include <gx2/surface.h>
+#include <gx2/swap.h>
 #include <gx2/texture.h>
 #include <whb/gfx.h>
 #include "../../vba/gba/Debug.h"
@@ -197,6 +199,7 @@ void WutVideoDriver::shutdown()
 {
 	OSCancelAlarm(&frameTimerAlarm);
 
+	drainGpu();
 	WHBGfxShutdown();
 }
 
@@ -210,12 +213,18 @@ EmulatorVideoDriver* WutVideoDriver::getEmulatorVideo()
 	return emulatorVideo;
 }
 
-void WutVideoDriver::prepareFrame()
+void WutVideoDriver::prepareFrame(bool waitForFlip)
 {
 	if(!isForeground())
+	{
+		gpuFramesInFlight = false; // GX2 context is gone/reinitialised; stale timestamps are meaningless
 		return;
+	}
 
-	WHBGfxBeginRender();
+	// In sync mode this is the vsync wait. In pipelined mode it is skipped
+	// here and done just before the next scan-buffer copy (presentBuffer).
+	if(waitForFlip)
+		WHBGfxBeginRender();
 
 	auto drawPass = [&]() {
 		WHBGfxClearColor(clearColor.r / 255.0f, clearColor.g / 255.0f, clearColor.b / 255.0f, clearColor.a / 255.0f);
@@ -242,25 +251,79 @@ void WutVideoDriver::renderMenu()
 
 void WutVideoDriver::startMenuVideo()
 {
-
+	// Leaving the emulator: make sure no pipelined frame is still in flight
+	// before the menu starts recording draws into shared GX2 buffers.
+	drainGpu();
 }
 
-void WutVideoDriver::presentBuffer()
+void WutVideoDriver::waitGpuRetired()
+{
+	if(!gpuFramesInFlight)
+		return;
+	if(!isForeground())
+	{
+		gpuFramesInFlight = false;
+		return;
+	}
+	if(GX2GetRetiredTimeStamp() >= lastSubmitTimeStamp)
+		return;
+	GX2WaitTimeStamp(lastSubmitTimeStamp);
+}
+
+void WutVideoDriver::drainGpu()
+{
+	if(!gpuFramesInFlight)
+		return;
+	gpuFramesInFlight = false;
+	if(!isForeground())
+		return;
+
+	GX2DrawDone();
+	WHBGfxBeginRender(); // waits for the outstanding flip(s)
+}
+
+void WutVideoDriver::presentBuffer(bool pipelined)
 {
 	if(isForeground())
 	{
+		if(pipelined)
+		{
+			// The previous swap must have flipped before we copy into the scan
+			// buffers again. This is the same wait WHBGfxBeginRender() used to do
+			// at the top of the frame; it now happens here so the emulation of
+			// this frame overlapped it.
+			PROFILER_PHASE_START(phFlip);
+			WHBGfxBeginRender();
+			PROFILER_PHASE_END(PHASE_FLIPWAIT, phFlip);
+		}
+
 		PROFILER_PHASE_START(phCopy);
 		WHBGfxFinishRenderTV();
 		WHBGfxFinishRenderDRC();
 		PROFILER_PHASE_END(PHASE_SCANCOPY, phCopy);
 
 		PROFILER_PHASE_START(phSwap);
-		WHBGfxFinishRender();
+		if(pipelined)
+		{
+			// WHBGfxFinishRender() minus GX2DrawDone(): submit and return.
+			GX2SwapScanBuffers();
+			GX2Flush();
+			GX2SetTVEnable(TRUE);
+			GX2SetDRCEnable(TRUE);
+			lastSubmitTimeStamp = GX2GetLastSubmittedTimeStamp();
+			gpuFramesInFlight = true;
+		}
+		else
+		{
+			// SwapScanBuffers + Flush + DrawDone: waits for GPU completion
+			WHBGfxFinishRender();
+			gpuFramesInFlight = false;
+		}
 		PROFILER_PHASE_END(PHASE_SWAPWAIT, phSwap);
 	}
 
 	PROFILER_PHASE_START(phPrep);
-	prepareFrame();
+	prepareFrame(!pipelined);
 	PROFILER_PHASE_END(PHASE_PREPARE, phPrep);
 }
 

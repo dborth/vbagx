@@ -5,6 +5,7 @@
  ***************************************************************************/
 #pragma once
 
+#include <coreinit/time.h>
 #include <gx2/sampler.h>
 #include <gx2/texture.h>
 #include "../VideoDriver.h"
@@ -64,14 +65,39 @@ class WutVideoDriver : public VideoDriver
 		//!than issuing a GX2 call into a context we no longer own.
 		bool isForeground() const;
 
-		void presentBuffer();
+		// pipelined == false: the original blocking present (used by the menu,
+		//   where nothing is time-critical): copy, swap, flush, DrawDone,
+		//   then wait for the flip before returning.
+		// pipelined == true (used by the emulator, see WutEmulatorVideo::
+		//   presentFrame): copy, swap, flush and return. The GPU renders and
+		//   the flip happens at vblank while the CPU is already emulating
+		//   the next frame; the wait for that flip is done at the *next*
+		//   present, just before the next scan-buffer copy.
+		void presentBuffer(bool pipelined = false);
+
+		// Emulator present path only (see presentFrame). Blocks until the
+		// GPU has retired the last submitted frame. Must be called before
+		// the CPU touches anything the GPU reads (emulator texture,
+		// vertex/uniform buffers, texture realloc). Normally a no-op: the
+		// GPU finishes ~3 ms after submit, well before the next frame is
+		// ready to present.
+		void waitGpuRetired();
+
+		// DrawDone + wait for outstanding flips. Called when leaving the
+		// emulator for the menu, and before shutdown, so a still-in-flight
+		// emulator frame can never be seen by code that assumes the
+		// blocking (menu) present model.
+		void drainGpu();
 	private:
 		// Binds the TV context state and resets the per-frame render
 		// state (viewport/scissor/blend/depth/cull) that WHBGfxInit()
 		// doesn't set on its own. Called once at the end of init() so
 		// the first frame's draws land somewhere valid, then again at
 		// the top of every render() pass.
-		void prepareFrame();
+		void prepareFrame(bool waitForFlip = true);
+
+		bool gpuFramesInFlight = false;   // a pipelined frame was submitted and not yet drained
+		OSTime lastSubmitTimeStamp = 0;   // GX2 timestamp of that submit
 
 		// Queries GX2's current TV scan mode/aspect ratio and derives the
 		// physical TV and DRC target dims

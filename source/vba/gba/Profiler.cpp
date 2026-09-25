@@ -117,8 +117,11 @@ void DebugStats::reset() {
 	snapWallTick = SystemTime::now();
 	snapThumb = snapArm = snapJit = snapComp = 0;
 	snapCoreFrames = snapSkipped = snapAudioOverflow = 0;
+	snapJitInstr = snapFbInstr = snapJitHops = 0;
+	snapCompiles = snapFlushes = snapEvictions = snapSmc = snapSmcPatched = 0;
 	intervalCount = 0;
 	vsyncUsHint = 16683;
+	// frameskipOn is set every frame
 }
 
 void DebugStats::print() {
@@ -260,7 +263,7 @@ void DebugStats::print() {
 	float avgDisp = fpsSamples > 0 ? (float)(accumRenderFps / fpsSamples) : 0.0f;
 
 	DEBUG_LOG("Core FPS:    Min: %5.1f | Max: %5.1f | Avg: %5.1f\n", minCoreFps, maxCoreFps, avgCore);
-	DEBUG_LOG("Render FPS: Min: %5.1f | Max: %5.1f | Avg: %5.1f\n", minRenderFps, minRenderFps, avgDisp);
+	DEBUG_LOG("Render FPS: Min: %5.1f | Max: %5.1f | Avg: %5.1f\n", minRenderFps, maxRenderFps, avgDisp);
 	DEBUG_LOG("FPS Histogram (<50 | 50-55 | 55-59 | 59-61 | >61):\n");
 	DEBUG_LOG("  Core:    [%4u | %4u | %4u | %4u | %4u]\n", coreFpsBins[0], coreFpsBins[1], coreFpsBins[2], coreFpsBins[3], coreFpsBins[4]);
 	DEBUG_LOG("  Display: [%4u | %4u | %4u | %4u | %4u]\n", renderFpsBins[0], renderFpsBins[1], renderFpsBins[2], renderFpsBins[3], renderFpsBins[4]);
@@ -540,8 +543,10 @@ static const char* const kPhaseNames[PHASE_COUNT] = {
 	"  upload RGB555->RGBA8",
 	"  drawQuad (TV+DRC)",
 	"  scan-buffer copy",
-	"  swap+flush+DrawDone",
+	"  swap+flush(+DrawDone)",
 	"  prepareFrame",
+	"  gpu-retire wait (pipe)",
+	"  flip wait (pipe)",
 };
 
 void DebugStats::onCoreFrame() {
@@ -600,8 +605,8 @@ void DebugStats::onPresentEnd(u32 vsyncUs) {
 }
 
 // One time-series entry per FPS sample (every 60 rendered frames). All
-// figures are ms per emulated (core) frame over the interval, so they can be
-// read directly against the 16.7 ms budget.
+// per-frame figures are ms (or counts) per emulated (core) frame over the
+// interval, so they read directly against the 16.7 ms budget.
 void DebugStats::logInterval(float coreFPS, float renderFPS) {
 	u64 now = (u64)SystemTime::now();
 	u32 frames = coreFrames - snapCoreFrames;
@@ -611,8 +616,10 @@ void DebugStats::logInterval(float coreFPS, float renderFPS) {
 	double wallPF  = TicksToMs(now - snapWallTick) / f;
 	double thumbPF = TicksToMs(timeSpentThumb - snapThumb) / f;
 	double armPF   = TicksToMs(timeSpentARM - snapArm) / f;
-	double jitPF   = TicksToMs(timeSpentJIT - snapJit) / f;
-	double compPF  = TicksToMs(timeSpentCompiling - snapComp) / f;
+	double jitMs   = TicksToMs(timeSpentJIT - snapJit);
+	double compMs  = TicksToMs(timeSpentCompiling - snapComp);
+	double jitPF   = jitMs / f;
+	double compPF  = compMs / f;
 	double p[PHASE_COUNT];
 	for (int i = 0; i < PHASE_COUNT; i++) p[i] = TicksToMs(ph[i].ticks - snapPh[i]) / f;
 
@@ -620,16 +627,35 @@ void DebugStats::logInterval(float coreFPS, float renderFPS) {
 	double emuAvg = ivEmuWorkSamples ? TicksToMs(ivEmuWorkTicks) / ivEmuWorkSamples : 0.0;
 	double t = TicksToMs(now - timeTotalStart) / 1000.0;
 
-	DEBUG_LOG("[T+%5.1fs #%u] core %4.1f / render %4.1f fps | %5.2f ms/frame = thumb %5.2f (jit %4.2f comp %4.2f) arm %4.2f ppu %4.2f snd %4.2f in %4.2f sysf %4.2f | present %5.2f [up %4.2f draw %4.2f copy %4.2f swap %5.2f prep %4.2f] | unattrib %5.2f\n",
+	DEBUG_LOG("[T+%5.1fs #%u] core %4.1f / render %4.1f fps | %5.2f ms/frame = thumb %5.2f (jit %4.2f comp %4.2f) arm %4.2f ppu %4.2f snd %4.2f in %4.2f sysf %4.2f | present %5.2f [up %4.2f draw %4.2f copy %4.2f swap %5.2f prep %5.2f | gpuw %5.2f flip %5.2f] | unattrib %5.2f\n",
 		t, intervalCount, coreFPS, renderFPS, wallPF, thumbPF, jitPF, compPF, armPF,
 		p[PHASE_PPU], p[PHASE_SOUND], p[PHASE_INPUT], p[PHASE_SYSFRAME], p[PHASE_PRESENT],
 		p[PHASE_UPLOAD], p[PHASE_DRAW], p[PHASE_SCANCOPY], p[PHASE_SWAPWAIT], p[PHASE_PREPARE],
+		p[PHASE_GPUWAIT], p[PHASE_FLIPWAIT],
 		wallPF - attributed);
-	DEBUG_LOG("                 emu-work/frame avg %5.2f max %5.2f ms | worst: swap %5.2f present %5.2f ppu-line %5.3f snd %5.2f ms | skips %u | audio ovf %u\n",
+	DEBUG_LOG("                 emu-work/frame avg %5.2f max %5.2f ms | worst: swap %5.2f flip %5.2f present %5.2f ppu-line %5.3f snd %5.2f ms | skips %u | audio ovf %u | fs=%s\n",
 		emuAvg, TicksToMs(ivEmuWorkMaxTicks),
-		TicksToMs(ph[PHASE_SWAPWAIT].ivMaxTicks), TicksToMs(ph[PHASE_PRESENT].ivMaxTicks),
+		TicksToMs(ph[PHASE_SWAPWAIT].ivMaxTicks), TicksToMs(ph[PHASE_FLIPWAIT].ivMaxTicks),
+		TicksToMs(ph[PHASE_PRESENT].ivMaxTicks),
 		TicksToMs(ph[PHASE_PPU].ivMaxTicks), TicksToMs(ph[PHASE_SOUND].ivMaxTicks),
-		framesSkippedTotal - snapSkipped, audioOverflowDrops - snapAudioOverflow);
+		framesSkippedTotal - snapSkipped, audioOverflowDrops - snapAudioOverflow,
+		frameskipOn ? "on" : "off");
+
+	// JIT / cache counters for the interval. "in-jit MIPS" divides guest
+	// instructions run from the JIT by the time inside the JIT execute
+	// timer, so it is directly comparable to the whole-run "JIT Exec Speed".
+	u64 jitInstr = jitInstructionsExecuted - snapJitInstr;
+	u64 fbInstr  = fallbackInstructionsExecuted - snapFbInstr;
+	u64 jitHops  = jitInvocations - snapJitHops;
+	u32 compiles = blocksCompiled - snapCompiles;
+	double inJitMips = jitMs > 0.0 ? (double)jitInstr / (jitMs * 1000.0) : 0.0;
+	double usPerCompile = compiles ? compMs * 1000.0 / compiles : 0.0;
+	double instrPerHop = jitHops ? (double)jitInstr / (double)jitHops : 0.0;
+	DEBUG_LOG("                 guest instr/frame: jit %6.0f fallback %5.0f | in-jit %5.2f MIPS | hops/frame %5.1f (%4.1f instr/hop) | compiles/frame %5.1f (%4.1f us each) | flushes %u evictions %u | smc calls %u (real %u)\n",
+		(double)jitInstr / f, (double)fbInstr / f, inJitMips, (double)jitHops / f, instrPerHop,
+		(double)compiles / f, usPerCompile,
+		cacheFlushes - snapFlushes, cacheEvictions - snapEvictions,
+		smcInvalidateCalls - snapSmc, smcInvalidatePatched - snapSmcPatched);
 
 	// Roll the snapshot forward
 	snapWallTick = now;
@@ -639,6 +665,9 @@ void DebugStats::logInterval(float coreFPS, float renderFPS) {
 	snapCoreFrames = coreFrames;
 	snapSkipped = framesSkippedTotal;
 	snapAudioOverflow = audioOverflowDrops;
+	snapJitInstr = jitInstructionsExecuted; snapFbInstr = fallbackInstructionsExecuted; snapJitHops = jitInvocations;
+	snapCompiles = blocksCompiled; snapFlushes = cacheFlushes; snapEvictions = cacheEvictions;
+	snapSmc = smcInvalidateCalls; snapSmcPatched = smcInvalidatePatched;
 	ivEmuWorkTicks = 0; ivEmuWorkSamples = 0; ivEmuWorkMaxTicks = 0;
 	intervalCount++;
 }
