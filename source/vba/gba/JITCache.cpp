@@ -73,8 +73,8 @@ void JITCache::initialize(u32* arenaPtr, BasicBlock* blockPtr, BasicBlock** smcR
 	smcRegistry = smcRegPtr;
 	smcPageFlags = smcFlagsPtr;
 	arenaOffset = 0;
-	flushCache();
 	isInitialized = true;
+	flushCache();
 }
 
 void JITCache::destroy() {
