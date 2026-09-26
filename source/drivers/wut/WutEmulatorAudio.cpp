@@ -11,6 +11,7 @@
 #include "../Logger.h"
 #include "../../vbagx.h"
 #include "../../vba/gba/Globals.h" // extern bool turboMode;
+#include "../../vba/gba/Debug.h" // PROFILER_LOG_AUDIO_STARVATION / PROFILER_LOG_DRC
 
 WutEmulatorAudio::WutEmulatorAudio()
 {
@@ -29,7 +30,7 @@ WutEmulatorAudio::~WutEmulatorAudio()
  * configureVoice
  *
  * Sets everything about a voice that never changes again after init():
- * format, hard L/R pan via device mix.
+ * format, hard L/R pan via device mix, SRC bypass, static full volume.
  ***************************************************************************/
 void WutEmulatorAudio::configureVoice(AXVoice* v, int16_t* ringBuf, bool isLeft)
 {
@@ -82,6 +83,8 @@ void WutEmulatorAudio::init()
 	configureVoice(voiceL, ringL, true);
 	configureVoice(voiceR, ringR, false);
 
+	minFrames = AXGetInputSamplesPerFrame() * 3;
+
 	resetAudio();
 }
 
@@ -95,13 +98,14 @@ void WutEmulatorAudio::shutdown()
 /****************************************************************************
  * resetAudio
  *
- * Cheap reset
+ * Cheap reset -- called when loading a new game.
  ***************************************************************************/
 void WutEmulatorAudio::resetAudio()
 {
 	writePos = 0;
-	started = false;
-	ducked = false;
+	queuedFrames = 0;
+	voiceRunning = false;
+	primed = false;
 	rateState = RATE_STATE_NEUTRAL;
 
 	if (voiceL) { AXSetVoiceState(voiceL, AX_VOICE_STATE_STOPPED); AXSetVoiceCurrentOffset(voiceL, 0); }
@@ -112,40 +116,35 @@ void WutEmulatorAudio::stop()
 {
 	if (voiceL) AXSetVoiceState(voiceL, AX_VOICE_STATE_STOPPED);
 	if (voiceR) AXSetVoiceState(voiceR, AX_VOICE_STATE_STOPPED);
-	started = false;
-	ducked = false;
-}
-
-void WutEmulatorAudio::start()
-{
-	if (started || !voiceL || !voiceR)
-		return;
-
-	AXSetVoiceState(voiceL, AX_VOICE_STATE_PLAYING);
-	AXSetVoiceState(voiceR, AX_VOICE_STATE_PLAYING);
-	started = true;
-	ducked = false;
+	voiceRunning = false;
+	primed = false;
 }
 
 /****************************************************************************
- * queryUnplayedFrames
+ * startVoice
  *
- * voiceL is the timing master: both voices share the same ring length,
- * SRC-bypassed 1:1 ratio, and were started together, so voiceR's position
- * is never independently queried -- there is nothing for it to drift
- * against.
+ * Resyncs both voices' hardware offset to the oldest sample still queued,
+ * then sets them PLAYING.
  ***************************************************************************/
-uint32_t WutEmulatorAudio::queryUnplayedFrames()
+void WutEmulatorAudio::startVoice()
 {
-	if (!voiceL) return 0;
-	uint32_t currentOffset = AXGetVoiceCurrentOffsetEx(voiceL, ringL);
-	return (writePos - currentOffset + RING_FRAMES) % RING_FRAMES;
+	if (!voiceL || !voiceR)
+		return;
+
+	uint32_t start = (writePos + RING_FRAMES - (queuedFrames % RING_FRAMES)) % RING_FRAMES;
+
+	AXSetVoiceCurrentOffset(voiceL, start);
+	AXSetVoiceCurrentOffset(voiceR, start);
+	AXSetVoiceState(voiceL, AX_VOICE_STATE_PLAYING);
+	AXSetVoiceState(voiceR, AX_VOICE_STATE_PLAYING);
+	voiceRunning = true;
+	primed = true;
 }
 
 int WutEmulatorAudio::getUnplayed()
 {
-	if (!started) return -1;
-	return (int)(queryUnplayedFrames() / COMMIT_FRAMES);
+	if (!primed) return -1;
+	return getUnplayedBuffers();
 }
 
 bool WutEmulatorAudio::canWrite()
@@ -155,7 +154,7 @@ bool WutEmulatorAudio::canWrite()
 		stop();
 		return false;
 	}
-	return queryUnplayedFrames() < MAX_QUEUED_FRAMES;
+	return queuedFrames < (uint32_t)MAX_QUEUED_FRAMES;
 }
 
 double WutEmulatorAudio::getDynamicRate()
@@ -166,7 +165,7 @@ double WutEmulatorAudio::getDynamicRate()
 		return RATE_NEUTRAL;
 	}
 
-	uint32_t unplayed = queryUnplayedFrames();
+	int unplayed = (int)queuedFrames;
 
 	if (rateState == RATE_STATE_DRAINING && unplayed <= HIGH_RELEASE_FRAMES)
 		rateState = RATE_STATE_NEUTRAL;
@@ -177,6 +176,10 @@ double WutEmulatorAudio::getDynamicRate()
 		rateState = RATE_STATE_DRAINING;
 	else if (unplayed < LOW_WATER_FRAMES)
 		rateState = RATE_STATE_FILLING;
+
+	int unplayedChunks = getUnplayedBuffers();
+	if (unplayedChunks > 12) unplayedChunks = 12;
+	PROFILER_LOG_DRC(unplayedChunks, rateState);
 
 	if (rateState == RATE_STATE_DRAINING)
 		return (unplayed >= HIGH_CRITICAL_FRAMES) ? RATE_EMERGENCY_SLOW_DOWN : RATE_SLOW_DOWN;
@@ -228,52 +231,36 @@ void WutEmulatorAudio::writeFrames(const int16_t* interleavedSrc, uint32_t frame
 void WutEmulatorAudio::commitWrite()
 {
 	writeFrames(stagingInterleaved, COMMIT_FRAMES);
+	queuedFrames += COMMIT_FRAMES;
 
-	if (!started && queryUnplayedFrames() >= START_LEVEL_FRAMES)
-		start();
-
-	// Fresh audio has arrived -- if the frame callback ducked us for a
-	// transient underrun, ramp back up now that there's real signal again.
-	if (ducked && queryUnplayedFrames() >= COMMIT_FRAMES)
-	{
-		rampVolume(voiceL, 0, AX_MAX_VOLUME);
-		rampVolume(voiceR, 0, AX_MAX_VOLUME);
-		ducked = false;
-	}
-}
-
-void WutEmulatorAudio::rampVolume(AXVoice* v, uint16_t startVolume, uint16_t targetVolume)
-{
-	if (!v) return;
-	AXVoiceVeData ve;
-	ve.volume = startVolume;
-	ve.delta = (int16_t)(((int32_t)targetVolume - (int32_t)startVolume) / DUCK_RAMP_SAMPLES);
-	AXSetVoiceVe(v, &ve);
+	if (!voiceRunning && queuedFrames >= (uint32_t)START_LEVEL_FRAMES)
+		startVoice();
 }
 
 /****************************************************************************
  * frameTick
  *
- * Called from WutAudioDriver's single AX frame callback (~3ms) while
- * emulator audio is the active mode. Deliberately read-only with respect
- * to writePos/ring content.
+ * Called from WutAudioDriver's AX frame callback (~3ms), every tick
+ * regardless of mode. Retires one tick's worth of frames from queuedFrames
+ * while the voices are running
  ***************************************************************************/
 void WutEmulatorAudio::frameTick()
 {
-	if (!started || ducked)
+	if (!voiceRunning)
 		return;
 
-	uint32_t unplayed = queryUnplayedFrames();
-	uint32_t tickFrames = AXGetInputSamplesPerFrame();
+	uint32_t frame = AXGetInputSamplesPerFrame();
 
-	if (unplayed < tickFrames)
+	if (queuedFrames < minFrames)
 	{
-		// Caught up to our own write edge -- ramp to silence via AX's
-		// native volume envelope rather than an abrupt state-stop (which
-		// pops), and let commitWrite() ramp back up once fresh samples
-		// build back up past a chunk's worth.
-		rampVolume(voiceL, AX_MAX_VOLUME, 0);
-		rampVolume(voiceR, AX_MAX_VOLUME, 0);
-		ducked = true;
+		// Starving -- stop outright rather than let the voices loop stale
+		// ring content.
+		if (voiceL) AXSetVoiceState(voiceL, AX_VOICE_STATE_STOPPED);
+		if (voiceR) AXSetVoiceState(voiceR, AX_VOICE_STATE_STOPPED);
+		voiceRunning = false;
+		PROFILER_LOG_AUDIO_STARVATION();
+		return;
 	}
+
+	queuedFrames -= frame;
 }

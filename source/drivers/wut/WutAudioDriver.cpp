@@ -20,7 +20,12 @@ static inline bool isForeground() { return platform->getStatus() == Status::Runn
 
 static void wut_frame_callback() {
 	if (instance)
+	{
 		instance->handleStreamCallback();
+
+		if (instance->getEmulatorAudio())
+			instance->getEmulatorAudio()->frameTick();
+	}
 }
 
 template <int N>

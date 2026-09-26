@@ -4,8 +4,8 @@
  * WutEmulatorAudio.h
  *
  * AX-backed EmulatorAudioDriver implementation for Wii U. Feeds the VBA
- * core's sound output through a continuously-looping AX ring buffer with
- * dynamic rate control. Adapted to AX's frame-callback model.
+ * core's sound output through a pair of hard-panned AX voices (L/R) reading
+ * a looping ring buffer, with dynamic rate control.
  ***************************************************************************/
 #pragma once
 
@@ -26,15 +26,14 @@ class WutEmulatorAudio : public EmulatorAudioDriver
 		void resetAudio() override;
 		int getUnplayed() override;
 
+		//! No-op. Voices are armed lazily by commitWrite() itself, once
+		//! enough is queued
+		void start() {}
+
 		double getDynamicRate() override;
 		bool canWrite() override;
 		u16* getWriteBuffer() override;
 		void commitWrite() override;
-
-		//! Arms playback once commitWrite() has pre-rolled enough frames.
-		//! Not part of the EmulatorAudioDriver interface -- called by
-		//! commitWrite() itself and by WutAudioDriver::startEmulatorAudio().
-		void start();
 
 		//! Hard-stops both voices (leaving to the menu, or shutdown).
 		void stop();
@@ -59,6 +58,8 @@ class WutEmulatorAudio : public EmulatorAudioDriver
 		static constexpr int LOW_WATER_FRAMES   = 4  * COMMIT_FRAMES;
 		static constexpr int CRITICAL_FRAMES    = 1  * COMMIT_FRAMES;
 		static constexpr int HIGH_CRITICAL_FRAMES = 11 * COMMIT_FRAMES;
+
+		// Pre-roll level before (re)starting the voices
 		static constexpr int START_LEVEL_FRAMES = 6  * COMMIT_FRAMES;
 
 		static constexpr double RATE_SLOW_DOWN = 1.005;
@@ -67,23 +68,26 @@ class WutEmulatorAudio : public EmulatorAudioDriver
 		static constexpr double RATE_EMERGENCY_SPEED_UP = 0.985;
 		static constexpr double RATE_NEUTRAL = 1.0;
 
-		// Native AX hardware volume-envelope ramp, used to duck/unduck on
-		// a transient starvation instead of an abrupt AXSetVoiceState
-		// stop (which pops). Values are a starting point, not verified
-		// against real hardware timing yet -- worth confirming by ear.
-		static constexpr uint16_t AX_MAX_VOLUME = 0x8000;
-		static constexpr int DUCK_RAMP_SAMPLES = 64; // ~1.3ms at 48kHz
-
 		// AXSetVoiceDeviceMix output channel counts (TV/DRC)
 		static constexpr int AX_TV_CHANNELS = 6;
 		static constexpr int AX_DRC_CHANNELS = 4;
+
+		// Static full-volume envelope
+		static constexpr uint16_t AX_MAX_VOLUME = 0x8000;
 
 		enum RateState { RATE_STATE_NEUTRAL, RATE_STATE_DRAINING, RATE_STATE_FILLING };
 
 		void configureVoice(AXVoice* v, int16_t* ringBuf, bool isLeft);
 		void writeFrames(const int16_t* interleavedSrc, uint32_t frames);
-		uint32_t queryUnplayedFrames();
-		void rampVolume(AXVoice* v, uint16_t startVolume, uint16_t targetVolume);
+
+		//! Resyncs both voices' hardware offset to the oldest sample still
+		//! queued and sets them PLAYING
+		void startVoice();
+
+		int getUnplayedBuffers() const { return (int)(queuedFrames / COMMIT_FRAMES); }
+
+		// Stop-on-underrun margin, in frames
+		uint32_t minFrames = 0;
 
 		AXVoice* voiceL = nullptr;
 		AXVoice* voiceR = nullptr;
@@ -97,10 +101,14 @@ class WutEmulatorAudio : public EmulatorAudioDriver
 
 		// Owned exclusively by commitWrite()/the main thread.
 		uint32_t writePos = 0;
-		volatile bool started = false;
 
-		// Owned exclusively by frameTick()/the AX callback context.
-		bool ducked = false;
+		// Software-owned queue depth
+		volatile uint32_t queuedFrames = 0;
+
+		// Whether the AX voices are PLAYING right now
+		volatile bool voiceRunning = false;
+
+		bool primed = false;
 
 		RateState rateState = RATE_STATE_NEUTRAL;
 };
