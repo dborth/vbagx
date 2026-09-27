@@ -31,7 +31,7 @@ SOURCES		:=	source source/libgui source/utils source/utils/sz \
 				source/vba source/vba/apu source/vba/common \
 				source/vba/gb source/vba/gba source/goomba source/goomba/minilzo-2.06
 INCLUDES	:=	source source/vba
-DATA		:=	data/images data/sounds data/fonts data/lang
+DATA		:=	data/images_hd data/sounds data/fonts data/lang
 
 #---------------------------------------------------------------------------------
 # options for code generation
