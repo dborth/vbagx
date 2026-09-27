@@ -44,7 +44,7 @@ enum {
 struct GBAMemory {
     uint8_t texturemem[TEXTUREMEM_SIZE];
     uint32_t jitArena[JIT_ARENA_SIZE / sizeof(uint32_t)];
-    uint8_t blockTable[HASH_TABLE_SIZE * 16];
+    uint8_t blockTable[HASH_TABLE_SIZE * sizeof(BasicBlock)];
     uint8_t smcPageFlags[SMC_MAP_SIZE];
     uint8_t smcRegistry[SMC_MAP_SIZE * sizeof(void*)];
 } __attribute__((aligned(32)));
