@@ -342,6 +342,8 @@ void WutEmulatorVideo::uploadFrame(int gbWidth, int gbHeight)
  ***************************************************************************/
 void WutEmulatorVideo::drawQuad()
 {
+	videoDriver->flushDrawQueue();
+
 	if (!texture || !videoDriver->isForeground())
 		return;
 
@@ -443,6 +445,7 @@ void WutEmulatorVideo::drawQuad()
  ***************************************************************************/
 void WutEmulatorVideo::drawFpsOverlay()
 {
+	videoDriver->flushDrawQueue(); // overlays draw directly; keep queued UI draws underneath them
 	if (!EmuSettings.displayFrameRate || !videoDriver->isForeground())
 		return;
 
@@ -514,6 +517,7 @@ void WutEmulatorVideo::drawFpsOverlay()
  ***************************************************************************/
 void WutEmulatorVideo::drawCursorOverlay()
 {
+	videoDriver->flushDrawQueue(); // overlays draw directly; keep queued UI draws underneath them
 	if (!CursorVisible || !CursorValid || !videoDriver->isForeground())
 		return;
 
