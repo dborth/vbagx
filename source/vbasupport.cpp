@@ -274,7 +274,7 @@ void systemFrame()
 
 		if (pendingFrames > static_cast<uint32_t>(skipFrms))
 		{
-			platform->getVideo()->setFrameTimer(skipFrms);
+			platform->getVideo()->limitFrameTimer(skipFrms);
 			pendingFrames = skipFrms;
 		}
 
@@ -298,8 +298,7 @@ void systemFrame()
 			PROFILER_COMMIT_FRAMESKIP();
 		}
 
-		if (platform->getVideo()->getFrameTimer() > 0)
-			platform->getVideo()->setFrameTimer(platform->getVideo()->getFrameTimer() - 1);
+		platform->getVideo()->consumeFrameTick();
 	}
 	else
 	{
