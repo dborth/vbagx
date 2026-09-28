@@ -231,9 +231,10 @@ void WutEmulatorAudio::writeFrames(const int16_t* interleavedSrc, uint32_t frame
 void WutEmulatorAudio::commitWrite()
 {
 	writeFrames(stagingInterleaved, COMMIT_FRAMES);
-	queuedFrames += COMMIT_FRAMES;
 
-	if (!voiceRunning && queuedFrames >= (uint32_t)START_LEVEL_FRAMES)
+	const uint32_t queued = __atomic_add_fetch(&queuedFrames, COMMIT_FRAMES, __ATOMIC_RELAXED);
+
+	if (!voiceRunning && queued >= (uint32_t)START_LEVEL_FRAMES)
 		startVoice();
 }
 
@@ -251,16 +252,18 @@ void WutEmulatorAudio::frameTick()
 
 	uint32_t frame = AXGetInputSamplesPerFrame();
 
-	if (queuedFrames < minFrames)
+	// Check and subtract as one atomic step
+	uint32_t queued = __atomic_load_n(&queuedFrames, __ATOMIC_RELAXED);
+	do
 	{
-		// Starving -- stop outright rather than let the voices loop stale
-		// ring content.
-		if (voiceL) AXSetVoiceState(voiceL, AX_VOICE_STATE_STOPPED);
-		if (voiceR) AXSetVoiceState(voiceR, AX_VOICE_STATE_STOPPED);
-		voiceRunning = false;
-		PROFILER_LOG_AUDIO_STARVATION();
-		return;
-	}
-
-	queuedFrames -= frame;
+		if (queued < minFrames)
+		{
+			// Starving -- stop outright rather than let the voices loop stale ring content
+			if (voiceL) AXSetVoiceState(voiceL, AX_VOICE_STATE_STOPPED);
+			if (voiceR) AXSetVoiceState(voiceR, AX_VOICE_STATE_STOPPED);
+			voiceRunning = false;
+			PROFILER_LOG_AUDIO_STARVATION();
+			return;
+		}
+	} while (!__atomic_compare_exchange_n(&queuedFrames, &queued, queued - frame, false, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 }
