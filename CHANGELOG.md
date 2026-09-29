@@ -2,6 +2,29 @@
 
 All notable changes to Visual Boy Advance GX are recorded here, newest first. For the current features and setup instructions, see [README.md](README.md).
 
+## Unreleased
+* **Native Wii U release!** Visual Boy Advance GX now runs natively on the Wii U as its own app, with its own icon on the Wii U Menu. Requires [Aroma](https://wiiu.hacks.guide/) - run the latest Aroma release and launch the `.wuhb` directly from it
+  * Output up to 1080p, with a new GPU-powered **ScaleFX** upscaler shader and a **Sharp Bilinear** shader, plus a scanline shader
+  * Crisp, upscaled menus with sharper text and HD artwork
+  * Full **Wii U GamePad** support - touch screen, buttons, and rumble (including in-game rumble) - alongside Wiimote, Nunchuk, Classic Controller, and Wii U Pro Controller
+  * Correct 16:9 aspect ratio handling, with Wii U aspect ratio handling
+  * SD card plus up to 3 USB drives at once, with hotplug. USB supports FAT32, exFAT, and NTFS (requires [Mocha](https://github.com/wiiu-env/MochaPayload), an optional Aroma component)
+  * Press the HOME button to open the Wii U menu overlay. In game, HOME still opens the app menu.
+  * Sound plays on both the TV and the GamePad
+  * Recommended: install [Bloopair](https://github.com/GaryOderNichts/Bloopair) to pair Bluetooth controllers (Switch Pro, Joy-Con, DualShock/DualSense, Xbox, and more) as if they were a Wii U Pro Controller
+  * The new GBA JIT is ported to Wii U, fully working, and on by default. You can check whether it's enabled under Settings > Emulation. If it's off and can't be turned on, that depends on how the app was launched - it's recommended to launch the `.wuhb` directly from Wii U menu with the latest Aroma
+* Network shares now use libsmb2 (replacing the old SMB code) for modern SMB2/3 server support, on GameCube, Wii, and Wii U.
+* Wii: added support for multiple USB devices at once, with proper hotplug. Only devices that are actually mounted appear in the device list
+* GameCube: added hotplug support for SD Gecko and SD2SP2 - devices can now be inserted and removed while the app is running
+* Reworked and simplified the video settings, and added a new Emulation menu:
+  * Video options are now: Output Mode, Aspect Ratio Correction, Bilinear Filtering, Hardware Softening (GameCube/Wii), Upscaling, Scanline Overlay, GBA/GB Screen Zoom and Fixed Pixel Ratio, and Screen Position
+  * Wii U: scanlines are available as an independent overlay that can be combined with the upscaling filters
+  * Frameskip, Turbo Mode, Show Framerate, and the Game Boy palette/colorization options are all grouped in the Emulation menu alongside Dynamic Recompilation
+* Note: due to renaming, settings will all be reset upon first load
+* Menu rumble is gentler
+* GameCube: ZIP-compressed GBA ROMs up to 16MB can now be loaded
+* GameCube: fixed ROM paging issues, including a freeze in the virtual memory system, and GB/GBC ROM loading
+
 ## 3.0.2 — August 12, 2026
 * Fixed crash returning to the menu when set to non-English language
 * Fixed bug with Monochrome Screen setting not being applied consistently
