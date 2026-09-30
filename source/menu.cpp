@@ -217,10 +217,10 @@ struct Menu {
 		bgBottomImg.setAlignment(ALIGN_H::LEFT, ALIGN_V::BOTTOM);
 
 		logoTxt.setAlignment(ALIGN_H::RIGHT, ALIGN_V::TOP);
-		logoTxt.setPosition(0, 4);
+		logoTxt.setPosition(0, 0);
 
 		btnLogo.setAlignment(ALIGN_H::RIGHT, ALIGN_V::TOP);
-		btnLogo.setPosition(-50, 24);
+		btnLogo.setPosition(-48, 24);
 		btnLogo.setImage(&logoImg);
 		btnLogo.setImageOver(&logoImgOver);
 		btnLogo.setLabel(&logoTxt);
