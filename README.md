@@ -300,7 +300,7 @@ You can also customize the menu's background music by dropping a `bg_music.ogg` 
 
 ### Artwork
 
-Cover art, screenshots, or general artwork can be shown on the main menu when a game is highlighted. Pick which one to display under **Settings → Menu → Preview Image**. Each image lives in its matching folder (`vbagx/covers`, `vbagx/screenshots`, `vbagx/artwork`) and must be a PNG named exactly the same as the ROM (e.g. `Pokemon Emerald.png` for `Pokemon Emerald.gba`).
+Cover art, screenshots, or general artwork can be shown on the main menu when a game is highlighted. Pick which one to display under **Settings → Menu → Preview Image**. Each image lives in its matching folder (`vbagx/covers`, `vbagx/screenshots`, `vbagx/artwork`) and must be a PNG named exactly the same as the ROM (e.g. `Pokemon Emerald.png` for `Pokemon Emerald.gba`), no larger than 640×480. **240×160** for GBA, **160x144** for GB/GBC, and **256x224** with the SGB border are the recommended sizes.
 
 ### Network Shares (SMB)
 
