@@ -385,6 +385,19 @@ char * StripDevice(char * path)
  * Owns the retry/prompt policy around connecting; the SmbDriver only makes
  * a single connect() attempt per call.
  ***************************************************************************/
+
+static volatile bool shareConnectCancelled = false;
+
+static void OnShareConnectCancel()
+{
+	shareConnectCancelled = true;
+}
+
+static bool ShareConnectCancelRequested()
+{
+	return shareConnectCancelled || platform->getStatus() == Status::Exiting;
+}
+
 bool ConnectShare(bool silent)
 {
 	bool invalidShare = strlen(EmuSettings.smbShare.share) == 0;
@@ -411,16 +424,23 @@ bool ConnectShare(bool silent)
 	}
 
 	SmbDriver * smb = platform->getFileSystem()->getSmb();
+	smb->setCancelCheck(ShareConnectCancelRequested);
+
+	// Only offer a Cancel button where the driver can really act on it
+	void (*onCancel)(void) = smb->supportsCancel() ? OnShareConnectCancel : nullptr;
+
 	int retry = 1;
 	SmbConnectResult result = SmbConnectResult::InvalidSettings;
 
 	while(retry)
 	{
+		shareConnectCancelled = false; // every attempt, including a Retry, starts uncancelled
+
 		bool networkUp = smb->isNetworkUp();
 		if(!networkUp)
 		{
 			if(!silent)
-				ShowAction("Initializing network...");
+				ShowAction("Initializing network...", onCancel);
 
 			networkUp = smb->ensureNetworkUp();
 		}
@@ -428,7 +448,7 @@ bool ConnectShare(bool silent)
 		if(networkUp)
 		{
 			if(!silent)
-				ShowAction("Connecting to network share...");
+				ShowAction("Connecting to network share...", onCancel);
 
 			result = smb->connect(EmuSettings.smbShare);
 		}
@@ -437,14 +457,19 @@ bool ConnectShare(bool silent)
 			result = SmbConnectResult::NetworkUnavailable;
 		}
 
+		if(result != SmbConnectResult::Success && ShareConnectCancelRequested())
+			result = SmbConnectResult::Cancelled;
+
 		if(!silent)
 			CancelAction();
 
-		if(result == SmbConnectResult::Success || silent)
+		if(result == SmbConnectResult::Success || result == SmbConnectResult::Cancelled || silent)
 			break;
 
 		retry = ErrorPromptRetry(smb->connectResultMessage(result));
 	}
+
+	smb->setCancelCheck(nullptr);
 
 	return result == SmbConnectResult::Success;
 }
