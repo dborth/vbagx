@@ -30,7 +30,7 @@ class WutEmulatorVideo : public EmulatorVideoDriver
 		void presentFrame(int width, int height) override;
 		void snapshotFrame() override;
 		void readFrameRGB24(int width, int height, uint8_t* dst) override;
-		bool mapPointerToUnit(float canvasX, float canvasY, float* u, float* v) override;
+		bool mapPointerToUnit(float canvasX, float canvasY, bool onGamePad, float* u, float* v) override;
 
 		//! Sets the initial console dimensions, before the first presentFrame() call
 		void renderInit(int width, int height);
@@ -69,7 +69,7 @@ class WutEmulatorVideo : public EmulatorVideoDriver
 		// The game quad in UI-canvas pixels (top-left x/y, size w/h), derived by
 		// resetVideo() from the TV placement below. Not used for drawing - only
 		// the menu's game screenshot background (gameScreenPng) and the
-		// canvas-space pointer mapping need it.
+		// pointer-in-game mapping uses the per-target placement below.
 		float quadX, quadY, quadWidth, quadHeight;
 
 		// Where the game quad is drawn: top-left x/y and size w/h in the physical

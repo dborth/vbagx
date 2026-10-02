@@ -38,9 +38,11 @@ class EmulatorVideoDriver
 		//! each axis, clamped) within the game picture, following its actual on-screen
 		//! placement (aspect, zoom, fixed scale, shift). Returns false until the
 		//! placement is known.
-		virtual bool mapPointerToUnit(float canvasX, float canvasY, float* u, float* v)
+		//! onGamePad selects the output the pointer is on (touch is GamePad-only), since
+		//! the game can be placed differently on the TV and the GamePad.
+		virtual bool mapPointerToUnit(float canvasX, float canvasY, bool onGamePad, float* u, float* v)
 		{
-			(void)canvasX; (void)canvasY; (void)u; (void)v;
+			(void)canvasX; (void)canvasY; (void)onGamePad; (void)u; (void)v;
 			return false;
 		}
 };

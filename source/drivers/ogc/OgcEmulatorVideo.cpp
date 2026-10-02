@@ -638,7 +638,7 @@ void OgcEmulatorVideo::recalculateScaling()
 	updateScaling = 0;
 }
 
-bool OgcEmulatorVideo::mapPointerToUnit(float canvasX, float canvasY, float* u, float* v)
+bool OgcEmulatorVideo::mapPointerToUnit(float canvasX, float canvasY, bool, float* u, float* v)
 {
 	if (!u || !v || frameW <= 0.0f || frameH <= 0.0f) // scaling hasn't been computed yet
 		return false;

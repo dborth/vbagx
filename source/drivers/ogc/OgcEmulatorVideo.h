@@ -30,7 +30,7 @@ class OgcEmulatorVideo : public EmulatorVideoDriver
 
 		//! Sets the initial console dimensions, before the first presentFrame() call
 		void renderInit(int width, int height);
-		bool mapPointerToUnit(float canvasX, float canvasY, float* u, float* v) override;
+		bool mapPointerToUnit(float canvasX, float canvasY, bool onGamePad, float* u, float* v) override;
 
 		//! Loads the FPS overlay font into texture memory. Must be called at startup.
 		void initFPSFontData();

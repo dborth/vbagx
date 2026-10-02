@@ -619,7 +619,7 @@ bool GetPointerInGame(unsigned short pad, float* u, float* v)
 	if (!data.validPointer) return false;
 
 	EmulatorVideoDriver* emuVideo = platform->getVideo()->getEmulatorVideo();
-	if (emuVideo && emuVideo->mapPointerToUnit(data.cursor_x, data.cursor_y, u, v))
+	if (emuVideo && emuVideo->mapPointerToUnit(data.cursor_x, data.cursor_y, data.isTouch, u, v))
 		return true;
 
 	// assume the picture fills the whole canvas

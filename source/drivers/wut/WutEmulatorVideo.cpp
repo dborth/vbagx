@@ -139,10 +139,9 @@ void WutEmulatorVideo::init(VideoDriver* driver)
  * 1.3 partial, 1.6 stretch to fit) towards the target's aspect ratio, then 
  * letterboxed/pillarboxed if that falls short.
  *
- * quadX/Y/Width/Height (and gameScreenPng) are the same placement expressed in
- * UI-canvas pixels, derived from the TV placement. They only exist for the
- * menu's game screenshot and for mapping the pointer, which live in canvas
- * space; nothing is drawn from them.
+ * quadX/Y/Width/Height (and gameScreenPng) are the TV placement expressed in
+ * UI-canvas pixels. They only exist for the menu's game screenshot, which
+ * lives in canvas space; nothing is drawn from them.
  ***************************************************************************/
 void WutEmulatorVideo::resetVideo()
 {
@@ -224,7 +223,7 @@ void WutEmulatorVideo::resetVideo()
 		placement[i].h = h;
 	}
 
-	// The same placement in UI-canvas pixels (menu screenshot + pointer mapping), from the TV's placement
+	// The same placement in UI-canvas pixels (menu screenshot), from the TV's placement
 	const TargetPlacement& tv = placement[static_cast<int>(OutputTarget::TV)];
 	const float toCanvasX = (float)videoDriver->getScreenWidth()  / (float)videoDriver->getTargetWidth(OutputTarget::TV);
 	const float toCanvasY = (float)videoDriver->getScreenHeight() / (float)videoDriver->getTargetHeight(OutputTarget::TV);
@@ -245,16 +244,26 @@ void WutEmulatorVideo::resetVideo()
 /****************************************************************************
  * mapPointerToUnit
  *
- * The pointer is reported in UI-canvas coordinates, so this works against the
- * canvas-space rect resetVideo() derives from the TV placement.
+ * The pointer is reported in UI-canvas coordinates, which span the whole
+ * screen on every output, so they are a fraction of the target the pointer is
+ * on. That is mapped through that target's own placement (the TV and the
+ * GamePad are fitted independently, so they differ).
  ***************************************************************************/
-bool WutEmulatorVideo::mapPointerToUnit(float canvasX, float canvasY, float* u, float* v)
+bool WutEmulatorVideo::mapPointerToUnit(float canvasX, float canvasY, bool onGamePad, float* u, float* v)
 {
-	if (!u || !v || quadWidth <= 0.0f || quadHeight <= 0.0f) // resetVideo() hasn't run yet
+	if (!u || !v)
 		return false;
 
-	float fx = (canvasX - quadX) / quadWidth;
-	float fy = (canvasY - quadY) / quadHeight;
+	const OutputTarget target = onGamePad ? OutputTarget::DRC : OutputTarget::TV;
+	const TargetPlacement& p = placement[static_cast<int>(target)];
+	if (p.w <= 0.0f || p.h <= 0.0f) // resetVideo() hasn't run yet
+		return false;
+
+	const float px = (canvasX / (float)videoDriver->getScreenWidth())  * (float)videoDriver->getTargetWidth(target);
+	const float py = (canvasY / (float)videoDriver->getScreenHeight()) * (float)videoDriver->getTargetHeight(target);
+
+	const float fx = (px - p.x) / p.w;
+	const float fy = (py - p.y) / p.h;
 	*u = fx < 0.0f ? 0.0f : (fx > 1.0f ? 1.0f : fx);
 	*v = fy < 0.0f ? 0.0f : (fy > 1.0f ? 1.0f : fy);
 	return true;
