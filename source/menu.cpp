@@ -3667,8 +3667,8 @@ static int MenuSettingsVideo()
 				EmuSettings.videoAspectRatioCorrection++;
 				if (EmuSettings.videoAspectRatioCorrection >= SCALING_LENGTH)
 					EmuSettings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
-				// disable Widescreen correction in Wii mode - determined automatically
-				#ifdef HW_RVL
+				// disable Widescreen correction on Wii and Wii U - determined automatically
+				#if defined(HW_RVL) || defined(__WIIU__)
 				if(EmuSettings.videoAspectRatioCorrection == SCALING_WIDESCREEN_CORRECTION)
 					EmuSettings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
 				#endif

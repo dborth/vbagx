@@ -678,6 +678,11 @@ void FixInvalidSettings()
 #endif
 	if(!(EmuSettings.videoAspectRatioCorrection >= SCALING_MAINTAIN_ASPECT && EmuSettings.videoAspectRatioCorrection < SCALING_LENGTH))
 		EmuSettings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
+#if defined(HW_RVL) || defined(__WIIU__)
+	// 16:9 Correction is GameCube-only; on Wii / Wii U the TV aspect ratio is detected
+	if(EmuSettings.videoAspectRatioCorrection == SCALING_WIDESCREEN_CORRECTION)
+		EmuSettings.videoAspectRatioCorrection = SCALING_MAINTAIN_ASPECT;
+#endif
 	if(!(EmuSettings.videoMode >= VIDEOMODE_AUTO && EmuSettings.videoMode < VIDEOMODE_LENGTH))
 		EmuSettings.videoMode = VIDEOMODE_AUTO;
 	if(!(EmuSettings.displayFrameRate >= FRAMERATE_OFF && EmuSettings.displayFrameRate < FRAMERATE_LENGTH))

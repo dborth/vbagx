@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
+#include <math.h>
+#include <algorithm>
 
 #include <coreinit/memdefaultheap.h>
 #include <coreinit/time.h>
@@ -32,6 +34,29 @@ namespace
 {
 	// Darkness of the scanline gaps (0..1) when Scanline Overlay is on
 	const float SCANLINE_STRENGTH = 0.5f;
+
+	// Emulator video is placed in the physical pixels of each output target.
+	// The constants below are NOT a design canvas - they are the units the saved
+	// settings and the shared HD art are defined in.
+
+	// Units of the Screen Position (videoXshift/videoYshift) setting: one unit is
+	// 1/640 of the screen width, 1/480 of the screen height. Same on every
+	// platform, so a saved shift looks the same everywhere.
+	const float SHIFT_UNITS_X = 640.0f;
+	const float SHIFT_UNITS_Y = 480.0f;
+
+	// Fixed Pixel Ratio: "Nx" is N output pixels per console pixel on a
+	// 480-line screen (what GC/Wii give), scaled up by whole pixels for taller targets
+	const float FIXED_REFERENCE_LINES = 480.0f;
+
+	// Overlay art (FPS font, pointer) is authored for a 1080-line target and drawn
+	// at its native size there, scaled uniformly by targetHeight / 1080 elsewhere
+	const float HD_ASSET_LINES = 1080.0f;
+
+	// FPS readout anchor, as a fraction of the target, and its glyph advance in HD art pixels
+	const float FPS_ANCHOR_X = 0.75f;
+	const float FPS_ANCHOR_Y = 0.875f;
+	const float FPS_ADVANCE_HD = 42.0f;
 
 	// FPS atlas layout: 16 equal-width cells across (0-9, '.', 'F', 'P', 'S', ':', blank).
 	// Each cell's UV rect lives in its own immutable slot, padded to
@@ -98,45 +123,37 @@ void WutEmulatorVideo::init(VideoDriver* driver)
 /****************************************************************************
  * resetVideo
  *
- * Recomputes the on-screen placement of the game quad, in design-canvas
- * (640x480) pixels, from the current vwidth/vheight and EmuSettings'
- * aspect ratio / zoom / fixed-scale options, and gameScreenPng's
- * scale/offset. GX2/PixelRectToNdc maps design-canvas pixels
- * straight to NDC against the real screen resolution. gameScreenPng's
- * scale/offset fall out of quadWidth/quadHeight/quadX/quadY directly
- * instead of needing their own physical-pixel remapping.
+ * Computes where the game quad goes on each output target, in that target's
+ * own physical pixels (placement[]), from the current vwidth/vheight and
+ * EmuSettings' aspect ratio / zoom / fixed-scale / shift options.
+ *
+ * Nothing here depends on the UI canvas. Every target's buffer is
+ * square-pixel (640x480, 854x480, 1280x720, 1920x1080 TV modes, and the
+ * 854x480 GamePad), so a target's aspect ratio is simply width/height and
+ * there is no anamorphic compensation - the Wii's "(4/3)/tv" term exists
+ * because its EFB is always 640x480 whatever the TV shape. TV and GamePad are
+ * fitted independently, so a 4:3 TV and the 16:9 GamePad each get a correctly
+ * shaped picture.
+ *
+ * The console picture is stretched up to maxStretchRatio (1.0 maintain, 
+ * 1.3 partial, 1.6 stretch to fit) towards the target's aspect ratio, then 
+ * letterboxed/pillarboxed if that falls short.
+ *
+ * quadX/Y/Width/Height (and gameScreenPng) are the same placement expressed in
+ * UI-canvas pixels, derived from the TV placement. They only exist for the
+ * menu's game screenshot and for mapping the pointer, which live in canvas
+ * space; nothing is drawn from them.
  ***************************************************************************/
 void WutEmulatorVideo::resetVideo()
 {
 	if (vwidth <= 0 || vheight <= 0)
 		return;
 
-	float tvAspectRatio = (EmuSettings.videoAspectRatioCorrection == SCALING_WIDESCREEN_CORRECTION)
-		? (16.0f / 9.0f) : (4.0f / 3.0f);
-
-	float maxStretchRatio =
+	const float maxStretchRatio =
 		(EmuSettings.videoAspectRatioCorrection == SCALING_PARTIAL_STRETCH) ? 1.3f :
 		(EmuSettings.videoAspectRatioCorrection == SCALING_STRETCH_TO_FIT)  ? 1.6f : 1.0f;
 
-	float consoleAspectRatio = (float)vwidth / (float)vheight;
-
-	float xscale, yscale;
-	if (tvAspectRatio > consoleAspectRatio)
-	{
-		yscale = 240.0f; // half of the 640x480 design canvas
-		float stretchRatio = tvAspectRatio / consoleAspectRatio;
-		if (stretchRatio > maxStretchRatio)
-			stretchRatio = maxStretchRatio;
-		xscale = 240.0f * consoleAspectRatio * stretchRatio * ((4.0f / 3.0f) / tvAspectRatio);
-	}
-	else
-	{
-		xscale = 320.0f;
-		float stretchRatio = consoleAspectRatio / tvAspectRatio;
-		if (stretchRatio > maxStretchRatio)
-			stretchRatio = maxStretchRatio;
-		yscale = 320.0f / consoleAspectRatio * stretchRatio / ((4.0f / 3.0f) / tvAspectRatio);
-	}
+	const float consoleAspectRatio = (float)vwidth / (float)vheight;
 
 	float zoomHor, zoomVert;
 	int fixed;
@@ -153,44 +170,69 @@ void WutEmulatorVideo::resetVideo()
 		fixed    = EmuSettings.gbFixed;
 	}
 
-	if (fixed)
-	{
-		// Pixel-exact integer multiple of the console's native resolution,
-		// same "ratio"/"widescreen bit".
-		int ratio = fixed % 10;
-		bool widescreen = fixed / 10;
-
-		float vw = (float)vwidth * ratio;
-		if (widescreen)
-			vw /= (4.0f / 3.0f);
-		float vh = (float)vheight * ratio;
-
-		quadWidth  = vw;
-		quadHeight = vh;
-	}
-	else
-	{
-		quadWidth  = 2.0f * xscale * zoomHor;
-		quadHeight = 2.0f * yscale * zoomVert;
-	}
-
-	quadX = (videoDriver->getScreenWidth()  - quadWidth)  * 0.5f + EmuSettings.videoXshift;
-	quadY = (videoDriver->getScreenHeight() - quadHeight) * 0.5f + EmuSettings.videoYshift;
-
-	// Same quad in physical pixels of each target. The canvas is stretched onto
-	// every target independently per axis, so this is exactly where the
-	// canvas placement above lands on screen.
 	for (int i = 0; i < OUTPUT_TARGET_COUNT; i++)
 	{
 		const OutputTarget target = static_cast<OutputTarget>(i);
-		const float sx = (float) videoDriver->getTargetWidth(target)  / videoDriver->getScreenWidth();
-		const float sy = (float) videoDriver->getTargetHeight(target) / videoDriver->getScreenHeight();
+		const float targetW = (float)videoDriver->getTargetWidth(target);
+		const float targetH = (float)videoDriver->getTargetHeight(target);
 
-		placement[i].x = quadX * sx;
-		placement[i].y = quadY * sy;
-		placement[i].w = quadWidth * sx;
-		placement[i].h = quadHeight * sy;
+		float w, h;
+		if (fixed)
+		{
+			// Whole output pixels per console pixel, square. The "16:9 correction"
+			// bit of 'fixed' is an anamorphic-output workaround and never applies here.
+			const int ratio = fixed % 10;
+			const float pixelScale = std::max(1.0f, floorf(ratio * targetH / FIXED_REFERENCE_LINES + 0.001f));
+			w = (float)vwidth  * pixelScale;
+			h = (float)vheight * pixelScale;
+		}
+		else
+		{
+			const float targetAspectRatio = targetW / targetH;
+
+			float fillW, fillH; // fraction of the target
+			if (targetAspectRatio > consoleAspectRatio)
+			{
+				fillH = 1.0f;
+				float stretchRatio = std::min(targetAspectRatio / consoleAspectRatio, maxStretchRatio);
+				fillW = consoleAspectRatio * stretchRatio / targetAspectRatio;
+			}
+			else
+			{
+				fillW = 1.0f;
+				float stretchRatio = std::min(consoleAspectRatio / targetAspectRatio, maxStretchRatio);
+				fillH = targetAspectRatio * stretchRatio / consoleAspectRatio;
+			}
+
+			w = targetW * fillW * zoomHor;
+			h = targetH * fillH * zoomVert;
+		}
+
+		float x = (targetW - w) * 0.5f + EmuSettings.videoXshift * (targetW / SHIFT_UNITS_X);
+		float y = (targetH - h) * 0.5f + EmuSettings.videoYshift * (targetH / SHIFT_UNITS_Y);
+
+		if (fixed)
+		{
+			// Pixel-exact only if the quad also starts on a pixel boundary
+			x = floorf(x + 0.5f);
+			y = floorf(y + 0.5f);
+		}
+
+		placement[i].x = x;
+		placement[i].y = y;
+		placement[i].w = w;
+		placement[i].h = h;
 	}
+
+	// The same placement in UI-canvas pixels (menu screenshot + pointer mapping), from the TV's placement
+	const TargetPlacement& tv = placement[static_cast<int>(OutputTarget::TV)];
+	const float toCanvasX = (float)videoDriver->getScreenWidth()  / (float)videoDriver->getTargetWidth(OutputTarget::TV);
+	const float toCanvasY = (float)videoDriver->getScreenHeight() / (float)videoDriver->getTargetHeight(OutputTarget::TV);
+
+	quadX      = tv.x * toCanvasX;
+	quadY      = tv.y * toCanvasY;
+	quadWidth  = tv.w * toCanvasX;
+	quadHeight = tv.h * toCanvasY;
 
 	gameScreenPng.width  = vwidth;
 	gameScreenPng.height = vheight;
@@ -203,8 +245,8 @@ void WutEmulatorVideo::resetVideo()
 /****************************************************************************
  * mapPointerToUnit
  *
- * The canvas is stretched onto every output target (TV and GamePad) in the
- * same proportion, so the canvas rect is valid for both.
+ * The pointer is reported in UI-canvas coordinates, so this works against the
+ * canvas-space rect resetVideo() derives from the TV placement.
  ***************************************************************************/
 bool WutEmulatorVideo::mapPointerToUnit(float canvasX, float canvasY, float* u, float* v)
 {
@@ -464,16 +506,14 @@ void WutEmulatorVideo::drawFpsOverlay()
 		lastFpsTime = nowMs;
 	}
 
-	const float atlasWidth = (float)fpsFont->getWidth();
-	const float glyphW = atlasWidth / 16.0f; // 16 cells across the atlas
-	const float glyphH = (float)fpsFont->getHeight();
-	const float startX = 480.0f, startY = 420.0f; // bottom-right-ish
-	const float advance = 14.0f; // tight visual kerning
+	// Native size of the (HD) glyph cell, in HD art pixels
+	const float glyphW = (float)fontTex->surface.width / (float)fpsGlyphCells;
+	const float glyphH = (float)fontTex->surface.height;
 
 	Texture2DShader* shader = Texture2DShader::instance();
 	float colorIntensity[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-	float cursorX = startX;
+	float penHd = 0.0f; // advance so far, in HD art pixels
 	for (int i = 0; fpsStr[i] != '\0'; i++)
 	{
 		char c = fpsStr[i];
@@ -489,10 +529,15 @@ void WutEmulatorVideo::drawFpsOverlay()
 		// made after this draw is recorded would be seen by it.
 		const float* glyphUvs = fpsGlyphTexCoords + texIdx * fpsGlyphSlotFloats;
 
-		float offset[3], scale[3];
-		PixelRectToNdc(cursorX, startY, glyphW, glyphH, videoDriver->getScreenWidth(), videoDriver->getScreenHeight(), offset, scale);
+		auto drawPass = [&](OutputTarget target) {
+			const float targetW = (float)videoDriver->getTargetWidth(target);
+			const float targetH = (float)videoDriver->getTargetHeight(target);
+			const float s = targetH / HD_ASSET_LINES; // uniform: art keeps its shape on any target
 
-		auto drawPass = [&]() {
+			float offset[3], scale[3];
+			PixelRectToNdc(targetW * FPS_ANCHOR_X + penHd * s, targetH * FPS_ANCHOR_Y, glyphW * s, glyphH * s,
+				(int)targetW, (int)targetH, offset, scale);
+
 			shader->setShaders();
 			shader->setAttributeBuffer();
 			VertexShader::setAttributeBuffer(1, fpsGlyphUvSize, Shader::cuTexCoordAttrSize, glyphUvs);
@@ -505,10 +550,10 @@ void WutEmulatorVideo::drawFpsOverlay()
 			shader->draw(GX2_PRIMITIVE_MODE_QUADS, 4);
 		};
 
-		WHBGfxBeginRenderTV(); drawPass();
-		WHBGfxBeginRenderDRC(); drawPass();
+		WHBGfxBeginRenderTV(); drawPass(OutputTarget::TV);
+		WHBGfxBeginRenderDRC(); drawPass(OutputTarget::DRC);
 
-		cursorX += advance;
+		penHd += FPS_ADVANCE_HD;
 	}
 }
 
@@ -529,17 +574,24 @@ void WutEmulatorVideo::drawCursorOverlay()
 	if (!cursorTex)
 		return;
 
-	const float w = (float)cursorImg->getWidth();
-	const float h = (float)cursorImg->getHeight();
-
-	float offset[3], scale[3];
-	PixelRectToNdc((float)CursorX - w * 0.5f, (float)CursorY - h * 0.5f, w, h,
-		videoDriver->getScreenWidth(), videoDriver->getScreenHeight(), offset, scale);
+	// Position comes from the input driver in UI-canvas coordinates, so it is taken
+	// as a fraction of the screen; the size is the HD art's own, in physical pixels
+	const float u = (float)CursorX / (float)videoDriver->getScreenWidth();
+	const float v = (float)CursorY / (float)videoDriver->getScreenHeight();
 
 	float colorIntensity[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	Texture2DShader* shader = Texture2DShader::instance();
 
-	auto drawPass = [&]() {
+	auto drawPass = [&](OutputTarget target) {
+		const float targetW = (float)videoDriver->getTargetWidth(target);
+		const float targetH = (float)videoDriver->getTargetHeight(target);
+		const float s = targetH / HD_ASSET_LINES; // uniform: art keeps its shape on any target
+		const float w = (float)cursorTex->surface.width  * s;
+		const float h = (float)cursorTex->surface.height * s;
+
+		float offset[3], scale[3];
+		PixelRectToNdc(u * targetW - w * 0.5f, v * targetH - h * 0.5f, w, h, (int)targetW, (int)targetH, offset, scale);
+
 		shader->setShaders();
 		shader->setAttributeBuffer();
 		shader->setAngle(0.0f);
@@ -551,8 +603,8 @@ void WutEmulatorVideo::drawCursorOverlay()
 		shader->draw(GX2_PRIMITIVE_MODE_QUADS, 4);
 	};
 
-	WHBGfxBeginRenderTV(); drawPass();
-	WHBGfxBeginRenderDRC(); drawPass();
+	WHBGfxBeginRenderTV(); drawPass(OutputTarget::TV);
+	WHBGfxBeginRenderDRC(); drawPass(OutputTarget::DRC);
 }
 
 /****************************************************************************

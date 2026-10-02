@@ -66,16 +66,16 @@ class WutEmulatorVideo : public EmulatorVideoDriver
 		int oldvwidth, oldvheight;
 		int checkVideo;
 
-		// On-screen placement of the game quad, in design-canvas pixels
-		// (top-left x/y, size w/h) - recomputed by resetVideo(). This is the
-		// source of truth for the zoom/shift/aspect settings, and the metrics
-		// the menu's game screenshot background (gameScreenPng) is drawn with.
+		// The game quad in UI-canvas pixels (top-left x/y, size w/h), derived by
+		// resetVideo() from the TV placement below. Not used for drawing - only
+		// the menu's game screenshot background (gameScreenPng) and the
+		// canvas-space pointer mapping need it.
 		float quadX, quadY, quadWidth, quadHeight;
 
-		// The same quad in physical pixels of each render target (top-left
-		// x/y, size w/h), derived from the canvas placement above by the
-		// canvas-to-target stretch. This is what actually gets drawn, and what
-		// scaling/filtering needs (source-to-output scale = size / vwidth,vheight).
+		// Where the game quad is drawn: top-left x/y and size w/h in the physical
+		// pixels of each render target, computed per target by resetVideo()
+		// straight from the target's own size (no UI canvas involved).
+		// Scaling/filtering uses it too (source-to-output scale = size / vwidth,vheight).
 		struct TargetPlacement { float x, y, w, h; };
 		TargetPlacement placement[OUTPUT_TARGET_COUNT];
 
