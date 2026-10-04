@@ -2,6 +2,10 @@
 
 All notable changes to Visual Boy Advance GX are recorded here, newest first. For the current features and setup instructions, see [README.md](README.md).
 
+## Unreleased
+* Wii U: the Wiimote tilt sensor now works (Kirby Tilt-N-Tumble, Yoshi Topsy-Turvy, WarioWare Twisted!, Boktai's Gun Del Sol), and Yoshi's Universal Gravitation rotates the screen as on Wii
+* Wii U: Japanese/Korean/Chinese fonts are now also found in `vbagx/` or `wiiu/apps/vbagx/` on the SD card even before settings have been saved, and stay crisp at 1080p
+
 ## 3.0.3 - October 1, 2026
 * **Native Wii U release!** Visual Boy Advance GX now runs natively on the Wii U as its own app, with its own icon on the Wii U Menu. Requires [Aroma](https://wiiu.hacks.guide/) - run the latest Aroma release and launch the `.wuhb` directly from it
   * Output up to 1080p, with a new GPU-powered **ScaleFX** upscaler shader and a **Sharp Bilinear** shader, plus a scanline shader

@@ -295,7 +295,7 @@ Visual Boy Advance GX has two kinds of saves: **SRAM**, the in-game battery save
 
 ### Language & Custom Fonts
 
-For Japanese or Korean, supply a matching font file yourself — `jp.ttf` or `ko.ttf` — placed in your app folder (`apps/vbagx/` on Wii, alongside `vbagx-gc.dol` on GameCube). Once the font file is in place, select that language from **Settings → Menu → Language** and it switches fonts automatically.
+For Japanese or Korean, supply a matching font file yourself — `jp.ttf` or `ko.ttf` — placed in your app folder (`apps/vbagx/` on Wii, `vbagx/` on the SD card root on Wii U — the same folder as `settings.xml` — alongside `vbagx-gc.dol` on GameCube). Once the font file is in place, select that language from **Settings → Menu → Language** and it switches fonts automatically.
 
 You can also customize the menu's background music by dropping a `bg_music.ogg` into the same app folder.
 
