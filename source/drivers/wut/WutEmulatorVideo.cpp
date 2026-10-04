@@ -67,6 +67,39 @@ namespace
 	const uint32_t fpsGlyphSlotSize   = GX2_VERTEX_BUFFER_ALIGNMENT;
 	const uint32_t fpsGlyphSlotFloats = fpsGlyphSlotSize / sizeof(float);
 
+	// Screen tilt (Yoshi's Universal Gravitation): the game quad turns with the
+	// Wiimote and is shrunk so its corners stay on screen - same factor as GC/Wii
+	const float TILT_SCREEN_SCALE = 0.8f;
+
+	// Corners (NDC) of a pixel rect turned `degrees` clockwise about its own
+	// centre and scaled by `shrink`. Rotating in physical pixels keeps the
+	// turn rigid on any target aspect ratio. Vertex order matches
+	// Texture2DShader's unit quad: bottom-left, bottom-right, top-right, top-left.
+	void TiltedQuadToNdc(float x, float y, float w, float h, float degrees, float shrink, int designWidth, int designHeight, float corners[8])
+	{
+		const float cx = x + w * 0.5f;
+		const float cy = y + h * 0.5f;
+		const float hw = w * shrink * 0.5f;
+		const float hh = h * shrink * 0.5f;
+		const float rad = degrees * ((float)M_PI / 180.0f);
+		const float c = cosf(rad);
+		const float s = sinf(rad);
+
+		static const float lx[4] = { -1.0f,  1.0f, 1.0f, -1.0f };
+		static const float ly[4] = { -1.0f, -1.0f, 1.0f,  1.0f }; // +1 = top of the quad
+
+		for (int i = 0; i < 4; i++)
+		{
+			const float dx = lx[i] * hw;
+			const float dy = -ly[i] * hh; // pixel space is y-down
+			const float px = cx + dx * c - dy * s;
+			const float py = cy + dx * s + dy * c;
+
+			corners[i * 2 + 0] = (px / designWidth) * 2.0f - 1.0f;
+			corners[i * 2 + 1] = 1.0f - (py / designHeight) * 2.0f;
+		}
+	}
+
 	void PixelRectToNdc(float x, float y, float w, float h, int designWidth, int designHeight, float offset[3], float scale[3])
 	{
 		float centerPxX = x + w * 0.5f;
@@ -429,6 +462,35 @@ void WutEmulatorVideo::drawQuad()
 		shader->draw(GX2_PRIMITIVE_MODE_QUADS, 4);
 	};
 
+	// Tilted game quad: pre-rotated corners, drawn plain (the output filters and
+	// ScaleFX are skipped while the screen is tilting). Returns false if the
+	// per-frame rotated-quad slots are exhausted - the caller draws it straight.
+	auto drawTiltedPass = [&](OutputTarget target) {
+		const TargetPlacement& p = placement[static_cast<int>(target)];
+
+		float corners[8];
+		TiltedQuadToNdc(p.x, p.y, p.w, p.h, TiltAngle, TILT_SCREEN_SCALE,
+			videoDriver->getTargetWidth(target), videoDriver->getTargetHeight(target), corners);
+
+		uint32_t slot = 0;
+		if (!shader->uploadRotatedQuad(corners, slot))
+			return false;
+
+		static const float identityOffset[3] = { 0.0f, 0.0f, 0.0f };
+		static const float identityScale[3] = { 1.0f, 1.0f, 1.0f };
+
+		shader->setShaders();
+		shader->setRotatedAttributeBuffer(slot);
+		shader->setAngle(0.0f);
+		shader->setOffset(identityOffset);
+		shader->setScale(identityScale);
+		shader->setColorIntensity(colorIntensity);
+		shader->clearBlur();
+		shader->setTextureAndSampler(texture, &sampler);
+		shader->draw(GX2_PRIMITIVE_MODE_QUADS, 4);
+		return true;
+	};
+
 	const bool sharp = EmuSettings.videoUpscalingFilter == UPSCALE_SHARP_BILINEAR;
 	const float scanlines = EmuSettings.videoScanlines ? SCANLINE_STRENGTH : 0.0f;
 
@@ -450,6 +512,8 @@ void WutEmulatorVideo::drawQuad()
 
 	// The frame texture on a target: plain textured quad, or the output filter when it has work to do
 	auto drawGame = [&](OutputTarget target) {
+		if (TiltScreen && drawTiltedPass(target))
+			return;
 		if ((sharp || scanlines > 0.0f) && outputFilterPass(target, texture, EmuSettings.videoBilinearFilter, sharp))
 			return;
 		drawPass(target);
@@ -461,7 +525,7 @@ void WutEmulatorVideo::drawQuad()
 
 	if (EmuSettings.videoUpscalingFilter == UPSCALE_SCALEFX)
 	{
-		if (scalefx->prepare(texture->surface.width, texture->surface.height))
+		if (!TiltScreen && scalefx->prepare(texture->surface.width, texture->surface.height))
 		{
 			scalefx->run(texture);
 			useScaleFX = true;

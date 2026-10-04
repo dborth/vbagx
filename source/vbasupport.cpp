@@ -16,10 +16,6 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-#ifdef HW_RVL
-#include <wiiuse/wpad.h>
-#endif
-
 #include "vbagx.h"
 #include "vbasupport.h"
 #include "memmanager.h"
@@ -38,6 +34,8 @@
 #include "gameborder.h"
 #include "preferences.h"
 #include "drivers/Time.h"
+#include "drivers/InputController.h"
+#include "drivers/InputData.h"
 
 #ifdef HW_DOL
 #include "drivers/ogc/gamecube/vm/vm.h"
@@ -875,6 +873,28 @@ uint8_t systemGetSensorDarkness()
 	return sensorDarkness;
 }
 
+// First Wiimote's accelerometer state
+struct WiimoteMotion { float gforceX, gforceY, pitch, roll; };
+
+static WiimoteMotion GetWiimoteMotion()
+{
+	WiimoteMotion m = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+	if (!controller[0])
+		return m;
+
+	const InputPadData& data = controller[0]->getPadData();
+
+	if (!data.hw_connected[INPUT_HW_WIIMOTE])
+		return m;
+
+	m.gforceX = data.hw_gforceX[INPUT_HW_WIIMOTE];
+	m.gforceY = data.hw_gforceY[INPUT_HW_WIIMOTE];
+	m.pitch   = data.hw_pitch[INPUT_HW_WIIMOTE];
+	m.roll    = data.hw_roll[INPUT_HW_WIIMOTE];
+	return m;
+}
+
 void systemUpdateSolarSensor()
 {
 	uint8_t sun = 0x0; //sun = 0xE8 - 0xE8 (case 0 and default)
@@ -934,20 +954,17 @@ void systemUpdateSolarSensor()
 		sun >>= 1;
 	}
 
-#ifdef HW_RVL
 	// pointing the Gun Del Sol at the ground blocks the sun light,
 	// because sometimes you need the shade.
-	WPADData *Data = WPAD_Data(0);// first wiimote
-	WPADData data = *Data;
+	WiimoteMotion motion = GetWiimoteMotion();
 	float f = 1.0f;
-	if (data.orient.pitch > 0)
+	if (motion.pitch > 0)
 	{
-		f = 1.0f - (data.orient.pitch/85.0f);
+		f = 1.0f - (motion.pitch/85.0f);
 		if (f < 0)
 			f = 0;
 	}
 	sun = int(float(int(sun)) * f);
-#endif
 	sensorDarkness = 0xE8 - sun;
 }
 
@@ -959,26 +976,24 @@ static inline float absf(float f) {
 
 void systemUpdateMotionSensor()
 {
-#ifdef HW_RVL
-	WPADData *Data = WPAD_Data(0); // first wiimote
-	WPADData data = *Data;
+	WiimoteMotion data = GetWiimoteMotion();
 	static float OldTiltAngle, OldAvg;
 	static bool WasFlat = false;
 	float DeltaAngle = 0;
 
 	if (TiltSideways)
 	{
-		sensorY = 2047+(data.gforce.x*50);
-		sensorX = 2047+(data.gforce.y*50);
-		TiltAngle = ((-data.orient.pitch) + OldTiltAngle)*0.5f;
-		OldTiltAngle = -data.orient.pitch;
+		sensorY = 2047+(data.gforceX*50);
+		sensorX = 2047+(data.gforceY*50);
+		TiltAngle = ((-data.pitch) + OldTiltAngle)*0.5f;
+		OldTiltAngle = -data.pitch;
 	}
 	else
 	{
-		sensorX = 2047-(data.gforce.x*50);
-		sensorY = 2047+(data.gforce.y*50);
-		TiltAngle = ((data.orient.roll) + OldTiltAngle)*0.5f;
-		OldTiltAngle = data.orient.roll;
+		sensorX = 2047-(data.gforceX*50);
+		sensorY = 2047+(data.gforceY*50);
+		TiltAngle = ((data.roll) + OldTiltAngle)*0.5f;
+		OldTiltAngle = data.roll;
 	}
 	DeltaAngle = TiltAngle - OldAvg;
 	if (DeltaAngle > 180.0f)
@@ -999,8 +1014,6 @@ void systemUpdateMotionSensor()
 	}
 
 	sensorWario = 0x6C0+DeltaAngle*11;
-
-#endif
 
 	systemUpdateSolarSensor();
 }

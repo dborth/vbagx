@@ -32,6 +32,23 @@ static inline float clampf(float v, float lo, float hi) {
 	return (v < lo) ? lo : (v > hi) ? hi : v;
 }
 
+static void UpdateTiltAngles(float ax, float ay, float az, float& pitch, float& roll) {
+	const float kRadToDeg = 180.0f / (float)M_PI;
+	const float kMaxG = 1.1f;
+	const float x = clampf(ax, -1.0f, 1.0f);
+	const float y = clampf(ay, -1.0f, 1.0f);
+	const float z = clampf(az, -1.0f, 1.0f);
+
+	if (std::abs(ax) <= kMaxG) {
+		const float r = std::atan2(x, z) * kRadToDeg;
+		if (std::isfinite(r)) roll = r;
+	}
+	if (std::abs(ay) <= kMaxG) {
+		const float p = std::atan2(y, z) * kRadToDeg;
+		if (std::isfinite(p)) pitch = p;
+	}
+}
+
 // Copies the persistent per-profile state (held buttons + analog stick/
 // orientation) for hardware index `hw` from src into dst. Deliberately
 // excludes hw_buttons_d/hw_buttons_r - those are one-frame events
@@ -346,6 +363,13 @@ void WutInputDriver::update() {
 			padData.hw_gforceX[INPUT_HW_WIIMOTE] = kpadStatus.acc.x;
 			padData.hw_gforceY[INPUT_HW_WIIMOTE] = kpadStatus.acc.y;
 			padData.hw_gforceZ[INPUT_HW_WIIMOTE] = kpadStatus.acc.z;
+
+			// Last known angles come from the cache so they hold when an axis is out of range
+			float wmPitch = kpadCache[i].hw_pitch[INPUT_HW_WIIMOTE];
+			float wmRoll  = kpadCache[i].hw_roll[INPUT_HW_WIIMOTE];
+			UpdateTiltAngles(kpadStatus.acc.x, kpadStatus.acc.y, kpadStatus.acc.z, wmPitch, wmRoll);
+			padData.hw_pitch[INPUT_HW_WIIMOTE] = wmPitch;
+			padData.hw_roll[INPUT_HW_WIIMOTE]  = wmRoll;
 
 			if (kpadStatus.extensionType == WPAD_EXT_PRO_CONTROLLER) {
 				padData.hw_connected[INPUT_HW_WUPC] = true;
