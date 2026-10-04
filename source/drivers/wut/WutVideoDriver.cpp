@@ -654,8 +654,12 @@ void WutGlyphRenderer::loadTextureData(void * texturePtr, FT_Bitmap * bitmap)
 	uint32_t copyWidth = (bitmap->width < texture->surface.width) ? bitmap->width : texture->surface.width;
 	uint32_t copyHeight = (bitmap->rows < texture->surface.height) ? bitmap->rows : texture->surface.height;
 
+	uint32_t srcPitch = bitmap->pitch < 0 ? -bitmap->pitch : bitmap->pitch;
+	if(srcPitch == 0)
+		srcPitch = bitmap->width;
+
 	for(uint32_t y = 0; y < copyHeight; y++)
-		memcpy(dst + y * texture->surface.pitch, src + y * bitmap->width, copyWidth);
+		memcpy(dst + y * texture->surface.pitch, src + y * srcPitch, copyWidth);
 
 	GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, texture->surface.image, texture->surface.imageSize);
 }
