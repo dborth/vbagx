@@ -1087,8 +1087,14 @@ static bool ResolvePreviewImagePath(void *, int index, char * outPath, size_t ou
 	   browser.numEntries <= 0 || index <= 0 || index >= browser.numEntries)
 		return false;
 
-	char imageFile[MAXJOLIET + 1];
-	snprintf(imageFile, sizeof(imageFile), "%s.png", browserList[index].displayname);
+	char imageBase[MAXJOLIET + 1];
+	if(browserList[index].isdir)
+		snprintf(imageBase, sizeof(imageBase), "%s", browserList[index].filename);
+	else
+		StripExt(imageBase, browserList[index].filename);
+
+	char imageFile[MAXJOLIET + 16];
+	snprintf(imageFile, sizeof(imageFile), "%s.png", imageBase);
 	platform->getFileSystem()->getPath(outPath, outPathSize, EmuSettings.loadDevice, getImageFolder(), imageFile);
 	return true;
 }
@@ -1619,7 +1625,9 @@ static int MenuGame()
 	bool isBoktai = ((RomIdCode & 0xFF)=='U');
     char s[64];
 
-	GuiText titleTxt(ROMFilename, 22, (PixelColor){255, 255, 255, 255});
+	char romTitle[512];
+	platform->getFileSystem()->nameToDisplay(ROMFilename, romTitle, sizeof(romTitle)); // raw name -> UTF-8 for display only
+	GuiText titleTxt(romTitle, 22, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
