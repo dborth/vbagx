@@ -732,7 +732,7 @@ static int GetWiiUSystemLanguage()
 		case 8: return LANG_DUTCH;
 		case 9: return LANG_PORTUGUESE;
 		case 11: return LANG_SIMP_CHINESE; // traditional: not supported
-		default: return LANG_ENGLISH
+		default: return LANG_ENGLISH;
 	}
 }
 #endif
