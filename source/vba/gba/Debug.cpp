@@ -7,7 +7,7 @@
  *
  * Implements the logging/reporting functions declared in Debug.h and gated
  * behind VBAGX_DEBUG. Everything here writes into one shared in-memory
- * text buffer (debugLogBuffer, allocated from MEM2 via mem2_malloc) rather
+ * text buffer (debugLogBuffer, allocated from the extmem heap) rather
  * than touching the SD card per call, since SD I/O during emulation would
  * be far too slow — WriteDebugLogToFile() is the one place that actually
  * flushes the accumulated buffer out to a timestamped file

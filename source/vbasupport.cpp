@@ -1380,6 +1380,51 @@ static bool utilIsZipFile(const char* file)
 	return false;
 }
 
+#ifdef HW_RVL
+// Uncompressed size of the ROM about to be loaded, or 0 if it can't be told
+// cheaply. ROMMemoryAcquire() uses it to pick which MEM2 block the ROM goes in,
+// so it has to be known before the load. (0 is safe: it assumes the worst.)
+static uint32_t GetROMSizeHint(const char *filepath)
+{
+	if(inSz) // 7z: the browser entry carries the size of the selected file
+		return (uint32_t)browserList[browser.selIndex].length;
+
+	int device;
+	if(!FindDevice((char *)filepath, &device))
+		return 0;
+
+	HaltParseThread();
+	if(!ChangeInterface(device, SILENT))
+		return 0;
+
+	FILE *fp = fopen(filepath, "rb");
+	if(!fp)
+		return 0;
+
+	uint32_t size = 0;
+	char header[32];
+
+	if(fread(header, 1, sizeof(header), fp) == sizeof(header)) {
+		if(IsZipFile(header)) { // uncompressed size of the first entry, from its local header
+			size = (uint32_t)(uint8_t)header[22] |
+				((uint32_t)(uint8_t)header[23] << 8) |
+				((uint32_t)(uint8_t)header[24] << 16) |
+				((uint32_t)(uint8_t)header[25] << 24);
+		}
+		else {
+			fseeko(fp, 0, SEEK_END);
+			off_t end = ftello(fp);
+			if(end > 0 && end <= (off_t)0xFFFFFFFFu)
+				size = (uint32_t)end;
+		}
+	}
+	fclose(fp);
+	return size;
+}
+#else
+#define GetROMSizeHint(filepath) ((uint32_t)0)
+#endif
+
 #ifdef HW_DOL
 int LoadROMToVM(const char* filepath) {
 	int size = 0;
@@ -1510,7 +1555,7 @@ int LoadROMToVM(const char* filepath) {
 
 bool LoadGBROM()
 {
-	gbRom = romPtr;
+	gbRom = ROMMemoryAcquire(1024*1024*8, nullptr);
 	bios = (uint8_t *)calloc(1,0x100);
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
@@ -1624,19 +1669,30 @@ static bool GBAROMAlloc()
 static int GBAROMLoad()
 {
 	GBAROMSize = 0;
-	rom = romPtr;
 
+	char filepath[MAXPATHLEN];
+	uint32_t romCapacity = 0;
+
+	// Pick the MEM2 block for this ROM (and, with it, the JIT cache's block).
+	// This needs the ROM's size up front, hence the hint.
 	if(!inSz)
 	{
-		char filepath[MAXPATHLEN];
-
 		if(!MakeFilePath(filepath, FILE_ROM))
 			return 0;
 
+		rom = ROMMemoryAcquire(GetROMSizeHint(filepath), &romCapacity);
+	}
+	else
+	{
+		rom = ROMMemoryAcquire(GetROMSizeHint(nullptr), &romCapacity);
+	}
+
+	if(!inSz)
+	{
 		#ifdef HW_DOL
 		GBAROMSize = LoadROMToVM(filepath);
 		#else
-		GBAROMSize = LoadFile ((char *)rom, filepath, 0, MAX_GBA_ROM_SIZE, NOTSILENT);
+		GBAROMSize = LoadFile ((char *)rom, filepath, 0, romCapacity, NOTSILENT);
 		#endif
 	}
 	else

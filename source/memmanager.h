@@ -45,6 +45,9 @@ void* memspace_malloc(uint32_t size);
 void memspace_free(void *ptr);
 int memspace_size_free();
 char* memspace_strdup(const char *s);
+// Picks where the ROM (and, on Wii, the JIT arena) for the ROM about to be loaded lives
+uint8_t* ROMMemoryAcquire(uint32_t romSize, uint32_t *capacity);
+// Persistent heap that survives menu <-> game mode switches (font, bg music)
 void* extmem_malloc(uint32_t size);
 void extmem_free(void *ptr);
 int extmem_size_free();

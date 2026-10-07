@@ -5,7 +5,7 @@
  *
  * JITCache.cpp
  *
- * Implements the JITCache class: the 8MB bump-allocated code arena, the
+ * Implements the JITCache class: the bump-allocated code arena (size chosen by the caller), the
  * 65536-bucket direct-mapped (no-chaining, colliding-block-evicts) block
  * hash table, and the self-modifying inline-cache "linker stub" that makes
  * block chaining possible.
@@ -52,6 +52,7 @@ JITCache jitCache;
 
 JITCache::JITCache() {
 	jitArena = nullptr;
+	arenaSize = 0;
 	blockTable = nullptr;
 	smcRegistry = nullptr;
 	smcPageFlags = SMC_PAGE_FLAGS_IDLE;
@@ -65,10 +66,14 @@ JITCache::~JITCache() {
     destroy();
 }
 
-void JITCache::initialize(u32* arenaPtr, BasicBlock* blockPtr, BasicBlock** smcRegPtr, u8* smcFlagsPtr) {
+void JITCache::initialize(u32* arenaPtr, size_t arenaBytes, BasicBlock* blockPtr, BasicBlock** smcRegPtr, u8* smcFlagsPtr) {
 	if (isInitialized) return;
 
+	// Direct block-to-block `b` patching only reaches +/-32MB
+	if (arenaBytes > JIT_ARENA_MAX_SIZE) arenaBytes = JIT_ARENA_MAX_SIZE;
+
 	jitArena = arenaPtr;
+	arenaSize = arenaBytes & ~(size_t)31;
 	blockTable = blockPtr;
 	smcRegistry = smcRegPtr;
 	smcPageFlags = smcFlagsPtr;
@@ -79,6 +84,7 @@ void JITCache::initialize(u32* arenaPtr, BasicBlock* blockPtr, BasicBlock** smcR
 
 void JITCache::destroy() {
 	jitArena = nullptr;
+	arenaSize = 0;
 	blockTable = nullptr;
 	smcRegistry = nullptr;
 	smcPageFlags = SMC_PAGE_FLAGS_IDLE;
@@ -89,8 +95,8 @@ void JITCache::destroy() {
 u32* JITCache::allocateJITMemory(size_t numBytes) {
 	numBytes = (numBytes + 31) & ~31;
 
-	// If this allocation exceeds our 512KB arena, flush the cache
-	if (arenaOffset + numBytes > JIT_ARENA_SIZE) {
+	// If this allocation exceeds the arena, flush the cache
+	if (arenaOffset + numBytes > arenaSize) {
 		flushCache();
 	}
 
