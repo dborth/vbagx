@@ -24,12 +24,8 @@
  *     fetch; the heavier registerBlock()/flushCache()/invalidateSMCTarget()
  *     logic lives in JITCache.cpp.
  *
- * JIT_ARENA_SIZE is the default arena size; on Wii the arena lives in MEM2 and
- * its actual size is chosen at runtime (memmanager.cpp) and passed to
- * initialize(). JIT_ARENA_MAX_SIZE is the hard ceiling: a PowerPC `b` reaches
- * +/-32MB, and the linker stub patches direct `b` instructions between any two
- * blocks in the arena, so no arena may be larger than 32MB.
- * HASH_TABLE_SIZE (65536) and SMC_MAP_SIZE are the settled tuning constants
+ * JIT_ARENA_SIZE (8MB), HASH_TABLE_SIZE (65536), and SMC_MAP_SIZE are the
+ * settled tuning constants
  ***************************************************************************/
 
 #ifndef JIT_CACHE_H
@@ -57,7 +53,7 @@
 #endif
 
 #if defined(HW_RVL) || defined(HW_DOL)
-#define JIT_ARENA_SIZE					(1024 * 1024 * 8) // 8 MB (GameCube; Wii sizes its MEM2 arena at runtime)
+#define JIT_ARENA_SIZE					(1024 * 1024 * 8) // 8 MB
 #define HASH_TABLE_SIZE					65536
 #define SMC_MAP_SIZE                    65536 // 64K pages (1KB page granularity across 64MB)
 #else
@@ -65,9 +61,6 @@
 #define HASH_TABLE_SIZE					(1024 * 1024) // 1MB
 #define SMC_MAP_SIZE                    (1024 * 512) // 512K pages (1KB page granularity across 64MB)
 #endif
-
-// Hard ceiling for any arena: the reach of a PowerPC relative `b`
-#define JIT_ARENA_MAX_SIZE				(1024 * 1024 * 32)
 
 // -------------------------------------------------------------------------
 // ENGINE DEFINITIONS
@@ -85,7 +78,6 @@ struct __attribute__((aligned(16))) BasicBlock {
 class JITCache {
 	private:
 		u32* jitArena;
-		size_t arenaSize;
 		size_t arenaOffset;
 		BasicBlock* blockTable;
 		BasicBlock** smcRegistry;
@@ -101,7 +93,7 @@ class JITCache {
 
 		inline bool isReady() const { return isInitialized; }
 
-		void initialize(u32* arenaPtr, size_t arenaBytes, BasicBlock* blockPtr, BasicBlock** smcRegPtr, u8* smcFlagsPtr);
+		void initialize(u32* arenaPtr, BasicBlock* blockPtr, BasicBlock** smcRegPtr, u8* smcFlagsPtr);
 		void destroy();
 
 		u32* allocateJITMemory(size_t numBytes);
