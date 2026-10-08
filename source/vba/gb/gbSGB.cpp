@@ -6,6 +6,7 @@
 #include "../Util.h"
 #include "gb.h"
 #include "gbGlobals.h"
+#include "memmanager.h"
 
 extern u8 *pix;
 
@@ -33,8 +34,13 @@ u8  gbSgbNextController    = 0x0f;
 u8  gbSgbReadingController = 0;
 u16 gbSgbSCPPalette[4*512];
 u8  gbSgbATF[20 * 18];
-u8  gbSgbATFList[45 * 20 * 18];
+u8  *gbSgbATFList = nullptr;
 u8  gbSgbScreenBuffer[4160];
+
+void gbSgbAllocate()
+{
+  gbSgbATFList = (u8 *)bootmem_calloc(45 * 20 * 18);
+}
 
 inline void gbSgbDraw16Bit(u16 *p, u16 v)
 {

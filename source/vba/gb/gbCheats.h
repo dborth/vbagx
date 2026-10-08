@@ -39,6 +39,7 @@ bool gbVerifyGgCode(const char *code);
 
 extern int gbCheatNumber;
 extern gbCheat gbCheatList[100];
-extern bool gbCheatMap[0x10000];
+extern bool *gbCheatMap; // 0x10000 entries, see gbCheatsAllocate()
+extern void gbCheatsAllocate();
 
 #endif // GBCHEATS_H

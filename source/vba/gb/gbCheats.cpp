@@ -10,11 +10,17 @@
 #include "gbCheats.h"
 #include "gbGlobals.h"
 #include "gb.h"
+#include "memmanager.h"
 
 gbCheat gbCheatList[100];
 int gbCheatNumber = 0;
 int gbNextCheat = 0;
-bool gbCheatMap[0x10000];
+bool *gbCheatMap = nullptr;
+
+void gbCheatsAllocate()
+{
+  gbCheatMap = (bool *)bootmem_calloc(0x10000 * sizeof(bool));
+}
 
 extern bool cheatsEnabled;
 

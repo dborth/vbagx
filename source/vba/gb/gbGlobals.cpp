@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include "../common/Types.h"
+#include "memmanager.h"
 
 u8 *gbMemoryMap[16];
 
@@ -26,7 +27,12 @@ int gbWindowLine = -1;
 bool genericflashcardEnable = false;
 int gbCgbMode = 0;
 
-u16 gbColorFilter[32768];
+u16 *gbColorFilter = nullptr;
+
+void gbColorFilterAllocate()
+{
+	gbColorFilter = (u16 *)bootmem_calloc(32768 * sizeof(u16));
+}
 int gbColorOption = 0;
 int gbPaletteOption = 0;
 int gbEmulatorType = 0;

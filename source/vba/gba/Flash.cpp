@@ -5,6 +5,7 @@
 #include "Flash.h"
 #include "Sram.h"
 #include "../Util.h"
+#include "memmanager.h"
 
 #define FLASH_READ_ARRAY         0
 #define FLASH_CMD_1              1
@@ -17,7 +18,7 @@
 #define FLASH_PROGRAM            8
 #define FLASH_SETBANK            9
 
-uint8_t flashSaveMemory[FLASH_128K_SZ];
+uint8_t *flashSaveMemory = nullptr;
 
 int flashState = FLASH_READ_ARRAY;
 int flashReadState = FLASH_READ_ARRAY;
@@ -29,7 +30,7 @@ int flashBank = 0;
 static variable_desc flashSaveData[] = {
   { &flashState, sizeof(int) },
   { &flashReadState, sizeof(int) },
-  { &flashSaveMemory[0], 0x10000 },
+  { NULL, 0x10000 }, // flashSaveMemory, set by flashAllocate()
   { NULL, 0 }
 };
 
@@ -37,7 +38,7 @@ static variable_desc flashSaveData2[] = {
   { &flashState, sizeof(int) },
   { &flashReadState, sizeof(int) },
   { &flashSize, sizeof(int) },
-  { &flashSaveMemory[0], 0x20000 },
+  { NULL, 0x20000 }, // flashSaveMemory, set by flashAllocate()
   { NULL, 0 }
 };
 
@@ -46,13 +47,23 @@ static variable_desc flashSaveData3[] = {
   { &flashReadState, sizeof(int) },
   { &flashSize, sizeof(int) },
   { &flashBank, sizeof(int) },
-  { &flashSaveMemory[0], 0x20000 },
+  { NULL, 0x20000 }, // flashSaveMemory, set by flashAllocate()
   { NULL, 0 }
 };
 
+void flashAllocate()
+{
+	flashSaveMemory = (u8 *)bootmem_calloc(FLASH_128K_SZ);
+
+	// the save-state tables hold the buffer's address
+	flashSaveData[2].address = flashSaveMemory;
+	flashSaveData2[3].address = flashSaveMemory;
+	flashSaveData3[4].address = flashSaveMemory;
+}
+
 void flashInit()
 {
-	memset(flashSaveMemory, 0xff, sizeof(flashSaveMemory));
+	memset(flashSaveMemory, 0xff, FLASH_128K_SZ);
 }
 
 void flashReset()

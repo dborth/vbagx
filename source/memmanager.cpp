@@ -12,6 +12,7 @@
 #include <ogc/system.h>
 #endif
 #include <malloc.h>
+#include <stdlib.h>
 #include "vbagx.h"
 #include "vbasupport.h"
 #include "memmanager.h"
@@ -96,6 +97,21 @@ extern "C" { extern char __mem2_start[]; }
 extern "C" { void *__myArena2Hi = __mem2_start; }
 #endif
 
+void* bootmem_calloc(size_t size)
+{
+#ifdef HW_RVL
+	return mem2_calloc(1, size);
+#else
+	return calloc(1, size);
+#endif
+}
+
+// Boot-time buffer allocations owned by the VBA core
+void flashAllocate();
+void gbColorFilterAllocate();
+void gbCheatsAllocate();
+void gbSgbAllocate();
+
 void InitMemManager ()
 {
 #ifdef HW_RVL
@@ -114,6 +130,11 @@ void InitMemManager ()
 	browserList = (BROWSERENTRY *)memalign(FILE_BUFFER_ALIGN, sizeof(BROWSERENTRY) * MAX_BROWSER_SIZE);
 	texturemem = coreMem.gba.texturemem;
 #endif
+
+	flashAllocate();
+	gbColorFilterAllocate();
+	gbCheatsAllocate();
+	gbSgbAllocate();
 }
 
 #ifdef __WIIU__

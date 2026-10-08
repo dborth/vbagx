@@ -9,10 +9,11 @@ extern void flashReadGameSkip(gzFile _gzFile, int version);
 extern u8 flashRead(u32 address);
 extern void flashWrite(u32 address, u8 byte);
 extern void flashDelayedWrite(u32 address, u8 byte);
-extern u8 flashSaveMemory[FLASH_128K_SZ];
+extern u8 *flashSaveMemory;
 extern void flashSaveDecide(u32 address, u8 byte);
 extern void flashReset();
 extern void flashSetSize(int size);
+extern void flashAllocate();
 extern void flashInit();
 
 extern int flashSize;

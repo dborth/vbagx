@@ -10,6 +10,7 @@
 #include <ogcsys.h>
 #include <unistd.h>
 #include <ogc/cond.h>
+#include <malloc.h>
 
 #include "OgcThreadDriver.h"
 
@@ -20,6 +21,7 @@ namespace
 		lwp_t thread = LWP_THREAD_NULL;
 		ThreadEntry entry = nullptr;
 		void * arg = nullptr;
+		void * stack = nullptr;
 	};
 
 	void * OgcThreadTrampoline(void * arg)
@@ -65,10 +67,16 @@ bool OgcThreadDriver::createThread(ThreadEntry entry, void * arg, uint32_t stack
 	*outHandle = handle;
 
 	int nativePriority = MapOgcPriority(priority);
-	int32_t res = LWP_CreateThread(&handle->thread, OgcThreadTrampoline, handle, nullptr, stackSize, nativePriority);
+#ifdef HW_RVL
+	handle->stack = mem2_memalign(32, stackSize);
+#endif
+	int32_t res = LWP_CreateThread(&handle->thread, OgcThreadTrampoline, handle, handle->stack, stackSize, nativePriority);
 	if(res != 0)
 	{
 		*outHandle = nullptr;
+#ifdef HW_RVL
+		mem2_free(handle->stack);
+#endif
 		delete handle;
 		return false;
 	}
@@ -83,6 +91,9 @@ void OgcThreadDriver::joinThread(void * thread)
 
 	OgcThreadHandle * handle = static_cast<OgcThreadHandle *>(thread);
 	LWP_JoinThread(handle->thread, nullptr);
+#ifdef HW_RVL
+	mem2_free(handle->stack);
+#endif
 	delete handle;
 }
 

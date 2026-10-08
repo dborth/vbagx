@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <malloc.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <memory>
@@ -63,7 +64,8 @@
 GuiImageData * pointer[4];
 GuiImage cursorImg[4];
 #ifdef HW_RVL
-uint8_t pointerTexture[4][96 * 96 * 4] __attribute__((aligned(32)));
+// cursor textures (4 x 96x96 RGBA): allocated in MEM2 by InitGUI
+static uint8_t (*pointerTexture)[96 * 96 * 4];
 #endif
 #endif
 
@@ -756,6 +758,7 @@ void InitGUI()
 {
 	#ifdef CURSOR_SUPPORT
 	#ifdef HW_RVL
+	pointerTexture = (uint8_t (*)[96 * 96 * 4]) mem2_memalign(32, 4 * 96 * 96 * 4);
 	pointer[0] = new GuiImageData(player1_point_png, pointerTexture[0]);
 	pointer[1] = new GuiImageData(player2_point_png, pointerTexture[1]);
 	pointer[2] = new GuiImageData(player3_point_png, pointerTexture[2]);

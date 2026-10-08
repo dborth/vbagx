@@ -24,7 +24,8 @@ extern u8 *gbTAMA5ram;
 extern u8 *gbMemoryMap[16];
 
 extern int gbFrameSkip;
-extern u16 gbColorFilter[32768];
+extern u16 *gbColorFilter; // 32768 entries, see gbColorFilterAllocate()
+extern void gbColorFilterAllocate();
 extern int gbColorOption;
 extern int gbPaletteOption;
 extern int gbEmulatorType;

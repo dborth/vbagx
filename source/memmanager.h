@@ -20,6 +20,9 @@
 #endif
 #define PNG_FILE_BUFFER_SIZE (512 * 1024)
 
+#include <stddef.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -47,6 +50,9 @@ int memspace_size_free();
 char* memspace_strdup(const char *s);
 void* extmem_malloc(uint32_t size);
 void extmem_free(void *ptr);
+
+// Zeroed allocation for large buffers that live for the whole run
+void* bootmem_calloc(size_t size);
 
 #ifdef __cplusplus
 }
