@@ -380,8 +380,14 @@ void OgcVideoDriver::init(int width, int height)
 	// Allocate the video buffers. Sized for the largest supported mode
 	// (640x576, 2 bytes per pixel) so the same buffers serve every mode.
 	const u32 xfbSize = MAX_FB_WIDTH * MAX_FB_HEIGHT * 2;
+#ifdef HW_RVL
+	// MEM1 is reserved for the JIT cache: keep the framebuffers in MEM2
+	xfb[0] = (u32 *) mem2_memalign(32, xfbSize);
+	xfb[1] = (u32 *) mem2_memalign(32, xfbSize);
+#else
 	xfb[0] = (u32 *) memalign(32, xfbSize);
 	xfb[1] = (u32 *) memalign(32, xfbSize);
+#endif
 	DCInvalidateRange(xfb[0], xfbSize);
 	DCInvalidateRange(xfb[1], xfbSize);
 	xfb[0] = (u32 *) MEM_K0_TO_K1 (xfb[0]);

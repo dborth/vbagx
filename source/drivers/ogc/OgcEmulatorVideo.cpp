@@ -738,16 +738,25 @@ long long int* OgcEmulatorVideo::processFrameAndGetDest(void* textureBase, const
 // (survives the switch) before that happens.
 void OgcEmulatorVideo::snapshotFrame()
 {
+
+#ifdef HW_RVL
+#define SNAPSHOT_ALLOC(n) mem2_malloc(n)
+#define SNAPSHOT_FREE(p) mem2_free(p)
+#else
+#define SNAPSHOT_ALLOC(n) malloc(n)
+#define SNAPSHOT_FREE(p) free(p)
+#endif
+
 	if(screenshotSnapshot)
 	{
-		free(screenshotSnapshot);
+		SNAPSHOT_FREE(screenshotSnapshot);
 		screenshotSnapshot = nullptr;
 	}
 
 	if(!texturemem)
 		return;
 
-	screenshotSnapshot = (uint8_t *)malloc(TEXTUREMEM_SIZE);
+	screenshotSnapshot = (uint8_t *)SNAPSHOT_ALLOC(TEXTUREMEM_SIZE);
 	if(screenshotSnapshot)
 		memcpy(screenshotSnapshot, texturemem, TEXTUREMEM_SIZE);
 }
@@ -784,7 +793,7 @@ void OgcEmulatorVideo::readFrameRGB24(int width, int height, uint8_t* dst)
 		}
 	}
 
-	free(screenshotSnapshot);
+	SNAPSHOT_FREE(screenshotSnapshot);
 	screenshotSnapshot = nullptr;
 }
 
