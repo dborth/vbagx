@@ -31,8 +31,6 @@
 #include "drivers/wut/WutCodegen.h"
 #endif
 
-#define MEM2_SIZE		(42*1024*1024)
-
 enum {
 	MEMORY_MODE_NONE = -1,
 	MEMORY_MODE_MENU = 0,
@@ -40,6 +38,17 @@ enum {
 	MEMORY_MODE_GBA
 };
 
+#ifdef HW_RVL
+// Mode 3: GBA Game
+struct GBAMemory {
+    uint32_t jitArena[JIT_ARENA_SIZE / sizeof(uint32_t)];
+} __attribute__((aligned(32)));
+
+// Mode 2: GB Game
+struct GBMemory {
+	uint8_t heapSpace[sizeof(struct GBAMemory)];
+} __attribute__((aligned(32)));
+#else
 // Mode 3: GBA Game
 struct GBAMemory {
     uint8_t texturemem[TEXTUREMEM_SIZE];
@@ -54,6 +63,7 @@ struct GBMemory {
 	uint8_t texturemem[TEXTUREMEM_SIZE];
 	uint8_t heapSpace[sizeof(struct GBAMemory) - TEXTUREMEM_SIZE];
 } __attribute__((aligned(32)));
+#endif
 
 // Mode 1: Menu
 struct MenuMemory {
@@ -72,18 +82,28 @@ alignas(32) union CoreMemoryOverlay coreMem;
 uint8_t *romPtr;
 
 #if (defined(HW_RVL) || defined(HW_DOL))
+static BasicBlock *blockTable = nullptr;
+static BasicBlock **smcRegistry = nullptr;
+static uint8_t* smcPageFlags = nullptr;
 static mspace memspace_ptr = nullptr;
-static mspace extmem_space = nullptr;
 static int memoryMode = -1;
+#endif
+
+#ifdef HW_RVL
+// Embedded assets (images, sound, fonts, languages) are linked at the top of
+// MEM2 by mem2.ld (see Makefile.wii). Keep libogc2's MEM2 arena below them.
+extern "C" { extern char __mem2_start[]; }
+extern "C" { void *__myArena2Hi = __mem2_start; }
 #endif
 
 void InitMemManager ()
 {
 #ifdef HW_RVL
-	void *mem2_heap_ptr = SYS_AllocArenaMem2Hi(MEM2_SIZE, 32);
-	extmem_space = create_mspace_with_base(mem2_heap_ptr, MEM2_SIZE, 1);
-	mspace_set_footprint_limit(extmem_space, MEM2_SIZE);
-	romPtr = (uint8_t *)extmem_malloc(MAX_GBA_ROM_SIZE); // allocate 32 MB to GBA ROM
+	romPtr = (uint8_t *)mem2_malloc(MAX_GBA_ROM_SIZE); // allocate 32 MB to GBA ROM
+	texturemem = (uint8_t *)mem2_memalign(32, TEXTUREMEM_SIZE);
+	blockTable = (BasicBlock*)mem2_malloc(HASH_TABLE_SIZE * sizeof(BasicBlock));
+	smcRegistry = (BasicBlock **)mem2_malloc(SMC_MAP_SIZE * sizeof(void*));
+	smcPageFlags = (uint8_t*)mem2_malloc(SMC_MAP_SIZE);
 #elif HW_DOL
 	romPtr = (uint8_t *)VM_Init(MAX_GBA_ROM_SIZE, 2 * 1024 * 1024); // 2MB MEM1 + 16 ARAM + SD backing for GB/GBA ROM
 	VMPager_Init(romPtr);
@@ -151,7 +171,6 @@ void memspace_free(void *ptr) { free(ptr); }
 int memspace_size_free() { return 0; }
 void* extmem_malloc(uint32_t size) { return memalign(FILE_BUFFER_ALIGN, size); }
 void extmem_free(void *ptr) { free(ptr); }
-int extmem_size_free() { return 0; }
 void SwitchMemoryModeMenu() { }
 void SwitchMemoryModeGame() {
 #ifdef __WIIU__
@@ -184,22 +203,20 @@ int memspace_size_free()
 	return info.fordblks;
 }
 
+#ifdef HW_RVL
 void* extmem_malloc(uint32_t size)
 {
-	return mspace_malloc(extmem_space, size);
+	return mem2_malloc(size);
 }
 
 void extmem_free(void *ptr)
 {
-	mspace_free(extmem_space, ptr);
+	mem2_free(ptr);
 }
-
-int extmem_size_free()
-{
-	if(!extmem_space) return 0;
-	struct mallinfo info = mspace_mallinfo(extmem_space);
-	return info.fordblks;
-}
+#else
+void* extmem_malloc(uint32_t size) { return malloc(size); }
+void extmem_free(void *ptr) { free(ptr); }
+#endif
 
 static bool ChangeMode(int mode) {
 	if(memoryMode == mode)
@@ -213,7 +230,9 @@ static bool ChangeMode(int mode) {
 	savebuffer = nullptr;
 	if(memspace_ptr) destroy_mspace(memspace_ptr);
 	memspace_ptr = nullptr;
+#ifdef HW_DOL
 	texturemem = nullptr;
+#endif
 	jitCache.destroy();
 	memoryMode = mode;
 	return true;
@@ -237,18 +256,25 @@ void SwitchMemoryModeMenu() {
 
 static void SwitchMemoryModeGB() {
 	if(!ChangeMode(MEMORY_MODE_GB)) return;
+#ifdef HW_DOL
 	texturemem = coreMem.gb.texturemem;
+#endif
 	CreateMem1Space(coreMem.gb.heapSpace, sizeof(coreMem.gb.heapSpace));
 }
 
 static void SwitchMemoryModeGBA() {
 	if(!ChangeMode(MEMORY_MODE_GBA)) return;
+#ifdef HW_DOL
 	texturemem = coreMem.gba.texturemem;
+	blockTable = (BasicBlock*)coreMem.gba.blockTable;
+	smcRegistry = (BasicBlock**)coreMem.gba.smcRegistry;
+	smcPageFlags = (uint8_t*)coreMem.gba.smcPageFlags;
+#endif
 	jitCache.initialize(
 		(uint32_t*)coreMem.gba.jitArena,
-		(BasicBlock*)coreMem.gba.blockTable,
-		(BasicBlock**)coreMem.gba.smcRegistry,
-		(uint8_t*)coreMem.gba.smcPageFlags
+		blockTable,
+		smcRegistry,
+		smcPageFlags
 	);
 }
 
@@ -259,6 +285,8 @@ void SwitchMemoryModeGame() {
 	else {
 		SwitchMemoryModeGB();
 	}
+#ifdef HW_DOL
 	memset(texturemem, 0, TEXTUREMEM_SIZE);
+#endif
 }
 #endif

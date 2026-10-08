@@ -47,7 +47,6 @@ int memspace_size_free();
 char* memspace_strdup(const char *s);
 void* extmem_malloc(uint32_t size);
 void extmem_free(void *ptr);
-int extmem_size_free();
 
 #ifdef __cplusplus
 }

@@ -133,7 +133,7 @@ uint8_t* BorderManager::load(const char *title, const char *fallback, int &outWi
 		goto cleanup;
 
 	// we need the border in non-shared memory because it will cross the menu <> emulator boundary
-	newBorder = (uint8_t*)malloc(imgWidth * imgHeight * 4);
+	newBorder = (uint8_t*)extmem_malloc(imgWidth * imgHeight * 4);
 	if (!newBorder)
 		goto cleanup;
 
@@ -220,7 +220,7 @@ GameBorder::~GameBorder() {
 
 void GameBorder::clear() {
 	if (pixels) {
-		free(pixels);
+		extmem_free(pixels);
 		pixels = nullptr;
 	}
 	width = 0;
