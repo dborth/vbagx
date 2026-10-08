@@ -43,11 +43,17 @@ CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 				-Wno-memset-elt-size -Wno-attributes -Wno-tautological-compare -Wno-infinite-recursion -Wno-array-bounds
 
 # Strip C++ runtime bloating to conserve L1 I-Cache lines
+# no exceptions are used: don't emit unwind tables
+CFLAGS		+=	-fno-unwind-tables -fno-asynchronous-unwind-tables
 CXXFLAGS	=	$(CFLAGS) -Wno-register -Wno-reorder -fno-exceptions -fno-rtti -fno-threadsafe-statics
 
 # Added -O3 and LTO directly to linker pipeline for global scope analysis optimization
 LDFLAGS		=	-g -O3 $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--gc-sections
 LDFLAGS		+=	-L../buildtools
+# adds a MEM2 output section for embedded assets (see mem2.ld)
+WII_LD		?=	rvl.ld
+OGC_LD		:=	$(shell $(CC) $(MACHDEP) -print-file-name=$(WII_LD))
+LDFLAGS		+=	-T $(MEM2_LD) -T $(OGC_LD)
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with
@@ -69,6 +75,7 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
 
 export OUTPUT	:=	$(CURDIR)/$(TARGETDIR)/$(TARGET)
+export MEM2_LD	:=	$(CURDIR)/mem2.ld
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
@@ -157,22 +164,27 @@ $(OFILES_SOURCES) : $(HFILES)
 %.ttf.o %_ttf.h : %.ttf
 	@echo $(notdir $<)
 	$(bin2o)
+	@$(OBJCOPY) --prefix-alloc-sections=.mem2 $(notdir $<).o
 	
 %.lang.o %_lang.h : %.lang
 	@echo $(notdir $<)
 	$(bin2o)
+	@$(OBJCOPY) --prefix-alloc-sections=.mem2 $(notdir $<).o
 
 %.png.o %_png.h : %.png
 	@echo $(notdir $<)
 	$(bin2o)
+	@$(OBJCOPY) --prefix-alloc-sections=.mem2 $(notdir $<).o
 	
 %.ogg.o %_ogg.h : %.ogg
 	@echo $(notdir $<)
 	$(bin2o)
+	@$(OBJCOPY) --prefix-alloc-sections=.mem2 $(notdir $<).o
 	
 %.pcm.o %_pcm.h : %.pcm
 	@echo $(notdir $<)
 	$(bin2o)
+	@$(OBJCOPY) --prefix-alloc-sections=.mem2 $(notdir $<).o
 
 -include $(DEPENDS)
 
