@@ -90,13 +90,6 @@ static mspace memspace_ptr = nullptr;
 static int memoryMode = -1;
 #endif
 
-#ifdef HW_RVL
-// Embedded assets (images, sound, fonts, languages) are linked at the top of
-// MEM2 by mem2.ld (see Makefile.wii). Keep libogc2's MEM2 arena below them.
-extern "C" { extern char __mem2_start[]; }
-extern "C" { void *__myArena2Hi = __mem2_start; }
-#endif
-
 void* bootmem_calloc(size_t size)
 {
 #ifdef HW_RVL
