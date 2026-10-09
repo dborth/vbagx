@@ -9,6 +9,7 @@
  ***************************************************************************/
 
 #ifdef GEKKO
+#include <ogc/cache.h>
 #include <ogc/system.h>
 #endif
 #include <malloc.h>
@@ -109,7 +110,7 @@ static void AssetsRelocate()
 		abort();
 
 	memcpy(__assets_mem2_start, __assets_lma_start, __assets_mem2_end - __assets_mem2_start);
-
+	DCFlushRange(__assets_mem2_start, __assets_mem2_end - __assets_mem2_start);
 	// The block used to be .bss, which crt0 zeroed. Keep that contract: start from zeros.
 	memset(__jit_region_start, 0, __jit_region_end - __jit_region_start);
 }
