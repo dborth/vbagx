@@ -95,15 +95,10 @@ extern "C" {
 }
 
 static union CoreMemoryOverlay &coreMem = *reinterpret_cast<union CoreMemoryOverlay*>(__jit_region_start);
-static uint32_t osArena2Lo = 0, osArena2Hi = 0; // what the loader/OS declared in low memory
 
 // Must run before any embedded asset is used and before coreMem is used.
 static void AssetsRelocate()
 {
-	// libogc2 never modifies these; they are the MEM2 range the loader declared usable.
-	osArena2Lo = *(volatile uint32_t*)0x80003124;
-	osArena2Hi = *(volatile uint32_t*)0x80003128;
-
 	// linker/code must agree on the block size (Makefile.wii JIT_ARENA_MB feeds both)
 	if((size_t)(__jit_region_end - __jit_region_start) != sizeof(union CoreMemoryOverlay) ||
 	   ((uintptr_t)__jit_region_start & 31))

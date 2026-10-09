@@ -71,3 +71,6 @@ INSERT AFTER .bss;
 ASSERT(__assets_mem2_end <= MEM2_ASSETS_TOP, "MEM2 asset image overruns the IPC buffer region: lower MEM2_ASSETS_BASE in wii_mem.ld")
 ASSERT(__assets_lma_end  <= HBC_LD_MAX_ADDR, "DOL load image extends past what the Homebrew Channel will load")
 ASSERT(SIZEOF(.assets)   <= __jit_region_size, "embedded assets are larger than the MEM1 core region (raise JIT_ARENA_MB)")
+ASSERT(__bss_end <= __jit_region_start, "crt0 would clear into the core region")
+ASSERT(__Arena1Lo >= __jit_region_end, "libogc2 heap/argv would overlap the core region")
+ASSERT((__jit_region_start & 31) == 0, "core region not 32-byte aligned")
