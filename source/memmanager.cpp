@@ -13,6 +13,8 @@
 #endif
 #include <malloc.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include "vbagx.h"
 #include "vbasupport.h"
 #include "memmanager.h"
@@ -79,7 +81,41 @@ union CoreMemoryOverlay {
     struct GBAMemory gba;
 };
 
+#ifdef HW_RVL
+// The core overlay is not a C++ object: it is a block of MEM1 reserved by the linker (wii_mem.ld) that
+// first holds the embedded assets' load image. AssetsRelocate() moves the assets to MEM2, after which
+// the whole block is the overlay (JIT arena / menu heap / GB heap) - no MEM1 is stranded.
+extern "C" {
+	extern char __assets_mem2_start[], __assets_mem2_end[]; // assets' run address (MEM2)
+	extern char __assets_lma_start[];                       // assets' load address (MEM1)
+	extern char __jit_region_start[], __jit_region_end[];   // the MEM1 block
+	// keep libogc2's MEM2 arena below the asset image
+	void *__myArena2Hi = __assets_mem2_start;
+}
+
+static union CoreMemoryOverlay &coreMem = *reinterpret_cast<union CoreMemoryOverlay*>(__jit_region_start);
+static uint32_t osArena2Lo = 0, osArena2Hi = 0; // what the loader/OS declared in low memory
+
+// Must run before any embedded asset is used and before coreMem is used.
+static void AssetsRelocate()
+{
+	// libogc2 never modifies these; they are the MEM2 range the loader declared usable.
+	osArena2Lo = *(volatile uint32_t*)0x80003124;
+	osArena2Hi = *(volatile uint32_t*)0x80003128;
+
+	// linker/code must agree on the block size (Makefile.wii JIT_ARENA_MB feeds both)
+	if((size_t)(__jit_region_end - __jit_region_start) != sizeof(union CoreMemoryOverlay) ||
+	   ((uintptr_t)__jit_region_start & 31))
+		abort();
+
+	memcpy(__assets_mem2_start, __assets_lma_start, __assets_mem2_end - __assets_mem2_start);
+
+	// The block used to be .bss, which crt0 zeroed. Keep that contract: start from zeros.
+	memset(__jit_region_start, 0, __jit_region_end - __jit_region_start);
+}
+#else
 alignas(32) union CoreMemoryOverlay coreMem;
+#endif
 uint8_t *romPtr;
 
 #if (defined(HW_RVL) || defined(HW_DOL))
@@ -108,6 +144,8 @@ void gbSgbAllocate();
 void InitMemManager ()
 {
 #ifdef HW_RVL
+	AssetsRelocate(); // first: assets are not usable before this
+
 	romPtr = (uint8_t *)mem2_malloc(MAX_GBA_ROM_SIZE); // allocate 32 MB to GBA ROM
 	texturemem = (uint8_t *)mem2_memalign(32, TEXTUREMEM_SIZE);
 	blockTable = (BasicBlock*)mem2_malloc(HASH_TABLE_SIZE * sizeof(BasicBlock));

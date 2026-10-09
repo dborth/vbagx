@@ -50,6 +50,13 @@ CXXFLAGS	=	$(CFLAGS) -Wno-register -Wno-reorder -fno-exceptions -fno-rtti -fno-t
 # Added -O3 and LTO directly to linker pipeline for global scope analysis optimization
 LDFLAGS		=	-g -O3 $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--gc-sections
 LDFLAGS		+=	-L../buildtools
+# One linker-reserved MEM1 block holds the embedded assets' load image and, after boot, the JIT arena /
+# menu+GB heap (see wii_mem.ld). Size in MB: the single source of truth for JIT_ARENA_SIZE and the linker.
+JIT_ARENA_MB	?=	16
+CFLAGS		+=	-DJIT_ARENA_MB=$(JIT_ARENA_MB)
+WII_LD		?=	rvl.ld
+OGC_LD		:=	$(shell $(CC) $(MACHDEP) -print-file-name=$(WII_LD))
+LDFLAGS		+=	-Wl,--defsym,__jit_region_size=$(JIT_ARENA_MB)M -T $(WII_MEM_LD) -T $(OGC_LD)
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with
@@ -71,6 +78,7 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
 
 export OUTPUT	:=	$(CURDIR)/$(TARGETDIR)/$(TARGET)
+export WII_MEM_LD	:=	$(CURDIR)/wii_mem.ld
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
@@ -159,22 +167,27 @@ $(OFILES_SOURCES) : $(HFILES)
 %.ttf.o %_ttf.h : %.ttf
 	@echo $(notdir $<)
 	$(bin2o)
+	@$(OBJCOPY) --prefix-alloc-sections=.mem2 $(notdir $<).o
 	
 %.lang.o %_lang.h : %.lang
 	@echo $(notdir $<)
 	$(bin2o)
+	@$(OBJCOPY) --prefix-alloc-sections=.mem2 $(notdir $<).o
 
 %.png.o %_png.h : %.png
 	@echo $(notdir $<)
 	$(bin2o)
+	@$(OBJCOPY) --prefix-alloc-sections=.mem2 $(notdir $<).o
 	
 %.ogg.o %_ogg.h : %.ogg
 	@echo $(notdir $<)
 	$(bin2o)
+	@$(OBJCOPY) --prefix-alloc-sections=.mem2 $(notdir $<).o
 	
 %.pcm.o %_pcm.h : %.pcm
 	@echo $(notdir $<)
 	$(bin2o)
+	@$(OBJCOPY) --prefix-alloc-sections=.mem2 $(notdir $<).o
 
 -include $(DEPENDS)
 
