@@ -53,7 +53,7 @@
 #endif
 
 #if defined(HW_RVL)
-#define JIT_ARENA_SIZE					(1024 * 1024 * 12) // 16 MB (must stay <= 32MB: `b` reach)
+#define JIT_ARENA_SIZE					(1024 * 1024 * 16) // 16 MB (must stay <= 32MB: `b` reach)
 #define HASH_TABLE_SIZE					65536
 #define SMC_MAP_SIZE                    65536 // 64K pages (1KB page granularity across 64MB)
 #elif defined(HW_DOL)
