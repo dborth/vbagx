@@ -34,7 +34,7 @@ msgstr ".SAVE 파일에 자동 추가"
 msgid "Apr"
 msgstr "4월"
 
-msgid "Are you sure that you want to reset this game? Any unsaved progress will be lost."
+msgid "Reset this game? Any unsaved progress will be lost."
 msgstr "이 게임을 재설정할까요? 저장되지 않는 진행은 손실됩니다."
 
 msgid "Are you sure that you want to reset your mappings?"
@@ -212,7 +212,7 @@ msgid "Error saving file!"
 msgstr "파일 저장 오류!"
 
 msgid "Exit"
-msgstr "나가기
+msgstr "나가기"
 
 msgid "Exit Action"
 msgstr "작업 나가기"
@@ -367,8 +367,23 @@ msgstr "무음"
 msgid "Network"
 msgstr "네트워크"
 
+msgid "Settings - Network Share"
+msgstr "설정 - 네트워크 공유"
+
 msgid "Network Share"
 msgstr "네트워크 공유"
+
+msgid "IP"
+msgstr "IP"
+
+msgid "Name"
+msgstr "이름"
+
+msgid "Username"
+msgstr "사용자"
+
+msgid "Password"
+msgstr "비밀번호"
 
 msgid "New"
 msgstr "새로 만들기"
@@ -703,6 +718,9 @@ msgstr "다음 조건 하에서 배포 또는 변경되었습니다."
 msgid "Emulation"
 msgstr "에뮬레이션"
 
+msgid "Hardware"
+msgstr "하드웨어"
+
 msgid "European RGB (240i)"
 msgstr "유럽 RGB (240i)"
 
@@ -755,7 +773,7 @@ msgid "Hardware (GB/GBC)"
 msgstr "하드웨어 (GB/GBC)"
 
 msgid "Maintain Aspect Ratio"
-msgstr "가로 세로 비율을 유지"
+msgstr "화면비 유지"
 
 msgid "Main developer"
 msgstr "주 개발자"
@@ -835,7 +853,7 @@ msgstr "고품질2배"
 msgid "hq2x Soft"
 msgstr "고품질 부드러움"
 
-msgid "hq2x Bolt"
+msgid "hq2x Bold"
 msgstr "고품질 두꺼움"
 
 msgid "Scale2x"
@@ -856,6 +874,12 @@ msgstr "디지털 왜곡 방지 기술"
 msgid "Show Framerate"
 msgstr "프레임 표시"
 
+msgid "Actual"
+msgstr "실제"
+
+msgid "Core (Unbound)"
+msgstr "코어 (언바운드)"
+
 msgid "Load / Save"
 msgstr "불러오기 / 저장"
 
@@ -867,3 +891,24 @@ msgstr "비주얼보이 어드밴스-M"
 
 msgid "Visual Boy Advance"
 msgstr "비주얼보이 어드밴스"
+
+msgid "Output Mode"
+msgstr "출력 모드"
+
+msgid "Aspect Ratio Correction"
+msgstr "화면비 조정"
+
+msgid "Hardware Softening"
+msgstr "하드웨어 연성"
+
+msgid "Sharp"
+msgstr "선명함"
+
+msgid "Soft"
+msgstr "부드러움"
+
+msgid "Upscaling"
+msgstr "업스케일링"
+
+msgid "Scanline Overlay"
+msgstr "스캔라인 오버레이"
