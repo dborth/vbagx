@@ -495,6 +495,7 @@ void WutInputDriver::update() {
 			// A real error - treat as genuinely disconnected
 			kpadCache[i] = InputPadData();
 			irSmoothInit[i] = false;
+			controller[i]->setSideways(false);
 		}
 
 		// Merge Aggregate State
