@@ -6,6 +6,7 @@
  * JIT support functions
  ***************************************************************************/
 #include "WutCodegen.h"
+#include "WutPlatform.h"
 
 #include <coreinit/codegen.h>
 #include <coreinit/cache.h>
@@ -46,7 +47,11 @@ uint32_t * WutCodegenAcquire(size_t wanted) {
 	// RW-/R-X toggle and every write/execute against this slot has to
 	// happen from that core, so pin the calling (emulation) thread here
 	// now that we know the slot actually exists.
-	OSSetThreadAffinity(OSGetCurrentThread(), 1u << codegenCore);
+	WutPlatform * wutPlatform = static_cast<WutPlatform*>(platform);
+
+	if(!wutPlatform->isCemu()) {
+		OSSetThreadAffinity(OSGetCurrentThread(), 1u << codegenCore);
+	}
 
 	LOG_INFO("[JIT] codegen slot acquired: base=%p size=%u codegenCore=%d", addr, (unsigned)size, codegenCore);
 	return (uint32_t *)addr;
