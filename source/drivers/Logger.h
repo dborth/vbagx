@@ -40,6 +40,7 @@
 
 //!Severity of a single log call. `None` is only meaningful as a
 //!LogConfig::level value ("log nothing"), never passed to a LOG_*() call.
+//!\ingroup grp_logging
 enum class LogLevel : uint8_t
 {
 	Debug,
@@ -57,9 +58,10 @@ static_assert(static_cast<uint8_t>(LogLevel::Error)   == LOG_LEVEL_ERROR,   "LOG
 //!Which single backend is active when LogConfig::mode isn't Multi. Kept
 //!separate from LogBackendId below so the common case - "just point me at
 //!one backend" - doesn't require touching a bitmask.
+//!\ingroup grp_logging
 enum class LogMode : uint8_t
 {
-	OSReport, //!< built-in platform logging. Useful for emulators.
+	OSReport, //!< OSReport (Wii U) / SYS_Report (GC+Wii) - always safe, no hardware required
 	UDP,
 	SerialGecko,
 	File,
@@ -70,6 +72,7 @@ enum class LogMode : uint8_t
 //!config code can OR them together; extend by appending a new bit, never
 //!by renumbering existing ones (multiBackendMask may be persisted/passed
 //!around by a caller).
+//!\ingroup grp_logging
 enum LogBackendId : uint32_t
 {
 	LOGGER_NONE     = 0,
@@ -80,6 +83,7 @@ enum LogBackendId : uint32_t
 };
 
 //!How LoggerFile flushes writes to storage.
+//!\ingroup grp_logging
 enum class LogFlushPolicy : uint8_t
 {
 	Immediate,    //!< fflush() after every write - safest against a crash/power loss, slowest
@@ -90,11 +94,13 @@ enum class LogFlushPolicy : uint8_t
 //!Full runtime configuration for the Logger. Nothing backend-specific is
 //!ever hardcoded in a backend implementation - it all comes from here,
 //!supplied by app code (or left at these defaults, which are deliberately
-//!safe/inert: OSReport only, nothing that touches hardware or network).
+//!safe: log to a file on the first mounted device, mirrored to the console
+//!debug output; nothing that touches the network or external hardware).
+//!\ingroup grp_logging
 struct LogConfig
 {
-	LogMode mode = LogMode::File;
-	LogLevel level = LogLevel::Info;
+	LogMode mode = LogMode::File; //!< Which backend(s) receive log lines; see LogMode
+	LogLevel level = LogLevel::Info; //!< Minimum severity that is logged
 
 	//! Only consulted when mode == LogMode::Multi. OR LOGGER_* flags
 	//! together, e.g. LOGGER_UDP | LOGGER_FILE.
@@ -107,7 +113,9 @@ struct LogConfig
 	bool mirrorToOSReport = true;
 
 	// ---- UDP ----
+	//!Destination IPv4 address for the UDP backend
 	const char * targetIp = "192.168.1.100";
+	//!Destination UDP port for the UDP backend
 	uint16_t targetPort = 4405;
 	bool nonBlocking = true; //!< socket is always created non-blocking; kept for clarity/future use
 
@@ -122,14 +130,17 @@ struct LogConfig
 	uint32_t serialBaudRate = 115200;
 
 	// ---- SD / file ----
+	//!Path of the log file for the file backend. Each platform's init() points this at debug.log on the first mounted device.
 	char filePath[1024] = "sd:/debug.log";
+	//!How often the file backend flushes to storage
 	LogFlushPolicy flushPolicy = LogFlushPolicy::Immediate;
+	//!Flush interval in writes; only used when flushPolicy is LogFlushPolicy::EveryNWrites
 	uint32_t flushEveryNWrites = 16;
 
 	// ---- Formatting ----
 	bool includeLevelTag = true;         //!< prefix each line with "[DEBUG] "/"[INFO] "/etc.
 	bool includeSequenceNumber = false;  //!< prefix each line with a monotonic call counter, useful for spotting dropped UDP packets
-	bool includeTimestamp = true;
+	bool includeTimestamp = true;        //!< prefix each line with the time since process start as "[secs.millis]"
 };
 
 //!Abstract backend a Logger fans a formatted line out to. Every method
@@ -137,6 +148,7 @@ struct LogConfig
 //!Logger already serializes all calls to a given Logger instance under
 //!its own mutex, so a backend does not need its own locking for write(),
 //!but must still not do something like an unbounded blocking socket send.
+//!\ingroup grp_logging
 class LoggingDriver
 {
 public:
@@ -165,6 +177,16 @@ public:
 //!Central fan-out dispatcher. Concrete (not abstract) - there is exactly
 //!one Logger, owned by Platform, and every platform builds the same kind
 //!of Logger with a different set of backends registered into it.
+//!
+//!Usage from a Platform::init():
+//!  logger = new Logger();
+//!  logger->registerBackend(LOGGER_OSREPORT, new WutOSReportLogBackend());
+//!  logger->registerBackend(LOGGER_UDP, new WutUdpLogBackend());
+//!  logger->init(LogConfig{}); // defaults: OSReport only, Info level
+//!
+//!Usage from anywhere else in the app, no platform-specific code needed:
+//!  LOG_INFO("mounted %d devices", count);
+//!\ingroup grp_logging
 class Logger
 {
 public:
@@ -205,6 +227,7 @@ public:
 	//!Runtime-adjusts the minimum severity without touching any
 	//!other config field or re-touching backend init/shutdown.
 	void setLevel(LogLevel level);
+	//!\return the current minimum severity
 	LogLevel getLevel() const { return logConfig.level; }
 
 	//!Formats fmt/args into a fixed stack buffer and fans it out to
@@ -214,6 +237,7 @@ public:
 	//!application code should not normally call this directly.
 	void log(LogLevel level, const char * fmt, va_list args);
 
+	//!Maximum number of backends that can be registered at once
 	static const int MAX_BACKENDS = 8;
 
 private:

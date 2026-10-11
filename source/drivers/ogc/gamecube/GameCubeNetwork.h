@@ -10,6 +10,8 @@
  ***************************************************************************/
 #pragma once
 
+//!GameCube network bring-up for the Broadband Adapter (synchronous if_config).
+//!\ingroup grp_ogc
 class GameCubeNetwork
 {
 	public:

@@ -9,6 +9,7 @@
 //!GameCube FileSystemDriver: memory card slots, GC Loader, and DVD, plus
 //!DEVICE_SMB (broadband adapter). Enumeration/mount/poll logic itself
 //!lives in the shared OgcFileSystemDriver base.
+//!\ingroup grp_ogc
 class GameCubeFileSystemDriver : public OgcFileSystemDriver
 {
 	public:
