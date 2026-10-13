@@ -120,25 +120,25 @@ struct MenuPalette {
 	PixelColor text, textMuted, textOnAccent;
 };
 
-//!Visual Boy Advance GX: purple chrome (matches the original header/footer art), gray secondary
+//!Visual Boy Advance GX: purple chrome, gray secondary
 static inline MenuPalette MenuPaletteDefault()
 {
 	MenuPalette p;
 	p.chromeLight    = MenuRGBA(104, 22, 122);
 	p.chromeDark     = MenuRGBA(66, 4, 80);
 	p.chromeEdge     = MenuRGBA(128, 58, 142);
-	p.backgroundTop    = MenuRGBA(243, 241, 246);
-	p.backgroundBottom = MenuRGBA(216, 212, 223);
+	p.backgroundTop    = MenuRGBA(230, 230, 230);
+	p.backgroundBottom = MenuRGBA(200, 200, 200);
 	p.accent         = MenuRGBA(130, 36, 152);
 	p.accentDark     = MenuRGBA(92, 12, 110);
 	p.accentTint     = MenuRGBA(246, 232, 250);
 	p.glow           = MenuRGBA(240, 208, 255, 170);
-	p.surface        = MenuRGBA(246, 246, 249);
+	p.surface        = MenuRGBA(250, 250, 250);
 	p.surfaceRaised  = MenuRGBA(255, 255, 255);
-	p.outline        = MenuRGBA(208, 208, 215);
-	p.outlineStrong  = MenuRGBA(166, 166, 175);
-	p.text           = MenuRGBA(30, 30, 34);
-	p.textMuted      = MenuRGBA(118, 118, 127);
+	p.outline        = MenuRGBA(220, 220, 220);
+	p.outlineStrong  = MenuRGBA(160, 160, 160);
+	p.text           = MenuRGBA(30, 30, 30);
+	p.textMuted      = MenuRGBA(118, 118, 118);
 	p.textOnAccent   = MenuRGBA(255, 255, 255);
 	return p;
 }
