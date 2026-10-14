@@ -2290,7 +2290,7 @@ static int MenuGameSaves(int action)
 	}
 
 	GuiSaveBrowser saveBrowser(552, 248, &saves, action);
-	saveBrowser.setPosition(0, 108);
+	saveBrowser.setPosition(0, MENU_LIST_Y);
 	saveBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 
 	menu->mainWindow.appendWithAutoRemove(&saveBrowser);
@@ -2687,8 +2687,8 @@ static int MenuGameCheats()
 	backBtn.setTrigger(&trigB);
 	backBtn.setEffectGrow();
 
-	GuiOptionBrowser optionBrowser(552, 248, &options);
-	optionBrowser.setPosition(0, 108);
+	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
+	optionBrowser.setPosition(0, MENU_LIST_Y);
 	optionBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	optionBrowser.setCol2Position(475);
 
@@ -3078,8 +3078,8 @@ static int MenuSettingsMappingsMap()
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 
-	GuiOptionBrowser optionBrowser(552, 248, &options);
-	optionBrowser.setPosition(0, 108);
+	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
+	optionBrowser.setPosition(0, MENU_LIST_Y);
 	optionBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	optionBrowser.setCol2Position(215);
 
@@ -3477,8 +3477,8 @@ static int MenuSettingsVideo()
 	backBtn.setTrigger(trigA);
 	backBtn.setEffectGrow();
 
-	GuiOptionBrowser optionBrowser(552, 248, &options);
-	optionBrowser.setPosition(0, 108);
+	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
+	optionBrowser.setPosition(0, MENU_LIST_Y);
 	optionBrowser.setCol2Position(240);
 	optionBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 
@@ -3701,8 +3701,8 @@ static int MenuSettingsEmulation()
 	backBtn.setTrigger(trigA);
 	backBtn.setEffectGrow();
 
-	GuiOptionBrowser optionBrowser(552, 248, &options);
-	optionBrowser.setPosition(0, 108);
+	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
+	optionBrowser.setPosition(0, MENU_LIST_Y);
 	optionBrowser.setCol2Position(240);
 	optionBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 
@@ -4006,8 +4006,8 @@ static int MenuSettingsFile()
 	backBtn.setTrigger(trigA);
 	backBtn.setEffectGrow();
 
-	GuiOptionBrowser optionBrowser(552, 248, &options);
-	optionBrowser.setPosition(0, 108);
+	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
+	optionBrowser.setPosition(0, MENU_LIST_Y);
 	optionBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	optionBrowser.setCol2Position(215);
 
@@ -4292,8 +4292,8 @@ static int MenuSettingsMenu()
 	backBtn.setTrigger(trigA);
 	backBtn.setEffectGrow();
 
-	GuiOptionBrowser optionBrowser(552, 248, &options);
-	optionBrowser.setPosition(0, 108);
+	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
+	optionBrowser.setPosition(0, MENU_LIST_Y);
 	optionBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	optionBrowser.setCol2Position(275);
 
@@ -4483,8 +4483,8 @@ static int MenuSettingsNetwork()
 	backBtn.setTrigger(trigA);
 	backBtn.setEffectGrow();
 
-	GuiOptionBrowser optionBrowser(552, 248, &options);
-	optionBrowser.setPosition(0, 108);
+	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
+	optionBrowser.setPosition(0, MENU_LIST_Y);
 	optionBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	optionBrowser.setCol2Position(290);
 
