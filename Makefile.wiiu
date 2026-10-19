@@ -133,7 +133,7 @@ $(OUTPUT).wuhb: $(OUTPUT).rpx
 	@echo packaging $@ ...
 	@$(DEVKITPRO)/tools/bin/wuhbtool $< $@ \
 		--name="Visual Boy Advance GX" \
-		--short-name="vbagx" \
+		--short-name="Visual Boy Advance GX" \
 		--author="dborth" \
 		--icon=$(TOPDIR)/meta/icon.png \
 		--tv-image=$(TOPDIR)/meta/tv_splash.png \
