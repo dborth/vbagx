@@ -36,10 +36,6 @@ inline int Gb_Apu::calc_output( int osc ) const
 
 void Gb_Apu::set_output( Blip_Buffer* center, Blip_Buffer* left, Blip_Buffer* right, int osc )
 {
-	// Must be silent (all NULL), mono (left and right NULL), or stereo (none NULL)
-	require( !center || (center && !left && !right) || (center && left && right) );
-	require( (unsigned) osc <= osc_count ); // fails if you pass invalid osc index
-
 	if ( !center || !left || !right )
 	{
 		left  = center;
@@ -239,7 +235,6 @@ void Gb_Apu::run_until_( blip_time_t end_time )
 
 inline void Gb_Apu::run_until( blip_time_t time )
 {
-	require( time >= last_time ); // end_time must not be before previous time
 	if ( time > last_time )
 		run_until_( time );
 }
@@ -283,12 +278,9 @@ void Gb_Apu::apply_stereo()
 
 void Gb_Apu::write_register( blip_time_t time, unsigned addr, int data )
 {
-	require( (unsigned) data < 0x100 );
-
 	int reg = addr - start_addr;
 	if ( (unsigned) reg >= register_count )
 	{
-		require( false );
 		return;
 	}
 
@@ -356,7 +348,6 @@ int Gb_Apu::read_register( blip_time_t time, unsigned addr )
 	int reg = addr - start_addr;
 	if ( (unsigned) reg >= register_count )
 	{
-		require( false );
 		return 0;
 	}
 

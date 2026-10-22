@@ -171,7 +171,6 @@ void Stereo_Buffer::end_frame( blip_time_t time )
 
 long Stereo_Buffer::read_samples( blip_sample_t* out, long out_size )
 {
-	require( (out_size & 1) == 0 ); // must read an even number of samples
 	out_size = min( out_size, samples_avail() );
 
 	int pair_count = int (out_size >> 1);

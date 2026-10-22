@@ -157,7 +157,6 @@ void Effects_Buffer::clear()
 Effects_Buffer::channel_t Effects_Buffer::channel( int i )
 {
 	i += extra_chans;
-	require( extra_chans <= i && i < (int) chans.size() );
 	return chans [i].channel;
 }
 
@@ -232,13 +231,11 @@ void Simple_Effects_Buffer::apply_config()
 
 int Effects_Buffer::min_delay() const
 {
-	require( sample_rate() );
 	return max_read * 1000L / sample_rate();
 }
 
 int Effects_Buffer::max_delay() const
 {
-	require( sample_rate() );
 	return (echo_size / stereo - max_read) * 1000L / sample_rate();
 }
 
@@ -436,7 +433,6 @@ long Effects_Buffer::read_samples( blip_sample_t* out, long out_size )
 	out_size = min( out_size, samples_avail() );
 
 	int pair_count = int (out_size >> 1);
-	require( pair_count * stereo == out_size ); // must read an even number of samples
 	if ( pair_count )
 	{
 		if ( no_effects )
