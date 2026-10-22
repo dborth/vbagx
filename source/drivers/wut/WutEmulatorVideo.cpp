@@ -24,7 +24,7 @@
 #include "../../vbasupport.h"
 #include "../../gameborder.h"
 #include "../../video.h"
-#include "../../menu.h"
+#include "../../menu/menu.h"
 #include "../../vba/gba/Globals.h"
 #include "../../vba/gba/Debug.h"
 

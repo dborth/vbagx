@@ -26,7 +26,7 @@ TARGET		:=	vbagx-wiiu
 BUILD		:=	build_wiiu
 EXECUTABLES	:=	executables
 
-SOURCES		:=	source source/libgui source/utils source/utils/sz \
+SOURCES		:=	source source/menu source/libgui source/utils source/utils/sz \
 				source/drivers source/drivers/wut source/drivers/wut/shaders \
 				source/vba source/vba/apu source/vba/common \
 				source/vba/gb source/vba/gba source/goomba source/goomba/minilzo-2.06

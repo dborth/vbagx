@@ -16,7 +16,7 @@
 #include "video.h"
 #include "fileop.h"
 #include "memmanager.h"
-#include "menu.h"
+#include "menu/menu.h"
 #include "drivers/EmulatorVideoDriver.h"
 #include "utils/pngcodec.h"
 

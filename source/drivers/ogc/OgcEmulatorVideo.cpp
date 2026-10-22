@@ -17,7 +17,7 @@
 #include "videofilters.h"
 #include "../../vbagx.h"
 #include "../../video.h"
-#include "../../menu.h"
+#include "../../menu/menu.h"
 #include "../../vbasupport.h"
 #include "../../gameborder.h"
 #include "../../vba/gba/Globals.h"

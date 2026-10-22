@@ -27,7 +27,7 @@
 #include "cheatmgr.h"
 #include "gameinput.h"
 #include "video.h"
-#include "menu.h"
+#include "menu/menu.h"
 #include "utils/decompress.h"
 #include "gamesettings.h"
 #include "gbaoverrides.h"

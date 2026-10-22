@@ -25,7 +25,7 @@
 #endif
 
 #include "vbagx.h"
-#include "menu.h"
+#include "menu/menu.h"
 #include "fileop.h"
 #include "video.h"
 #include "filebrowser.h"

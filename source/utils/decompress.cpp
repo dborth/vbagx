@@ -19,7 +19,7 @@
 #include "vbagx.h"
 #include "fileop.h"
 #include "filebrowser.h"
-#include "menu.h"
+#include "../menu/menu.h"
 #include "decompress.h"
 
 extern "C" {

@@ -9,7 +9,7 @@
 #include "gbCheats.h"
 #include "gbGlobals.h"
 #include "../../vbagx.h"
-#include "../../menu.h"
+#include "../../menu/menu.h"
 
 //#define CARLLOG
 

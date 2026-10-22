@@ -17,7 +17,7 @@
 #include "vbasupport.h"
 #include "cheatmgr.h"
 #include "filebrowser.h"
-#include "menu.h"
+#include "menu/menu.h"
 #include "video.h"
 #include "fileop.h"
 #include "input.h"

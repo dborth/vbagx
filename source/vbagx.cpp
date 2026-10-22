@@ -13,7 +13,7 @@
 #include "preferences.h"
 #include "filebrowser.h"
 #include "fileop.h"
-#include "menu.h"
+#include "menu/menu.h"
 #include "input.h"
 #include "video.h"
 #include "gamesettings.h"

@@ -20,7 +20,7 @@
 #include "memmanager.h"
 #include "vbasupport.h"
 #include "fileop.h"
-#include "menu.h"
+#include "menu/menu.h"
 #include "filebrowser.h"
 #include "utils/decompress.h"
 #include "libgui/Gui.h"
