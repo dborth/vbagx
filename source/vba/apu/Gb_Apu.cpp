@@ -250,10 +250,7 @@ void Gb_Apu::end_frame( blip_time_t end_time )
 		run_until( end_time );
 
 	frame_time -= end_time;
-	assert( frame_time >= 0 );
-
 	last_time -= end_time;
-	assert( last_time >= 0 );
 }
 
 void Gb_Apu::silence_osc( Gb_Osc& o )

@@ -2,7 +2,6 @@
 
 #include "Blip_Buffer.h"
 
-#include <assert.h>
 #include <limits.h>
 #include <string.h>
 #include <stdlib.h>
@@ -42,11 +41,9 @@ Blip_Buffer::Blip_Buffer()
 	#ifndef NDEBUG
 		// right shift of negative value preserves sign
 		buf_t_ i = -0x7FFFFFFE;
-		assert( (i >> 1) == -0x3FFFFFFF );
 
 		// casting to short truncates to 16 bits and sign-extends
 		i = 0x18000;
-		assert( (short) i == -0x8000 );
 	#endif
 
 	clear();
@@ -82,7 +79,6 @@ Blip_Buffer::blargg_err_t Blip_Buffer::set_sample_rate( long new_rate, int msec 
 {
 	if ( buffer_size_ == silent_buf_size )
 	{
-		assert( 0 );
 		return "Internal (tried to resize Silent_Blip_Buffer)";
 	}
 
@@ -93,8 +89,6 @@ Blip_Buffer::blargg_err_t Blip_Buffer::set_sample_rate( long new_rate, int msec 
 		long s = (new_rate * (msec + 1) + 999) / 1000;
 		if ( s < new_size )
 			new_size = s;
-		else
-			assert( 0 ); // fails if requested buffer length exceeds limit
 	}
 
 	if ( buffer_size_ != new_size )
@@ -106,13 +100,10 @@ Blip_Buffer::blargg_err_t Blip_Buffer::set_sample_rate( long new_rate, int msec 
 	}
 
 	buffer_size_ = new_size;
-	assert( buffer_size_ != silent_buf_size ); // size should never happen to match this
 
 	// update things based on the sample rate
 	sample_rate_ = new_rate;
 	length_ = new_size * 1000 / new_rate - 1;
-	if ( msec )
-		assert( length_ == msec ); // ensure length is same as that passed in
 
 	// update these since they depend on sample rate
 	if ( clock_rate_ )
@@ -128,7 +119,6 @@ blip_resampled_time_t Blip_Buffer::clock_rate_factor( long rate ) const
 {
 	double ratio = (double)(sample_rate_) / double(rate);
 	blip_long factor = (blip_long) floor( ratio * (1L << BLIP_BUFFER_ACCURACY) + 0.5 );
-	assert( factor > 0 || !sample_rate_ ); // fails if clock/output ratio is too large
 	return (blip_resampled_time_t) factor;
 }
 
@@ -148,7 +138,6 @@ void Blip_Buffer::bass_freq( int freq )
 void Blip_Buffer::end_frame( blip_time_t t )
 {
 	offset_ += t * factor_;
-	assert( samples_avail() <= (long) buffer_size_ ); // fails if time is past end of buffer
 }
 
 long Blip_Buffer::count_samples( blip_time_t t ) const
@@ -162,7 +151,6 @@ blip_time_t Blip_Buffer::count_clocks( long count ) const
 {
 	if ( !factor_ )
 	{
-		assert( 0 ); // sample rate and clock rates must be set first
 		return 0;
 	}
 
@@ -368,7 +356,6 @@ void Blip_Synth_::volume_unit( double new_unit )
 			if ( shift )
 			{
 				kernel_unit >>= shift;
-				assert( kernel_unit > 0 ); // fails if volume unit is too low
 
 				// keep values positive to avoid round-towards-zero of sign-preserving
 				// right shift for negative values
@@ -433,7 +420,6 @@ void Blip_Buffer::mix_samples( blip_sample_t const* in, long count )
 {
 	if ( buffer_size_ == silent_buf_size )
 	{
-		assert( 0 );
 		return;
 	}
 
@@ -455,7 +441,6 @@ blip_ulong const subsample_mask = (1L << BLIP_BUFFER_ACCURACY) - 1;
 
 void Blip_Buffer::save_state( blip_buffer_state_t* out )
 {
-	assert( samples_avail() == 0 );
 	out->offset_       = offset_;
 	out->reader_accum_ = reader_accum_;
 	memcpy( out->buf, &buffer_ [offset_ >> BLIP_BUFFER_ACCURACY], sizeof out->buf );

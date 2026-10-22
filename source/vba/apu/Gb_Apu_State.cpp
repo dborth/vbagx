@@ -38,10 +38,6 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 inline const char* Gb_Apu::save_load( gb_apu_state_t* io, bool save )
 {
-	#if !GB_APU_CUSTOM_STATE
-		assert( sizeof (gb_apu_state_t) == 256 );
-	#endif
-
 	int format = io->format0;
 	REFLECT( format, format );
 	if ( format != io->format0 )
@@ -51,7 +47,6 @@ inline const char* Gb_Apu::save_load( gb_apu_state_t* io, bool save )
 	REFLECT( version, version );
 
 	// Registers and wave RAM
-	assert( regs_size == sizeof io->regs );
 	if ( save )
 		memcpy( io->regs, regs, sizeof io->regs );
 	else

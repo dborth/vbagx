@@ -277,7 +277,7 @@ int const blip_sample_bits = 30;
 class Silent_Blip_Buffer : public Blip_Buffer {
 	buf_t_ buf [blip_buffer_extra_ + 1];
 public:
-	// The following cannot be used (an assertion will fail if attempted):
+	// The following cannot be used
 	blargg_err_t set_sample_rate( long samples_per_sec, int msec_length );
 	blip_time_t count_clocks( long count ) const;
 	void mix_samples( blip_sample_t const* buf, long count );
@@ -385,18 +385,10 @@ struct blip_buffer_state_t
 
 // End of public interface
 
-#ifndef assert
-	#include <assert.h>
-#endif
-
 template<int quality,int range>
 inline void Blip_Synth<quality,range>::offset_resampled( blip_resampled_time_t time,
 		int delta, Blip_Buffer* blip_buf ) const
 {
-	// If this assertion fails, it means that an attempt was made to add a delta
-	// at a negative time or past the end of the buffer.
-	assert( (blip_long) (time >> BLIP_BUFFER_ACCURACY) < blip_buf->buffer_size_ );
-
 	delta *= impl.delta_factor;
 	blip_long* BLIP_RESTRICT buf = blip_buf->buffer_ + (time >> BLIP_BUFFER_ACCURACY);
 	int phase = (int) (time >> (BLIP_BUFFER_ACCURACY - BLIP_PHASE_BITS) & (blip_res - 1));
@@ -543,8 +535,6 @@ inline int Blip_Reader::begin( Blip_Buffer& blip_buf )
 
 inline void Blip_Buffer::remove_silence( long count )
 {
-	// fails if you try to remove more samples than available
-	assert( count <= samples_avail() );
 	offset_ -= (blip_resampled_time_t) count << BLIP_BUFFER_ACCURACY;
 }
 

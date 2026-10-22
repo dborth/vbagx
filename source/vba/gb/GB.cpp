@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <algorithm>
 
 #include "../System.h"
@@ -3443,7 +3442,7 @@ static bool gbReadSaveState(gzFile gzFile) {
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
 
 	if (version >= 12 && utilReadInt(gzFile) != 0x12345678)
-		assert(false); // fails if something read too much/little from file
+		return false; // fails if something read too much/little from file
 
 	return true;
 }

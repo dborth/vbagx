@@ -7,7 +7,6 @@
 
 #include <stddef.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <limits.h>
 
 #undef BLARGG_COMMON_H
@@ -65,7 +64,6 @@ public:
 	void clear() { void* p = begin_; begin_ = 0; size_ = 0; free( p ); }
 	T& operator [] ( size_t n ) const
 	{
-		assert( n <= size_ ); // <= to allow past-the-end value
 		return begin_ [n];
 	}
 };

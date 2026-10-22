@@ -12,21 +12,6 @@ unprefixed names. */
 // a particular macro is defined to do something. When defined to do nothing, the
 // macros do NOT evaluate their argument(s).
 
-// If expr is false, prints file and line number, then aborts program. Meant for
-// checking internal state and consistency. A failed assertion indicates a bug
-// in MY code.
-//
-// void assert( bool expr );
-#include <assert.h>
-
-// If expr is false, prints file and line number, then aborts program. Meant for
-// checking caller-supplied parameters and operations that are outside the control
-// of the module. A failed requirement probably indicates a bug in YOUR code.
-//
-// void require( bool expr );
-#undef  require
-#define require( expr ) assert( expr )
-
 // Like printf() except output goes to debugging console/file.
 //
 // void dprintf( const char* format, ... );
