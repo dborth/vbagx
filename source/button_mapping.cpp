@@ -35,7 +35,7 @@ CtrlrMap ctrlr_def[6] = {
 		{INPUT_BTN_PLUS, "START"},
 		{INPUT_TRIGGER_L, "L"},
 		{INPUT_TRIGGER_R, "R"},
-		{INPUT_TRIGGER_ZL, "Z"},
+		{INPUT_TRIGGER_ZR, "Z"},
 		{INPUT_BTN_NONE, ""},
 		{INPUT_BTN_NONE, ""}
 	}
