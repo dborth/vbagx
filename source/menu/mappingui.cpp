@@ -52,7 +52,9 @@ bool Contains(const std::vector<int>& v, int x)
 std::vector<int> HardwareList()
 {
 	std::vector<int> v;
+#ifndef __WIIU__
 	v.push_back(INPUT_HW_GAMECUBE);
+#endif
 #ifndef HW_DOL
 	v.push_back(INPUT_HW_WIIMOTE);
 	v.push_back(INPUT_HW_NUNCHUK);
