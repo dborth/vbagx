@@ -34,6 +34,7 @@
 #include "input.h"
 #include "filelist.h"
 #include "menu.h"
+#include "mappingui.h"
 #include "gamesettings.h"
 #include "libgui/Gui.h"
 #include "vba/gb/gb.h"
@@ -81,7 +82,6 @@ static GuiSound * exitSound = nullptr;
 static GuiText * settingText = nullptr;
 static GuiText * settingText2 = nullptr;
 static int lastMenu = MENU_NONE;
-static int mapMenuCtrl = 0;
 
 uint8_t * bg_music;
 uint32_t bg_music_size;
@@ -101,7 +101,6 @@ static char progressMsg[201];
 static int progressDone = 0;
 static int progressTotal = 0;
 static void (*progressCancelFn)(void) = nullptr; // protected by ProgressSync().mutex - non-null means the overlay offers a Cancel button
-static bool buttonMappingCancelled = false;
 
 static ThreadId mainThreadId;
 
@@ -2521,411 +2520,21 @@ static int MenuGameCheats()
 }
 
 /****************************************************************************
- * MenuSettingsMappings
+ * What screens built outside this file need of the menu (see menu.h)
  ***************************************************************************/
-static int MenuSettingsMappings()
+GuiWindow& MenuMainWindow()
 {
-	int selection = MENU_NONE;
-
-	GuiText titleTxt("Game Settings - Button Mappings", 26, (PixelColor){255, 255, 255, 255});
-	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
-	titleTxt.setPosition(50,50);
-
-	MenuIconData iconWiimote(icon_settings_wiimote_png);
-	MenuIconData iconClassic(icon_settings_classic_png);
-	MenuIconData iconGamecube(icon_settings_gamecube_png);
-	MenuIconData iconNunchuk(icon_settings_nunchuk_png);
-	MenuIconData iconWiiupro(icon_settings_wiiupro_png);
-	MenuIconData iconDrc(icon_settings_drc_png);
-
-	GuiText gamecubeBtnTxt("GameCube Controller", 22, (PixelColor){0, 0, 0, 255});
-	gamecubeBtnTxt.setWrap(true, MENU_BTN_LARGE_W-30);
-	MenuButtonShape gamecubeBtnImg(MenuButtonShape::LARGE);
-	GuiImage gamecubeBtnIcon(&iconGamecube);
-	GuiButton gamecubeBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	gamecubeBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	gamecubeBtn.setPosition(-125, 120);
-	gamecubeBtn.setLabel(&gamecubeBtnTxt);
-	gamecubeBtn.setImage(&gamecubeBtnImg);
-	gamecubeBtn.setIcon(&gamecubeBtnIcon);
-	gamecubeBtn.setTrigger(trigA);
-	gamecubeBtn.setEffectGrow();
-	
-	GuiText wiimoteBtnTxt("Wiimote", 22, (PixelColor){0, 0, 0, 255});
-	MenuButtonShape wiimoteBtnImg(MenuButtonShape::LARGE);
-	GuiImage wiimoteBtnIcon(&iconWiimote);
-	GuiButton wiimoteBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	wiimoteBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	wiimoteBtn.setPosition(125, 120);
-	wiimoteBtn.setLabel(&wiimoteBtnTxt);
-	wiimoteBtn.setImage(&wiimoteBtnImg);
-	wiimoteBtn.setIcon(&wiimoteBtnIcon);
-	wiimoteBtn.setTrigger(trigA);
-	wiimoteBtn.setEffectGrow();
-
-	GuiText drcBtnTxt("Wii U GamePad", 22, (PixelColor){0, 0, 0, 255});
-	drcBtnTxt.setWrap(true, MENU_BTN_LARGE_W-30);
-	MenuButtonShape drcBtnImg(MenuButtonShape::LARGE);
-	GuiImage drcBtnIcon(&iconDrc);
-	GuiButton drcBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	drcBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	drcBtn.setPosition(200, 120);
-	drcBtn.setLabel(&drcBtnTxt);
-	drcBtn.setImage(&drcBtnImg);
-	drcBtn.setIcon(&drcBtnIcon);
-	drcBtn.setTrigger(trigA);
-	drcBtn.setEffectGrow();
-	
-	GuiText classicBtnTxt("Classic Controller", 22, (PixelColor){0, 0, 0, 255});
-	classicBtnTxt.setWrap(true, MENU_BTN_LARGE_W-30);
-	MenuButtonShape classicBtnImg(MenuButtonShape::LARGE);
-	GuiImage classicBtnIcon(&iconClassic);
-	GuiButton classicBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	classicBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	classicBtn.setPosition(-200, 250);
-	classicBtn.setLabel(&classicBtnTxt);
-	classicBtn.setImage(&classicBtnImg);
-	classicBtn.setIcon(&classicBtnIcon);
-	classicBtn.setTrigger(trigA);
-	classicBtn.setEffectGrow();
-
-	GuiText nunchukBtnTxt1("Wiimote", 22, (PixelColor){0, 0, 0, 255});
-	GuiText nunchukBtnTxt2("&", 18, (PixelColor){0, 0, 0, 255});
-	GuiText nunchukBtnTxt3("Nunchuk", 22, (PixelColor){0, 0, 0, 255});
-	nunchukBtnTxt1.setPosition(0, -20);
-	nunchukBtnTxt3.setPosition(0, +20);
-	MenuButtonShape nunchukBtnImg(MenuButtonShape::LARGE);
-	GuiImage nunchukBtnIcon(&iconNunchuk);
-	GuiButton nunchukBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	nunchukBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	nunchukBtn.setPosition(0, 250);
-	nunchukBtn.setLabel(&nunchukBtnTxt1, 0);
-	nunchukBtn.setLabel(&nunchukBtnTxt2, 1);
-	nunchukBtn.setLabel(&nunchukBtnTxt3, 2);
-	nunchukBtn.setImage(&nunchukBtnImg);
-	nunchukBtn.setIcon(&nunchukBtnIcon);
-	nunchukBtn.setTrigger(trigA);
-	nunchukBtn.setEffectGrow();
-
-	GuiText wiiuproBtnTxt("Wii U Pro Controller", 22, (PixelColor){0, 0, 0, 255});
-	wiiuproBtnTxt.setWrap(true, MENU_BTN_LARGE_W-20);
-	MenuButtonShape wiiuproBtnImg(MenuButtonShape::LARGE);
-	GuiImage wiiuproBtnIcon(&iconWiiupro);
-	GuiButton wiiuproBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	wiiuproBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	wiiuproBtn.setPosition(200, 250);
-	wiiuproBtn.setLabel(&wiiuproBtnTxt);
-	wiiuproBtn.setImage(&wiiuproBtnImg);
-	wiiuproBtn.setIcon(&wiiuproBtnIcon);
-	wiiuproBtn.setTrigger(trigA);
-	wiiuproBtn.setEffectGrow();
-
-	GuiText backBtnTxt("Go Back", 22, (PixelColor){0, 0, 0, 255});
-	MenuButtonShape backBtnImg(MenuButtonShape::NORMAL);
-	GuiButton backBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
-	backBtn.setAlignment(ALIGN_H::LEFT, ALIGN_V::BOTTOM);
-	backBtn.setPosition(50, -35);
-	backBtn.setLabel(&backBtnTxt);
-	backBtn.setImage(&backBtnImg);
-	backBtn.setTrigger(trigA);
-	backBtn.setEffectGrow();
-
-	GuiWindow w(platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
-	w.append(&titleTxt);
-
-	w.append(&gamecubeBtn);
-#ifndef HW_DOL
-	w.append(&wiimoteBtn);
-	
-	if(controller[0]->getPadData().hw_connected[INPUT_HW_DRC]) {
-		gamecubeBtn.setPosition(-200, 120);
-		wiimoteBtn.setPosition(0, 120);
-		w.append(&drcBtn);
-	}
-	
-	w.append(&classicBtn);
-	w.append(&nunchukBtn);
-	w.append(&wiiuproBtn);
-#endif
-	w.append(&backBtn);
-
-	menu->mainWindow.appendWithAutoRemove(&w);
-
-
-	while(selection == MENU_NONE)
-	{
-		if(!UpdateGui()) return MENU_EXIT;
-
-		if(wiimoteBtn.getState() == STATE::CLICKED)
-		{
-			selection = MENU_GAMESETTINGS_MAPPINGS_MAP;
-			mapMenuCtrl = INPUT_HW_WIIMOTE;
-		}
-		else if(nunchukBtn.getState() == STATE::CLICKED)
-		{
-			selection = MENU_GAMESETTINGS_MAPPINGS_MAP;
-			mapMenuCtrl = INPUT_HW_NUNCHUK;
-		}
-		else if(classicBtn.getState() == STATE::CLICKED)
-		{
-			selection = MENU_GAMESETTINGS_MAPPINGS_MAP;
-			mapMenuCtrl = INPUT_HW_CLASSIC;
-		}
-		else if(wiiuproBtn.getState() == STATE::CLICKED)
-		{
-			selection = MENU_GAMESETTINGS_MAPPINGS_MAP;
-			mapMenuCtrl = INPUT_HW_WUPC;
-		}
-		else if(drcBtn.getState() == STATE::CLICKED)
-		{
-			selection = MENU_GAMESETTINGS_MAPPINGS_MAP;
-			mapMenuCtrl = INPUT_HW_DRC;
-		}
-		else if(gamecubeBtn.getState() == STATE::CLICKED)
-		{
-			selection = MENU_GAMESETTINGS_MAPPINGS_MAP;
-			mapMenuCtrl = INPUT_HW_GAMECUBE;
-		}
-		else if(backBtn.getState() == STATE::CLICKED)
-		{
-			selection = MENU_GAMESETTINGS;
-		}
-	}
-	return selection;
+	return menu->mainWindow;
 }
 
-/****************************************************************************
- * ButtonMappingWindow
- ***************************************************************************/
-static uint32_t ButtonMappingWindow()
+bool MenuUpdateGui()
 {
-	GuiWindow promptWindow(448,288);
-	promptWindow.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
-	promptWindow.setPosition(0, -10);
-
-	MenuDialogShape dialogBoxImg(MENU_DIALOG_W, MENU_DIALOG_H, MENU_DIALOG_HEADER_H);
-
-	GuiText titleTxt("Button Mapping", 26, (PixelColor){255, 255, 255, 255});
-	titleTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	titleTxt.setPosition(0, MENU_DIALOG_TITLE_Y);
-
-	char msg[200];
-
-	switch(mapMenuCtrl)
-	{
-		case INPUT_HW_GAMECUBE:
-			sprintf(msg, "Press any button on the GameCube Controller now. Press Home or the C-Stick in any direction to clear the existing mapping.");
-			break;
-		case INPUT_HW_WIIMOTE:
-			sprintf(msg, "Press any button on the Wiimote now. Press Home to clear the existing mapping.");
-			break;
-		case INPUT_HW_CLASSIC:
-			sprintf(msg, "Press any button on the Classic Controller now. Press Home to clear the existing mapping.");
-			break;
-		case INPUT_HW_WUPC:
-			sprintf(msg, "Press any button on the Wii U Pro Controller now. Press Home to clear the existing mapping.");
-			break;
-		case INPUT_HW_DRC:
-			sprintf(msg, "Press any button on the Wii U GamePad now. Press Home to clear the existing mapping.");
-			break;
-		case INPUT_HW_NUNCHUK:
-			sprintf(msg, "Press any button on the Wiimote or Nunchuk now. Press Home to clear the existing mapping.");
-			break;
-		default:
-			sprintf(msg, "Press any button to map. Press Home to clear.");
-			break;
-	}
-
-	GuiText msgTxt(msg, 26, (PixelColor){0, 0, 0, 255});
-	msgTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
-	msgTxt.setPosition(0,-20);
-	msgTxt.setWrap(true, 430);
-
-	promptWindow.append(&dialogBoxImg);
-	promptWindow.append(&titleTxt);
-	promptWindow.append(&msgTxt);
-
-	menu->mainWindow.setState(STATE::DISABLED);
-	menu->mainWindow.appendWithAutoRemove(&promptWindow);
-	menu->mainWindow.changeFocus(&promptWindow);
-
-	uint32_t pressed = 0;
-	bool buttonMappingCancelled = false;
-
-	while(pressed == 0 && !buttonMappingCancelled)
-	{
-		if(!UpdateGui()) return 0;
-
-		if(!controller[0]) continue;
-
-		const InputPadData& pad = controller[0]->getPadData();
-
-		// Listen strictly to the specific hardware profile being mapped
-		pressed = pad.hw_buttons_d[mapMenuCtrl];
-
-		// C-Stick clear for GameCube specifically
-		if(mapMenuCtrl == INPUT_HW_GAMECUBE)
-		{
-			if(pad.hw_substickX[INPUT_HW_GAMECUBE] < -0.55f || pad.hw_substickX[INPUT_HW_GAMECUBE] > 0.55f ||
-			   pad.hw_substickY[INPUT_HW_GAMECUBE] < -0.55f || pad.hw_substickY[INPUT_HW_GAMECUBE] > 0.55f)
-			{
-				pressed = INPUT_BTN_HOME;
-			}
-		}
-
-		// Normalize Home button press to clear mapping
-		if (pressed & INPUT_BTN_HOME) {
-			pressed = INPUT_BTN_HOME;
-		}
-
-		// If no button was pressed on the target hardware, check if the user
-		// hit the generic "Cancel" button (B/1) on ANY controller to back out.
-		if(pressed == 0)
-		{
-			if(controller[0]->isSecondaryPressed()) {
-				buttonMappingCancelled = true;
-			}
-		}
-	}
-
-	// INPUT_BTN_HOME explicitly clears the mapped button
-	if(pressed == INPUT_BTN_HOME) {
-		pressed = 0;
-	}
-
-	menu->mainWindow.setState(STATE::DEFAULT);
-
-	return pressed;
+	return UpdateGui();
 }
 
-static int MenuSettingsMappingsMap()
+bool MenuConfirm(const char * title, const char * msg, const char * yes, const char * no)
 {
-	int selection = MENU_NONE;
-	int ret,i,j;
-	bool firstRun = true;
-	OptionList options;
-
-	char menuTitle[100];
-	char menuSubtitle[100];
-	sprintf(menuTitle, "Game Settings - Button Mappings");
-
-	GuiText titleTxt(menuTitle, 26, (PixelColor){255, 255, 255, 255});
-	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
-	titleTxt.setPosition(50,30);
-
-	sprintf(menuSubtitle, "%s", ctrlrName[mapMenuCtrl]);
-	GuiText subtitleTxt(menuSubtitle, 20, (PixelColor){255, 255, 255, 255});
-	subtitleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
-	subtitleTxt.setPosition(50,60);
-
-	GuiText backBtnTxt("Go Back", 22, (PixelColor){0, 0, 0, 255});
-	MenuButtonShape backBtnImg(MenuButtonShape::NORMAL);
-	GuiButton backBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
-	backBtn.setAlignment(ALIGN_H::LEFT, ALIGN_V::BOTTOM);
-	backBtn.setPosition(50, -35);
-	backBtn.setLabel(&backBtnTxt);
-	backBtn.setImage(&backBtnImg);
-	backBtn.setTrigger(trigA);
-	backBtn.setEffectGrow();
-
-	GuiText resetBtnTxt("Reset Mappings", 22, (PixelColor){0, 0, 0, 255});
-	MenuButtonShape resetBtnImg(MenuButtonShape::SHORT);
-	GuiButton resetBtn(MENU_BTN_SHORT_W, MENU_BTN_SHORT_H);
-	resetBtn.setAlignment(ALIGN_H::LEFT, ALIGN_V::BOTTOM);
-	resetBtn.setPosition(260, -35);
-	resetBtn.setLabel(&resetBtnTxt);
-	resetBtn.setImage(&resetBtnImg);
-	resetBtn.setTrigger(trigA);
-	resetBtn.setEffectGrow();
-
-	i=0;
-	sprintf(options.name[i++], "B");
-	sprintf(options.name[i++], "A");
-	sprintf(options.name[i++], "Select");
-	sprintf(options.name[i++], "Start");
-	sprintf(options.name[i++], "Up");
-	sprintf(options.name[i++], "Down");
-	sprintf(options.name[i++], "Left");
-	sprintf(options.name[i++], "Right");
-	sprintf(options.name[i++], "L");
-	sprintf(options.name[i++], "R");
-	options.length = i;
-
-	for(i=0; i < options.length; i++)
-		options.value[i][0] = 0;
-
-	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
-	optionBrowser.setPosition(0, MENU_LIST_Y);
-	optionBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	optionBrowser.setCol2Position(215);
-
-	GuiWindow w(platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
-	w.append(&backBtn);
-	w.append(&resetBtn);
-	menu->mainWindow.appendWithAutoRemove(&optionBrowser);
-	menu->mainWindow.appendWithAutoRemove(&w);
-	menu->mainWindow.appendWithAutoRemove(&titleTxt);
-	menu->mainWindow.appendWithAutoRemove(&subtitleTxt);
-
-	while(selection == MENU_NONE)
-	{
-		if(!UpdateGui()) return MENU_EXIT;
-
-		if(backBtn.getState() == STATE::CLICKED)
-		{
-			selection = MENU_GAMESETTINGS_MAPPINGS;
-		}
-		else if(resetBtn.getState() == STATE::CLICKED)
-		{
-			resetBtn.resetState();
-
-			int choice = WindowPrompt(
-				"Reset Mappings",
-				"Are you sure that you want to reset your mappings?",
-				"Yes",
-				"No");
-
-			if(choice == 1)
-			{
-				ResetControls(mapMenuCtrl);
-				firstRun = true;
-			}
-		}
-
-		ret = optionBrowser.getClickedOption();
-
-		if(ret >= 0)
-		{
-			// get a button selection from user
-			btnmap[mapMenuCtrl][ret] = ButtonMappingWindow();
-		}
-
-		if(ret >= 0 || firstRun)
-		{
-			firstRun = false;
-
-			for(i=0; i < options.length; i++)
-			{
-				for(j=0; j < ctrlr_def[mapMenuCtrl].num_btns; j++)
-				{
-					if(btnmap[mapMenuCtrl][i] == 0)
-					{
-						options.value[i][0] = 0;
-					}
-					else if(btnmap[mapMenuCtrl][i] ==
-						ctrlr_def[mapMenuCtrl].map[j].btn)
-					{
-						if(strcmp(options.value[i], ctrlr_def[mapMenuCtrl].map[j].name) != 0)
-							sprintf(options.value[i], ctrlr_def[mapMenuCtrl].map[j].name);
-						break;
-					}
-				}
-			}
-			optionBrowser.triggerUpdate();
-		}
-	}
-
-	return selection;
+	return WindowPrompt(title, msg, yes, no) == 1;
 }
 
 /****************************************************************************
@@ -5196,10 +4805,7 @@ void MainMenu (int selection)
 				currentMenu = MenuGameSettings();
 				break;
 			case MENU_GAMESETTINGS_MAPPINGS:
-				currentMenu = MenuSettingsMappings();
-				break;
-			case MENU_GAMESETTINGS_MAPPINGS_MAP:
-				currentMenu = MenuSettingsMappingsMap();
+				currentMenu = MappingScreen();
 				break;
 			case MENU_GAMESETTINGS_VIDEO:
 				currentMenu = MenuSettingsVideo();
