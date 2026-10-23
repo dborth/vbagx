@@ -234,7 +234,7 @@ Configure the GBA/GB controller independently for each input device you have con
 
 Game Boy and Game Boy Color games don't have L and R buttons — those only work in Game Boy Advance games.
 
-Whatever controls you choose here can be overridden for certain games by turning on **Match Wii Controls** (or **Match GameCube Controls** on GameCube) with the appropriate expansion plugged in — see [Special Wii Controls](#special-wii-controls). Games without special Wii controls just use whatever you configured here.
+Whatever controls you choose here can be overridden for certain games by turning on **Match Wii Controls** (or **Match GC Controls** on GameCube) in the in-game menu, with the appropriate expansion plugged in — see [Special Wii Controls](#special-wii-controls). Games without special Wii controls just use whatever you configured here.
 
 In addition to the controls you configure, these always apply:
 
@@ -319,15 +319,15 @@ The File Browser loads automatically on startup and lists the contents of your `
 
 ## Gameplay
 
-Once you choose a game, it starts. Press **Home** to open the in-game menu (Save, Load, Reset, Controller, Cheats) — these settings apply to all games, not just the current one. Select **Main Menu** to return to the File Browser, or **Close** to resume play.
+Once you choose a game, it starts. Press **Home** to open the in-game menu (Saves, Button Mappings, Reset, Match Wii Controls, Game Settings). Select **Main Menu** to return to the File Browser, or **Close** to resume play.
 
-- **Save** offers **New SRAM** and **New Snapshot**; click either to create a save, or click an existing save to overwrite it.
-- **Load** loads a saved SRAM or Snapshot.
+- **Saves** shows your Snapshots in a grid, with the game's own **Game Save File** (SRAM) under them for games that have one. Click **New Snapshot** to save the moment you are at, or click a Snapshot to Load, Update or Delete it. Click the Game Save File to Save Now, Make a Backup, or open its Backups to Restore or Delete one.
+- **Button Mappings** opens the [button mapping](#button-mappings) screen.
 - **Reset** resets the current game.
-- **Controller** toggles which controller drives the game.
-- **Cheats** toggles your loaded cheat codes (below).
+- **Match Wii Controls** (**Match GC Controls** on GameCube) switches between ON and OFF each time you click it. See [Special Wii Controls](#special-wii-controls).
+- **Game Settings** has Emulation, Video, Screenshot, and Cheats (your loaded cheat codes, below).
 
-If you're playing a Boktai game with the solar sensor active, a fifth button lets you set the in-game weather; sunlight is based on the weather, time of day, and the angle of your Wiimote. Note that if it's night time for real, there won't be any sun regardless of what you set the weather to.
+If you're playing a Boktai game with the solar sensor active, a Weather button beside Game Settings lets you set the in-game weather; sunlight is based on the weather, time of day, and the angle of your Wiimote. Note that if it's night time for real, there won't be any sun regardless of what you set the weather to.
 
 ## Cheats
 
@@ -390,7 +390,7 @@ Colourized/translated games may still show minor distortion, though it's improve
 
 ## Special Wii Controls
 
-Turn **Match Wii Controls** (or **Match GameCube Controls**) on in [Button Mappings](#button-mappings) to use motion/gesture controls modeled after each game's Wii/GameCube counterpart, with a Wii Remote, Nunchuk, Classic Controller, or GameCube Controller plugged in. Games without an entry here just use your regular configured controls.
+Turn **Match Wii Controls** (or **Match GC Controls**) on in the in-game menu to use motion/gesture controls modeled after each game's Wii/GameCube counterpart, with a Wii Remote, Nunchuk, Classic Controller, or GameCube Controller plugged in. Games without an entry here just use your regular configured controls.
 
 | Games | Modeled after |
 |---|---|

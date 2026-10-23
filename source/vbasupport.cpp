@@ -428,6 +428,54 @@ int MemCPUWriteBatteryFile(char * membuffer)
 }
 
 /****************************************************************************
+* The snapshot this game was started from, or last saved to or loaded from:
+* the saves screen points at it, and offers to update it
+****************************************************************************/
+
+static char playingFrom[MAXPATHLEN] = "";
+
+const char * GetPlayingFrom()
+{
+	return playingFrom;
+}
+
+void ClearPlayingFrom()
+{
+	playingFrom[0] = 0;
+}
+
+static void SetPlayingFrom(const char * filepath)
+{
+	snprintf(playingFrom, sizeof(playingFrom), "%s", filepath);
+}
+
+/****************************************************************************
+* GameHasBatterySave
+* Whether this game has a battery save (a .sav) of its own to write. Decided
+* the way MemCPUWriteBatteryFile / MemgbWriteBatteryFile decide whether there
+* is anything to write, but without writing it.
+****************************************************************************/
+
+extern int gbBattery;
+
+bool GameHasBatterySave()
+{
+	if(cartridgeType == CARTRIDGE_GB)
+		return gbBattery != 0;
+
+	int type = gbaSaveType;
+
+	if(type == 0)
+	{
+		if(eepromInUse)
+			type = 3;
+		else if(saveType == 1 || saveType == 2)
+			type = saveType;
+	}
+	return type != 0 && type != 5;
+}
+
+/****************************************************************************
 * LoadBatteryOrState
 * Load Battery/State file into memory
 * action = FILE_SRAM - Load battery
@@ -489,6 +537,8 @@ bool LoadBatteryOrState(char * filepath, int action, bool silent)
 		else
 		{
 			result = emulator.emuReadMemState((char *)savebuffer, offset);
+			if(result)
+				SetPlayingFrom(filepath);
 		}
 	}
 
@@ -670,6 +720,9 @@ bool SaveBatteryOrState(char * filepath, int action, bool silent)
 	result = WriteBatteryOrStateData(filepath, (char *)savebuffer, datasize, silent);
 
 	FreeSaveBuffer();
+
+	if(result && action == FILE_STATE)
+		SetPlayingFrom(filepath);
 
 	return result;
 }

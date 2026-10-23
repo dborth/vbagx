@@ -54,8 +54,12 @@ class MenuScreenWindow
 /** The space the menu's popovers keep clear: the header and footer bars and the page margin. */
 GuiPopover::Insets MenuPopover_Insets();
 
-/** One row of a popover list: the name on the left, a dot on the right when `marked` (the one in use). The caller adds onClick / onFocus. */
-GuiCard& MenuPopover_Row(UiScope& ui, int width, int height, const std::string& title, bool marked, bool dotSlot = true);
+/** One row of a popover list: the name on the left, a dot on the right when `marked` (the one in use), or a chevron when `chevron` (the row opens another list). The caller adds onClick / onFocus. */
+GuiCard& MenuPopover_Row(UiScope& ui, int width, int height, const std::string& title, bool marked, bool dotSlot = true, const std::string& hint = std::string(), bool chevron = false);
+
+/** A chip that opens a popover: what it chooses in small capitals, what is chosen under it, an arrow pointing the way it opens.
+ *  With `arrow` false there is no arrow, for a chip that changes its value in place (an on/off switch). The caller adds onClick / onFocus. */
+GuiCard& MenuPopover_Chip(UiScope& ui, int width, const char * what, std::function<std::string()> value, bool arrow = true);
 
 /** A one pixel rule `w` wide, in the outline color. */
 GuiShape& MenuPopover_Divider(UiScope& ui, int w);
@@ -70,9 +74,12 @@ struct PickerRow {
 struct PickerItem {
 	std::string name;					/**< "Arrow keys" */
 	std::vector<std::string> lines;		/**< What it is, a few short lines (at most three are shown) */
+	std::string hint;					/**< A line under the name, on the row itself. When any item has one the list is "hinted": taller rows, and no caption under the list */
 	std::vector<PickerRow> rows;		/**< What it does for the buttons (at most seven are shown) */
 	bool current;						/**< The one in use now */
+	bool preferred = false;				/**< The cursor starts here when nothing is `current` (no dot is drawn) */
 	bool divider = false;				/**< A rule is drawn after this item: what follows is a different kind of choice */
+	bool chevron = false;				/**< A chevron at the row's end: choosing it opens another list (a hinted list only) */
 };
 
 /**
@@ -83,7 +90,7 @@ struct PickerItem {
 class PickerView : public GuiPopover
 {
 	public:
-		/** `anchor` is the control it opens beside; with none it is centred. B or a click outside closes it (isDismissed()). */
+		/** `anchor` is the control it opens beside; with none it is centred. B or a click outside closes it (isDismissed()). An empty `title` leaves off the heading and the rule under it. */
 		PickerView(const char * title, const std::vector<PickerItem>& items, const GuiPopover::Anchor& anchor = GuiPopover::Anchor());
 		/** Whether a choice was made (after any confirmation). */
 		bool chosen() const { return done; }

@@ -14,7 +14,10 @@
 #include <malloc.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <algorithm>
 #include <memory>
+#include <string>
+#include <vector>
 #include <new>
 
 #ifdef HW_RVL
@@ -35,6 +38,7 @@
 #include "filelist.h"
 #include "menu.h"
 #include "mappingui.h"
+#include "menupopover.h"
 #include "gamesettings.h"
 #include "libgui/Gui.h"
 #include "vba/gb/gb.h"
@@ -1558,55 +1562,73 @@ static int MenuGame()
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
-	MenuIconData iconGameSettings(icon_game_settings_png);
-	MenuIconData iconLoad(icon_game_load_png);
+	MenuIconData iconMappings(icon_settings_mappings_png, -4.0f);
 	MenuIconData iconSave(icon_game_save_png);
-	MenuIconData iconDelete(icon_game_delete_png);
 	MenuIconData iconReset(icon_game_reset_png);
 
 	GuiTrigger trigHome;
 	trigHome.setButtonOnlyTrigger(-1, INPUT_BTN_HOME);
 
-	int xOffset=125;
-	if (isBoktai) 
-		xOffset=200;
+	GuiText mappingBtnTxt("Button Mappings", 22, (PixelColor){0, 0, 0, 255});
+	mappingBtnTxt.setWrap(true, MENU_BTN_LARGE_W-30);
+	MenuButtonShape mappingBtnImg(MenuButtonShape::LARGE);
+	GuiImage mappingBtnIcon(&iconMappings);
+	GuiButton mappingBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
+	mappingBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	mappingBtn.setPosition(-200, 150);
+	mappingBtn.setLabel(&mappingBtnTxt);
+	mappingBtn.setImage(&mappingBtnImg);
+	mappingBtn.setIcon(&mappingBtnIcon);
+	mappingBtn.setTrigger(trigA);
+	mappingBtn.setEffectGrow();
 
-	GuiText saveBtnTxt("Save", 22, (PixelColor){0, 0, 0, 255});
+	GuiText saveBtnTxt("Saves", 22, (PixelColor){0, 0, 0, 255});
 	MenuButtonShape saveBtnImg(MenuButtonShape::LARGE);
 	GuiImage saveBtnIcon(&iconSave);
 	GuiButton saveBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
 	saveBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	saveBtn.setPosition(-200, 120);
+	saveBtn.setPosition(0, 150);
 	saveBtn.setLabel(&saveBtnTxt);
 	saveBtn.setImage(&saveBtnImg);
 	saveBtn.setIcon(&saveBtnIcon);
 	saveBtn.setTrigger(trigA);
 	saveBtn.setEffectGrow();
 
-	GuiText loadBtnTxt("Load", 22, (PixelColor){0, 0, 0, 255});
-	MenuButtonShape loadBtnImg(MenuButtonShape::LARGE);
-	GuiImage loadBtnIcon(&iconLoad);
-	GuiButton loadBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	loadBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	loadBtn.setPosition(0, 120);
-	loadBtn.setLabel(&loadBtnTxt);
-	loadBtn.setImage(&loadBtnImg);
-	loadBtn.setIcon(&loadBtnIcon);
-	loadBtn.setTrigger(trigA);
-	loadBtn.setEffectGrow();
+	GuiText resetBtnTxt("Reset", 22, (PixelColor){0, 0, 0, 255});
+	MenuButtonShape resetBtnImg(MenuButtonShape::LARGE);
+	GuiImage resetBtnIcon(&iconReset);
+	GuiButton resetBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
+	resetBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	resetBtn.setPosition(200, 150);
+	resetBtn.setLabel(&resetBtnTxt);
+	resetBtn.setImage(&resetBtnImg);
+	resetBtn.setIcon(&resetBtnIcon);
+	resetBtn.setTrigger(trigA);
+	resetBtn.setEffectGrow();
 
-	GuiText deleteBtnTxt("Delete", 22, (PixelColor){0, 0, 0, 255});
-	MenuButtonShape deleteBtnImg(MenuButtonShape::LARGE);
-	GuiImage deleteBtnIcon(&iconDelete);
-	GuiButton deleteBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	deleteBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	deleteBtn.setPosition(200, 120);
-	deleteBtn.setLabel(&deleteBtnTxt);
-	deleteBtn.setImage(&deleteBtnImg);
-	deleteBtn.setIcon(&deleteBtnIcon);
-	deleteBtn.setTrigger(trigA);
-	deleteBtn.setEffectGrow();
-	
+	// Second row: Match Wii Controls, Game Settings and, for Boktai, the sun, centred as a group. Match Wii
+	// Controls is a chip that flips between ON and OFF where it is, rather than opening a popover.
+	const int row2Pitch = isBoktai ? 206 : 120;
+	UiScope ui;
+	#ifndef HW_DOL
+	GuiCard& wiiControlsChip = MenuPopover_Chip(ui, MENU_BTN_NORMAL_W, "MATCH WII CONTROLS", []{ return std::string(EmuSettings.wiiControls ? "ON" : "OFF"); }, false);
+	#else
+	GuiCard& wiiControlsChip = MenuPopover_Chip(ui, MENU_BTN_NORMAL_W, "MATCH GC CONTROLS", []{ return std::string(EmuSettings.wiiControls ? "ON" : "OFF"); }, false);
+	#endif
+	wiiControlsChip.onClick([]{ EmuSettings.wiiControls = !EmuSettings.wiiControls; });
+	wiiControlsChip.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	wiiControlsChip.setPosition(-row2Pitch, 296);
+
+	GuiText gameSettingsBtnTxt("Game Settings", 22, (PixelColor){0, 0, 0, 255});
+	MenuButtonShape gameSettingsBtnImg(MenuButtonShape::NORMAL);
+	GuiButton gameSettingsBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
+	gameSettingsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	gameSettingsBtn.setPosition(isBoktai ? 0 : row2Pitch, 290);
+	gameSettingsBtn.setLabel(&gameSettingsBtnTxt);
+	gameSettingsBtn.setImage(&gameSettingsBtnImg);
+	gameSettingsBtn.setTrigger(trigA);
+	gameSettingsBtn.setEffectGrow();
+
 	// Boktai adds an extra button for setting the sun.
 	GuiText *sunBtnTxt = nullptr;
 	MenuButtonShape *sunBtnImg = nullptr;
@@ -1626,42 +1648,17 @@ static int MenuGame()
 		else 
 			sprintf(s, "Weather: %d%% sun", SunBars*10);
 		
-		sunBtnTxt = new GuiText(s, 22, (PixelColor){0, 0, 0, 255});
-		sunBtnTxt->setWrap(true, MENU_BTN_LARGE_W-30);
-		sunBtnImg = new MenuButtonShape(MenuButtonShape::LARGE);
-		sunBtn = new GuiButton(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
+		sunBtnTxt = new GuiText(s, 20, (PixelColor){0, 0, 0, 255});
+		sunBtnTxt->setWrap(true, MENU_BTN_NORMAL_W-30);
+		sunBtnImg = new MenuButtonShape(MenuButtonShape::NORMAL);
+		sunBtn = new GuiButton(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
 		sunBtn->setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-		sunBtn->setPosition(0, 250);
+		sunBtn->setPosition(row2Pitch, 290);
 		sunBtn->setLabel(sunBtnTxt);
 		sunBtn->setImage(sunBtnImg);
 		sunBtn->setTrigger(trigA);
 		sunBtn->setEffectGrow();
 	}
-
-	GuiText resetBtnTxt("Reset", 22, (PixelColor){0, 0, 0, 255});
-	MenuButtonShape resetBtnImg(MenuButtonShape::LARGE);
-	GuiImage resetBtnIcon(&iconReset);
-	GuiButton resetBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	resetBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	resetBtn.setPosition(xOffset, 250);
-	resetBtn.setLabel(&resetBtnTxt);
-	resetBtn.setImage(&resetBtnImg);
-	resetBtn.setIcon(&resetBtnIcon);
-	resetBtn.setTrigger(trigA);
-	resetBtn.setEffectGrow();
-
-	GuiText gameSettingsBtnTxt("Game Settings", 22, (PixelColor){0, 0, 0, 255});
-	gameSettingsBtnTxt.setWrap(true, MENU_BTN_LARGE_W-30);
-	MenuButtonShape gameSettingsBtnImg(MenuButtonShape::LARGE);
-	GuiImage gameSettingsBtnIcon(&iconGameSettings);
-	GuiButton gameSettingsBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	gameSettingsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	gameSettingsBtn.setPosition(-xOffset, 250);
-	gameSettingsBtn.setLabel(&gameSettingsBtnTxt);
-	gameSettingsBtn.setImage(&gameSettingsBtnImg);
-	gameSettingsBtn.setIcon(&gameSettingsBtnIcon);
-	gameSettingsBtn.setTrigger(trigA);
-	gameSettingsBtn.setEffectGrow();
 
 	GuiText mainmenuBtnTxt("Main Menu", 22, (PixelColor){0, 0, 0, 255});
 	if(EmuSettings.autoloadGame) {
@@ -1695,9 +1692,9 @@ static int MenuGame()
 	GuiWindow w(platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
 	w.append(&titleTxt);
 	w.append(&saveBtn);
-	w.append(&loadBtn);
-	w.append(&deleteBtn);
+	w.append(&mappingBtn);
 	w.append(&resetBtn);
+	w.append(&wiiControlsChip);
 	w.append(&gameSettingsBtn);
 	if (isBoktai)
 		w.append(sunBtn);
@@ -1708,6 +1705,8 @@ static int MenuGame()
 
 	w.append(&mainmenuBtn);
 	w.append(&closeBtn);
+
+	ui.attachTo(w);
 
 	menu->btnLogo.setAlignment(ALIGN_H::RIGHT, ALIGN_V::BOTTOM);
 	menu->btnLogo.setPosition(-50, -40);
@@ -1737,13 +1736,9 @@ static int MenuGame()
 		{
 			selection = MENU_GAME_SAVE;
 		}
-		else if(loadBtn.getState() == STATE::CLICKED)
+		else if(mappingBtn.getState() == STATE::CLICKED)
 		{
-			selection = MENU_GAME_LOAD;
-		}
-		else if(deleteBtn.getState() == STATE::CLICKED)
-		{
-			selection = MENU_GAME_DELETE;
+			selection = MENU_GAMESETTINGS_MAPPINGS;
 		}
 		else if(resetBtn.getState() == STATE::CLICKED)
 		{
@@ -1834,15 +1829,21 @@ static int MenuGame()
  * Determines the save file number of the given file name
  * Returns -1 if none is found
  ***************************************************************************/
-static int FindGameSaveNum(char * savefile)
+static int FindGameSaveNum(char * savefile, bool exactIsAuto = false)
 {
 	int n = -1;
 	int romlen = strlen(ROMFilename);
 	int savelen = strlen(savefile);
+
 	int diff = savelen-romlen;
 
 	if(strncmp(savefile, ROMFilename, romlen) != 0)
 		return -1;
+
+	// The auto slot has no "Auto" in its name when the setting for that is off, and a game's save file may have
+	// always been named that way. Only the caller knows whether that name is the auto slot.
+	if(diff == 0)
+		return exactIsAuto ? 0 : -1;
 
 	if(savefile[romlen] == ' ')
 	{
@@ -1896,7 +1897,7 @@ static int SaveListTask(void * arg)
 	{
 		len2 = strlen(browserList[i].filename);
 
-		if(len2 < 6 || len2-len < 5)
+		if(len2 < 6 || len2-len < 4)
 			continue;
 
 		if(strncmp(&browserList[i].filename[len2-4], ".sav", 4) == 0)
@@ -1908,7 +1909,7 @@ static int SaveListTask(void * arg)
 
 		strcpy(tmp, browserList[i].filename);
 		tmp[len2-4] = 0;
-		n = FindGameSaveNum(tmp);
+		n = FindGameSaveNum(tmp, type == FILE_SRAM || !EmuSettings.appendAuto);
 
 		if(n >= 0)
 		{
@@ -1954,6 +1955,7 @@ struct SaveOpArgs
 {
 	int op;
 	int type; // FILE_SRAM / FILE_STATE
+	bool silent; // saving only: no "Save successful" box - the screen shows its own note
 	char filepath[1024];
 };
 static SaveOpArgs saveOpArgs; // static: the worker may still be running if the app exits mid-operation
@@ -1973,7 +1975,7 @@ static int SaveOpTask(void * arg)
 
 		case SAVEOP_SAVE:
 			if(a->type == FILE_SRAM || a->type == FILE_STATE)
-				result = SaveBatteryOrState(a->filepath, a->type, NOTSILENT);
+				result = SaveBatteryOrState(a->filepath, a->type, a->silent);
 			break;
 
 		case SAVEOP_DELETE:
@@ -2001,13 +2003,14 @@ static int SaveOpTask(void * arg)
 }
 
 // \return false if the app was asked to quit
-static bool RunSaveOp(int op, int type, const char * filepath, int * result)
+static bool RunSaveOp(int op, int type, const char * filepath, int * result, bool silent = false)
 {
 	menu->mainWindow.setState(STATE::DISABLED);
 	if(!WaitForQueuedTasks()) return false;
 
 	saveOpArgs.op = op;
 	saveOpArgs.type = type;
+	saveOpArgs.silent = silent;
 	snprintf(saveOpArgs.filepath, sizeof(saveOpArgs.filepath), "%s", filepath);
 	return RunWithGuiUpdates(SaveOpTask, result, &saveOpArgs);
 }
@@ -2015,14 +2018,255 @@ static bool RunSaveOp(int op, int type, const char * filepath, int * result)
 /****************************************************************************
  * MenuGameSaves
  *
- * Allows the user to load or save progress.
+ * One screen for everything saved: a grid of snapshots (the whole game at
+ * one moment, a "state") and under it the game's own save file ("SRAM"),
+ * which a game with no battery doesn't have. Choosing a card opens a popover
+ * beside it with what can be done with that card, so the D-pad, the pointer
+ * and touch all work the same way. The snapshot the game was started from
+ * (or last saved to) is pinned first and tagged, and is what "Update" offers
+ * to overwrite. The save file's backups are one step further: its popover
+ * has a Backups row that opens a list of them.
  ***************************************************************************/
-static int MenuGameSaves(int action)
+enum { SAVEACT_LOAD, SAVEACT_UPDATE, SAVEACT_DELETE, SAVEACT_SAVENOW, SAVEACT_BACKUP, SAVEACT_BACKUPS, SAVEACT_RESTORE };
+
+#define SAVE_LIST_Y		116		// the grid's top, under the header bar
+#define SAVE_LIST_W		540
+#define SAVE_CARD_W		250	// a card of the browser, and the pitch from one column to the next: both are the
+#define SAVE_CARD_H		72	// browser's, repeated here for the note that stands in the empty column
+#define SAVE_COL_PITCH	258
+#define SAVE_MAX_BACKUPS	6	// the most the Backups list shows: a popover doesn't scroll
+#define SAVE_TOAST_W	224
+#define SAVE_TOAST_H	30
+#define SAVE_TOAST_FRAMES	120
+
+// What a card stands for
+struct SaveCard
+{
+	int save;		// index into the SaveList; -1 when there is no file yet (a "new" card)
+	int type;		// FILE_STATE / FILE_SRAM
+	int slot;		// the number in the file's name; 0 is the auto slot; -1 for a new snapshot
+	bool main;		// the game's own save file (slot 0 of the save file kind)
+	bool playing;	// the snapshot the game was started from
+};
+
+// The slot number in a save file's name (0 for the auto slot), or -1
+static int SaveSlotOf(const char * filename, int type)
+{
+	char tmp[MAXJOLIET+1];
+	const int len = strlen(filename);
+
+	if(len < 5 || len > MAXJOLIET)
+		return -1;
+
+	snprintf(tmp, sizeof(tmp), "%s", filename);
+	tmp[len-4] = 0; // the extension
+	return FindGameSaveNum(tmp, type == FILE_SRAM || !EmuSettings.appendAuto);
+}
+
+static std::string SaveNumbered(const char * what, int slot)
+{
+	char text[64];
+	snprintf(text, sizeof(text), "%s %d", what, slot);
+	return text;
+}
+
+static std::string SaveWhen(SaveList & saves, int i)
+{
+	std::string when = saves.date[i];
+	if(saves.time[i][0])
+		when += (when.empty() ? "" : ", ") + std::string(saves.time[i]);
+	return when;
+}
+
+// The files of one kind, the auto slot first and then the numbered ones, newest slot first
+static void SortSaveFiles(SaveList & saves, int type, std::vector<int> & found)
+{
+	std::sort(found.begin(), found.end(), [&saves, type](int a, int b)
+	{
+		const int sa = SaveSlotOf(saves.filename[a], type);
+		const int sb = SaveSlotOf(saves.filename[b], type);
+		if((sa == 0) != (sb == 0))
+			return sa == 0;
+		return sa > sb;
+	});
+}
+
+// The game's own save file, then its backups, as indexes into the SaveList
+static void FindSramFiles(SaveList & saves, std::vector<int> & found)
+{
+	found.clear();
+	for(int i = 0; i < saves.length; i++)
+		if(saves.type[i] == FILE_SRAM && SaveSlotOf(saves.filename[i], FILE_SRAM) >= 0)
+			found.push_back(i);
+
+	// a save file from before the slots, named for the game itself, is the game's save: other slot 0 files are not
+	const size_t romLen = strlen(ROMFilename);
+	bool legacy = false;
+	for(size_t k = 0; k < found.size(); k++)
+		legacy = legacy || (SaveSlotOf(saves.filename[found[k]], FILE_SRAM) == 0 && strlen(saves.filename[found[k]]) - 4 == romLen);
+	if(legacy)
+		found.erase(std::remove_if(found.begin(), found.end(), [&saves, romLen](int i)
+		{
+			return SaveSlotOf(saves.filename[i], FILE_SRAM) == 0 && strlen(saves.filename[i]) - 4 != romLen;
+		}), found.end());
+
+	SortSaveFiles(saves, FILE_SRAM, found);
+}
+
+// The cards: the snapshot we started from, a New Snapshot card, the auto snapshot, then the numbered ones newest
+// first - and, when the game has a save of its own, its pinned card last. The backups of that save are not cards:
+// they are listed in `backups` (indexes into the SaveList), for its popover.
+static void BuildSaveCards(SaveList & saves, bool gameSave, std::vector<SaveEntry> & entries, std::vector<SaveCard> & cards, std::vector<int> & backups)
+{
+	entries.clear();
+	cards.clear();
+	backups.clear();
+
+	const char * playing = GetPlayingFrom();
+	char path[1024];
+	std::vector<int> found;
+	int playingIdx = -1;
+
+	for(int i = 0; i < saves.length; i++)
+	{
+		if(saves.type[i] != FILE_STATE || SaveSlotOf(saves.filename[i], FILE_STATE) < 0)
+			continue;
+
+		if(playing[0] && MakeFilePath(path, FILE_STATE, saves.filename[i]) && strcmp(path, playing) == 0)
+			playingIdx = i;
+		else
+			found.push_back(i);
+	}
+	SortSaveFiles(saves, FILE_STATE, found);
+
+	auto addSnapshot = [&](int i, bool isPlaying)
+	{
+		SaveEntry e;
+		SaveCard c;
+		c.save = i;
+		c.type = FILE_STATE;
+		c.slot = SaveSlotOf(saves.filename[i], FILE_STATE);
+		c.main = false;
+		c.playing = isPlaying;
+		e.kind = SaveEntry::SAVE;
+		e.title = c.slot == 0 ? std::string("Auto Snapshot") : SaveNumbered("Snapshot", c.slot);
+		e.subtitle = SaveWhen(saves, i);
+		e.preview = saves.previewImg[i].get();
+		e.placeholder = "No image";
+		e.playing = isPlaying;
+		e.id = i;
+		entries.push_back(e);
+		cards.push_back(c);
+	};
+
+	if(playingIdx >= 0)
+		addSnapshot(playingIdx, true);
+
+	{
+		SaveEntry e;
+		SaveCard c;
+		e.kind = SaveEntry::NEW;
+		e.title = "New Snapshot";
+		e.subtitle = "Save this moment";
+		e.placeholder = "New";
+		c.save = -1; c.type = FILE_STATE; c.slot = -1; c.main = false; c.playing = false;
+		entries.push_back(e);
+		cards.push_back(c);
+	}
+
+	for(size_t k = 0; k < found.size(); k++)
+		addSnapshot(found[k], false);
+
+	if(!gameSave)
+		return;
+
+	std::vector<int> sram;
+	FindSramFiles(saves, sram);
+	const bool haveMain = !sram.empty() && SaveSlotOf(saves.filename[sram[0]], FILE_SRAM) == 0;
+
+	SaveEntry e;
+	SaveCard c;
+	e.kind = haveMain ? SaveEntry::SAVE : SaveEntry::NEW;	// with no file yet it is a card for writing it the first time
+	e.pinned = true;
+	e.title = "Game Save File";
+	e.subtitle = haveMain ? "Saved " + SaveWhen(saves, sram[0]) : std::string("Not saved yet");
+	// Auto-save looks after this file when it is set to SRAM or both; set to snapshots only, or off, it does not
+	const bool autoSaved = EmuSettings.autoSave == AUTOSAVE_SRAM || EmuSettings.autoSave == AUTOSAVE_BOTH;
+	e.chip = autoSaved ? "Auto-save on" : "Auto-save off";
+	e.chipOn = autoSaved;
+	e.id = haveMain ? sram[0] : -1;
+	c.save = e.id; c.type = FILE_SRAM; c.slot = 0; c.main = true; c.playing = false;
+	entries.push_back(e);
+	cards.push_back(c);
+
+	for(size_t k = haveMain ? 1 : 0; k < sram.size(); k++)
+		backups.push_back(sram[k]);
+}
+
+static SaveCard BackupCard(SaveList & saves, int index)
+{
+	SaveCard c;
+	c.save = index;
+	c.type = FILE_SRAM;
+	c.slot = SaveSlotOf(saves.filename[index], FILE_SRAM);
+	c.main = false;
+	c.playing = false;
+	return c;
+}
+
+// What can be done with a card: the rows of its popover and, for each, the action it stands for. The row the
+// cursor starts on is the likeliest and never the destructive one - except Update on the snapshot we started from.
+static void SaveCardMenu(const SaveCard & card, int backupCount, std::vector<PickerItem> & items, std::vector<int> & acts)
+{
+	items.clear();
+	acts.clear();
+
+	auto add = [&items, &acts](int act, const char * name, const std::string & about, bool preferred, bool divider)
+	{
+		PickerItem it;
+		it.name = name;
+		it.hint = about;
+		it.current = false;
+		it.preferred = preferred;
+		it.divider = divider;
+		items.push_back(it);
+		acts.push_back(act);
+	};
+
+	if(card.type == FILE_STATE)
+	{
+		if(card.playing)
+		{
+			add(SAVEACT_UPDATE, "Update", "Replace with your progress now", true, false);
+			add(SAVEACT_LOAD, "Load", "Jump back to this moment", false, true);
+		}
+		else
+		{
+			add(SAVEACT_LOAD, "Load", "Jump to this moment", true, false);
+			add(SAVEACT_UPDATE, "Replace", "Overwrite with your progress", false, true);
+		}
+		add(SAVEACT_DELETE, "Delete", "Remove this snapshot", false, false);
+	}
+	else if(card.main)
+	{
+		add(SAVEACT_SAVENOW, "Save Now", "Write the save to its file", true, false);
+		add(SAVEACT_BACKUP, "Make Backup", "Keep a copy, just in case", false, backupCount > 0);
+		if(backupCount > 0)
+		{
+			add(SAVEACT_BACKUPS, "Backups", GuiFormat("%d saved", backupCount), false, false);
+			items.back().chevron = true;
+		}
+	}
+	else
+	{
+		add(SAVEACT_RESTORE, "Restore", "Use this as the game's save", true, true);
+		add(SAVEACT_DELETE, "Delete", "Remove this backup", false, false);
+	}
+}
+
+static int MenuGameSaves()
 {
 	int selection = MENU_NONE;
-	int ret, result;
-	int i;
-
 	char filepath[1024];
 
 	static ChangeInterfaceArgs ciArgs;
@@ -2042,16 +2286,23 @@ static int MenuGameSaves(int action)
 	if(!changeOk)
 		return MENU_GAME;
 
-	GuiText titleTxt(nullptr, 26, (PixelColor){255, 255, 255, 255});
-	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
-	titleTxt.setPosition(50,50);
+	// A game with no battery has no save file of its own: then there is nothing under the snapshots,
+	// and they get the room
+	const bool gameSave = GameHasBatterySave();
 
-	if(action == 0)
-		titleTxt.setText("Load Game");
-	else if (action == 2)
-		titleTxt.setText("Delete Saves");
-	else
-		titleTxt.setText("Save Game");
+	const MenuPalette & pal = MenuPaletteCurrent();
+	const PixelColor white = (PixelColor){255, 255, 255, 255};
+
+	char romTitle[512];
+	platform->getFileSystem()->nameToDisplay(ROMFilename, romTitle, sizeof(romTitle)); // raw name -> UTF-8 for display only
+
+	GuiText titleTxt("Saves", 26, white);
+	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
+	titleTxt.setPosition(50,24);
+
+	GuiText gameTxt(romTitle, 20, white);
+	gameTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
+	gameTxt.setPosition(50,60);
 
 	GuiTrigger trigHome;
 	trigHome.setButtonOnlyTrigger(-1, INPUT_BTN_HOME);
@@ -2077,115 +2328,355 @@ static int MenuGameSaves(int action)
 	closeBtn.setTrigger(&trigHome);
 	closeBtn.setEffectGrow();
 
+	// Shown beside a lone "New Snapshot" card, in the grid's second column. It is a card of its own - dark and
+	// translucent, the size of the cards, not clickable - so the words read over any picture, and it looks
+	// like a note next to the white cards you can choose.
+	const int emptyX = (platform->getVideo()->getScreenWidth() - SAVE_LIST_W) / 2 + SAVE_COL_PITCH;
+	GuiShape emptyCard(SAVE_CARD_W, SAVE_CARD_H);
+	emptyCard.setCorners(GuiCorners(GuiTheme::current().radius));
+	emptyCard.setPaint(GuiPaint().color(MenuRGBA(0, 0, 0, 150)).stroke(1.5f, MenuRGBA(255, 255, 255, 80)));
+	emptyCard.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
+	emptyCard.setPosition(emptyX, SAVE_LIST_Y);
+	emptyCard.setVisible(false);
+	GuiText emptyTitle("No snapshots yet", 16, white);
+	GuiText emptyLine0("Remembers the exact moment, so you", 13, white);
+	GuiText emptyLine1("can jump back to it any time.", 13, white);
+	GuiText * emptyTexts[3] = { &emptyTitle, &emptyLine0, &emptyLine1 };
+	const int emptyTextY[3] = { 11, 35, 52 };
+	for(int k = 0; k < 3; k++)
+	{
+		emptyTexts[k]->setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
+		emptyTexts[k]->setPosition(emptyX + 16, SAVE_LIST_Y + emptyTextY[k]);
+		emptyTexts[k]->setVisible(false);
+	}
+
+	// the note that says what a save did, over the bottom of the list
+	GuiText toastTxt(nullptr, 16, white);
+	toastTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
+	toastTxt.setPosition(14, 0);
+	MenuCheckIcon toastCheck(20, white, pal.accentDark);
+	toastCheck.setAlignment(ALIGN_H::LEFT, ALIGN_V::MIDDLE);
+	toastCheck.setPosition(10, 0);
+	GuiShape toastShape(SAVE_TOAST_W, SAVE_TOAST_H);
+	toastShape.setCorners(GuiCorners(SAVE_TOAST_H / 2.0f));
+	toastShape.setStyle(GuiShapeStyle(GuiPaint().gradient(pal.accent, pal.accentDark).stroke(2.0f, pal.glow)));
+	GuiButton toastBtn(SAVE_TOAST_W, SAVE_TOAST_H);
+	toastBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::BOTTOM);
+	toastBtn.setPosition(0, -(MENU_BAR_BOTTOM_H + 4));
+	toastBtn.setLabel(&toastTxt);
+	toastBtn.setImage(&toastShape);
+	toastBtn.setIcon(&toastCheck);
+	toastBtn.setSelectable(false);
+	toastBtn.setVisible(false);
+	int toastFrames = 0;
+
 	GuiWindow w(platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
 	w.append(&backBtn);
 	w.append(&closeBtn);
 	menu->mainWindow.appendWithAutoRemove(&w);
 	menu->mainWindow.appendWithAutoRemove(&titleTxt);
+	menu->mainWindow.appendWithAutoRemove(&gameTxt);
+	menu->mainWindow.appendWithAutoRemove(&emptyCard);
+	for(int k = 0; k < 3; k++)
+		menu->mainWindow.appendWithAutoRemove(emptyTexts[k]);
+
+	// two rows of snapshots with the save file under them, or three rows when there is no save file
+	GuiSaveBrowser saveBrowser(SAVE_LIST_W, gameSave ? 2 : 3);
+	saveBrowser.setPosition(0, SAVE_LIST_Y);
+	saveBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	menu->mainWindow.appendWithAutoRemove(&saveBrowser);
+	menu->mainWindow.appendWithAutoRemove(&toastBtn);
 
 	// Look up the saves on the worker thread so the GUI keeps running. The data is on
 	// the heap because the task may still be using it if the app is asked to quit.
-	std::unique_ptr<SaveScreenData> data(new SaveScreenData);
-
-	if(!RunWithGuiUpdates(SaveListTask, nullptr, data.get()))
+	std::unique_ptr<SaveScreenData> data;
+	auto loadSaves = [&data]() -> bool
 	{
-		data.release(); // deliberately leaked - the worker may still be writing to it
-		return MENU_EXIT;
-	}
+		std::unique_ptr<SaveScreenData> fresh(new SaveScreenData);
 
-	SaveList & saves = data->saves;
-
-	// create the screenshot textures (main thread only)
-	for(i=0; i < saves.length; i++)
-	{
-		if(data->thumbs[i].valid())
+		if(!RunWithGuiUpdates(SaveListTask, nullptr, fresh.get()))
 		{
-			auto thumb = std::make_unique<GuiImageData>();
-			if(thumb->uploadDecoded(std::move(data->thumbs[i])))
-				saves.previewImg[i] = std::move(thumb);
+			fresh.release(); // deliberately leaked - the worker may still be writing to it
+			return false;
 		}
-	}
 
-	if((saves.length == 0 && action == 0) || (saves.length == 0 && action == 2)) 
+		// create the screenshot textures (main thread only)
+		for(int i = 0; i < fresh->saves.length; i++)
+		{
+			if(fresh->thumbs[i].valid())
+			{
+				auto thumb = std::make_unique<GuiImageData>();
+				if(thumb->uploadDecoded(std::move(fresh->thumbs[i])))
+					fresh->saves.previewImg[i] = std::move(thumb);
+			}
+		}
+		data = std::move(fresh);
+		return true;
+	};
+
+	std::vector<SaveEntry> entries;
+	std::vector<SaveCard> cards;
+	std::vector<int> backups;
+
+	// Shows the cards, with the cursor on the card of kind `selType` (FILE_STATE / FILE_SRAM) and slot `selSlot`, or with
+	// `selType` -1 on the card at `selPos` (or the last one of the grid, when that is gone)
+	auto showCards = [&](int selType, int selSlot, int selPos)
 	{
-		InfoPrompt("No game saves found.");
-		selection = MENU_GAME;
-	}
+		BuildSaveCards(data->saves, gameSave, entries, cards, backups);
 
-	GuiSaveBrowser saveBrowser(552, 248, &saves, action);
-	saveBrowser.setPosition(0, MENU_LIST_Y);
-	saveBrowser.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+		const int gridCount = (int)entries.size() - ((!entries.empty() && entries.back().pinned) ? 1 : 0);
+		int select = selPos;
+		for(size_t k = 0; selType >= 0 && k < cards.size(); k++)
+			if(cards[k].type == selType && cards[k].slot == selSlot)
+				select = (int)k;
+		if(selType < 0 && select >= gridCount)
+			select = gridCount - 1;
+		if(select >= (int)entries.size())
+			select = (int)entries.size() - 1;
+		if(select < 0)
+			select = 0;
 
-	menu->mainWindow.appendWithAutoRemove(&saveBrowser);
-	menu->mainWindow.changeFocus(&saveBrowser);
+		saveBrowser.setEntries(entries, select);
+
+		const bool onlyNew = (gridCount == 1);
+		emptyCard.setVisible(onlyNew);
+		for(int k = 0; k < 3; k++)
+			emptyTexts[k]->setVisible(onlyNew);
+
+		menu->mainWindow.changeFocus(&saveBrowser);
+	};
+
+	auto showToast = [&](const std::string & text)
+	{
+		toastTxt.setText(text.c_str());
+		toastBtn.setVisible(true);
+		toastFrames = SAVE_TOAST_FRAMES;
+	};
+
+	// the first free slot (1-99) of a kind of file, or -1
+	auto freeSlot = [&](int type) -> int
+	{
+		for(int s = 1; s < 100; s++)
+			if(data->saves.files[type][s] == 0)
+				return s;
+		return -1;
+	};
+
+	// What to do with a card, asked in popovers beside it. The save file's popover leads on to its backups: a list
+	// of them, then what to do with the one picked (which then becomes `card`). B steps back to the one before.
+	// The action chosen (a SAVEACT_*), or -1.
+	auto askAction = [&](SaveCard & card, SaveEntry & entry, const GuiPopover::Anchor & anchor) -> int
+	{
+		std::vector<PickerItem> items;
+		std::vector<int> acts;
+
+		while(true)
+		{
+			SaveCardMenu(card, (int)backups.size(), items, acts);
+			const int chosen = MenuPopover_Pick("", items, anchor);
+			if(chosen < 0 || (size_t)chosen >= acts.size())
+				return -1;
+			if(acts[(size_t)chosen] != SAVEACT_BACKUPS)
+				return acts[(size_t)chosen];
+
+			while(true)
+			{
+				std::vector<PickerItem> list;
+				const size_t shown = std::min(backups.size(), (size_t)SAVE_MAX_BACKUPS);
+				for(size_t k = 0; k < shown; k++)
+				{
+					PickerItem it;
+					it.name = SaveNumbered("Backup", SaveSlotOf(data->saves.filename[backups[k]], FILE_SRAM));
+					it.hint = SaveWhen(data->saves, backups[k]);
+					it.current = false;
+					list.push_back(it);
+				}
+
+				const int picked = MenuPopover_Pick("", list, anchor);
+				if(picked < 0 || (size_t)picked >= shown)
+					break;	// back to the save file's popover
+
+				const SaveCard backup = BackupCard(data->saves, backups[(size_t)picked]);
+				std::vector<PickerItem> what;
+				std::vector<int> whatActs;
+				SaveCardMenu(backup, 0, what, whatActs);
+				const int doing = MenuPopover_Pick("", what, anchor);
+				if(doing < 0 || (size_t)doing >= whatActs.size())
+					continue;	// back to the list of backups
+
+				card = backup;
+				entry.title = SaveNumbered("Backup", backup.slot);
+				return whatActs[(size_t)doing];
+			}
+		}
+	};
+
+	if(!loadSaves())
+		return MENU_EXIT;
+	showCards(-1, -1, 0);
 
 	while(selection == MENU_NONE)
 	{
 		if(!UpdateGui()) return MENU_EXIT;
 
-		ret = saveBrowser.getClickedSave();
+		if(toastFrames > 0 && --toastFrames == 0)
+			toastBtn.setVisible(false);
 
-		// load, save and delete save games
-		if(ret > -3)
+		const int pos = saveBrowser.getClickedSave();
+
+		if(pos >= 0 && pos < (int)cards.size())
 		{
-			result = 0;
+			SaveCard card = cards[(size_t)pos];
+			SaveEntry entry = entries[(size_t)pos];
+			int act = -1;
 
-			if(action == 0) // load
+			if(card.type == FILE_STATE && card.save < 0)
 			{
-				MakeFilePath(filepath, saves.type[ret], saves.filename[ret]);
-				if(!RunSaveOp(SAVEOP_LOAD, saves.type[ret], filepath, &result))
-					return MENU_EXIT;
-				if(saves.type[ret] == FILE_SRAM)
-					emulator.emuReset();
-				if(result && CanReturnToGame())
-					selection = MENU_EXIT;
+				act = SAVEACT_UPDATE; // New Snapshot: it only ever adds one, so there is nothing to ask
 			}
-			else if(action == 2) // delete SRAM/State
+			else
 			{
-				if (WindowPrompt("Delete File", "Delete this save file? Deleted files can not be restored.", "OK", "Cancel"))
-				{
-					MakeFilePath(filepath, saves.type[ret], saves.filename[ret]);
-					if(!RunSaveOp(SAVEOP_DELETE, saves.type[ret], filepath, &result))
-						return MENU_EXIT;
-				}
-				selection = MENU_GAME_DELETE;
+				// popovers beside the card, over this screen, which keeps the card highlighted but takes no input
+				w.setState(STATE::DISABLED);
+				saveBrowser.setState(STATE::DISABLED);
+				act = askAction(card, entry, saveBrowser.getEntryAnchor(pos));
+				saveBrowser.setState(STATE::DEFAULT);
+				w.setState(STATE::DEFAULT);
+				saveBrowser.resetState();
+				menu->mainWindow.changeFocus(&saveBrowser);
 			}
-			else // save
+
+			if(act >= 0)
 			{
-				if(ret == -2) // new SRAM
+				int result = 0;
+				int newSlot = -1;
+				bool changed = false;	// the list of files changed: look again
+				const char * saved = nullptr;
+
+				if(card.save >= 0)
+					MakeFilePath(filepath, card.type, data->saves.filename[card.save]);
+
+				switch(act)
 				{
-					for(i=1; i < 100; i++)
-						if(saves.files[FILE_SRAM][i] == 0)
+					case SAVEACT_LOAD:
+					case SAVEACT_RESTORE:
+						if(!RunSaveOp(SAVEOP_LOAD, card.type, filepath, &result))
+							return MENU_EXIT;
+						if(card.type == FILE_SRAM)
+							emulator.emuReset();
+						if(result && CanReturnToGame())
+							selection = MENU_EXIT;	// back to the game
+						break;
+
+					case SAVEACT_UPDATE: // Update / Replace / a New Snapshot
+					{
+						if(card.save < 0)
+						{
+							newSlot = freeSlot(FILE_STATE);
+							if(newSlot < 0)
+							{
+								ErrorPrompt("All 99 snapshot slots are in use. Delete one to make room.");
+								break;
+							}
+							MakeFilePath(filepath, FILE_STATE, ROMFilename, newSlot);
+						}
+						else if(!card.playing && !WindowPrompt(("Replace " + entry.title + "?").c_str(),
+							"It will be overwritten with your progress right now.", "Replace", "Cancel"))
 							break;
 
-					if(i < 100)
-					{
-						MakeFilePath(filepath, FILE_SRAM, ROMFilename, i);
-						if(!RunSaveOp(SAVEOP_SAVE, FILE_SRAM, filepath, &result))
+						if(!RunSaveOp(SAVEOP_SAVE, FILE_STATE, filepath, &result, true))
 							return MENU_EXIT;
-						selection = MENU_GAME_SAVE;
+
+						if(result)
+						{
+							changed = true;
+							if(newSlot >= 0)
+							{
+								saved = "saved";
+							}
+							else
+							{
+								newSlot = card.slot;
+								saved = "updated";
+							}
+						}
+						else
+							ErrorPrompt("Save failed!");
+						break;
 					}
-				}
-				else if(ret == -1) // new State
-				{
-					for(i=1; i < 100; i++)
-						if(saves.files[FILE_STATE][i] == 0)
+
+					case SAVEACT_SAVENOW:
+					case SAVEACT_BACKUP:
+					{
+						int slot = 0;
+						if(act == SAVEACT_BACKUP)
+						{
+							slot = freeSlot(FILE_SRAM);
+							if(slot < 0 || (int)backups.size() >= SAVE_MAX_BACKUPS)
+							{
+								ErrorPrompt(GuiFormat("All %d backup slots are in use. Delete one to make room.", SAVE_MAX_BACKUPS).c_str());
+								break;
+							}
+						}
+						if(act == SAVEACT_BACKUP || card.save < 0)	// Save Now on a file that exists writes that very file
+							MakeFilePath(filepath, FILE_SRAM, ROMFilename, slot);
+
+						if(!RunSaveOp(SAVEOP_SAVE, FILE_SRAM, filepath, &result, true))
+							return MENU_EXIT;
+
+						if(result)
+						{
+							changed = true;
+							newSlot = slot;
+							saved = (act == SAVEACT_BACKUP) ? "saved" : "updated";
+						}
+						else
+							ErrorPrompt("Save failed!");
+						break;
+					}
+
+					case SAVEACT_DELETE:
+					{
+						std::string question = "Delete " + entry.title + "?";
+						std::string detail = "This can't be undone.";
+						if(card.playing)
+							detail = "This is the snapshot you started from. " + detail;
+
+						if(!WindowPrompt(question.c_str(), detail.c_str(), "Delete", "Cancel"))
 							break;
 
-					if(i < 100)
-					{
-						MakeFilePath(filepath, FILE_STATE, ROMFilename, i);
-						if(!RunSaveOp(SAVEOP_SAVE, FILE_STATE, filepath, &result))
+						if(!RunSaveOp(SAVEOP_DELETE, card.type, filepath, &result))
 							return MENU_EXIT;
-						selection = MENU_GAME_SAVE;
+
+						if(card.type == FILE_STATE && strcmp(filepath, GetPlayingFrom()) == 0)
+							ClearPlayingFrom(); // or the next snapshot to take this slot would look like the one we started from
+
+						changed = true;
+						break;
 					}
 				}
-				else // overwrite SRAM/State
+
+				if(changed && selection == MENU_NONE)
 				{
-					MakeFilePath(filepath, saves.type[ret], saves.filename[ret]);
-					if(!RunSaveOp(SAVEOP_SAVE, saves.type[ret], filepath, &result))
+					if(!loadSaves())
 						return MENU_EXIT;
-					selection = MENU_GAME_SAVE;
+
+					// the cursor stays where it was: on the save file for anything done to it or its backups, on the
+					// snapshot just written, or where a deleted snapshot was
+					if(card.type == FILE_SRAM)
+						showCards(FILE_SRAM, 0, pos);
+					else if(act == SAVEACT_DELETE)
+						showCards(-1, -1, pos);
+					else
+						showCards(FILE_STATE, newSlot, pos);
+
+					if(saved)
+					{
+						std::string what = (card.type == FILE_SRAM)
+							? (newSlot == 0 ? std::string("Game save file") : SaveNumbered("Backup", newSlot))
+							: SaveNumbered("Snapshot", newSlot);
+						showToast(what + " " + saved);
+					}
 				}
 			}
 		}
@@ -2230,39 +2721,19 @@ static int MenuGameSaves(int action)
 static int MenuGameSettings()
 {
 	int selection = MENU_NONE;
-	char s[4];
 	char filepath[1024];
 
 	GuiText titleTxt("Game Settings", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
-	MenuIconData iconMappings(icon_settings_mappings_png, -4.0f);
 	MenuIconData iconVideo(icon_settings_video_png);
 	MenuIconData iconEmulation(icon_settings_emulation_png);
-#ifndef HW_DOL
-	MenuIconData iconWiiControls(icon_settings_nunchuk_png);
-#else
-	MenuIconData iconWiiControls(icon_settings_gamecube_png);
-#endif
 	MenuIconData iconCheats(icon_game_cheats_png);
 	MenuIconData iconScreenshot(icon_settings_screenshot_png);
 
 	GuiTrigger trigHome;
 	trigHome.setButtonOnlyTrigger(-1, INPUT_BTN_HOME);
-
-	GuiText mappingBtnTxt("Button Mappings", 22, (PixelColor){0, 0, 0, 255});
-	mappingBtnTxt.setWrap(true, MENU_BTN_LARGE_W-30);
-	MenuButtonShape mappingBtnImg(MenuButtonShape::LARGE);
-	GuiImage mappingBtnIcon(&iconMappings);
-	GuiButton mappingBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	mappingBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	mappingBtn.setPosition(-200, 120);
-	mappingBtn.setLabel(&mappingBtnTxt);
-	mappingBtn.setImage(&mappingBtnImg);
-	mappingBtn.setIcon(&mappingBtnIcon);
-	mappingBtn.setTrigger(trigA);
-	mappingBtn.setEffectGrow();
 
 	GuiText emulationBtnTxt("Emulation", 22, (PixelColor){0, 0, 0, 255});
 	emulationBtnTxt.setWrap(true, MENU_BTN_LARGE_W-20);
@@ -2270,7 +2741,7 @@ static int MenuGameSettings()
 	GuiImage emulationBtnIcon(&iconEmulation);
 	GuiButton emulationBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
 	emulationBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	emulationBtn.setPosition(0, 120);
+	emulationBtn.setPosition(-100, 120);
 	emulationBtn.setLabel(&emulationBtnTxt);
 	emulationBtn.setImage(&emulationBtnImg);
 	emulationBtn.setIcon(&emulationBtnIcon);
@@ -2283,42 +2754,19 @@ static int MenuGameSettings()
 	GuiImage videoBtnIcon(&iconVideo);
 	GuiButton videoBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
 	videoBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	videoBtn.setPosition(200, 120);
+	videoBtn.setPosition(100, 120);
 	videoBtn.setLabel(&videoBtnTxt);
 	videoBtn.setImage(&videoBtnImg);
 	videoBtn.setIcon(&videoBtnIcon);
 	videoBtn.setTrigger(trigA);
 	videoBtn.setEffectGrow();
 
-	#ifndef HW_DOL
-	GuiText wiiControlsBtnTxt1("Match Wii Controls", 22, (PixelColor){0, 0, 0, 255});
-	#else
-	GuiText wiiControlsBtnTxt1("Match GC Controls", 22, (PixelColor){0, 0, 0, 255});
-	#endif
-	if (EmuSettings.wiiControls) sprintf(s, "ON");
-	else sprintf(s, "OFF");
-	GuiText wiiControlsBtnTxt2(s, 18, (PixelColor){0, 0, 0, 255});
-	wiiControlsBtnTxt1.setPosition(0, -10);
-	wiiControlsBtnTxt1.setWrap(true, MENU_BTN_LARGE_W-30);
-	wiiControlsBtnTxt2.setPosition(0, +30);
-	MenuButtonShape wiiControlsBtnImg(MenuButtonShape::LARGE);
-	GuiImage wiiControlsBtnIcon(&iconWiiControls);
-	GuiButton wiiControlsBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	wiiControlsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	wiiControlsBtn.setPosition(-200, 250);
-	wiiControlsBtn.setLabel(&wiiControlsBtnTxt1, 0);
-	wiiControlsBtn.setLabel(&wiiControlsBtnTxt2, 1);
-	wiiControlsBtn.setImage(&wiiControlsBtnImg);
-	wiiControlsBtn.setIcon(&wiiControlsBtnIcon);
-	wiiControlsBtn.setTrigger(trigA);
-	wiiControlsBtn.setEffectGrow();
-
 	GuiText screenshotBtnTxt("Screenshot", 22, (PixelColor){0, 0, 0, 255});
 	MenuButtonShape screenshotBtnImg(MenuButtonShape::LARGE);
 	GuiImage screenshotBtnIcon(&iconScreenshot);
 	GuiButton screenshotBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
 	screenshotBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	screenshotBtn.setPosition(0, 250);
+	screenshotBtn.setPosition(-100, 250);
 	screenshotBtn.setLabel(&screenshotBtnTxt);
 	screenshotBtn.setImage(&screenshotBtnImg);
 	screenshotBtn.setIcon(&screenshotBtnIcon);
@@ -2330,7 +2778,7 @@ static int MenuGameSettings()
 	GuiImage cheatsBtnIcon(&iconCheats);
 	GuiButton cheatsBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
 	cheatsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	cheatsBtn.setPosition(200, 250);
+	cheatsBtn.setPosition(100, 250);
 	cheatsBtn.setLabel(&cheatsBtnTxt);
 	cheatsBtn.setImage(&cheatsBtnImg);
 	cheatsBtn.setIcon(&cheatsBtnIcon);
@@ -2360,10 +2808,8 @@ static int MenuGameSettings()
 
 	GuiWindow w(platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
 	w.append(&titleTxt);
-	w.append(&mappingBtn);
 	w.append(&videoBtn);
 	w.append(&emulationBtn);
-	w.append(&wiiControlsBtn);
 	w.append(&screenshotBtn);
 	w.append(&cheatsBtn);
 	w.append(&closeBtn);
@@ -2376,25 +2822,13 @@ static int MenuGameSettings()
 	{
 		if(!UpdateGui()) return MENU_EXIT;
 
-		if(mappingBtn.getState() == STATE::CLICKED)
-		{
-			selection = MENU_GAMESETTINGS_MAPPINGS;
-		}
-		else if(videoBtn.getState() == STATE::CLICKED)
+		if(videoBtn.getState() == STATE::CLICKED)
 		{
 			selection = MENU_GAMESETTINGS_VIDEO;
 		}
 		else if(emulationBtn.getState() == STATE::CLICKED)
 		{
 			selection = MENU_GAMESETTINGS_EMULATION;
-		}
-		else if(wiiControlsBtn.getState() == STATE::CLICKED)
-		{
-			EmuSettings.wiiControls = !EmuSettings.wiiControls;
-			if (EmuSettings.wiiControls) sprintf(s, "ON");
-			else sprintf(s, "OFF");
-			wiiControlsBtnTxt2.setText(s);
-			wiiControlsBtn.resetState();
 		}
 		else if(screenshotBtn.getState() == STATE::CLICKED)
 		{
@@ -4793,13 +5227,13 @@ void MainMenu (int selection)
 				currentMenu = MenuGame();
 				break;
 			case MENU_GAME_LOAD:
-				currentMenu = MenuGameSaves(0);
+				currentMenu = MenuGameSaves();
 				break;
 			case MENU_GAME_SAVE:
-				currentMenu = MenuGameSaves(1);
+				currentMenu = MenuGameSaves();
 				break;
 			case MENU_GAME_DELETE:
-				currentMenu = MenuGameSaves(2);
+				currentMenu = MenuGameSaves();
 				break;	
 			case MENU_GAMESETTINGS:
 				currentMenu = MenuGameSettings();

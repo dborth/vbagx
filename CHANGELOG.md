@@ -2,6 +2,10 @@
 
 All notable changes to Visual Boy Advance GX are recorded here, newest first. For the current features and setup instructions, see [README.md](README.md).
 
+## Unreleased
+* **Redesigned Saves screen.** The Save, Load and Delete buttons are now a single **Saves** button. Snapshots fill a grid, with the game's **Game Save File** (shown only for games that have one) in its own card beneath. Choosing a card opens a small popover of what can be done with it; the save file's backups are listed from its popover
+* **Redesigned in-game menu.** **Button Mappings** and **Match Wii Controls** (**Match GC Controls** on GameCube) have moved from Game Settings to the in-game menu's front page. Match Wii Controls now switches between ON and OFF right where it is when clicked
+
 ## 3.0.4 - October 20, 2026
 * **New menu look!** The menus have been rebuilt with a fresh, modern style: a deeper purple header and footer, cleaner rounded buttons with soft shadows, a redesigned game list with a slimmer scrollbar and a clear highlight on the selected entry, new prompt windows, and more. The menu graphics are now drawn procedurally by the renderer instead of being loaded from PNG images, so they stay sharp at any output resolution
 * **New controller status bar** in the menu footer, replacing the Wiimote battery icons. Each of the four player slots (P1-P4) now shows the type of controller connected (Wiimote, GameCube controller, etc.), with the battery level shown for Wiimote controllers and the Gamepad. Empty slots appear dimmed
