@@ -100,7 +100,8 @@ bool GuiSoundOggPlayer::play(const uint8_t* data, int32_t length, int time_pos, 
 void GuiSoundOggPlayer::stop() {
 	// The decode thread clears threadRunning itself when a non-looping stream
 	// hits EOF, so threadRunning says nothing about whether the thread still
-	// needs joining.
+	// needs joining. Skipping the join left decodeThread's handle set (which
+	// makes the next Thread::start() fail) and leaked its stack/OSThread.
 	threadRunning = false;
 
 	if (decodeThread.isRunning())
