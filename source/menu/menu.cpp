@@ -1554,7 +1554,7 @@ static int MenuGame()
 
 	// Weather menu if a game with Boktai solar sensor
 	bool isBoktai = ((RomIdCode & 0xFF)=='U');
-    char s[64];
+	char s[64] = "";
 
 	char romTitle[512];
 	platform->getFileSystem()->nameToDisplay(ROMFilename, romTitle, sizeof(romTitle)); // raw name -> UTF-8 for display only
@@ -1606,24 +1606,27 @@ static int MenuGame()
 	resetBtn.setTrigger(trigA);
 	resetBtn.setEffectGrow();
 
-	// Second row: Match Wii Controls, Game Settings and, for Boktai, the sun, centred as a group. Match Wii
-	// Controls is a button like the others with an on/off switch inside it: it flips where it is, rather than opening a popover.
-	const int row2Pitch = isBoktai ? 206 : 120;
+	// Second row: Match Wii Controls and Game Settings, centred as a pair. Match Wii Controls is a button like
+	// the others with an on/off switch inside it: it flips where it is, rather than opening a popover.
 	#ifndef HW_DOL
 	GuiText wiiControlsBtnTxt("Match Wii Controls", 18, (PixelColor){0, 0, 0, 255});
 	#else
 	GuiText wiiControlsBtnTxt("Match GC Controls", 18, (PixelColor){0, 0, 0, 255});
 	#endif
-	wiiControlsBtnTxt.setWrap(true, MENU_BTN_NORMAL_W - 18 - MenuSwitch::W - 16 - 8);
-	wiiControlsBtnTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::MIDDLE);
-	wiiControlsBtnTxt.setPosition(18, 0);
+	// The label is centred in the space between the button's left edge and the switch
+	const int wiiControlsTxtLeft = 14;
+	const int wiiControlsTxtW = MENU_BTN_NORMAL_W - wiiControlsTxtLeft - MenuSwitch::W - 16 - 12;
+	wiiControlsBtnTxt.setWrap(true, wiiControlsTxtW);
+	wiiControlsBtnTxt.setLineSpacing(-2);
+	wiiControlsBtnTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
+	wiiControlsBtnTxt.setPosition(wiiControlsTxtLeft + wiiControlsTxtW / 2 - MENU_BTN_NORMAL_W / 2, 0);
 	MenuSwitch wiiControlsSwitch(EmuSettings.wiiControls);
 	wiiControlsSwitch.setAlignment(ALIGN_H::RIGHT, ALIGN_V::MIDDLE);
 	wiiControlsSwitch.setPosition(-16, 0);
 	MenuButtonShape wiiControlsBtnImg(MenuButtonShape::NORMAL);
 	GuiButton wiiControlsBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
 	wiiControlsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	wiiControlsBtn.setPosition(-row2Pitch, 290);
+	wiiControlsBtn.setPosition(-120, 290);
 	wiiControlsBtn.setLabel(&wiiControlsBtnTxt);
 	wiiControlsBtn.setImage(&wiiControlsBtnImg);
 	wiiControlsBtn.setIcon(&wiiControlsSwitch);
@@ -1634,17 +1637,16 @@ static int MenuGame()
 	MenuButtonShape gameSettingsBtnImg(MenuButtonShape::NORMAL);
 	GuiButton gameSettingsBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
 	gameSettingsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	gameSettingsBtn.setPosition(isBoktai ? 0 : row2Pitch, 290);
+	gameSettingsBtn.setPosition(120, 290);
 	gameSettingsBtn.setLabel(&gameSettingsBtnTxt);
 	gameSettingsBtn.setImage(&gameSettingsBtnImg);
 	gameSettingsBtn.setTrigger(trigA);
 	gameSettingsBtn.setEffectGrow();
 
-	// Boktai adds an extra button for setting the sun.
-	GuiText *sunBtnTxt = nullptr;
-	MenuButtonShape *sunBtnImg = nullptr;
-	GuiButton *sunBtn = nullptr;
-	if (isBoktai) 
+	// Boktai shows the weather
+	const int sunInfoW = MENU_BTN_LARGE_W;
+	const int sunInfoH = 28;
+	if (isBoktai)
 	{
 		struct tm *newtime;
 		time_t long_time;
@@ -1655,21 +1657,21 @@ static int MenuGame()
 		if (newtime->tm_hour > 21 || newtime->tm_hour < 5)
 		{
 			sprintf(s, "Weather: Night Time");
-		} 
-		else 
+		}
+		else
 			sprintf(s, "Weather: %d%% sun", SunBars*10);
-		
-		sunBtnTxt = new GuiText(s, 20, (PixelColor){0, 0, 0, 255});
-		sunBtnTxt->setWrap(true, MENU_BTN_NORMAL_W-30);
-		sunBtnImg = new MenuButtonShape(MenuButtonShape::NORMAL);
-		sunBtn = new GuiButton(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
-		sunBtn->setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-		sunBtn->setPosition(row2Pitch, 290);
-		sunBtn->setLabel(sunBtnTxt);
-		sunBtn->setImage(sunBtnImg);
-		sunBtn->setTrigger(trigA);
-		sunBtn->setEffectGrow();
 	}
+	GuiShape sunInfoShape(sunInfoW, sunInfoH);
+	sunInfoShape.setCapsule();
+	sunInfoShape.setStyle(MenuChipStyle());
+	sunInfoShape.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
+	GuiText sunInfoTxt(s, 16, MenuPaletteCurrent().text);
+	sunInfoTxt.setMaxWidth(sunInfoW - 16);
+	GuiWindow sunInfo(sunInfoW, sunInfoH);
+	sunInfo.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	sunInfo.setPosition(-200, 150 - sunInfoH - 12);
+	sunInfo.append(&sunInfoShape);
+	sunInfo.append(&sunInfoTxt);
 
 	GuiText mainmenuBtnTxt("Main Menu", 22, (PixelColor){0, 0, 0, 255});
 	if(EmuSettings.autoloadGame) {
@@ -1708,7 +1710,7 @@ static int MenuGame()
 	w.append(&wiiControlsBtn);
 	w.append(&gameSettingsBtn);
 	if (isBoktai)
-		w.append(sunBtn);
+		w.append(&sunInfo);
 
 	#ifndef HW_DOL
 	controllerStatus.appendTo(w);
@@ -1830,12 +1832,6 @@ static int MenuGame()
 				closeBtn.resetState();
 			}
 		}
-	}
-
-	if (isBoktai) {
-		delete sunBtnTxt;
-		delete sunBtnImg;
-		delete sunBtn;
 	}
 
 	return selection;
