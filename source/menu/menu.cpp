@@ -1643,11 +1643,11 @@ static int MenuGame()
 	gameSettingsBtn.setTrigger(trigA);
 	gameSettingsBtn.setEffectGrow();
 
-	// Boktai shows the weather
-	const int sunInfoW = MENU_BTN_LARGE_W;
-	const int sunInfoH = 28;
-	if (isBoktai)
-	{
+	// Boktai adds a small button, above Reset, for setting the sun: each click steps it up by a tenth.
+	// The label shows the weather the solar sensor will report; it is always Night Time at night.
+	const int sunBtnW = MENU_BTN_LARGE_W;
+	const int sunBtnH = 32;
+	auto sunText = [&s]() {
 		struct tm *newtime;
 		time_t long_time;
 
@@ -1655,23 +1655,24 @@ static int MenuGame()
 		time(&long_time); // Get time as long integer.
 		newtime = localtime(&long_time); // Convert to local time.
 		if (newtime->tm_hour > 21 || newtime->tm_hour < 5)
-		{
 			sprintf(s, "Weather: Night Time");
-		}
 		else
 			sprintf(s, "Weather: %d%% sun", SunBars*10);
-	}
-	GuiShape sunInfoShape(sunInfoW, sunInfoH);
-	sunInfoShape.setCapsule();
-	sunInfoShape.setStyle(MenuChipStyle());
-	sunInfoShape.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
-	GuiText sunInfoTxt(s, 16, MenuPaletteCurrent().text);
-	sunInfoTxt.setMaxWidth(sunInfoW - 16);
-	GuiWindow sunInfo(sunInfoW, sunInfoH);
-	sunInfo.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	sunInfo.setPosition(-200, 150 - sunInfoH - 12);
-	sunInfo.append(&sunInfoShape);
-	sunInfo.append(&sunInfoTxt);
+	};
+	if (isBoktai)
+		sunText();
+	GuiText sunBtnTxt(s, 16, (PixelColor){0, 0, 0, 255});
+	sunBtnTxt.setMaxWidth(sunBtnW - 16);
+	GuiShape sunBtnImg(sunBtnW, sunBtnH);
+	sunBtnImg.setCorners(GuiCorners(sunBtnH / 2.0f));
+	sunBtnImg.setStyle(MenuButtonStyle());
+	GuiButton sunBtn(sunBtnW, sunBtnH);
+	sunBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	sunBtn.setPosition(200, 150 - sunBtnH - 10);
+	sunBtn.setLabel(&sunBtnTxt);
+	sunBtn.setImage(&sunBtnImg);
+	sunBtn.setTrigger(trigA);
+	sunBtn.setEffectGrow();
 
 	GuiText mainmenuBtnTxt("Main Menu", 22, (PixelColor){0, 0, 0, 255});
 	if(EmuSettings.autoloadGame) {
@@ -1710,7 +1711,7 @@ static int MenuGame()
 	w.append(&wiiControlsBtn);
 	w.append(&gameSettingsBtn);
 	if (isBoktai)
-		w.append(&sunInfo);
+		w.append(&sunBtn);
 
 	#ifndef HW_DOL
 	controllerStatus.appendTo(w);
@@ -1770,6 +1771,17 @@ static int MenuGame()
 			const int chan = wiiControlsBtn.getStateChan();
 			wiiControlsBtn.resetState();
 			wiiControlsBtn.setState(STATE::SELECTED, chan);
+		}
+		else if(isBoktai && sunBtn.getState() == STATE::CLICKED)
+		{
+			if (++SunBars > 10)
+				SunBars = 0;
+			sunText();
+			sunBtnTxt.setText(s);
+			// stays selected, so the button keeps its highlight and the D-pad stays on it
+			const int chan = sunBtn.getStateChan();
+			sunBtn.resetState();
+			sunBtn.setState(STATE::SELECTED, chan);
 		}
 		else if(gameSettingsBtn.getState() == STATE::CLICKED)
 		{
