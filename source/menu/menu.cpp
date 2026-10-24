@@ -41,6 +41,7 @@
 #include "menupopover.h"
 #include "gamesettings.h"
 #include "libgui/Gui.h"
+#include "widgets/GuiWidgets.h"
 #include "vba/gb/gb.h"
 #include "menuart.h"
 #include "controllerstatus.h"
