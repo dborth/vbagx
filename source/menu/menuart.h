@@ -69,6 +69,79 @@ class MenuButtonShape : public GuiShape
 		}
 };
 
+//!An on/off switch: a capsule track with a round knob that slides to the right (on, accent track) or the left (off,
+//!gray track). Use it as a GuiButton's icon, aligned inside the button; the button's own click flips what it shows
+//!through setOn(). It draws no outline of its own when the button is highlighted: the button carries that.
+class MenuSwitch : public GuiElement
+{
+	public:
+		enum { W = 44, H = 24, INSET = 3 };
+
+		MenuSwitch(bool on = false) :
+			track(W, H), knob(H - 2 * INSET, H - 2 * INSET), isOn(on)
+		{
+			setSize(W, H);
+
+			track.setCapsule();
+			track.setTransition(0.12f);
+			track.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
+			track.setParent(this);
+
+			knob.setShape(SHAPE::ELLIPSE);
+			knob.setPaint(GuiPaint().color(MenuRGBA(255, 255, 255)).shadow(3.0f, MenuRGBA(0, 0, 0, 90), 0.0f, 1.0f));
+			knob.setAlignment(ALIGN_H::LEFT, ALIGN_V::MIDDLE);
+			knob.setParent(this);
+
+			knobX = target();
+			knob.setPosition((int)knobX, 0);
+			applyLook();
+		}
+
+		//!Sets whether the switch shows on; the knob slides there
+		void setOn(bool on)
+		{
+			if(on == isOn)
+				return;
+			isOn = on;
+			applyLook();
+		}
+		bool on() const { return isOn; }
+
+		void draw() override
+		{
+			if(!isVisible())
+				return;
+
+			const float t = target();
+			const float step = (float)(W - H) * platform->getVideo()->getDeltaTime() / 0.12f;
+			if(knobX < t)
+				knobX = std::min(t, knobX + step);
+			else if(knobX > t)
+				knobX = std::max(t, knobX - step);
+			knob.setPosition((int)(knobX + 0.5f), 0);
+
+			track.draw();
+			knob.draw();
+		}
+
+	private:
+		float target() const { return isOn ? (float)(W - H + INSET) : (float)INSET; }
+
+		void applyLook()
+		{
+			const MenuPalette& p = MenuPaletteCurrent();
+			if(isOn)
+				track.setPaint(GuiPaint().color(p.accent).stroke(1.5f, p.accentDark));
+			else
+				track.setPaint(GuiPaint().color(p.outlineStrong).stroke(1.5f, MenuMix(p.outlineStrong, p.text, 0.25f)));
+		}
+
+		GuiShape track;
+		GuiShape knob;
+		bool isOn;
+		float knobX = 0.0f;
+};
+
 //!A page-turning arrow: gray, turning to the accent color while its button is
 //!highlighted. Use it as the image of a GuiButton of MENU_ARROW_* size; it centers
 //!itself in the button.

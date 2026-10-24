@@ -1607,17 +1607,28 @@ static int MenuGame()
 	resetBtn.setEffectGrow();
 
 	// Second row: Match Wii Controls, Game Settings and, for Boktai, the sun, centred as a group. Match Wii
-	// Controls is a chip that flips between ON and OFF where it is, rather than opening a popover.
+	// Controls is a button like the others with an on/off switch inside it: it flips where it is, rather than opening a popover.
 	const int row2Pitch = isBoktai ? 206 : 120;
-	UiScope ui;
 	#ifndef HW_DOL
-	GuiCard& wiiControlsChip = MenuPopover_Chip(ui, MENU_BTN_NORMAL_W, "MATCH WII CONTROLS", []{ return std::string(EmuSettings.wiiControls ? "ON" : "OFF"); }, false);
+	GuiText wiiControlsBtnTxt("Match Wii Controls", 18, (PixelColor){0, 0, 0, 255});
 	#else
-	GuiCard& wiiControlsChip = MenuPopover_Chip(ui, MENU_BTN_NORMAL_W, "MATCH GC CONTROLS", []{ return std::string(EmuSettings.wiiControls ? "ON" : "OFF"); }, false);
+	GuiText wiiControlsBtnTxt("Match GC Controls", 18, (PixelColor){0, 0, 0, 255});
 	#endif
-	wiiControlsChip.onClick([]{ EmuSettings.wiiControls = !EmuSettings.wiiControls; });
-	wiiControlsChip.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	wiiControlsChip.setPosition(-row2Pitch, 296);
+	wiiControlsBtnTxt.setWrap(true, MENU_BTN_NORMAL_W - 18 - MenuSwitch::W - 16 - 8);
+	wiiControlsBtnTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::MIDDLE);
+	wiiControlsBtnTxt.setPosition(18, 0);
+	MenuSwitch wiiControlsSwitch(EmuSettings.wiiControls);
+	wiiControlsSwitch.setAlignment(ALIGN_H::RIGHT, ALIGN_V::MIDDLE);
+	wiiControlsSwitch.setPosition(-16, 0);
+	MenuButtonShape wiiControlsBtnImg(MenuButtonShape::NORMAL);
+	GuiButton wiiControlsBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
+	wiiControlsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	wiiControlsBtn.setPosition(-row2Pitch, 290);
+	wiiControlsBtn.setLabel(&wiiControlsBtnTxt);
+	wiiControlsBtn.setImage(&wiiControlsBtnImg);
+	wiiControlsBtn.setIcon(&wiiControlsSwitch);
+	wiiControlsBtn.setTrigger(trigA);
+	wiiControlsBtn.setEffectGrow();
 
 	GuiText gameSettingsBtnTxt("Game Settings", 22, (PixelColor){0, 0, 0, 255});
 	MenuButtonShape gameSettingsBtnImg(MenuButtonShape::NORMAL);
@@ -1694,7 +1705,7 @@ static int MenuGame()
 	w.append(&saveBtn);
 	w.append(&mappingBtn);
 	w.append(&resetBtn);
-	w.append(&wiiControlsChip);
+	w.append(&wiiControlsBtn);
 	w.append(&gameSettingsBtn);
 	if (isBoktai)
 		w.append(sunBtn);
@@ -1705,8 +1716,6 @@ static int MenuGame()
 
 	w.append(&mainmenuBtn);
 	w.append(&closeBtn);
-
-	ui.attachTo(w);
 
 	menu->btnLogo.setAlignment(ALIGN_H::RIGHT, ALIGN_V::BOTTOM);
 	menu->btnLogo.setPosition(-50, -40);
@@ -1750,6 +1759,15 @@ static int MenuGame()
 			else {
 				resetBtn.resetState();
 			}
+		}
+		else if(wiiControlsBtn.getState() == STATE::CLICKED)
+		{
+			EmuSettings.wiiControls = !EmuSettings.wiiControls;
+			wiiControlsSwitch.setOn(EmuSettings.wiiControls);
+			// stays selected, so the button keeps its highlight and the D-pad stays on it
+			const int chan = wiiControlsBtn.getStateChan();
+			wiiControlsBtn.resetState();
+			wiiControlsBtn.setState(STATE::SELECTED, chan);
 		}
 		else if(gameSettingsBtn.getState() == STATE::CLICKED)
 		{
