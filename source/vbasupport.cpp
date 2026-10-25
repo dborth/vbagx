@@ -357,9 +357,15 @@ void systemMessage(int, const char *msg, ...) {
     va_end(args);
 }
 
+// The size of the .sav read into the save memory since this game started (0: none). A game on automatic save type
+// does not say what kind of save it has until it first uses the save hardware, after the BIOS and its own start-up;
+// until then this is the only way to know the save memory holds a real save, and how big it is
+static int batteryLoadedSize = 0;
+
 bool MemCPUReadBatteryFile(char * membuffer, int size)
 {
 	systemSaveUpdateCounter = SYSTEM_SAVE_NOT_UPDATED;
+	batteryLoadedSize = size;
 
 	if(size == 512 || size == 0x2000)
 	{
@@ -424,6 +430,21 @@ int MemCPUWriteBatteryFile(char * membuffer)
 			result = eepromSize;
 		}
 	}
+	else if(gbaSaveType == 0 && batteryLoadedSize > 0)
+	{
+		// The game has not touched its save hardware yet (it is still in the BIOS or starting up), so the save memory
+		// is still exactly the .sav that was loaded: write that back, sized the way it was read
+		if(batteryLoadedSize == 512 || batteryLoadedSize == 0x2000)
+		{
+			memcpy(membuffer, eepromData, batteryLoadedSize);
+			result = batteryLoadedSize;
+		}
+		else
+		{
+			result = (batteryLoadedSize == 0x20000) ? 0x20000 : 0x10000;
+			memcpy(membuffer, flashSaveMemory, result);
+		}
+	}
 	return result;
 }
 
@@ -458,6 +479,31 @@ static void SetPlayingFrom(const char * filepath)
 
 extern int gbBattery;
 
+// Whether the GBA ROM carries one of the save library's markers ("SRAM_V", "FLASH1M_V", "EEPROM_V"...), found while it
+// was loaded. A game on automatic save type only shows what kind of save it has once it first touches the save hardware
+// (after the BIOS and the game's own start-up), but the marker is in the ROM from the start.
+static bool romHasSaveMarker = false;
+
+static const struct { const char * text; int length; } saveMarkers[] = {
+	{ "EEPROM_V", 8 }, { "SRAM_V", 6 }, { "SRAM_F_V", 8 }, { "FLASH_V", 7 }, { "FLASH512_V", 10 }, { "FLASH1M_V", 9 }
+};
+
+// Looks for a marker in the words of rom[from, to): the libraries keep them word aligned. Reads up to 10 bytes past `to`
+// (the ROM goes on there); `size` is the end of the ROM
+static bool FindSaveMarker(const uint8_t * data, int from, int to, int size)
+{
+	for(int at = from & ~3; at < to; at += 4)
+	{
+		const uint8_t c = data[at];
+		if(c != 'E' && c != 'S' && c != 'F')
+			continue;
+		for(size_t m = 0; m < sizeof(saveMarkers) / sizeof(saveMarkers[0]); m++)
+			if(at + saveMarkers[m].length <= size && memcmp(data + at, saveMarkers[m].text, (size_t)saveMarkers[m].length) == 0)
+				return true;
+	}
+	return false;
+}
+
 bool GameHasBatterySave()
 {
 	if(cartridgeType == CARTRIDGE_GB)
@@ -472,7 +518,18 @@ bool GameHasBatterySave()
 		else if(saveType == 1 || saveType == 2)
 			type = saveType;
 	}
-	return type != 0 && type != 5;
+	if(type == 0)
+		return romHasSaveMarker || batteryLoadedSize > 0;	// not told yet by the game: what the ROM says, or the .sav that was loaded
+	return type != 5;
+}
+
+bool BatterySavePending()
+{
+	if(cartridgeType == CARTRIDGE_GB || !GameHasBatterySave())
+		return false;
+
+	// it has a save, but nothing is in the save memory yet: no .sav was loaded and the game has not started using it
+	return gbaSaveType == 0 && !eepromInUse && saveType == 0 && batteryLoadedSize == 0;
 }
 
 /****************************************************************************
@@ -1215,6 +1272,8 @@ void ResetTiltAndCursor() {
 
 static void ApplyPerImagePreferences()
 {
+	batteryLoadedSize = 0;	// a new game: no .sav has been read for it yet
+
 	RomIdCode = rom[0xac] | (rom[0xad] << 8) | (rom[0xae] << 16) | (rom[0xaf] << 24);
 	RomTitle[0] = '\0';
 
@@ -1228,7 +1287,17 @@ static void ApplyPerImagePreferences()
 	int profileIndex = -1;
 
 	// 1. Lookup by CRC32
-	uint32_t currentCrc = crc32(0, rom, GBAROMSize);
+	// the CRC and the search for the save library's marker in one pass over the ROM (a second pass would page the whole
+	// ROM through the VM again on GameCube)
+	uint32_t currentCrc = crc32(0, NULL, 0);
+	romHasSaveMarker = false;
+	for(int at = 0; at < GBAROMSize; at += 0x10000)
+	{
+		const int len = (GBAROMSize - at < 0x10000) ? GBAROMSize - at : 0x10000;
+		currentCrc = crc32(currentCrc, rom + at, len);
+		if(!romHasSaveMarker)
+			romHasSaveMarker = FindSaveMarker(rom, at, at + len, GBAROMSize);
+	}
 	for(uint16_t i = 0; i < CRC_COUNT; ++i)
 	{
 		if(crcTable[i].crc32 == currentCrc)

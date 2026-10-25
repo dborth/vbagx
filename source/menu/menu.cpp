@@ -2693,6 +2693,8 @@ static int MenuGameSaves()
 							newSlot = slot;
 							saved = (act == SAVEACT_BACKUP) ? "saved" : "updated";
 						}
+						else if(BatterySavePending())
+							InfoPrompt("Nothing to save yet. The game hasn't started using its save memory.");
 						else
 							ErrorPrompt("Save failed!");
 						break;

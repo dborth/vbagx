@@ -51,6 +51,7 @@ void ClearPlayingFrom();
 
 // Whether this game has a battery save (a .sav) of its own to write
 bool GameHasBatterySave();
+bool BatterySavePending();
 
 // Deferred auto-save: SnapshotBatteryOrStateAuto() copies the battery/state and its
 // destination right now (call it from the thread that owns the emulator, while the
