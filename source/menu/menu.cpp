@@ -3385,6 +3385,9 @@ static int MenuSettingsVideo()
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
+	GuiTrigger trigB;
+	trigB.setSecondaryTrigger();
+
 	GuiText backBtnTxt("Go Back", 22, (PixelColor){0, 0, 0, 255});
 	MenuButtonShape backBtnImg(MenuButtonShape::NORMAL);
 	GuiButton backBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
@@ -3393,6 +3396,7 @@ static int MenuSettingsVideo()
 	backBtn.setLabel(&backBtnTxt);
 	backBtn.setImage(&backBtnImg);
 	backBtn.setTrigger(trigA);
+	backBtn.setTrigger(&trigB);
 	backBtn.setEffectGrow();
 
 	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
@@ -3604,6 +3608,9 @@ static int MenuSettingsEmulation()
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
+	GuiTrigger trigB;
+	trigB.setSecondaryTrigger();
+
 	GuiText backBtnTxt("Go Back", 22, (PixelColor){0, 0, 0, 255});
 	MenuButtonShape backBtnImg(MenuButtonShape::NORMAL);
 	GuiButton backBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
@@ -3612,6 +3619,7 @@ static int MenuSettingsEmulation()
 	backBtn.setLabel(&backBtnTxt);
 	backBtn.setImage(&backBtnImg);
 	backBtn.setTrigger(trigA);
+	backBtn.setTrigger(&trigB);
 	backBtn.setEffectGrow();
 
 	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
@@ -3906,6 +3914,9 @@ static int MenuSettingsFile()
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
+	GuiTrigger trigB;
+	trigB.setSecondaryTrigger();
+
 	GuiText backBtnTxt("Go Back", 22, (PixelColor){0, 0, 0, 255});
 	MenuButtonShape backBtnImg(MenuButtonShape::LONG);
 	GuiButton backBtn(MENU_BTN_LONG_W, MENU_BTN_LONG_H);
@@ -3914,6 +3925,7 @@ static int MenuSettingsFile()
 	backBtn.setLabel(&backBtnTxt);
 	backBtn.setImage(&backBtnImg);
 	backBtn.setTrigger(trigA);
+	backBtn.setTrigger(&trigB);
 	backBtn.setEffectGrow();
 
 	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
@@ -4187,6 +4199,9 @@ static int MenuSettingsMenu()
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
+	GuiTrigger trigB;
+	trigB.setSecondaryTrigger();
+
 	GuiText backBtnTxt("Go Back", 22, (PixelColor){0, 0, 0, 255});
 	MenuButtonShape backBtnImg(MenuButtonShape::LONG);
 	GuiButton backBtn(MENU_BTN_LONG_W, MENU_BTN_LONG_H);
@@ -4195,6 +4210,7 @@ static int MenuSettingsMenu()
 	backBtn.setLabel(&backBtnTxt);
 	backBtn.setImage(&backBtnImg);
 	backBtn.setTrigger(trigA);
+	backBtn.setTrigger(&trigB);
 	backBtn.setEffectGrow();
 
 	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
@@ -4373,6 +4389,9 @@ static int MenuSettingsNetwork()
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
+	GuiTrigger trigB;
+	trigB.setSecondaryTrigger();
+
 	GuiText backBtnTxt("Go Back", 22, (PixelColor){0, 0, 0, 255});
 	MenuButtonShape backBtnImg(MenuButtonShape::LONG);
 	GuiButton backBtn(MENU_BTN_LONG_W, MENU_BTN_LONG_H);
@@ -4381,6 +4400,7 @@ static int MenuSettingsNetwork()
 	backBtn.setLabel(&backBtnTxt);
 	backBtn.setImage(&backBtnImg);
 	backBtn.setTrigger(trigA);
+	backBtn.setTrigger(&trigB);
 	backBtn.setEffectGrow();
 
 	GuiOptionBrowser optionBrowser(MENU_OPTIONS_W, MENU_OPTIONS_H, &options);
