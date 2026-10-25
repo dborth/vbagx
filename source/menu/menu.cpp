@@ -87,6 +87,7 @@ static GuiSound * exitSound = nullptr;
 static GuiText * settingText = nullptr;
 static GuiText * settingText2 = nullptr;
 static int lastMenu = MENU_NONE;
+static int previousMenu = MENU_NONE; // the page that ran just before the current one (MENU_NONE: the game)
 
 uint8_t * bg_music;
 uint32_t bg_music_size;
@@ -693,7 +694,7 @@ static int WindowPrompt(const char *title, const char *msg, const char *btn1Labe
 
 static int WindowPrompt(const char *title, const char *msg, const char *btn1Label, const char *btn2Label)
 {
-	return WindowPrompt(title, msg, btn1Label, btn2Label, false);
+	return WindowPrompt(title, msg, btn1Label, btn2Label, true);
 }
 
 /****************************************************************************
@@ -827,7 +828,7 @@ void ShowAction (const char *msg, void (*onCancel)(void))
 	ProgressSync().mutex.unlock();
 }
 
-static int WindowPromptRequest(const char *title, const char *msg, const char *btn1Label, const char *btn2Label, bool btn1Default = false)
+static int WindowPromptRequest(const char *title, const char *msg, const char *btn1Label, const char *btn2Label, bool btn1Default = true)
 {
 	if(IsMainThread())
 		return WindowPrompt(title, msg, btn1Label, btn2Label, btn1Default);
@@ -1513,6 +1514,36 @@ static bool CanReturnToGame() {
 }
 
 /****************************************************************************
+ * FlushEmulatorAudio
+ *
+ * Whatever is queued for the speakers belongs to the game as it was. After a
+ * reset or a loaded snapshot it must not play ahead of the new state, so the
+ * queue is emptied (as when loading a new game). Only for use while in the
+ * menu, when emulator audio is stopped.
+ ***************************************************************************/
+static void FlushEmulatorAudio()
+{
+	EmulatorAudioDriver * audio = platform->getAudio()->getEmulatorAudio();
+	if(audio)
+		audio->resetAudio();
+}
+
+/****************************************************************************
+ * SelectButton
+ *
+ * Puts the highlight on one button of a page. A page highlights its top-most
+ * button when it first gets focus (usually Close), and a prompt on top of it
+ * clears the highlight, so a page that wants a particular button highlighted
+ * - when it opens, or after a prompt is cancelled - does it with this.
+ ***************************************************************************/
+static void SelectButton(GuiWindow & page, GuiElement & button)
+{
+	menu->mainWindow.changeFocus(&page); // lets the page pick its default first...
+	page.resetState();                   // ...which is then replaced
+	button.setState(STATE::SELECTED);
+}
+
+/****************************************************************************
  * MenuGame
  *
  * Menu displayed when returning to the menu from in-game.
@@ -1708,6 +1739,21 @@ static int MenuGame()
 	menu->btnLogo.setPosition(-50, -40);
 	menu->mainWindow.appendWithAutoRemove(&w);
 
+	// Opening from the game: Saves, the usual reason to open this menu. Coming back from one of its pages:
+	// the button that opened it.
+	switch(previousMenu)
+	{
+		case MENU_GAMESETTINGS_MAPPINGS:
+			SelectButton(w, mappingBtn);
+			break;
+		case MENU_GAMESETTINGS:
+			SelectButton(w, gameSettingsBtn);
+			break;
+		default:
+			SelectButton(w, saveBtn);
+			break;
+	}
+
 	if(lastMenu == MENU_NONE)
 	{
 		closeBtn.setEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_IN, 35);
@@ -1741,10 +1787,11 @@ static int MenuGame()
 			if (WindowPrompt("Reset Game", "Reset this game? Any unsaved progress will be lost.", "OK", "Cancel") && CanReturnToGame())
 			{
 				emulator.emuReset();
+				FlushEmulatorAudio();
 				selection = MENU_EXIT;
 			}
 			else {
-				resetBtn.resetState();
+				SelectButton(w, resetBtn);
 			}
 		}
 		else if(wiiControlsBtn.getState() == STATE::CLICKED)
@@ -1799,6 +1846,10 @@ static int MenuGame()
 					bgMusic->play();
 					selection = MENU_GAMESELECTION;
 				}
+			}
+			else
+			{
+				SelectButton(w, mainmenuBtn);
 			}
 		}
 		else if(closeBtn.getState() == STATE::CLICKED)
@@ -2574,6 +2625,8 @@ static int MenuGameSaves()
 							return MENU_EXIT;
 						if(card.type == FILE_SRAM)
 							emulator.emuReset();
+						if(result)
+							FlushEmulatorAudio(); // the loaded state/save replaces what was playing
 						if(result && CanReturnToGame())
 							selection = MENU_EXIT;	// back to the game
 						break;
@@ -2783,7 +2836,14 @@ static int MenuGameSettings()
 	screenshotBtn.setTrigger(trigA);
 	screenshotBtn.setEffectGrow();
 	
-	GuiText cheatsBtnTxt("Cheats", 22, (PixelColor){0, 0, 0, 255});
+	// With no cheats loaded the button says so (it can still be clicked, and explains)
+	const bool haveCheats = cheatCount > 0;
+	GuiText cheatsBtnTxt(haveCheats ? "Cheats" : "Cheats (none)", 22, (PixelColor){0, 0, 0, 255});
+	if(!haveCheats)
+	{
+		cheatsBtnTxt.setWrap(true, MENU_BTN_LARGE_W-20);
+		cheatsBtnTxt.setColor((PixelColor){110, 110, 110, 255});
+	}
 	MenuButtonShape cheatsBtnImg(MenuButtonShape::LARGE);
 	GuiImage cheatsBtnIcon(&iconCheats);
 	GuiButton cheatsBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
@@ -2827,6 +2887,20 @@ static int MenuGameSettings()
 
 	menu->mainWindow.appendWithAutoRemove(&w);
 
+	// Opening from the game menu: the first button. Coming back from one of its pages: the button that opened it.
+	switch(previousMenu)
+	{
+		case MENU_GAMESETTINGS_VIDEO:
+			SelectButton(w, videoBtn);
+			break;
+		case MENU_GAMESETTINGS_CHEATS:
+			SelectButton(w, cheatsBtn);
+			break;
+		default:
+			SelectButton(w, emulationBtn);
+			break;
+	}
+
 
 	while(selection == MENU_NONE)
 	{
@@ -2847,6 +2921,7 @@ static int MenuGameSettings()
 				platform->getFileSystem()->getPath(filepath, EmuSettings.loadDevice, EmuSettings.screenshotsFolder, ROMFilename);
 				SavePreviewImg(filepath, SILENT); 
 			}
+			SelectButton(w, screenshotBtn);
 		}
 		else if(cheatsBtn.getState() == STATE::CLICKED)
 		{
@@ -2857,6 +2932,7 @@ static int MenuGameSettings()
 			}
 			else {
 				InfoPrompt("Cheats file not found!");
+				SelectButton(w, cheatsBtn);
 			}
 		}
 		else if(closeBtn.getState() == STATE::CLICKED)
@@ -3733,6 +3809,22 @@ static int MenuSettings()
 	w.append(&resetBtn);
 
 	menu->mainWindow.appendWithAutoRemove(&w);
+
+	// Coming back from one of its pages: the button that opened it
+	switch(previousMenu)
+	{
+		case MENU_SETTINGS_FILE:
+			SelectButton(w, savingBtn);
+			break;
+		case MENU_SETTINGS_MENU:
+			SelectButton(w, menuBtn);
+			break;
+		case MENU_SETTINGS_NETWORK:
+			SelectButton(w, networkBtn);
+			break;
+		default:
+			break;
+	}
 
 
 	while(selection == MENU_NONE)
@@ -5176,6 +5268,7 @@ void MainMenu (int selection)
 	static bool firstRun = true;
 	int currentMenu = selection;
 	lastMenu = MENU_NONE;
+	previousMenu = MENU_NONE;
 
 	if(selection == MENU_GAME)
 	{
@@ -5227,6 +5320,7 @@ void MainMenu (int selection)
 
 	while(currentMenu != MENU_EXIT || !ROMLoaded)
 	{
+		const int pageRun = currentMenu;
 		switch (currentMenu)
 		{
 			case MENU_GAMESELECTION:
@@ -5279,6 +5373,7 @@ void MainMenu (int selection)
 				break;
 		}
 		lastMenu = currentMenu;
+		previousMenu = pageRun;
 
 		if(guiExiting)
 			break;

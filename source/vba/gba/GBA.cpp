@@ -2504,7 +2504,9 @@ void CPUReset()
     cpuFlashEnabled = true;
     cpuEEPROMEnabled = true;
     cpuEEPROMSensorEnabled = false;
-    saveType = gbaSaveType = 0;
+    // Detection starts over, but what was detected before the reset (latched at the top of this
+    // function) is kept: a reset does not remove the game's save
+    saveType = 0;
     break;
   case 1: // EEPROM
     cpuSramEnabled = false;
