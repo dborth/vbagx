@@ -27,6 +27,7 @@
 #include "vbagx.h"
 #include "memmanager.h"
 #include "vbasupport.h"
+#include "savemode.h"
 #include "video.h"
 #include "filebrowser.h"
 #include "utils/decompress.h"
@@ -1121,13 +1122,15 @@ static bool WaitForQueuedTasks()
 /****************************************************************************
  * AutoSave
  *
- * Automatically saves SRAM/state when returning from in-game to the menu.
+ * What the Save Mode saves when returning from in-game to the menu: the
+ * Auto Snapshot (Snapshot), the Game Save File (Game Save File), or nothing
+ * (Manual).
  *
- * Nothing is asked: the state goes to the game's auto slot (slot 0), never to
- * a numbered snapshot, so it can't overwrite anything the user saved by hand.
+ * Nothing is asked: a Snapshot goes to the game's auto slot (slot 0), never to
+ * a numbered one, so it can't overwrite anything the user saved by hand.
  *
  * Everything that has to happen while the game is still loaded - capturing
- * the SRAM/state - is done right here on the main thread. Writing it to the
+ * the Game Save File or Snapshot - is done right here on the main thread. Writing it to the
  * storage device is then queued as a silent background task, so the menu
  * never waits on the device and nothing on screen is disabled or covered
  * while it happens.
@@ -1157,10 +1160,7 @@ static int AutoSaveTask(void * arg)
 
 static bool AutoSave()
 {
-	const bool saveSram = EmuSettings.autoSave == AUTOSAVE_SRAM || EmuSettings.autoSave == AUTOSAVE_BOTH;
-	const bool saveState = EmuSettings.autoSave == AUTOSAVE_STATE || EmuSettings.autoSave == AUTOSAVE_BOTH;
-
-	if(!saveSram && !saveState)
+	if(EmuSettings.saveMode == SAVEMODE_MANUAL)
 		return true; // nothing to save
 
 	// Capture everything now - the worker may not get to it until the user has
@@ -1170,14 +1170,16 @@ static bool AutoSave()
 	if(!job)
 		return true;
 
-	job->sram = saveSram ? SnapshotBatteryOrStateAuto(FILE_SRAM) : nullptr;
-	job->state = saveState ? SnapshotBatteryOrStateAuto(FILE_STATE) : nullptr;
+	job->sram = EmuSettings.saveMode == SAVEMODE_GAMESAVE ? SnapshotBatteryOrStateAuto(FILE_SRAM) : nullptr;
+	job->state = EmuSettings.saveMode == SAVEMODE_SNAPSHOT ? SnapshotBatteryOrStateAuto(FILE_STATE) : nullptr;
 
 	if(!job->sram && !job->state)
 	{
 		delete job;
 		return true;
 	}
+
+	ClearLiveStateChanged(); // the Auto Snapshot is about to be up to date
 
 	if(QueueBackgroundTask(AutoSaveTask, job))
 		return true;
@@ -1787,6 +1789,7 @@ static int MenuGame()
 			if (WindowPrompt("Reset Game", "Reset this game? Any unsaved progress will be lost.", "OK", "Cancel") && CanReturnToGame())
 			{
 				emulator.emuReset();
+				MarkLiveStateChanged();
 				FlushEmulatorAudio();
 				selection = MENU_EXIT;
 			}
@@ -1970,7 +1973,7 @@ static int SaveListTask(void * arg)
 
 		strcpy(tmp, browserList[i].filename);
 		tmp[len2-4] = 0;
-		n = FindGameSaveNum(tmp, type == FILE_SRAM || !EmuSettings.appendAuto);
+		n = FindGameSaveNum(tmp, type == FILE_SRAM);
 
 		if(n >= 0)
 		{
@@ -2045,7 +2048,7 @@ static int SaveOpTask(void * arg)
 				snprintf(deletepath, sizeof(deletepath), "%s", a->filepath);
 				deletepath[strlen(deletepath)-4] = 0;
 				strcat(deletepath, ".sav");
-				remove(deletepath); // Delete the *.sav file (Battery save file)
+				remove(deletepath); // Delete the *.sav file (Game Save File)
 			}
 			else if(a->type == FILE_STATE)
 			{
@@ -2056,7 +2059,7 @@ static int SaveOpTask(void * arg)
 				snprintf(deletepath, sizeof(deletepath), "%s", a->filepath);
 				deletepath[strlen(deletepath)-4] = 0;
 				strcat(deletepath, ".sgm");
-				remove(deletepath); // Delete the *.sgm file (Save State file)
+				remove(deletepath); // Delete the *.sgm file (Snapshot file)
 			}
 			break;
 	}
@@ -2080,8 +2083,8 @@ static bool RunSaveOp(int op, int type, const char * filepath, int * result, boo
  * MenuGameSaves
  *
  * One screen for everything saved: a grid of snapshots (the whole game at
- * one moment, a "state") and under it the game's own save file ("SRAM"),
- * which a game with no battery doesn't have. Choosing a card opens a popover
+ * one moment) and under it the game's own save, the Game Save File, which
+ * a game with no battery doesn't have. Choosing a card opens a popover
  * beside it with what can be done with that card, so the D-pad, the pointer
  * and touch all work the same way. The snapshot the game was started from
  * (or last saved to) is pinned first and tagged, and is what "Update" offers
@@ -2121,7 +2124,7 @@ static int SaveSlotOf(const char * filename, int type)
 
 	snprintf(tmp, sizeof(tmp), "%s", filename);
 	tmp[len-4] = 0; // the extension
-	return FindGameSaveNum(tmp, type == FILE_SRAM || !EmuSettings.appendAuto);
+	return FindGameSaveNum(tmp, type == FILE_SRAM);
 }
 
 static std::string SaveNumbered(const char * what, int slot)
@@ -2251,8 +2254,8 @@ static void BuildSaveCards(SaveList & saves, bool gameSave, std::vector<SaveEntr
 	e.pinned = true;
 	e.title = "Game Save File";
 	e.subtitle = haveMain ? "Saved " + SaveWhen(saves, sram[0]) : std::string("Not saved yet");
-	// Auto-save looks after this file when it is set to SRAM or both; set to snapshots only, or off, it does not
-	const bool autoSaved = EmuSettings.autoSave == AUTOSAVE_SRAM || EmuSettings.autoSave == AUTOSAVE_BOTH;
+	// The Save Mode looks after this file only when it is set to Game Save File
+	const bool autoSaved = EmuSettings.saveMode == SAVEMODE_GAMESAVE;
 	e.chip = autoSaved ? "Auto-save on" : "Auto-save off";
 	e.chipOn = autoSaved;
 	e.id = haveMain ? sram[0] : -1;
@@ -2626,7 +2629,7 @@ static int MenuGameSaves()
 						if(card.type == FILE_SRAM)
 							emulator.emuReset();
 						if(result)
-							FlushEmulatorAudio(); // the loaded state/save replaces what was playing
+							FlushEmulatorAudio(); // the loaded Snapshot/Game Save File replaces what was playing
 						if(result && CanReturnToGame())
 							selection = MENU_EXIT;	// back to the game
 						break;
@@ -3732,23 +3735,18 @@ static int MenuSettings()
 	MenuIconData iconNetwork(icon_settings_network_png);
 	MenuIconData iconCredits(icon_credits_png);
 
-	GuiText savingBtnTxt1("Saving", 22, (PixelColor){0, 0, 0, 255});
-	GuiText savingBtnTxt2("&", 18, (PixelColor){0, 0, 0, 255});
-	GuiText savingBtnTxt3("Loading", 22, (PixelColor){0, 0, 0, 255});
-	savingBtnTxt1.setPosition(0, -20);
-	savingBtnTxt3.setPosition(0, +20);
-	MenuButtonShape savingBtnImg(MenuButtonShape::LARGE);
+	GuiText storageBtnTxt("Storage", 22, (PixelColor){0, 0, 0, 255});
+	storageBtnTxt.setWrap(true, MENU_BTN_LARGE_W-30);
+	MenuButtonShape storageBtnImg(MenuButtonShape::LARGE);
 	GuiImage fileBtnIcon(&iconFile);
-	GuiButton savingBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
-	savingBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	savingBtn.setPosition(-125, 120);
-	savingBtn.setLabel(&savingBtnTxt1, 0);
-	savingBtn.setLabel(&savingBtnTxt2, 1);
-	savingBtn.setLabel(&savingBtnTxt3, 2);
-	savingBtn.setImage(&savingBtnImg);
-	savingBtn.setIcon(&fileBtnIcon);
-	savingBtn.setTrigger(trigA);
-	savingBtn.setEffectGrow();
+	GuiButton storageBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
+	storageBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	storageBtn.setPosition(-125, 120);
+	storageBtn.setLabel(&storageBtnTxt);
+	storageBtn.setImage(&storageBtnImg);
+	storageBtn.setIcon(&fileBtnIcon);
+	storageBtn.setTrigger(trigA);
+	storageBtn.setEffectGrow();
 
 	GuiText menuBtnTxt("Menu", 22, (PixelColor){0, 0, 0, 255});
 	menuBtnTxt.setWrap(true, MENU_BTN_LARGE_W-30);
@@ -3811,7 +3809,7 @@ static int MenuSettings()
 
 	GuiWindow w(platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
 	w.append(&titleTxt);
-	w.append(&savingBtn);
+	w.append(&storageBtn);
 	w.append(&menuBtn);
 	w.append(&networkBtn);
 	w.append(&creditsBtn);
@@ -3823,8 +3821,8 @@ static int MenuSettings()
 	// Coming back from one of its pages: the button that opened it
 	switch(previousMenu)
 	{
-		case MENU_SETTINGS_FILE:
-			SelectButton(w, savingBtn);
+		case MENU_SETTINGS_STORAGE:
+			SelectButton(w, storageBtn);
 			break;
 		case MENU_SETTINGS_MENU:
 			SelectButton(w, menuBtn);
@@ -3841,9 +3839,9 @@ static int MenuSettings()
 	{
 		if(!UpdateGui()) return MENU_EXIT;
 
-		if(savingBtn.getState() == STATE::CLICKED)
+		if(storageBtn.getState() == STATE::CLICKED)
 		{
-			selection = MENU_SETTINGS_FILE;
+			selection = MENU_SETTINGS_STORAGE;
 		}
 		else if(menuBtn.getState() == STATE::CLICKED)
 		{
@@ -3884,10 +3882,10 @@ static int MenuSettings()
 }
 
 /****************************************************************************
- * MenuSettingsFile
+ * MenuSettingsStorage
  ***************************************************************************/
 
-static int MenuSettingsFile()
+static int MenuSettingsStorage()
 {
 	int selection = MENU_NONE;
 	int ret;
@@ -3902,15 +3900,13 @@ static int MenuSettingsFile()
 	sprintf(options.name[i++], "Screenshots Folder");
 	sprintf(options.name[i++], "Covers Folder");
 	sprintf(options.name[i++], "Artwork Folder");
-	sprintf(options.name[i++], "Auto Load");
-	sprintf(options.name[i++], "Auto Save");
-	sprintf(options.name[i++], "Append Auto to .SAV Files");
+	sprintf(options.name[i++], "Save Mode");
 	options.length = i;
 
 	for(i=0; i < options.length; i++)
 		options.value[i][0] = 0;
 
-	GuiText titleTxt("Settings - Saving & Loading", 26, (PixelColor){255, 255, 255, 255});
+	GuiText titleTxt("Settings - Storage", 26, (PixelColor){255, 255, 255, 255});
 	titleTxt.setAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
 	titleTxt.setPosition(50,50);
 
@@ -3980,19 +3976,9 @@ static int MenuSettingsFile()
 				break;
 			
 			case 8:
-				EmuSettings.autoLoad++;
-				if (EmuSettings.autoLoad > AUTOLOAD_STATE)
-					EmuSettings.autoLoad = AUTOLOAD_OFF;
-				break;
-
-			case 9:
-				EmuSettings.autoSave++;
-				if (EmuSettings.autoSave > AUTOSAVE_BOTH)
-					EmuSettings.autoSave = AUTOSAVE_OFF;
-				break;
-
-			case 10:
-				EmuSettings.appendAuto = !EmuSettings.appendAuto;
+				EmuSettings.saveMode++;
+				if (EmuSettings.saveMode >= SAVEMODE_LENGTH)
+					EmuSettings.saveMode = SAVEMODE_SNAPSHOT;
 				break;
 		}
 
@@ -4026,17 +4012,9 @@ static int MenuSettingsFile()
 			snprintf (options.value[6], 35, "%s", EmuSettings.coverFolder);
 			snprintf (options.value[7], 35, "%s", EmuSettings.artworkFolder);
 			
-			if (EmuSettings.autoLoad == AUTOLOAD_OFF) sprintf (options.value[8],"Off");
-			else if (EmuSettings.autoLoad == AUTOLOAD_SRAM) sprintf (options.value[8],"SRAM");
-			else if (EmuSettings.autoLoad == AUTOLOAD_STATE) sprintf (options.value[8],"State");
-
-			if (EmuSettings.autoSave == AUTOSAVE_OFF) sprintf (options.value[9],"Off");
-			else if (EmuSettings.autoSave == AUTOSAVE_SRAM) sprintf (options.value[9],"SRAM");
-			else if (EmuSettings.autoSave == AUTOSAVE_STATE) sprintf (options.value[9],"State");
-			else if (EmuSettings.autoSave == AUTOSAVE_BOTH) sprintf (options.value[9],"Both");
-
-			if (!EmuSettings.appendAuto) sprintf (options.value[10],"Off");
-			else sprintf (options.value[10],"On");
+			if (EmuSettings.saveMode == SAVEMODE_SNAPSHOT) sprintf (options.value[8],"Snapshot");
+			else if (EmuSettings.saveMode == SAVEMODE_GAMESAVE) sprintf (options.value[8],"Game Save File");
+			else if (EmuSettings.saveMode == SAVEMODE_MANUAL) sprintf (options.value[8],"Manual");
 
 			optionBrowser.triggerUpdate();
 		}
@@ -5381,8 +5359,8 @@ void MainMenu (int selection)
 			case MENU_SETTINGS:
 				currentMenu = MenuSettings();
 				break;
-			case MENU_SETTINGS_FILE:
-				currentMenu = MenuSettingsFile();
+			case MENU_SETTINGS_STORAGE:
+				currentMenu = MenuSettingsStorage();
 				break;
 			case MENU_SETTINGS_MENU:
 				currentMenu = MenuSettingsMenu();

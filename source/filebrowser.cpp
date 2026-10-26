@@ -12,11 +12,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/dir.h>
+#include <sys/stat.h>
 
 #include "vbagx.h"
 #include "vbasupport.h"
 #include "cheatmgr.h"
 #include "filebrowser.h"
+#include "savemode.h"
+#include "widgets/GuiSaveBrowser.h"
 #include "menu/menu.h"
 #include "video.h"
 #include "fileop.h"
@@ -413,19 +416,15 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 				if(type == FILE_SRAM) sprintf(ext, "sav");
 				else sprintf(ext, "sgm");
 
+				// Slot 0 is the auto slot. A Snapshot's is "<name> Auto.sgm". The Game Save File has the
+				// plain name the game is known by, "<name>.sav", and its other slots are its backups.
+				// -1 is the plain name, for either type.
 				if(filenum >= -1)
 				{
-					if(filenum == -1)
+					if(filenum == -1 || (filenum == 0 && type == FILE_SRAM))
 						snprintf(file, sizeof(file), "%s.%s", filename, ext);
 					else if(filenum == 0)
-						if (!EmuSettings.appendAuto)
-						{
-							snprintf(file, sizeof(file), "%s.%s", filename, ext);
-						}
-						else
-						{
-							snprintf(file, sizeof(file), "%s Auto.%s", filename, ext);
-						}
+						snprintf(file, sizeof(file), "%s Auto.%s", filename, ext);
 					else
 						snprintf(file, sizeof(file), "%s %i.%s", filename, filenum, ext);
 				}
@@ -445,6 +444,121 @@ bool MakeFilePath(char filepath[], int type, char * filename, int filenum)
 	CleanupPath(temppath); // cleanup path
 	snprintf(filepath, MAXPATHLEN, "%s", temppath);
 	return true;
+}
+
+/****************************************************************************
+ * MigrateSaveFileNames
+ *
+ * Older versions named some files differently, depending on a setting that is
+ * gone. For the game that is loaded:
+ *  - a Snapshot's auto slot may be "<name>.frz": it becomes "<name> Auto.frz"
+ *    (with its screenshot)
+ *  - a Game Save File may be "<name> Auto.srm", and have been kept up to
+ *    date there, or beside a "<name>.srm" that was: the newer of the two is the
+ *    Game Save File, and an older one is kept as a backup
+ ***************************************************************************/
+static bool FileExists(const char * path)
+{
+	struct stat st;
+	return stat(path, &st) == 0;
+}
+
+static time_t FileTime(const char * path)
+{
+	struct stat st;
+
+	if(stat(path, &st) != 0)
+		return 0;
+	return st.st_mtime;
+}
+
+// "<name>.ext" -> "<name> Auto.ext"; ext is 3 characters
+static void AutoNamedPath(char * out, const char * plain)
+{
+	const int len = strlen(plain);
+
+	if(len < 4)
+	{
+		snprintf(out, MAXPATHLEN, "%s", plain);
+		return;
+	}
+	snprintf(out, MAXPATHLEN, "%.*s Auto%s", len-4, plain, &plain[len-4]);
+}
+
+// Replaces the 3 character extension of path
+static void ChangeExtension(char * out, const char * path, const char * ext)
+{
+	const int len = strlen(path);
+
+	if(len < 4)
+	{
+		snprintf(out, MAXPATHLEN, "%s", path);
+		return;
+	}
+	snprintf(out, MAXPATHLEN, "%.*s%s", len-3, path, ext);
+}
+
+static bool MoveGameSave(const char * from, const char * to)
+{
+	return rename(from, to) == 0;
+}
+
+void MigrateSaveFileNames()
+{
+	char plain[MAXPATHLEN];
+	char autoNamed[MAXPATHLEN];
+	char png[MAXPATHLEN];
+	char autoPng[MAXPATHLEN];
+
+	// Snapshot
+	if(MakeFilePath(plain, FILE_STATE, ROMFilename, -1) && MakeFilePath(autoNamed, FILE_STATE, ROMFilename, 0))
+	{
+		if(FileExists(plain) && !FileExists(autoNamed))
+		{
+			rename(plain, autoNamed);
+			ChangeExtension(png, plain, "png");
+			ChangeExtension(autoPng, autoNamed, "png");
+
+			if(FileExists(png) && !FileExists(autoPng))
+				rename(png, autoPng);
+		}
+	}
+
+	// Game Save File
+	if(!MakeFilePath(plain, FILE_SRAM, ROMFilename, 0))
+		return;
+
+	AutoNamedPath(autoNamed, plain);
+
+	if(!FileExists(autoNamed))
+		return;
+
+	if(!FileExists(plain))
+	{
+		MoveGameSave(autoNamed, plain);
+		return;
+	}
+
+	// Both: the newer one is the Game Save File, and the older becomes a backup in the first free slot
+	const bool autoIsNewer = FileTime(autoNamed) > FileTime(plain);
+	char backup[MAXPATHLEN];
+
+	for(int slot = 1; slot < MAX_SAVES; slot++)
+	{
+		if(!MakeFilePath(backup, FILE_SRAM, ROMFilename, slot) || FileExists(backup))
+			continue;
+
+		if(autoIsNewer)
+		{
+			if(MoveGameSave(plain, backup))
+				MoveGameSave(autoNamed, plain);
+		}
+		else
+		{
+			MoveGameSave(autoNamed, backup);
+		}
+		return;
+	}
 }
 
 /****************************************************************************
@@ -628,7 +742,7 @@ int BrowserLoadFile()
 	if(!FindDevice(browser.dir, &device))
 		return 0;
 
-	// store the filename (w/o ext) - used for sram/freeze naming
+	// store the filename (w/o ext) - used for Game Save File/Snapshot naming
 	StripExt(ROMFilename, browserList[browser.selIndex].filename);
 	snprintf(EmuSettings.lastFileLoaded, MAXPATHLEN, "%s", browserList[browser.selIndex].filename);
 
@@ -648,10 +762,7 @@ int BrowserLoadFile()
 		platform->getAudio()->getEmulatorAudio()->resetAudio();
 		ClearPlayingFrom(); // a new game does not start from the last game's snapshot
 
-		if (EmuSettings.autoLoad == AUTOLOAD_SRAM)
-			LoadBatteryOrStateAuto(FILE_SRAM, SILENT);
-		else if (EmuSettings.autoLoad == AUTOLOAD_STATE)
-			LoadBatteryOrStateAuto(FILE_STATE, SILENT);
+		AutoLoadOnGameOpen();
 
 		LoadCheatFile();
 		ResetBrowser();

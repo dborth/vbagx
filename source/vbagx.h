@@ -69,17 +69,12 @@ enum
 	FILE_BORDER_PNG
 };
 
+// What is saved and loaded without being asked (see savemode.h)
 enum {
-	AUTOLOAD_OFF = 0,
-	AUTOLOAD_SRAM,
-	AUTOLOAD_STATE
-};
-
-enum {
-	AUTOSAVE_OFF = 0,
-	AUTOSAVE_SRAM,
-	AUTOSAVE_STATE,
-	AUTOSAVE_BOTH
+	SAVEMODE_SNAPSHOT = 0,	// resume exactly where you left off
+	SAVEMODE_GAMESAVE,		// keep the game's own save file; every start is a fresh boot
+	SAVEMODE_MANUAL,		// nothing is saved or loaded unless asked
+	SAVEMODE_LENGTH
 };
 
 enum {
@@ -167,11 +162,9 @@ enum {
 
 struct SEmuSettings
 {
-	int		autoLoad;
-	int		autoSave;
+	int		saveMode;
 	int		loadDevice;    // For ROMS: Auto, SD, DVD, USB, Network Share
-	int		saveDevice;    // For SRAM, Freeze, Prefs: Auto, SD, USB, Network Share
-	bool	appendAuto;
+	int		saveDevice;    // For Game Save Files, Snapshots, Prefs: Auto, SD, USB, Network Share
 
 	int		videoMode;
 	int		videoAspectRatioCorrection;

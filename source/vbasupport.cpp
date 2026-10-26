@@ -18,6 +18,7 @@
 
 #include "vbagx.h"
 #include "vbasupport.h"
+#include "savemode.h"
 #include "memmanager.h"
 #include "fileop.h"
 #include "filebrowser.h"
@@ -597,6 +598,9 @@ bool LoadBatteryOrState(char * filepath, int action, bool silent)
 			if(result)
 				SetPlayingFrom(filepath);
 		}
+
+		if(result)
+			MarkLiveStateChanged();
 	}
 
 	FreeSaveBuffer();
@@ -606,53 +610,30 @@ bool LoadBatteryOrState(char * filepath, int action, bool silent)
 		if(offset == 0)
 		{
 			if(action == FILE_SRAM)
-				ErrorPrompt ("Save file not found");
+				ErrorPrompt ("Game Save File not found");
 			else
-				ErrorPrompt ("State file not found");
+				ErrorPrompt ("Snapshot not found");
 		}
 		else
 		{
 			if(action == FILE_SRAM)
-				ErrorPrompt ("Invalid save file");
+				ErrorPrompt ("Invalid Game Save File");
 			else
-				ErrorPrompt ("Invalid state file");
+				ErrorPrompt ("Invalid Snapshot");
 		}
 	}
 	return result;
 }
 
+// Loads the game's Game Save File ("<name>.sav", action FILE_SRAM) or Auto Snapshot ("<name> Auto.sgm", action FILE_STATE)
 bool LoadBatteryOrStateAuto(int action, bool silent)
 {
 	char filepath[MAXPATHLEN];
-	char filepath2[MAXPATHLEN];
 
 	if(!MakeFilePath(filepath, action, ROMFilename, 0))
 		return false;
 
-	if (action==FILE_SRAM)
-	{
-		if (LoadBatteryOrState(filepath, action, SILENT))
-			return true;
-
-		if (!EmuSettings.appendAuto)
-			return false;
-
-		// look for file with no number or Auto appended
-		if(!MakeFilePath(filepath2, action, ROMFilename, -1))
-			return false;
-
-		if(LoadBatteryOrState(filepath2, action, silent))
-		{
-			// rename this file - append Auto
-			rename(filepath2, filepath); // rename file (to avoid duplicates)
-			return true;
-		}
-		return false;
-	}
-	else
-	{
-		return LoadBatteryOrState(filepath, action, silent);
-	}
+	return LoadBatteryOrState(filepath, action, silent);
 }
 
 /****************************************************************************
@@ -691,7 +672,7 @@ static int SerializeBatteryOrState(int action, unsigned char * buffer)
 // \return the size of the data in the savebuffer to write, or 0 if it can't be saved
 static int MergeIntoGoombaSave(char * filepath, const char * romTitle, int datasize)
 {
-	const char* generic_goomba_error = "Cannot save SRAM in Goomba format (did not load correctly.)";
+	const char* generic_goomba_error = "Cannot save Game Save File in Goomba format (did not load correctly.)";
 	// check for goomba sram format
 	char* old_sram = (char*)malloc(GOOMBA_COLOR_SRAM_SIZE);
 	size_t br = LoadFile(old_sram, filepath, GOOMBA_COLOR_SRAM_SIZE, GOOMBA_COLOR_SRAM_SIZE, true);
@@ -805,7 +786,7 @@ struct BatteryOrStateSnapshot
 	int pngSize;
 };
 
-BatteryOrStateSnapshot * SnapshotBatteryOrStateAuto(int action)
+BatteryOrStateSnapshot * SnapshotBatteryOrStateAuto(int action, bool withScreenshot)
 {
 	BatteryOrStateSnapshot * snapshot = (BatteryOrStateSnapshot *)calloc(1, sizeof(BatteryOrStateSnapshot));
 
@@ -846,7 +827,7 @@ BatteryOrStateSnapshot * SnapshotBatteryOrStateAuto(int action)
 		return nullptr;
 	}
 
-	if(action == FILE_STATE && gameScreenPng.size > 0 && gameScreenPng.buffer)
+	if(action == FILE_STATE && withScreenshot && gameScreenPng.size > 0 && gameScreenPng.buffer)
 	{
 		snapshot->png = (unsigned char *)malloc(gameScreenPng.size);
 

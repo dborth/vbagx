@@ -183,14 +183,12 @@ preparePrefsData ()
 
 	createXMLSection("File", "File Settings");
 
-	createXMLSetting("autoLoad", "Auto Load", toStr(EmuSettings.autoLoad));
-	createXMLSetting("autoSave", "Auto Save", toStr(EmuSettings.autoSave));
+	createXMLSetting("saveMode", "Save Mode", toStr(EmuSettings.saveMode));
 	createXMLSetting("loadDevice", "Load Device", toStr(EmuSettings.loadDevice));
 	createXMLSetting("saveDevice", "Save Device", toStr(EmuSettings.saveDevice));
 	createXMLSetting("loadFolder", "Load Folder", EmuSettings.loadFolder);
 	createXMLSetting("lastFileLoaded", "Last File Loaded", EmuSettings.lastFileLoaded);
 	createXMLSetting("saveFolder", "Save Folder", EmuSettings.saveFolder);
-	createXMLSetting("appendAuto", "Append Auto to .SAV Files", BtoStr(EmuSettings.appendAuto));
 	createXMLSetting("cheatFolder", "Cheats Folder", EmuSettings.cheatFolder);
 	createXMLSetting("screenshotsFolder", "Screenshots Folder", EmuSettings.screenshotsFolder);
 	createXMLSetting("borderFolder", "SGB Borders Folder", EmuSettings.borderFolder);
@@ -509,14 +507,12 @@ static bool decodePrefsData ()
 
 	// File Settings
 
-	loadXMLSetting(&EmuSettings.autoLoad, "autoLoad");
-	loadXMLSetting(&EmuSettings.autoSave, "autoSave");
+	loadXMLSetting(&EmuSettings.saveMode, "saveMode");
 	loadXMLSetting(&EmuSettings.loadDevice, "loadDevice");
 	loadXMLSetting(&EmuSettings.saveDevice, "saveDevice");
 	loadXMLSetting(EmuSettings.loadFolder, "loadFolder", sizeof(EmuSettings.loadFolder));
 	loadXMLSetting(EmuSettings.lastFileLoaded, "lastFileLoaded", sizeof(EmuSettings.lastFileLoaded));
 	loadXMLSetting(EmuSettings.saveFolder, "saveFolder", sizeof(EmuSettings.saveFolder));
-	loadXMLSetting(&EmuSettings.appendAuto, "appendAuto");
 	loadXMLSetting(EmuSettings.cheatFolder, "cheatFolder", sizeof(EmuSettings.cheatFolder));
 	loadXMLSetting(EmuSettings.screenshotsFolder, "screenshotsFolder", sizeof(EmuSettings.screenshotsFolder));
 	loadXMLSetting(EmuSettings.borderFolder, "borderFolder", sizeof(EmuSettings.borderFolder));
@@ -639,6 +635,8 @@ static bool decodePalsData ()
  ***************************************************************************/
 void FixInvalidSettings()
 {
+	if(EmuSettings.saveMode < SAVEMODE_SNAPSHOT || EmuSettings.saveMode >= SAVEMODE_LENGTH)
+		EmuSettings.saveMode = SAVEMODE_SNAPSHOT;
 	if(!isValidLoadDevice(EmuSettings.loadDevice))
 		EmuSettings.loadDevice = DEVICE_AUTO;
 	if(!isValidSaveDevice(EmuSettings.saveDevice))
@@ -752,9 +750,7 @@ void DefaultSettings()
 	sprintf (EmuSettings.coverFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_COVERS].name); // Path to cover files
 	sprintf (EmuSettings.artworkFolder, "%s/%s", APPFOLDER, loadFolder[LOADFOLDER_ARTWORK].name); // Path to artwork files
 
-	EmuSettings.autoLoad = true;
-	EmuSettings.autoSave = true;
-	EmuSettings.appendAuto = true;
+	EmuSettings.saveMode = SAVEMODE_SNAPSHOT;
 
 	EmuSettings.gbaZoomHor = 1.0; // GBA horizontal zoom level
 	EmuSettings.gbaZoomVert = 1.0; // GBA vertical zoom level
