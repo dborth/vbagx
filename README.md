@@ -27,6 +27,7 @@ Visual Boy Advance GX is homebrew — it isn't signed by Nintendo, so your conso
   - [Network Shares (SMB)](#network-shares-smb)
 - [File Browser](#file-browser)
 - [Gameplay](#gameplay)
+- [Saves](#saves)
 - [Cheats](#cheats)
 - [Dynamic Recompilation (JIT)](#dynamic-recompilation-jit)
 - [Super Game Boy Borders](#super-game-boy-borders)
@@ -280,17 +281,8 @@ In addition to the controls you configure, these always apply:
 | **Load Folder** | Opens an on-screen keyboard to set a custom ROM folder |
 | **Save Method** | SD, USB, Network, Auto |
 | **Save Folder** | Opens an on-screen keyboard to set a custom save folder |
-| **Save Mode** | Snapshot, Cartridge Save, Manual |
 
-Visual Boy Advance GX has two kinds of saves: the **Cartridge Save**, the game's own in-game save you'd get on real hardware, and **Snapshots**, which capture exactly where you are. Loading a Snapshot replaces the Cartridge Save's contents in memory, so be careful. See [Importing and Exporting Cartridge Saves](#importing-and-exporting-cartridge-saves) for moving saves to/from other platforms.
-
-**Save Mode** decides what Visual Boy Advance GX saves and loads for you, without being asked:
-
-- **Snapshot** (default) — Picks up exactly where you left off, as if you never turned the console off. Leaving a game saves its *Auto Snapshot*, and opening the game loads it. Load an earlier Snapshot from the **Saves** screen and leave, and the game comes back there next time. If a game has no Auto Snapshot yet, its Cartridge Save is loaded instead.
-- **Cartridge Save** — Like a real console: the game's own save is kept for you, and the game starts fresh each time. Leaving a game saves its Cartridge Save (`.sav`), and opening the game loads it.
-- **Manual** — Nothing is saved or loaded unless you do it yourself from the **Saves** screen.
-
-Quitting Visual Boy Advance GX while a game is running (or while the console is shutting it down) saves the same way.
+Which saves are written and loaded for you automatically is set by the **Save Mode**, on the Saves screen — see [Saves](#saves).
 
 ### Menu
 
@@ -330,13 +322,34 @@ The File Browser loads automatically on startup and lists the contents of your `
 
 Once you choose a game, it starts. Press **Home** to open the in-game menu (Saves, Button Mappings, Reset, Match Wii Controls, Game Settings). Select **Main Menu** to return to the File Browser, or **Close** to resume play.
 
-- **Saves** shows your Snapshots in a grid, with the game's own **Cartridge Save** under them for games that have one. Click **New Snapshot** to save the moment you are at, or click a Snapshot to Load, Update or Delete it. Click the Cartridge Save to Save Now, Make a Backup, or open its Backups to Restore or Delete one.
+- **Saves** manages your Snapshots and the game's Cartridge Save, and sets the Save Mode (see [Saves](#saves)).
 - **Button Mappings** opens the [button mapping](#button-mappings) screen.
 - **Reset** resets the current game.
 - **Match Wii Controls** (**Match GC Controls** on GameCube) switches between ON and OFF each time you click it. See [Special Wii Controls](#special-wii-controls).
 - **Game Settings** has Emulation, Video, Screenshot, and Cheats (your loaded cheat codes, below).
 
 If you're playing a Boktai game with the solar sensor active, a Weather button beside Game Settings lets you set the in-game weather; sunlight is based on the weather, time of day, and the angle of your Wiimote. Note that if it's night time for real, there won't be any sun regardless of what you set the weather to.
+
+## Saves
+
+Visual Boy Advance GX has two kinds of saves: the **Cartridge Save**, the game's own in-game save (only applicable to games that have one), and **Snapshots**, which capture exactly where you are and let you resume later. Loading a Snapshot replaces the Cartridge Save's contents in memory, so be careful. Open **Saves** from the in-game menu (press **Home** while playing) to manage them. See [Importing and Exporting Cartridge Saves](#importing-and-exporting-cartridge-saves) for moving saves to or from other platforms.
+
+### Save Mode
+
+**Save Mode** decides what Visual Boy Advance GX saves and loads for you, without being asked. It is the button beside **Go Back** at the bottom of the Saves screen: it shows the current mode, and clicking it opens the list of three. Your choice is remembered.
+
+- **Snapshot** (default) — Picks up exactly where you left off, as if you never turned the console off. Leaving a game saves its *Auto Snapshot*, and opening the game loads it. Load an earlier Snapshot from the **Saves** screen and leave, and the game comes back there next time. If a game has no Auto Snapshot yet, its Cartridge Save is loaded instead.
+- **Cartridge Save** — Like a real console: the game's own save is kept for you, and the game starts fresh each time. Leaving a game saves its Cartridge Save (`.sav`), and opening the game loads it.
+- **Manual** — Nothing is saved or loaded unless you do it yourself from the **Saves** screen.
+
+Quitting Visual Boy Advance GX while a game is running (or while the console is shutting it down) saves the same way.
+
+### The Saves screen
+
+- **Snapshots** fill a grid. The **Auto Snapshot** comes first: tagged *Autosave* when Save Mode is Snapshot, and *Paused* in the other modes, where it isn't updated. Next is **New Snapshot** (called **Manual Snapshot** in Snapshot mode, where saving one is optional), then the Snapshot the game was started from (tagged *Playing from*), then the rest, newest first.
+- **Click a Snapshot** to Load it, replace it with your current progress, or Delete it. The Auto Snapshot can be loaded or deleted, but never overwritten by hand.
+- **The Cartridge Save** has its own card under the grid, for games that have one. In **Snapshot** mode it is only a note — the Cartridge Save is kept inside your Snapshots, so there is nothing to manage. In **Cartridge Save** mode it is tagged *Autosave*; click it to make a backup, or to restore or delete one. In **Manual** mode you can also **Save Now** to write it to its file, and **Load** it into the game.
+- **Games without a Cartridge Save** show only Snapshots. In Cartridge Save mode the screen says so.
 
 ## Cheats
 
