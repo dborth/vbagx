@@ -610,14 +610,14 @@ bool LoadBatteryOrState(char * filepath, int action, bool silent)
 		if(offset == 0)
 		{
 			if(action == FILE_SRAM)
-				ErrorPrompt ("Game Save File not found");
+				ErrorPrompt ("Cartridge Save not found");
 			else
 				ErrorPrompt ("Snapshot not found");
 		}
 		else
 		{
 			if(action == FILE_SRAM)
-				ErrorPrompt ("Invalid Game Save File");
+				ErrorPrompt ("Invalid Cartridge Save");
 			else
 				ErrorPrompt ("Invalid Snapshot");
 		}
@@ -625,7 +625,7 @@ bool LoadBatteryOrState(char * filepath, int action, bool silent)
 	return result;
 }
 
-// Loads the game's Game Save File ("<name>.sav", action FILE_SRAM) or Auto Snapshot ("<name> Auto.sgm", action FILE_STATE)
+// Loads the game's Cartridge Save ("<name>.sav", action FILE_SRAM) or Auto Snapshot ("<name> Auto.sgm", action FILE_STATE)
 bool LoadBatteryOrStateAuto(int action, bool silent)
 {
 	char filepath[MAXPATHLEN];
@@ -672,7 +672,7 @@ static int SerializeBatteryOrState(int action, unsigned char * buffer)
 // \return the size of the data in the savebuffer to write, or 0 if it can't be saved
 static int MergeIntoGoombaSave(char * filepath, const char * romTitle, int datasize)
 {
-	const char* generic_goomba_error = "Cannot save Game Save File in Goomba format (did not load correctly.)";
+	const char* generic_goomba_error = "Cannot save Cartridge Save in Goomba format (did not load correctly.)";
 	// check for goomba sram format
 	char* old_sram = (char*)malloc(GOOMBA_COLOR_SRAM_SIZE);
 	size_t br = LoadFile(old_sram, filepath, GOOMBA_COLOR_SRAM_SIZE, GOOMBA_COLOR_SRAM_SIZE, true);

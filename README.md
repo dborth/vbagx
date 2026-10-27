@@ -31,7 +31,7 @@ Visual Boy Advance GX is homebrew — it isn't signed by Nintendo, so your conso
 - [Dynamic Recompilation (JIT)](#dynamic-recompilation-jit)
 - [Super Game Boy Borders](#super-game-boy-borders)
 - [Turbo Mode](#turbo-mode)
-- [Importing and Exporting Game Save Files](#importing-and-exporting-game-save-files)
+- [Importing and Exporting Cartridge Saves](#importing-and-exporting-cartridge-saves)
 - [Patches (IPS/UPS)](#patches-ipsups)
 - [Special Wii Controls](#special-wii-controls)
 - [Building from Source](#building-from-source)
@@ -73,14 +73,14 @@ Every push builds automatically. Grab the latest continuous-integration build:
 - Native Wii U build outputs up to **1080p**, with a **GX2 shader-based ScaleFX** upscaler built specifically for the Wii U's GPU
 - Rotation sensor, solar sensor (Boktai), and rumble support — on Wii U, GamePad rumble uses a shorter, reduced-amplitude pattern than the Wiimote
 - Special Wii-style motion/gesture controls built in for select games — see [Special Wii Controls](#special-wii-controls)
-- Save Mode: automatically resume from a Snapshot, keep the Game Save File, or manage everything yourself
+- Save Mode: automatically resume from a Snapshot, keep the Cartridge Save, or manage everything yourself
 - Cheat code support (Libretro `.cht` format) for both GBA and GB/GBC games
 - IPS/UPS patch support
 - Fully customizable, per-controller button mappings, including "Match Wii Controls" per game
 - SD, USB, DVD, and SMB network share support (native Wii U build supports FAT32/exFAT/NTFS USB via Mocha), plus ZIP/7z archive loading
 - Turbo Mode, screen zoom, widescreen, unfiltered and 240p video options, fixed pixel ratio (1x/2x/3x)
 - Upscaling filters — hq2x, Scale2x, 2xBR, DDT on GameCube/Wii; ScaleFX on Wii U — plus scanlines
-- Native loading/saving of ROMs and Game Save Files from Goomba (a GB emulator for GBA)
+- Native loading/saving of ROMs and Cartridge Saves from Goomba (a GB emulator for GBA)
 - Super Game Boy border support, loaded from the game itself or from custom `.png` files
 - Cover art / screenshot / artwork preview support
 - Open source
@@ -98,7 +98,7 @@ Once you've placed the loader files for your console (below), also create these 
 ```text
 SD:/vbagx/
 ├── roms/          ← your GB/GBC/GBA ROMs, or zipped/.7z
-├── saves/         ← Game Save Files and Snapshots
+├── saves/         ← Cartridge Saves and Snapshots
 ├── cheats/        ← .cht cheat files (see Cheats)
 ├── borders/       ← custom Super Game Boy border .png files
 ├── screenshots/   ← in-game screenshots and/or screenshot preview images
@@ -270,7 +270,7 @@ In addition to the controls you configure, these always apply:
 | **Mono Colorization** *(GB only)* | On/Off — built-in color palettes for select unpatched monochrome games |
 | **Enable Turbo Mode** | On by default — see [Turbo Mode](#turbo-mode) |
 | **Show Framerate** | Displays an on-screen FPS counter |
-| **Offset from UTC (hours)** | For GB/GBC real-time-clock games — only needed if you share the same Game Save File across time-zone-aware platforms |
+| **Offset from UTC (hours)** | For GB/GBC real-time-clock games — only needed if you share the same Cartridge Save across time-zone-aware platforms |
 
 ### Storage
 
@@ -280,14 +280,14 @@ In addition to the controls you configure, these always apply:
 | **Load Folder** | Opens an on-screen keyboard to set a custom ROM folder |
 | **Save Method** | SD, USB, Network, Auto |
 | **Save Folder** | Opens an on-screen keyboard to set a custom save folder |
-| **Save Mode** | Snapshot, Game Save File, Manual |
+| **Save Mode** | Snapshot, Cartridge Save, Manual |
 
-Visual Boy Advance GX has two kinds of saves: the **Game Save File**, the game's own in-game save you'd get on real hardware, and **Snapshots**, which capture exactly where you are. Loading a Snapshot replaces the Game Save File's contents in memory, so be careful. See [Importing and Exporting Game Save Files](#importing-and-exporting-game-save-files) for moving saves to/from other platforms.
+Visual Boy Advance GX has two kinds of saves: the **Cartridge Save**, the game's own in-game save you'd get on real hardware, and **Snapshots**, which capture exactly where you are. Loading a Snapshot replaces the Cartridge Save's contents in memory, so be careful. See [Importing and Exporting Cartridge Saves](#importing-and-exporting-cartridge-saves) for moving saves to/from other platforms.
 
 **Save Mode** decides what Visual Boy Advance GX saves and loads for you, without being asked:
 
-- **Snapshot** (default) — Picks up exactly where you left off, as if you never turned the console off. Leaving a game saves its *Auto Snapshot*, and opening the game loads it. Load an earlier Snapshot from the **Saves** screen and leave, and the game comes back there next time. If a game has no Auto Snapshot yet, its Game Save File is loaded instead.
-- **Game Save File** — Like a real console: the game's own save is kept for you, and the game starts fresh each time. Leaving a game saves its Game Save File (`.sav`), and opening the game loads it.
+- **Snapshot** (default) — Picks up exactly where you left off, as if you never turned the console off. Leaving a game saves its *Auto Snapshot*, and opening the game loads it. Load an earlier Snapshot from the **Saves** screen and leave, and the game comes back there next time. If a game has no Auto Snapshot yet, its Cartridge Save is loaded instead.
+- **Cartridge Save** — Like a real console: the game's own save is kept for you, and the game starts fresh each time. Leaving a game saves its Cartridge Save (`.sav`), and opening the game loads it.
 - **Manual** — Nothing is saved or loaded unless you do it yourself from the **Saves** screen.
 
 Quitting Visual Boy Advance GX while a game is running (or while the console is shutting it down) saves the same way.
@@ -330,7 +330,7 @@ The File Browser loads automatically on startup and lists the contents of your `
 
 Once you choose a game, it starts. Press **Home** to open the in-game menu (Saves, Button Mappings, Reset, Match Wii Controls, Game Settings). Select **Main Menu** to return to the File Browser, or **Close** to resume play.
 
-- **Saves** shows your Snapshots in a grid, with the game's own **Game Save File** under them for games that have one. Click **New Snapshot** to save the moment you are at, or click a Snapshot to Load, Update or Delete it. Click the Game Save File to Save Now, Make a Backup, or open its Backups to Restore or Delete one.
+- **Saves** shows your Snapshots in a grid, with the game's own **Cartridge Save** under them for games that have one. Click **New Snapshot** to save the moment you are at, or click a Snapshot to Load, Update or Delete it. Click the Cartridge Save to Save Now, Make a Backup, or open its Backups to Restore or Delete one.
 - **Button Mappings** opens the [button mapping](#button-mappings) screen.
 - **Reset** resets the current game.
 - **Match Wii Controls** (**Match GC Controls** on GameCube) switches between ON and OFF each time you click it. See [Special Wii Controls](#special-wii-controls).
@@ -382,9 +382,9 @@ Borders render along with the game's video output, so border pixels are the same
 
 Hold **A+B**, **Spacebar**, or the **right analog stick** during play to fast-forward. Turbo Mode is on by default and can be turned off from **Settings → Emulation → Enable Turbo Mode** if you'd rather disable fast-forwarding entirely.
 
-## Importing and Exporting Game Save Files
+## Importing and Exporting Cartridge Saves
 
-Visual Boy Advance GX can load Game Save Files saved by VBA-M on other platforms (Mac/PC/Linux/etc.), and vice versa.
+Visual Boy Advance GX can load Cartridge Saves saved by VBA-M on other platforms (Mac/PC/Linux/etc.), and vice versa.
 
 - **To import**, make sure the `.srm` file's name matches your ROM's filename (aside from the extension).
 - **To export**, copy the save from your console's `vbagx/saves` folder over to the other platform — you may need to rename it to whatever that VBA-M build expects.

@@ -49,11 +49,11 @@ bool SaveBatteryOrStateAuto(int action, bool silent);
 const char * GetPlayingFrom();
 void ClearPlayingFrom();
 
-// Whether this game has a Game Save File (a .sav) of its own to write
+// Whether this game has a Cartridge Save (a .sav) of its own to write
 bool GameHasBatterySave();
 bool BatterySavePending();
 
-// Deferred auto-save: SnapshotBatteryOrStateAuto() copies the Game Save File/Snapshot and its
+// Deferred auto-save: SnapshotBatteryOrStateAuto() copies the Cartridge Save/Snapshot and its
 // destination right now (call it from the thread that owns the emulator, while the
 // game is still loaded); WriteBatteryOrStateSnapshot() does the device I/O later,
 // on any thread. SnapshotBatteryOrStateAuto() returns nullptr if there is nothing to

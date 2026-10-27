@@ -164,7 +164,7 @@ struct SEmuSettings
 {
 	int		saveMode;
 	int		loadDevice;    // For ROMS: Auto, SD, DVD, USB, Network Share
-	int		saveDevice;    // For Game Save Files, Snapshots, Prefs: Auto, SD, USB, Network Share
+	int		saveDevice;    // For Cartridge Saves, Snapshots, Prefs: Auto, SD, USB, Network Share
 
 	int		videoMode;
 	int		videoAspectRatioCorrection;
