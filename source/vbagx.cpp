@@ -187,6 +187,7 @@ int main(int argc, char *argv[])
 		platform->getVideo()->getEmulatorVideo()->snapshotFrame();
 		SwitchMemoryModeMenu();
 		TakeScreenshot();
+		MarkScreenshotCurrent();
 		platform->getVideo()->startMenuVideo();
 
 		#ifdef HW_DOL
