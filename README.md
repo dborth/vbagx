@@ -162,7 +162,7 @@ Wii U support comes in **three genuinely different forms** — pick the one that
 |                     | vWii (Homebrew Channel) | vWii (VC-style injection) | Native Wii U build |
 |---------------------|--------------------------|-----------------------------|----------------------|
 | What it is          | The regular **Wii** build, run inside vWii | The same Wii build, launched as its own injected Virtual-Console-style channel | A dedicated Wii U (Aroma) app, `.wuhb` |
-| Requires            | Homebrew Channel *inside vWii* | Homebrew Channel *inside vWii*, plus a channel built with **[TeconMoon's WiiVC Injector Mod](https://github.com/timefox/TeconMoon-s-WiiVC-Injector-Mod)** | **Aroma** (Wii U homebrew environment) |
+| Requires            | Homebrew Channel *inside vWii* | Homebrew Channel *inside vWii*, plus a channel built with **[TeconMoon's WiiVC Injector Mod](https://github.com/Rodrigo-Matsuura/MoonWiiVCInjector/releases)** | **Aroma** (Wii U homebrew environment) |
 | GamePad             | Not usable | Usable as an **extra controller** (buttons/sticks; no touch) | **Full support** — touch, buttons |
 | Output              | vWii-level, up to 480p | Same as plain vWii | Native, up to **1080p** |
 | Upscaling filters   | hq2x, Scale2x, 2xBR, DDT | Same as plain vWii | GX2 shader-based **ScaleFX** |
@@ -205,7 +205,7 @@ This is the simplest Wii U path, but it's also the most limited one: no GamePad 
 
 #### vWii via VC-style injection (GamePad support)
 
-Rather than launching Visual Boy Advance GX from the Homebrew Channel every time, you can package it as its **own injected channel** using **[TeconMoon's WiiVC Injector Mod](https://github.com/timefox/TeconMoon-s-WiiVC-Injector-Mod)**. This installs it as a Virtual-Console-style title in your vWii NAND rather than something launched through the Homebrew Channel, which is what lets you use the Wii U GamePad for display (without touch) and as an extra controller.
+Rather than launching Visual Boy Advance GX from the Homebrew Channel every time, you can package it as its **own injected channel** using **[TeconMoon's WiiVC Injector Mod](https://github.com/Rodrigo-Matsuura/MoonWiiVCInjector/releases)**. This installs it as a Virtual-Console-style title in your vWii NAND rather than something launched through the Homebrew Channel, which is what lets you use the Wii U GamePad for display (without touch) and as an extra controller.
 
 At a high level:
 
@@ -546,7 +546,7 @@ And many others who have contributed over the years!
 - [Wii U Homebrew Guide](https://wiiu.hacks.guide/)
 - [gc-forever.com — GameCube homebrew/hardware hub](https://www.gc-forever.com/)
 - [Swiss](https://github.com/emukidid/swiss-gc) — the recommended GameCube loader
-- [TeconMoon's WiiVC Injector Mod](https://github.com/timefox/TeconMoon-s-WiiVC-Injector-Mod)
+- [TeconMoon's WiiVC Injector Mod](https://github.com/Rodrigo-Matsuura/MoonWiiVCInjector/releases)
 - [Mocha](https://github.com/wiiu-env/MochaPayload) — USB storage access for the native Wii U build
 - [Bloopair](https://github.com/GaryOderNichts/Bloopair) — Bluetooth controller pairing for the native Wii U build
 - [Change History (CHANGELOG.md)](CHANGELOG.md)
