@@ -63,6 +63,8 @@ std::vector<int> HardwareList()
 	const InputPadData * pad = PadData();
 	if(pad && pad->hw_connected[INPUT_HW_DRC])
 		v.push_back(INPUT_HW_DRC);
+	if(pad && pad->hw_connected[INPUT_HW_DS3])
+		v.push_back(INPUT_HW_DS3);
 #endif
 	return v;
 }

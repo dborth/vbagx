@@ -127,6 +127,21 @@ void ResetControls(int wiiCtrl)
 		btnmap[INPUT_HW_WUPC][i++] = INPUT_TRIGGER_L;
 		btnmap[INPUT_HW_WUPC][i++] = INPUT_TRIGGER_R;
 	}
+
+	if(wiiCtrl == INPUT_HW_DS3 || wiiCtrl == -1)
+	{
+		i=0;
+		btnmap[INPUT_HW_DS3][i++] = INPUT_BTN_Y;
+		btnmap[INPUT_HW_DS3][i++] = INPUT_BTN_B;
+		btnmap[INPUT_HW_DS3][i++] = INPUT_BTN_MINUS;
+		btnmap[INPUT_HW_DS3][i++] = INPUT_BTN_PLUS;
+		btnmap[INPUT_HW_DS3][i++] = INPUT_BTN_UP;
+		btnmap[INPUT_HW_DS3][i++] = INPUT_BTN_DOWN;
+		btnmap[INPUT_HW_DS3][i++] = INPUT_BTN_LEFT;
+		btnmap[INPUT_HW_DS3][i++] = INPUT_BTN_RIGHT;
+		btnmap[INPUT_HW_DS3][i++] = INPUT_TRIGGER_L;
+		btnmap[INPUT_HW_DS3][i++] = INPUT_TRIGGER_R;
+	}
 	
 	/*** Wii U Gamepad (DRC) Padmap ***/
 	if(wiiCtrl == INPUT_HW_DRC || wiiCtrl == -1)

@@ -41,6 +41,19 @@ jobs:
           make -f Makefile.platform wiiu_install
         fi
 
+    - name: Build and install libsicksaxis
+      if: ${{ matrix.image == 'Wii' }}
+      run: |
+        git clone https://github.com/xerpi/libsicksaxis.git /tmp/libsicksaxis
+        cd /tmp/libsicksaxis && git checkout 4ddd49e687a7d2466691fd2c73d8a55a90fe1ca6
+        cd libsicksaxis
+        OGC=$DEVKITPRO/libogc2
+        powerpc-eabi-gcc -O2 -mrvl -mcpu=750 -meabi -mhard-float -DGEKKO -I$OGC/include -c sicksaxis.c -o sicksaxis.o
+        powerpc-eabi-ar rcs libsicksaxis.a sicksaxis.o
+        mkdir -p $DEVKITPRO/portlibs/ppc/lib $DEVKITPRO/portlibs/ppc/include
+        cp libsicksaxis.a $DEVKITPRO/portlibs/ppc/lib/
+        cp sicksaxis.h $DEVKITPRO/portlibs/ppc/include/
+
     - name: Build Wii
       if: ${{ matrix.image == 'Wii' }}
       run: |

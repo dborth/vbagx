@@ -255,6 +255,7 @@ preparePrefsData ()
 	createXMLController(btnmap[INPUT_HW_CLASSIC], "ccpadmapping", "Classic Controller");
 	createXMLController(btnmap[INPUT_HW_NUNCHUK], "ncpadmapping", "Nunchuk");
 	createXMLController(btnmap[INPUT_HW_WUPC], "wupcpadmapping", "Wii U Pro Controller");
+	createXMLController(btnmap[INPUT_HW_DS3], "ds3padmapping", "DualShock 3");
 	createXMLController(btnmap[INPUT_HW_DRC], "drcpadmapping", "Wii U Gamepad");
 
 	int datasize = mxmlSaveString(xml, (char *)savebuffer, SAVEBUFFERSIZE, XMLSaveCallback);
@@ -565,6 +566,7 @@ static bool decodePrefsData ()
 	loadXMLController(btnmap[INPUT_HW_CLASSIC], "ccpadmapping");
 	loadXMLController(btnmap[INPUT_HW_NUNCHUK], "ncpadmapping");
 	loadXMLController(btnmap[INPUT_HW_WUPC], "wupcpadmapping");
+	loadXMLController(btnmap[INPUT_HW_DS3], "ds3padmapping");
 	loadXMLController(btnmap[INPUT_HW_DRC], "drcpadmapping");
 
 	// Emulation Settings

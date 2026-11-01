@@ -30,7 +30,7 @@ inline int FirstConnected(const InputPadData& pad, const int * list, size_t coun
 //!Wiimote, GameCube pad (the Classic, Nunchuk and Pro ride on a Wiimote, so they come before it); INPUT_HW_MAX if none
 inline int ConsoleHardware(const InputPadData& pad)
 {
-	static const int order[] = { INPUT_HW_WUPC, INPUT_HW_CLASSIC, INPUT_HW_NUNCHUK, INPUT_HW_WIIMOTE, INPUT_HW_GAMECUBE };
+	static const int order[] = { INPUT_HW_DS3, INPUT_HW_WUPC, INPUT_HW_CLASSIC, INPUT_HW_NUNCHUK, INPUT_HW_WIIMOTE, INPUT_HW_GAMECUBE };
 	return FirstConnected(pad, order, sizeof(order) / sizeof(order[0]));
 }
 
