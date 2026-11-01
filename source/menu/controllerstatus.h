@@ -105,7 +105,8 @@ class ControllerStatus
 			{
 				const InputPadData& pad = controller[i]->getPadData();
 				Kind kind = NONE;
-				if(pad.hw_connected[INPUT_HW_WUPC]) kind = PRO;
+				if(pad.hw_connected[INPUT_HW_DS3]) kind = PRO;
+				else if(pad.hw_connected[INPUT_HW_WUPC]) kind = PRO;
 				else if(pad.hw_connected[INPUT_HW_CLASSIC]) kind = CLASSIC;
 				else if(pad.hw_connected[INPUT_HW_NUNCHUK]) kind = NUNCHUK;
 				else if(pad.hw_connected[INPUT_HW_WIIMOTE]) kind = WIIMOTE;

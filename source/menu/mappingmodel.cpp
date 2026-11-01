@@ -44,7 +44,8 @@ const ControllerLayout& MappingLayout(int hw, bool sideways)
 		case INPUT_HW_WIIMOTE: return sideways ? WiimoteSidewaysControllerLayout() : WiimoteControllerLayout();
 		case INPUT_HW_NUNCHUK: return WiimoteNunchukControllerLayout();
 		case INPUT_HW_CLASSIC: return ClassicControllerLayout();
-		case INPUT_HW_WUPC: return WiiUProControllerLayout();
+		case INPUT_HW_WUPC:
+		case INPUT_HW_DS3: return WiiUProControllerLayout();
 		case INPUT_HW_DRC: return GamePadControllerLayout();
 		default: break;
 	}

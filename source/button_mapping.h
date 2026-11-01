@@ -11,8 +11,8 @@
 #ifndef BTN_MAP_H
 #define BTN_MAP_H
 
-const char ctrlrName[7][32] =
-{ "GameCube Controller", "Wiimote", "Nunchuk + Wiimote", "Classic Controller", "Wii U Pro Controller", "Wii U Gamepad", "USB Mouse / Tablet" };
+const char ctrlrName[8][32] =
+{ "GameCube Controller", "Wiimote", "Nunchuk + Wiimote", "Classic Controller", "Wii U Pro Controller", "Wii U Gamepad", "USB Mouse / Tablet", "DualShock 3" };
 
 typedef struct _btn_map {
 	uint32_t btn;					// button 'id'
@@ -25,6 +25,6 @@ typedef struct _ctrlr_map {
 	BtnMap map[15];				// controller button map
 } CtrlrMap;
 
-extern CtrlrMap ctrlr_def[7];
+extern CtrlrMap ctrlr_def[8];
 
 #endif

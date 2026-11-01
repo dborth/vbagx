@@ -33,7 +33,7 @@ INCLUDES 	:=  source source/vba
 
 # -fno-strict-aliasing: critical for GCC pointer casting inside Memory.cpp
 CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
-				-DCURSOR_SUPPORT -DHAVE_TABLET -D__ppc__ -DNO_PNG -DHAVE_ZUTIL_H \
+				-DCURSOR_SUPPORT -DHAVE_TABLET -DHAVE_GCADAPTER -DHAVE_SICKSAXIS -D__ppc__ -DNO_PNG -DHAVE_ZUTIL_H \
 				-DBLARGG_NONPORTABLE -DBLARGG_BIG_ENDIAN -DBLARGG_CPU_POWERPC \
 				-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
 				-fomit-frame-pointer -fno-strict-aliasing -ffunction-sections -fdata-sections \
@@ -64,7 +64,7 @@ LDFLAGS		+=	-Wl,--defsym,__jit_region_size=$(JIT_ARENA_MB)M -T $(WII_MEM_LD) -T 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with
 #---------------------------------------------------------------------------------
-LIBS	:=	-ldi -liso9660 -lpng -lmxml	-lfat -lwiiuse -lz -lbte -lasnd -logc \
+LIBS	:=	-lsicksaxis -ldi -liso9660 -lpng -lmxml	-lfat -lwiiuse -lz -lbte -lasnd -logc \
 			-lvorbisidec -logg -lsmb2 $(FREETYPE_LIBS)
 
 #---------------------------------------------------------------------------------

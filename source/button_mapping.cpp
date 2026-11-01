@@ -17,7 +17,7 @@
  * and for displaying the name of said button
  ***************************************************************************/
 
-CtrlrMap ctrlr_def[7] = {
+CtrlrMap ctrlr_def[8] = {
 // Gamecube controller btn def
 {
 	INPUT_HW_GAMECUBE,
@@ -170,6 +170,28 @@ CtrlrMap ctrlr_def[7] = {
 		{INPUT_BTN_NONE, ""},
 		{INPUT_BTN_NONE, ""},
 		{INPUT_BTN_NONE, ""}
+	}
+},
+// DualShock 3 btn def
+{
+	INPUT_HW_DS3,
+	15,
+	{
+		{INPUT_BTN_DOWN, "DOWN"},
+		{INPUT_BTN_UP, "UP"},
+		{INPUT_BTN_LEFT, "LEFT"},
+		{INPUT_BTN_RIGHT, "RIGHT"},
+		{INPUT_BTN_A, "CIRCLE"},
+		{INPUT_BTN_B, "CROSS"},
+		{INPUT_BTN_X, "TRIANG"},
+		{INPUT_BTN_Y, "SQUARE"},
+		{INPUT_BTN_PLUS, "START"},
+		{INPUT_BTN_MINUS, "SELECT"},
+		{INPUT_BTN_HOME, "PS"},
+		{INPUT_TRIGGER_L, "L1"},
+		{INPUT_TRIGGER_R, "R1"},
+		{INPUT_TRIGGER_ZL, "L2"},
+		{INPUT_TRIGGER_ZR, "R2"}
 	}
 }
 };

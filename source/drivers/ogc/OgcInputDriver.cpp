@@ -23,6 +23,15 @@
 #include "wii/wiidrc.h"
 #include "wii/WiiPlatform.h"
 #include "wii/libwiiinput/usbpointer.h"
+#include "wii/libwiiinput/ds3.h"
+#include "wii/libwiiinput/input_wii.h"
+
+// libwiiinput's GameCube controller adapter for Wii U (libinput_gcadapter.c)
+extern "C" {
+void inpw_gcadapter_init(bool enabled);
+void inpw_gcadapter_shutdown(void);
+void inpw_gcadapter_update(void);
+}
 #endif
 
 extern "C" {
@@ -31,6 +40,10 @@ s32 __STM_Init();
 }
 
 bool isWiiVC = false;
+
+#ifdef HW_RVL
+static uint16_t prevGcAdapterHeld[4]; // previous-frame buttons of the GameCube adapter's ports, for down/up edges
+#endif
 
 OgcInputDriver::OgcInputDriver() {
 	for (int i = 0; i < 4; i++) {
@@ -62,6 +75,8 @@ void OgcInputDriver::init() {
 	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
 	WPAD_SetVRes(WPAD_CHAN_ALL, platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
 	WPAD_SetPowerButtonCallback(WiimotePowerButtonCallback);
+	Ds3_Init();
+	inpw_gcadapter_init(true);
 	UsbPointer_Init(platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
 	#endif
 
@@ -71,6 +86,8 @@ void OgcInputDriver::init() {
 void OgcInputDriver::shutdown() {
 	#ifdef HW_RVL
 	UsbPointer_Shutdown();
+	Ds3_Shutdown();
+	inpw_gcadapter_shutdown();
 	#endif
 	for (int i = 0; i < 4; i++) {
 		#ifdef HW_RVL
@@ -179,6 +196,28 @@ static uint32_t MapClassicToGeneric(uint32_t wpad_btns)
 	return mask;
 }
 
+static uint32_t MapDs3ToGeneric(uint32_t ds3_btns) {
+	uint32_t mask = INPUT_BTN_NONE;
+	if (ds3_btns & DS3_BUTTON_CIRCLE)   mask |= INPUT_BTN_A;
+	if (ds3_btns & DS3_BUTTON_CROSS)    mask |= INPUT_BTN_B;
+	if (ds3_btns & DS3_BUTTON_TRIANGLE) mask |= INPUT_BTN_X;
+	if (ds3_btns & DS3_BUTTON_SQUARE)   mask |= INPUT_BTN_Y;
+	if (ds3_btns & DS3_BUTTON_UP)       mask |= INPUT_BTN_UP;
+	if (ds3_btns & DS3_BUTTON_DOWN)     mask |= INPUT_BTN_DOWN;
+	if (ds3_btns & DS3_BUTTON_LEFT)     mask |= INPUT_BTN_LEFT;
+	if (ds3_btns & DS3_BUTTON_RIGHT)    mask |= INPUT_BTN_RIGHT;
+	if (ds3_btns & DS3_BUTTON_START)    mask |= INPUT_BTN_PLUS;
+	if (ds3_btns & DS3_BUTTON_SELECT)   mask |= INPUT_BTN_MINUS;
+	if (ds3_btns & DS3_BUTTON_PS)       mask |= INPUT_BTN_HOME;
+	if (ds3_btns & DS3_BUTTON_L1)       mask |= INPUT_TRIGGER_L;
+	if (ds3_btns & DS3_BUTTON_R1)       mask |= INPUT_TRIGGER_R;
+	if (ds3_btns & DS3_BUTTON_L2)       mask |= INPUT_TRIGGER_ZL;
+	if (ds3_btns & DS3_BUTTON_R2)       mask |= INPUT_TRIGGER_ZR;
+	if (ds3_btns & DS3_BUTTON_L3)       mask |= INPUT_THUMB_L;
+	if (ds3_btns & DS3_BUTTON_R3)       mask |= INPUT_THUMB_R;
+	return mask;
+}
+
 static uint32_t MapUsbPointerToGeneric(uint32_t btns) {
 	uint32_t mask = INPUT_BTN_NONE;
 	if (btns & USBPOINTER_LEFT)   mask |= INPUT_BTN_A;
@@ -230,6 +269,8 @@ void OgcInputDriver::update() {
 	#ifdef HW_RVL
 	WPAD_ScanPads();
 	UsbPointer_Update();
+	Ds3_Update();
+	inpw_gcadapter_update();
 	WiiDRC_ScanPads();
 	bool systemRumbleAllowed = (CONF_GetPadMotorMode() != 0);
 	#else
@@ -254,6 +295,26 @@ void OgcInputDriver::update() {
 			padData.hw_substickX[INPUT_HW_GAMECUBE] = clampf((float)PAD_SubStickX(i) / 128.0f, -1.0f, 1.0f);
 			padData.hw_substickY[INPUT_HW_GAMECUBE] = clampf((float)PAD_SubStickY(i) / 128.0f, -1.0f, 1.0f);
 		}
+
+		#ifdef HW_RVL
+		// The GameCube controller adapter for Wii U reads like the console's own ports: a real pad on this port wins
+		input_gc_pad adapterPad;
+		if(!gamecubeActive && INPUT_GCAdapterPad(i, &adapterPad)) {
+			uint16_t held = adapterPad.buttons;
+			padData.hw_connected[INPUT_HW_GAMECUBE] = true;
+			padData.hw_buttons_d[INPUT_HW_GAMECUBE] = MapPADToGeneric(held & ~prevGcAdapterHeld[i]);
+			padData.hw_buttons_h[INPUT_HW_GAMECUBE] = MapPADToGeneric(held);
+			padData.hw_buttons_r[INPUT_HW_GAMECUBE] = MapPADToGeneric(prevGcAdapterHeld[i] & ~held);
+			prevGcAdapterHeld[i] = held;
+			padData.hw_stickX[INPUT_HW_GAMECUBE] = clampf((float)adapterPad.stick_x / 128.0f, -1.0f, 1.0f);
+			padData.hw_stickY[INPUT_HW_GAMECUBE] = clampf((float)adapterPad.stick_y / 128.0f, -1.0f, 1.0f);
+			padData.hw_substickX[INPUT_HW_GAMECUBE] = clampf((float)adapterPad.substick_x / 128.0f, -1.0f, 1.0f);
+			padData.hw_substickY[INPUT_HW_GAMECUBE] = clampf((float)adapterPad.substick_y / 128.0f, -1.0f, 1.0f);
+		}
+		else {
+			prevGcAdapterHeld[i] = 0;
+		}
+		#endif
 
 		#ifdef HW_RVL
 		// Process Wiimote and Extensions
@@ -348,6 +409,22 @@ void OgcInputDriver::update() {
 		#endif
 
 		#ifdef HW_RVL
+		// DualShock 3 (one, on player 1)
+		if(i == 0 && Ds3_Connected()) {
+			float lx, ly, rx, ry;
+			Ds3_Sticks(&lx, &ly, &rx, &ry);
+			padData.hw_connected[INPUT_HW_DS3] = true;
+			padData.hw_buttons_d[INPUT_HW_DS3] = MapDs3ToGeneric(Ds3_ButtonsDown());
+			padData.hw_buttons_h[INPUT_HW_DS3] = MapDs3ToGeneric(Ds3_ButtonsHeld());
+			padData.hw_buttons_r[INPUT_HW_DS3] = MapDs3ToGeneric(Ds3_ButtonsUp());
+			padData.hw_stickX[INPUT_HW_DS3] = clampf(lx, -1.0f, 1.0f);
+			padData.hw_stickY[INPUT_HW_DS3] = clampf(ly, -1.0f, 1.0f);
+			padData.hw_substickX[INPUT_HW_DS3] = clampf(rx, -1.0f, 1.0f);
+			padData.hw_substickY[INPUT_HW_DS3] = clampf(ry, -1.0f, 1.0f);
+		}
+		#endif
+
+		#ifdef HW_RVL
 		// USB mouse / pen tablet / uDraw: one pointer, on player 1. While it is in use it steers the cursor in
 		// place of the Wii Remote's IR pointer; the buttons have a profile of their own.
 		if(i == 0 && UsbPointer_Connected()) {
@@ -434,6 +511,10 @@ void OgcInputDriver::update() {
 
 		#ifdef HW_RVL
 		WPAD_Rumble(i, motorOn ? 1 : 0);
+		#endif
+
+		#ifdef HW_RVL
+		if (INPUT_GCAdapterPad(i, nullptr)) INPUT_GCAdapterRumble(i, motorOn);
 		#endif
 
 		if (gamecubeActive) {
