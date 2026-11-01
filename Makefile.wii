@@ -21,7 +21,7 @@ TARGET		:=	vbagx-wii
 TARGETDIR   :=  executables
 BUILD		:=	build_wii
 SOURCES		:=	source source/menu source/libgui source/widgets source/utils source/utils/sz \
-				source/drivers source/drivers/ogc source/drivers/ogc/wii \
+				source/drivers source/drivers/ogc source/drivers/ogc/wii source/drivers/ogc/wii/libwiiinput \
 				source/vba source/vba/apu source/vba/common \
 				source/vba/gb source/vba/gba source/goomba source/goomba/minilzo-2.06
 DATA		:=	data/images data/fonts data/lang data/sounds
@@ -33,7 +33,7 @@ INCLUDES 	:=  source source/vba
 
 # -fno-strict-aliasing: critical for GCC pointer casting inside Memory.cpp
 CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
-				-DCURSOR_SUPPORT -D__ppc__ -DNO_PNG -DHAVE_ZUTIL_H \
+				-DCURSOR_SUPPORT -DHAVE_TABLET -D__ppc__ -DNO_PNG -DHAVE_ZUTIL_H \
 				-DBLARGG_NONPORTABLE -DBLARGG_BIG_ENDIAN -DBLARGG_CPU_POWERPC \
 				-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
 				-fomit-frame-pointer -fno-strict-aliasing -ffunction-sections -fdata-sections \
@@ -49,6 +49,9 @@ CXXFLAGS	=	$(CFLAGS) -Wno-register -Wno-reorder -fno-exceptions -fno-rtti -fno-t
 
 # Added -O3 and LTO directly to linker pipeline for global scope analysis optimization
 LDFLAGS		=	-g -O3 $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--gc-sections
+# libwiiinput's tablet drivers: USB_GetDeviceList hides tablets from libogc's USB mouse driver, the other two
+# keep wiiuse from taking a uDraw GameTablet for a Classic Controller
+LDFLAGS		+=	-Wl,--wrap=classic_ctrl_handshake,--wrap=parse_event,--wrap=USB_GetDeviceList
 LDFLAGS		+=	-L../buildtools
 # One linker-reserved MEM1 block holds the embedded assets' load image and, after boot, the JIT arena /
 # menu+GB heap (see wii_mem.ld). Size in MB: the single source of truth for JIT_ARENA_SIZE and the linker.

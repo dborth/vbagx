@@ -22,6 +22,7 @@
 #ifdef HW_RVL
 #include "wii/wiidrc.h"
 #include "wii/WiiPlatform.h"
+#include "wii/libwiiinput/usbpointer.h"
 #endif
 
 extern "C" {
@@ -61,12 +62,16 @@ void OgcInputDriver::init() {
 	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
 	WPAD_SetVRes(WPAD_CHAN_ALL, platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
 	WPAD_SetPowerButtonCallback(WiimotePowerButtonCallback);
+	UsbPointer_Init(platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight());
 	#endif
 
 	InitUserInputControllers();
 }
 
 void OgcInputDriver::shutdown() {
+	#ifdef HW_RVL
+	UsbPointer_Shutdown();
+	#endif
 	for (int i = 0; i < 4; i++) {
 		#ifdef HW_RVL
 		WPAD_Rumble(i, 0);
@@ -174,6 +179,14 @@ static uint32_t MapClassicToGeneric(uint32_t wpad_btns)
 	return mask;
 }
 
+static uint32_t MapUsbPointerToGeneric(uint32_t btns) {
+	uint32_t mask = INPUT_BTN_NONE;
+	if (btns & USBPOINTER_LEFT)   mask |= INPUT_BTN_A;
+	if (btns & USBPOINTER_RIGHT)  mask |= INPUT_BTN_B;
+	if (btns & USBPOINTER_MIDDLE) mask |= INPUT_BTN_X;
+	return mask;
+}
+
 static uint32_t MapWiiUGamepadToGeneric(uint32_t drc_btns) {
 	uint32_t mask = INPUT_BTN_NONE;
 	if (drc_btns & WIIDRC_BUTTON_A) mask |= INPUT_BTN_A;
@@ -216,6 +229,7 @@ static float NormalizeWPADAnalog(int pos, int min, int max, int center) {
 void OgcInputDriver::update() {
 	#ifdef HW_RVL
 	WPAD_ScanPads();
+	UsbPointer_Update();
 	WiiDRC_ScanPads();
 	bool systemRumbleAllowed = (CONF_GetPadMotorMode() != 0);
 	#else
@@ -330,6 +344,24 @@ void OgcInputDriver::update() {
 			padData.hw_stickY[INPUT_HW_DRC] = clampf((float)WiiDRC_lStickY() / 128.0f, -1.0f, 1.0f);
 			padData.hw_substickX[INPUT_HW_DRC] = clampf((float)WiiDRC_rStickX() / 128.0f, -1.0f, 1.0f);
 			padData.hw_substickY[INPUT_HW_DRC] = clampf((float)WiiDRC_rStickY() / 128.0f, -1.0f, 1.0f);
+		}
+		#endif
+
+		#ifdef HW_RVL
+		// USB mouse / pen tablet / uDraw: one pointer, on player 1. While it is in use it steers the cursor in
+		// place of the Wii Remote's IR pointer; the buttons have a profile of their own.
+		if(i == 0 && UsbPointer_Connected()) {
+			padData.hw_connected[INPUT_HW_USBPOINTER] = true;
+			padData.hw_buttons_d[INPUT_HW_USBPOINTER] = MapUsbPointerToGeneric(UsbPointer_ButtonsDown());
+			padData.hw_buttons_h[INPUT_HW_USBPOINTER] = MapUsbPointerToGeneric(UsbPointer_ButtonsHeld());
+			padData.hw_buttons_r[INPUT_HW_USBPOINTER] = MapUsbPointerToGeneric(UsbPointer_ButtonsUp());
+
+			if(UsbPointer_Active()) {
+				UsbPointer_Position(&padData.cursor_x, &padData.cursor_y);
+				padData.cursor_angle = 0.0f;
+				padData.validPointer = true;
+				padData.isTouch = false;
+			}
 		}
 		#endif
 
