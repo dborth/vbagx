@@ -314,6 +314,10 @@ Network Shares (SMB) uses `libsmb2` on all platforms, with the SMB dialect auto-
 
 ---
 
+### USB Mouse and Drawing Tablet (Wii)
+
+A USB mouse, pen tablet or THQ uDraw GameTablet moves the on-screen cursor for player 1 in the menus. While it is being used it steers the cursor instead of the Wii Remote's pointer; the Wii Remote takes over again once the mouse or pen has been idle for a few seconds. The uDraw can be plugged into any Wii Remote; its own Wii Remote buttons are not used. Left click, pen tip or uDraw pen is A, right click or the lower pen switch / rocker is B, and middle click or the upper pen switch / rocker is X. The tablet drivers come from [libwiiinput](https://github.com/quatric/libwiiinput) (`source/drivers/ogc/wii/libwiiinput`).
+
 ## File Browser
 
 The File Browser loads automatically on startup and lists the contents of your `vbagx/roms` folder (or wherever you've pointed Load Folder — see [Storage](#storage)). Click a game — uncompressed, or zipped in a `.zip`/`.7z` archive — to load it. When choosing a file, use left/right to page up or down. ROMs in a `.zip` must be the first file in the archive, or you'll get an error.
