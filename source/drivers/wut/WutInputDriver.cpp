@@ -273,9 +273,9 @@ void WutInputDriver::update() {
 				padData.hw_substickX[INPUT_HW_DRC] = clampf(vpadStatus.rightStick.x, -1.0f, 1.0f);
 				padData.hw_substickY[INPUT_HW_DRC] = clampf(vpadStatus.rightStick.y, -1.0f, 1.0f);
 
-				padData.hw_gforceX[INPUT_HW_DRC] = vpadStatus.accelorometer.acc.x;
-				padData.hw_gforceY[INPUT_HW_DRC] = vpadStatus.accelorometer.acc.y;
-				padData.hw_gforceZ[INPUT_HW_DRC] = vpadStatus.accelorometer.acc.z;
+				padData.hw_gforceX[INPUT_HW_DRC] = vpadStatus.accelerometer.acc.x;
+				padData.hw_gforceY[INPUT_HW_DRC] = vpadStatus.accelerometer.acc.y;
+				padData.hw_gforceZ[INPUT_HW_DRC] = vpadStatus.accelerometer.acc.z;
 				padData.hw_pitch[INPUT_HW_DRC] = vpadStatus.angle.x * 360.0f;
 				padData.hw_roll[INPUT_HW_DRC]  = vpadStatus.angle.y * 360.0f;
 				padData.hw_yaw[INPUT_HW_DRC]   = vpadStatus.angle.z * 360.0f;
@@ -391,25 +391,11 @@ void WutInputDriver::update() {
 
 				controller[i]->setSideways(false);
 			}
-			else if (kpadStatus.extensionType == WPAD_EXT_CLASSIC || kpadStatus.extensionType == WPAD_EXT_MPLUS_CLASSIC) {
-				padData.hw_connected[INPUT_HW_CLASSIC] = true;
-				padData.hw_buttons_d[INPUT_HW_CLASSIC] = MapKPADClassicToGeneric(kpadStatus.classic.trigger);
-				padData.hw_buttons_h[INPUT_HW_CLASSIC] = MapKPADClassicToGeneric(kpadStatus.classic.hold);
-				padData.hw_buttons_r[INPUT_HW_CLASSIC] = MapKPADClassicToGeneric(kpadStatus.classic.release);
-
-				padData.hw_stickX[INPUT_HW_CLASSIC] = clampf(kpadStatus.classic.leftStick.x, -1.0f, 1.0f);
-				padData.hw_stickY[INPUT_HW_CLASSIC] = clampf(kpadStatus.classic.leftStick.y, -1.0f, 1.0f);
-				padData.hw_substickX[INPUT_HW_CLASSIC] = clampf(kpadStatus.classic.rightStick.x, -1.0f, 1.0f);
-				padData.hw_substickY[INPUT_HW_CLASSIC] = clampf(kpadStatus.classic.rightStick.y, -1.0f, 1.0f);
-
-				controller[i]->setSideways(false);
-			}
 			else {
-				// Core Wiimote or Wiimote + Nunchuk
+				// The Wiimote itself: its buttons and IR pointer, whatever is plugged into it
 				padData.hw_buttons_d[INPUT_HW_WIIMOTE] = MapKPADCoreToGeneric(kpadStatus.trigger);
 				padData.hw_buttons_h[INPUT_HW_WIIMOTE] = MapKPADCoreToGeneric(kpadStatus.hold);
 				padData.hw_buttons_r[INPUT_HW_WIIMOTE] = MapKPADCoreToGeneric(kpadStatus.release);
-
 
 				// Map IR pointer if active and DRC touch is not currently taking priority
 				if (kpadStatus.posValid && !padData.validPointer) {
@@ -453,7 +439,22 @@ void WutInputDriver::update() {
 					irSmoothInit[i] = false;
 				}
 
-				if (kpadStatus.extensionType == WPAD_EXT_NUNCHUK || kpadStatus.extensionType == WPAD_EXT_MPLUS_NUNCHUK) {
+				// With anything plugged in it is held vertically, never sideways
+				const bool extensionPlugged = (kpadStatus.extensionType != WPAD_EXT_CORE);
+				controller[i]->setSideways(!extensionPlugged && getWiimoteOrientation() == WIIMOTE_ORIENTATION_HORIZONTAL);
+
+				if (kpadStatus.extensionType == WPAD_EXT_CLASSIC || kpadStatus.extensionType == WPAD_EXT_MPLUS_CLASSIC) {
+					padData.hw_connected[INPUT_HW_CLASSIC] = true;
+					padData.hw_buttons_d[INPUT_HW_CLASSIC] = MapKPADClassicToGeneric(kpadStatus.classic.trigger);
+					padData.hw_buttons_h[INPUT_HW_CLASSIC] = MapKPADClassicToGeneric(kpadStatus.classic.hold);
+					padData.hw_buttons_r[INPUT_HW_CLASSIC] = MapKPADClassicToGeneric(kpadStatus.classic.release);
+
+					padData.hw_stickX[INPUT_HW_CLASSIC] = clampf(kpadStatus.classic.leftStick.x, -1.0f, 1.0f);
+					padData.hw_stickY[INPUT_HW_CLASSIC] = clampf(kpadStatus.classic.leftStick.y, -1.0f, 1.0f);
+					padData.hw_substickX[INPUT_HW_CLASSIC] = clampf(kpadStatus.classic.rightStick.x, -1.0f, 1.0f);
+					padData.hw_substickY[INPUT_HW_CLASSIC] = clampf(kpadStatus.classic.rightStick.y, -1.0f, 1.0f);
+				}
+				else if (kpadStatus.extensionType == WPAD_EXT_NUNCHUK || kpadStatus.extensionType == WPAD_EXT_MPLUS_NUNCHUK) {
 					padData.hw_connected[INPUT_HW_NUNCHUK] = true;
 
 					padData.hw_buttons_d[INPUT_HW_NUNCHUK] = MapKPADNunchukToGeneric(kpadStatus.nunchuk.trigger);
@@ -466,10 +467,6 @@ void WutInputDriver::update() {
 					padData.hw_gforceX[INPUT_HW_NUNCHUK] = kpadStatus.nunchuk.acc.x;
 					padData.hw_gforceY[INPUT_HW_NUNCHUK] = kpadStatus.nunchuk.acc.y;
 					padData.hw_gforceZ[INPUT_HW_NUNCHUK] = kpadStatus.nunchuk.acc.z;
-
-					controller[i]->setSideways(false);
-				} else {
-					controller[i]->setSideways(getWiimoteOrientation() == WIIMOTE_ORIENTATION_HORIZONTAL);
 				}
 			}
 

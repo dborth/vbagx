@@ -223,7 +223,7 @@ Consult the injector's own documentation/thread for anything version-specific �
 
 The first time you run Visual Boy Advance GX, it writes a new `settings.xml` next to the app (in `apps/vbagx/` on Wii, alongside `vbagx-gc.dol` on GameCube) to store your configuration. If you're upgrading from a previous version, the emulator may start with a message that your preferences have been reset — you'll need to set them again.
 
-On launch, the emulator drops you into the ROM browser. Navigate with the D-Pad or the Wiimote pointer, and select with the **A** button; press **B** to swap between controlling the list and controlling the buttons. Press **Home** at the main menu to exit — what exactly that does is configurable, see [Menu](#menu). Click the logo to see the credits.
+On launch, the emulator drops you into the ROM browser. Navigate with the D-Pad, the Wiimote pointer, or the left stick (it moves the pointer), and select with the **A** button; press **B** to swap between controlling the list and controlling the buttons. Press **Home** at the main menu to exit — what exactly that does is configurable, see [Menu](#menu). Click the logo to see the credits.
 
 ## Configuration
 
