@@ -32,11 +32,16 @@ class InputDriver
 		virtual void setContinuousRumble(int channel, bool continuous) = 0;
 		
 		void setRumbleEnabled(bool enabled) { rumbleEnabled = enabled; }
-		bool isRumbleEnabled() const { return rumbleEnabled; }
+		bool isRumbleEnabled() const { return rumbleEnabled && !rumbleHalted; }
+		void haltRumble() { rumbleHalted = true; stopAllRumble(); }
 		void setWiimoteOrientation(int orientation) { wiimoteOrientation = orientation; }
 		int getWiimoteOrientation() const { return wiimoteOrientation; }
 	
 	protected:
+		//! Stops every motor on every channel and clears all pending rumble state
+		virtual void stopAllRumble() = 0;
+
 		bool rumbleEnabled = true;
+		bool rumbleHalted = false;
 		int wiimoteOrientation = WIIMOTE_ORIENTATION_VERTICAL;
 };

@@ -28,6 +28,8 @@ class OgcInputDriver : public InputDriver
 		void setContinuousRumble(int channel, bool continuous) override;
 
 	protected:
+		void stopAllRumble() override;
+
 		//! Extension points for a console with more input hardware than GameCube pads.
 		//! The defaults do nothing, which is exactly a GameCube.
 
