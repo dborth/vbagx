@@ -15,8 +15,6 @@ extern "C" {
 extern void __exception_setreload(int t);
 }
 
-extern bool isWiiVC;
-
 /****************************************************************************
  * Shutdown/reset
  ***************************************************************************/
@@ -167,7 +165,7 @@ void WiiPlatform::init(const PlatformConfig& config)
 	this->audioDriver = new WiiAudioDriver();
 	this->audioDriver->init();
 
-	this->inputDriver = new OgcInputDriver();
+	this->inputDriver = new WiiInputDriver();
 	this->inputDriver->init();
 
 	this->fileSystemDriver = new WiiFileSystemDriver();
@@ -247,7 +245,7 @@ ConsoleType WiiPlatform::getConsoleType() {
 	}
 
 	if (isWiiU()) {
-		if (isWiiVC) {
+		if (inputDriver && inputDriver->isWiiVC()) {
 			return CONSOLE_WIIU_WIIVC;
 		}
 		return CONSOLE_WIIU_VWII;

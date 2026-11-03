@@ -2,9 +2,16 @@
  * Platform Abstraction Layer (OGC driver)
  * Daryl Borth 2026
  * OgcInputDriver.h
+ *
+ * Input for every libogc console. This is the GameCube driver, and the base
+ * of the Wii one: the Wii has everything a GameCube has (the controller
+ * ports and rumble), so WiiInputDriver derives from this class and adds its
+ * own hardware through the protected hooks below, rather than this file
+ * switching on HW_RVL.
  ***************************************************************************/
 #pragma once
 #include "../InputDriver.h"
+#include "../InputData.h"
 
 class OgcInputDriver : public InputDriver
 {
@@ -19,6 +26,27 @@ class OgcInputDriver : public InputDriver
 		void setGameRumble(int channel, int frames) override;
 		void ensureGameRumble(int channel, int frames) override;
 		void setContinuousRumble(int channel, bool continuous) override;
+
+	protected:
+		//! Extension points for a console with more input hardware than GameCube pads.
+		//! The defaults do nothing, which is exactly a GameCube.
+
+		//! Called from init() after the GameCube pads are up
+		virtual void initHardware() {}
+
+		//! Called once per frame before the channels are read: poll the extra hardware
+		virtual void scanHardware() {}
+
+		//! Called once per channel per frame: add the extra hardware's state for `channel`
+		//! to `pad` (each device in the slot of its own hardware profile)
+		virtual void readChannel(int channel, InputPadData & pad) { (void)channel; (void)pad; }
+
+		//! False if the console's own settings disable controller rumble
+		virtual bool isSystemRumbleAllowed() const { return true; }
+
+		//! Drives the rumble motor of any controller other than the GameCube pad on
+		//! `channel`; called every frame (and with false on shutdown)
+		virtual void driveRumble(int channel, bool on) { (void)channel; (void)on; }
 
 	private:
 		bool rumbleRequest[4];
