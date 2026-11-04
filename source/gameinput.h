@@ -11,6 +11,9 @@
 #ifndef _GAMEINPUT_H_
 #define _GAMEINPUT_H_
 
+#include <stdint.h>
+#include "drivers/InputData.h"
+
 #define gid(a,b,c) (a|(b<<8)|(c<<16))
 
 #define BOKTAI1			gid('U','3','I')
@@ -129,6 +132,8 @@ bool GetPointerInGame(unsigned short pad, float* u, float* v);
 
 uint32_t StandardDPad(unsigned short pad);
 uint32_t StandardMovement(unsigned short pad);
+uint32_t StandardDirections(unsigned short pad);
+uint32_t GameButtonsHeld(const InputPadData& data);
 uint32_t StandardSideways(unsigned short pad);
 uint32_t StandardClassic(unsigned short pad);
 

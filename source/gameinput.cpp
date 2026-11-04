@@ -1062,7 +1062,7 @@ uint32_t CastlevaniaAdventureInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
 
-	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+	uint32_t J = StandardDirections(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[INPUT_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[INPUT_HW_GAMECUBE];
@@ -1111,7 +1111,7 @@ uint32_t CastlevaniaBelmontInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
 
-	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+	uint32_t J = StandardDirections(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[INPUT_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[INPUT_HW_GAMECUBE];
@@ -1336,7 +1336,7 @@ uint32_t KidDraculaInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
 
-	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+	uint32_t J = StandardDirections(pad) | StandardSideways(pad) | StandardClassic(pad);
 
 	if (data.hw_connected[INPUT_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[INPUT_HW_GAMECUBE];

@@ -188,6 +188,70 @@ uint32_t StandardDPad(unsigned short pad)
 	return J;
 }
 
+//! The D-pad of every connected piece of hardware as directions - each in its own orientation, so a
+//! Wiimote held sideways has its D-pad turned a quarter (as StandardSideways does)
+static uint32_t HardwareDPad(unsigned short pad)
+{
+	if (!controller[pad]) return 0;
+	const InputPadData& data = controller[pad]->getPadData();
+	const bool sideways = controller[pad]->isSideways();
+	uint32_t J = 0;
+
+	for (uint32_t hw = 0; hw < INPUT_HW_MAX; hw++)
+	{
+		if (!data.hw_connected[hw]) continue;
+		const uint32_t held = data.hw_buttons_h[hw];
+
+		if (hw == INPUT_HW_WIIMOTE && sideways)
+		{
+			if (held & INPUT_BTN_RIGHT) J |= VBA_UP;
+			if (held & INPUT_BTN_LEFT) J |= VBA_DOWN;
+			if (held & INPUT_BTN_UP) J |= VBA_LEFT;
+			if (held & INPUT_BTN_DOWN) J |= VBA_RIGHT;
+		}
+		else
+		{
+			if (held & INPUT_BTN_UP) J |= VBA_UP;
+			if (held & INPUT_BTN_DOWN) J |= VBA_DOWN;
+			if (held & INPUT_BTN_LEFT) J |= VBA_LEFT;
+			if (held & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+		}
+	}
+	return J;
+}
+
+//! The sticks and the D-pads: every way a controller can say "left"
+uint32_t StandardDirections(unsigned short pad)
+{
+	return StandardMovement(pad) | HardwareDPad(pad);
+}
+
+//! Held buttons for the per-game "Match Wii Controls" handlers, which are written for the Wii layout:
+//! A is the main action and B the secondary one (as on the Wiimote, whose B is the trigger). On the Classic
+//! Controller, Pro Controller and GamePad the main action is the bottom button, B, as it was for the Classic
+//! Controller in those handlers before the input refactor - so there A and B change places.
+uint32_t GameButtonsHeld(const InputPadData& data)
+{
+	uint32_t held = 0;
+
+	for (uint32_t hw = 0; hw < INPUT_HW_MAX; hw++)
+	{
+		if (!data.hw_connected[hw]) continue;
+		uint32_t buttons = data.hw_buttons_h[hw];
+
+		if (hw == INPUT_HW_CLASSIC || hw == INPUT_HW_WUPC || hw == INPUT_HW_DRC)
+		{
+			const uint32_t a = buttons & INPUT_BTN_A;
+			const uint32_t b = buttons & INPUT_BTN_B;
+			buttons &= ~(INPUT_BTN_A | INPUT_BTN_B);
+			if (a) buttons |= INPUT_BTN_B;
+			if (b) buttons |= INPUT_BTN_A;
+		}
+		held |= buttons;
+	}
+	return held;
+}
+
 uint32_t StandardSideways(unsigned short pad)
 {
 	if (!controller[pad]) return 0;

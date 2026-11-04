@@ -32,7 +32,7 @@
 uint32_t MarioKartInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 	static uint32_t frame = 0;
 
 	uint8_t Health = 0;
@@ -75,27 +75,28 @@ uint32_t MarioKartInput(unsigned short pad) {
 uint32_t Mario1DXInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	const uint32_t held = GameButtonsHeld(data); // Wii layout of the face buttons
+	uint32_t J = StandardDirections(pad);
 
 	// Pause & Select
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (held & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (held & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
 	// Jump
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (held & INPUT_BTN_A) J |= VBA_BUTTON_A;
 
 	// Run, pick up, spin attack
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
+	if (held & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
 	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_B; // Starspin shoots when using fireflower
 
 	// Crouch
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) {
+	if (held & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) {
 		J |= VBA_DOWN;
 		J &= ~VBA_UP;
 	}
 
 	// Speed/Camera
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
+	if (held & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
 
 	return J;
 }
@@ -111,22 +112,23 @@ uint32_t MarioLand1Input(unsigned short pad) {
 uint32_t MarioLand2Input(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	const uint32_t held = GameButtonsHeld(data); // Wii layout of the face buttons
+	uint32_t J = StandardDirections(pad);
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
+	if (held & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (held & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (held & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (held & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
 
 	// Spin attack (Shake X-axis)
 	if (fabs(data.gforceX) > 1.4) J |= VBA_DOWN | VBA_BUTTON_A;
 
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) {
+	if (held & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) {
 		J |= VBA_DOWN;
 		J &= ~VBA_UP;
 	}
 
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
+	if (held & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
 
 	return J;
 }
@@ -134,19 +136,20 @@ uint32_t MarioLand2Input(unsigned short pad) {
 uint32_t Mario2Input(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	const uint32_t held = GameButtonsHeld(data); // Wii layout of the face buttons
+	uint32_t J = StandardDirections(pad);
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (held & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (held & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
+	if (held & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (held & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
 
 	// Shake X-axis to pick up/throw
 	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_B;
 
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) J |= VBA_DOWN;
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
+	if (held & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) J |= VBA_DOWN;
+	if (held & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
 
 	return J;
 }
@@ -154,27 +157,28 @@ uint32_t Mario2Input(unsigned short pad) {
 uint32_t MarioWorldInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	const uint32_t held = GameButtonsHeld(data); // Wii layout of the face buttons
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t FallState = CPUReadByte(0x3003FA1); // 0B = jump, 24 = fall
 	uint8_t RidingYoshi = CPUReadByte(0x3004302); // 00 = not riding, 01 = riding
 	static bool NeedStomp = false;
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (held & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (held & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
+	if (held & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (held & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
 
 	// Spin Attack / Tongue (Button or Shake)
-	if (data.buttons_h & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
+	if (held & INPUT_TRIGGER_R) J |= VBA_BUTTON_R;
 	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_R;
 
 	// Camera
-	if (data.buttons_h & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
+	if (held & INPUT_TRIGGER_L) J |= VBA_BUTTON_L;
 
 	// Crouch / Stomp
-	if (data.buttons_h & INPUT_TRIGGER_ZL) {
+	if (held & INPUT_TRIGGER_ZL) {
 		J |= VBA_DOWN;
 		J &= ~VBA_UP;
 		if (FallState != 0 && !RidingYoshi) NeedStomp = true;
@@ -195,16 +199,17 @@ uint32_t Mario3Input(unsigned short pad) {
 uint32_t YoshiIslandInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	const uint32_t held = GameButtonsHeld(data); // Wii layout of the face buttons
+	uint32_t J = StandardDirections(pad);
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (held & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (held & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X)) J |= VBA_BUTTON_B;
-	if (data.buttons_h & (INPUT_BTN_Y | INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_BUTTON_R; // Throw
+	if (held & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (held & (INPUT_BTN_B | INPUT_BTN_X)) J |= VBA_BUTTON_B;
+	if (held & (INPUT_BTN_Y | INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_BUTTON_R; // Throw
 
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) {
+	if (held & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) {
 		J |= VBA_DOWN;
 		J &= ~VBA_UP;
 	}
@@ -215,22 +220,23 @@ uint32_t YoshiIslandInput(unsigned short pad) {
 uint32_t UniversalGravitationInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
+	const uint32_t held = GameButtonsHeld(data); // Wii layout of the face buttons
 	TiltScreen = true;
 	TiltSideways = false;
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	if (held & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
+	if (held & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
 
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B; // Tongue
+	if (held & INPUT_BTN_A) J |= VBA_BUTTON_A;
+	if (held & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B; // Tongue
 
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) {
+	if (held & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) {
 		J |= VBA_DOWN; // Crouch/Stomp
 		J &= ~VBA_UP;
 	}
 
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
+	if (held & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
 
 	return J;
 }

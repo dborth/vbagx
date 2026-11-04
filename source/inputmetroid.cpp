@@ -32,7 +32,7 @@
 uint32_t MetroidZeroInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t BallState = CPUReadByte(0x30015df); // 0 = stand, 1 = crouch, 2 = ball
 	uint16_t Health = CPUReadByte(0x3001536);
@@ -147,7 +147,7 @@ uint32_t MetroidZeroInput(unsigned short pad) {
 uint32_t MetroidFusionInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t BallState = CPUReadByte(0x3001329); // 0 = stand, 2 = crouch, 5 = ball
 	uint16_t Health = CPUReadHalfWord(0x3001310); 
@@ -259,7 +259,7 @@ uint32_t MetroidFusionInput(unsigned short pad) {
 uint32_t Metroid1Input(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t BallState = CPUReadByte(0x3007500); // 3 = ball, other = stand
 	uint8_t MissileState = CPUReadByte(0x300730E); // 1 = missile, 0 = beam
@@ -314,7 +314,7 @@ uint32_t Metroid1Input(unsigned short pad) {
 uint32_t Metroid2Input(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t BallState = gbReadMemory(0xD020); // 4 = crouch, 5 = ball, other = stand
 	uint8_t MissileState = gbReadMemory(0xD04D); // 8 = missile hatch open

@@ -32,7 +32,7 @@
 uint32_t LegoStarWars1Input(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
@@ -57,7 +57,7 @@ uint32_t LegoStarWars1Input(unsigned short pad) {
 uint32_t LegoStarWars2Input(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
@@ -86,7 +86,7 @@ uint32_t LegoStarWars2Input(unsigned short pad) {
 uint32_t SWObiWanInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t Health = gbReadMemory(0xCFF2);
 	static uint8_t OldHealth = 0;
@@ -121,7 +121,7 @@ uint32_t SWObiWanInput(unsigned short pad) {
 uint32_t SWEpisode2Input(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t Health = CPUReadByte(0x3002fb3);
 	static uint8_t OldHealth = 0;
@@ -146,7 +146,7 @@ uint32_t SWEpisode2Input(unsigned short pad) {
 uint32_t SWEpisode3Input(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
@@ -171,7 +171,7 @@ uint32_t SWEpisode3Input(unsigned short pad) {
 uint32_t SWJediPowerBattlesInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
@@ -196,7 +196,7 @@ uint32_t SWJediPowerBattlesInput(unsigned short pad) {
 uint32_t SWTrilogyInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
@@ -221,7 +221,7 @@ uint32_t SWTrilogyInput(unsigned short pad) {
 uint32_t SWEpisode4Input(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
@@ -254,7 +254,7 @@ uint32_t SWEpisode6Input(unsigned short pad) {
 uint32_t SWYodaStoriesInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
+	uint32_t J = StandardDirections(pad);
 
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
