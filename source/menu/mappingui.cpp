@@ -543,7 +543,7 @@ MappingView::MappingView(int hw, bool selectWii) :
 	// do (laid out by where each control is on the drawing); otherwise they are the mappings
 	WiiControls wiiControls;
 	const WiiScheme wiiScheme = WiiSchemeFor(hardware);
-	const bool showWii = WiiControlsOverrideActive() && WiiControlsFor(wiiScheme, wiiControls);
+	const bool showWii = WiiControlsOverrideActive() && WiiControlsFor(hardware, wiiControls);
 
 	GuiLayout * leftCol;
 	GuiLayout * rightCol;

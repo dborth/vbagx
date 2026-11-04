@@ -415,7 +415,7 @@ Choose **Match Wii Controls** (or **Match GC Controls**) at the top of the Butto
 
 > **Match Wii Controls replaces your Button Mappings for the games listed below.** The choice only appears on the Button Mappings screen of those games, as **My Mappings | Match Wii Controls**. While Match Wii Controls is selected the mappings are shown faded: they are kept, not erased, and apply again when you switch back. The setting is global rather than per game, but it only affects the games in this table.
 >
-> While it is selected, the Button Mappings screen lists what each control does in that game, around the drawing of the controller you are using (the same descriptions as below, in short). Shakes, swings and pointing are listed under **Motion**. Select a line to see where the control is and the full description. For games the descriptions below don't cover, the mappings are shown faded instead.
+> While it is selected, the Button Mappings screen lists what each control does in that game, around the drawing of the controller you are using (the same descriptions as below, in short). Shakes, swings and pointing are listed under **Motion**. Select a line to see where the control is and the full description. Mario Kart, Star Wars, The Lord of the Rings and Castlevania aren't described below, so for them the screen lists the controls as the code reads them (for some, only which Game Boy button a control presses). Where a game has nothing listed for the controller you are using, the mappings are shown faded instead.
 
 | Games | Modeled after |
 |---|---|

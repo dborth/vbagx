@@ -6,9 +6,10 @@
  * What a game's own controls ("Match Wii Controls") do, as data, for the
  * Button Mappings screen to show while they are replacing your mappings. The
  * wording follows the README's "Special Wii Controls" section, which is the
- * intent of the original controls; the code that reads the controller
- * (gameinput.cpp and friends) is not consulted, and nothing here changes how
- * input is read.
+ * intent of the original controls. For the games the README does not describe
+ * (Mario Kart, Star Wars, The Lord of the Rings, Castlevania) it follows the
+ * handlers in the code, which name what the controls do. Nothing here changes
+ * how input is read.
  ***************************************************************************/
 
 #pragma once
@@ -37,5 +38,6 @@ struct WiiControls {
 //!The scheme a piece of hardware (an INPUT_HW_* value) uses
 WiiScheme WiiSchemeFor(int hw);
 
-//!The loaded game's controls on a scheme: false if nothing is written down for that game on that scheme (then `out` is empty)
-bool WiiControlsFor(WiiScheme scheme, WiiControls& out);
+//!The loaded game's controls on a piece of hardware (an INPUT_HW_* value): false if nothing is written down for that game
+//!on that hardware (then `out` is empty)
+bool WiiControlsFor(int hw, WiiControls& out);

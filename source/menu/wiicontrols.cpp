@@ -4,14 +4,17 @@
  * wiicontrols.cpp
  *
  * See wiicontrols.h. The wording comes from the README's "Special Wii Controls"
- * section. Games the README has no controls written down for (Mario Kart, the
- * non-Lego Star Wars games, The Lord of the Rings, Castlevania) have no table
- * here, so the screen shows nothing for them.
+ * section; Mario Kart, the non-Lego Star Wars games, The Lord of the Rings and
+ * Castlevania, which the README does not describe, are written from their
+ * handlers (inputstarwars.cpp, gameinput.cpp), using the names the code gives
+ * what the controls do. Where the code can only say which Game Boy Advance
+ * button a control presses, that is what the line says ("A button").
  ***************************************************************************/
 
 #include "wiicontrols.h"
 #include "gameinput.h"
 #include "drivers/InputData.h"
+#include "vbasupport.h"
 
 namespace {
 
@@ -30,7 +33,9 @@ const uint32_t kStick = INPUT_THUMB_L, kRStick = INPUT_THUMB_R;
 
 enum class Family {
 	None, Zelda, Mario, Metroid, Turtles, MortalKombat, LegoStarWars, HarryPotter, MedalOfHonor,
-	OnePiece, Boktai, Twisted, Kirby, KidDracula
+	OnePiece, Boktai, Twisted, Kirby, KidDracula,
+	MarioKart, StarWars,
+	Isolated		// plays by what each kind of hardware reports on its own (Lord of the Rings, Castlevania)
 };
 
 struct Game {
@@ -71,6 +76,17 @@ const Game kGames[] = {
 	{ BoktaiInput, Family::Boktai }, { Boktai2Input, Family::Boktai },
 	{ TwistedInput, Family::Twisted }, { KirbyTntInput, Family::Kirby },
 	{ KidDraculaInput, Family::KidDracula },
+
+	{ MarioKartInput, Family::MarioKart },
+
+	{ SWObiWanInput, Family::StarWars }, { SWJediPowerBattlesInput, Family::StarWars }, { SWEpisode2Input, Family::StarWars },
+	{ SWEpisode3Input, Family::StarWars }, { SWEpisode4Input, Family::StarWars }, { SWEpisode5Input, Family::StarWars },
+	{ SWEpisode6Input, Family::StarWars }, { SWTrilogyInput, Family::StarWars }, { SWNDAInput, Family::StarWars },
+	{ SWYodaStoriesInput, Family::StarWars },
+
+	{ HobbitInput, Family::Isolated }, { FellowshipOfTheRingInput, Family::Isolated }, { ReturnOfTheKingInput, Family::Isolated },
+	{ CastlevaniaAdventureInput, Family::Isolated }, { CastlevaniaBelmontInput, Family::Isolated },
+	{ CastlevaniaLegendsInput, Family::Isolated }, { CastlevaniaCircleMoonInput, Family::Isolated },
 };
 
 Family FamilyOf(GameInputFn fn)
@@ -390,6 +406,201 @@ bool KidDracula(GameInputFn, WiiScheme s, Builder& b)
 	return false;
 }
 
+// Mario Kart reads the unified buttons, so it plays the same on every kind of hardware
+bool MarioKart(GameInputFn, WiiScheme s, Builder& b)
+{
+	b.add(kL | kZL, "Use item");
+	b.add(kA | kY, "Accelerate");
+	b.add(kB | kX, "Brake");
+	b.add(kR | kZR, "Jump / slide", "Jump, and power slide");
+	b.add(kPlus, "Pause");
+	b.add(kMinus, "Select");
+	if(s == WiiScheme::WII)
+	{
+		b.add(0, "Tilt: steer", "Tilt the Wii Remote left and right to steer");
+		b.add(0, "Shake: jump", "Shake the Wii Remote up and down to jump");
+	}
+	return true;
+}
+
+// The Star Wars games read the unified buttons too. What A, B and the triggers do differs from game to game; where the
+// handler does not say what the Game Boy button is for, the line names the button.
+bool StarWars(GameInputFn fn, WiiScheme s, Builder& b)
+{
+	const char * button = "Presses the game's button of that name";
+	if(fn == SWNDAInput)
+	{
+		b.add(kA, "Jump attack", "The only kind of jump in this game");
+		b.add(kB | kX | kY, "Saber", "Lights and swings your lightsaber");
+		b.add(kL | kZL, "Block");
+		b.add(kR | kZR, "Force");
+		b.add(kDpad, "D-pad: Force power", "Changes your Force power");
+		b.add(k1 | k2, "Fast-forward");
+	}
+	else if(fn == SWObiWanInput)
+	{
+		b.add(kA, "Jump");
+		b.add(kB | kX | kY, "Saber / shoot", "Saber or blaster");
+		b.add(kL | kZL, "Weapon 3", "Switches to the game's third weapon and uses it");
+		b.add(kR | kZR, "Fast-forward");
+	}
+	else if(fn == SWYodaStoriesInput)
+	{
+		b.add(kA, "Drag object");
+		b.add(kB | kX | kY, "Saber / shoot");
+		b.add(kL | kZL, "L button", button);
+		b.add(kR | kZR, "Fast-forward");
+	}
+	else if(fn == SWEpisode2Input || fn == SWJediPowerBattlesInput)
+	{
+		b.add(kA, "Jump");
+		b.add(kB | kX | kY, "Saber / shoot");
+		b.add(kL | kZL, "L button", button);
+		b.add(kR | kZR, "R button", button);
+	}
+	else
+	{
+		// Episodes 3 to 6 and the Trilogy: A and B press the game's A and B; in Episodes 4 to 6, R fast-forwards
+		const bool fast = fn == SWEpisode4Input || fn == SWEpisode5Input || fn == SWEpisode6Input;
+		b.add(kA, "A button", button);
+		b.add(kB | kX | kY, "B button", button);
+		b.add(kL | kZL, "L button", button);
+		b.add(kR | kZR, fast ? "Fast-forward" : "R button", fast ? nullptr : button);
+	}
+	b.add(kPlus, "Start");
+	b.add(kMinus, "Select");
+	if(s == WiiScheme::WII)
+		b.add(0, "Shake: saber", "Shake the Wii Remote to swing your lightsaber");
+	return true;
+}
+
+// The Lord of the Rings and Castlevania games read each kind of hardware's own buttons, not the unified ones, and have
+// a handful of Game Boy Advance buttons to give out: those lines name the button. The Nunchuk (and, in Castlevania, the
+// Classic Controller) is written out by what each control does. The Wii U Pro Controller and the GamePad are not read at
+// all, other than the sticks, so they have no controls here.
+bool Isolated(GameInputFn fn, int hw, Builder& b)
+{
+	const bool gba = cartridgeType == CARTRIDGE_GBA;
+	const bool hobbit = fn == HobbitInput, fellowship = fn == FellowshipOfTheRingInput, king = fn == ReturnOfTheKingInput;
+	const bool adventure = fn == CastlevaniaAdventureInput, belmont = fn == CastlevaniaBelmontInput;
+	const bool legends = fn == CastlevaniaLegendsInput, circle = fn == CastlevaniaCircleMoonInput;
+	const bool castlevania = adventure || belmont || legends || circle;
+
+	switch(hw)
+	{
+		case INPUT_HW_GAMECUBE:
+			b.add(kA, "A button");
+			b.add(kB, "B button");
+			b.add(kPlus, "Start");
+			b.add(kGcZ, "Select");
+			if(gba)
+			{
+				b.add(kL, "L button");
+				b.add(kR, "R button");
+			}
+			return true;
+
+		case INPUT_HW_WIIMOTE:
+			// the Wii Remote on its own is held sideways
+			b.add(kUp, "Move left", "The Wii Remote is held sideways, so the D-pad is turned");
+			b.add(kDown, "Move right", "The Wii Remote is held sideways, so the D-pad is turned");
+			b.add(kLeft, "Move down", "The Wii Remote is held sideways, so the D-pad is turned");
+			b.add(kRight, "Move up", "The Wii Remote is held sideways, so the D-pad is turned");
+			b.add(k2, "A button");
+			b.add(k1, "B button");
+			b.add(kA, gba ? "R button" : "Fast-forward");
+			b.add(kB, gba ? "L button" : "Fast-forward");
+			b.add(kPlus, "Start");
+			b.add(kMinus, "Select");
+			return true;
+
+		case INPUT_HW_NUNCHUK:
+			b.add(kDpad, "D-pad: move");
+			b.add(kStick, "Move");
+			if(hobbit)
+			{
+				b.add(kB, "Ability");
+				b.add(kA, "Use");
+				b.add(kPlus, "Pause");
+				b.add(kMinus, "Items");
+				b.add(kC, "Speed", "Fast-forward");
+				b.add(kZ, "Change skill");
+				b.add(0, "Shake: attack", "Shake the Wii Remote to attack");
+			}
+			else if(fellowship)
+			{
+				b.add(kB, "Cancel");
+				b.add(kA, "Use");
+				b.add(kPlus, "Pause");
+				b.add(kMinus, "Items");
+				b.add(kC, "Speed", "Fast-forward");
+				b.add(kZ, "Change character");
+				b.add(k1, "Select");
+				b.add(0, "Shake: cancel", "Shake the Wii Remote to cancel");
+			}
+			else if(king)
+			{
+				b.add(kB, "Ability");
+				b.add(kA, "Use");
+				b.add(kPlus, "Pause");
+				b.add(kMinus, "Items");
+				b.add(kC, "Speed", "Fast-forward");
+				b.add(kZ, "Change skill");
+				b.add(0, "Shake: attack", "Shake the Wii Remote to attack");
+			}
+			else if(castlevania)
+			{
+				b.add(kB, "Attack");
+				b.add(kC, "Jump");
+				b.add(kZ, "Guard", "Crouch and guard");
+				b.add(kPlus, "Pause");
+				b.add(kMinus, "Select");
+				if(!adventure)
+					b.add(kA, "Sub-weapon", "Throws your sub-weapon");
+				b.add(kA | kB, "A + B: speed", "Press A and B together to fast-forward");
+				if(legends || circle)
+					b.add(kDown, "Hyper", "Hyper attack");
+				if(circle)
+				{
+					b.add(k1, "L button");
+					b.add(k2, "R button");
+				}
+				b.add(0, "Shake: attack", "Shake the Wii Remote to attack");
+			}
+			return true;
+
+		case INPUT_HW_CLASSIC:
+			if(castlevania)
+			{
+				b.add(kB, "Attack");
+				b.add(kR, "Jump");
+				b.add(kL, "Guard", "Crouch and guard");
+				b.add(kPlus, "Pause");
+				b.add(kMinus, "Select");
+				b.add(kA, "Speed", "Fast-forward");
+				if(!adventure)
+					b.add(kY, "Sub-weapon", "Throws your sub-weapon");
+				if(legends || circle)
+					b.add(kX, "Hyper", "Hyper attack");
+				if(circle)
+					b.add(kL | kR, "L / R button", "L and R also press the game's L and R buttons");
+			}
+			else
+			{
+				b.add(kDpad, "D-pad: move");
+				b.add(kA, "A button");
+				b.add(kB, "B button");
+				b.add(kL | kZL, "L button");
+				b.add(kR | kZR, "R button");
+				b.add(kX | kY, "Fast-forward");
+				b.add(kPlus, "Start");
+				b.add(kMinus, "Select");
+			}
+			return true;
+	}
+	return false;
+}
+
 } // namespace
 
 WiiScheme WiiSchemeFor(int hw)
@@ -403,9 +614,10 @@ WiiScheme WiiSchemeFor(int hw)
 	}
 }
 
-bool WiiControlsFor(WiiScheme scheme, WiiControls& out)
+bool WiiControlsFor(int hw, WiiControls& out)
 {
 	out.actions.clear();
+	const WiiScheme scheme = WiiSchemeFor(hw);
 	const GameInputFn fn = CurrentGameInput();
 	Builder b(out);
 
@@ -425,6 +637,9 @@ bool WiiControlsFor(WiiScheme scheme, WiiControls& out)
 		case Family::Twisted: found = Twisted(fn, scheme, b); break;
 		case Family::Kirby: found = Kirby(fn, scheme, b); break;
 		case Family::KidDracula: found = KidDracula(fn, scheme, b); break;
+		case Family::MarioKart: found = MarioKart(fn, scheme, b); break;
+		case Family::StarWars: found = StarWars(fn, scheme, b); break;
+		case Family::Isolated: found = Isolated(fn, hw, b); break;
 		case Family::None: break;
 	}
 	if(!found)
