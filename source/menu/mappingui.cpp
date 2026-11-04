@@ -34,6 +34,8 @@ int mapHardware = -1;
 
 const int kSideW = 172;			// a column of rows beside the drawing
 const int kRowGap = 1;
+const int kResetH = 22;			// the Reset button's height, which the warning banner matches
+const int kBannerH = kResetH;
 const int kCardPad = 8;
 const int kBodyW = 640 - 2 * MENU_PAGE_MARGIN;
 const int kContentW = kBodyW - 2 * kCardPad;
@@ -283,7 +285,11 @@ MappingView::MappingView(int hw) :
 	const int bodyH = sh - MENU_BAR_TOP_H - MENU_BAR_BOTTOM_H - 8;
 	const int stageH = bodyH - 2 * kCardPad;
 	const int drawW = kContentW - 2 * kSideW - 2 * 6;
-	const float scale = MappingScale(layout, (float)drawW, (float)stageH - 24.0f);
+	// With the warning banner up, the stage starts below it and the drawing is a little smaller, so the tallest
+	// drawing (the Wiimote) clears the banner
+	const bool warned = WiiControlsOverrideActive();
+	const int stageTop = warned ? kBannerH + 4 : 0;
+	const float scale = MappingScale(layout, (float)drawW, (float)(warned ? stageH - stageTop - 12 : stageH - 24));
 	view = &ui.make<ControllerView>(layout, scale);
 	// no text on the drawing: the rows name each control
 	view->setLabelFilter([](int){ return false; });
@@ -336,10 +342,10 @@ MappingView::MappingView(int hw) :
 		view->setLeader(id != 0, edgeX, midY);
 	});
 
-	GuiLayout& stage = ui.row().size(kContentW, stageH).gap(6).align(LAYOUT_ALIGN::CENTRE).justifyContent(LAYOUT_JUSTIFY::CENTRE)
+	GuiLayout& stage = ui.row().size(kContentW, stageH).pad(0, stageTop, 0, 0).gap(6).align(LAYOUT_ALIGN::CENTRE).justifyContent(LAYOUT_JUSTIFY::CENTRE)
 		.add(left).add(*view).add(right);
 
-	GuiTextButton& reset = ui.button(Tr("Reset").c_str()).size(48, 22).fontSize(UI_FONT_SMALL - 1).style(MenuKeycapStyle())
+	GuiTextButton& reset = ui.button(Tr("Reset").c_str()).size(48, kResetH).fontSize(UI_FONT_SMALL - 1).style(MenuKeycapStyle())
 		.rounded(8.0f).litTextColor(MenuPaletteCurrent().text)
 		.onFocus([this]{ status = "A puts these buttons back to their defaults"; });
 	resetBtn = &reset;
@@ -349,17 +355,18 @@ MappingView::MappingView(int hw) :
 
 	// When Match Wii Controls is on for a game that has its own controls, these mappings are bypassed: say so, up here,
 	// in the strip the drawing leaves free (clear of Reset at the other end). Amber, not the palette accent: it is a warning.
-	if(WiiControlsOverrideActive())
+	if(warned)
 	{
 		const int bannerW = kContentW - 48 - 10;
 		const std::string msg = GuiFormat("%s is on: this game ignores these mappings", Tr(WiiControlsOptionName()).c_str());
-		GuiLabel& warnText = ui.label(msg.c_str()).fontSize(UI_FONT_SMALL).textColor(MenuRGBA(104, 66, 0));
+		GuiLabel& warnText = ui.label(msg.c_str()).fontSize(UI_FONT_SMALL).nudgeY(2).textColor(MenuRGBA(104, 66, 0));
 		warnText.setMaxWidth(bannerW - 20);
 		warnText.setScroll(SCROLL::HORIZONTAL);
+		GuiLayout& warnLine = ui.row().size(bannerW - 20, kBannerH).align(LAYOUT_ALIGN::CENTRE).add(warnText);
 		GuiCard& warn = ui.card().selectable(false)
 			.style(GuiShapeStyle(GuiPaint().color(MenuRGBA(255, 243, 205)).stroke(1.5f, MenuRGBA(214, 158, 46))))
-			.pad(10, 3).corners(GuiCorners(9.0f)).size(bannerW, 0);
-		warn.add(warnText);
+			.pad(10, 0).corners(GuiCorners(9.0f)).size(bannerW, kBannerH);
+		warn.add(warnLine);
 		content.add(warn, GuiItem().at(LAYOUT_ALIGN::START, LAYOUT_ALIGN::START));
 	}
 	content.add(stage, GuiItem().at(LAYOUT_ALIGN::START, LAYOUT_ALIGN::END));

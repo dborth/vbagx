@@ -1663,6 +1663,21 @@ static int MenuGame()
 	wiiControlsBtn.setTrigger(trigA);
 	wiiControlsBtn.setEffectGrow();
 
+	// A game with no special controls of its own never looks at this setting. Say so, rather than let the switch
+	// look like it does something: it still shows where the setting is (it is global, and applies again to the
+	// next game that has controls) but dimmed, with a note under it.
+	const bool wiiControlsApplies = GameHasWiiControls();
+	GuiText wiiControlsNoteTxt("No special controls for this game", 14, (PixelColor){110, 110, 110, 255});
+	wiiControlsNoteTxt.setWrap(true, MENU_BTN_NORMAL_W + 30);
+	wiiControlsNoteTxt.setLineSpacing(-2);
+	wiiControlsNoteTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
+	wiiControlsNoteTxt.setPosition(-120, 290 + MENU_BTN_NORMAL_H + 6);
+	if (!wiiControlsApplies)
+	{
+		wiiControlsBtnTxt.setColor((PixelColor){130, 130, 130, 255});
+		wiiControlsSwitch.setAlpha(110);
+	}
+
 	GuiText gameSettingsBtnTxt("Game Settings", 22, (PixelColor){0, 0, 0, 255});
 	MenuButtonShape gameSettingsBtnImg(MenuButtonShape::NORMAL);
 	GuiButton gameSettingsBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
@@ -1739,6 +1754,8 @@ static int MenuGame()
 	w.append(&mappingBtn);
 	w.append(&resetBtn);
 	w.append(&wiiControlsBtn);
+	if (!wiiControlsApplies)
+		w.append(&wiiControlsNoteTxt);
 	w.append(&gameSettingsBtn);
 	if (isBoktai)
 		w.append(&sunBtn);
