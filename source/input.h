@@ -39,4 +39,9 @@ void systemGameRumbleOnlyFor(int OnlyRumbleForFrames);
 uint32_t GetJoy(int which);
 bool isMenuRequested();
 
+//! The loaded game has its own Wii/GameCube control scheme (see "Match Wii Controls" in the README)
+bool GameHasWiiControls();
+//! "Match Wii Controls" is on AND the loaded game has such a scheme: the game ignores Button Mappings
+bool WiiControlsOverrideActive();
+
 #endif

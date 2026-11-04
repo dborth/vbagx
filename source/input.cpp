@@ -306,6 +306,203 @@ uint32_t StandardClassic(unsigned short pad)
 	return J;
 }
 
+//! A game's own "Match Wii Controls" handler, as it reads the pad
+typedef uint32_t (*GameInputFn)(unsigned short pad);
+
+//! The "Match Wii Controls" handler for the loaded game, or nullptr if it has none
+static GameInputFn FindGameInput()
+{
+	switch (RomIdCode & 0xFFFFFF) {
+		// Zelda
+		case ZELDA1:
+			return Zelda1Input;
+		case ZELDA2:
+			return Zelda2Input;
+		case ALINKTOTHEPAST:
+			return ALinkToThePastInput;
+		case LINKSAWAKENING:
+			return LinksAwakeningInput;
+		case ORACLEOFAGES:
+			return OracleOfAgesInput;
+		case ORACLEOFSEASONS:
+			return OracleOfSeasonsInput;
+		case MINISHCAP:
+			return MinishCapInput;
+
+		// Metroid
+		case METROID0:
+			return MetroidZeroInput;
+		case METROID1:
+			return Metroid1Input;
+		case METROID2:
+			return Metroid2Input;
+		case METROID4:
+			return MetroidFusionInput;
+
+		// TMNT
+		case TMNT1:
+			return TMNT1Input;
+		case TMNT2:
+			return TMNT2Input;
+		case TMNT3:
+			return TMNT3Input;
+		case TMNTGBA:
+			return TMNTGBAInput;
+		case TMNTGBA2:
+			return TMNTGBA2Input;
+		case TMNT:
+			return TMNTInput;
+
+		// Medal Of Honor
+		case MOHUNDERGROUND:
+			return MohUndergroundInput;
+		case MOHINFILTRATOR:
+			return MohInfiltratorInput;
+
+		// Harry Potter
+		case HARRYPOTTER1GBC:
+			return HarryPotter1GBCInput;
+		case HARRYPOTTER2GBC:
+			return HarryPotter2GBCInput;
+		case HARRYPOTTER1:
+			return HarryPotter1Input;
+		case HARRYPOTTER2:
+			return HarryPotter2Input;
+		case HARRYPOTTER3:
+			return HarryPotter3Input;
+		case HARRYPOTTER4:
+			return HarryPotter4Input;
+		case HARRYPOTTER5:
+			return HarryPotter5Input;
+
+		// Mario
+		case MARIO1CLASSIC:
+		case MARIO2CLASSIC:
+			return Mario1ClassicInput;
+		case MARIO1DX:
+			return Mario1DXInput;
+		case MARIO2ADV:
+			return Mario2Input;
+		case MARIO3ADV:
+			return Mario3Input;
+		case MARIOWORLD:
+			return MarioWorldInput;
+		case YOSHIISLAND:
+			return YoshiIslandInput;
+		case MARIOLAND1:
+			return MarioLand1Input;
+		case MARIOLAND2:
+			return MarioLand2Input;
+		case YOSHIUG:
+			return UniversalGravitationInput;
+
+		// Mario Kart
+		case MARIOKART:
+			return MarioKartInput;
+
+		// Lego Star Wars
+		case LSW1:
+			return LegoStarWars1Input;
+		case LSW2:
+			return LegoStarWars2Input;
+
+		// Star Wars
+		case SWOBIWAN:
+			return SWObiWanInput;
+		case SWJPB:
+			return SWJediPowerBattlesInput;
+		case SWEP2:
+			return SWEpisode2Input;
+		case SWEP3:
+			return SWEpisode3Input;
+		case SWEP4:
+			return SWEpisode4Input;
+		case SWEP5:
+			return SWEpisode5Input;
+		case SWEP6:
+			return SWEpisode6Input;
+		case SWTRILOGY:
+			return SWTrilogyInput;
+		case SWNDA:
+			return SWNDAInput;
+		case SWYODA:
+			return SWYodaStoriesInput;
+
+		// Mortal Kombat
+		case MK1:
+			return MK1Input;
+		case MK12:
+			return MK12Input;
+		case MK2:
+			return MK2Input;
+		case MK3:
+			return MK3Input;
+		case MK4:
+			return MK4Input;
+		case MKA:
+			return MKAInput;
+		case MKDA:
+			return MKDAInput;
+		case MKTE:
+			return MKTEInput;
+
+		// WarioWare
+		case TWISTED:
+			return TwistedInput;
+
+		// Kirby
+		case KIRBYTNT:
+		case KIRBYTNTJ:
+			return KirbyTntInput;
+
+		// Boktai
+		case BOKTAI1:
+			return BoktaiInput;
+		case BOKTAI2:
+		case BOKTAI3:
+			return Boktai2Input;
+
+		// One Piece
+		case ONEPIECE:
+			return OnePieceInput;
+
+		// Lord of the Rings
+		case HOBBIT:
+			return HobbitInput;
+		case LOTR1:
+			return FellowshipOfTheRingInput;
+		case LOTR2:
+		case LOTR3:
+			return ReturnOfTheKingInput;
+
+		// Castlevania
+		case CVADVENTURE:
+			return CastlevaniaAdventureInput;
+		case CVBELMONT:
+			return CastlevaniaBelmontInput;
+		case CVLEGENDS:
+			return CastlevaniaLegendsInput;
+		case CVCIRCLEMOON:
+		case CVHARMONY:
+		case CVARIA:
+			return CastlevaniaCircleMoonInput;
+
+		case KIDDRACULA:
+			return KidDraculaInput;
+	}
+	return nullptr;
+}
+
+bool GameHasWiiControls()
+{
+	return FindGameInput() != nullptr;
+}
+
+bool WiiControlsOverrideActive()
+{
+	return EmuSettings.wiiControls && GameHasWiiControls();
+}
+
 /****************************************************************************
  * DecodeJoy
  *
@@ -323,184 +520,9 @@ static uint32_t DecodeJoy(unsigned short pad)
 
 	// check for games that should have special Wii controls
 	if (EmuSettings.wiiControls) {
-		switch (RomIdCode & 0xFFFFFF) {
-			// Zelda
-			case ZELDA1:
-				return Zelda1Input(pad);
-			case ZELDA2:
-				return Zelda2Input(pad);
-			case ALINKTOTHEPAST:
-				return ALinkToThePastInput(pad);
-			case LINKSAWAKENING:
-				return LinksAwakeningInput(pad);
-			case ORACLEOFAGES:
-				return OracleOfAgesInput(pad);
-			case ORACLEOFSEASONS:
-				return OracleOfSeasonsInput(pad);
-			case MINISHCAP:
-				return MinishCapInput(pad);
-
-			// Metroid
-			case METROID0:
-				return MetroidZeroInput(pad);
-			case METROID1:
-				return Metroid1Input(pad);
-			case METROID2:
-				return Metroid2Input(pad);
-			case METROID4:
-				return MetroidFusionInput(pad);
-
-			// TMNT
-			case TMNT1:
-				return TMNT1Input(pad);
-			case TMNT2:
-				return TMNT2Input(pad);
-			case TMNT3:
-				return TMNT3Input(pad);
-			case TMNTGBA:
-				return TMNTGBAInput(pad);
-			case TMNTGBA2:
-				return TMNTGBA2Input(pad);
-			case TMNT:
-				return TMNTInput(pad);
-
-			// Medal Of Honor
-			case MOHUNDERGROUND:
-				return MohUndergroundInput(pad);
-			case MOHINFILTRATOR:
-				return MohInfiltratorInput(pad);
-
-			// Harry Potter
-			case HARRYPOTTER1GBC:
-				return HarryPotter1GBCInput(pad);
-			case HARRYPOTTER2GBC:
-				return HarryPotter2GBCInput(pad);
-			case HARRYPOTTER1:
-				return HarryPotter1Input(pad);
-			case HARRYPOTTER2:
-				return HarryPotter2Input(pad);
-			case HARRYPOTTER3:
-				return HarryPotter3Input(pad);
-			case HARRYPOTTER4:
-				return HarryPotter4Input(pad);
-			case HARRYPOTTER5:
-				return HarryPotter5Input(pad);
-
-			// Mario
-			case MARIO1CLASSIC:
-			case MARIO2CLASSIC:
-				return Mario1ClassicInput(pad);
-			case MARIO1DX:
-				return Mario1DXInput(pad);
-			case MARIO2ADV:
-				return Mario2Input(pad);
-			case MARIO3ADV:
-				return Mario3Input(pad);
-			case MARIOWORLD:
-				return MarioWorldInput(pad);
-			case YOSHIISLAND:
-				return YoshiIslandInput(pad);
-			case MARIOLAND1:
-				return MarioLand1Input(pad);
-			case MARIOLAND2:
-				return MarioLand2Input(pad);
-			case YOSHIUG:
-				return UniversalGravitationInput(pad);
-
-			// Mario Kart
-			case MARIOKART:
-				return MarioKartInput(pad);
-
-			// Lego Star Wars
-			case LSW1:
-				return LegoStarWars1Input(pad);
-			case LSW2:
-				return LegoStarWars2Input(pad);
-
-			// Star Wars
-			case SWOBIWAN:
-				return SWObiWanInput(pad);
-			case SWJPB:
-				return SWJediPowerBattlesInput(pad);
-			case SWEP2:
-				return SWEpisode2Input(pad);
-			case SWEP3:
-				return SWEpisode3Input(pad);
-			case SWEP4:
-				return SWEpisode4Input(pad);
-			case SWEP5:
-				return SWEpisode5Input(pad);
-			case SWEP6:
-				return SWEpisode6Input(pad);
-			case SWTRILOGY:
-				return SWTrilogyInput(pad);
-			case SWNDA:
-				return SWNDAInput(pad);
-			case SWYODA:
-				return SWYodaStoriesInput(pad);
-
-			// Mortal Kombat
-			case MK1:
-				return MK1Input(pad);
-			case MK12:
-				return MK12Input(pad);
-			case MK2:
-				return MK2Input(pad);
-			case MK3:
-				return MK3Input(pad);
-			case MK4:
-				return MK4Input(pad);
-			case MKA:
-				return MKAInput(pad);
-			case MKDA:
-				return MKDAInput(pad);
-			case MKTE:
-				return MKTEInput(pad);
-
-			// WarioWare
-			case TWISTED:
-				return TwistedInput(pad);
-
-			// Kirby
-			case KIRBYTNT:
-			case KIRBYTNTJ:
-				return KirbyTntInput(pad);
-
-			// Boktai
-			case BOKTAI1:
-				return BoktaiInput(pad);
-			case BOKTAI2:
-			case BOKTAI3:
-				return Boktai2Input(pad);
-
-			// One Piece
-			case ONEPIECE:
-				return OnePieceInput(pad);
-
-			// Lord of the Rings
-			case HOBBIT:
-				return HobbitInput(pad);
-			case LOTR1:
-				return FellowshipOfTheRingInput(pad);
-			case LOTR2:
-			case LOTR3:
-				return ReturnOfTheKingInput(pad);
-
-			// Castlevania
-			case CVADVENTURE:
-				return CastlevaniaAdventureInput(pad);
-			case CVBELMONT:
-				return CastlevaniaBelmontInput(pad);
-			case CVLEGENDS:
-				return CastlevaniaLegendsInput(pad);
-			case CVCIRCLEMOON:
-			case CVHARMONY:
-			case CVARIA:
-				return CastlevaniaCircleMoonInput(pad);
-
-			case KIDDRACULA:
-				return KidDraculaInput(pad);
-		}
+		const GameInputFn gameInput = FindGameInput();
+		if (gameInput)
+			return gameInput(pad);
 	}
 
 	// Get baseline movement (translates unified Analog Sticks to VBA directions)

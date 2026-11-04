@@ -414,6 +414,8 @@ Colourized/translated games may still show minor distortion, though it's improve
 
 Turn **Match Wii Controls** (or **Match GC Controls**) on in the in-game menu to use motion/gesture controls modeled after each game's Wii/GameCube counterpart, with a Wii Remote, Nunchuk, Classic Controller, or GameCube Controller plugged in. Games without an entry here just use your regular configured controls.
 
+> **Match Wii Controls replaces your Button Mappings for the games listed below.** While it is on, those games ignore the mappings (they are kept, not erased, and apply again when you turn it off). The Button Mappings screen shows a warning when this is the case. The setting is global rather than per game, but it only affects the games in this table.
+
 | Games | Modeled after |
 |---|---|
 | The Legend of Zelda, Zelda II, A Link to the Past, Link's Awakening (DX), Oracle of Ages, Oracle of Seasons, Minish Cap | *Twilight Princess* |

@@ -93,6 +93,16 @@ std::string Tr(const char * s)
 	return textTranslator ? std::string(textTranslator->getText(s)) : std::string(s);
 }
 
+// The name of the in-game menu option that bypasses these mappings
+const char * WiiControlsOptionName()
+{
+#ifndef HW_DOL
+	return "Match Wii Controls";
+#else
+	return "Match GC Controls";
+#endif
+}
+
 GLYPH GlyphFor(MAP_ICON icon, const char *& letter)
 {
 	letter = "";
@@ -223,7 +233,13 @@ GuiCard& MappingView::bindingRow(const MapRow& r, bool onLeft, int width)
 
 	GuiCard& row = ui.card();
 	row.size(width, 0).style(MenuRowHighlightStyle()).pad(padX, 4).corners(GuiCorners(9.0f));
-	row.onFocus([this, name]{ status = GuiFormat("A changes what %s does", Tr(name).c_str()); });
+	row.onFocus([this, name]{
+		// while Match Wii Controls is overriding this game, what is set here is kept but not used
+		if(WiiControlsOverrideActive())
+			status = GuiFormat("Not used while %s is on", Tr(WiiControlsOptionName()).c_str());
+		else
+			status = GuiFormat("A changes what %s does", Tr(name).c_str());
+	});
 	row.onClick([this, index]{ requestedRow = index; rowRequested = true; });
 	row.add(content);
 	rows.push_back(std::make_pair(index, &row));
@@ -330,6 +346,22 @@ MappingView::MappingView(int hw) :
 
 	GuiLayout& content = ui.overlay().size(kContentW, stageH);
 	content.add(reset, GuiItem().at(LAYOUT_ALIGN::END, LAYOUT_ALIGN::START));
+
+	// When Match Wii Controls is on for a game that has its own controls, these mappings are bypassed: say so, up here,
+	// in the strip the drawing leaves free (clear of Reset at the other end). Amber, not the palette accent: it is a warning.
+	if(WiiControlsOverrideActive())
+	{
+		const int bannerW = kContentW - 48 - 10;
+		const std::string msg = GuiFormat("%s is on: this game ignores these mappings", Tr(WiiControlsOptionName()).c_str());
+		GuiLabel& warnText = ui.label(msg.c_str()).fontSize(UI_FONT_SMALL).textColor(MenuRGBA(104, 66, 0));
+		warnText.setMaxWidth(bannerW - 20);
+		warnText.setScroll(SCROLL::HORIZONTAL);
+		GuiCard& warn = ui.card().selectable(false)
+			.style(GuiShapeStyle(GuiPaint().color(MenuRGBA(255, 243, 205)).stroke(1.5f, MenuRGBA(214, 158, 46))))
+			.pad(10, 3).corners(GuiCorners(9.0f)).size(bannerW, 0);
+		warn.add(warnText);
+		content.add(warn, GuiItem().at(LAYOUT_ALIGN::START, LAYOUT_ALIGN::START));
+	}
 	content.add(stage, GuiItem().at(LAYOUT_ALIGN::START, LAYOUT_ALIGN::END));
 
 	GuiCard& panel = ui.card().selectable(false).style(MenuPageCardStyle()).pad(kCardPad, kCardPad).size(kBodyW, 0);

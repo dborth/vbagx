@@ -2,6 +2,9 @@
 
 All notable changes to Visual Boy Advance GX are recorded here, newest first. For the current features and setup instructions, see [README.md](README.md).
 
+## Unreleased
+* **The Button Mappings screen now warns you when Match Wii Controls (Match GC Controls on GameCube) is overriding them** for the current game, instead of leaving you to wonder why your mappings have no effect
+
 ## 3.0.5 - November 3, 2026
 * **The left analog stick now moves the pointer in the menus**, on every controller, like a mouse. It no longer also steps through the buttons; the D-pad still does
 * **A Wiimote with anything plugged into it is now always vertical in the menus**, and its buttons and IR pointer work alongside the extension (a Nunchuk on Wii and a Classic Controller on both Wii and Wii U previously lost them)
