@@ -306,11 +306,7 @@ uint32_t StandardClassic(unsigned short pad)
 	return J;
 }
 
-//! A game's own "Match Wii Controls" handler, as it reads the pad
-typedef uint32_t (*GameInputFn)(unsigned short pad);
-
-//! The "Match Wii Controls" handler for the loaded game, or nullptr if it has none
-static GameInputFn FindGameInput()
+GameInputFn CurrentGameInput()
 {
 	switch (RomIdCode & 0xFFFFFF) {
 		// Zelda
@@ -495,7 +491,7 @@ static GameInputFn FindGameInput()
 
 bool GameHasWiiControls()
 {
-	return FindGameInput() != nullptr;
+	return CurrentGameInput() != nullptr;
 }
 
 bool WiiControlsOverrideActive()
@@ -520,7 +516,7 @@ static uint32_t DecodeJoy(unsigned short pad)
 
 	// check for games that should have special Wii controls
 	if (EmuSettings.wiiControls) {
-		const GameInputFn gameInput = FindGameInput();
+		const GameInputFn gameInput = CurrentGameInput();
 		if (gameInput)
 			return gameInput(pad);
 	}

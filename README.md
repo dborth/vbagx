@@ -414,6 +414,8 @@ Colourized/translated games may still show minor distortion, though it's improve
 Choose **Match Wii Controls** (or **Match GC Controls**) at the top of the Button Mappings screen to use motion/gesture controls modeled after each game's Wii/GameCube counterpart, with a Wii Remote, Nunchuk, Classic Controller, or GameCube Controller plugged in. Games without an entry here just use your regular configured controls.
 
 > **Match Wii Controls replaces your Button Mappings for the games listed below.** The choice only appears on the Button Mappings screen of those games, as **My Mappings | Match Wii Controls**. While Match Wii Controls is selected the mappings are shown faded: they are kept, not erased, and apply again when you switch back. The setting is global rather than per game, but it only affects the games in this table.
+>
+> While it is selected, the Button Mappings screen lists what each control does in that game, around the drawing of the controller you are using (the same descriptions as below, in short). Shakes, swings and pointing are listed under **Motion**. Select a line to see where the control is and the full description. For games the descriptions below don't cover, the mappings are shown faded instead.
 
 | Games | Modeled after |
 |---|---|

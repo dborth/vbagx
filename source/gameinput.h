@@ -14,6 +14,12 @@
 #include <stdint.h>
 #include "drivers/InputData.h"
 
+//! A game's own "Match Wii Controls" handler: reads the pad, returns the Game Boy Advance buttons held
+typedef uint32_t (*GameInputFn)(unsigned short pad);
+
+//! The handler for the loaded game, or nullptr if the game has no controls of its own
+GameInputFn CurrentGameInput();
+
 #define gid(a,b,c) (a|(b<<8)|(c<<16))
 
 #define BOKTAI1			gid('U','3','I')

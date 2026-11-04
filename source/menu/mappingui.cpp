@@ -10,11 +10,13 @@
 #include <vector>
 #include <algorithm>
 #include <string.h>
+#include <math.h>
 
 #include "libgui/Gui.h"
 #include "drivers/InputController.h"
 #include "mappingui.h"
 #include "mappingmodel.h"
+#include "wiicontrols.h"
 #include "mappingchooser.h"
 #include "controllerorder.h"
 #include "controllerview.h"
@@ -38,6 +40,8 @@ const int kResetH = 22;			// the Reset button's height, which the Match Wii Cont
 const int kWiiMapW = 96;			// its two segments
 const int kWiiGameW = 150;
 const int kWiiDimAlpha = 110;		// the rows and drawing while the mappings are not in use
+const int kWiiRowH = 29;			// about as tall as a row, to fit the lines of a game's controls to a column
+const int kWiiHeadH = 19;			// and a heading
 const int kCardPad = 8;
 const int kBodyW = 640 - 2 * MENU_PAGE_MARGIN;
 const int kContentW = kBodyW - 2 * kCardPad;
@@ -144,6 +148,156 @@ const MapRow * FindRow(int index)
 	return nullptr;
 }
 
+// The icon for a control of a game's own controls. The Nunchuk's C and Z are the left trigger bits; the GameCube pad's
+// Z is the right Z trigger and its C-stick is the right stick.
+struct ControlGlyph {
+	GLYPH kind;
+	const char * letter;
+};
+
+ControlGlyph GlyphForControl(WiiScheme scheme, uint32_t bit)
+{
+	switch(bit)
+	{
+		case INPUT_BTN_A: return { GLYPH::BUTTON, "A" };
+		case INPUT_BTN_B: return { GLYPH::BUTTON, "B" };
+		case INPUT_BTN_X: return { GLYPH::BUTTON, "X" };
+		case INPUT_BTN_Y: return { GLYPH::BUTTON, "Y" };
+		case INPUT_BTN_1: return { GLYPH::BUTTON, "1" };
+		case INPUT_BTN_2: return { GLYPH::BUTTON, "2" };
+		case INPUT_BTN_UP: return { GLYPH::UP, "" };
+		case INPUT_BTN_DOWN: return { GLYPH::DOWN, "" };
+		case INPUT_BTN_LEFT: return { GLYPH::LEFT, "" };
+		case INPUT_BTN_RIGHT: return { GLYPH::RIGHT, "" };
+		case INPUT_BTN_PLUS: return { GLYPH::PLUS, "" };
+		case INPUT_BTN_MINUS: return { GLYPH::MINUS, "" };
+		case INPUT_BTN_HOME: return { GLYPH::HOME, "" };
+		case INPUT_TRIGGER_L: return scheme == WiiScheme::WII ? ControlGlyph{ GLYPH::BUTTON, "C" } : ControlGlyph{ GLYPH::BUMPER, "L" };
+		case INPUT_TRIGGER_R: return { GLYPH::BUMPER, "R" };
+		case INPUT_TRIGGER_ZL: return { GLYPH::BUMPER, scheme == WiiScheme::WII ? "Z" : "ZL" };
+		case INPUT_TRIGGER_ZR: return { GLYPH::BUMPER, scheme == WiiScheme::GAMECUBE ? "Z" : "ZR" };
+		case INPUT_THUMB_L: return { GLYPH::STICK, scheme == WiiScheme::WII ? "" : "L" };
+		case INPUT_THUMB_R: return { GLYPH::STICK, scheme == WiiScheme::GAMECUBE ? "C" : "R" };
+	}
+	return { GLYPH::BUTTON, "" };
+}
+
+// One line of a game's controls, placed
+struct WiiRowPlan {
+	const WiiAction * action;
+	std::vector<int> spots;		// the controls on the drawing it is on
+	float x, y;					// where, on the drawing
+};
+
+bool ByY(const WiiRowPlan& a, const WiiRowPlan& b) { return a.y < b.y; }
+
+int ColumnHeight(const std::vector<WiiRowPlan>& rows, const std::vector<WiiRowPlan>& extra)
+{
+	return (int)rows.size() * (kWiiRowH + kRowGap) + (extra.empty() ? 0 : kWiiHeadH + (int)extra.size() * (kWiiRowH + kRowGap));
+}
+
+// Moves the line nearest the middle of the drawing from one column to the other
+void MoveNearestMiddle(std::vector<WiiRowPlan>& from, std::vector<WiiRowPlan>& to, float mid)
+{
+	size_t best = 0;
+	float bestD = 1e9f;
+	for(size_t i = 0; i < from.size(); i++)
+	{
+		const float d = fabsf(from[i].x - mid);
+		if(d < bestD)
+		{
+			bestD = d;
+			best = i;
+		}
+	}
+	to.push_back(from[best]);
+	from.erase(from.begin() + (long)best);
+	std::stable_sort(to.begin(), to.end(), ByY);
+}
+
+// Where the lines of a game's controls go: each button's line in the column on its side of the drawing, top to bottom,
+// the columns evened out (a Wiimote is a single strip, so it is split down the middle); then the lines about something
+// other than a button (a shake, a swing) under a heading in whichever column has more room, as many as fit in `budget`.
+// A button the drawing has no control for (the Nunchuk's C and Z on a Wiimote alone) has no line.
+void PlanWiiColumns(const ControllerLayout& layout, const WiiControls& controls, int budget,
+	std::vector<WiiRowPlan> side[2], std::vector<WiiRowPlan> extra[2])
+{
+	std::vector<WiiRowPlan> buttons, others;
+	for(size_t i = 0; i < controls.actions.size(); i++)
+	{
+		WiiRowPlan p;
+		p.action = &controls.actions[i];
+		p.x = p.y = 0.0f;
+		if(p.action->ids == 0)
+		{
+			others.push_back(p);
+			continue;
+		}
+		for(int bit = 0; bit < 32; bit++)
+		{
+			const uint32_t b = 1u << bit;
+			const ControlSpot * spot = (p.action->ids & b) ? layout.find((int)b) : nullptr;
+			if(!spot)
+				continue;
+			p.spots.push_back((int)b);
+			p.x += spot->x + spot->w / 2.0f;
+			p.y += spot->y + spot->h / 2.0f;
+		}
+		if(p.spots.empty())
+			continue;
+		p.x /= (float)p.spots.size();
+		p.y /= (float)p.spots.size();
+		buttons.push_back(p);
+	}
+	std::stable_sort(buttons.begin(), buttons.end(), ByY);
+
+	float minX = 1e9f, maxX = -1e9f;
+	for(size_t i = 0; i < buttons.size(); i++)
+	{
+		minX = std::min(minX, buttons[i].x);
+		maxX = std::max(maxX, buttons[i].x);
+	}
+	const bool strip = (maxX - minX) < layout.width * 0.2f;
+	const float mid = layout.width / 2.0f;
+	for(size_t i = 0; i < buttons.size(); i++)
+	{
+		const bool toRight = strip ? i >= (buttons.size() + 1) / 2 : buttons[i].x >= mid;
+		side[toRight ? 1 : 0].push_back(buttons[i]);
+	}
+	// even the columns out: the line nearest the middle goes from the longer to the shorter
+	while(side[0].size() > side[1].size() + 2 || side[1].size() > side[0].size() + 2)
+	{
+		const int from = side[0].size() > side[1].size() ? 0 : 1;
+		MoveNearestMiddle(side[from], side[1 - from], mid);
+	}
+	for(int c = 0; c < 2; c++)
+	{
+		std::stable_sort(side[c].begin(), side[c].end(), ByY);
+		while(!side[c].empty() && ColumnHeight(side[c], extra[c]) > budget)	// more than fits: the last ones go
+			side[c].pop_back();
+	}
+
+	// the lines that are not a button share one heading, so they go in one column: the one that has them, else the
+	// shorter. If they do not fit, a button's line moves over to the other column to make room, if that has room.
+	for(size_t i = 0; i < others.size(); i++)
+	{
+		for(int attempt = 0; attempt < 8; attempt++)
+		{
+			const int to = extra[0].empty() != extra[1].empty() ? (extra[0].empty() ? 1 : 0)
+				: (ColumnHeight(side[0], extra[0]) <= ColumnHeight(side[1], extra[1]) ? 0 : 1);
+			const int need = kWiiRowH + (extra[to].empty() ? kWiiHeadH : 0);
+			if(ColumnHeight(side[to], extra[to]) + need <= budget)
+			{
+				extra[to].push_back(others[i]);
+				break;
+			}
+			if(side[to].empty() || ColumnHeight(side[1 - to], extra[1 - to]) + kWiiRowH + kRowGap > budget)
+				break;
+			MoveNearestMiddle(side[to], side[1 - to], mid);
+		}
+	}
+}
+
 // What a row uses by default. Defaults are only set by ResetControls (all of a controller's rows at once, and for the
 // Wii U Pro controller and the GamePad together), so this has it set them and puts everything back.
 uint32_t DefaultButton(int hw, int index)
@@ -207,6 +361,7 @@ class MappingView : public GuiOverlay
 	private:
 		GuiCard& bindingRow(const MapRow& r, bool onLeft, int width);
 		GuiCard& wiiSegment(const char * text, int width, bool on, bool wii, const char * hint);
+		GuiCard& wiiRow(const WiiRowPlan& plan, WiiScheme scheme, bool onLeft, int width);
 
 		UiScope ui;
 		int hardware;
@@ -214,6 +369,7 @@ class MappingView : public GuiOverlay
 		std::string status;
 		std::vector<std::pair<int, GuiCard*>> rows;		// btnmap index, row
 		std::vector<bool> rowOnLeft;
+		std::vector<std::vector<int>> wiiSpots;		// when the rows are a game's controls: the controls each is on, by row index
 		GuiTextButton * backBtn;
 		GuiTextButton * resetBtn;
 		GuiCard * usingChip;
@@ -258,6 +414,48 @@ GuiCard& MappingView::bindingRow(const MapRow& r, bool onLeft, int width)
 			status = GuiFormat("A changes what %s does", Tr(name).c_str());
 	});
 	row.onClick([this, index]{ requestedRow = index; rowRequested = true; });
+	row.add(content);
+	rows.push_back(std::make_pair(index, &row));
+	rowOnLeft.push_back(onLeft);
+	return row;
+}
+
+//!One line of a game's own controls: the icon of the control (or of each of the first two it is on), what it does, and
+//!the whole story as the hint. It can be selected to show where the control is on the drawing, but not changed.
+GuiCard& MappingView::wiiRow(const WiiRowPlan& plan, WiiScheme scheme, bool onLeft, int width)
+{
+	const int padX = 8;
+	const WiiAction& a = *plan.action;
+	const int index = (int)wiiSpots.size();
+	wiiSpots.push_back(plan.spots);
+
+	GuiLayout& content = ui.row().size(width - 2 * padX, 0).gap(6).align(LAYOUT_ALIGN::CENTRE);
+
+	// an icon for each of the first two controls; a whole D-pad has none (the drawing shows it)
+	const uint32_t dpad = INPUT_BTN_UP | INPUT_BTN_DOWN | INPUT_BTN_LEFT | INPUT_BTN_RIGHT;
+	uint32_t shown = 0;
+	for(size_t i = 0; i < plan.spots.size(); i++)
+		shown |= (uint32_t)plan.spots[i];
+	if((shown & dpad) == dpad)
+		shown &= ~dpad;
+	int icons = 0;
+	for(int bit = 0; bit < 32 && icons < 2; bit++)
+		if(shown & (1u << bit))
+		{
+			const ControlGlyph g = GlyphForControl(scheme, 1u << bit);
+			content.add(ui.glyph(g.kind, g.letter));
+			icons++;
+		}
+
+	GuiLabel& label = ui.label(Tr(a.name).c_str()).fontSize(UI_FONT_SMALL + 2).nudgeY(2);
+	label.setMaxWidth(width - 2 * padX - icons * 30);
+	label.setScroll(SCROLL::HORIZONTAL);
+	content.add(label);
+
+	const std::string hint = Tr(a.detail ? a.detail : a.name);
+	GuiCard& row = ui.card();
+	row.size(width, 0).style(MenuRowHighlightStyle()).pad(padX, 4).corners(GuiCorners(9.0f));
+	row.onFocus([this, hint]{ status = hint; });
 	row.add(content);
 	rows.push_back(std::make_pair(index, &row));
 	rowOnLeft.push_back(onLeft);
@@ -341,20 +539,52 @@ MappingView::MappingView(int hw, bool selectWii) :
 		return pad && id > 0 && (pad->hw_buttons_h[hw] & (uint32_t)id) != 0;
 	});
 
-	const auto column = [this](const std::vector<MapGroup>& groups, bool onLeft) -> GuiLayout& {
-		GuiLayout& col = ui.column().gap(kRowGap).align(onLeft ? LAYOUT_ALIGN::END : LAYOUT_ALIGN::START);
-		for(size_t g = 0; g < groups.size(); g++)
-		{
-			GuiLayout& heading = ui.row().size(kSideW, 0).pad(8, 5, 0, 1)
-				.add(ui.label(Tr(groups[g].title).c_str()).fontSize(UI_FONT_SMALL - 2).muted());
-			col.add(heading);
-			for(size_t i = 0; i < groups[g].rows.size(); i++)
-				col.add(bindingRow(groups[g].rows[i], onLeft, kSideW));
-		}
-		return col;
-	};
-	GuiLayout& left = column(profile.left, true);
-	GuiLayout& right = column(profile.right, false);
+	// While the game's own Wii controls are replacing the mappings, and we have them written down, the rows are what they
+	// do (laid out by where each control is on the drawing); otherwise they are the mappings
+	WiiControls wiiControls;
+	const WiiScheme wiiScheme = WiiSchemeFor(hardware);
+	const bool showWii = WiiControlsOverrideActive() && WiiControlsFor(wiiScheme, wiiControls);
+
+	GuiLayout * leftCol;
+	GuiLayout * rightCol;
+	if(showWii)
+	{
+		std::vector<WiiRowPlan> side[2], extra[2];
+		PlanWiiColumns(layout, wiiControls, stageH - stageTop, side, extra);
+		const auto wiiColumn = [this, wiiScheme](const std::vector<WiiRowPlan>& plans, const std::vector<WiiRowPlan>& other, bool onLeft) -> GuiLayout& {
+			GuiLayout& col = ui.column().gap(kRowGap).align(onLeft ? LAYOUT_ALIGN::END : LAYOUT_ALIGN::START);
+			for(size_t i = 0; i < plans.size(); i++)
+				col.add(wiiRow(plans[i], wiiScheme, onLeft, kSideW));
+			if(!other.empty())
+			{
+				GuiLayout& heading = ui.row().size(kSideW, 0).pad(8, 5, 0, 1)
+					.add(ui.label(Tr(wiiScheme == WiiScheme::WII ? "MOTION" : "NOTES").c_str()).fontSize(UI_FONT_SMALL - 2).muted());
+				col.add(heading);
+				for(size_t i = 0; i < other.size(); i++)
+					col.add(wiiRow(other[i], wiiScheme, onLeft, kSideW));
+			}
+			return col;
+		};
+		leftCol = &wiiColumn(side[0], extra[0], true);
+		rightCol = &wiiColumn(side[1], extra[1], false);
+	}
+	else
+	{
+		const auto column = [this](const std::vector<MapGroup>& groups, bool onLeft) -> GuiLayout& {
+			GuiLayout& col = ui.column().gap(kRowGap).align(onLeft ? LAYOUT_ALIGN::END : LAYOUT_ALIGN::START);
+			for(size_t g = 0; g < groups.size(); g++)
+			{
+				GuiLayout& heading = ui.row().size(kSideW, 0).pad(8, 5, 0, 1)
+					.add(ui.label(Tr(groups[g].title).c_str()).fontSize(UI_FONT_SMALL - 2).muted());
+				col.add(heading);
+				for(size_t i = 0; i < groups[g].rows.size(); i++)
+					col.add(bindingRow(groups[g].rows[i], onLeft, kSideW));
+			}
+			return col;
+		};
+		leftCol = &column(profile.left, true);
+		rightCol = &column(profile.right, false);
+	}
 
 	// the drawing marks the control the selected row is mapped to, with a line to it
 	ui.bind([this, h, &layout]{
@@ -377,6 +607,15 @@ MappingView::MappingView(int hw, bool selectWii) :
 			}
 			return;
 		}
+		if(!wiiSpots.empty())
+		{
+			// a game's own controls: the line says which controls it is on
+			const std::vector<int>& spots = wiiSpots[(size_t)index];
+			view->setHighlight(spots);
+			view->setLeader(!spots.empty(), (float)(onLeft ? selected->getLeft() + selected->getWidth() : selected->getLeft()),
+				(float)(selected->getTop() + selected->getHeight() / 2));
+			return;
+		}
 		const int id = MappingSpotFor(layout, btnmap[h][index]);
 		view->setHighlight(id);
 		const float midY = (float)(selected->getTop() + selected->getHeight() / 2);
@@ -385,9 +624,9 @@ MappingView::MappingView(int hw, bool selectWii) :
 	});
 
 	GuiLayout& stage = ui.row().size(kContentW, stageH).pad(0, stageTop, 0, 0).gap(6).align(LAYOUT_ALIGN::CENTRE).justifyContent(LAYOUT_JUSTIFY::CENTRE)
-		.add(left).add(*view).add(right);
+		.add(*leftCol).add(*view).add(*rightCol);
 	// the mappings are kept but not in use while the game's own Wii controls are: show them faded
-	if(WiiControlsOverrideActive())
+	if(WiiControlsOverrideActive() && !showWii)
 		stage.setAlpha(kWiiDimAlpha);
 
 	GuiTextButton& reset = ui.button(Tr("Reset").c_str()).size(48, kResetH).fontSize(UI_FONT_SMALL - 1).style(MenuKeycapStyle())
