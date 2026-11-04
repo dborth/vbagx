@@ -235,7 +235,7 @@ Configure the GBA/GB controller independently for each input device you have con
 
 Game Boy and Game Boy Color games don't have L and R buttons — those only work in Game Boy Advance games.
 
-Whatever controls you choose here can be overridden for certain games by turning on **Match Wii Controls** (or **Match GC Controls** on GameCube) in the in-game menu, with the appropriate expansion plugged in — see [Special Wii Controls](#special-wii-controls). Games without special Wii controls just use whatever you configured here.
+Whatever controls you choose here can be overridden for certain games by choosing **Match Wii Controls** (or **Match GC Controls** on GameCube) at the top of the Button Mappings screen, with the appropriate expansion plugged in — see [Special Wii Controls](#special-wii-controls). Games without special Wii controls just use whatever you configured here.
 
 In addition to the controls you configure, these always apply:
 
@@ -320,12 +320,11 @@ The File Browser loads automatically on startup and lists the contents of your `
 
 ## Gameplay
 
-Once you choose a game, it starts. Press **Home** to open the in-game menu (Saves, Button Mappings, Reset, Match Wii Controls, Game Settings). Select **Main Menu** to return to the File Browser, or **Close** to resume play.
+Once you choose a game, it starts. Press **Home** to open the in-game menu (Saves, Button Mappings, Reset, Game Settings). Select **Main Menu** to return to the File Browser, or **Close** to resume play.
 
 - **Saves** manages your Snapshots and the game's Cartridge Save, and sets the Save Mode (see [Saves](#saves)).
-- **Button Mappings** opens the [button mapping](#button-mappings) screen.
+- **Button Mappings** opens the [button mapping](#button-mappings) screen. For games with [special Wii controls](#special-wii-controls) it also holds the Match Wii Controls choice, and while that is on the button wears a small **Wii** (**GC** on GameCube) badge.
 - **Reset** resets the current game.
-- **Match Wii Controls** (**Match GC Controls** on GameCube) switches between ON and OFF each time you click it. See [Special Wii Controls](#special-wii-controls).
 - **Game Settings** has Emulation, Video, Screenshot, and Cheats (your loaded cheat codes, below).
 
 If you're playing a Boktai game with the solar sensor active, a Weather button beside Game Settings lets you set the in-game weather; sunlight is based on the weather, time of day, and the angle of your Wiimote. Note that if it's night time for real, there won't be any sun regardless of what you set the weather to.
@@ -412,9 +411,9 @@ Colourized/translated games may still show minor distortion, though it's improve
 
 ## Special Wii Controls
 
-Turn **Match Wii Controls** (or **Match GC Controls**) on in the in-game menu to use motion/gesture controls modeled after each game's Wii/GameCube counterpart, with a Wii Remote, Nunchuk, Classic Controller, or GameCube Controller plugged in. Games without an entry here just use your regular configured controls.
+Choose **Match Wii Controls** (or **Match GC Controls**) at the top of the Button Mappings screen to use motion/gesture controls modeled after each game's Wii/GameCube counterpart, with a Wii Remote, Nunchuk, Classic Controller, or GameCube Controller plugged in. Games without an entry here just use your regular configured controls.
 
-> **Match Wii Controls replaces your Button Mappings for the games listed below.** While it is on, those games ignore the mappings (they are kept, not erased, and apply again when you turn it off). The Button Mappings screen shows a warning when this is the case. The setting is global rather than per game, but it only affects the games in this table.
+> **Match Wii Controls replaces your Button Mappings for the games listed below.** The choice only appears on the Button Mappings screen of those games, as **My Mappings | Match Wii Controls**. While Match Wii Controls is selected the mappings are shown faded: they are kept, not erased, and apply again when you switch back. The setting is global rather than per game, but it only affects the games in this table.
 
 | Games | Modeled after |
 |---|---|

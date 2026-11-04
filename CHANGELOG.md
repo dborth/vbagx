@@ -3,8 +3,7 @@
 All notable changes to Visual Boy Advance GX are recorded here, newest first. For the current features and setup instructions, see [README.md](README.md).
 
 ## Unreleased
-* **The Button Mappings screen now warns you when Match Wii Controls (Match GC Controls on GameCube) is overriding them** for the current game, instead of leaving you to wonder why your mappings have no effect
-* **Match Wii Controls (Match GC Controls) now shows when it does nothing.** For a game with no special controls of its own, the switch is dimmed and a note says so
+* **Match Wii Controls (Match GC Controls on GameCube) has moved to the Button Mappings screen**, next to what it replaces. For a game with special Wii controls, a **My Mappings | Match Wii Controls** choice appears at the top; while Match Wii Controls is selected the mappings are shown faded, and the in-game menu's Button Mappings button wears a **Wii** badge. Games without special controls never show it, and the in-game menu is back to its simpler layout
 
 ## 3.0.5 - November 3, 2026
 * **The left analog stick now moves the pointer in the menus**, on every controller, like a mouse. It no longer also steps through the buttons; the D-pad still does

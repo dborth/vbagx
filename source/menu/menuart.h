@@ -142,6 +142,46 @@ class MenuSwitch : public GuiElement
 		float knobX = 0.0f;
 };
 
+//!A button's icon with a small capsule badge ("Wii") over its top right corner: a state worth seeing at a glance, drawn
+//!on the button itself so it reads over any background. Use it as the icon of a GuiButton of the icon's size; it
+//!draws the icon, then the badge, and follows the button's growing and fading like the icon does.
+class MenuBadgedIcon : public GuiElement
+{
+	public:
+		enum { PILL_W = 46, PILL_H = 22, INSET_X = 8, INSET_Y = 3 };
+
+		MenuBadgedIcon(GuiElement& icon, const char * text, int w, int h) :
+			inner(icon), pill(PILL_W, PILL_H), label(text, 15, (PixelColor){255, 255, 255, 255})
+		{
+			setSize(w, h);
+			inner.setParent(this);
+
+			const MenuPalette& p = MenuPaletteCurrent();
+			pill.setCapsule();
+			pill.setPaint(GuiPaint().color(p.accent).stroke(2.5f, MenuRGBA(255, 255, 255)).shadow(4.0f, MenuRGBA(0, 0, 0, 90), 0.0f, 1.5f));
+			pill.setAlignment(ALIGN_H::RIGHT, ALIGN_V::TOP);
+			pill.setPosition(-INSET_X, INSET_Y);
+			pill.setParent(this);
+
+			label.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
+			label.setParent(&pill);
+		}
+
+		void draw() override
+		{
+			if(!isVisible())
+				return;
+			inner.draw();
+			pill.draw();
+			label.draw();
+		}
+
+	private:
+		GuiElement& inner;
+		GuiShape pill;
+		GuiText label;
+};
+
 //!A page-turning arrow: gray, turning to the accent color while its button is
 //!highlighted. Use it as the image of a GuiButton of MENU_ARROW_* size; it centers
 //!itself in the button.

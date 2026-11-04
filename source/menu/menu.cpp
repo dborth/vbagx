@@ -1603,12 +1603,21 @@ static int MenuGame()
 	mappingBtnTxt.setWrap(true, MENU_BTN_LARGE_W-30);
 	MenuButtonShape mappingBtnImg(MenuButtonShape::LARGE);
 	GuiImage mappingBtnIcon(&iconMappings);
+	// While a game's own Wii controls are replacing the mappings, the button wears a small badge saying so
+	#ifndef HW_DOL
+	MenuBadgedIcon mappingBtnBadgedIcon(mappingBtnIcon, "Wii", MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
+	#else
+	MenuBadgedIcon mappingBtnBadgedIcon(mappingBtnIcon, "GC", MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
+	#endif
 	GuiButton mappingBtn(MENU_BTN_LARGE_W, MENU_BTN_LARGE_H);
 	mappingBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
 	mappingBtn.setPosition(-200, 150);
 	mappingBtn.setLabel(&mappingBtnTxt);
 	mappingBtn.setImage(&mappingBtnImg);
-	mappingBtn.setIcon(&mappingBtnIcon);
+	if (WiiControlsOverrideActive())
+		mappingBtn.setIcon(&mappingBtnBadgedIcon);
+	else
+		mappingBtn.setIcon(&mappingBtnIcon);
 	mappingBtn.setTrigger(trigA);
 	mappingBtn.setEffectGrow();
 
@@ -1636,53 +1645,12 @@ static int MenuGame()
 	resetBtn.setTrigger(trigA);
 	resetBtn.setEffectGrow();
 
-	// Second row: Match Wii Controls and Game Settings, centred as a pair. Match Wii Controls is a button like
-	// the others with an on/off switch inside it: it flips where it is, rather than opening a popover.
-	#ifndef HW_DOL
-	GuiText wiiControlsBtnTxt("Match Wii Controls", 18, (PixelColor){0, 0, 0, 255});
-	#else
-	GuiText wiiControlsBtnTxt("Match GC Controls", 18, (PixelColor){0, 0, 0, 255});
-	#endif
-	// The label is centred in the space between the button's left edge and the switch
-	const int wiiControlsTxtLeft = 14;
-	const int wiiControlsTxtW = MENU_BTN_NORMAL_W - wiiControlsTxtLeft - MenuSwitch::W - 16 - 12;
-	wiiControlsBtnTxt.setWrap(true, wiiControlsTxtW);
-	wiiControlsBtnTxt.setLineSpacing(-2);
-	wiiControlsBtnTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
-	wiiControlsBtnTxt.setPosition(wiiControlsTxtLeft + wiiControlsTxtW / 2 - MENU_BTN_NORMAL_W / 2, 0);
-	MenuSwitch wiiControlsSwitch(EmuSettings.wiiControls);
-	wiiControlsSwitch.setAlignment(ALIGN_H::RIGHT, ALIGN_V::MIDDLE);
-	wiiControlsSwitch.setPosition(-16, 0);
-	MenuButtonShape wiiControlsBtnImg(MenuButtonShape::NORMAL);
-	GuiButton wiiControlsBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
-	wiiControlsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	wiiControlsBtn.setPosition(-120, 290);
-	wiiControlsBtn.setLabel(&wiiControlsBtnTxt);
-	wiiControlsBtn.setImage(&wiiControlsBtnImg);
-	wiiControlsBtn.setIcon(&wiiControlsSwitch);
-	wiiControlsBtn.setTrigger(trigA);
-	wiiControlsBtn.setEffectGrow();
-
-	// A game with no special controls of its own never looks at this setting. Say so, rather than let the switch
-	// look like it does something: it still shows where the setting is (it is global, and applies again to the
-	// next game that has controls) but dimmed, with a note under it.
-	const bool wiiControlsApplies = GameHasWiiControls();
-	GuiText wiiControlsNoteTxt("No special controls for this game", 14, (PixelColor){110, 110, 110, 255});
-	wiiControlsNoteTxt.setWrap(true, MENU_BTN_NORMAL_W + 30);
-	wiiControlsNoteTxt.setLineSpacing(-2);
-	wiiControlsNoteTxt.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	wiiControlsNoteTxt.setPosition(-120, 290 + MENU_BTN_NORMAL_H + 6);
-	if (!wiiControlsApplies)
-	{
-		wiiControlsBtnTxt.setColor((PixelColor){130, 130, 130, 255});
-		wiiControlsSwitch.setAlpha(110);
-	}
-
+	// Second row: Game Settings. (Match Wii Controls lives on the Button Mappings screen, next to what it replaces.)
 	GuiText gameSettingsBtnTxt("Game Settings", 22, (PixelColor){0, 0, 0, 255});
 	MenuButtonShape gameSettingsBtnImg(MenuButtonShape::NORMAL);
 	GuiButton gameSettingsBtn(MENU_BTN_NORMAL_W, MENU_BTN_NORMAL_H);
 	gameSettingsBtn.setAlignment(ALIGN_H::CENTRE, ALIGN_V::TOP);
-	gameSettingsBtn.setPosition(120, 290);
+	gameSettingsBtn.setPosition(0, 290);
 	gameSettingsBtn.setLabel(&gameSettingsBtnTxt);
 	gameSettingsBtn.setImage(&gameSettingsBtnImg);
 	gameSettingsBtn.setTrigger(trigA);
@@ -1753,9 +1721,6 @@ static int MenuGame()
 	w.append(&saveBtn);
 	w.append(&mappingBtn);
 	w.append(&resetBtn);
-	w.append(&wiiControlsBtn);
-	if (!wiiControlsApplies)
-		w.append(&wiiControlsNoteTxt);
 	w.append(&gameSettingsBtn);
 	if (isBoktai)
 		w.append(&sunBtn);
@@ -1826,15 +1791,6 @@ static int MenuGame()
 			else {
 				SelectButton(w, resetBtn);
 			}
-		}
-		else if(wiiControlsBtn.getState() == STATE::CLICKED)
-		{
-			EmuSettings.wiiControls = !EmuSettings.wiiControls;
-			wiiControlsSwitch.setOn(EmuSettings.wiiControls);
-			// stays selected, so the button keeps its highlight and the D-pad stays on it
-			const int chan = wiiControlsBtn.getStateChan();
-			wiiControlsBtn.resetState();
-			wiiControlsBtn.setState(STATE::SELECTED, chan);
 		}
 		else if(isBoktai && sunBtn.getState() == STATE::CLICKED)
 		{
