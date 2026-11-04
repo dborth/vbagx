@@ -1777,6 +1777,7 @@ static int MenuGame()
 		}
 		else if(mappingBtn.getState() == STATE::CLICKED)
 		{
+			MappingScreenOpenedBy(mappingBtn.getStateChan());
 			selection = MENU_GAMESETTINGS_MAPPINGS;
 		}
 		else if(resetBtn.getState() == STATE::CLICKED)

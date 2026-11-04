@@ -22,6 +22,7 @@
 #include "controllerview.h"
 #include "menupopover.h"
 #include "menustyle.h"
+#include "menuart.h"
 #include "menu.h"
 #include "input.h"
 #include "button_mapping.h"
@@ -36,9 +37,11 @@ int mapHardware = -1;
 
 const int kSideW = 172;			// a column of rows beside the drawing
 const int kRowGap = 1;
-const int kResetH = 22;			// the Reset button's height, which the Match Wii Controls choice matches
-const int kWiiMapW = 96;			// its two segments
-const int kWiiGameW = 150;
+const int kResetH = 22;			// the Reset button's height
+const int kWiiBarW = 188;			// the Match Wii Controls switch, in the strip above the drawing
+const int kWiiBarH = 32;
+const int kWiiBarPadX = 12;
+const int kWiiLabelW = kWiiBarW - 2 * kWiiBarPadX - 8 - MenuSwitch::W;
 const int kWiiDimAlpha = 110;		// the rows and drawing while the mappings are not in use
 const int kWiiRowH = 29;			// about as tall as a row, to fit the lines of a game's controls to a column
 const int kWiiHeadH = 19;			// and a heading
@@ -75,10 +78,41 @@ std::vector<int> HardwareList()
 	return v;
 }
 
-// The hardware to start on: the controller in use on channel 0, chosen the way the controller strip chooses its icon
-// (see controllerorder.h)
+// The hardware that opened the screen (the controller whose A pressed Button Mappings), or -1 when not known
+int openedHardware = -1;
+
+// The controller being used on a channel: the one that is pressing buttons. A Wiimote's own buttons are shared by what is
+// plugged into it, so with a Nunchuk, Classic Controller or Pro Controller on it that is the one (see controllerorder.h).
+// -1 when nothing on the channel is pressing anything.
+int HardwareInUse(int channel)
+{
+	if(channel < 0 || channel >= 4 || !controller[channel])
+		channel = 0;
+	if(!controller[channel])
+		return -1;
+	const InputPadData& pad = controller[channel]->getPadData();
+	static const int pressing[] = { INPUT_HW_DRC, INPUT_HW_WUPC, INPUT_HW_CLASSIC, INPUT_HW_GAMECUBE, INPUT_HW_WIIMOTE };
+	for(size_t i = 0; i < sizeof(pressing) / sizeof(pressing[0]); i++)
+	{
+		const int hw = pressing[i];
+		if(!pad.hw_connected[hw] || (pad.hw_buttons_d[hw] | pad.hw_buttons_h[hw] | pad.hw_buttons_r[hw]) == 0)
+			continue;
+		if(hw == INPUT_HW_WIIMOTE)
+		{
+			const int console = ControllerOrder::ConsoleHardware(pad);
+			return console == INPUT_HW_MAX ? hw : console;
+		}
+		return hw;
+	}
+	return -1;
+}
+
+// The hardware to start on: the controller that opened the screen; failing that, the controller in use on channel 0,
+// chosen the way the controller strip chooses its icon (see controllerorder.h)
 int DefaultHardware(const std::vector<int>& list)
 {
+	if(openedHardware >= 0 && Contains(list, openedHardware))
+		return openedHardware;
 	const InputPadData * pad = PadData();
 	if(pad)
 	{
@@ -344,7 +378,7 @@ class MappingView : public GuiOverlay
 			return true;
 		}
 		Pick takePick() { const Pick p = pickRequest; pickRequest = Pick::NONE; return p; }
-		//!Whether a choice between My Mappings and Match Wii Controls was clicked since the last call; `wii` is the one chosen
+		//!Whether the Match Wii Controls switch was clicked since the last call; `wii` is what it was turned to
 		bool takeWiiChoice(bool& wii)
 		{
 			if(!wiiRequested)
@@ -360,7 +394,7 @@ class MappingView : public GuiOverlay
 
 	private:
 		GuiCard& bindingRow(const MapRow& r, bool onLeft, int width);
-		GuiCard& wiiSegment(const char * text, int width, bool on, bool wii, const char * hint);
+		GuiCard& wiiToggle(bool on, bool animate);
 		GuiCard& wiiRow(const WiiRowPlan& plan, WiiScheme scheme, bool onLeft, int width);
 
 		UiScope ui;
@@ -373,7 +407,7 @@ class MappingView : public GuiOverlay
 		GuiTextButton * backBtn;
 		GuiTextButton * resetBtn;
 		GuiCard * usingChip;
-		GuiCard * wiiOn;			// the segment of Match Wii Controls that is on, when the game has them
+		GuiCard * wiiCard;		// the Match Wii Controls switch, when the game has them
 		bool wiiRequested;
 		bool wiiChoice;
 		bool rowRequested;
@@ -406,14 +440,15 @@ GuiCard& MappingView::bindingRow(const MapRow& r, bool onLeft, int width)
 
 	GuiCard& row = ui.card();
 	row.size(width, 0).style(MenuRowHighlightStyle()).pad(padX, 4).corners(GuiCorners(9.0f));
-	row.onFocus([this, name]{
-		// while Match Wii Controls is overriding this game, what is set here is kept but not used
-		if(WiiControlsOverrideActive())
-			status = GuiFormat("Not used while %s is on", Tr(WiiControlsOptionName()).c_str());
-		else
-			status = GuiFormat("A changes what %s does", Tr(name).c_str());
-	});
-	row.onClick([this, index]{ requestedRow = index; rowRequested = true; });
+	// while Match Wii Controls is overriding this game, what is set here is kept but not used: the rows are shown faded and
+	// can not be selected or clicked (the hint at the top says why)
+	if(WiiControlsOverrideActive())
+		row.selectable(false);
+	else
+	{
+		row.onFocus([this, name]{ status = GuiFormat("A changes what %s does", Tr(name).c_str()); });
+		row.onClick([this, index]{ requestedRow = index; rowRequested = true; });
+	}
 	row.add(content);
 	rows.push_back(std::make_pair(index, &row));
 	rowOnLeft.push_back(onLeft);
@@ -456,42 +491,43 @@ GuiCard& MappingView::wiiRow(const WiiRowPlan& plan, WiiScheme scheme, bool onLe
 	GuiCard& row = ui.card();
 	row.size(width, 0).style(MenuRowHighlightStyle()).pad(padX, 4).corners(GuiCorners(9.0f));
 	row.onFocus([this, hint]{ status = hint; });
+	// nothing to change here; a click that did nothing would leave the row stuck in its clicked state
+	row.onClick([]{});
 	row.add(content);
 	rows.push_back(std::make_pair(index, &row));
 	rowOnLeft.push_back(onLeft);
 	return row;
 }
 
-//!One half of the choice between the game's Wii controls and the mappings: dark while it is the one in use. Clicking the
-//!other one asks the screen to switch (the screen is rebuilt to show it).
-GuiCard& MappingView::wiiSegment(const char * text, int width, bool on, bool wii, const char * hint)
+//!The switch that has the game use its own Wii controls instead of these mappings. Clicking it asks the screen to turn it
+//!(the screen is rebuilt to show the other rows); `animate` starts the knob where it was, so it slides to its new place.
+GuiCard& MappingView::wiiToggle(bool on, bool animate)
 {
-	const int h = kResetH - 4;
-	GuiLabel& label = ui.label(text).fontSize(UI_FONT_SMALL).nudgeY(2);
-	if(on)
-		label.textColor(MenuRGBA(255, 255, 255));
-	label.setMaxWidth(width - 16);
-	GuiLayout& line = ui.row().size(width - 16, h).align(LAYOUT_ALIGN::CENTRE).justifyContent(LAYOUT_JUSTIFY::CENTRE).add(label);
+	GuiLabel& label = ui.label(Tr(WiiControlsOptionName()).c_str()).fontSize(UI_FONT_SMALL + 1).nudgeY(2);
+	label.setMaxWidth(kWiiLabelW);
+	label.setScroll(SCROLL::HORIZONTAL);
+	MenuSwitch& knob = ui.make<MenuSwitch>(animate ? !on : on);
+	if(animate)
+		knob.setOn(on);
 
-	GuiCard& seg = ui.card();
-	seg.size(width, h).style(MenuToggleSegmentStyle(on)).pad(8, 0).corners(GuiCorners(h / 2.0f));
-	seg.onFocus([this, hint]{ status = Tr(hint); });
-	seg.onClick([this, on, wii]{
-		if(!on)
-		{
-			wiiChoice = wii;
-			wiiRequested = true;
-		}
+	GuiLayout& line = ui.row().size(kWiiBarW - 2 * kWiiBarPadX, 0).gap(8).align(LAYOUT_ALIGN::CENTRE)
+		.add(label).addSpace().add(knob);
+
+	GuiCard& card = ui.card();
+	card.size(kWiiBarW, kWiiBarH).style(MenuChipStyle()).corners(GuiCorners(kWiiBarH / 2.0f)).pad(kWiiBarPadX, 0);
+	card.onFocus([this, on]{ status = Tr(on ? "A goes back to using the mappings below" : "A uses this game's own Wii controls instead"); });
+	card.onClick([this, on]{
+		wiiChoice = !on;
+		wiiRequested = true;
 	});
-	seg.add(line);
-	if(on)
-		wiiOn = &seg;
-	return seg;
+	card.add(line);
+	wiiCard = &card;
+	return card;
 }
 
 MappingView::MappingView(int hw, bool selectWii) :
 	hardware(hw), view(nullptr), status("Move over a button to see what it uses"),
-	backBtn(nullptr), resetBtn(nullptr), usingChip(nullptr), wiiOn(nullptr), wiiRequested(false), wiiChoice(false),
+	backBtn(nullptr), resetBtn(nullptr), usingChip(nullptr), wiiCard(nullptr), wiiRequested(false), wiiChoice(false),
 	rowRequested(false), requestedRow(0), pickRequest(Pick::NONE)
 {
 	const int sw = platform->getVideo()->getScreenWidth();
@@ -525,10 +561,10 @@ MappingView::MappingView(int hw, bool selectWii) :
 	const int bodyH = sh - MENU_BAR_TOP_H - MENU_BAR_BOTTOM_H - 8;
 	const int stageH = bodyH - 2 * kCardPad;
 	const int drawW = kContentW - 2 * kSideW - 2 * 6;
-	// With the Match Wii Controls choice up, the stage starts below it and the drawing is a little smaller, so the tallest
+	// With the Match Wii Controls switch up, the stage starts below it and the drawing is a little smaller, so the tallest
 	// drawing (the Wiimote) clears the banner
 	const bool hasWii = GameHasWiiControls();
-	const int stageTop = hasWii ? kResetH + 4 : 0;
+	const int stageTop = hasWii ? kWiiBarH + 2 : 0;
 	const float scale = MappingScale(layout, (float)drawW, (float)(hasWii ? stageH - stageTop - 12 : stageH - 24));
 	view = &ui.make<ControllerView>(layout, scale);
 	// no text on the drawing: the rows name each control
@@ -544,6 +580,8 @@ MappingView::MappingView(int hw, bool selectWii) :
 	WiiControls wiiControls;
 	const WiiScheme wiiScheme = WiiSchemeFor(hardware);
 	const bool showWii = WiiControlsOverrideActive() && WiiControlsFor(hardware, wiiControls);
+	if(WiiControlsOverrideActive() && !showWii)
+		status = GuiFormat("Not used while %s is on", Tr(WiiControlsOptionName()).c_str());
 
 	GuiLayout * leftCol;
 	GuiLayout * rightCol;
@@ -635,21 +673,17 @@ MappingView::MappingView(int hw, bool selectWii) :
 	resetBtn = &reset;
 
 	GuiLayout& content = ui.overlay().size(kContentW, stageH);
-	content.add(reset, GuiItem().at(LAYOUT_ALIGN::END, LAYOUT_ALIGN::START));
 
-	// A game with Wii controls of its own gets the choice between them and these mappings, in the strip above the
-	// drawing (clear of Reset at the other end); other games never see it
+	// A game with Wii controls of its own gets the switch for them in the strip above the drawing (clear of Reset at the
+	// other end, which is centred on it); other games never see it
 	if(hasWii)
 	{
-		const bool wii = EmuSettings.wiiControls;
-		GuiLayout& pair = ui.row().gap(0)
-			.add(wiiSegment(Tr("My Mappings").c_str(), kWiiMapW, !wii, false, "A uses the mappings below"))
-			.add(wiiSegment(Tr(WiiControlsOptionName()).c_str(), kWiiGameW, wii, true, "A uses this game's own Wii controls instead"));
-		GuiCard& capsule = ui.card().selectable(false).style(MenuToggleCapsuleStyle()).pad(2, 2)
-			.corners(GuiCorners(kResetH / 2.0f)).size(kWiiMapW + kWiiGameW + 4, kResetH);
-		capsule.add(pair);
-		content.add(capsule, GuiItem().at(LAYOUT_ALIGN::START, LAYOUT_ALIGN::START));
+		GuiLayout& resetBox = ui.column().pad(0, (kWiiBarH - kResetH) / 2, 0, 0).add(reset);
+		content.add(resetBox, GuiItem().at(LAYOUT_ALIGN::END, LAYOUT_ALIGN::START));
+		content.add(wiiToggle(EmuSettings.wiiControls, selectWii), GuiItem().at(LAYOUT_ALIGN::START, LAYOUT_ALIGN::START));
 	}
+	else
+		content.add(reset, GuiItem().at(LAYOUT_ALIGN::END, LAYOUT_ALIGN::START));
 	content.add(stage, GuiItem().at(LAYOUT_ALIGN::START, LAYOUT_ALIGN::END));
 
 	GuiCard& panel = ui.card().selectable(false).style(MenuPageCardStyle()).pad(kCardPad, kCardPad).size(kBodyW, 0);
@@ -673,8 +707,8 @@ MappingView::MappingView(int hw, bool selectWii) :
 
 	ui.attachTo(*this);
 	// taking the focus steps the selection down from what is selected; starting at the chip lands on a row
-	if(selectWii && wiiOn)
-		wiiOn->select();
+	if(selectWii && wiiCard)
+		wiiCard->select();
 	else
 		usingChipCard.select();
 }
@@ -713,13 +747,19 @@ std::vector<PickerItem> HardwareItems(const std::vector<int>& list)
 
 } // namespace
 
+void MappingScreenOpenedBy(int channel)
+{
+	openedHardware = HardwareInUse(channel);
+}
+
 int MappingScreen()
 {
-	// starts on the controller in use
+	// starts on the controller that opened it
 	mapHardware = -1;
 	ResolveHardware();
+	openedHardware = -1;
 
-	bool selectWii = false;		// keep the cursor on the Match Wii Controls choice after it rebuilds the screen
+	bool selectWii = false;		// keep the cursor on the Match Wii Controls switch after it rebuilds the screen
 	while(true)
 	{
 		MappingView view(mapHardware, selectWii);
