@@ -200,7 +200,6 @@ void WutInputDriver::init() {
 	KPADInit();
 	WPADEnableURCC(TRUE);
 	WPADEnableWiiRemote(TRUE);
-	VPADInit();
 	OSEnableHomeButtonMenu(FALSE);
 	InitUserInputControllers();
 }
