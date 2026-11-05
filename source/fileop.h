@@ -32,6 +32,7 @@ void InitFileOpThreads();
 
 void ArmDeviceChecking();
 void UpdateDeviceCheckingArm();
+void RequestStopDeviceChecking();
 void StopDeviceChecking();
 
 struct DeviceCheckingScope
@@ -42,6 +43,8 @@ struct DeviceCheckingScope
 	DeviceCheckingScope & operator=(const DeviceCheckingScope &) = delete;
 
 	void update() { UpdateDeviceCheckingArm(); }
+	//! Start leaving without waiting: call as soon as the decision to leave is made, then leave() when ready
+	void beginLeave() { RequestStopDeviceChecking(); }
 	void leave() { StopDeviceChecking(); }
 };
 
