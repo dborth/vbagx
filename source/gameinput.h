@@ -143,6 +143,13 @@ uint32_t GameButtonsHeld(const InputPadData& data);
 uint32_t StandardSideways(unsigned short pad);
 uint32_t StandardClassic(unsigned short pad);
 
+//! The Classic Controller, Wii U Pro Controller and GamePad, which games with controls of their own play by as one
+bool ClassicStyleConnected(const InputPadData& data);
+uint32_t ClassicStyleHeld(const InputPadData& data);
+uint32_t ClassicStyleReleased(const InputPadData& data);
+//! Just the D-pad of those, as Game Boy Advance directions
+uint32_t ClassicStyleDPad(unsigned short pad);
+
 uint32_t MarioLand1Input(unsigned short pad);
 uint32_t MarioLand2Input(unsigned short pad);
 uint32_t LegoStarWars1Input(unsigned short pad);

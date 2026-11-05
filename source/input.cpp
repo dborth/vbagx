@@ -161,6 +161,41 @@ void systemGameRumbleOnlyFor(int onlyRumbleForFrames) {
 	if (controller[0]) controller[0]->setGameRumble(onlyRumbleForFrames);
 }
 
+bool ClassicStyleConnected(const InputPadData& data)
+{
+	return data.hw_connected[INPUT_HW_CLASSIC] || data.hw_connected[INPUT_HW_WUPC] || data.hw_connected[INPUT_HW_DRC];
+}
+
+uint32_t ClassicStyleHeld(const InputPadData& data)
+{
+	uint32_t held = 0;
+	if (data.hw_connected[INPUT_HW_CLASSIC]) held |= data.hw_buttons_h[INPUT_HW_CLASSIC];
+	if (data.hw_connected[INPUT_HW_WUPC]) held |= data.hw_buttons_h[INPUT_HW_WUPC];
+	if (data.hw_connected[INPUT_HW_DRC]) held |= data.hw_buttons_h[INPUT_HW_DRC];
+	return held;
+}
+
+uint32_t ClassicStyleReleased(const InputPadData& data)
+{
+	uint32_t released = 0;
+	if (data.hw_connected[INPUT_HW_CLASSIC]) released |= data.hw_buttons_r[INPUT_HW_CLASSIC];
+	if (data.hw_connected[INPUT_HW_WUPC]) released |= data.hw_buttons_r[INPUT_HW_WUPC];
+	if (data.hw_connected[INPUT_HW_DRC]) released |= data.hw_buttons_r[INPUT_HW_DRC];
+	return released;
+}
+
+uint32_t ClassicStyleDPad(unsigned short pad)
+{
+	if (!controller[pad]) return 0;
+	const uint32_t wp = ClassicStyleHeld(controller[pad]->getPadData());
+	uint32_t J = 0;
+	if (wp & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+	else if (wp & INPUT_BTN_LEFT) J |= VBA_LEFT;
+	if (wp & INPUT_BTN_UP) J |= VBA_UP;
+	else if (wp & INPUT_BTN_DOWN) J |= VBA_DOWN;
+	return J;
+}
+
 uint32_t StandardMovement(unsigned short chan)
 {
 	if (!controller[chan]) return 0;
@@ -258,6 +293,9 @@ uint32_t StandardSideways(unsigned short pad)
 	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = 0;
 
+	// A Wii Remote with a Nunchuk is not held sideways
+	if (data.hw_connected[INPUT_HW_NUNCHUK]) return 0;
+
 	// Read directly from isolated Wiimote state
 	uint32_t wp = data.hw_buttons_h[INPUT_HW_WIIMOTE];
 
@@ -286,8 +324,8 @@ uint32_t StandardClassic(unsigned short pad)
 	const InputPadData& data = controller[pad]->getPadData();
 	uint32_t J = 0;
 
-	// Read isolated Classic Controller state
-	uint32_t wp = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	// Read the Classic Controller, Pro Controller and GamePad as one
+	uint32_t wp = ClassicStyleHeld(data);
 
 	if (wp & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
 	else if (wp & INPUT_BTN_LEFT) J |= VBA_LEFT;

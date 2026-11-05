@@ -64,8 +64,8 @@ uint32_t TMNTInput(unsigned short pad) {
 				J |= VBA_BUTTON_L | VBA_BUTTON_R;
 			else J |= VBA_BUTTON_R;
 		}
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		Jump = (hw & INPUT_BTN_B);
 		Attack = (hw & INPUT_BTN_A);
 		SpinKick = (hw & INPUT_BTN_X);
@@ -77,7 +77,7 @@ uint32_t TMNTInput(unsigned short pad) {
 			holdcount++;
 			if (holdcount > 20) J |= VBA_BUTTON_L | VBA_BUTTON_R;
 		}
-		if (data.hw_buttons_r[INPUT_HW_CLASSIC] & INPUT_BTN_Y) {
+		if (ClassicStyleReleased(data) & INPUT_BTN_Y) {
 			if (holdcount <= 20) J |= VBA_BUTTON_R;
 			holdcount = 0;
 		}
@@ -153,8 +153,8 @@ uint32_t TMNT1Input(unsigned short pad) {
 		Roll = (hw & INPUT_TRIGGER_ZL) || (hw & INPUT_TRIGGER_L);
 		Pause = (hw & INPUT_BTN_PLUS);
 		Select = (hw & INPUT_BTN_MINUS);
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		Jump = (hw & INPUT_BTN_B);
 		Attack = (hw & INPUT_BTN_A);
 		SpinKick = (hw & INPUT_BTN_X);
@@ -208,8 +208,8 @@ uint32_t TMNT2Input(unsigned short pad) {
 		Roll = (hw & INPUT_TRIGGER_ZL) || (hw & INPUT_TRIGGER_L);
 		Pause = (hw & INPUT_BTN_PLUS);
 		Select = (hw & INPUT_BTN_MINUS);
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		Jump = (hw & INPUT_BTN_B);
 		Attack = (hw & INPUT_BTN_A);
 		SpinKick = (hw & INPUT_BTN_X);
@@ -264,8 +264,8 @@ uint32_t TMNT3Input(unsigned short pad) {
 		Pause = (hw & INPUT_BTN_PLUS);
 		Select = (hw & INPUT_BTN_MINUS);
 		if (hw & INPUT_BTN_B) J |= VBA_BUTTON_START;
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		Jump = (hw & INPUT_BTN_B);
 		Attack = (hw & INPUT_BTN_A);
 		SpinKick = (hw & INPUT_BTN_X);
@@ -323,8 +323,8 @@ uint32_t TMNTGBAInput(unsigned short pad) {
 		SpecialMove = (hw & INPUT_TRIGGER_ZL);
 		Pause = (hw & INPUT_BTN_PLUS);
 		Select = (hw & INPUT_BTN_MINUS);
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		Jump = (hw & INPUT_BTN_B);
 		Attack = (hw & INPUT_BTN_A);
 		SpinKick = (hw & INPUT_BTN_X);
@@ -382,8 +382,8 @@ uint32_t TMNTGBA2Input(unsigned short pad) {
 		Pause = (hw & INPUT_BTN_PLUS);
 		Select = (hw & INPUT_BTN_MINUS);
 		Look = (hw & INPUT_TRIGGER_L);
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		Jump = (hw & INPUT_BTN_B);
 		Attack = (hw & INPUT_BTN_A);
 		SpinKick = (hw & INPUT_BTN_X);
@@ -690,7 +690,7 @@ uint32_t TwistedInput(unsigned short pad) {
 		if (data.hw_buttons_h[INPUT_HW_NUNCHUK] & INPUT_TRIGGER_L) {
 			CalibrateWario = true;
 		} else CalibrateWario = false;
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
+	} else if (ClassicStyleConnected(data)) {
 		TiltSideways = false;
 		J |= StandardDPad(pad) | StandardClassic(pad);
 	} else {
@@ -720,7 +720,7 @@ uint32_t KirbyTntInput(unsigned short pad) {
 		if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
 		if (data.buttons_h & INPUT_BTN_B) J |= VBA_BUTTON_B;
 		if (data.hw_buttons_h[INPUT_HW_NUNCHUK] & INPUT_TRIGGER_L) J |= VBA_SPEED;
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
+	} else if (ClassicStyleConnected(data)) {
 		TiltSideways = false;
 		J |= StandardDPad(pad) | StandardClassic(pad);
 		if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
@@ -750,7 +750,7 @@ uint32_t MohInfiltratorInput(unsigned short pad) {
 		if (hw & INPUT_TRIGGER_L) J |= VBA_BUTTON_R;
 		if ((hw & INPUT_BTN_LEFT) || (hw & INPUT_BTN_RIGHT)) J |= VBA_BUTTON_B;
 		if (data.hw_buttons_h[INPUT_HW_WIIMOTE] & INPUT_BTN_1) J |= VBA_SPEED;
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
+	} else if (ClassicStyleConnected(data)) {
 		J |= StandardClassic(pad);
 	} else {
 		J |= StandardSideways(pad);
@@ -1062,7 +1062,7 @@ uint32_t CastlevaniaAdventureInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
 
-	uint32_t J = StandardDirections(pad) | StandardSideways(pad) | StandardClassic(pad);
+	uint32_t J = StandardDirections(pad) | StandardSideways(pad) | ClassicStyleDPad(pad);
 
 	if (data.hw_connected[INPUT_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[INPUT_HW_GAMECUBE];
@@ -1084,8 +1084,8 @@ uint32_t CastlevaniaAdventureInput(unsigned short pad) {
 		PauseButton = hw & INPUT_BTN_PLUS;
 		SelectButton = hw & INPUT_BTN_MINUS;
 		SpeedButton = (hw & INPUT_BTN_A) && (hw & INPUT_BTN_B);
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		AttackButton = hw & INPUT_BTN_B;
 		JumpButton = hw & INPUT_TRIGGER_R;
 		GuardButton = hw & INPUT_TRIGGER_L;
@@ -1111,7 +1111,7 @@ uint32_t CastlevaniaBelmontInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
 
-	uint32_t J = StandardDirections(pad) | StandardSideways(pad) | StandardClassic(pad);
+	uint32_t J = StandardDirections(pad) | StandardSideways(pad) | ClassicStyleDPad(pad);
 
 	if (data.hw_connected[INPUT_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[INPUT_HW_GAMECUBE];
@@ -1134,8 +1134,8 @@ uint32_t CastlevaniaBelmontInput(unsigned short pad) {
 		PauseButton = hw & INPUT_BTN_PLUS;
 		SelectButton = hw & INPUT_BTN_MINUS;
 		SpeedButton = (hw & INPUT_BTN_A) && (hw & INPUT_BTN_B);
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		ShootButton = hw & INPUT_BTN_Y;
 		AttackButton = hw & INPUT_BTN_B;
 		JumpButton = hw & INPUT_TRIGGER_R;
@@ -1166,7 +1166,7 @@ uint32_t CastlevaniaLegendsInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
 
-	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | ClassicStyleDPad(pad);
 
 	if (data.hw_connected[INPUT_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[INPUT_HW_GAMECUBE];
@@ -1190,8 +1190,8 @@ uint32_t CastlevaniaLegendsInput(unsigned short pad) {
 		SelectButton = hw & INPUT_BTN_MINUS;
 		SpeedButton = (hw & INPUT_BTN_A) && (hw & INPUT_BTN_B);
 		HyperButton = hw & INPUT_BTN_DOWN;
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		ShootButton = hw & INPUT_BTN_Y;
 		AttackButton = hw & INPUT_BTN_B;
 		JumpButton = hw & INPUT_TRIGGER_R;
@@ -1224,7 +1224,7 @@ uint32_t CastlevaniaCircleMoonInput(unsigned short pad) {
 	if (!controller[pad]) return 0;
 	const InputPadData& data = controller[pad]->getPadData();
 
-	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | StandardClassic(pad);
+	uint32_t J = StandardMovement(pad) | StandardSideways(pad) | ClassicStyleDPad(pad);
 
 	if (data.hw_connected[INPUT_HW_GAMECUBE]) {
 		uint32_t gc = data.hw_buttons_h[INPUT_HW_GAMECUBE];
@@ -1251,8 +1251,8 @@ uint32_t CastlevaniaCircleMoonInput(unsigned short pad) {
 		HyperButton = hw & INPUT_BTN_DOWN;
 		LButton = data.hw_buttons_h[INPUT_HW_WIIMOTE] & INPUT_BTN_1;
 		RButton = data.hw_buttons_h[INPUT_HW_WIIMOTE] & INPUT_BTN_2;
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		ShootButton = hw & INPUT_BTN_Y;
 		AttackButton = hw & INPUT_BTN_B;
 		JumpButton = hw & INPUT_TRIGGER_R;
@@ -1359,8 +1359,8 @@ uint32_t KidDraculaInput(unsigned short pad) {
 		SpeedButton = (data.hw_buttons_h[INPUT_HW_WIIMOTE] & INPUT_BTN_1) || (data.hw_buttons_h[INPUT_HW_WIIMOTE] & INPUT_BTN_2);
 		NorButton = hw & INPUT_TRIGGER_ZL;
 		BatButton = hw & INPUT_TRIGGER_L;
-	} else if (data.hw_connected[INPUT_HW_CLASSIC]) {
-		uint32_t hw = data.hw_buttons_h[INPUT_HW_CLASSIC];
+	} else if (ClassicStyleConnected(data)) {
+		uint32_t hw = ClassicStyleHeld(data);
 		JumpButton = hw & (INPUT_BTN_B | INPUT_BTN_A);
 		ShootButton = hw & INPUT_BTN_Y;
 		PauseButton = hw & INPUT_BTN_PLUS;
