@@ -1050,8 +1050,8 @@ static void OnPreviewImageChanged(void * context, GuiImage * target, bool isDefa
 	shadow->fit(isDefault ? 0 : w, isDefault ? 0 : h); // the default image has no drop shadow
 }
 
-static int BrowserLoadFileTask(void * arg) { return BrowserLoadFile(); }
-static int BrowserChangeFolderTask(void * arg) { return BrowserChangeFolder(); }
+static int BrowserLoadFileTask(void *) { return BrowserLoadFile(); }
+static int BrowserChangeFolderTask(void *) { return BrowserChangeFolder(); }
 
 struct ChangeInterfaceArgs
 {
