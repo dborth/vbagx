@@ -217,8 +217,12 @@ bool Mario(GameInputFn fn, WiiScheme s, Builder& b)
 	return false;
 }
 
-bool Metroid(GameInputFn, WiiScheme s, Builder& b)
+bool Metroid(GameInputFn fn, WiiScheme s, Builder& b)
 {
+	const bool zero = fn == MetroidZeroInput;
+	// Metroid 1 and 2 fire missiles with X, Y and R, and aim up with L; Zero Mission and Fusion have missiles on X and Y
+	const bool classicMissiles = fn == Metroid1Input || fn == Metroid2Input;
+
 	switch(s)
 	{
 		case WiiScheme::WII:
@@ -234,23 +238,39 @@ bool Metroid(GameInputFn, WiiScheme s, Builder& b)
 			b.add(0, "Flick up: spring", "Flick the Wii Remote up while in Morph Ball to spring-jump");
 			return true;
 		case WiiScheme::CLASSIC:
-			b.add(kA, "Shoot");
-			b.add(kB, "Jump");
-			b.add(kL, "Aim", "Presses the game's L button, to aim");
-			b.add(kR, "R button", "Presses the game's R button");
-			b.add(kX | kY, "Missile");
-			b.add(kZL, "Morph Ball", "Toggles the Morph Ball");
+			b.add(kA, "Jump");
+			b.add(kB, "Shoot");
+			b.add(kL, "Aim", classicMissiles ? "Aims up" : "Presses the game's L button, to aim");
+			b.add(classicMissiles ? (kX | kY | kR) : (kX | kY), "Missile");
+			if(!classicMissiles)
+				b.add(kR, "R button", "Presses the game's R button");
+			b.add(kZL | kZR, "Morph Ball", "Toggles the Morph Ball");
 			b.add(kPlus, "Start");
 			b.add(kMinus, "Select");
 			return true;
 		case WiiScheme::GAMECUBE:
-			// the Morph Ball is on ZL, which this pad has no button for
-			b.add(kA, "Shoot");
-			b.add(kB, "Jump");
-			b.add(kL, "Aim", "Presses the game's L button, to aim");
-			b.add(kR, "R button", "Presses the game's R button");
-			b.add(kX | kY, "Missile");
-			b.add(kPlus, "Start");
+			if(zero)
+			{
+				b.add(kA, "Shoot");
+				b.add(kB, "Jump");
+				b.add(kY, "Missile");
+				b.add(kX, "Morph Ball", "Toggles the Morph Ball");
+				b.add(kGcZ, "Map");
+				b.add(kL, "Aim", "Presses the game's L button, to aim");
+				b.add(kR, "R button", "Presses the game's R button");
+				b.add(kPlus, "Super missiles", "Toggles super missiles");
+			}
+			else
+			{
+				b.add(kA, "Jump");
+				b.add(kB, "Shoot");
+				b.add(kL, "Aim", classicMissiles ? "Aims up" : "Presses the game's L button, to aim");
+				b.add(classicMissiles ? (kX | kY | kR) : (kX | kY), "Missile");
+				if(!classicMissiles)
+					b.add(kR, "R button", "Presses the game's R button");
+				b.add(kGcZ, "Morph Ball", "Toggles the Morph Ball");
+				b.add(kPlus, "Start");
+			}
 			return true;
 	}
 	return false;
@@ -318,6 +338,7 @@ bool MortalKombat(GameInputFn, WiiScheme s, Builder& b)
 			b.add(kRight, "High kick");
 			b.add(kZ, "Block");
 			b.add(kA, "Throw");
+			b.add(kB, "Special move");
 			b.add(kC, "Style / run", "Changes style, runs, or changes costume / character");
 			b.add(kPlus, "Pause");
 			b.add(kMinus, "Costume / character");
@@ -328,18 +349,18 @@ bool MortalKombat(GameInputFn, WiiScheme s, Builder& b)
 			b.add(kX, "High punch");
 			b.add(kB, "Low kick");
 			b.add(kA, "High kick");
-			b.add(kR | kZR, "Block");
+			b.add(kR, "Block");
 			b.add(kZR, "Throw");
 			b.add(kL | kZL, "Style / run", "Changes style, runs, or changes costume / character");
 			b.add(kPlus, "Pause");
 			b.add(kMinus, "Costume / character");
 			return true;
 		case WiiScheme::GAMECUBE:
-			b.add(kY, "Low punch");
-			b.add(kX, "High punch");
-			b.add(kB, "Low kick");
-			b.add(kA, "High kick");
-			b.add(kR | kGcZ, "Block");
+			b.add(kB, "Low punch");
+			b.add(kY, "High punch");
+			b.add(kA, "Low kick");
+			b.add(kX, "High kick");
+			b.add(kR, "Block");
 			b.add(kGcZ, "Throw");
 			b.add(kL, "Style / run", "Changes style, runs, or changes costume / character");
 			b.add(kPlus, "Pause");
