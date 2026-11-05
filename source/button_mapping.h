@@ -11,8 +11,12 @@
 #ifndef BTN_MAP_H
 #define BTN_MAP_H
 
-const char ctrlrName[6][32] =
+#include "drivers/InputData.h"
+
+// indexed by GuiHardwareProfile. The size is deduced so the check below catches a profile without a name.
+const char ctrlrName[][32] =
 { "GameCube Controller", "Wiimote", "Nunchuk + Wiimote", "Classic Controller", "Wii U Pro Controller", "Wii U Gamepad" };
+static_assert(sizeof(ctrlrName) / sizeof(ctrlrName[0]) == INPUT_HW_MAX, "ctrlrName needs one entry per GuiHardwareProfile");
 
 typedef struct _btn_map {
 	uint32_t btn;					// button 'id'
