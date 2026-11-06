@@ -80,7 +80,6 @@ int main(int, char *[])
 	platform->setSaveHandler(SaveAppDataBeforeRelease);
 
 	InitFileOpThreads();
-	MountAllFAT();
 
 	InitMemManager();
 	SwitchMemoryModeMenu();
