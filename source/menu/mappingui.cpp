@@ -28,8 +28,6 @@
 #include "button_mapping.h"
 #include "vbagx.h"
 
-extern GuiTextTranslator * textTranslator;
-
 namespace {
 
 // The hardware being mapped (-1 until chosen: the screen starts on the controller in use)
@@ -128,11 +126,6 @@ void ResolveHardware()
 	const std::vector<int> list = HardwareList();
 	if(mapHardware < 0 || !Contains(list, mapHardware))
 		mapHardware = DefaultHardware(list);
-}
-
-std::string Tr(const char * s)
-{
-	return textTranslator ? std::string(textTranslator->getText(s)) : std::string(s);
 }
 
 // The name of the in-game menu option that bypasses these mappings
@@ -446,7 +439,7 @@ GuiCard& MappingView::bindingRow(const MapRow& r, bool onLeft, int width)
 		row.selectable(false);
 	else
 	{
-		row.onFocus([this, name]{ status = GuiFormat("A changes what %s does", Tr(name).c_str()); });
+		row.onFocus([this, name]{ status = TrFormat("A changes what %s does", Tr(name).c_str()); });
 		row.onClick([this, index]{ requestedRow = index; rowRequested = true; });
 	}
 	row.add(content);
@@ -581,7 +574,7 @@ MappingView::MappingView(int hw, bool selectWii) :
 	const WiiScheme wiiScheme = WiiSchemeFor(hardware);
 	const bool showWii = WiiControlsOverrideActive() && WiiControlsFor(hardware, wiiControls);
 	if(WiiControlsOverrideActive() && !showWii)
-		status = GuiFormat("Not used while %s is on", Tr(WiiControlsOptionName()).c_str());
+		status = TrFormat("Not used while %s is on", Tr(WiiControlsOptionName()).c_str());
 
 	GuiLayout * leftCol;
 	GuiLayout * rightCol;

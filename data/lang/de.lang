@@ -427,6 +427,12 @@ msgstr "Ja"
 msgid " "
 msgstr ""
 
+msgid "%s saved"
+msgstr "%s gespeichert"
+
+msgid "%s updated"
+msgstr "%s aktualisiert"
+
 msgid "%s uses %s"
 msgstr "%s nutzt %s"
 
@@ -444,6 +450,12 @@ msgstr ""
 
 msgid "2xBR-lv1"
 msgstr ""
+
+msgid "7z decompression failed: %s"
+msgstr "7z-Entpacken fehlgeschlagen: %s"
+
+msgid "A changes what %s does"
+msgstr "Mit A änderst du, was %s macht"
 
 msgid "A chooses the controller to map"
 msgstr "A wählt den zu belegenden Controller"
@@ -463,8 +475,14 @@ msgstr ""
 msgid "Actual"
 msgstr "Tatsächlich"
 
+msgid "All %d backup slots are in use. Delete one to make room."
+msgstr "Alle %d Sicherungsplätze sind belegt. Lösche eine, um Platz zu schaffen."
+
 msgid "All 99 snapshot slots are in use. Delete one to make room."
 msgstr "Alle 99 Schnappschuss-Plätze sind belegt. Lösche einen, um Platz zu schaffen."
+
+msgid "Archive contains too many files."
+msgstr "Das Archiv enthält zu viele Dateien."
 
 msgid "Artwork"
 msgstr ""
@@ -483,6 +501,9 @@ msgstr "Autospeicherung"
 
 msgid "BUTTONS"
 msgstr "TASTEN"
+
+msgid "Backup %d"
+msgstr "Sicherung %d"
 
 msgid "Backups"
 msgstr "Sicherungen"
@@ -514,6 +535,9 @@ msgstr "Katalanisch"
 msgid "Cheats (none)"
 msgstr "Cheats (keine)"
 
+msgid "Check settings.xml."
+msgstr "Prüfe die settings.xml."
+
 msgid "Chinese (Simplified)"
 msgstr "Chinesisch (vereinfacht)"
 
@@ -528,6 +552,9 @@ msgstr "Komprimierte ROM-Datei ist zu groß zum Entpacken!"
 
 msgid "Copy the cartridge's save now"
 msgstr "Modulspeicher jetzt kopieren"
+
+msgid "Copy, or restore one of %d"
+msgstr "Kopieren oder eine von %d wiederherstellen"
 
 msgid "Core (Unbound)"
 msgstr "Kern (unbegrenzt)"
@@ -552,6 +579,9 @@ msgstr ""
 
 msgid "Delete"
 msgstr "Löschen"
+
+msgid "Delete %s?"
+msgstr "%s löschen?"
 
 msgid "Device not found!"
 msgstr "Gerät nicht gefunden!"
@@ -585,6 +615,21 @@ msgstr "Europäisches RGB (240i)"
 
 msgid "European RGB (240p)"
 msgstr "Europäisches RGB (240p)"
+
+msgid "Failed to read file data."
+msgstr "Dateidaten konnten nicht gelesen werden."
+
+msgid "File is corrupt (CRC mismatch)."
+msgstr "Die Datei ist beschädigt (CRC-Fehler)."
+
+msgid "File is corrupt."
+msgstr "Die Datei ist beschädigt."
+
+msgid "File uses too high of compression settings (dictionary size is too large)."
+msgstr "Die Datei nutzt zu hohe Komprimierungseinstellungen (Wörterbuchgröße zu groß)."
+
+msgid "File uses unsupported compression settings."
+msgstr "Die Datei nutzt nicht unterstützte Komprimierungseinstellungen."
 
 msgid "Font file is too large!"
 msgstr "Schriftdatei ist zu groß!"
@@ -658,6 +703,12 @@ msgstr "Ungültiger Modulspeicher"
 msgid "Invalid Snapshot"
 msgstr "Ungültiger Schnappschuss"
 
+msgid "Invalid network settings - %s"
+msgstr "Ungültige Netzwerkeinstellungen - %s"
+
+msgid "It is not being updated in the current Save Mode. This can't be undone."
+msgstr "Er wird im aktuellen Speichermodus nicht aktualisiert. Das kann nicht rückgängig gemacht werden."
+
 msgid "It will be overwritten with your progress right now."
 msgstr "Er wird mit deinem aktuellen Fortschritt überschrieben."
 
@@ -727,6 +778,9 @@ msgstr ""
 msgid "Network share not connected!"
 msgstr "Netzwerk Share nicht verbunden!"
 
+msgid "Next time you open this game it starts from its Cartridge Save, or from the beginning. This can't be undone."
+msgstr "Beim nächsten Öffnen startet das Spiel von seinem Modulspeicher oder von vorn. Das kann nicht rückgängig gemacht werden."
+
 msgid "No game save file"
 msgstr "Keine Spielstanddatei"
 
@@ -747,6 +801,9 @@ msgstr "Wird nicht aktualisiert, solange der Speichermodus „Modulspeicher“ i
 
 msgid "Not updated while Save Mode is Manual."
 msgstr "Wird nicht aktualisiert, solange der Speichermodus „Manuell“ ist."
+
+msgid "Not used while %s is on"
+msgstr "Nicht verwendet, solange „%s“ aktiv ist"
 
 msgid "Nothing is saved or loaded unless you do it yourself."
 msgstr "Es wird nichts gespeichert oder geladen, außer du tust es selbst."
@@ -787,6 +844,12 @@ msgstr "Pausiert"
 msgid "Picks up exactly where you left off, as if you never turned the console off."
 msgstr "Macht genau dort weiter, wo du aufgehört hast - als hättest du die Konsole nie ausgeschaltet."
 
+msgid "Player %d"
+msgstr "Spieler %d"
+
+msgid "Player Mapping - Controller %d"
+msgstr "Spielerzuordnung - Controller %d"
+
 msgid "Playing from"
 msgstr "Spielt von hier"
 
@@ -813,6 +876,9 @@ msgstr "Diesen Schnappschuss entfernen"
 
 msgid "Replace"
 msgstr "Ersetzen"
+
+msgid "Replace %s?"
+msgstr "%s ersetzen?"
 
 msgid "Replace with your progress now"
 msgstr "Durch deinen aktuellen Fortschritt ersetzen"
@@ -844,6 +910,9 @@ msgstr "SYSTEM"
 msgid "Save Mode"
 msgstr "Speichermodus"
 
+msgid "Save Mode: %s"
+msgstr "Speichermodus: %s"
+
 msgid "Save Now"
 msgstr "Jetzt speichern"
 
@@ -852,6 +921,9 @@ msgstr "Neuen Vorschau-Screenshot speichern? Das aktuelle Screenshot-Bild wird �
 
 msgid "Save this moment"
 msgstr "Diesen Moment speichern"
+
+msgid "Saved %s"
+msgstr "Gespeichert: %s"
 
 msgid "Saved inside your snapshots"
 msgstr "In deinen Schnappschüssen gespeichert"
@@ -892,11 +964,20 @@ msgstr "Einstellungen - Netzwerk Share"
 msgid "Settings - Storage"
 msgstr "Einstellungen - Speicher"
 
+msgid "Share IP is blank."
+msgstr "Die Share-IP ist leer."
+
+msgid "Share name is blank."
+msgstr "Der Share-Name ist leer."
+
 msgid "Sharp"
 msgstr "Scharf"
 
 msgid "Show Framerate"
 msgstr "Bildrate anzeigen"
+
+msgid "Snapshot %d"
+msgstr "Schnappschuss %d"
 
 msgid "Snapshot not found"
 msgstr "Schnappschuss nicht gefunden"
@@ -954,6 +1035,9 @@ msgstr "Diese Datei enthält unkomprimierte Game-Boy-(Color)-ROMs. Möchtest du 
 
 msgid "This game doesn't have its own save feature. Use snapshots to save."
 msgstr "Dieses Spiel hat keine eigene Speicherfunktion. Speichere mit Schnappschüssen."
+
+msgid "This is the snapshot you started from. This can't be undone."
+msgstr "Das ist der Schnappschuss, von dem du gestartet bist. Das kann nicht rückgängig gemacht werden."
 
 msgid "This software is open source and may be copied, distributed, or modified"
 msgstr "Diese Software ist Open Source und darf kopiert, verbreitet oder verändert werden"
@@ -1041,6 +1125,9 @@ msgstr ""
 
 msgid "Waiting for a button..."
 msgstr "Warte auf eine Taste..."
+
+msgid "Weather: %d%% sun"
+msgstr "Wetter: %d%% Sonne"
 
 msgid "Weather: Night Time"
 msgstr "Wetter: Nacht"
