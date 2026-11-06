@@ -1,38 +1,5 @@
-msgid "&"
-msgstr "&"
-
 msgid "16:9 Correction"
 msgstr "16:9 보정"
-
-msgid "7z decompression failed: Archive contains too many files."
-msgstr "7z 압축 해제 실패: 압축 파일에 너무 많은 파일이 포함되었습니다."
-
-msgid "7z decompression failed: Failed to read file data."
-msgstr "7z 압축 해제 실패: 파일 데이터 읽기 실패하였습니다."
-
-msgid "7z decompression failed: File is corrupt."
-msgstr "7z 압축 해제 실패: 파일이 손상되었습니다."
-
-msgid "7z decompression failed: File is corrupt (CRC mismatch)."
-msgstr "7z 압축 해제 실패: 파일이 손상되었습니다. (CRC 불일치)"
-
-msgid "7z decompression failed: File uses too high of compression settings (dictionary size is too large)."
-msgstr "7z 압축 해제 실패: 파일이 압축 설정을 너무 높게 사용합니다. (폴더 크기가 너무 큼)"
-
-msgid "7z decompression failed: File uses unsupported compression settings."
-msgstr "7z 압축 해제 실패: 파일이 지원되지 않는 압축 설정을 사용합니다."
-
-msgid "Additional improvements"
-msgstr "추가 개선 사항"
-
-msgid "AM"
-msgstr "오전"
-
-msgid "Append Auto to .SAV Files"
-msgstr ".SAVE 파일에 자동 추가"
-
-msgid "Apr"
-msgstr "4월"
 
 msgid "Reset this game? Any unsaved progress will be lost."
 msgstr "이 게임을 재설정할까요? 저장되지 않는 진행은 손실됩니다."
@@ -49,26 +16,11 @@ msgstr "삽화"
 msgid "Artwork Folder"
 msgstr "삽화 폴더"
 
-msgid "Attempting to determine load device..."
-msgstr "불러온 장치 확인 시도 중..."
-
-msgid "Attempting to determine save device..."
-msgstr "저장 장치 확인 시도 중..."
-
-msgid "Aug"
-msgstr "8월"
-
 msgid "Auto"
 msgstr "자동"
 
 msgid "Auto Detect"
 msgstr "자동 감지"
-
-msgid "Auto Load"
-msgstr "자동 불러오기"
-
-msgid "Auto Save"
-msgstr "자동 저장하기"
 
 msgid "Automatic (Recommended)"
 msgstr "자동 (추천)"
@@ -76,14 +28,8 @@ msgstr "자동 (추천)"
 msgid "Back"
 msgstr "뒤로"
 
-msgid "Both"
-msgstr "둘 다"
-
 msgid "Brazilian Portuguese"
 msgstr "브라질 포루투갈어"
-
-msgid "Button Mapping"
-msgstr "버튼 매핑"
 
 msgid "Button Mappings"
 msgstr "버튼 매핑"
@@ -139,32 +85,17 @@ msgstr "크레딧"
 msgid "Data DVD"
 msgstr "데이터 DVD"
 
-msgid "Dec"
-msgstr "12월"
-
 msgid "Default"
 msgstr "기본값"
 
 msgid "Delete"
 msgstr "삭제하기"
 
-msgid "Delete File"
-msgstr "파일 삭제"
-
-msgid "Delete Saves"
-msgstr "저장 삭제"
-
-msgid "Delete this save file? Deleted files can not be restored."
-msgstr "이 저장 파일을 삭제할까요? 삭제 파일은 복원할 수 없습니다."
-
 msgid "Directory name is too long!"
 msgstr "폴더명이 너무 깁니다!"
 
 msgid "Disabled"
 msgstr "사용 불가"
-
-msgid "Don't Save"
-msgstr "세이브를 할 수 없습니다"
 
 msgid "Down"
 msgstr "아래쪽"
@@ -193,9 +124,6 @@ msgstr "파일 생성 오류!"
 msgid "Error loading font!"
 msgstr "글꼴 불러오기 오류!"
 
-msgid "Error loading game!"
-msgstr "게임 불러오기 오류!"
-
 msgid "Error opening archive!"
 msgstr "압축 파일 열기 오류!"
 
@@ -220,15 +148,6 @@ msgstr "작업 나가기"
 msgid "Failed to connect to network share."
 msgstr "네트워크 공유 접속에 실패하였습니다."
 
-msgid "Feb"
-msgstr "2월"
-
-msgid "Filtered (Sharp)"
-msgstr "필터 (날카로움)"
-
-msgid "Filtered (Soft)"
-msgstr "필터 (부드러움)"
-
 msgid "Font file is too large!"
 msgstr "글꼴 파일이 너무 큽니다!"
 
@@ -238,14 +157,8 @@ msgstr "폰트 파일을 찾을 수 없습니다!"
 msgid "French"
 msgstr "프랑스어"
 
-msgid "Fri"
-msgstr "금"
-
 msgid "Game Settings"
 msgstr "게임 설정"
-
-msgid "Game Settings - Button Mappings"
-msgstr "게임 설정 - 버튼 매핑"
 
 msgid "Game Settings - Cheats"
 msgstr "게임 설정 - 치트"
@@ -271,32 +184,11 @@ msgstr "정보"
 msgid "Initializing network..."
 msgstr "네트워크 초기화 중..."
 
-msgid "Invalid network settings - Check settings.xml."
-msgstr "잘못된 네트워크 설정 - settings.xml 확인"
-
-msgid "Invalid network settings - Share IP is blank."
-msgstr "잘못된 네트워크 설정 - 공유 IP가 비었습니다."
-
-msgid "Invalid network settings - Share name is blank."
-msgstr "잘못된 네트워크 설정 - 공유명이 비었습니다."
-
-msgid "IOS: "
-msgstr "IOS: "
-
 msgid "Italian"
 msgstr "이탈리아어"
 
-msgid "Jan"
-msgstr "1월"
-
 msgid "Japanese"
 msgstr "일본어"
-
-msgid "Jul"
-msgstr "7월"
-
-msgid "Jun"
-msgstr "6월"
 
 msgid "Korean"
 msgstr "한국어"
@@ -319,12 +211,6 @@ msgstr "장치 불러오기"
 msgid "Load Folder"
 msgstr "폴더 불러오기"
 
-msgid "Load Game"
-msgstr "게임 불러오기"
-
-msgid "Loading"
-msgstr "불러오기"
-
 msgid "Loading DVD..."
 msgstr "DVD 불러오기 중..."
 
@@ -334,29 +220,17 @@ msgstr "불러오기 중..."
 msgid "Main Menu"
 msgstr "메인 메뉴"
 
-msgid "Mar"
-msgstr "3월"
-
 msgid "Maximum filepath length reached!"
 msgstr "최대 파일경로 길이입니다!"
 
-msgid "May"
-msgstr "5월"
-
 msgid "Menu"
 msgstr "메뉴"
-
-msgid "Menu artwork"
-msgstr "이미지 메뉴"
 
 msgid "Menu sound"
 msgstr "사운드 메뉴"
 
 msgid "MINUS"
 msgstr "마이너스"
-
-msgid "Mon"
-msgstr "월"
 
 msgid "Music Volume"
 msgstr "음악 볼륨"
@@ -394,12 +268,6 @@ msgstr "아니요"
 msgid "No disc inserted!"
 msgstr "삽입된 디스크가 없습니다!"
 
-msgid "No game saves found."
-msgstr "게임 저장을 찾을 수 없습니다."
-
-msgid "Nov"
-msgstr "11월"
-
 msgid "NTSC (480i)"
 msgstr ""
 
@@ -408,9 +276,6 @@ msgstr "눈차크"
 
 msgid "Nunchuk + Wiimote"
 msgstr "눈차크 + 위모트"
-
-msgid "Oct"
-msgstr "10월"
 
 msgid "Off"
 msgstr "끔"
@@ -424,17 +289,8 @@ msgstr "확인"
 msgid "On"
 msgstr "켬"
 
-msgid "Original"
-msgstr "오리지널"
-
 msgid "Out of memory: too many files!"
 msgstr "메모리 부족: 너무 많은 파일!"
-
-msgid "PAL (50Hz)"
-msgstr "PAL (50Hz)"
-
-msgid "PAL (60Hz)"
-msgstr "PAL (60Hz)"
 
 msgid "Please Wait"
 msgstr "잠시만 기다려주세요"
@@ -442,35 +298,11 @@ msgstr "잠시만 기다려주세요"
 msgid "PLUS"
 msgstr "플러스"
 
-msgid "PM"
-msgstr "오후"
-
 msgid "Portuguese"
 msgstr "포르투갈어"
 
 msgid "Power off Wii"
 msgstr "Wii 끄기"
-
-msgid "Preferences saved"
-msgstr "환경 설정 저장"
-
-msgid "Press any button on the Classic Controller now. Press Home to clear the existing mapping."
-msgstr "지금 클래식 컨트롤러의 아무 버튼이나 누릅니다. 홈 버튼을 눌러 기존 매핑을 정리합니다."
-
-msgid "Press any button on the GameCube Controller now. Press Home or the C-Stick in any direction to clear the existing mapping."
-msgstr "지금 클래식 컨트롤러의 아무 버튼이나 누릅니다. 홈 버튼 또는 C-스틱을 눌러 기존 매핑을 정리합니다."
-
-msgid "Press any button on the GameCube Controller now. Press the C-Stick in any direction to clear the existing mapping."
-msgstr "지금 클래식 컨트롤러의 아무 버튼이나 누릅니다. C-스틱을 눌러 기존 매핑을 정리합니다."
-
-msgid "Press any button on the Wii U Pro Controller now. Press Home to clear the existing mapping."
-msgstr "지금 Wii U Pro 컨트롤러의 아무 버튼이나 누르세요. 기존 매핑을 지우려면 홈을 누르세요."
-
-msgid "Press any button on the Wiimote now. Press Home to clear the existing mapping."
-msgstr "지금 위모트의 아무 버튼이나 누릅니다. 홈 버튼을 눌러 기존 매핑을 정리합니다."
-
-msgid "Press any button on the Wiimote or Nunchuk now. Press Home to clear the existing mapping."
-msgstr "지금 위모트 또는 눈챠크의 아무 버튼이나 누릅니다. 홈 버튼을 눌러 기존 매핑을 정리합니다."
 
 msgid "Preview Image"
 msgstr "이미지 미리보기"
@@ -486,9 +318,6 @@ msgstr "이 게임을 종료할까요? 저장되지 않는 진행은 손실됩�
 
 msgid "Reboot"
 msgstr "재부팅"
-
-msgid "Rendering"
-msgstr "렌더링"
 
 msgid "Reset"
 msgstr "재설정"
@@ -520,12 +349,6 @@ msgstr "오른쪽"
 msgid "Rumble"
 msgstr "진동"
 
-msgid "Sat"
-msgstr "토"
-
-msgid "Save"
-msgstr "저장하기"
-
 msgid "Save a new Preview Screenshot? Current Screenshot image will be overwritten."
 msgstr "새 스크린샷 미리보기를 저장할까요? 현재 스크린샷 이미지를 덮어씁니다."
 
@@ -535,32 +358,14 @@ msgstr "저장 장치"
 msgid "Save Folder"
 msgstr "저장 폴더"
 
-msgid "Save Game"
-msgstr "저장 게임"
-
-msgid "Save State?"
-msgstr "상태를 저장할까요?"
-
 msgid "Save successful"
 msgstr "저장에 성공했습니다."
-
-msgid "Saving"
-msgstr "저장하기"
-
-msgid "Saving preferences..."
-msgstr "환경 설정 저장 중..."
 
 msgid "Saving..."
 msgstr "저장 중..."
 
-msgid "Scaling"
-msgstr "스케일"
-
 msgid "Screen Position"
 msgstr "화면 위치"
-
-msgid "Screen Zoom"
-msgstr "화면 확대"
 
 msgid "Screenshot"
 msgstr "스크린샷"
@@ -589,35 +394,14 @@ msgstr "SD 에 SP2"
 msgid "Select"
 msgstr "선택"
 
-msgid "Sep"
-msgstr "9월"
-
 msgid "Settings"
 msgstr "설정"
 
 msgid "Settings - Menu"
 msgstr "설정 - 메뉴"
 
-msgid "Settings - Network"
-msgstr "설정 - 네트워크"
-
-msgid "Settings - Saving & Loading"
-msgstr "설정 - 저장하기 & 불러오기"
-
 msgid "Shift"
 msgstr "시프트"
-
-msgid "SMB Share IP"
-msgstr "SMB 공유 IP"
-
-msgid "SMB Share Name"
-msgstr "SMB 공유명"
-
-msgid "SMB Share Password"
-msgstr "SMB 공유 비밀번호"
-
-msgid "SMB Share Username"
-msgstr "SMB 공유 사용자명"
 
 msgid "Sound Effects Volume"
 msgstr "사운드 효과 볼륨"
@@ -631,38 +415,17 @@ msgstr "시작"
 msgid "START"
 msgstr "시작"
 
-msgid "State"
-msgstr "상태"
-
-msgid "Sun"
-msgstr "일"
-
 msgid "The current IOS has been altered (fake-signed). Functionality and/or stability may be adversely affected."
 msgstr "현재 IOS는 (가짜 서명) 변경되었습니다. 기능 및 안정성에 부정적인 영향을 줄 수 있습니다"
 
 msgid "The current IOS is unsupported. Functionality and/or stability may be adversely affected."
 msgstr "현재 IOS는 지원하지 않습니다. 기능 및 안정성에 부정적인 영향을 줄 수 있습니다."
 
-msgid "Thu"
-msgstr "목"
-
-msgid "Tue"
-msgstr "화"
-
 msgid "Turkish"
 msgstr "터키어"
 
 msgid "Unable to initialize network!"
 msgstr "네트워크 초기화 할 수 없습니다!"
-
-msgid "Unable to locate a load device!"
-msgstr "불러온 장치를 찾을 수 없습니다!"
-
-msgid "Unable to locate a save device!"
-msgstr "저장 장치를 찾을 수 없습니다!"
-
-msgid "Unfiltered"
-msgstr "필터링되지 않음"
 
 msgid "Unrecognized DVD format."
 msgstr "인식할 수 없는 DVD 형식입니다."
@@ -688,12 +451,6 @@ msgstr "수직"
 msgid "Video"
 msgstr "비디오"
 
-msgid "Video Mode"
-msgstr "비디오 모드"
-
-msgid "Wed"
-msgstr "수"
-
 msgid "Wii U Pro Controller"
 msgstr "위 U 프로 컨트롤러"
 
@@ -712,9 +469,6 @@ msgstr "추가 코딩"
 msgid "Custom"
 msgstr "커스텀"
 
-msgid "distributed, or modified under the terms of the"
-msgstr "다음 조건 하에서 배포 또는 변경되었습니다."
-
 msgid "Emulation"
 msgstr "에뮬레이션"
 
@@ -726,9 +480,6 @@ msgstr "유럽 RGB (240i)"
 
 msgid "European RGB (240p)"
 msgstr "유럽 RGB (240p)"
-
-msgid "Filtered (Auto)"
-msgstr "필터 (자동)"
 
 msgid "From .png file"
 msgstr ".png 파일에서"
@@ -742,15 +493,6 @@ msgstr "게임 설정 - 에뮬레이션"
 msgid "GB Fixed Pixel Ratio"
 msgstr "GB 수정 픽셀 비율"
 
-msgid "GB Mono Colorization"
-msgstr "GB 모노 컬러화"
-
-msgid "GB Palette"
-msgstr "GB 팔레트"
-
-msgid "GB Screen Palette"
-msgstr "GB 화면 팔레트"
-
 msgid "GB Screen Zoom"
 msgstr "GB 화면 확대/축소"
 
@@ -762,9 +504,6 @@ msgstr "GBA 프레임스킵"
 
 msgid "GBA Screen Zoom"
 msgstr "GBA 화면 확대"
-
-msgid "GNU General Public License (GPL) Version 2."
-msgstr "GNU 일반 공중 사용허가 (GPL) 버전 2."
 
 msgid "Green Screen"
 msgstr "녹색 화면"
@@ -793,20 +532,11 @@ msgstr "NTSC(480p)"
 msgid "PAL (576i)"
 msgstr "PAL (576i)"
 
-msgid "OFF"
-msgstr "끔"
-
 msgid "Offset from UTC (hours)"
 msgstr "UTC로부터 오프셋 (시간)"
 
-msgid "ON"
-msgstr "켬"
-
 msgid "Partial Stretch"
 msgstr "부분 늘리기"
-
-msgid "Save SRAM and State?"
-msgstr "SRAM과 상태를 저장할까요?"
 
 msgid "Stretch to Fit"
 msgstr "화면에 맞춤"
@@ -814,17 +544,11 @@ msgstr "화면에 맞춤"
 msgid "Super Game Boy border"
 msgstr "슈퍼 게임보이 테두리"
 
-msgid "This software is open source and may be copied,"
-msgstr "이 소프트웨어는 오픈 소스고 복사할 수 있습니다."
-
 msgid "Enable Turbo Mode"
 msgstr "터보 모드 활성화"
 
 msgid "Swedish"
 msgstr "스웨덴어"
-
-msgid "GBA Dynamic Recompilation"
-msgstr "GBA 동적 재컴파일"
 
 msgid "Game Boy Color"
 msgstr "게임보이 컬러"
@@ -840,9 +564,6 @@ msgstr "게임보이 어드밴스"
 
 msgid "Super Game Boy 2"
 msgstr "슈퍼 게임보이 2"
-
-msgid "Filtering"
-msgstr "필터링"
 
 msgid "None"
 msgstr "없음"

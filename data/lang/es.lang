@@ -1,44 +1,8 @@
-msgid "&"
-msgstr "y"
-
 msgid "16:9 Correction"
 msgstr "Corrección 16:9"
 
-msgid "7z decompression failed: Archive contains too many files."
-msgstr "Descompresión 7z falló: El archivo contiene demasiados archivos."
-
-msgid "7z decompression failed: Failed to read file data."
-msgstr "Descompresión 7z falló: Error al leer los datos del archivo."
-
-msgid "7z decompression failed: File is corrupt."
-msgstr "Descompresión 7z falló: El archivo está dañado."
-
-msgid "7z decompression failed: File is corrupt (CRC mismatch)."
-msgstr "Descompresión 7z falló: El archivo está dañado (CRC no coincide)"
-
-msgid "7z decompression failed: File uses too high of compression settings (dictionary size is too large)."
-msgstr "Descompresión 7z falló: El archivo utiliza una compresión muy alta (el tamaño del diccionario es muy grande)."
-
-msgid "7z decompression failed: File uses unsupported compression settings."
-msgstr "Descompresión 7z falló: El archivo utiliza una compresión no compatible."
-
-msgid "Additional improvements"
-msgstr "Mejoras adicionales"
-
-msgid "AM"
-msgstr "AM"
-
-msgid "Append Auto to .SAV Files"
-msgstr "Añadir Auto a archivos .SAV"
-
-msgid "Apr"
-msgstr "Abril"
-
 msgid "Reset this game? Any unsaved progress will be lost."
 msgstr "¿Reiniciar el juego? Se perderá cualquier progreso no guardado."
-
-msgid "Are you sure that you want to reset this game? Any unsaved progress will be lost."
-msgstr "¿Seguro que desea reiniciar el juego? Se perderá cualquier progreso no guardado."
 
 msgid "Are you sure that you want to reset your mappings?"
 msgstr "¿Seguro que desea restablecer los controles?"
@@ -52,26 +16,11 @@ msgstr "Arte"
 msgid "Artwork Folder"
 msgstr "Carpeta de Artes"
 
-msgid "Attempting to determine load device..."
-msgstr "Intentando determinar el dispositivo para carga..."
-
-msgid "Attempting to determine save device..."
-msgstr "Intentando determinar el dispositivo para guardados..."
-
-msgid "Aug"
-msgstr "Agosto"
-
 msgid "Auto"
 msgstr "Automático"
 
 msgid "Auto Detect"
 msgstr "Detectar automáticamente"
-
-msgid "Auto Load"
-msgstr "Carga automática"
-
-msgid "Auto Save"
-msgstr "Guardado automático"
 
 msgid "Automatic (Recommended)"
 msgstr "Automático (Recomendado)"
@@ -79,14 +28,8 @@ msgstr "Automático (Recomendado)"
 msgid "Back"
 msgstr "Atrás"
 
-msgid "Both"
-msgstr "Ambos"
-
 msgid "Brazilian Portuguese"
 msgstr "Portugués Brasileño"
-
-msgid "Button Mapping"
-msgstr "Asignación de botones"
 
 msgid "Button Mappings"
 msgstr "Controles"
@@ -142,32 +85,17 @@ msgstr "Créditos"
 msgid "Data DVD"
 msgstr "DVD Datos"
 
-msgid "Dec"
-msgstr "Diciembre"
-
 msgid "Default"
 msgstr "Por Defecto"
 
 msgid "Delete"
 msgstr "Eliminar"
 
-msgid "Delete File"
-msgstr "Eliminar archivo"
-
-msgid "Delete Saves"
-msgstr "Eliminar partidas"
-
-msgid "Delete this save file? Deleted files can not be restored."
-msgstr "¿Eliminar este archivo guardado? Esto no se puede deshacer."
-
 msgid "Directory name is too long!"
 msgstr "¡El nombre del directorio es demasiado largo!"
 
 msgid "Disabled"
 msgstr "Desactivado"
-
-msgid "Don't Save"
-msgstr "No guardar"
 
 msgid "Down"
 msgstr "Abajo"
@@ -199,9 +127,6 @@ msgstr "¡Error al crear el archivo!"
 msgid "Error loading font!"
 msgstr "¡Error al cargar la fuente!"
 
-msgid "Error loading game!"
-msgstr "¡Error al cargar el juego!"
-
 msgid "Error opening archive!"
 msgstr "¡Error al abrir el archivo!"
 
@@ -226,15 +151,6 @@ msgstr "Acción al Salir"
 msgid "Failed to connect to network share."
 msgstr "No se pudo conectar a la red compartida."
 
-msgid "Feb"
-msgstr "Febrero"
-
-msgid "Filtered (Sharp)"
-msgstr "Filtrado (Nítido)"
-
-msgid "Filtered (Soft)"
-msgstr "Filtrado (Suave)"
-
 msgid "Font file is too large!"
 msgstr "¡El archivo de fuente es demasiado grande!"
 
@@ -244,14 +160,8 @@ msgstr "¡Archivo de fuente no encontrado!"
 msgid "French"
 msgstr "Francés"
 
-msgid "Fri"
-msgstr "Viernes"
-
 msgid "Game Settings"
 msgstr "Configuración"
-
-msgid "Game Settings - Button Mappings"
-msgstr "Configuración - Controles"
 
 msgid "Game Settings - Cheats"
 msgstr "Configuración - Trucos"
@@ -277,32 +187,11 @@ msgstr "Información"
 msgid "Initializing network..."
 msgstr "Iniciando red..."
 
-msgid "Invalid network settings - Check settings.xml."
-msgstr "Configuración de red no válida. Compruebe la Configuración de Red."
-
-msgid "Invalid network settings - Share IP is blank."
-msgstr "Configuración de red no válida. La IP del SMB está en blanco."
-
-msgid "Invalid network settings - Share name is blank."
-msgstr "Configuración de red no válida. El nombre del SMB está en blanco."
-
-msgid "IOS: "
-msgstr "IOS: "
-
 msgid "Italian"
 msgstr "Italiano"
 
-msgid "Jan"
-msgstr "Enero"
-
 msgid "Japanese"
 msgstr "Japonés"
-
-msgid "Jul"
-msgstr "Julio"
-
-msgid "Jun"
-msgstr "Junio"
 
 msgid "Korean"
 msgstr "Coreano"
@@ -325,12 +214,6 @@ msgstr "Dispositivo para Carga"
 msgid "Load Folder"
 msgstr "Carpeta de Juegos"
 
-msgid "Load Game"
-msgstr "Cargar partida"
-
-msgid "Loading"
-msgstr "Cargando"
-
 msgid "Loading DVD..."
 msgstr "Cargando DVD..."
 
@@ -340,29 +223,17 @@ msgstr "Cargando..."
 msgid "Main Menu"
 msgstr "Menú Principal"
 
-msgid "Mar"
-msgstr "Marzo"
-
 msgid "Maximum filepath length reached!"
 msgstr "¡Longitud máxima de la ruta del archivo alcanzada!"
 
-msgid "May"
-msgstr "Mayo"
-
 msgid "Menu"
 msgstr "Menú"
-
-msgid "Menu artwork"
-msgstr "Ilustraciones del menú"
 
 msgid "Menu sound"
 msgstr "Sonido del menú"
 
 msgid "MINUS"
 msgstr "MENOS (-)"
-
-msgid "Mon"
-msgstr "Lunes"
 
 msgid "Music Volume"
 msgstr "Volumen de la Música"
@@ -385,12 +256,6 @@ msgstr "No"
 msgid "No disc inserted!"
 msgstr "¡Disco no insertado!"
 
-msgid "No game saves found."
-msgstr "No hay partidas guardadas."
-
-msgid "Nov"
-msgstr "Noviembre"
-
 msgid "NTSC (480i)"
 msgstr "NTSC (480i)"
 
@@ -399,9 +264,6 @@ msgstr "Nunchuk"
 
 msgid "Nunchuk + Wiimote"
 msgstr "Wiimote y Nunchuk"
-
-msgid "Oct"
-msgstr "Octubre"
 
 msgid "Off"
 msgstr "Desactivado"
@@ -415,17 +277,8 @@ msgstr "Aceptar"
 msgid "On"
 msgstr "Activado"
 
-msgid "Original"
-msgstr "Original"
-
 msgid "Out of memory: too many files!"
 msgstr "¡Sin memoria: demasiados archivos!"
-
-msgid "PAL (50Hz)"
-msgstr "PAL (50Hz)"
-
-msgid "PAL (60Hz)"
-msgstr "PAL (60Hz)"
 
 msgid "Please Wait"
 msgstr "Espere, por favor"
@@ -433,35 +286,11 @@ msgstr "Espere, por favor"
 msgid "PLUS"
 msgstr "MÁS (+)"
 
-msgid "PM"
-msgstr "PM"
-
 msgid "Portuguese"
 msgstr "Portugués"
 
 msgid "Power off Wii"
 msgstr "Apagar Wii"
-
-msgid "Preferences saved"
-msgstr "Configuraciones guardadas"
-
-msgid "Press any button on the Classic Controller now. Press Home to clear the existing mapping."
-msgstr "Presione cualquier botón en el Control Clásico. Presione HOME para borrar la asignación existente."
-
-msgid "Press any button on the GameCube Controller now. Press Home or the C-Stick in any direction to clear the existing mapping."
-msgstr "Presione cualquier botón en el Control de GameCube. Presione HOME o mueva el Stick-C para borrar la asignación existente."
-
-msgid "Press any button on the GameCube Controller now. Press the C-Stick in any direction to clear the existing mapping."
-msgstr "Presione cualquier botón en el Control de GameCube. Mueva el Stick-C para borrar la asignación existente."
-
-msgid "Press any button on the Wii U Pro Controller now. Press Home to clear the existing mapping."
-msgstr "Presione cualquier botón en el Control Pro de Wii U. Presione HOME para borrar la asignación existente."
-
-msgid "Press any button on the Wiimote now. Press Home to clear the existing mapping."
-msgstr "Presione cualquier botón en el Wiimote. Presione HOME para borrar la asignación existente."
-
-msgid "Press any button on the Wiimote or Nunchuk now. Press Home to clear the existing mapping."
-msgstr "Presione cualquier botón en el Wiimote o Nunchuk. Presione HOME para borrar la asignación existente."
 
 msgid "Preview Image"
 msgstr "Imagen de Previsualización"
@@ -477,9 +306,6 @@ msgstr "¿Salir del juego? Se perderá cualquier progreso no guardado."
 
 msgid "Reboot"
 msgstr "Reiniciar"
-
-msgid "Rendering"
-msgstr "Renderizado"
 
 msgid "Reset"
 msgstr "Reiniciar"
@@ -511,12 +337,6 @@ msgstr "DERECHA"
 msgid "Rumble"
 msgstr "Vibración"
 
-msgid "Sat"
-msgstr "Sábado"
-
-msgid "Save"
-msgstr "Guardar"
-
 msgid "Save a new Preview Screenshot? Current Screenshot image will be overwritten."
 msgstr "¿Guardar una nueva captura de pantalla? Se sobreescribirá la imagen actual."
 
@@ -526,32 +346,14 @@ msgstr "Dispositivo para Guardados"
 msgid "Save Folder"
 msgstr "Carpeta de Guardados"
 
-msgid "Save Game"
-msgstr "Guardar partida"
-
-msgid "Save State?"
-msgstr "¿Guardar partida?"
-
 msgid "Save successful"
 msgstr "Guardado con éxito."
-
-msgid "Saving"
-msgstr "Guardar"
-
-msgid "Saving preferences..."
-msgstr "Guardando configuraciones..."
 
 msgid "Saving..."
 msgstr "Guardando..."
 
-msgid "Scaling"
-msgstr "Escalado"
-
 msgid "Screen Position"
 msgstr "Posición de Pantalla"
-
-msgid "Screen Zoom"
-msgstr "Zoom de Pantalla"
 
 msgid "Screenshot"
 msgstr "Captura"
@@ -580,35 +382,14 @@ msgstr "SD en SP2"
 msgid "Select"
 msgstr "Select"
 
-msgid "Sep"
-msgstr "Septiembre"
-
 msgid "Settings"
 msgstr "Configuración"
 
 msgid "Settings - Menu"
 msgstr "Configuración - Menú"
 
-msgid "Settings - Network"
-msgstr "Configuración - Red"
-
-msgid "Settings - Saving & Loading"
-msgstr "Configuración - Guardar y Cargar"
-
 msgid "Shift"
 msgstr "Mayús"
-
-msgid "SMB Share IP"
-msgstr "IP del SMB"
-
-msgid "SMB Share Name"
-msgstr "Nombre del SMB"
-
-msgid "SMB Share Password"
-msgstr "Contraseña del SMB"
-
-msgid "SMB Share Username"
-msgstr "Nombre de Usuario del SMB"
 
 msgid "Sound Effects Volume"
 msgstr "Volumen de los Efectos"
@@ -622,38 +403,17 @@ msgstr "Start"
 msgid "START"
 msgstr "START"
 
-msgid "State"
-msgstr "Estado"
-
-msgid "Sun"
-msgstr "Domingo"
-
 msgid "The current IOS has been altered (fake-signed). Functionality and/or stability may be adversely affected."
 msgstr "El IOS actual ha sido alterado (falso firmado). La funcionalidad y/o la estabilidad pueden verse afectadas negativamente."
 
 msgid "The current IOS is unsupported. Functionality and/or stability may be adversely affected."
 msgstr "El IOS actual no es compatible. La funcionalidad y/o la estabilidad pueden verse afectadas negativamente."
 
-msgid "Thu"
-msgstr "Jueves"
-
-msgid "Tue"
-msgstr "Martes"
-
 msgid "Turkish"
 msgstr "Turco"
 
 msgid "Unable to initialize network!"
 msgstr "¡No se puede iniciar la red!"
-
-msgid "Unable to locate a load device!"
-msgstr "¡No se puede localizar un dispositivo para carga!"
-
-msgid "Unable to locate a save device!"
-msgstr "¡No se puede encontrar un dispositivo para guardados!"
-
-msgid "Unfiltered"
-msgstr "Sin filtrado"
 
 msgid "Unrecognized DVD format."
 msgstr "Formato de DVD no reconocido."
@@ -679,12 +439,6 @@ msgstr "Vertical"
 msgid "Video"
 msgstr "Vídeo"
 
-msgid "Video Mode"
-msgstr "Modo de Vídeo"
-
-msgid "Wed"
-msgstr "Miércoles"
-
 msgid "Wii U Pro Controller"
 msgstr "Control Pro de Wii U"
 
@@ -703,9 +457,6 @@ msgstr "Código adicional"
 msgid "Custom"
 msgstr "Personalizado"
 
-msgid "distributed, or modified under the terms of the"
-msgstr "distribuido, o modificado bajo los términos de"
-
 msgid "Emulation"
 msgstr "Emulación"
 
@@ -714,9 +465,6 @@ msgstr "RGB Europa (240i)"
 
 msgid "European RGB (240p)"
 msgstr "RGB Europa (240p)"
-
-msgid "Filtered (Auto)"
-msgstr "Filtrado (Automático)"
 
 msgid "From .png file"
 msgstr "Desde archivo .png"
@@ -730,15 +478,6 @@ msgstr "Configuración - Emulación"
 msgid "GB Fixed Pixel Ratio"
 msgstr "GB Proporción de píxeles"
 
-msgid "GB Mono Colorization"
-msgstr "GB Colorización Mono"
-
-msgid "GB Palette"
-msgstr "GB Paleta de Colores"
-
-msgid "GB Screen Palette"
-msgstr "GB Paleta de pantalla"
-
 msgid "GB Screen Zoom"
 msgstr "GB Zoom de Pantalla"
 
@@ -750,9 +489,6 @@ msgstr "GBA Salto de cuadros"
 
 msgid "GBA Screen Zoom"
 msgstr "GBA Zoom de Pantalla"
-
-msgid "GNU General Public License (GPL) Version 2."
-msgstr "la Licencia Pública General GNU (GPL) Versión 2."
 
 msgid "Green Screen"
 msgstr "Pantalla verde"
@@ -781,26 +517,14 @@ msgstr "NTSC (480p)"
 msgid "PAL (576i)"
 msgstr "PAL (576i)"
 
-msgid "OFF"
-msgstr "Desactivado"
-
 msgid "Offset from UTC (hours)"
 msgstr "Compensación de UTC (horas)"
 
-msgid "ON"
-msgstr "Activado"
-
 msgid "Partial Stretch"
 msgstr "Distribuir"
-
-msgid "Save SRAM and State?"
-msgstr "¿Guardar SRAM y partida?"
 
 msgid "Stretch to Fit"
 msgstr "Rellenar"
 
 msgid "Super Game Boy border"
 msgstr "Bordes Super Game Boy"
-
-msgid "This software is open source and may be copied,"
-msgstr "Este software es de código abierto y puede ser copiado,"
