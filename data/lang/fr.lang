@@ -432,3 +432,651 @@ msgstr "Orientation de la Wiimote"
 
 msgid "Yes"
 msgstr "Oui"
+
+msgid " "
+msgstr ""
+
+msgid "%s uses %s"
+msgstr "%s utilise %s"
+
+msgid "%s uses the default: %s"
+msgstr "%s utilise la valeur par défaut : %s"
+
+msgid "%s will do nothing"
+msgstr "%s ne fera rien"
+
+msgid "%s will do nothing."
+msgstr "%s ne fera rien."
+
+msgid "2xBR"
+msgstr ""
+
+msgid "2xBR-lv1"
+msgstr ""
+
+msgid "A chooses the controller to map"
+msgstr "A choisit la manette à configurer"
+
+msgid "A goes back to using the mappings below"
+msgstr "A revient aux touches définies ci-dessous"
+
+msgid "A puts these buttons back to their defaults"
+msgstr "A rétablit les touches par défaut"
+
+msgid "A uses this game's own Wii controls instead"
+msgstr "A utilise plutôt les commandes Wii propres à ce jeu"
+
+msgid "AUTO"
+msgstr ""
+
+msgid "Actual"
+msgstr "Réel"
+
+msgid "Additional coding"
+msgstr "Programmation supplémentaire"
+
+msgid "All 99 snapshot slots are in use. Delete one to make room."
+msgstr "Les 99 emplacements de sauvegarde d'état sont utilisés. Supprimez-en un pour faire de la place."
+
+msgid "Aspect Ratio Correction"
+msgstr "Correction du format d'image"
+
+msgid "Auto"
+msgstr "Auto"
+
+msgid "Auto Snapshot"
+msgstr "Sauvegarde d'état auto"
+
+msgid "Autosave"
+msgstr "Sauvegarde auto"
+
+msgid "BUTTONS"
+msgstr "BOUTONS"
+
+msgid "Backups"
+msgstr "Copies de secours"
+
+msgid "Bilinear Filtering"
+msgstr "Filtrage bilinéaire"
+
+msgid "Buttons"
+msgstr "Boutons"
+
+msgid "Cancelling..."
+msgstr "Annulation..."
+
+msgid "Cannot resume - unable to reopen ROM file. Save your game!"
+msgstr "Impossible de reprendre - le fichier ROM n'a pas pu être rouvert. Sauvegardez votre partie !"
+
+msgid "Cartridge Save"
+msgstr "Sauvegarde cartouche"
+
+msgid "Cartridge Save not found"
+msgstr "Sauvegarde cartouche introuvable"
+
+msgid "Catalan"
+msgstr "Catalan"
+
+msgid "Cheats (none)"
+msgstr "Triches (aucune)"
+
+msgid "Chinese (Traditional)"
+msgstr "Chinois (traditionnel)"
+
+msgid "Choose 'Pressed button', then press the button you want on the %s."
+msgstr "Choisissez « Bouton pressé », puis appuyez sur la touche voulue (%s)."
+
+msgid "Compressed ROM file is too large to decompress!"
+msgstr "Le fichier ROM compressé est trop volumineux pour être décompressé !"
+
+msgid "Copy the cartridge's save now"
+msgstr "Copier la sauvegarde cartouche maintenant"
+
+msgid "Core (Unbound)"
+msgstr "Noyau (illimité)"
+
+msgid "Custom"
+msgstr "Personnalisé"
+
+msgid "Custom Palette"
+msgstr "Palette personnalisée"
+
+msgid "D-PAD"
+msgstr "CROIX DIR."
+
+msgid "DDT"
+msgstr ""
+
+msgid "DVD"
+msgstr ""
+
+msgid "Device not found!"
+msgstr "Périphérique introuvable !"
+
+msgid "Dynamic Recompilation"
+msgstr "Recompilation dynamique"
+
+msgid "Empty"
+msgstr "Vide"
+
+msgid "Empty until you play"
+msgstr "Vide tant que vous n'avez pas joué"
+
+msgid "Emulation"
+msgstr ""
+
+msgid "Enable Turbo Mode"
+msgstr "Activer le mode turbo"
+
+msgid "Error extracting ZIP file!"
+msgstr "Erreur lors de l'extraction du fichier ZIP !"
+
+msgid "Error loading font!"
+msgstr "Erreur lors du chargement de la police !"
+
+msgid "Error reading uncompressed ROM data!"
+msgstr "Erreur lors de la lecture des données ROM non compressées !"
+
+msgid "European RGB (240i)"
+msgstr "RGB européen (240i)"
+
+msgid "European RGB (240p)"
+msgstr "RGB européen (240p)"
+
+msgid "Font file is too large!"
+msgstr "Le fichier de police est trop volumineux !"
+
+msgid "Font file not found!"
+msgstr "Fichier de police introuvable !"
+
+msgid "Frameskip"
+msgstr ""
+
+msgid "From .png file"
+msgstr "Depuis un fichier .png"
+
+msgid "From game (SGB only)"
+msgstr "Depuis le jeu (SGB uniquement)"
+
+msgid "GB Fixed Pixel Ratio"
+msgstr "GB ratio de pixels fixe"
+
+msgid "GB Screen Zoom"
+msgstr "Zoom écran GB"
+
+msgid "GBA Fixed Pixel Ratio"
+msgstr "GBA ratio de pixels fixe"
+
+msgid "GBA Frameskip"
+msgstr ""
+
+msgid "Game Boy"
+msgstr ""
+
+msgid "Game Boy Advance"
+msgstr ""
+
+msgid "Game Boy Color"
+msgstr ""
+
+msgid "Game Settings - Emulation"
+msgstr "Paramètres du jeu - Émulation"
+
+msgid "Go back to where you left off"
+msgstr "Revenir là où vous vous étiez arrêté"
+
+msgid "Green Screen"
+msgstr "Écran vert"
+
+msgid "HOME"
+msgstr ""
+
+msgid "Hardware"
+msgstr ""
+
+msgid "Hardware (GB/GBC)"
+msgstr ""
+
+msgid "Hardware Softening"
+msgstr "Adoucissement matériel"
+
+msgid "Home clears it."
+msgstr "Home l'efface."
+
+msgid "Home or the C-Stick clears it."
+msgstr "Home ou le stick C l'efface."
+
+msgid "Horizontal"
+msgstr ""
+
+msgid "IP"
+msgstr ""
+
+msgid "Information"
+msgstr ""
+
+msgid "Invalid Cartridge Save"
+msgstr "Sauvegarde cartouche invalide"
+
+msgid "Invalid Snapshot"
+msgstr "Sauvegarde d'état invalide"
+
+msgid "It will be overwritten with your progress right now."
+msgstr "Elle sera écrasée par votre progression actuelle."
+
+msgid "JIT compiler is not available."
+msgstr "Le compilateur JIT n'est pas disponible."
+
+msgid "Jump back to this moment"
+msgstr "Revenir à ce moment"
+
+msgid "Jump to this moment"
+msgstr "Aller à ce moment"
+
+msgid "Like a real console: the game's own save is kept for you, and the game starts fresh each time."
+msgstr "Comme sur une vraie console : la sauvegarde du jeu est conservée et la partie redémarre à chaque fois."
+
+msgid "Load / Save"
+msgstr "Charger / Sauvegarder"
+
+msgid "MOTION"
+msgstr "MOUVEMENT"
+
+msgid "Main developer"
+msgstr "Développeur principal"
+
+msgid "Make Backup"
+msgstr "Créer une copie"
+
+msgid "Make a copy of the save"
+msgstr "Faire une copie de la sauvegarde"
+
+msgid "Manual"
+msgstr "Manuel"
+
+msgid "Manual Snapshot"
+msgstr "Sauvegarde d'état manuelle"
+
+msgid "Menu"
+msgstr "Menu"
+
+msgid "Mono Colorization"
+msgstr "Colorisation mono"
+
+msgid "Mono Screen Palette"
+msgstr "Palette d'écran mono"
+
+msgid "Monochrome Screen"
+msgstr "Écran monochrome"
+
+msgid "Move over a button to see what it uses"
+msgstr "Survolez une touche pour voir ce qu'elle utilise"
+
+msgid "Move over a kind to see its choices"
+msgstr "Survolez un type pour voir ses choix"
+
+msgid "NOTES"
+msgstr "REMARQUES"
+
+msgid "NTSC (240p)"
+msgstr ""
+
+msgid "NTSC (480i)"
+msgstr ""
+
+msgid "NTSC (480p)"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Network share not connected!"
+msgstr "Partage réseau non connecté !"
+
+msgid "No game save file"
+msgstr "Aucun fichier de sauvegarde du jeu"
+
+msgid "No image"
+msgstr "Aucune image"
+
+msgid "No more ROMs found in the file."
+msgstr "Plus aucune ROM trouvée dans le fichier."
+
+msgid "No snapshots yet"
+msgstr "Aucune sauvegarde d'état pour l'instant"
+
+msgid "Not saved yet"
+msgstr "Pas encore sauvegardé"
+
+msgid "Not updated while Save Mode is Cartridge Save."
+msgstr "Non mis à jour tant que le mode de sauvegarde est « Sauvegarde cartouche »."
+
+msgid "Not updated while Save Mode is Manual."
+msgstr "Non mis à jour tant que le mode de sauvegarde est « Manuel »."
+
+msgid "Nothing is saved or loaded unless you do it yourself."
+msgstr "Rien n'est sauvegardé ni chargé sans votre action."
+
+msgid "Nothing to save yet. The game hasn't started using its save memory."
+msgstr "Rien à sauvegarder pour l'instant. Le jeu n'a pas encore utilisé sa mémoire de sauvegarde."
+
+msgid "Now: %s"
+msgstr "Actuellement : %s"
+
+msgid "Nunchuk"
+msgstr ""
+
+msgid "Nunchuk + Wiimote"
+msgstr ""
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Off"
+msgstr "Non"
+
+msgid "Offset from UTC (hours)"
+msgstr "Décalage UTC (heures)"
+
+msgid "On"
+msgstr "Oui"
+
+msgid "Optional save point"
+msgstr "Point de sauvegarde facultatif"
+
+msgid "Output Mode"
+msgstr "Mode de sortie"
+
+msgid "Overwrite with your progress"
+msgstr "Écraser avec votre progression"
+
+msgid "PAL (576i)"
+msgstr ""
+
+msgid "PLUS"
+msgstr ""
+
+msgid "Palette"
+msgstr ""
+
+msgid "Password"
+msgstr "Mot de passe"
+
+msgid "Pause"
+msgstr ""
+
+msgid "Paused"
+msgstr "En pause"
+
+msgid "Picks up exactly where you left off, as if you never turned the console off."
+msgstr "Reprend exactement là où vous vous étiez arrêté, comme si vous n'aviez jamais éteint la console."
+
+msgid "Playing from"
+msgstr "Joué depuis"
+
+msgid "Press a button on the %s now."
+msgstr "Appuyez maintenant sur une touche (%s)."
+
+msgid "Pressed button"
+msgstr "Bouton pressé"
+
+msgid "Remembers the exact moment, so you"
+msgstr "Mémorise l'instant exact, pour que vous"
+
+msgid "Remove this backup"
+msgstr "Supprimer cette copie"
+
+msgid "Remove this snapshot"
+msgstr "Supprimer cette sauvegarde d'état"
+
+msgid "Replace"
+msgstr "Remplacer"
+
+msgid "Replace with your progress now"
+msgstr "Remplacer par votre progression actuelle"
+
+msgid "Restore"
+msgstr "Restaurer"
+
+msgid "SD"
+msgstr ""
+
+msgid "SD Gecko Slot A"
+msgstr ""
+
+msgid "SD Gecko Slot B"
+msgstr ""
+
+msgid "SD in SP2"
+msgstr ""
+
+msgid "SHOULDER"
+msgstr "GÂCHETTES"
+
+msgid "START"
+msgstr ""
+
+msgid "SYSTEM"
+msgstr "SYSTÈME"
+
+msgid "Save Mode"
+msgstr "Mode de sauvegarde"
+
+msgid "Save Now"
+msgstr "Sauvegarder maintenant"
+
+msgid "Save this moment"
+msgstr "Sauvegarder cet instant"
+
+msgid "Saved inside your snapshots"
+msgstr "Enregistré dans vos sauvegardes d'état"
+
+msgid "Saved when you leave the game, or when you save it."
+msgstr "Sauvegardé à la fermeture du jeu ou quand vous le sauvegardez."
+
+msgid "Saved when you leave the game, or when you update it."
+msgstr "Sauvegardé à la fermeture du jeu ou quand vous le mettez à jour."
+
+msgid "Saves"
+msgstr "Sauvegardes"
+
+msgid "Saves when you do"
+msgstr "Sauvegarde quand vous le faites"
+
+msgid "Scale2x"
+msgstr ""
+
+msgid "Scanline Overlay"
+msgstr "Superposition de lignes"
+
+msgid "Scanlines"
+msgstr ""
+
+msgid "Select"
+msgstr ""
+
+msgid "Settings - Network Share"
+msgstr "Paramètres - Partage réseau"
+
+msgid "Settings - Storage"
+msgstr "Paramètres - Stockage"
+
+msgid "Sharp"
+msgstr "Net"
+
+msgid "Snapshot not found"
+msgstr "Sauvegarde d'état introuvable"
+
+msgid "Soft"
+msgstr "Doux"
+
+msgid "SoftDev, emukidid"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "Start fresh next time"
+msgstr "Repartir de zéro la prochaine fois"
+
+msgid "Storage"
+msgstr "Stockage"
+
+msgid "Storage device not found!"
+msgstr "Périphérique de stockage introuvable !"
+
+msgid "Super Game Boy"
+msgstr ""
+
+msgid "Super Game Boy 2"
+msgstr ""
+
+msgid "Super Game Boy border"
+msgstr "Bordure Super Game Boy"
+
+msgid "Swedish"
+msgstr "Suédois"
+
+msgid "TV Mode"
+msgstr "Mode TV"
+
+msgid "The Auto Snapshot couldn't be loaded. The Cartridge Save was loaded instead."
+msgstr "La sauvegarde d'état auto n'a pas pu être chargée. La sauvegarde cartouche a été chargée à la place."
+
+msgid "The Auto Snapshot couldn't be loaded. The game starts from the beginning."
+msgstr "La sauvegarde d'état auto n'a pas pu être chargée. Le jeu démarre depuis le début."
+
+msgid "This can't be undone."
+msgstr "Cette action est irréversible."
+
+msgid "This file contains uncompressed Game Boy (Color) ROMs. Do you want to run these?"
+msgstr "Ce fichier contient des ROM Game Boy (Color) non compressées. Voulez-vous les lancer ?"
+
+msgid "This game doesn't have its own save feature. Use snapshots to save."
+msgstr "Ce jeu n'a pas de fonction de sauvegarde propre. Utilisez les sauvegardes d'état."
+
+msgid "This software is open source and may be copied, distributed, or modified"
+msgstr "Ce logiciel est open source et peut être copié, distribué ou modifié"
+
+msgid "USB"
+msgstr ""
+
+msgid "USB Mass Storage 2"
+msgstr "Périphérique de stockage USB 2"
+
+msgid "USB Mass Storage 3"
+msgstr "Périphérique de stockage USB 3"
+
+msgid "USB Storage 1"
+msgstr "Stockage USB 1"
+
+msgid "USB Storage 2"
+msgstr "Stockage USB 2"
+
+msgid "USB Storage 3"
+msgstr "Stockage USB 3"
+
+msgid "USB drive 2 not found!"
+msgstr "Aucun disque USB 2 n'a été trouvé !"
+
+msgid "USB drive 3 not found!"
+msgstr "Aucun disque USB 3 n'a été trouvé !"
+
+msgid "USING"
+msgstr "UTILISE"
+
+msgid "Unable to mount device."
+msgstr "Impossible de monter le périphérique."
+
+msgid "Unassign"
+msgstr "Retirer"
+
+msgid "Unnamed Cheat"
+msgstr "Triche sans nom"
+
+msgid "Unsupported drive format. Use FAT32, exFAT or NTFS."
+msgstr "Format de disque non pris en charge. Utilisez FAT32, exFAT ou NTFS."
+
+msgid "Unsupported file size!"
+msgstr "Taille de fichier non prise en charge !"
+
+msgid "Unsupported format - FAT32 is recommended."
+msgstr "Format non pris en charge - FAT32 est recommandé."
+
+msgid "Unsupported format - please use FAT32/exFAT."
+msgstr "Format non pris en charge - utilisez FAT32/exFAT."
+
+msgid "Unsupported format."
+msgstr "Format non pris en charge."
+
+msgid "Unsupported language!"
+msgstr "Langue non prise en charge !"
+
+msgid "Update"
+msgstr "Mettre à jour"
+
+msgid "Upscaling"
+msgstr "Mise à l'échelle"
+
+msgid "Use the saved file in the game"
+msgstr "Utiliser le fichier sauvegardé dans le jeu"
+
+msgid "Use this as the cartridge's save"
+msgstr "Utiliser comme sauvegarde cartouche"
+
+msgid "Username"
+msgstr "Nom d'utilisateur"
+
+msgid "VBA GameCube"
+msgstr ""
+
+msgid "Vertical"
+msgstr "Vertical"
+
+msgid "Visual Boy Advance"
+msgstr ""
+
+msgid "Visual Boy Advance - M"
+msgstr ""
+
+msgid "Waiting for a button..."
+msgstr "En attente d'une touche..."
+
+msgid "Weather: Night Time"
+msgstr "Météo : nuit"
+
+msgid "What should %s use?"
+msgstr "Que doit utiliser %s ?"
+
+msgid "Which controller is being mapped?"
+msgstr "Quelle manette est configurée ?"
+
+msgid "Wii U Gamepad"
+msgstr ""
+
+msgid "Wii U Pro Controller"
+msgstr ""
+
+msgid "Wiimote"
+msgstr ""
+
+msgid "Write the save to its file"
+msgstr "Écrire la sauvegarde dans son fichier"
+
+msgid "can jump back to it any time."
+msgstr "puissiez y revenir à tout moment."
+
+msgid "cebolleto, bgK, Carl Kenner, dancinninjac"
+msgstr ""
+
+msgid "hq2x"
+msgstr ""
+
+msgid "hq2x Bold"
+msgstr ""
+
+msgid "hq2x Soft"
+msgstr ""
+
+msgid "libogc / devkitPPC"
+msgstr ""
