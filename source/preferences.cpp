@@ -33,6 +33,7 @@
 #include "memmanager.h"
 #include "input.h"
 #include "button_mapping.h"
+#include "drivers/safestr.h"
 #include "gamesettings.h"
 
 #if defined(HW_RVL) || defined(HW_DOL)
@@ -908,13 +909,15 @@ static bool SavePrefsNow()
 
 	if(prefpath[0] != 0)
 	{
-		snprintf(filepath, sizeof(filepath), "%s/%s", prefpath, PREF_FILE_NAME);
+		if(!FormatString(filepath, sizeof(filepath), "%s/%s", prefpath, PREF_FILE_NAME))
+			return false; // the remembered folder is too long to put the file in
 		FindDevice(filepath, &device);
 	}
 	else if(appPath[0] != 0)
 	{
-		snprintf(filepath, sizeof(filepath), "%s/%s", appPath, PREF_FILE_NAME);
-		strcpy(prefpath, appPath);
+		if(!FormatString(filepath, sizeof(filepath), "%s/%s", appPath, PREF_FILE_NAME))
+			return false;
+		CopyString(prefpath, sizeof(prefpath), appPath);
 		FindDevice(filepath, &device);
 	}
 
@@ -938,13 +941,15 @@ static bool SavePrefsNow()
 			return false;
 		}
 
-		platform->getFileSystem()->getPath(filepath, device, APPFOLDER);
-		if(!CreateDirectory(filepath)) {
+		if(!platform->getFileSystem()->getPath(filepath, device, APPFOLDER) || !CreateDirectory(filepath)) {
 			return false;
 		}
 
-		platform->getFileSystem()->getPath(filepath, device, APPFOLDER, PREF_FILE_NAME);
-		platform->getFileSystem()->getPath(prefpath, device, APPFOLDER);
+		if(!platform->getFileSystem()->getPath(filepath, device, APPFOLDER, PREF_FILE_NAME)
+			|| !platform->getFileSystem()->getPath(prefpath, device, APPFOLDER)) {
+			prefpath[0] = 0;
+			return false;
+		}
 	}
 
 	if(device == DEVICE_AUTO)
@@ -1013,7 +1018,8 @@ LoadPrefsFromMethod (char * path)
 	bool retval = false;
 	int offset = 0;
 	char filepath[MAXPATHLEN];
-	sprintf(filepath, "%s/%s", path, PREF_FILE_NAME);
+	if(!FormatString(filepath, sizeof(filepath), "%s/%s", path, PREF_FILE_NAME))
+		return false;
 
 	AllocSaveBuffer ();
 
@@ -1063,7 +1069,8 @@ static bool ScanForExistingPrefs()
 		for(int f = 0; f < folderCount; f++)
 		{
 			char path[MAXPATHLEN];
-			MakeFilePathForFolderPath(path, device, folders[f]);
+			if(!MakeFilePathForFolderPath(path, device, folders[f]))
+				continue;
 
 			if(LoadPrefsFromMethod(path))
 				return true;
@@ -1133,11 +1140,13 @@ static void RemapUsbPathIfNeeded(char * path, size_t pathSize)
 			continue; // this slot isn't mounted right now
 
 		char candidatePath[MAXPATHLEN];
-		MakeFilePathForFolderPath(candidatePath, usbCandidates[i], suffix);
+		if(!MakeFilePathForFolderPath(candidatePath, usbCandidates[i], suffix))
+			continue;
 
-		if(stat(candidatePath, &st) == 0)
+		// (a path that does not fit in the caller's buffer is no use to it: leave path alone)
+		if(stat(candidatePath, &st) == 0 && strlen(candidatePath) < pathSize)
 		{
-			snprintf(path, pathSize, "%s", candidatePath);
+			CopyString(path, pathSize, candidatePath);
 			return;
 		}
 	}
@@ -1205,8 +1214,8 @@ bool LoadPrefs()
 
 void CreatePathWithPrefix(int device, const char* folder) {
 	char fullPath[MAXPATHLEN];
-	MakeFilePathForFolderPath(fullPath, device, folder);
-	CreateDirectory(fullPath);
+	if(MakeFilePathForFolderPath(fullPath, device, folder))
+		CreateDirectory(fullPath);
 }
 
 void CreateMissingDirectories() {
@@ -1264,7 +1273,8 @@ bool SavePalettes(bool silent)
 	if(prefpath[0] == 0)
 		return false;
 
-	snprintf(filepath, sizeof(filepath), "%s/%s", prefpath, PAL_FILE_NAME);
+	if(!FormatString(filepath, sizeof(filepath), "%s/%s", prefpath, PAL_FILE_NAME))
+		return false;
 
 	// Now create the XML palette file
 
@@ -1332,9 +1342,11 @@ bool LoadPalettes()
 	int offset = 0;
 	char filepath[MAXPATHLEN];
 
+	if(!FormatString(filepath, sizeof(filepath), "%s/%s", prefpath, PAL_FILE_NAME))
+		return false;
+
 	AllocSaveBuffer ();
 
-	snprintf(filepath, sizeof(filepath), "%s/%s", prefpath, PAL_FILE_NAME);
 	offset = LoadFile(filepath, SILENT);
 
 	if (offset > 0)

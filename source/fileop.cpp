@@ -31,6 +31,7 @@
 #include "drivers/Cond.h"
 #include "drivers/Platform.h"
 #include "drivers/FileSystemDriver.h"
+#include "drivers/safestr.h"
 #include "drivers/SmbDriver.h"
 
 #define PARSE_FIRST_BATCH 20
@@ -688,6 +689,10 @@ static bool ParseDirEntries(int batchSize)
 		if(entry->d_name[0] == '.')
 			continue;
 
+		// An entry cannot hold a longer name, and a cut-off name would point at a different file
+		if(strlen(entry->d_name) > MAXJOLIET)
+			continue;
+
 		if(parsePrefixLen > 0 && strncmp(entry->d_name, parsePrefix, parsePrefixLen) != 0)
 			continue;
 
@@ -719,7 +724,7 @@ static bool ParseDirEntries(int batchSize)
 			break;
 		}
 
-		snprintf(browserList[browser.numEntries+i].filename, MAXJOLIET, "%s", entry->d_name);
+		CopyString(browserList[browser.numEntries+i].filename, sizeof(browserList[0].filename), entry->d_name);
 		browserList[browser.numEntries+i].isdir = isdir; // flag this as a dir
 
 		char utf8Name[MAXJOLIET + 1];
@@ -727,7 +732,7 @@ static bool ParseDirEntries(int batchSize)
 
 		if(isdir)
 		{
-			snprintf(browserList[browser.numEntries+i].displayname, MAXJOLIET, "%s", utf8Name);
+			CopyString(browserList[browser.numEntries+i].displayname, sizeof(browserList[0].displayname), utf8Name);
 			browserList[browser.numEntries+i].icon = ICON_FOLDER;
 		}
 		else
@@ -1061,7 +1066,8 @@ size_t LoadFont(char * filepath)
 void LoadBgMusic()
 {
 	char filepath[MAXPATHLEN];
-	sprintf(filepath, "%s/bg_music.ogg", appPath);
+	if(!FormatString(filepath, sizeof(filepath), "%s/bg_music.ogg", appPath))
+		return;
 	FILE *file = fopen (filepath, "rb");
 	if(!file) {
 		return;
