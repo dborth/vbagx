@@ -402,6 +402,7 @@ class MappingView : public GuiOverlay
 		GuiCard * usingChip;
 		GuiCard * wiiCard;		// the Match Wii Controls switch, when the game has them
 		bool wiiRequested;
+		bool wiiMappingsApply;	// the game's own controls leave the mappings in charge on this controller
 		bool wiiChoice;
 		bool rowRequested;
 		int requestedRow;
@@ -573,6 +574,7 @@ MappingView::MappingView(int hw, bool selectWii) :
 	WiiControls wiiControls;
 	const WiiScheme wiiScheme = WiiSchemeFor(hardware);
 	const bool showWii = WiiControlsOverrideActive() && WiiControlsFor(hardware, wiiControls);
+	wiiMappingsApply = WiiControlsOverrideActive() && !showWii && wiiControls.mappings;
 	if(WiiControlsOverrideActive() && !showWii)
 		status = TrFormat("Not used while %s is on", Tr(WiiControlsOptionName()).c_str());
 
@@ -582,14 +584,14 @@ MappingView::MappingView(int hw, bool selectWii) :
 	{
 		std::vector<WiiRowPlan> side[2], extra[2];
 		PlanWiiColumns(layout, wiiControls, stageH - stageTop, side, extra);
-		const auto wiiColumn = [this, wiiScheme](const std::vector<WiiRowPlan>& plans, const std::vector<WiiRowPlan>& other, bool onLeft) -> GuiLayout& {
+		const auto wiiColumn = [this, wiiScheme, &wiiControls](const std::vector<WiiRowPlan>& plans, const std::vector<WiiRowPlan>& other, bool onLeft) -> GuiLayout& {
 			GuiLayout& col = ui.column().gap(kRowGap).align(onLeft ? LAYOUT_ALIGN::END : LAYOUT_ALIGN::START);
 			for(size_t i = 0; i < plans.size(); i++)
 				col.add(wiiRow(plans[i], wiiScheme, onLeft, kSideW));
 			if(!other.empty())
 			{
 				GuiLayout& heading = ui.row().size(kSideW, 0).pad(8, 5, 0, 1)
-					.add(ui.label(Tr(wiiScheme == WiiScheme::WII ? "MOTION" : "NOTES").c_str()).fontSize(UI_FONT_SMALL - 2).muted());
+					.add(ui.label(Tr(wiiScheme == WiiScheme::WII && !wiiControls.derived ? "MOTION" : "NOTES").c_str()).fontSize(UI_FONT_SMALL - 2).muted());
 				col.add(heading);
 				for(size_t i = 0; i < other.size(); i++)
 					col.add(wiiRow(other[i], wiiScheme, onLeft, kSideW));
@@ -657,7 +659,7 @@ MappingView::MappingView(int hw, bool selectWii) :
 	GuiLayout& stage = ui.row().size(kContentW, stageH).pad(0, stageTop, 0, 0).gap(6).align(LAYOUT_ALIGN::CENTRE).justifyContent(LAYOUT_JUSTIFY::CENTRE)
 		.add(*leftCol).add(*view).add(*rightCol);
 	// the mappings are kept but not in use while the game's own Wii controls are: show them faded
-	if(WiiControlsOverrideActive() && !showWii)
+	if(WiiControlsOverrideActive() && !showWii && !wiiMappingsApply)
 		stage.setAlpha(kWiiDimAlpha);
 
 	GuiTextButton& reset = ui.button(Tr("Reset").c_str()).size(48, kResetH).fontSize(UI_FONT_SMALL - 1).style(MenuKeycapStyle())

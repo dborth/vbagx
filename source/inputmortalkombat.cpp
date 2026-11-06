@@ -29,6 +29,7 @@
 #include "vba/gba/bios.h"
 #include "vba/gba/GBAinline.h"
 #include "vba/gb/gbGlobals.h"
+#include "legacyinput.h"
 
 void gbSetSpritePal(uint8_t WhichPal, uint32_t bright, uint32_t medium, uint32_t dark);
 
@@ -116,82 +117,79 @@ static uint32_t  VBA_FORWARD=VBA_RIGHT, VBA_BACK=VBA_LEFT;
 static int ChameleonChangeTime = 0;
 
 uint32_t GetMKInput(unsigned short pad, int rumbleTime=4) {
-	// The stick moves; the D-pad moves on every pad but a Wii Remote with a Nunchuk, where it is the punches and kicks
-	uint32_t J = StandardMovement(pad) | StandardSideways(pad);
+	uint32_t J = StandardMovement(pad) | DecodeWiimote(pad);
     HP=0;LP=0;HK=0;LK=0;BL=0;Throw=0;CS=0;F=0;B=0;Select=0;Start=0;SpecialMove=0;
-	if (!controller[pad]) return J;
-	const InputPadData& data = controller[pad]->getPadData();
+
 	// Rumble when they lose health!
-	if (OurHealth < OurOldHealth) systemGameRumble(rumbleTime);
+	if (OurHealth < OurOldHealth)
+		systemGameRumble(rumbleTime);
 	OurOldHealth = OurHealth;
+		
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	if (data.hw_connected[INPUT_HW_NUNCHUK]) {
-		const uint32_t hw = data.hw_buttons_h[INPUT_HW_NUNCHUK];
+	if (wp->exp.type == LW_EXP_NUNCHUK) {
 		// Punch
-		if (hw & INPUT_BTN_LEFT) LP = true;
-		if (hw & INPUT_BTN_UP) HP = true;
+		if (wp->btns_h & LW_BUTTON_LEFT) LP = true;
+		if (wp->btns_h & LW_BUTTON_UP) HP = true;
 		// Kick
-		if (hw & INPUT_BTN_DOWN) LK = true;
-		if (hw & INPUT_BTN_RIGHT) HK = true;
+		if (wp->btns_h & LW_BUTTON_DOWN) LK = true;
+		if (wp->btns_h & LW_BUTTON_RIGHT) HK = true;
 		// Block
-		if (hw & INPUT_TRIGGER_ZL) BL = true;
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z) BL = true;
 		// Throw
-		if (hw & INPUT_BTN_A) Throw = true;
+		if (wp->btns_h & LW_BUTTON_A) Throw = true;
 		// Run / Change Styles
-		if (hw & INPUT_TRIGGER_L) CS = true;
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_C) CS = true;
 		// Start and Select
-		if (hw & INPUT_BTN_MINUS) Select = true;
-		if (hw & INPUT_BTN_PLUS) Start = true;
+		if (wp->btns_h & LW_BUTTON_MINUS) Select=true;
+		if (wp->btns_h & LW_BUTTON_PLUS) Start=true;
 		// Special move
-		if (hw & INPUT_BTN_B) SpecialMove = true;
-	}
-
-	if (ClassicStyleConnected(data)) {
-		// Classic Controller, Pro Controller and GamePad
-		const uint32_t hw = ClassicStyleHeld(data);
-		// D-Pad moves
-		if (hw & INPUT_BTN_UP) J |= VBA_UP;
-		if (hw & INPUT_BTN_DOWN) J |= VBA_DOWN;
-		if (hw & INPUT_BTN_LEFT) J |= VBA_LEFT;
-		if (hw & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+		if (wp->btns_h & LW_BUTTON_B) SpecialMove=true;
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		// D-Pad
+		if (wp->btns_h & LW_CLASSIC_BUTTON_UP) J |= VBA_UP;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_DOWN) J |= VBA_DOWN;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_LEFT) J |= VBA_LEFT;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_RIGHT) J |= VBA_RIGHT;
 		// Punch
-		if (hw & INPUT_BTN_Y) LP = true;
-		if (hw & INPUT_BTN_X) HP = true;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_Y) LP = true;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_X) HP = true;
 		// Kick
-		if (hw & INPUT_BTN_B) LK = true;
-		if (hw & INPUT_BTN_A) HK = true;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_B) LK = true;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_A) HK = true;
 		// Throw
-		if (hw & INPUT_TRIGGER_ZR) Throw = true;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_ZR) Throw = true;
 		// Block
-		if (hw & INPUT_TRIGGER_R) BL = true;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_FULL_R) BL = true; // block
 		// Run / Change Styles
-		if (hw & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) CS = true;
+		if (wp->btns_h & (LW_CLASSIC_BUTTON_FULL_L | LW_CLASSIC_BUTTON_ZL)) CS = true;
 		// Start and Select
-		if (hw & INPUT_BTN_MINUS) Select = true;
-		if (hw & INPUT_BTN_PLUS) Start = true;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_MINUS) Select = true;
+		if (wp->btns_h & LW_CLASSIC_BUTTON_PLUS) Start = true;
+		// Special move
+		if (wp->btns_h & LW_BUTTON_B) SpecialMove=true;
 	}
-
-	if (data.hw_connected[INPUT_HW_GAMECUBE]) {
-		const uint32_t gc = data.hw_buttons_h[INPUT_HW_GAMECUBE];
+	{
+		uint32_t gc = LegacyPad_ButtonsHeld(pad);
 		// DPad moves
-		if (gc & INPUT_BTN_UP) J |= VBA_UP;
-		if (gc & INPUT_BTN_DOWN) J |= VBA_DOWN;
-		if (gc & INPUT_BTN_LEFT) J |= VBA_LEFT;
-		if (gc & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
+		if (gc & LP_BUTTON_UP) J |= VBA_UP;
+		if (gc & LP_BUTTON_DOWN) J |= VBA_DOWN;
+		if (gc & LP_BUTTON_LEFT) J |= VBA_LEFT;
+		if (gc & LP_BUTTON_RIGHT) J |= VBA_RIGHT;
 		// Start and Select
-		if (gc & INPUT_BTN_PLUS) Start = true;
+		if (gc & LP_BUTTON_START) Start = true;
 		// Punch
-		if (gc & INPUT_BTN_B) LP = true;
-		if (gc & INPUT_BTN_Y) HP = true;
+		if (gc & LP_BUTTON_B) LP = true;
+		if (gc & LP_BUTTON_Y) HP = true;
 		// Kick
-		if (gc & INPUT_BTN_A) LK = true;
-		if (gc & INPUT_BTN_X) HK = true;
+		if (gc & LP_BUTTON_A) LK = true;
+		if (gc & LP_BUTTON_X) HK = true;
 		// Block
-		if (gc & INPUT_TRIGGER_R) BL = true;
+		if (gc & LP_TRIGGER_R) BL = true;
 		// Run / Change Style
-		if (gc & INPUT_TRIGGER_L) CS = true;
+		if (gc & LP_TRIGGER_L) CS = true;
 		// Throw
-		if (gc & INPUT_TRIGGER_ZR) Throw = true;
+		if (gc & LP_TRIGGER_Z) Throw = true;
 	}
 	// Check which side they are on
 	if (OurX < OpponentX) {
@@ -1112,7 +1110,7 @@ uint32_t MKDAInput(unsigned short pad)
 	static uint32_t prevJ = 0, prevPrevJ = 0;
 	OurHealth = CPUReadByte(0x3000760);
 	uint8_t Side = CPUReadByte(0x3000747);
-	uint32_t Forwards, Back;
+	[[maybe_unused]] uint32_t Forwards, Back;
 	if (Side == 0) {
 		OurX = 0; OpponentX = 1;
 		Forwards = VBA_RIGHT;
@@ -1154,7 +1152,7 @@ uint32_t MKTEInput(unsigned short pad)
 	static uint32_t prevJ = 0, prevPrevJ = 0;
 	OurHealth = CPUReadByte(0x3000760);
 	uint8_t Side = CPUReadByte(0x3000777);
-	uint32_t Forwards, Back;
+	[[maybe_unused]] uint32_t Forwards, Back;
 	if (Side == 0) {
 		OurX = 0; OpponentX = 1;
 		Forwards = VBA_RIGHT;

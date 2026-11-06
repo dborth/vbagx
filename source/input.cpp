@@ -161,9 +161,13 @@ void systemGameRumbleOnlyFor(int onlyRumbleForFrames) {
 	if (controller[0]) controller[0]->setGameRumble(onlyRumbleForFrames);
 }
 
-bool ClassicStyleConnected(const InputPadData& data)
+uint32_t MappedButtons(int hw, uint32_t held)
 {
-	return data.hw_connected[INPUT_HW_CLASSIC] || data.hw_connected[INPUT_HW_WUPC] || data.hw_connected[INPUT_HW_DRC];
+	uint32_t J = 0;
+	for (int i = 0; i < MAXJP; ++i)
+		if (held & btnmap[hw][i])
+			J |= vbapadmap[i];
+	return J;
 }
 
 uint32_t ClassicStyleHeld(const InputPadData& data)
@@ -173,27 +177,6 @@ uint32_t ClassicStyleHeld(const InputPadData& data)
 	if (data.hw_connected[INPUT_HW_WUPC]) held |= data.hw_buttons_h[INPUT_HW_WUPC];
 	if (data.hw_connected[INPUT_HW_DRC]) held |= data.hw_buttons_h[INPUT_HW_DRC];
 	return held;
-}
-
-uint32_t ClassicStyleReleased(const InputPadData& data)
-{
-	uint32_t released = 0;
-	if (data.hw_connected[INPUT_HW_CLASSIC]) released |= data.hw_buttons_r[INPUT_HW_CLASSIC];
-	if (data.hw_connected[INPUT_HW_WUPC]) released |= data.hw_buttons_r[INPUT_HW_WUPC];
-	if (data.hw_connected[INPUT_HW_DRC]) released |= data.hw_buttons_r[INPUT_HW_DRC];
-	return released;
-}
-
-uint32_t ClassicStyleDPad(unsigned short pad)
-{
-	if (!controller[pad]) return 0;
-	const uint32_t wp = ClassicStyleHeld(controller[pad]->getPadData());
-	uint32_t J = 0;
-	if (wp & INPUT_BTN_RIGHT) J |= VBA_RIGHT;
-	else if (wp & INPUT_BTN_LEFT) J |= VBA_LEFT;
-	if (wp & INPUT_BTN_UP) J |= VBA_UP;
-	else if (wp & INPUT_BTN_DOWN) J |= VBA_DOWN;
-	return J;
 }
 
 uint32_t StandardMovement(unsigned short chan)

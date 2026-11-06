@@ -415,57 +415,7 @@ Choose **Match Wii Controls** (or **Match GC Controls**) at the top of the Butto
 
 > **Match Wii Controls replaces your Button Mappings for the games listed below.** The choice only appears on the Button Mappings screen of those games, as **My Mappings | Match Wii Controls**. While Match Wii Controls is selected the mappings are shown faded: they are kept, not erased, and apply again when you switch back. The setting is global rather than per game, but it only affects the games in this table.
 >
-> While it is selected, the Button Mappings screen lists what each control does in that game, around the drawing of the controller you are using (the same descriptions as below, in short). Shakes, swings and pointing are listed under **Motion**. Select a line to see where the control is and the full description. Every game with special controls is listed this way, for every kind of controller. Where the descriptions below cover a controller, the screen uses them; where they don't (the Classic Controller and GameCube pad for most games, and Mario Kart, Star Wars, The Lord of the Rings and Castlevania altogether), it lists the controls as the code reads them, and a line that can only say which Game Boy button a control presses says so ("A button"). A controller a game doesn't read shows a single "Not used" line.
-
-| Games | Modeled after |
-|---|---|
-| The Legend of Zelda, Zelda II, A Link to the Past, Link's Awakening (DX), Oracle of Ages, Oracle of Seasons, Minish Cap | *Twilight Princess* |
-| Super Mario Bros., Super Mario Bros. DX, Super Mario 2, Super Mario (2) Advance, Super Mario 3, Super Mario World, Yoshi's Island, Yoshi's Universal Gravitation (Topsy Turvy) | *Super Mario Galaxy* |
-| Mario Kart | *Mario Kart Wii* (rough fit — doesn't work especially well) |
-| Metroid Zero Mission, Metroid 1, Metroid 2, Metroid Fusion | *Metroid Prime 3: Corruption* |
-| TMNT, Teenage Mutant Ninja Turtles, Fall of the Foot Clan, Back from the Sewers, Radical Rescue | *TMNT* (Wii/GameCube); Classic Controller uses the PS2 control scheme instead |
-| Mortal Kombat, MK II, MK 3, MK 4, MK Advance, MK: Deadly Alliance, MK: Tournament Edition | *Mortal Kombat: Armageddon* |
-| Lego Star Wars: The Video Game, Lego Star Wars: The Original Trilogy | *Lego Star Wars: The Complete Saga* |
-| Harry Potter 1–5 (and GBC versions) | *Harry Potter and the Order of the Phoenix* (spell gestures not implemented) |
-| Medal of Honor: Underground, Medal of Honor: Infiltrator | Various Medal of Honor Wii games/modes |
-| One Piece | *One Piece: Unlimited Adventure* (Wii) / *One Piece: Grand Adventure* (GameCube) |
-| Boktai 1–3, Kirby's Tilt 'n' Tumble, WarioWare: Twisted | Custom controls designed specifically for VBA-GX (see below) |
-
-<details>
-<summary><strong>Zelda</strong></summary>
-
-**Wii Remote:** Swing to draw/swing your sword (A puts it away; the two-handed sword must be drawn from the items menu). Shake the Nunchuk for a spin attack. Z to Z-target and raise your shield (or Gust Jar, if equipped). A performs contextual actions (roll, talk, pick up, push, shrink/grow) and also sheathes your weapon; in Zelda II, A jumps. C fast-forwards. B uses the selected item, with three more mapped to D-Pad Left/Down/Right (swappable); in Minish Cap the D-Pad uses items directly instead of swapping. D-Pad Up talks to Midna/your hat, or opens the save screen (Link's Awakening) / secondary items (Oracle games). 1 = Map, - = Items, + = Quest Status. In Link's Awakening, select Bombs on the Items screen and press Z to toggle Bomb Arrows (equip the bow first).
-
-**GameCube Controller:** B draws/swings your sword (hold for spin attack), A sheathes it. L Trigger targets and raises your shield/Gust Jar. A performs contextual actions. R Trigger pulls/lifts objects (auto-equips bracelet/gloves) — unique to this controller. Right stick fast-forwards. X/Y use your two equipped items (share the B slot, except Minish Cap where one is in slot A). D-Pad Right = Map, D-Pad Up = Items, Start = Quest Status, Z = talk to Midna/hat.
-
-**Classic Controller:** Same sword/shield/action layout as GameCube (B/L/A), with ZL for fast-forward. R uses the selected item, with three more on the right stick directions (also mirrored to ZR/Y/X). + = subscreens, - = map/subscreens, stick-up talks to Midna/your hat.
-
-</details>
-
-<details>
-<summary><strong>Mario &amp; Yoshi games</strong></summary>
-
-**Wii Remote:** Shake to spin-attack or shoot fireballs as Fire Mario (some games use B for fireballs instead); shake to dismount Yoshi too. Move the stick a little to walk, a lot to run. A = jump, B = shoot/run/hold on/Yoshi's tongue, Z = crouch or lay an egg (press in the air to butt-stomp), C = hold to look around, D-Pad = look around or walk, + = pause, 1 = throw egg as Yoshi.
-
-**Classic Controller:** B = jump, A = spin attack, X/Y = shoot/run/hold on/tongue, ZL (sometimes L) = crouch/lay egg/butt-stomp, L/R = look around (where supported), ZR = fast-forward (8-bit Game Boy only), + = pause. In Super Mario World and Super Mario Land 2, A or R also perform a spin jump.
-
-Yoshi's Universal Gravitation (Topsy Turvy) uses the same scheme, except tilting the Wii Remote tilts the whole world and how you move within it.
-
-</details>
-
-<details>
-<summary><strong>Metroid</strong></summary>
-
-Point the Wii Remote up/down to aim. Flick it up while in Morph Ball to spring-jump. A = shoot, B = jump, D-Pad Down = missile, C = toggle Morph Ball, - = start, + = toggle super missiles, 1 = map, 2 = hint.
-
-</details>
-
-<details>
-<summary><strong>TMNT</strong></summary>
-
-**Wii Remote:** Shake to attack, pick up a weapon, or throw one away mid-air. Shake the Nunchuk for a spin kick. A = jump, B = swap turtle / charge attack (hold up + B for the family super move), C = roll, Z = special move.
-
-**Classic Controller:** Uses the PlayStation control scheme instead.
+> While it is selected, the Button Mappings screen lists what each control does in that game, around the drawing of the controller you are using (the same descriptions as below, in short). Shakes, swings and pointing are listed under **Motion**. Select a line to see where the control is and the full description. Every game with special controls is listed this way, for every kind of controller. Where the descriptions below cover a controller, the screen uses them; where they don't (the Classic Controller and GameCube pad in most games, and Mario Kart, Star Wars, The Lord of the Rings and Castlevania altogether), it lists the controls as the code reads them, and a line that can only say which Game Boy button a control presses says so ("A button"). Where a game leaves a controller's buttons to your Button Mappings, they are shown as normal, with an "Other buttons" line when only some of them are left to your mappings.
 
 </details>
 

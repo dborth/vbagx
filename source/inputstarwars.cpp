@@ -28,218 +28,393 @@
 #include "vba/gba/GBA.h"
 #include "vba/gba/bios.h"
 #include "vba/gba/GBAinline.h"
+#include "legacyinput.h"
 
 uint32_t LegoStarWars1Input(unsigned short pad) {
-	if (!controller[pad]) return 0;
-	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardDirections(pad);
-
+	uint32_t J = StandardMovement(pad) | DecodeGamecube(pad);
+	// Rumble when they lose health!
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
-	if (Health < OldHealth) systemGameRumble(20);
+	if (Health < OldHealth)
+		systemGameRumble(20);
 	OldHealth = Health;
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) J |= VBA_BUTTON_L; // Build/Force
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A; // Jump
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B; // Shoot/Saber
+	// Start/Select
+	if (wp->btns_h & LW_BUTTON_PLUS)
+		J |= VBA_BUTTON_START;
 
-	// Light saber (Shake X-axis)
-	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_B;
-
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED; // Speed/Grapple
-
+	if (wp->exp.type == LW_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == LW_EXP_NUNCHUK) {
+		// build, use force
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z)
+			J |= VBA_BUTTON_L;
+		// change characters
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_C)
+			J |= VBA_BUTTON_SELECT;
+		// Jump
+		if (wp->btns_h & LW_BUTTON_A)
+			J |= VBA_BUTTON_A;
+		// Shoot
+		if (wp->btns_h & LW_BUTTON_B)
+			J |= VBA_BUTTON_B;
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 )
+			J |= VBA_BUTTON_B;
+		// Force power, special ability
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_R;
+		if (wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_SPEED;
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		J |= DecodeClassic(pad);
+	} else J |= DecodeWiimote(pad);
 	return J;
 }
 
 uint32_t LegoStarWars2Input(unsigned short pad) {
-	if (!controller[pad]) return 0;
-	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardDirections(pad);
-
+	uint32_t J = StandardMovement(pad) | DecodeGamecube(pad);
+	// Rumble when they lose health!
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
-	if (Health < OldHealth) systemGameRumble(20);
+	if (Health < OldHealth)
+		systemGameRumble(20);
 	OldHealth = Health;
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_BUTTON_R; // Force/Grapple
+	// Start/Select
+	if (wp->btns_h & LW_BUTTON_PLUS)
+		J |= VBA_BUTTON_START;
 
-	// Grapple (Shake Y-axis)
-	if (fabs(data.gforceY) > 1.6) J |= VBA_BUTTON_R;
+	if (wp->exp.type == LW_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == LW_EXP_NUNCHUK) {
+		// build, force transform, pull lever
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z)
+			J |= VBA_BUTTON_R;
+		// change characters
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_C || wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_BUTTON_SELECT;
+		// grapple
+		if (fabs(wp->gforce.y)> 1.6 )
+			J |= VBA_BUTTON_R;
+		// Jump
+		if (wp->btns_h & LW_BUTTON_A)
+			J |= VBA_BUTTON_A;
+		// Shoot
+		if (wp->btns_h & LW_BUTTON_B)
+			J |= VBA_BUTTON_B;
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 )
+			J |= VBA_BUTTON_B;
+		// Force power, vehicle special ability
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_L;
+		if (wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_SPEED;
 
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) J |= VBA_BUTTON_L;
-
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A; // Jump
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B; // Shoot/Saber
-
-	// Light saber (Shake X-axis)
-	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_B;
-
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		J |= DecodeClassic(pad);
+	}
 	return J;
 }
 
 uint32_t SWObiWanInput(unsigned short pad) {
-	if (!controller[pad]) return 0;
-	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardDirections(pad);
-
+	uint32_t J = StandardMovement(pad) | DecodeGamecube(pad);
+	// Rumble when they lose health!
 	uint8_t Health = gbReadMemory(0xCFF2);
 	static uint8_t OldHealth = 0;
-	if (Health < OldHealth) systemGameRumble(20);
+	if (Health < OldHealth)
+		systemGameRumble(20);
 	OldHealth = Health;
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) {
-		gbWriteMemory(0xCFF1, 2);
-		J |= VBA_BUTTON_A;
+	// Start/Select
+	if (wp->btns_h & LW_BUTTON_PLUS)
+		J |= VBA_BUTTON_START;
+	if (wp->btns_h & LW_BUTTON_MINUS)
+		J |= VBA_BUTTON_SELECT;
+
+	if (wp->exp.type == LW_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == LW_EXP_NUNCHUK) {
+		// use the force
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z) {
+			gbWriteMemory(0xCFF1, 2);
+			J |= VBA_BUTTON_A;
+		}
+		// Jump
+		if (wp->btns_h & LW_BUTTON_A)
+			J |= VBA_BUTTON_B;
+		// Shoot
+		if (wp->btns_h & LW_BUTTON_B) {
+			gbWriteMemory(0xCFF1, 0);
+			J |= VBA_BUTTON_A;
+		}
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 ) {
+			gbWriteMemory(0xCFF1, 1);
+			J |= VBA_BUTTON_A;
+		}
+		if (wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_SPEED;
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		J |= DecodeClassic(pad);
 	}
-
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_B; // Jump
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) {
-		gbWriteMemory(0xCFF1, 0); // Saber/Shoot
-		J |= VBA_BUTTON_A;
-	}
-
-	// Light saber (Shake X-axis)
-	if (fabs(data.gforceX) > 1.5) {
-		gbWriteMemory(0xCFF1, 1);
-		J |= VBA_BUTTON_A;
-	}
-
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
-
 	return J;
 }
 
 uint32_t SWEpisode2Input(unsigned short pad) {
-	if (!controller[pad]) return 0;
-	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardDirections(pad);
-
+	uint32_t J = StandardMovement(pad) | DecodeGamecube(pad);
+	// Rumble when they lose health!
 	uint8_t Health = CPUReadByte(0x3002fb3);
 	static uint8_t OldHealth = 0;
-	if (Health < OldHealth) systemGameRumble(6);
+	if (Health < OldHealth)
+		systemGameRumble(6);
 	OldHealth = Health;
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_B; // Jump
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_A; // Shoot/Saber
+	// Start/Select
+	if (wp->btns_h & LW_BUTTON_PLUS)
+		J |= VBA_BUTTON_START;
+	if (wp->btns_h & LW_BUTTON_MINUS)
+		J |= VBA_BUTTON_SELECT;
 
-	// Light saber (Shake X-axis)
-	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_A;
-
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) J |= VBA_BUTTON_L;
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_BUTTON_R;
-
+	if (wp->exp.type == LW_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == LW_EXP_NUNCHUK) {
+		// Jump
+		if (wp->btns_h & LW_BUTTON_A)
+			J |= VBA_BUTTON_B;
+		// Shoot (N/A)
+		if (wp->btns_h & LW_BUTTON_B) {
+			J |= VBA_BUTTON_A;
+		}
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 ) {
+			J |= VBA_BUTTON_A;
+		}
+		if (wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_SPEED;
+		// CAKTODO
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_C) {
+			J |= VBA_BUTTON_L;
+		}
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z) {
+			J |= VBA_BUTTON_R;
+		}
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		J |= DecodeClassic(pad);
+	}
 	return J;
 }
 
 uint32_t SWEpisode3Input(unsigned short pad) {
-	if (!controller[pad]) return 0;
-	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardDirections(pad);
-
-	uint8_t Health = 0;
+	uint32_t J = StandardMovement(pad) | DecodeGamecube(pad);
+	// Rumble when they lose health!
+	uint8_t Health = 0;//CPUReadByte(0x3002fb3);
 	static uint8_t OldHealth = 0;
-	if (Health < OldHealth) systemGameRumble(6);
+	if (Health < OldHealth)
+		systemGameRumble(6);
 	OldHealth = Health;
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
-
-	// Light saber (Shake X-axis)
-	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_B;
-
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) J |= VBA_BUTTON_L;
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_BUTTON_R;
-
+	if (wp->exp.type == LW_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == LW_EXP_NUNCHUK) {
+		// Jump
+		if (wp->btns_h & LW_BUTTON_A)
+			J |= VBA_BUTTON_A;
+		// Shoot (N/A)
+		if (wp->btns_h & LW_BUTTON_B) {
+			J |= VBA_BUTTON_B;
+		}
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 ) {
+			J |= VBA_BUTTON_B;
+		}
+		if (wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_SPEED;
+		// CAKTODO
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_C) {
+			J |= VBA_BUTTON_L;
+		}
+		// Force
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z) {
+			J |= VBA_BUTTON_R;
+		}
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+		J |= DecodeClassic(pad);
+	}
 	return J;
 }
 
 uint32_t SWJediPowerBattlesInput(unsigned short pad) {
-	if (!controller[pad]) return 0;
-	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardDirections(pad);
-
-	uint8_t Health = 0;
+	uint32_t J = StandardMovement(pad) | DecodeGamecube(pad);
+	// Rumble when they lose health!
+	uint8_t Health = 0;//CPUReadByte(0x3002fb3);
 	static uint8_t OldHealth = 0;
-	if (Health < OldHealth) systemGameRumble(6);
+	if (Health < OldHealth)
+		systemGameRumble(6);
 	OldHealth = Health;
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_B; // Jump
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_A; // Shoot/Saber
-
-	// Light saber (Shake X-axis)
-	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_A;
-
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) J |= VBA_BUTTON_L;
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_BUTTON_R;
-
+	if (wp->exp.type == LW_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == LW_EXP_NUNCHUK) {
+		// Jump
+		if (wp->btns_h & LW_BUTTON_A)
+			J |= VBA_BUTTON_B;
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 ) {
+			J |= VBA_BUTTON_A;
+		}
+		// Shoot ?
+		if (wp->btns_h & LW_BUTTON_B) {
+			J |= VBA_BUTTON_A;
+		}
+		if (wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_SPEED;
+		// Block
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_C) {
+			J |= VBA_BUTTON_R;
+		}
+		// Force
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z) {
+			J |= VBA_BUTTON_L;
+		}
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+		J |= DecodeClassic(pad);
+	}
 	return J;
 }
 
 uint32_t SWTrilogyInput(unsigned short pad) {
-	if (!controller[pad]) return 0;
-	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardDirections(pad);
-
-	uint8_t Health = 0;
+	uint32_t J = StandardMovement(pad) | DecodeGamecube(pad);
+	// Rumble when they lose health!
+	uint8_t Health = 0;//CPUReadByte(0x3002fb3);
 	static uint8_t OldHealth = 0;
-	if (Health < OldHealth) systemGameRumble(6);
+	if (Health < OldHealth)
+		systemGameRumble(6);
 	OldHealth = Health;
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
-
-	// Light saber (Shake X-axis)
-	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_B;
-
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) J |= VBA_BUTTON_L;
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_BUTTON_R;
-
+	if (wp->exp.type == LW_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == LW_EXP_NUNCHUK) {
+		// Jump
+		if (wp->btns_h & LW_BUTTON_A)
+			J |= VBA_BUTTON_A;
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 ) {
+			J |= VBA_BUTTON_B;
+		}
+		// Shoot
+		if (wp->btns_h & LW_BUTTON_B) {
+			J |= VBA_BUTTON_B;
+		}
+		if (wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_SPEED;
+		// Block
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_C) {
+			J |= VBA_BUTTON_L;
+		}
+		// Force
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z) {
+			J |= VBA_BUTTON_R;
+		}
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+		J |= DecodeClassic(pad);
+	}
 	return J;
 }
 
 uint32_t SWEpisode4Input(unsigned short pad) {
-	if (!controller[pad]) return 0;
-	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardDirections(pad);
-
+	uint32_t J = StandardMovement(pad) | DecodeGamecube(pad);
+	// Rumble when they lose health!
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
-	if (Health < OldHealth) systemGameRumble(6);
+	if (Health < OldHealth)
+		systemGameRumble(6);
 	OldHealth = Health;
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_A;
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_B;
+	if (wp->exp.type == LW_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == LW_EXP_NUNCHUK) {
+		// Jump
+		if (wp->btns_h & LW_BUTTON_A)
+			J |= VBA_BUTTON_A;
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 ) {
+			J |= VBA_BUTTON_B;
+		}
+		// Shoot / run
+		if (wp->btns_h & LW_BUTTON_B) {
+			J |= VBA_BUTTON_B;
+		}
+		if (wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_SPEED;
+		// Block
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_C) {
+			J |= VBA_BUTTON_B;
+		}
+		// Force
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z) {
 
-	// Light saber (Shake X-axis)
-	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_B;
-
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) J |= VBA_BUTTON_L;
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
-
+		}
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+		J |= DecodeClassic(pad);
+	}
 	return J;
 }
 
@@ -252,84 +427,110 @@ uint32_t SWEpisode6Input(unsigned short pad) {
 }
 
 uint32_t SWYodaStoriesInput(unsigned short pad) {
-	if (!controller[pad]) return 0;
-	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardDirections(pad);
-
-	uint8_t Health = 0;
+	uint32_t J = StandardMovement(pad) | DecodeGamecube(pad);
+	// Rumble when they lose health!
+	uint8_t Health = 0;//gbReadMemory(0xD58A); // actually health bar progress
 	static uint8_t OldHealth = 0;
-	if (Health < OldHealth) systemGameRumble(6);
+	if (Health < OldHealth)
+		systemGameRumble(6);
 	OldHealth = Health;
 
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	if (data.buttons_h & INPUT_BTN_A) J |= VBA_BUTTON_B; // Drag object
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) J |= VBA_BUTTON_A; // Saber/Shoot
+	if (wp->exp.type == LW_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == LW_EXP_NUNCHUK) {
+		// Drag object, get out of dialog
+		if (wp->btns_h & LW_BUTTON_A)
+			J |= VBA_BUTTON_B;
 
-	// Light saber (Shake X-axis)
-	if (fabs(data.gforceX) > 1.5) J |= VBA_BUTTON_A;
-
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) J |= VBA_BUTTON_L;
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) J |= VBA_SPEED;
-
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 ) {
+			// should change weapon here
+			J |= VBA_BUTTON_A;
+		}
+		// Shoot / run
+		if (wp->btns_h & LW_BUTTON_B) {
+			// should change weapon here
+			J |= VBA_BUTTON_A;
+		}
+		if (wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_SPEED;
+		// Force
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z) {
+			// should change weapon here
+			J |= VBA_BUTTON_A;
+		}
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+		J |= DecodeClassic(pad);
+	}
 	return J;
 }
 
 uint32_t SWNDAInput(unsigned short pad) {
-	if (!controller[pad]) return 0;
-	const InputPadData& data = controller[pad]->getPadData();
-	uint32_t J = StandardMovement(pad);
-
+	uint32_t J = StandardMovement(pad) | DecodeGamecube(pad);
+	// Rumble when they lose health!
 	uint8_t Health = 0;
 	static uint8_t OldHealth = 0;
-	if (Health < OldHealth) systemGameRumble(6);
+	if (Health < OldHealth)
+		systemGameRumble(6);
 	OldHealth = Health;
 
-	// Start / Select
-	if (data.buttons_h & INPUT_BTN_PLUS) J |= VBA_BUTTON_START;
-	if (data.buttons_h & INPUT_BTN_MINUS) J |= VBA_BUTTON_SELECT;
+	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
-	// Jump attack, the only kind of jumping in this game
-	// Replaces Wiimote A behavior
-	if (data.buttons_h & INPUT_BTN_A) {
-		J &= ~(VBA_DOWN | VBA_LEFT | VBA_RIGHT);
-		J |= VBA_BUTTON_A | VBA_UP;
+	if (wp->exp.type == LW_EXP_NONE) {
+		J |= DecodeWiimote(pad);
+	} else if (wp->exp.type == LW_EXP_NUNCHUK) {
+		// Jump attack, the only kind of jumping in this game
+		// Note, this only works if you press B first, then A
+		if (wp->btns_h & LW_BUTTON_A) {
+			J &= ~(VBA_DOWN | VBA_LEFT | VBA_RIGHT);
+			J |= VBA_BUTTON_A | VBA_UP;
+		}
+		// Light saber
+		if (fabs(wp->gforce.x)> 1.5 ) {
+			J |= VBA_BUTTON_A;
+		}
+		// Activate light saber
+		if (wp->btns_h & LW_BUTTON_B) {
+			J |= VBA_BUTTON_A;
+		}
+		if (wp->btns_h & LW_BUTTON_1 || wp->btns_h & LW_BUTTON_2)
+			J |= VBA_SPEED;
+		// Force
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_Z) {
+			J |= VBA_BUTTON_R;
+		}
+		// Block
+		if (wp->btns_h & LW_NUNCHUK_BUTTON_C) {
+			J |= VBA_BUTTON_B;
+		}
+		// Change force power
+		if (wp->btns_h & (LW_BUTTON_LEFT | LW_BUTTON_RIGHT | LW_BUTTON_UP | LW_BUTTON_DOWN)) {
+			J |= VBA_BUTTON_L;
+		}
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+	} else if (wp->exp.type == LW_EXP_CLASSIC) {
+		// Start/Select
+		if (wp->btns_h & LW_BUTTON_PLUS)
+			J |= VBA_BUTTON_START;
+		if (wp->btns_h & LW_BUTTON_MINUS)
+			J |= VBA_BUTTON_SELECT;
+		J |= DecodeClassic(pad);
 	}
-
-	// Light saber / Activate light saber
-	// Replaces raw motion swing (gforce.x) and Wiimote B
-	if (data.buttons_h & (INPUT_BTN_B | INPUT_BTN_X | INPUT_BTN_Y)) {
-		J |= VBA_BUTTON_A;
-	}
-
-	// Light saber (Shake X-axis)
-	if (fabs(data.gforceX) > 1.5) {
-		J |= VBA_BUTTON_A;
-	}
-
-	// Speed
-	if (data.buttons_h & (INPUT_BTN_1 | INPUT_BTN_2)) {
-		J |= VBA_SPEED;
-	}
-
-	// Block
-	// Replaces Nunchuk C (which maps to INPUT_TRIGGER_L)
-	if (data.buttons_h & (INPUT_TRIGGER_L | INPUT_TRIGGER_ZL)) {
-		J |= VBA_BUTTON_B;
-	}
-
-	// Force
-	// Replaces Nunchuk Z (which maps to INPUT_TRIGGER_ZL / generic ZR)
-	if (data.buttons_h & (INPUT_TRIGGER_R | INPUT_TRIGGER_ZR)) {
-		J |= VBA_BUTTON_R;
-	}
-
-	// Change force power
-	// Uses the D-Pad (StandardMovement already handles analog sticks independently)
-	if (data.buttons_h & (INPUT_BTN_LEFT | INPUT_BTN_RIGHT | INPUT_BTN_UP | INPUT_BTN_DOWN)) {
-		J |= VBA_BUTTON_L;
-	}
-
 	return J;
 }

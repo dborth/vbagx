@@ -33,11 +33,13 @@ struct WiiAction {
 
 struct WiiControls {
 	std::vector<WiiAction> actions;
+	bool mappings = false;	//!< the user's Button Mappings also apply on this controller (for what is not listed)
+	bool derived = false;	//!< listed from what the code does rather than from the README: no motion, only buttons
 };
 
 //!The scheme a piece of hardware (an INPUT_HW_* value) uses
 WiiScheme WiiSchemeFor(int hw);
 
-//!The loaded game's controls on a piece of hardware (an INPUT_HW_* value): false if nothing is written down for that game
-//!on that hardware (then `out` is empty)
+//!The loaded game's controls on a piece of hardware (an INPUT_HW_* value): false if the game has no controls of its own
+//!listed for that hardware (then `out` is empty; `out.mappings` says whether the user's Button Mappings apply there)
 bool WiiControlsFor(int hw, WiiControls& out);

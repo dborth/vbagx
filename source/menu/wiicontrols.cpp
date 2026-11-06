@@ -11,6 +11,8 @@
  * button a control presses, that is what the line says ("A button").
  ***************************************************************************/
 
+#include <string.h>
+
 #include "wiicontrols.h"
 #include "gameinput.h"
 #include "drivers/InputData.h"
@@ -190,295 +192,112 @@ bool Mario(GameInputFn fn, WiiScheme s, Builder& b)
 			b.add(kZR, "Fast-forward", "8-bit Game Boy games only");
 			b.add(kPlus, "Pause");
 			return true;
-		case WiiScheme::GAMECUBE:
-			// nothing swaps on the GameCube pad: A jumps, and B, X and Y do what the Wii Remote's B does
-			b.add(kA, "Jump");
-			if(fn == YoshiIslandInput)
-			{
-				b.add(kB | kX, "Shoot / run", "Shoot, run, hold on, or Yoshi's tongue");
-				b.add(kY | kR | kGcZ, "Throw egg", "Throws an egg as Yoshi");
-				b.add(kL, "Crouch / egg", "Crouch, or lay an egg as Yoshi");
-			}
-			else if(fn == MarioWorldInput)
-			{
-				b.add(kB | kX | kY, "Shoot / run", "Shoot, run, hold on, or Yoshi's tongue");
-				b.add(kL, "Look around", "Moves the camera");
-				b.add(kR, "Spin attack", "Spin attack, or Yoshi's tongue");
-			}
-			else
-			{
-				b.add(kB | kX | kY, "Shoot / run", "Shoot, run, hold on, or Yoshi's tongue");
-				b.add(kL, "Crouch / egg", "Crouch, or lay an egg as Yoshi; press in the air to butt-stomp");
-				b.add(kR | kGcZ, "Fast-forward");
-			}
-			b.add(kPlus, "Pause");
-			return true;
+		default:
+			break;
 	}
 	return false;
 }
 
-bool Metroid(GameInputFn fn, WiiScheme s, Builder& b)
+bool Metroid(GameInputFn, WiiScheme s, Builder& b)
 {
-	const bool zero = fn == MetroidZeroInput;
-	// Metroid 1 and 2 fire missiles with X, Y and R, and aim up with L; Zero Mission and Fusion have missiles on X and Y
-	const bool classicMissiles = fn == Metroid1Input || fn == Metroid2Input;
-
-	switch(s)
-	{
-		case WiiScheme::WII:
-			b.add(kA, "Shoot");
-			b.add(kB, "Jump");
-			b.add(kDown, "Missile");
-			b.add(kC, "Morph Ball", "Toggles the Morph Ball");
-			b.add(kMinus, "Start");
-			b.add(kPlus, "Super missiles", "Toggles super missiles");
-			b.add(k1, "Map");
-			b.add(k2, "Hint");
-			b.add(0, "Point up / down: aim", "Point the Wii Remote up or down to aim");
-			b.add(0, "Flick up: spring", "Flick the Wii Remote up while in Morph Ball to spring-jump");
-			return true;
-		case WiiScheme::CLASSIC:
-			b.add(kA, "Jump");
-			b.add(kB, "Shoot");
-			b.add(kL, "Aim", classicMissiles ? "Aims up" : "Presses the game's L button, to aim");
-			b.add(classicMissiles ? (kX | kY | kR) : (kX | kY), "Missile");
-			if(!classicMissiles)
-				b.add(kR, "R button", "Presses the game's R button");
-			b.add(kZL | kZR, "Morph Ball", "Toggles the Morph Ball");
-			b.add(kPlus, "Start");
-			b.add(kMinus, "Select");
-			return true;
-		case WiiScheme::GAMECUBE:
-			if(zero)
-			{
-				b.add(kA, "Shoot");
-				b.add(kB, "Jump");
-				b.add(kY, "Missile");
-				b.add(kX, "Morph Ball", "Toggles the Morph Ball");
-				b.add(kGcZ, "Map");
-				b.add(kL, "Aim", "Presses the game's L button, to aim");
-				b.add(kR, "R button", "Presses the game's R button");
-				b.add(kPlus, "Super missiles", "Toggles super missiles");
-			}
-			else
-			{
-				b.add(kA, "Jump");
-				b.add(kB, "Shoot");
-				b.add(kL, "Aim", classicMissiles ? "Aims up" : "Presses the game's L button, to aim");
-				b.add(classicMissiles ? (kX | kY | kR) : (kX | kY), "Missile");
-				if(!classicMissiles)
-					b.add(kR, "R button", "Presses the game's R button");
-				b.add(kGcZ, "Morph Ball", "Toggles the Morph Ball");
-				b.add(kPlus, "Start");
-			}
-			return true;
-	}
-	return false;
+	if(s != WiiScheme::WII)
+		return false;
+	b.add(kA, "Shoot");
+	b.add(kB, "Jump");
+	b.add(kDown, "Missile");
+	b.add(kC, "Morph Ball", "Toggles the Morph Ball");
+	b.add(kMinus, "Start");
+	b.add(kPlus, "Super missiles", "Toggles super missiles");
+	b.add(k1, "Map");
+	b.add(k2, "Hint");
+	b.add(0, "Point up / down: aim", "Point the Wii Remote up or down to aim");
+	b.add(0, "Flick up: spring", "Flick the Wii Remote up while in Morph Ball to spring-jump");
+	return true;
 }
 
-bool Tmnt(GameInputFn fn, WiiScheme s, Builder& b)
+bool Tmnt(GameInputFn, WiiScheme s, Builder& b)
 {
-	const bool arcade = fn == TMNTInput, first = fn == TMNT1Input, third = fn == TMNT3Input;
-	const bool gba1 = fn == TMNTGBAInput, gba2 = fn == TMNTGBA2Input;
-	// what the shoulder buttons do: roll in the Game Boy games (not at all in the first), a special move in the GBA games
-	const char * shoulder = (gba1 || gba2) ? "Special move" : "Roll";
-
-	switch(s)
-	{
-		case WiiScheme::WII:
-			b.add(kA, "Jump");
-			b.add(kB, "Swap / charge", "Swaps turtle, or charges an attack (hold up + B for the family super move)");
-			b.add(kC, "Roll");
-			b.add(kZ, "Special move");
-			b.add(0, "Shake: attack", "Shake to attack, pick up a weapon, or throw one away mid-air");
-			b.add(0, "Shake Nunchuk: kick", "Shake the Nunchuk for a spin kick");
-			return true;
-		case WiiScheme::CLASSIC:
-			b.add(kB, "Jump");
-			b.add(kA, "Attack");
-			b.add(kX, "Spin kick");
-			if(!first)
-				b.add(gba2 ? (kL | kR | kZR) : (kL | kR | kZL | kZR), shoulder);
-			if(gba2)
-				b.add(kZL, "Look");
-			if(arcade)
-				b.add(kY, "Swap / charge", "Tap to swap turtle; hold for the family super move");
-			else if(third)
-				b.add(kY, "Swap turtle");
-			b.add(kPlus, "Pause");
-			b.add(kMinus, "Select");
-			return true;
-		case WiiScheme::GAMECUBE:
-			b.add(kA, "Jump");
-			b.add(kX, "Attack");
-			b.add(kY, "Spin kick");
-			if(!first)
-				b.add(kL | kR, shoulder);
-			if(arcade)
-				b.add(kB, "Swap / charge", "Tap to swap turtle; hold for the family super move");
-			else if(third)
-				b.add(kB, "Swap turtle");
-			else if(gba2)
-				b.add(kB, "Look");
-			b.add(kPlus, "Pause");
-			b.add(kGcZ, "Select");
-			return true;
-	}
-	return false;
+	if(s != WiiScheme::WII)
+		return false;
+	b.add(kA, "Jump");
+	b.add(kB, "Swap / charge", "Swaps turtle, or charges an attack (hold up + B for the family super move)");
+	b.add(kC, "Roll");
+	b.add(kZ, "Special move");
+	b.add(0, "Shake: attack", "Shake to attack, pick up a weapon, or throw one away mid-air");
+	b.add(0, "Shake Nunchuk: kick", "Shake the Nunchuk for a spin kick");
+	return true;
 }
 
 bool MortalKombat(GameInputFn, WiiScheme s, Builder& b)
 {
-	switch(s)
-	{
-		case WiiScheme::WII:
-			b.add(kLeft, "Low punch");
-			b.add(kUp, "High punch");
-			b.add(kDown, "Low kick");
-			b.add(kRight, "High kick");
-			b.add(kZ, "Block");
-			b.add(kA, "Throw");
-			b.add(kB, "Special move");
-			b.add(kC, "Style / run", "Changes style, runs, or changes costume / character");
-			b.add(kPlus, "Pause");
-			b.add(kMinus, "Costume / character");
-			b.add(kStick, "Move / jump", "The Nunchuk stick moves and jumps");
-			return true;
-		case WiiScheme::CLASSIC:
-			b.add(kY, "Low punch");
-			b.add(kX, "High punch");
-			b.add(kB, "Low kick");
-			b.add(kA, "High kick");
-			b.add(kR, "Block");
-			b.add(kZR, "Throw");
-			b.add(kL | kZL, "Style / run", "Changes style, runs, or changes costume / character");
-			b.add(kPlus, "Pause");
-			b.add(kMinus, "Costume / character");
-			return true;
-		case WiiScheme::GAMECUBE:
-			b.add(kB, "Low punch");
-			b.add(kY, "High punch");
-			b.add(kA, "Low kick");
-			b.add(kX, "High kick");
-			b.add(kR, "Block");
-			b.add(kGcZ, "Throw");
-			b.add(kL, "Style / run", "Changes style, runs, or changes costume / character");
-			b.add(kPlus, "Pause");
-			return true;
-	}
-	return false;
+	if(s != WiiScheme::WII)
+		return false;
+	b.add(kLeft, "Low punch");
+	b.add(kUp, "High punch");
+	b.add(kDown, "Low kick");
+	b.add(kRight, "High kick");
+	b.add(kZ, "Block");
+	b.add(kA, "Throw");
+	b.add(kB, "Special move");
+	b.add(kC, "Style / run", "Changes style, runs, or changes costume / character");
+	b.add(kPlus, "Pause");
+	b.add(kMinus, "Costume / character");
+	b.add(kStick, "Move / jump", "The Nunchuk stick moves and jumps");
+	return true;
 }
 
-bool LegoStarWars(GameInputFn fn, WiiScheme s, Builder& b)
+bool LegoStarWars(GameInputFn, WiiScheme s, Builder& b)
 {
-	const bool one = fn == LegoStarWars1Input;
-	switch(s)
-	{
-		case WiiScheme::WII:
-			b.add(kA, "Jump");
-			b.add(kB, "Shoot");
-			b.add(kZ, "Force / build", "Use the Force, or build Lego");
-			b.add(kC, "Character / talk", "Changes character, or talks");
-			b.add(kMinus, "Force power");
-			b.add(kPlus, "Start");
-			b.add(k1 | k2, "Fast-forward");
-			b.add(0, "Swing: lightsaber", "Swing to swing your lightsaber");
-			b.add(0, "Flick up: grapple", "Flick the Wii Remote up to grapple");
-			return true;
-		case WiiScheme::CLASSIC:
-		case WiiScheme::GAMECUBE:
-			b.add(kA, "Jump");
-			b.add(kB | kX | kY, "Shoot / saber");
-			b.add(kL | kZL, one ? "Build / Force" : "Character / talk");
-			b.add(kR | kZR, one ? "Fast-forward" : "Force / grapple", one ? "Speed, and grapple" : nullptr);
-			b.add(kPlus, "Start");
-			if(s == WiiScheme::CLASSIC)
-				b.add(kMinus, "Select");
-			return true;
-	}
-	return false;
+	if(s != WiiScheme::WII)
+		return false;
+	b.add(kA, "Jump");
+	b.add(kB, "Shoot");
+	b.add(kZ, "Force / build", "Use the Force, or build Lego");
+	b.add(kC, "Character / talk", "Changes character, or talks");
+	b.add(kMinus, "Force power");
+	b.add(kPlus, "Start");
+	b.add(k1 | k2, "Fast-forward");
+	b.add(0, "Swing: lightsaber", "Swing to swing your lightsaber");
+	b.add(0, "Flick up: grapple", "Flick the Wii Remote up to grapple");
+	return true;
 }
 
 bool HarryPotter(GameInputFn fn, WiiScheme s, Builder& b)
 {
-	const bool gbc = fn == HarryPotter1GBCInput || fn == HarryPotter2GBCInput;
-	// the GameCube pad also presses the game's L, R and Select directly in the first three and the Game Boy Color games
-	const bool gcDirect = gbc || fn == HarryPotter1Input || fn == HarryPotter2Input || fn == HarryPotter3Input;
-
-	switch(s)
-	{
-		case WiiScheme::WII:
-			b.add(kA, "Interact / Jinx");
-			b.add(kB, "Wand / charm", "Wand, charm, or cancel");
-			b.add(kZ, "Run / sneak");
-			b.add(kC, "Location / jump", "Shows the location name, plays the flute, or jumps (varies by game)");
-			b.add(kMinus, "Map / tasks");
-			b.add(kPlus, "Pause / menu");
-			b.add(k1 | k2, "Change spells");
-			b.add(kDpad, "D-pad: subscreen", "Changes subscreen and navigates menus");
-			b.add(kStick, "Walk");
-			b.add(0, "Wave: cast spell", "Wave to cast a spell (spell gestures are not implemented yet)");
-			if(fn == HarryPotter5Input)
-				b.add(0, "Point: aim spells", "Order of the Phoenix needs the IR pointer to aim spells");
-			return true;
-		case WiiScheme::CLASSIC:
-		case WiiScheme::GAMECUBE:
-			b.add(kA, "Interact / Jinx");
-			b.add(kB, "Wand / charm", "Wand, charm, or cancel");
-			b.add(kPlus, "Pause / menu");
-			if(s == WiiScheme::CLASSIC)
-				b.add(kMinus, "Map / tasks");
-			if(gbc)
-				b.add(kDpad, "D-pad: move");
-			else
-			{
-				b.add(kLeft | kRight, "Subscreen", "Left and right change subscreen");
-				b.add(kUp | kDown, "Move");
-			}
-			if(s == WiiScheme::GAMECUBE && gcDirect)
-			{
-				b.add(kL, "L button", "Presses the game's L button");
-				b.add(kR, "R button", "Presses the game's R button");
-				b.add(kGcZ, "Map / tasks", "Presses the game's Select button");
-			}
-			return true;
-	}
-	return false;
+	if(s != WiiScheme::WII)
+		return false;
+	b.add(kA, "Interact / Jinx");
+	b.add(kB, "Wand / charm", "Wand, charm, or cancel");
+	b.add(kZ, "Run / sneak");
+	b.add(kC, "Location / jump", "Shows the location name, plays the flute, or jumps (varies by game)");
+	b.add(kMinus, "Map / tasks");
+	b.add(kPlus, "Pause / menu");
+	b.add(k1 | k2, "Change spells");
+	b.add(kDpad, "D-pad: subscreen", "Changes subscreen and navigates menus");
+	b.add(kStick, "Walk");
+	b.add(0, "Wave: cast spell", "Wave to cast a spell (spell gestures are not implemented yet)");
+	if(fn == HarryPotter5Input)
+		b.add(0, "Point: aim spells", "Order of the Phoenix needs the IR pointer to aim spells");
+	return true;
 }
 
 bool MedalOfHonor(GameInputFn fn, WiiScheme s, Builder& b)
 {
-	switch(s)
-	{
-		case WiiScheme::WII:
-			b.add(kB, "Shoot");
-			b.add(kMinus, "Use");
-			b.add(kPlus, "Pause / menu", "Pause, objectives, or the menu");
-			b.add(k2 | kUp, "Reload");
-			b.add(kLeft | kRight, "Change weapon");
-			b.add(kDown, "Crouch");
-			b.add(kC, "Strafe");
-			b.add(k1, "Run");
-			b.add(kStick, "Move");
-			b.add(0, "Swing up: reload", "Swing the Wii Remote up to reload");
-			if(fn == MohUndergroundInput)
-				b.add(0, "Point: aim / turn", "Aim and turn with the IR pointer, like an FPS");
-			return true;
-		case WiiScheme::CLASSIC:
-			b.add(kDpad, "D-pad: move");
-			b.add(kA, "A button");
-			b.add(kB, "B button");
-			b.add(kL | kZL, "L button");
-			b.add(kR | kZR, "R button");
-			b.add(kX | kY, "Fast-forward");
-			b.add(kPlus, "Start");
-			b.add(kMinus, "Select");
-			return true;
-		case WiiScheme::GAMECUBE:
-			b.add(0, "Not used", "This game does not read the GameCube pad's buttons: only the stick moves");
-			return true;
-	}
-	return false;
+	if(s != WiiScheme::WII)
+		return false;
+	b.add(kB, "Shoot");
+	b.add(kMinus, "Use");
+	b.add(kPlus, "Pause / menu", "Pause, objectives, or the menu");
+	b.add(k2 | kUp, "Reload");
+	b.add(kLeft | kRight, "Change weapon");
+	b.add(kDown, "Crouch");
+	b.add(kC, "Strafe");
+	b.add(k1, "Run");
+	b.add(kStick, "Move");
+	b.add(0, "Swing up: reload", "Swing the Wii Remote up to reload");
+	if(fn == MohUndergroundInput)
+		b.add(0, "Point: aim / turn", "Aim and turn with the IR pointer, like an FPS");
+	return true;
 }
 
 bool OnePiece(GameInputFn, WiiScheme s, Builder& b)
@@ -505,114 +324,51 @@ bool OnePiece(GameInputFn, WiiScheme s, Builder& b)
 			b.add(kGcZ, "Grab");
 			b.add(kRStick, "Fast-forward");
 			return true;
-		case WiiScheme::CLASSIC:
-			// the standard Classic Controller layout: what each button presses is what the Wii Remote's buttons do
-			b.add(kDpad, "D-pad: move");
-			b.add(kA, "Jump");
-			b.add(kB, "Attack");
-			b.add(kL | kZL, "Change character");
-			b.add(kR | kZR, "Grab");
-			b.add(kX | kY, "Fast-forward");
-			b.add(kPlus, "Pause");
-			b.add(kMinus, "View");
-			return true;
+		default:
+			break;
 	}
 	return false;
 }
 
 bool Boktai(GameInputFn, WiiScheme s, Builder& b)
 {
-	switch(s)
-	{
-		case WiiScheme::WII:
-			// the same with or without a Nunchuk
-			b.add(kDpad | kStick, "D-pad / stick: walk");
-			b.add(kB, "Gun del Sol", "Fires the Gun del Sol");
-			b.add(kA, "Read / open / talk", "Reads signs, opens chests, and talks");
-			b.add(kC | k2, "Look / R", "Looks around, or changes subscreen (R)");
-			b.add(kZ | k1, "Element / L", "Changes element or subscreen (L); with a Nunchuk, 1 fast-forwards");
-			b.add(kPlus, "Start");
-			b.add(kMinus, "Select");
-			b.add(kHome, "Set weather", "Press Home during play to set the in-game weather; it must be set again every session");
-			b.add(0, "Swing: sword", "Swing to swing your sword or weapon");
-			b.add(0, "Point at sky: charge", "Point the Wii Remote at the sky to quickly charge your Gun del Sol");
-			b.add(0, "Point at ground: shade", "Point it at the ground to block sunlight and stop the gun overheating, or hold it normally for in between");
-			return true;
-		case WiiScheme::CLASSIC:
-			b.add(kDpad | kStick, "D-pad / stick: walk");
-			b.add(kB, "Gun del Sol", "Fires the Gun del Sol");
-			b.add(kA, "Read / open / talk", "Reads signs, opens chests, and talks");
-			b.add(kL | kZL, "Element / L", "Changes element or subscreen (L)");
-			b.add(kR | kZR, "Look / R", "Looks around, or changes subscreen (R)");
-			b.add(kX | kY, "Fast-forward");
-			b.add(kPlus, "Start");
-			b.add(kMinus, "Select");
-			return true;
-		case WiiScheme::GAMECUBE:
-			b.add(kDpad | kStick, "D-pad / stick: walk");
-			b.add(kB, "Gun del Sol", "Fires the Gun del Sol");
-			b.add(kA, "Read / open / talk", "Reads signs, opens chests, and talks");
-			b.add(kL, "Element / L", "Changes element or subscreen (L)");
-			b.add(kR, "Look / R", "Looks around, or changes subscreen (R)");
-			b.add(kPlus, "Start");
-			b.add(kGcZ, "Select");
-			return true;
-	}
-	return false;
+	if(s != WiiScheme::WII)
+		return false;
+	// the same with or without a Nunchuk
+	b.add(kDpad | kStick, "D-pad / stick: walk");
+	b.add(kB, "Gun del Sol", "Fires the Gun del Sol");
+	b.add(kA, "Read / open / talk", "Reads signs, opens chests, and talks");
+	b.add(kC | k2, "Look / R", "Looks around, or changes subscreen (R)");
+	b.add(kZ | k1, "Element / L", "Changes element or subscreen (L); with a Nunchuk, 1 fast-forwards");
+	b.add(kPlus, "Start");
+	b.add(kMinus, "Select");
+	b.add(kHome, "Set weather", "Press Home during play to set the in-game weather; it must be set again every session");
+	b.add(0, "Swing: sword", "Swing to swing your sword or weapon");
+	b.add(0, "Point at sky: charge", "Point the Wii Remote at the sky to quickly charge your Gun del Sol");
+	b.add(0, "Point at ground: shade", "Point it at the ground to block sunlight and stop the gun overheating, or hold it normally for in between");
+	return true;
 }
 
 bool Twisted(GameInputFn, WiiScheme s, Builder& b)
 {
-	switch(s)
-	{
-		case WiiScheme::WII:
-			b.add(kA, "Select");
-			b.add(kB, "Cancel");
-			b.add(kPlus, "Start");
-			b.add(kZ, "Lock item", "Hold Z to lock the current menu item");
-			b.add(0, "Rotate: rotate", "Rotate the Wii Remote to rotate");
-			return true;
-		case WiiScheme::CLASSIC:
-			b.add(kDpad, "D-pad: move");
-			b.add(kA, "A button");
-			b.add(kB, "B button");
-			b.add(kL | kZL, "L button");
-			b.add(kR | kZR, "R button");
-			b.add(kX | kY, "Fast-forward");
-			b.add(kPlus, "Start");
-			b.add(kMinus, "Select");
-			return true;
-		case WiiScheme::GAMECUBE:
-			b.add(0, "Not used", "This game does not read the GameCube pad's buttons (it plays by tilting a Wii Remote)");
-			return true;
-	}
-	return false;
+	if(s != WiiScheme::WII)
+		return false;
+	b.add(kA, "Select");
+	b.add(kB, "Cancel");
+	b.add(kPlus, "Start");
+	b.add(kZ, "Lock item", "Hold Z to lock the current menu item");
+	b.add(0, "Rotate: rotate", "Rotate the Wii Remote to rotate");
+	return true;
 }
 
 bool Kirby(GameInputFn, WiiScheme s, Builder& b)
 {
-	switch(s)
-	{
-		case WiiScheme::WII:
-			b.add(kA, "Launch", "Shoots you out of holes in the ground or off clouds");
-			b.add(0, "Tilt: tilt the world", "Tilt the Wii Remote to tilt the world");
-			b.add(0, "Shake: flick", "Shake to flick Kirby and enemies into the air");
-			return true;
-		case WiiScheme::CLASSIC:
-			b.add(kDpad, "D-pad: move");
-			b.add(kA, "Launch", "Shoots you out of holes in the ground or off clouds");
-			b.add(kB, "B button");
-			b.add(kL | kZL, "L button");
-			b.add(kR | kZR, "R button");
-			b.add(kX | kY, "Fast-forward");
-			b.add(kPlus, "Start");
-			b.add(kMinus, "Select");
-			return true;
-		case WiiScheme::GAMECUBE:
-			b.add(0, "Not used", "This game does not read the GameCube pad's buttons (it plays by tilting a Wii Remote)");
-			return true;
-	}
-	return false;
+	if(s != WiiScheme::WII)
+		return false;
+	b.add(kA, "Launch", "Shoots you out of holes in the ground or off clouds");
+	b.add(0, "Tilt: tilt the world", "Tilt the Wii Remote to tilt the world");
+	b.add(0, "Shake: flick", "Shake to flick Kirby and enemies into the air");
+	return true;
 }
 
 bool KidDracula(GameInputFn, WiiScheme s, Builder& b)
@@ -640,83 +396,10 @@ bool KidDracula(GameInputFn, WiiScheme s, Builder& b)
 			b.add(kMinus, "Switch item");
 			b.add(0, "Fire: fireball", fire);
 			return true;
-		case WiiScheme::GAMECUBE:
-			b.add(kA, "Jump");
-			b.add(kB, "Use item", "Uses the selected item (hold to charge)");
-			b.add(kPlus, "Pause");
-			b.add(kGcZ, "Switch item");
-			b.add(0, "Fire: fireball", fire);
-			return true;
+		default:
+			break;
 	}
 	return false;
-}
-
-// Mario Kart reads the unified buttons, so it plays the same on every kind of hardware
-bool MarioKart(GameInputFn, WiiScheme s, Builder& b)
-{
-	b.add(kL | kZL, "Use item");
-	b.add(kA | kY, "Accelerate");
-	b.add(kB | kX, "Brake");
-	b.add(kR | kZR, "Jump / slide", "Jump, and power slide");
-	b.add(kPlus, "Pause");
-	b.add(kMinus, "Select");
-	if(s == WiiScheme::WII)
-	{
-		b.add(0, "Tilt: steer", "Tilt the Wii Remote left and right to steer");
-		b.add(0, "Shake: jump", "Shake the Wii Remote up and down to jump");
-	}
-	return true;
-}
-
-// The Star Wars games read the unified buttons too. What A, B and the triggers do differs from game to game; where the
-// handler does not say what the Game Boy button is for, the line names the button.
-bool StarWars(GameInputFn fn, WiiScheme s, Builder& b)
-{
-	const char * button = "Presses the game's button of that name";
-	if(fn == SWNDAInput)
-	{
-		b.add(kA, "Jump attack", "The only kind of jump in this game");
-		b.add(kB | kX | kY, "Saber", "Lights and swings your lightsaber");
-		b.add(kL | kZL, "Block");
-		b.add(kR | kZR, "Force");
-		b.add(kDpad, "D-pad: Force power", "Changes your Force power");
-		b.add(k1 | k2, "Fast-forward");
-	}
-	else if(fn == SWObiWanInput)
-	{
-		b.add(kA, "Jump");
-		b.add(kB | kX | kY, "Saber / shoot", "Saber or blaster");
-		b.add(kL | kZL, "Weapon 3", "Switches to the game's third weapon and uses it");
-		b.add(kR | kZR, "Fast-forward");
-	}
-	else if(fn == SWYodaStoriesInput)
-	{
-		b.add(kA, "Drag object");
-		b.add(kB | kX | kY, "Saber / shoot");
-		b.add(kL | kZL, "L button", button);
-		b.add(kR | kZR, "Fast-forward");
-	}
-	else if(fn == SWEpisode2Input || fn == SWJediPowerBattlesInput)
-	{
-		b.add(kA, "Jump");
-		b.add(kB | kX | kY, "Saber / shoot");
-		b.add(kL | kZL, "L button", button);
-		b.add(kR | kZR, "R button", button);
-	}
-	else
-	{
-		// Episodes 3 to 6 and the Trilogy: A and B press the game's A and B; in Episodes 4 to 6, R fast-forwards
-		const bool fast = fn == SWEpisode4Input || fn == SWEpisode5Input || fn == SWEpisode6Input;
-		b.add(kA, "A button", button);
-		b.add(kB | kX | kY, "B button", button);
-		b.add(kL | kZL, "L button", button);
-		b.add(kR | kZR, fast ? "Fast-forward" : "R button", fast ? nullptr : button);
-	}
-	b.add(kPlus, "Start");
-	b.add(kMinus, "Select");
-	if(s == WiiScheme::WII)
-		b.add(0, "Shake: saber", "Shake the Wii Remote to swing your lightsaber");
-	return true;
 }
 
 // The Lord of the Rings and Castlevania games read each kind of hardware's own buttons, not the unified ones, and have
@@ -725,127 +408,100 @@ bool StarWars(GameInputFn fn, WiiScheme s, Builder& b)
 // Classic Controller.
 bool Isolated(GameInputFn fn, int hw, Builder& b)
 {
-	const bool gba = cartridgeType == CARTRIDGE_GBA;
+	if(hw != INPUT_HW_NUNCHUK)
+		return false;
 	const bool hobbit = fn == HobbitInput, fellowship = fn == FellowshipOfTheRingInput, king = fn == ReturnOfTheKingInput;
 	const bool adventure = fn == CastlevaniaAdventureInput, belmont = fn == CastlevaniaBelmontInput;
 	const bool legends = fn == CastlevaniaLegendsInput, circle = fn == CastlevaniaCircleMoonInput;
 	const bool castlevania = adventure || belmont || legends || circle;
 
+		b.add(kDpad, "D-pad: move");
+		b.add(kStick, "Move");
+		if(hobbit)
+		{
+			b.add(kB, "Ability");
+			b.add(kA, "Use");
+			b.add(kPlus, "Pause");
+			b.add(kMinus, "Items");
+			b.add(kC, "Speed", "Fast-forward");
+			b.add(kZ, "Change skill");
+			b.add(0, "Shake: attack", "Shake the Wii Remote to attack");
+		}
+		else if(fellowship)
+		{
+			b.add(kB, "Cancel");
+			b.add(kA, "Use");
+			b.add(kPlus, "Pause");
+			b.add(kMinus, "Items");
+			b.add(kC, "Speed", "Fast-forward");
+			b.add(kZ, "Change character");
+			b.add(k1, "Select");
+			b.add(0, "Shake: cancel", "Shake the Wii Remote to cancel");
+		}
+		else if(king)
+		{
+			b.add(kB, "Ability");
+			b.add(kA, "Use");
+			b.add(kPlus, "Pause");
+			b.add(kMinus, "Items");
+			b.add(kC, "Speed", "Fast-forward");
+			b.add(kZ, "Change skill");
+			b.add(0, "Shake: attack", "Shake the Wii Remote to attack");
+		}
+		else if(castlevania)
+		{
+			b.add(kB, "Attack");
+			b.add(kC, "Jump");
+			b.add(kZ, "Guard", "Crouch and guard");
+			b.add(kPlus, "Pause");
+			b.add(kMinus, "Select");
+			if(!adventure)
+				b.add(kA, "Sub-weapon", "Throws your sub-weapon");
+			b.add(kA | kB, "A + B: speed", "Press A and B together to fast-forward");
+			if(legends || circle)
+				b.add(kDown, "Hyper", "Hyper attack");
+			if(circle)
+			{
+				b.add(k1, "L button");
+				b.add(k2, "R button");
+			}
+			b.add(0, "Shake: attack", "Shake the Wii Remote to attack");
+		}
+		return true;
+}
+
+// What the README documents is written by hand above. For every other game and controller (Mario Kart, Star Wars, the
+// Lord of the Rings and Castlevania, and the Classic Controller and GameCube pad in most games) the lines are listed from
+// what the handlers do, one control at a time; a line that can only say which Game Boy button a control presses says so
+// ("A button"). Where the user's own Button Mappings still decide what other buttons do, `mappings` says so.
+#include "wiicontrols_derived.inc"
+
+// Which controllers the README (or the hand-written tables above) cover for a game
+bool HandCovers(Family family, int hw)
+{
+	const bool wii = hw == INPUT_HW_WIIMOTE || hw == INPUT_HW_NUNCHUK;
+	const bool classic = hw == INPUT_HW_CLASSIC || hw == INPUT_HW_WUPC || hw == INPUT_HW_DRC;
+	const bool gc = hw == INPUT_HW_GAMECUBE;
+	switch(family)
+	{
+		case Family::Zelda: return true;
+		case Family::Mario: case Family::KidDracula: return wii || classic;
+		case Family::OnePiece: return wii || gc;
+		case Family::Isolated: return hw == INPUT_HW_NUNCHUK;
+		case Family::MarioKart: case Family::StarWars: case Family::None: return false;
+		default: return wii;
+	}
+}
+
+const char * DerivedKey(int hw)
+{
 	switch(hw)
 	{
-		case INPUT_HW_GAMECUBE:
-			b.add(kA, "A button");
-			b.add(kB, "B button");
-			b.add(kPlus, "Start");
-			b.add(kGcZ, "Select");
-			if(gba)
-			{
-				b.add(kL, "L button");
-				b.add(kR, "R button");
-			}
-			return true;
-
-		case INPUT_HW_WIIMOTE:
-			// the Wii Remote on its own is held sideways
-			b.add(kUp, "Move left", "The Wii Remote is held sideways, so the D-pad is turned");
-			b.add(kDown, "Move right", "The Wii Remote is held sideways, so the D-pad is turned");
-			b.add(kLeft, "Move down", "The Wii Remote is held sideways, so the D-pad is turned");
-			b.add(kRight, "Move up", "The Wii Remote is held sideways, so the D-pad is turned");
-			b.add(k2, "A button");
-			b.add(k1, "B button");
-			b.add(kA, gba ? "R button" : "Fast-forward");
-			b.add(kB, gba ? "L button" : "Fast-forward");
-			b.add(kPlus, "Start");
-			b.add(kMinus, "Select");
-			return true;
-
-		case INPUT_HW_NUNCHUK:
-			b.add(kDpad, "D-pad: move");
-			b.add(kStick, "Move");
-			if(hobbit)
-			{
-				b.add(kB, "Ability");
-				b.add(kA, "Use");
-				b.add(kPlus, "Pause");
-				b.add(kMinus, "Items");
-				b.add(kC, "Speed", "Fast-forward");
-				b.add(kZ, "Change skill");
-				b.add(0, "Shake: attack", "Shake the Wii Remote to attack");
-			}
-			else if(fellowship)
-			{
-				b.add(kB, "Cancel");
-				b.add(kA, "Use");
-				b.add(kPlus, "Pause");
-				b.add(kMinus, "Items");
-				b.add(kC, "Speed", "Fast-forward");
-				b.add(kZ, "Change character");
-				b.add(k1, "Select");
-				b.add(0, "Shake: cancel", "Shake the Wii Remote to cancel");
-			}
-			else if(king)
-			{
-				b.add(kB, "Ability");
-				b.add(kA, "Use");
-				b.add(kPlus, "Pause");
-				b.add(kMinus, "Items");
-				b.add(kC, "Speed", "Fast-forward");
-				b.add(kZ, "Change skill");
-				b.add(0, "Shake: attack", "Shake the Wii Remote to attack");
-			}
-			else if(castlevania)
-			{
-				b.add(kB, "Attack");
-				b.add(kC, "Jump");
-				b.add(kZ, "Guard", "Crouch and guard");
-				b.add(kPlus, "Pause");
-				b.add(kMinus, "Select");
-				if(!adventure)
-					b.add(kA, "Sub-weapon", "Throws your sub-weapon");
-				b.add(kA | kB, "A + B: speed", "Press A and B together to fast-forward");
-				if(legends || circle)
-					b.add(kDown, "Hyper", "Hyper attack");
-				if(circle)
-				{
-					b.add(k1, "L button");
-					b.add(k2, "R button");
-				}
-				b.add(0, "Shake: attack", "Shake the Wii Remote to attack");
-			}
-			return true;
-
-		case INPUT_HW_CLASSIC:
-		case INPUT_HW_WUPC:
-		case INPUT_HW_DRC:
-			if(castlevania)
-			{
-				b.add(kB, "Attack");
-				b.add(kR, "Jump");
-				b.add(kL, "Guard", "Crouch and guard");
-				b.add(kPlus, "Pause");
-				b.add(kMinus, "Select");
-				b.add(kA, "Speed", "Fast-forward");
-				if(!adventure)
-					b.add(kY, "Sub-weapon", "Throws your sub-weapon");
-				if(legends || circle)
-					b.add(kX, "Hyper", "Hyper attack");
-				if(circle)
-					b.add(kL | kR, "L / R button", "L and R also press the game's L and R buttons");
-			}
-			else
-			{
-				b.add(kDpad, "D-pad: move");
-				b.add(kA, "A button");
-				b.add(kB, "B button");
-				b.add(kL | kZL, "L button");
-				b.add(kR | kZR, "R button");
-				b.add(kX | kY, "Fast-forward");
-				b.add(kPlus, "Start");
-				b.add(kMinus, "Select");
-			}
-			return true;
+		case INPUT_HW_GAMECUBE: return "GC";
+		case INPUT_HW_WIIMOTE: return "Wiimote";
+		case INPUT_HW_NUNCHUK: return "Nunchuk";
+		default: return "Classic";
 	}
-	return false;
 }
 
 } // namespace
@@ -864,32 +520,54 @@ WiiScheme WiiSchemeFor(int hw)
 bool WiiControlsFor(int hw, WiiControls& out)
 {
 	out.actions.clear();
+	out.mappings = false;
+	out.derived = false;
 	const WiiScheme scheme = WiiSchemeFor(hw);
 	const GameInputFn fn = CurrentGameInput();
+	const Family family = FamilyOf(fn);
 	Builder b(out);
 
 	bool found = false;
-	switch(FamilyOf(fn))
+	if(HandCovers(family, hw))
 	{
-		case Family::Zelda: found = Zelda(fn, scheme, b); break;
-		case Family::Mario: found = Mario(fn, scheme, b); break;
-		case Family::Metroid: found = Metroid(fn, scheme, b); break;
-		case Family::Turtles: found = Tmnt(fn, scheme, b); break;
-		case Family::MortalKombat: found = MortalKombat(fn, scheme, b); break;
-		case Family::LegoStarWars: found = LegoStarWars(fn, scheme, b); break;
-		case Family::HarryPotter: found = HarryPotter(fn, scheme, b); break;
-		case Family::MedalOfHonor: found = MedalOfHonor(fn, scheme, b); break;
-		case Family::OnePiece: found = OnePiece(fn, scheme, b); break;
-		case Family::Boktai: found = Boktai(fn, scheme, b); break;
-		case Family::Twisted: found = Twisted(fn, scheme, b); break;
-		case Family::Kirby: found = Kirby(fn, scheme, b); break;
-		case Family::KidDracula: found = KidDracula(fn, scheme, b); break;
-		case Family::MarioKart: found = MarioKart(fn, scheme, b); break;
-		case Family::StarWars: found = StarWars(fn, scheme, b); break;
-		case Family::Isolated: found = Isolated(fn, hw, b); break;
-		case Family::None: break;
+		switch(family)
+		{
+			case Family::Zelda: found = Zelda(fn, scheme, b); break;
+			case Family::Mario: found = Mario(fn, scheme, b); break;
+			case Family::Metroid: found = Metroid(fn, scheme, b); break;
+			case Family::Turtles: found = Tmnt(fn, scheme, b); break;
+			case Family::MortalKombat: found = MortalKombat(fn, scheme, b); break;
+			case Family::LegoStarWars: found = LegoStarWars(fn, scheme, b); break;
+			case Family::HarryPotter: found = HarryPotter(fn, scheme, b); break;
+			case Family::MedalOfHonor: found = MedalOfHonor(fn, scheme, b); break;
+			case Family::OnePiece: found = OnePiece(fn, scheme, b); break;
+			case Family::Boktai: found = Boktai(fn, scheme, b); break;
+			case Family::Twisted: found = Twisted(fn, scheme, b); break;
+			case Family::Kirby: found = Kirby(fn, scheme, b); break;
+			case Family::KidDracula: found = KidDracula(fn, scheme, b); break;
+			case Family::Isolated: found = Isolated(fn, hw, b); break;
+			case Family::MarioKart: case Family::StarWars: case Family::None: break;
+		}
+	}
+	else if(family != Family::None)
+	{
+		bool mappings = false;
+		found = Derived(fn, DerivedKey(hw), b, mappings);
+		out.mappings = mappings;
+		out.derived = true;
+		// the motions the handlers read, which listing the buttons can't show
+		if(found && scheme == WiiScheme::WII)
+		{
+			if(family == Family::MarioKart)
+			{
+				b.add(0, "Tilt: steer", "Tilt the Wii Remote left and right to steer");
+				b.add(0, "Shake: jump", "Shake the Wii Remote up and down to jump");
+			}
+			else if(family == Family::StarWars)
+				b.add(0, "Shake: saber", "Shake the Wii Remote to swing your lightsaber");
+		}
 	}
 	if(!found)
 		out.actions.clear();
-	return found;
+	return !out.actions.empty();
 }

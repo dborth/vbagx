@@ -39,6 +39,9 @@ void systemGameRumbleOnlyFor(int OnlyRumbleForFrames);
 uint32_t GetJoy(int which);
 bool isMenuRequested();
 
+//! The Game Boy Advance buttons the user's Button Mappings make of what a kind of hardware (an INPUT_HW_* value) holds
+uint32_t MappedButtons(int hw, uint32_t held);
+
 //! The loaded game has its own Wii/GameCube control scheme (see "Match Wii Controls" in the README)
 bool GameHasWiiControls();
 //! "Match Wii Controls" is on AND the loaded game has such a scheme: the game ignores Button Mappings
