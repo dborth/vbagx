@@ -140,8 +140,6 @@ bool SaneIOS(uint32_t ios)
  ***************************************************************************/
 void WiiPlatform::init(const PlatformConfig& config)
 {
-	this->config = config;
-
 	L2Enhance();
 
 	u32 ios = IOS_GetVersion();
@@ -153,6 +151,8 @@ void WiiPlatform::init(const PlatformConfig& config)
 		if(SupportedIOS(preferred))
 			IOS_ReloadIOS(preferred);
 	}
+
+	this->config = config;
 
 	__exception_setreload(8);
 

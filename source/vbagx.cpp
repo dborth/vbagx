@@ -69,8 +69,6 @@ int main(int argc, char *argv[]) // the Wii's loader passes the path and the gam
 int main(int, char *[])
 #endif
 {
-	InitMemManager();
-
 	PlatformConfig platformConfig;
 	platformConfig.canvasWidth = 640;
 	platformConfig.canvasHeight = 480;
@@ -81,11 +79,12 @@ int main(int, char *[])
 	platform->init(platformConfig);
 	platform->setSaveHandler(SaveAppDataBeforeRelease);
 
-	SwitchMemoryModeMenu();
-	platform->getVideo()->getEmulatorVideo()->initFPSFontData();
-
 	InitFileOpThreads();
 	MountAllFAT();
+
+	InitMemManager();
+	SwitchMemoryModeMenu();
+	platform->getVideo()->getEmulatorVideo()->initFPSFontData();
 
 	fontSystem = new GuiTextRenderer(font_ttf, font_ttf_size, platform->getVideo()->getGlyphRenderer(), platform->getVideo()->getUIScale());
 	textTranslator->loadLanguage(en_lang, en_lang_size);
