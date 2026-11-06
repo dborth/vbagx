@@ -437,10 +437,733 @@ msgid "Catalan"
 msgstr "Katalonca"
 
 msgid "The current IOS has been altered (fake-signed). Functionality and/or stability may be adversely affected."
-msgstr "Geçerli IOS değiştirilmiş (sahte-imzalı). Işlevsellik ve/veya stabilite olumsuz etkilenebilir."
+msgstr "Geçerli IOS değiştirilmiş (sahte-imzalı). İşlevsellik ve/veya stabilite olumsuz etkilenebilir."
 
 msgid "The current IOS is unsupported. Functionality and/or stability may be adversely affected."
-msgstr "Geçerli IOS desteklenmiyor. Işlevsellik ve/veya stabilite olumsuz etkilenebilir."
+msgstr "Geçerli IOS desteklenmiyor. İşlevsellik ve/veya stabilite olumsuz etkilenebilir."
 
 msgid "Turkish"
 msgstr "Türkçe"
+
+msgid " "
+msgstr ""
+
+msgid "%s saved"
+msgstr "%s kaydedildi"
+
+msgid "%s updated"
+msgstr "%s güncellendi"
+
+msgid "%s uses %s"
+msgstr "%s şunu kullanıyor: %s"
+
+msgid "%s uses the default: %s"
+msgstr "%s varsayılanı kullanıyor: %s"
+
+msgid "%s will do nothing"
+msgstr "%s hiçbir şey yapmayacak"
+
+msgid "%s will do nothing."
+msgstr "%s hiçbir şey yapmayacak."
+
+msgid "2xBR"
+msgstr ""
+
+msgid "2xBR-lv1"
+msgstr ""
+
+msgid "7z decompression failed: %s"
+msgstr "7z açma başarısız: %s"
+
+msgid "A changes what %s does"
+msgstr "A, %s işlevini değiştirir"
+
+msgid "A chooses the controller to map"
+msgstr "A, ayarlanacak kumandayı seçer"
+
+msgid "A goes back to using the mappings below"
+msgstr "A, aşağıdaki ayarları tekrar kullanır"
+
+msgid "A puts these buttons back to their defaults"
+msgstr "A, bu butonları varsayılana döndürür"
+
+msgid "A uses this game's own Wii controls instead"
+msgstr "A, bunun yerine oyunun kendi Wii kontrollerini kullanır"
+
+msgid "AUTO"
+msgstr ""
+
+msgid "Actual"
+msgstr "Gerçek"
+
+msgid "All %d backup slots are in use. Delete one to make room."
+msgstr "%d yedek yuvasının tümü dolu. Yer açmak için birini silin."
+
+msgid "All 99 snapshot slots are in use. Delete one to make room."
+msgstr "99 enstantane yuvasının tümü dolu. Yer açmak için birini silin."
+
+msgid "Archive contains too many files."
+msgstr "Arşivde çok fazla dosya var."
+
+msgid "Artwork"
+msgstr "Görseller"
+
+msgid "Artwork Folder"
+msgstr "Görsel Dizini"
+
+msgid "Aspect Ratio Correction"
+msgstr "En-Boy Oranı Düzeltmesi"
+
+msgid "Auto Snapshot"
+msgstr "Otomatik Enstantane"
+
+msgid "Autosave"
+msgstr "Otomatik Kayıt"
+
+msgid "BUTTONS"
+msgstr "BUTONLAR"
+
+msgid "Backup %d"
+msgstr "Yedek %d"
+
+msgid "Backups"
+msgstr "Yedekler"
+
+msgid "Bilinear Filtering"
+msgstr "Bilinear Filtreleme"
+
+msgid "Buttons"
+msgstr "Butonlar"
+
+msgid "Cancelling..."
+msgstr "İptal ediliyor..."
+
+msgid "Cannot resume - unable to reopen ROM file. Save your game!"
+msgstr "Devam edilemiyor - ROM dosyası tekrar açılamadı. Oyununuzu kaydedin!"
+
+msgid "Cartridge Save"
+msgstr "Kartuş Kaydı"
+
+msgid "Cartridge Save not found"
+msgstr "Kartuş Kaydı bulunamadı"
+
+msgid "Cheats (none)"
+msgstr "Hile (yok)"
+
+msgid "Check settings.xml."
+msgstr "settings.xml dosyasını kontrol edin."
+
+msgid "Chinese (Simplified)"
+msgstr "Çince (Basitleştirilmiş)"
+
+msgid "Chinese (Traditional)"
+msgstr "Çince (Geleneksel)"
+
+msgid "Choose 'Pressed button', then press the button you want on the %s."
+msgstr "“Basılan buton” seçeneğini seçin, ardından istediğiniz butona basın (%s)."
+
+msgid "Compressed ROM file is too large to decompress!"
+msgstr "Sıkıştırılmış ROM dosyası açılamayacak kadar büyük!"
+
+msgid "Copy the cartridge's save now"
+msgstr "Kartuş kaydını şimdi kopyala"
+
+msgid "Copy, or restore one of %d"
+msgstr "Kopyala veya %d taneden birini geri yükle"
+
+msgid "Core (Unbound)"
+msgstr "Çekirdek (Sınırsız)"
+
+msgid "Covers"
+msgstr "Kapaklar"
+
+msgid "Custom"
+msgstr "Özel"
+
+msgid "Custom Palette"
+msgstr "Özel Renk Paleti"
+
+msgid "D-PAD"
+msgstr "YÖN TUŞLARI"
+
+msgid "DDT"
+msgstr ""
+
+msgid "DVD"
+msgstr ""
+
+msgid "Delete"
+msgstr "Sil"
+
+msgid "Delete %s?"
+msgstr "%s silinsin mi?"
+
+msgid "Device not found!"
+msgstr "Aygıt bulunamadı!"
+
+msgid "Dynamic Recompilation"
+msgstr "Dinamik Yeniden Derleme"
+
+msgid "Empty"
+msgstr "Boş"
+
+msgid "Empty until you play"
+msgstr "Oynayana kadar boş"
+
+msgid "Emulation"
+msgstr "Emülasyon"
+
+msgid "Enable Turbo Mode"
+msgstr "Turbo Modunu Etkinleştir"
+
+msgid "Error extracting ZIP file!"
+msgstr "ZIP dosyası çıkarılamadı!"
+
+msgid "Error loading font!"
+msgstr "Yazı tipi yüklenemedi!"
+
+msgid "Error reading uncompressed ROM data!"
+msgstr "Sıkıştırılmamış ROM verisi okunamadı!"
+
+msgid "European RGB (240i)"
+msgstr "Avrupa RGB (240i)"
+
+msgid "European RGB (240p)"
+msgstr "Avrupa RGB (240p)"
+
+msgid "Failed to read file data."
+msgstr "Dosya verisi okunamadı."
+
+msgid "File is corrupt (CRC mismatch)."
+msgstr "Dosya bozuk (CRC uyuşmazlığı)."
+
+msgid "File is corrupt."
+msgstr "Dosya bozuk."
+
+msgid "File uses too high of compression settings (dictionary size is too large)."
+msgstr "Dosya çok yüksek sıkıştırma ayarları kullanıyor (sözlük boyutu çok büyük)."
+
+msgid "File uses unsupported compression settings."
+msgstr "Dosya desteklenmeyen sıkıştırma ayarları kullanıyor."
+
+msgid "Font file is too large!"
+msgstr "Yazı tipi dosyası çok büyük!"
+
+msgid "Font file not found!"
+msgstr "Yazı tipi dosyası bulunamadı!"
+
+msgid "Frameskip"
+msgstr ""
+
+msgid "From .png file"
+msgstr ".png dosyasından"
+
+msgid "From game (SGB only)"
+msgstr "Oyundan (yalnızca SGB)"
+
+msgid "GB Fixed Pixel Ratio"
+msgstr "GB Sabit Piksel Oranı"
+
+msgid "GB Screen Zoom"
+msgstr "GB Ekran Yakınlaştırması"
+
+msgid "GBA Fixed Pixel Ratio"
+msgstr "GBA Sabit Piksel Oranı"
+
+msgid "GBA Frameskip"
+msgstr ""
+
+msgid "Game Boy"
+msgstr ""
+
+msgid "Game Boy Advance"
+msgstr ""
+
+msgid "Game Boy Color"
+msgstr ""
+
+msgid "Game Settings - Emulation"
+msgstr "Oyun Ayarları - Emülasyon"
+
+msgid "Go back to where you left off"
+msgstr "Kaldığınız yere geri dönün"
+
+msgid "Green Screen"
+msgstr "Yeşil Ekran"
+
+msgid "HOME"
+msgstr ""
+
+msgid "Hardware"
+msgstr "Donanım"
+
+msgid "Hardware (GB/GBC)"
+msgstr "Donanım (GB/GBC)"
+
+msgid "Hardware Softening"
+msgstr "Donanımsal Yumuşatma"
+
+msgid "Home clears it."
+msgstr "Home bunu temizler."
+
+msgid "Home or the C-Stick clears it."
+msgstr "Home veya C-Çubuğu bunu temizler."
+
+msgid "IP"
+msgstr ""
+
+msgid "Invalid Cartridge Save"
+msgstr "Geçersiz Kartuş Kaydı"
+
+msgid "Invalid Snapshot"
+msgstr "Geçersiz Enstantane"
+
+msgid "Invalid network settings - %s"
+msgstr "Geçersiz ağ ayarları - %s"
+
+msgid "It is not being updated in the current Save Mode. This can't be undone."
+msgstr "Geçerli Kayıt Modunda güncellenmiyor. Bu işlem geri alınamaz."
+
+msgid "It will be overwritten with your progress right now."
+msgstr "Şu anki ilerlemenizle üzerine yazılacak."
+
+msgid "JIT compiler is not available."
+msgstr "JIT derleyicisi kullanılamıyor."
+
+msgid "Jump back to this moment"
+msgstr "Bu ana geri dön"
+
+msgid "Jump to this moment"
+msgstr "Bu ana git"
+
+msgid "Like a real console: the game's own save is kept for you, and the game starts fresh each time."
+msgstr "Gerçek bir konsol gibi: oyunun kendi kaydı saklanır ve oyun her seferinde baştan başlar."
+
+msgid "Load / Save"
+msgstr "Yükle / Kaydet"
+
+msgid "MOTION"
+msgstr "HAREKET"
+
+msgid "Main developer"
+msgstr "Ana geliştirici"
+
+msgid "Make Backup"
+msgstr "Yedek Oluştur"
+
+msgid "Make a copy of the save"
+msgstr "Kaydın bir kopyasını oluştur"
+
+msgid "Manual"
+msgstr "Manuel"
+
+msgid "Manual Snapshot"
+msgstr "Manuel Enstantane"
+
+msgid "Maximum filepath length reached!"
+msgstr "Azami dosya yolu uzunluğuna ulaşıldı!"
+
+msgid "Mono Colorization"
+msgstr "Tek Renkli Renklendirme"
+
+msgid "Mono Screen Palette"
+msgstr "Tek Renkli Ekran Paleti"
+
+msgid "Monochrome Screen"
+msgstr "Tek Renkli Ekran"
+
+msgid "Move over a button to see what it uses"
+msgstr "Neyi kullandığını görmek için bir butonun üzerine gelin"
+
+msgid "Move over a kind to see its choices"
+msgstr "Seçenekleri görmek için bir türün üzerine gelin"
+
+msgid "NOTES"
+msgstr "NOTLAR"
+
+msgid "NTSC (240p)"
+msgstr ""
+
+msgid "NTSC (480p)"
+msgstr ""
+
+msgid "Name"
+msgstr "Ad"
+
+msgid "Network share not connected!"
+msgstr "Ağ paylaşımı bağlı değil!"
+
+msgid "Next time you open this game it starts from its Cartridge Save, or from the beginning. This can't be undone."
+msgstr "Bu oyunu bir sonraki açışınızda Kartuş Kaydından veya baştan başlayacak. Bu işlem geri alınamaz."
+
+msgid "No game save file"
+msgstr "Oyun kayıt dosyası yok"
+
+msgid "No image"
+msgstr "Görsel yok"
+
+msgid "No more ROMs found in the file."
+msgstr "Dosyada başka ROM bulunamadı."
+
+msgid "No snapshots yet"
+msgstr "Henüz enstantane yok"
+
+msgid "Not saved yet"
+msgstr "Henüz kaydedilmedi"
+
+msgid "Not updated while Save Mode is Cartridge Save."
+msgstr "Kayıt Modu “Kartuş Kaydı” iken güncellenmez."
+
+msgid "Not updated while Save Mode is Manual."
+msgstr "Kayıt Modu “Manuel” iken güncellenmez."
+
+msgid "Not used while %s is on"
+msgstr "“%s” açıkken kullanılmaz"
+
+msgid "Nothing is saved or loaded unless you do it yourself."
+msgstr "Siz yapmadıkça hiçbir şey kaydedilmez veya yüklenmez."
+
+msgid "Nothing to save yet. The game hasn't started using its save memory."
+msgstr "Henüz kaydedilecek bir şey yok. Oyun kayıt belleğini henüz kullanmaya başlamadı."
+
+msgid "Now: %s"
+msgstr "Şimdi: %s"
+
+msgid "Nunchuk + Wiimote"
+msgstr ""
+
+msgid "Offset from UTC (hours)"
+msgstr "UTC farkı (saat)"
+
+msgid "Optional save point"
+msgstr "İsteğe bağlı kayıt noktası"
+
+msgid "Output Mode"
+msgstr "Çıkış Modu"
+
+msgid "Overwrite with your progress"
+msgstr "İlerlemenizle üzerine yaz"
+
+msgid "PAL (576i)"
+msgstr ""
+
+msgid "Password"
+msgstr "Parola"
+
+msgid "Paused"
+msgstr "Duraklatıldı"
+
+msgid "Picks up exactly where you left off, as if you never turned the console off."
+msgstr "Konsolu hiç kapatmamış gibi, tam kaldığınız yerden devam eder."
+
+msgid "Player %d"
+msgstr "Oyuncu %d"
+
+msgid "Player Mapping - Controller %d"
+msgstr "Oyuncu Ayarı - Kumanda %d"
+
+msgid "Playing from"
+msgstr "Buradan oynuyor"
+
+msgid "Press a button on the %s now."
+msgstr "Şimdi bir butona basın (%s)."
+
+msgid "Pressed button"
+msgstr "Basılan buton"
+
+msgid "Preview Image"
+msgstr "Önizleme Görseli"
+
+msgid "Preview Screenshot"
+msgstr "Önizleme Ekran Görüntüsü"
+
+msgid "Remembers the exact moment, so you"
+msgstr "Tam o anı hatırlar, böylece istediğiniz zaman"
+
+msgid "Remove this backup"
+msgstr "Bu yedeği kaldır"
+
+msgid "Remove this snapshot"
+msgstr "Bu enstantaneyi kaldır"
+
+msgid "Replace"
+msgstr "Değiştir"
+
+msgid "Replace %s?"
+msgstr "%s değiştirilsin mi?"
+
+msgid "Replace with your progress now"
+msgstr "Şimdiki ilerlemenizle değiştir"
+
+msgid "Restore"
+msgstr "Geri Yükle"
+
+msgid "SD"
+msgstr ""
+
+msgid "SD Gecko Slot A"
+msgstr ""
+
+msgid "SD Gecko Slot B"
+msgstr ""
+
+msgid "SD in SP2"
+msgstr ""
+
+msgid "SHOULDER"
+msgstr "OMUZ TUŞLARI"
+
+msgid "START"
+msgstr ""
+
+msgid "SYSTEM"
+msgstr "SİSTEM"
+
+msgid "Save Mode"
+msgstr "Kayıt Modu"
+
+msgid "Save Mode: %s"
+msgstr "Kayıt Modu: %s"
+
+msgid "Save Now"
+msgstr "Şimdi Kaydet"
+
+msgid "Save a new Preview Screenshot? Current Screenshot image will be overwritten."
+msgstr "Yeni bir Önizleme Ekran Görüntüsü kaydedilsin mi? Mevcut ekran görüntüsünün üzerine yazılacak."
+
+msgid "Save this moment"
+msgstr "Bu anı kaydet"
+
+msgid "Saved %s"
+msgstr "Kaydedildi: %s"
+
+msgid "Saved inside your snapshots"
+msgstr "Enstantanelerinizin içine kaydedildi"
+
+msgid "Saved when you leave the game, or when you save it."
+msgstr "Oyundan çıktığınızda veya kaydettiğinizde kaydedilir."
+
+msgid "Saved when you leave the game, or when you update it."
+msgstr "Oyundan çıktığınızda veya güncellediğinizde kaydedilir."
+
+msgid "Saves"
+msgstr "Kayıtlar"
+
+msgid "Saves when you do"
+msgstr "Siz yaptığınızda kaydeder"
+
+msgid "Scale2x"
+msgstr ""
+
+msgid "Scanline Overlay"
+msgstr "Tarama Çizgisi Kaplaması"
+
+msgid "Scanlines"
+msgstr ""
+
+msgid "Screenshot"
+msgstr "Ekran Görüntüsü"
+
+msgid "Screenshots"
+msgstr "Ekran Görüntüleri"
+
+msgid "Screenshots Folder"
+msgstr "Ekran Görüntüleri Dizini"
+
+msgid "Settings - Network Share"
+msgstr "Ayarlar - Ağ Paylaşımı"
+
+msgid "Settings - Storage"
+msgstr "Ayarlar - Depolama"
+
+msgid "Share IP is blank."
+msgstr "Paylaşımın IP adresi boş."
+
+msgid "Share name is blank."
+msgstr "Paylaşımın adı boş."
+
+msgid "Sharp"
+msgstr "Keskin"
+
+msgid "Show Framerate"
+msgstr "Kare Hızını Göster"
+
+msgid "Snapshot %d"
+msgstr "Enstantane %d"
+
+msgid "Snapshot not found"
+msgstr "Enstantane bulunamadı"
+
+msgid "Soft"
+msgstr "Yumuşak"
+
+msgid "SoftDev, emukidid"
+msgstr ""
+
+msgid "Start fresh next time"
+msgstr "Bir dahaki sefere sıfırdan başla"
+
+msgid "Storage"
+msgstr "Depolama"
+
+msgid "Storage device not found!"
+msgstr "Depolama aygıtı bulunamadı!"
+
+msgid "Super Game Boy"
+msgstr ""
+
+msgid "Super Game Boy 2"
+msgstr ""
+
+msgid "Super Game Boy border"
+msgstr "Super Game Boy çerçevesi"
+
+msgid "Swedish"
+msgstr "İsveççe"
+
+msgid "TV Mode"
+msgstr "TV Modu"
+
+msgid "The Auto Snapshot couldn't be loaded. The Cartridge Save was loaded instead."
+msgstr "Otomatik Enstantane yüklenemedi. Bunun yerine Kartuş Kaydı yüklendi."
+
+msgid "The Auto Snapshot couldn't be loaded. The game starts from the beginning."
+msgstr "Otomatik Enstantane yüklenemedi. Oyun baştan başlıyor."
+
+msgid "This can't be undone."
+msgstr "Bu işlem geri alınamaz."
+
+msgid "This file contains uncompressed Game Boy (Color) ROMs. Do you want to run these?"
+msgstr "Bu dosya sıkıştırılmamış Game Boy (Color) ROM'ları içeriyor. Bunları çalıştırmak istiyor musunuz?"
+
+msgid "This game doesn't have its own save feature. Use snapshots to save."
+msgstr "Bu oyunun kendi kayıt özelliği yok. Kaydetmek için enstantaneleri kullanın."
+
+msgid "This is the snapshot you started from. This can't be undone."
+msgstr "Bu, başladığınız enstantane. Bu işlem geri alınamaz."
+
+msgid "This software is open source and may be copied, distributed, or modified"
+msgstr "Bu yazılım açık kaynaklıdır ve kopyalanabilir, dağıtılabilir veya değiştirilebilir"
+
+msgid "USB"
+msgstr ""
+
+msgid "USB Mass Storage 2"
+msgstr "USB Yığın Depolama Aygıtı 2"
+
+msgid "USB Mass Storage 3"
+msgstr "USB Yığın Depolama Aygıtı 3"
+
+msgid "USB Storage 1"
+msgstr "USB Depolama 1"
+
+msgid "USB Storage 2"
+msgstr "USB Depolama 2"
+
+msgid "USB Storage 3"
+msgstr "USB Depolama 3"
+
+msgid "USB drive 2 not found!"
+msgstr "USB aygıtı 2 bulunamadı!"
+
+msgid "USB drive 3 not found!"
+msgstr "USB aygıtı 3 bulunamadı!"
+
+msgid "USING"
+msgstr "KULLANILAN"
+
+msgid "Unable to mount device."
+msgstr "Aygıt bağlanamadı."
+
+msgid "Unassign"
+msgstr "Kaldır"
+
+msgid "Unnamed Cheat"
+msgstr "Adsız Hile"
+
+msgid "Unsupported drive format. Use FAT32, exFAT or NTFS."
+msgstr "Desteklenmeyen sürücü formatı. FAT32, exFAT veya NTFS kullanın."
+
+msgid "Unsupported file size!"
+msgstr "Desteklenmeyen dosya boyutu!"
+
+msgid "Unsupported format - FAT32 is recommended."
+msgstr "Desteklenmeyen format - FAT32 önerilir."
+
+msgid "Unsupported format - please use FAT32/exFAT."
+msgstr "Desteklenmeyen format - lütfen FAT32/exFAT kullanın."
+
+msgid "Unsupported format."
+msgstr "Desteklenmeyen format."
+
+msgid "Unsupported language!"
+msgstr "Dil desteklenmiyor!"
+
+msgid "Update"
+msgstr "Güncelle"
+
+msgid "Upscaling"
+msgstr "Ölçek Büyütme"
+
+msgid "Use the saved file in the game"
+msgstr "Kayıtlı dosyayı oyunda kullan"
+
+msgid "Use this as the cartridge's save"
+msgstr "Bunu kartuşun kaydı olarak kullan"
+
+msgid "Username"
+msgstr "Kullanıcı Adı"
+
+msgid "VBA GameCube"
+msgstr ""
+
+msgid "Visual Boy Advance"
+msgstr ""
+
+msgid "Visual Boy Advance - M"
+msgstr ""
+
+msgid "Waiting for a button..."
+msgstr "Bir buton bekleniyor..."
+
+msgid "Weather: %d%% sun"
+msgstr "Hava durumu: %d%% güneşli"
+
+msgid "Weather: Night Time"
+msgstr "Hava Durumu: Gece"
+
+msgid "What should %s use?"
+msgstr "%s neyi kullansın?"
+
+msgid "Which controller is being mapped?"
+msgstr "Hangi kumanda ayarlanıyor?"
+
+msgid "Wii U Gamepad"
+msgstr ""
+
+msgid "Wii U Pro Controller"
+msgstr ""
+
+msgid "Write the save to its file"
+msgstr "Kaydı dosyasına yaz"
+
+msgid "can jump back to it any time."
+msgstr "o ana geri dönebilirsiniz."
+
+msgid "cebolleto, bgK, Carl Kenner, dancinninjac"
+msgstr ""
+
+msgid "hq2x"
+msgstr ""
+
+msgid "hq2x Bold"
+msgstr ""
+
+msgid "hq2x Soft"
+msgstr ""
+
+msgid "libogc / devkitPPC"
+msgstr ""
+
+msgid "under the terms of the GNU General Public License (GPL) Version 2."
+msgstr "GNU General Public License (GPL) Sürüm 2 koşulları altında."
