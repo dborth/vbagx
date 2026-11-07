@@ -662,7 +662,7 @@ MappingView::MappingView(int hw, bool selectWii) :
 	if(WiiControlsOverrideActive() && !showWii && !wiiMappingsApply)
 		stage.setAlpha(kWiiDimAlpha);
 
-	GuiTextButton& reset = ui.button(Tr("Reset").c_str()).size(48, kResetH).fontSize(UI_FONT_SMALL - 1).style(MenuKeycapStyle())
+	GuiTextButton& reset = ui.button(Tr("Reset").c_str()).size(48, kResetH).fitText(48, 9, 150).fontSize(UI_FONT_SMALL - 1).style(MenuKeycapStyle())
 		.rounded(8.0f).litTextColor(MenuPaletteCurrent().text)
 		.onFocus([this]{ status = "A puts these buttons back to their defaults"; });
 	resetBtn = &reset;
