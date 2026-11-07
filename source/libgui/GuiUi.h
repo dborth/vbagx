@@ -135,6 +135,7 @@ class GuiTextButton : public GuiButton
 		int fitMinW = 0;		//!< fitText(): 0 = not fitted
 		int fitPadX = 0;
 		int fitMaxW = 0;
+		int fitAppliedW = -1;	//!< the width last given to the button itself (a layout skips setLayoutSize() when the natural size is what it assigns)
 		int fitBudget = 0;		//!< the text's maximum width as last set (0 = none), so it is set only when it changes
 };
 

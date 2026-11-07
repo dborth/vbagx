@@ -2109,6 +2109,8 @@ static int FitButtonWidth(GuiText & label, int minW, int padX, int maxW)
 #define SAVE_MAX_BACKUPS	6	// the most the Backups list shows: a popover doesn't scroll
 #define SAVE_TOAST_W	224
 #define SAVE_TOAST_H	30
+#define SAVE_TOAST_PAD_L	40	// the toast's left edge to its words: the check mark is in between
+#define SAVE_TOAST_PAD_R	16
 #define SAVE_TOAST_FRAMES	120
 
 // What a card stands for
@@ -2698,7 +2700,21 @@ static int MenuGameSaves()
 
 	auto showToast = [&](const std::string & text)
 	{
+		// as wide as the words need (a translation can be much longer than English), within the screen's margins
+		toastTxt.setMaxWidth(0);
 		toastTxt.setText(text.c_str());
+		int toastW = toastTxt.getTextWidth() + SAVE_TOAST_PAD_L + SAVE_TOAST_PAD_R;
+		if(toastW < SAVE_TOAST_W)
+			toastW = SAVE_TOAST_W;
+		const int toastMaxW = platform->getVideo()->getScreenWidth() - 2 * MENU_PAGE_MARGIN;
+		if(toastW > toastMaxW)
+		{
+			toastW = toastMaxW;
+			toastTxt.setMaxWidth(toastMaxW - SAVE_TOAST_PAD_L - SAVE_TOAST_PAD_R);
+		}
+		toastShape.setSize(toastW, SAVE_TOAST_H);
+		toastBtn.setSize(toastW, SAVE_TOAST_H);
+		toastTxt.setPosition((SAVE_TOAST_PAD_L - SAVE_TOAST_PAD_R) / 2, 0);
 		toastBtn.setVisible(true);
 		toastFrames = SAVE_TOAST_FRAMES;
 	};
