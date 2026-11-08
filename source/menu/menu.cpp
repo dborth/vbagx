@@ -2359,15 +2359,6 @@ static void SaveCardMenu(const SaveCard & card, int backupCount, std::vector<Pic
 	}
 }
 
-// While a modal runs over the menu (a popover), everything on the main window is disabled: the page, its bars and the
-// logo are all dimmed together and none of it answers the pointer. The state it had comes back when this goes out of scope.
-struct MenuPageDisabled
-{
-	STATE previous;
-	MenuPageDisabled() : previous(menu->mainWindow.getState()) { menu->mainWindow.setState(STATE::DISABLED); }
-	~MenuPageDisabled() { menu->mainWindow.setState(previous); }
-};
-
 static int MenuGameSaves()
 {
 	int selection = MENU_NONE;

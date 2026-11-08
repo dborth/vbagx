@@ -793,10 +793,12 @@ int MappingScreen()
 				const GuiPopover::Anchor anchor = view.anchorForRow(row);
 				const MapRow * mapRow = FindRow(row);
 				uint32_t pressed = 0;
-				screen.setEnabled(false);
-				const bool chosen = MappingChoose(mapRow ? mapRow->name : "", mapHardware, btnmap[mapHardware][row],
-					DefaultButton(mapHardware, row), anchor, pressed);
-				screen.setEnabled(true);
+				bool chosen;
+				{
+					MenuPageDisabled pageDisabled;
+					chosen = MappingChoose(mapRow ? mapRow->name : "", mapHardware, btnmap[mapHardware][row],
+						DefaultButton(mapHardware, row), anchor, pressed);
+				}
 				if(chosen)
 					btnmap[mapHardware][row] = pressed;
 				MenuMainWindow().changeFocus(&screen.window());
@@ -808,10 +810,12 @@ int MappingScreen()
 			{
 				// a popover over this screen, which stays drawn (dimmed) where it is
 				const GuiPopover::Anchor anchor = view.anchorForChip();
-				screen.setEnabled(false);
 				const std::vector<int> list = HardwareList();
-				const int chosen = MenuPopover_Pick(Tr("Which controller is being mapped?").c_str(), HardwareItems(list), anchor);
-				screen.setEnabled(true);
+				int chosen;
+				{
+					MenuPageDisabled pageDisabled;
+					chosen = MenuPopover_Pick(Tr("Which controller is being mapped?").c_str(), HardwareItems(list), anchor);
+				}
 				MenuMainWindow().changeFocus(&screen.window());
 				screen.window().resetState();
 
