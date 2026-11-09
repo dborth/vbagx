@@ -1365,6 +1365,11 @@ int thumbExecute() {
 
 #if VBA_JIT
     bool useJIT = false;
+    // The entry PC after an event/IRQ return can be ANYWHERE inside a block (the loop is
+    // now cut at exact event time, not at JIT block boundaries). Compiling a trace there
+    // creates a 'suffix' block per arbitrary PC and thrashes the cache. So a miss at entry
+    // is interpreted until the next real discontinuity (branch target); cache hits still run.
+    bool allowCompile = false;
 
     if(EmuSettings.dynamicRecompilation) {
     	// Default to true upon entering the loop. This ensures that if the
@@ -1381,7 +1386,13 @@ int thumbExecute() {
 		if (useJIT) {
 			BasicBlock* block = jitCache.getBlock(pc);
 
-			if (__builtin_expect(block == nullptr, 0)) {
+			if (__builtin_expect(block == nullptr, 0) && !allowCompile) {
+				// Entry PC may be mid-block: don't compile here, and don't keep probing the
+				// cache once per interpreted instruction either. The next discontinuity
+				// (branch target) re-enables the JIT and compiling.
+				useJIT = false;
+			}
+			else if (__builtin_expect(block == nullptr, 0)) {
 				PROFILER_START_TIMER(compileStart);
 				block = JITCompileThumbTrace(pc, jitCache);
 				JIT_LOG_BLOCK_COMPILED(pc, block);
@@ -1408,7 +1419,13 @@ int thumbExecute() {
 				JIT_DEBUG_DUMP_FIRST_JIT_BLOCK(block);
 
 				// Execute Native Trace with flat memory maps
-				ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, &gbaFlags, &gbaReadTable);
+				// Per-call budget = distance to the next scheduler event. The trampoline seeds R3
+				// with -budget and each block's prologue yields if the remainder can't cover it,
+				// so chained JIT code can't run past cpuNextEvent (late IRQ delivery).
+				int jitBudget = cpuNextEvent - cpuTotalTicks;
+				if (jitBudget < 1) jitBudget = 1;
+				if (jitBudget > 0x40000000) jitBudget = 0x40000000;
+				ExecuteJITTrace(block->execute, &result, &busPrefetchCount, &reg[0].I, &gbaFlags, &gbaReadTable, -jitBudget);
 
 				JIT_LOG_TRACE_EXIT(pc, result.nextPC, gbaFlags, result.cycles);
 				JIT_LOG_EXEC(result.instructions, block->length, result.bailedOut);
@@ -1437,11 +1454,20 @@ int thumbExecute() {
 						// the block's own startPC.
 						PROFILER_INC(quotaYields);
 					}
+
+					// If the JIT'd prefix still ran us past the event, let CPULoop handle it
+					// before the bailing instruction (e.g. an MMIO store) runs, as the
+					// interpreter would. State was re-primed above, so resuming is valid.
+					if (cpuTotalTicks >= cpuNextEvent) {
+						PROFILER_ADD_TIME(timeSpentThumb, thumbTimeStart);
+						return 1;
+					}
 				}
 				else {
 					// Clean exit: the block ran to its natural end without
 					// bailing (result.bailedOut == 0)
 					useJIT = true;
+					allowCompile = true;
 					continue;
 				}
 
@@ -1503,6 +1529,7 @@ int thumbExecute() {
 			// This marks the beginning of a new logical block boundary.
 			if (armNextPC != oldArmNextPC + 2) {
 				useJIT = true;
+				allowCompile = true;
 			}
 		}
 #endif

@@ -45,7 +45,10 @@
 #include "GBAcpu.h"
 
 #define MAX_WORDS 3072
-#define YIELD_NUMBER 256
+// How far past cpuNextEvent a block is allowed to run. IRQ-latency-sensitive
+// code tolerated ~150 extra cycles in testing; each extra yield costs a full trampoline
+// round trip, so don't make this tiny.
+#define JIT_EVENT_TOLERANCE 128
 #define MAX_BAILOUTS 256
 #define MAX_BAILOUT_STUB_WORDS 20   // Bumped for prefetch sync + metadata bounds
 #define EPILOGUE_RESERVE_WORDS 64   // Heavy prefetch sync + full lazy register/flag flushes + quota guard stubs
@@ -115,6 +118,8 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	u32* emitPtr = nullptr;
 	u32* blockStart = nullptr;
 	u32* quotaGuard = nullptr;
+	u32* quotaCmp = nullptr;          // prologue CMPWI, immediate patched at block end
+	u32  blockCostEstimate = 0;       // compile-time upper-ish bound on cycles this block can consume
 	bool arenaAllocated = false;
 
 	u32 currentPC = startPC;
@@ -406,7 +411,10 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 		blockStart = emitPtr;
 
 		// EVENT QUOTA SHIELD
-		*emitPtr++ = PPC_CMPWI(0, PPC_R3, YIELD_NUMBER);
+		// R3 = (cycles elapsed) - (budget until cpuNextEvent), so it is negative while
+		// budget remains. Immediate is patched to -bound once the block is fully compiled.
+		quotaCmp = emitPtr;
+		*emitPtr++ = PPC_CMPWI(0, PPC_R3, 0);
 		quotaGuard = emitPtr;
 		*emitPtr++ = PPC_BGE(0);
 	};
@@ -428,6 +436,9 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	    chunkStaticCycles = 0;
 	    chunkStartPC = pc + 2;
 	};
+
+	// Every static cycle cost goes through here so the block-wide total is known.
+	auto AddCost = [&](u32 c) { chunkStaticCycles += c; blockCostEstimate += c; };
 
 	auto EmitPrefetchSync = [&](u32*& ptr, u32 cInstrCount, u32 cStaticCost, u32 pc) {
 		if (cInstrCount == 0) {
@@ -728,7 +739,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// Extract N and Z Flags natively from the host register
 				EmitNZFlags(hostRd);
 
-				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+				AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 				break;
 			}
 
@@ -766,7 +777,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// Extract N and Z Flags
 				EmitNZFlags(hostRd);
 
-				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+				AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -810,7 +821,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					if (op == 1) flagSrc = PPC_R11;
 					EmitNZFlags(flagSrc);
 				}
-				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+				AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -834,7 +845,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						EmitCVFlagsFromXER(PPC_R11);
 						EmitNZFlags(PPC_R12);
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 					else if (op == 0 || op == 1 || op == 12 || op == 14) { // AND, EOR, ORR, BIC
 						EnsureArenaAllocated();
@@ -849,7 +860,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Extract N and Z Flags
 						EmitNZFlags(hostRd);
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 					else if (op == 5 || op == 6) { // ADC / SBC
 						EnsureArenaAllocated();
@@ -878,7 +889,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Extract N and Z Flags natively from the host register
 						EmitNZFlags(hostRd);
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 					else if (op == 9) { // NEG (Rd = 0 - Rs)
 						EnsureArenaAllocated();
@@ -894,7 +905,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Extract N and Z Flags
 						EmitNZFlags(hostRd);
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 					else if (op == 15) { // MVN (Bitwise NOT: Rd = ~Rs)
 						EnsureArenaAllocated();
@@ -905,7 +916,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 						EmitNZFlags(hostRd); // MVN only updates N and Z
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 					else if (op == 8) { // TST (AND flags only, discard result)
 						EnsureArenaAllocated();
@@ -916,7 +927,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 						EmitNZFlags(PPC_R12);
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 					else if (op == 13) { // MUL (Rd = Rd * Rs)
 					    EnsureArenaAllocated();
@@ -1006,7 +1017,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Extract N and Z Flags natively
 						EmitNZFlags(PPC_R12);
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 					else if (op == 2 || op == 3 || op == 4 || op == 7) {
 						// Dynamic Shifts: LSL, LSR, ASR, ROR (by register)
@@ -1057,7 +1068,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 						// Matches thumb40_2 / thumb40_3 / thumb41_0 / thumb41_3:
 						// clockTicks = codeTicksAccessSeq16(armNextPC) + 1;
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 				}
 				else if (((opcode >> 8) & 0x03) != 3) {
@@ -1108,7 +1119,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						// Extract N and Z Flags from the Result (PPC_R12)
 						EmitNZFlags(PPC_R12);
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 					else if (op == 2) { // MOV
 						u32 regRs = 0;
@@ -1122,7 +1133,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 							*emitPtr++ = PPC_OR(regRd, regRs, regRs);
 						}
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 					else if (op == 0) { // ADD
 						u32 regRs = 0;
@@ -1137,7 +1148,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 							*emitPtr++ = PPC_ADD(regRd, regRd, regRs);
 						}
 
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 					}
 				}
 				else if ((opcode & 0xFF00) == 0x4700) {
@@ -1250,7 +1261,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// `3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)`:
 					// non-sequential code table (a memory access breaks the sequential
 					// prefetch stream), +3 (load constant, not +2 which was the store one).
-					chunkStaticCycles += STATIC_DATA_TICKS_32(targetAddr) + STATIC_CODE_TICKS_16(currentPC) + 3;
+					AddCost(STATIC_DATA_TICKS_32(targetAddr) + STATIC_CODE_TICKS_16(currentPC) + 3);
 				} else {
 					endBlock = true;
 					JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_UNSUPPORTED_MEM_BANK);
@@ -1457,7 +1468,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					// always pays the non-sequential cost for the instruction after a memory op.
 					// Add base execution cost + data access penalty delta (N-Cycle vs S-Cycle)
 					// Advance static cycles and prepay the sequential fetch cost
-					chunkStaticCycles += (2 + isMemLoad) + STATIC_CODE_TICKS_SEQ16(currentPC);
+					AddCost((2 + isMemLoad) + STATIC_CODE_TICKS_SEQ16(currentPC));
 					EmitDynamicNCyclePenalty(emitPtr, currentPC + 2);
 				}
 				break;
@@ -1539,7 +1550,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// thumb90 (STR): dataTicksAccess32(address) + codeTicksAccess16(armNextPC) + 2
 				// thumb98 (LDR): 3 + dataTicksAccess32(address) + codeTicksAccess16(armNextPC)
-				chunkStaticCycles += (2 + isLoad) + STATIC_CODE_TICKS_SEQ16(currentPC);
+				AddCost((2 + isLoad) + STATIC_CODE_TICKS_SEQ16(currentPC));
 				EmitDynamicNCyclePenalty(emitPtr, currentPC + 2);
 				break;
 			}
@@ -1583,7 +1594,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 				// Format 12 does not modify condition flags.
 				// Matches thumbA0/thumbA8: clockTicks = 1 + codeTicksAccess16(armNextPC);
-				chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+				AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 				break;
 			}
 			// -----------------------------------------------------------------
@@ -1611,7 +1622,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 
 					// Format 13 does NOT update condition flags.
 					// Matches thumbB0: clockTicks = 1 + codeTicksAccess16(armNextPC);
-					chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC) + 1;
+					AddCost(STATIC_CODE_TICKS_SEQ16(currentPC) + 1);
 				}
 				// THUMB Format 14 - PUSH / POP
 				else if ((opcode & 0xF600) == 0xB400) {
@@ -1790,6 +1801,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						EmitResultMetadata(emitPtr, instrCount + 1, 0);
 
 						// PIPELINE SYNC: Sync the chunk FIRST (Base memory loop cost is numRegs + 3)
+						blockCostEstimate += numRegs + 3;
 						EmitPrefetchSync(emitPtr, chunkInstrCount, chunkStaticCycles + numRegs + 3, chunkStartPC);
 						*emitPtr++ = PPC_LI(PPC_R5, 0); // POP PC flushes buffer BEFORE fetch costs!
 
@@ -1817,7 +1829,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						endBlock = true;
 					} else if (isPop && !Rbit) {
 					    // POP {Rlist}: thumbBC ends with `clockTicks += 2 + codeTicksAccess16(...)`.
-					    chunkStaticCycles += numRegs + 2 + STATIC_CODE_TICKS_SEQ16(currentPC);
+					    AddCost(numRegs + 2 + STATIC_CODE_TICKS_SEQ16(currentPC));
 					} else if (!(isPop && Rbit)) {
 					    // PUSH {Rlist} / PUSH {Rlist, LR}: thumbB4/B5 end with
 					    // `clockTicks += 1 + codeTicksAccess16(armNextPC)`. The flat "+1" was already
@@ -1825,7 +1837,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					    // non-sequential by PUSH's internal (I) cycle -- was missing outright. Bake
 					    // the S8 baseline in here, same as POP, and let EmitDynamicNCyclePenalty
 					    // below upgrade it to N8 at runtime when R5 says it's actually a cold miss.
-					    chunkStaticCycles += numRegs + 1 + STATIC_CODE_TICKS_SEQ16(currentPC);
+					    AddCost(numRegs + 1 + STATIC_CODE_TICKS_SEQ16(currentPC));
 					}
 
 					// Dynamic N-Cycle Penalty Check: upgrades the S8 baseline above to N8 when the
@@ -1997,7 +2009,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// (data ticks already accumulated into R3 above); only "+ numRegs" was missing here,
 				// same bug as PUSH/POP before that fix. Code-fetch cost is handled the same way as
 				// PUSH/POP, via EmitDynamicNCyclePenalty below -- not baked into this constant.
-				chunkStaticCycles += numRegs + (1 + isLoad) + STATIC_CODE_TICKS_SEQ16(currentPC);
+				AddCost(numRegs + (1 + isLoad) + STATIC_CODE_TICKS_SEQ16(currentPC));
 				EmitDynamicNCyclePenalty(emitPtr, currentPC + 2);
 				break;
 			}
@@ -2086,6 +2098,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 										   STATIC_CODE_TICKS_SEQ16(targetPC) +
 										   STATIC_CODE_TICKS_16(targetPC) + 3;
 
+						blockCostEstimate += takenPenalty;
 						EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 						*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 
@@ -2123,7 +2136,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 						}
 
 						// FALSE PATH (Branch Not Taken)
-						chunkStaticCycles += STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1;
+						AddCost(STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1);
 					} else {
 						JIT_LOG_BAILOUT(currentPC, opcode, BAILOUT_CONDITIONAL_BRANCH);
 						endBlock = true;
@@ -2154,6 +2167,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 				// Unconditional branch breaks prefetch and forces a full N+S cycle refill from the Target
 				u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(targetPC) * 2 + STATIC_CODE_TICKS_16(targetPC) + 3;
 
+				blockCostEstimate += takenPenalty;
 				EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 				*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 
@@ -2217,6 +2231,7 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 					u32 takenPenalty = STATIC_CODE_TICKS_SEQ16(currentPC + 2) + 1 +
 									   (STATIC_CODE_TICKS_SEQ16(targetPC) * 2) + STATIC_CODE_TICKS_16(targetPC) + 3;
 
+					blockCostEstimate += takenPenalty;
 					EmitPrefetchSync(emitPtr, chunkInstrCount + 1, chunkStaticCycles + takenPenalty, chunkStartPC);
 					*emitPtr++ = PPC_LI(PPC_R5, 0); // Branch taken flushes prefetch buffer
 					
@@ -2378,6 +2393,15 @@ BasicBlock* JITCompileThumbTrace(u32 startPC, JITCache& cache) {
 	*emitPtr++ = PPC_ORI(PPC_R4, PPC_R4, startPC & 0xFFFF);
 	s32 yieldOffset = (s32)((u8*)cache.linkerReturnAddress - (u8*)emitPtr);
 	*emitPtr++ = PPC_B(yieldOffset);
+
+	// Block only starts if the remaining event budget covers its estimated worst case:
+	// yield when (R3 >= -bound). +25% +16 absorbs costs the static estimate can't see
+	// (multi-register transfers, data wait states, MUL early-out).
+	u32 shieldBound = blockCostEstimate + (blockCostEstimate >> 2) + 16;
+	if (shieldBound > JIT_EVENT_TOLERANCE) shieldBound -= JIT_EVENT_TOLERANCE;
+	else shieldBound = 0;
+	if (shieldBound > 30000) shieldBound = 30000;
+	*quotaCmp = PPC_CMPWI(0, PPC_R3, -(s32)shieldBound);
 
 	// Patch the prologue guard to hit this yield stub
 	*quotaGuard = PPC_BGE((u32)((yieldTarget - quotaGuard) * 4));

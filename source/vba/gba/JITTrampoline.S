@@ -48,7 +48,7 @@
 # -----------------------------------------------------------------------------
 # ExecuteJITTrace(JITBlockFunc execute, JITResult* outResult,
 #                 u32* busPrefetchCount, u32* gbaRegs, u32* flags,
-#                 GBAReadPageTable readTable)
+#                 GBAReadPageTable readTable, s32 cycleBias)   // cycleBias = R9
 #
 # Register Allocations on Entry (PowerPC Standard EABI):
 #   R3: execute (Function pointer to JIT block)
@@ -84,6 +84,7 @@ ExecuteJITTrace:
     stw 7, 84(1)     # Stack[84] = flags array pointer (R7)
     stw 4, 88(1)     # Stack[88] = outResult pointer (R4)
     stw 5, 92(1)     # Stack[92] = busPrefetchCount pointer (R5)
+    stw 9, 96(1)     # Stack[96] = cycleBias (R9, 7th arg): R3 starts at this, removed again on return
 
     # Initialize Lazy Register Context Pointers
     mr 14, 6         # R14 = PPC_REG_GBA_REGS_PTR (Keep base pointer alive for lazy loads/stores)
@@ -98,7 +99,7 @@ ExecuteJITTrace:
 
     # Execute JIT Block Trace
     mtctr 3          # Move JIT block function pointer to Count Register (CTR)
-    li 3, 0          # Zero out the hardware cycle accumulator
+    mr 3, 9          # Seed cycle accumulator with cycleBias (= -budget until cpuNextEvent)
     bctr             # Branch to CTR
 
     # -------------------------------------------------------------------------
@@ -110,6 +111,10 @@ ExecuteJITTrace_Return:
     # Post-Execution: Write Back Return Values
     lwz 10, 92(1)    # R10 = busPrefetchCount pointer
     stw 5, 0(10)     # *busPrefetchCount = R5
+
+    # Remove the budget bias so outResult->cycles is the true cycles elapsed
+    lwz 10, 96(1)
+    sub 3, 3, 10
 
     # Reload outResult (Using safe scratch R10 to preserve trace outputs)
     lwz 10, 88(1)    # R10 = outResult pointer

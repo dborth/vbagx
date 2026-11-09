@@ -393,7 +393,7 @@ int JIT_RunDifferentialThumbHook_Impl(u32 pc, BasicBlock* block, u16 startOpcode
 	JITResult jitResult = {0, 0, 0, 0};
 	reg[15].I = pc + 4;
 
-	ExecuteJITTrace(block->execute, &jitResult, &busPrefetchCount, &reg[0].I, &gbaFlags, &gbaReadTable);
+	ExecuteJITTrace(block->execute, &jitResult, &busPrefetchCount, &reg[0].I, &gbaFlags, &gbaReadTable, -0x40000000); // effectively unlimited budget
 	JIT_LOG_EXEC(jitResult.instructions, block->length, jitResult.bailedOut);
 
 	// ALWAYS apply JIT state advancements to the global emulator state, leaving it exactly as JIT intended
