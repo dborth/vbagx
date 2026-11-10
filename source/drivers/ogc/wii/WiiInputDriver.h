@@ -5,11 +5,12 @@
  *
  * The Wii's input: everything on a GameCube (OgcInputDriver) plus the
  * Wiimote and its extensions, the Wii U GamePad (as a Wii U's vWii/Wii VC
- * sees it), and the console's power/reset buttons.
+ * sees it), the USB pen tablet, and the console's power/reset buttons.
  ***************************************************************************/
 #pragma once
 
 #include "../OgcInputDriver.h"
+#include "input/WiiUsbPads.h"
 
 class WiiInputDriver : public OgcInputDriver
 {
@@ -31,5 +32,6 @@ class WiiInputDriver : public OgcInputDriver
 		void readWiimote(int channel, InputPadData & pad);
 		void readGamePad(InputPadData & pad);
 
+		WiiUsbPads usbPads;
 		bool wiiVC = false;
 };
