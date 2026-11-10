@@ -70,6 +70,7 @@ Every push builds automatically. Grab the latest continuous-integration build:
 - ARAM/SD hybrid virtual memory pager on GameCube — ROM data is backed by ARAM/SD completely transparently, which is what makes the JIT possible there
 - Native 48kHz audio output with no upsampling, dropout-resistant buffering, and smooth fades instead of clicks
 - Wiimote, Nunchuk, Wii Classic Controller, Wii U Pro Controller, and GameCube Controller support
+- **USB mouse** support on **Wii** — it moves the pointer in the menus (left click is A, right click is B, middle click is X)
 - **Wii U GamePad** support — full touch + buttons on the **native Wii U build**; buttons/sticks and display (no touch) on **vWii via VC-style injection** — see [Wii U](#wii-u)
 - Native Wii U build outputs up to **1080p**, with a **GX2 shader-based ScaleFX** upscaler built specifically for the Wii U's GPU
 - Rotation sensor, solar sensor (Boktai), and rumble support — on Wii U, GamePad rumble uses a shorter, reduced-amplitude pattern than the Wiimote

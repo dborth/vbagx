@@ -15,7 +15,7 @@
 
 // indexed by GuiHardwareProfile. The size is deduced so the check below catches a profile without a name.
 const char ctrlrName[][32] =
-{ "GameCube Controller", "Wiimote", "Nunchuk + Wiimote", "Classic Controller", "Wii U Pro Controller", "Wii U Gamepad" };
+{ "GameCube Controller", "Wiimote", "Nunchuk + Wiimote", "Classic Controller", "Wii U Pro Controller", "Wii U Gamepad", "USB Mouse" };
 static_assert(sizeof(ctrlrName) / sizeof(ctrlrName[0]) == INPUT_HW_MAX, "ctrlrName needs one entry per GuiHardwareProfile");
 
 typedef struct _btn_map {
@@ -29,6 +29,6 @@ typedef struct _ctrlr_map {
 	BtnMap map[15];				// controller button map
 } CtrlrMap;
 
-extern CtrlrMap ctrlr_def[6];
+extern CtrlrMap ctrlr_def[INPUT_HW_MAX];
 
 #endif

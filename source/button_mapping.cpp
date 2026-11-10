@@ -17,7 +17,7 @@
  * and for displaying the name of said button
  ***************************************************************************/
 
-CtrlrMap ctrlr_def[6] = {
+CtrlrMap ctrlr_def[INPUT_HW_MAX] = {
 // Gamecube controller btn def
 {
 	INPUT_HW_GAMECUBE,
@@ -148,6 +148,28 @@ CtrlrMap ctrlr_def[6] = {
 		{INPUT_TRIGGER_R, "R"},
 		{INPUT_TRIGGER_ZL, "ZL"},
 		{INPUT_TRIGGER_ZR, "ZR"}
+	}
+},
+// USB mouse btn def (a pen tablet reports in the same profile: tip = LEFT, side switches = RIGHT / MIDDLE)
+{
+	INPUT_HW_USBMOUSE,
+	3,
+	{
+		{INPUT_BTN_A, "LEFT"},
+		{INPUT_BTN_B, "RIGHT"},
+		{INPUT_BTN_X, "MIDDLE"},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""},
+		{INPUT_BTN_NONE, ""}
 	}
 }
 };

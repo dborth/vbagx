@@ -112,6 +112,12 @@ void OgcInputDriver::update() {
 		// Whatever else this console has (Wiimotes, ...)
 		readChannel(i, padData);
 
+		// USB mouse, on channel 0: its own hardware profile for the buttons, and the pointer like the
+		// Wiimote IR's while it is being used. A platform without a mouse reports not connected.
+		if (i == 0)
+			mousePointer.apply(platform->getMouse(), platform->getVideo()->getDeltaTime(),
+				platform->getVideo()->getScreenWidth(), platform->getVideo()->getScreenHeight(), padData);
+
 		// Merge into unified aggregate state for UI Elements
 		for (uint32_t hw = 0; hw < INPUT_HW_MAX; hw++) {
 			if (!padData.hw_connected[hw])
