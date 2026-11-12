@@ -338,10 +338,10 @@ uint32_t DefaultButton(int hw, int index)
 }
 
 // What a row says it is mapped to
-std::string ValueText(int hw, int index)
+const char * ValueText(int hw, int index)
 {
 	const char * name = MappingButtonName(hw, btnmap[hw][index]);
-	return name ? std::string(name) : Tr("None");
+	return name ? name : Tr("None");
 }
 
 } // namespace
@@ -416,8 +416,8 @@ GuiCard& MappingView::bindingRow(const MapRow& r, bool onLeft, int width)
 	const int index = r.index;
 	const char * name = r.name;
 
-	GuiLabel& value = ui.label().fontSize(UI_FONT_SMALL + 1).nudgeY(2).accent().bind([hw, index]{ return ValueText(hw, index); });
-	GuiLabel& label = ui.label(Tr(name).c_str()).fontSize(UI_FONT_SMALL + 2).nudgeY(2);
+	GuiLabel& value = ui.label().fontSize(UI_FONT_SMALL + 1).nudgeY(2).accent().bind([hw, index](UiText& t){ t.set(ValueText(hw, index)); });
+	GuiLabel& label = ui.label(Tr(name)).fontSize(UI_FONT_SMALL + 2).nudgeY(2);
 
 	GuiLayout& content = ui.row().size(width - 2 * padX, 0).gap(6).align(LAYOUT_ALIGN::CENTRE);
 	if(r.icon != MAP_ICON::NONE)
@@ -440,7 +440,7 @@ GuiCard& MappingView::bindingRow(const MapRow& r, bool onLeft, int width)
 		row.selectable(false);
 	else
 	{
-		row.onFocus([this, name]{ status = TrFormat("A changes what %s does", Tr(name).c_str()); });
+		row.onFocus([this, name]{ status = TrFormat("A changes what %s does", Tr(name)); });
 		row.onClick([this, index]{ requestedRow = index; rowRequested = true; });
 	}
 	row.add(content);
@@ -476,7 +476,7 @@ GuiCard& MappingView::wiiRow(const WiiRowPlan& plan, WiiScheme scheme, bool onLe
 			icons++;
 		}
 
-	GuiLabel& label = ui.label(Tr(a.name).c_str()).fontSize(UI_FONT_SMALL + 2).nudgeY(2);
+	GuiLabel& label = ui.label(Tr(a.name)).fontSize(UI_FONT_SMALL + 2).nudgeY(2);
 	label.setMaxWidth(width - 2 * padX - icons * 30);
 	label.setScroll(SCROLL::HORIZONTAL);
 	content.add(label);
@@ -497,7 +497,7 @@ GuiCard& MappingView::wiiRow(const WiiRowPlan& plan, WiiScheme scheme, bool onLe
 //!(the screen is rebuilt to show the other rows); `animate` starts the knob where it was, so it slides to its new place.
 GuiCard& MappingView::wiiToggle(bool on, bool animate)
 {
-	GuiLabel& label = ui.label(Tr(WiiControlsOptionName()).c_str()).fontSize(UI_FONT_SMALL + 1).nudgeY(2);
+	GuiLabel& label = ui.label(Tr(WiiControlsOptionName())).fontSize(UI_FONT_SMALL + 1).nudgeY(2);
 	label.setMaxWidth(kWiiLabelW);
 	label.setScroll(SCROLL::HORIZONTAL);
 	MenuSwitch& knob = ui.make<MenuSwitch>(animate ? !on : on);
@@ -533,14 +533,14 @@ MappingView::MappingView(int hw, bool selectWii) :
 	cancel.setSecondaryTrigger();
 
 	// ---- header: the page name with the hint under it, and the chip that chooses the hardware
-	GuiLabel& title = ui.label(Tr("Button Mappings").c_str()).fontSize(UI_FONT_TITLE - 2).textColor(MenuChromeText());
-	GuiLabel& hint = ui.label().fontSize(UI_FONT_SMALL + 2).textColor(MenuChromeTextMuted()).bind([this]{ return status; });
+	GuiLabel& title = ui.label(Tr("Button Mappings")).fontSize(UI_FONT_TITLE - 2).textColor(MenuChromeText());
+	GuiLabel& hint = ui.label().fontSize(UI_FONT_SMALL + 2).textColor(MenuChromeTextMuted()).bind([this](UiText& t){ t.set(status.c_str()); });
 	hint.setMaxWidth(260);
 	hint.setScroll(SCROLL::HORIZONTAL);
 	GuiLayout& titleBlock = ui.column().gap(4).size(260, 0).add(title).add(hint);
 
 	const int h = hardware;
-	GuiCard& usingChipCard = MenuPopover_Chip(ui, 196, "USING", [h]{ return Tr(ctrlrName[h]); });
+	GuiCard& usingChipCard = MenuPopover_Chip(ui, 196, "USING", [h](UiText& t){ t.set(Tr(ctrlrName[h])); });
 	usingChipCard.onClick([this]{ pickRequest = Pick::USING; });
 	usingChipCard.onFocus([this]{ status = "A chooses the controller to map"; });
 	usingChip = &usingChipCard;
@@ -576,7 +576,7 @@ MappingView::MappingView(int hw, bool selectWii) :
 	const bool showWii = WiiControlsOverrideActive() && WiiControlsFor(hardware, wiiControls);
 	wiiMappingsApply = WiiControlsOverrideActive() && !showWii && wiiControls.mappings;
 	if(WiiControlsOverrideActive() && !showWii)
-		status = TrFormat("Not used while %s is on", Tr(WiiControlsOptionName()).c_str());
+		status = TrFormat("Not used while %s is on", Tr(WiiControlsOptionName()));
 
 	GuiLayout * leftCol;
 	GuiLayout * rightCol;
@@ -591,7 +591,7 @@ MappingView::MappingView(int hw, bool selectWii) :
 			if(!other.empty())
 			{
 				GuiLayout& heading = ui.row().size(kSideW, 0).pad(8, 5, 0, 1)
-					.add(ui.label(Tr(wiiScheme == WiiScheme::WII && !wiiControls.derived ? "MOTION" : "NOTES").c_str()).fontSize(UI_FONT_SMALL - 2).muted());
+					.add(ui.label(Tr(wiiScheme == WiiScheme::WII && !wiiControls.derived ? "MOTION" : "NOTES")).fontSize(UI_FONT_SMALL - 2).muted());
 				col.add(heading);
 				for(size_t i = 0; i < other.size(); i++)
 					col.add(wiiRow(other[i], wiiScheme, onLeft, kSideW));
@@ -608,7 +608,7 @@ MappingView::MappingView(int hw, bool selectWii) :
 			for(size_t g = 0; g < groups.size(); g++)
 			{
 				GuiLayout& heading = ui.row().size(kSideW, 0).pad(8, 5, 0, 1)
-					.add(ui.label(Tr(groups[g].title).c_str()).fontSize(UI_FONT_SMALL - 2).muted());
+					.add(ui.label(Tr(groups[g].title)).fontSize(UI_FONT_SMALL - 2).muted());
 				col.add(heading);
 				for(size_t i = 0; i < groups[g].rows.size(); i++)
 					col.add(bindingRow(groups[g].rows[i], onLeft, kSideW));
@@ -662,7 +662,7 @@ MappingView::MappingView(int hw, bool selectWii) :
 	if(WiiControlsOverrideActive() && !showWii && !wiiMappingsApply)
 		stage.setAlpha(kWiiDimAlpha);
 
-	GuiTextButton& reset = ui.button(Tr("Reset").c_str()).size(48, kResetH).fitText(48, 9, 150).fontSize(UI_FONT_SMALL - 1).style(MenuKeycapStyle())
+	GuiTextButton& reset = ui.button(Tr("Reset")).size(48, kResetH).fitText(48, 9, 150).fontSize(UI_FONT_SMALL - 1).style(MenuKeycapStyle())
 		.rounded(8.0f).litTextColor(MenuPaletteCurrent().text)
 		.onFocus([this]{ status = "A puts these buttons back to their defaults"; });
 	resetBtn = &reset;
@@ -688,7 +688,7 @@ MappingView::MappingView(int hw, bool selectWii) :
 	body.add(panel);
 
 	// ---- footer: Back at the left (the logo is at the right)
-	GuiTextButton& back = ui.button(Tr("Go Back").c_str()).size(110, 44).fontSize(20).style(MenuBarButtonStyle()).litTextColor(MenuPaletteCurrent().text);
+	GuiTextButton& back = ui.button(Tr("Go Back")).size(110, 44).fontSize(20).style(MenuBarButtonStyle()).litTextColor(MenuPaletteCurrent().text);
 	back.setTrigger(1, &cancel);
 	backBtn = &back;
 	GuiLayout& footer = ui.row().size(sw, MENU_BAR_BOTTOM_H).pad(margin, 0).gap(14).align(LAYOUT_ALIGN::CENTRE)
@@ -814,7 +814,7 @@ int MappingScreen()
 				int chosen;
 				{
 					MenuPageDisabled pageDisabled;
-					chosen = MenuPopover_Pick(Tr("Which controller is being mapped?").c_str(), HardwareItems(list), anchor);
+					chosen = MenuPopover_Pick(Tr("Which controller is being mapped?"), HardwareItems(list), anchor);
 				}
 				MenuMainWindow().changeFocus(&screen.window());
 				screen.window().resetState();

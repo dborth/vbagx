@@ -69,7 +69,7 @@ GuiCard& MenuPopover_Row(UiScope& ui, int width, int height, const std::string& 
 
 /** A chip that opens a popover: what it chooses in small capitals, what is chosen under it, an arrow pointing the way it opens.
  *  With `arrow` false there is no arrow, for a chip that changes its value in place (an on/off switch). The caller adds onClick / onFocus. */
-GuiCard& MenuPopover_Chip(UiScope& ui, int width, const char * what, std::function<std::string()> value, bool arrow = true);
+GuiCard& MenuPopover_Chip(UiScope& ui, int width, const char * what, std::function<void(UiText&)> value, bool arrow = true);
 
 /** How many characters of a hint (the small text under a row's name) fit `width` pixels, for wrapping it. */
 size_t MenuPopover_HintChars(int width);
