@@ -20,10 +20,11 @@ export	FREETYPE_LIBS		:=	`$(DEVKITPRO)/portlibs/ppc/bin/powerpc-eabi-pkg-config 
 TARGET		:=	vbagx-wii
 TARGETDIR   :=  executables
 BUILD		:=	build_wii
+CORE_SOURCES	:=	source/vba source/vba/apu source/vba/common source/vba/gb source/vba/gba
 SOURCES		:=	source source/menu source/libgui source/widgets source/utils source/utils/sz \
 				source/drivers source/drivers/ogc source/drivers/ogc/wii \
-				source/vba source/vba/apu source/vba/common \
-				source/vba/gb source/vba/gba source/goomba source/goomba/minilzo-2.06
+				source/goomba source/goomba/minilzo-2.06 \
+				$(CORE_SOURCES)
 DATA		:=	data/images data/fonts data/lang data/sounds
 INCLUDES 	:=  source source/vba
 
@@ -31,8 +32,12 @@ INCLUDES 	:=  source source/vba
 # options for code generation
 #---------------------------------------------------------------------------------
 
+WARNFLAGS		:=	-Wall -Wextra
+CORE_WARNFLAGS	:=	-Wall
+CORE_CXXFLAGS	:=	-Wno-register -Wno-reorder
+
 # -fno-strict-aliasing: critical for GCC pointer casting inside Memory.cpp
-CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
+CFLAGS		=	-g -O3 $(WARNFLAGS) $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 				-DCURSOR_SUPPORT -D__ppc__ -DNO_PNG -DHAVE_ZUTIL_H \
 				-DBLARGG_NONPORTABLE -DBLARGG_BIG_ENDIAN -DBLARGG_CPU_POWERPC \
 				-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
@@ -41,7 +46,7 @@ CFLAGS		=	-g -O3 -Wall $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
 # Strip C++ runtime bloating to conserve L1 I-Cache lines
 # no exceptions are used: don't emit unwind tables
 CFLAGS		+=	-fno-unwind-tables -fno-asynchronous-unwind-tables
-CXXFLAGS	=	$(CFLAGS) -Wno-register -Wno-reorder -fno-exceptions -fno-rtti -fno-threadsafe-statics
+CXXFLAGS	=	$(CFLAGS) -fno-exceptions -fno-rtti -fno-threadsafe-statics
 
 # Added -O3 and LTO directly to linker pipeline for global scope analysis optimization
 LDFLAGS		=	-g -O3 $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--gc-sections
@@ -107,6 +112,10 @@ export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
 export OFILES_SOURCES := $(filter-out GBA.o GBA-arm.o GBA-thumb.o, $(CPPFILES:.cpp=.o)) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
 export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) GBA.o GBA-arm.o GBA-thumb.o
 
+# the objects built from CORE_SOURCES, which get CORE_WARNFLAGS (see the top of this file)
+export CORE_COFILES	:=	$(foreach dir,$(CORE_SOURCES),$(patsubst %.c,%.o,$(notdir $(wildcard $(dir)/*.c))))
+export CORE_CXXOFILES	:=	$(foreach dir,$(CORE_SOURCES),$(patsubst %.cpp,%.o,$(notdir $(wildcard $(dir)/*.cpp))))
+
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
 
 #---------------------------------------------------------------------------------
@@ -129,7 +138,7 @@ export OUTPUT	:=	$(CURDIR)/$(TARGETDIR)/$(TARGET)
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@[ -d $(TARGETDIR) ] || mkdir -p $(TARGETDIR)
-	@make --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.wii
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.wii
 
 #---------------------------------------------------------------------------------
 clean:
@@ -148,6 +157,10 @@ reload:
 else
 
 DEPENDS	:=	$(OFILES:.o=.d)
+
+# the emulator core is built with CORE_WARNFLAGS rather than WARNFLAGS
+$(CORE_COFILES) $(CORE_CXXOFILES): WARNFLAGS := $(CORE_WARNFLAGS)
+$(CORE_CXXOFILES): CXXFLAGS += $(CORE_CXXFLAGS)
 
 #---------------------------------------------------------------------------------
 # main targets
