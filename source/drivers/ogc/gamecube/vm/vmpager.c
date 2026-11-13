@@ -199,7 +199,7 @@ static void VMPager_Notify(void) {
 // FAULT note above), and finally calls VM_SetCommitted() once per page
 // actually backed by real data so every waiter on any page in this block
 // can proceed.
-static void* VMPager_ThreadFunc(void* arg) {
+static void* VMPager_ThreadFunc(void*) {
 	while (pager_running) {
 		mqmsg_t msg;
 

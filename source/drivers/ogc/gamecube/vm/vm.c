@@ -372,7 +372,7 @@ static uint16_t locate_oldest(void)
 		// later ClearMEM1Mapping() on that old v_index would tear down
 		// whatever new page ends up owning this frame's PTE next.
 		uint16_t old_v = phys_map[head].page_index;
-		if (old_v < 65536 && virt_map[old_v].p_map_index == head)
+		if (virt_map[old_v].p_map_index == head)
 		{
 			virt_map[old_v].p_map_index = pmap_max;
 		}
@@ -465,7 +465,7 @@ static PTE* insert_pte(uint16_t index, uint32_t physical, uint8_t WIMG, uint8_t 
 		if (phys_map[i].valid && phys_map[i].pte_index == target_pte_idx) {
 			phys_map[i].valid = 0;
 			uint16_t old_v = phys_map[i].page_index;
-			if (old_v < 65536 && virt_map[old_v].p_map_index == i) {
+			if (virt_map[old_v].p_map_index == i) {
 				virt_map[old_v].p_map_index = pmap_max;
 			}
 			break;

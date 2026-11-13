@@ -34,7 +34,9 @@ static u8 fps_font_texture_data[FPS_FONT_TEX_SIZE] ATTRIBUTE_ALIGN(32);
 static unsigned char scanline_tex_data[32] ATTRIBUTE_ALIGN (32);
 
 static GXTexObj texobj;
+#ifdef HW_RVL
 static GXTexObj cursorObj;
+#endif
 static GXTexObj scanlineTexObj;
 static GXTexObj fpsFontTexObj;
 static Mtx view;
@@ -65,6 +67,7 @@ static s16 square[] ATTRIBUTE_ALIGN(32) = {
 	-200, -200, 0	// 3
     };
 
+#ifdef HW_RVL
 // 96x96 static quad for the cursor (Centered at 0,0)
 static s16 cursor_square[] ATTRIBUTE_ALIGN(32) = {
 	-48,  48, 0,	// 0: Top Left
@@ -72,6 +75,7 @@ static s16 cursor_square[] ATTRIBUTE_ALIGN(32) = {
 	 48, -48, 0,	// 2: Bottom Right
 	-48, -48, 0 	// 3: Bottom Left
 };
+#endif
 
 // 16x20 static quad for font characters
 static s16 fps_char_square[] ATTRIBUTE_ALIGN(32) = {

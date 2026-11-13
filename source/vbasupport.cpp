@@ -1583,7 +1583,7 @@ int LoadROMToVM(const char* filepath) {
 
 			memspace_free(chunk_buf);
 
-			if (offset == size) {
+			if (offset == (size_t)size) {
 				// <= 16MB file. Everything is in ARAM. We don't need file access so nothing more to do.
 				fclose(fp);
 				fp = nullptr;
