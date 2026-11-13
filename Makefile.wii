@@ -38,7 +38,7 @@ CORE_CXXFLAGS	:=	-Wno-register -Wno-reorder
 
 # -fno-strict-aliasing: critical for GCC pointer casting inside Memory.cpp
 CFLAGS		=	-g -O3 $(WARNFLAGS) $(MACHDEP) $(INCLUDE) $(FREETYPE_CFLAGS) \
-				-DCURSOR_SUPPORT -D__ppc__ -DNO_PNG -DHAVE_ZUTIL_H \
+				-DVBAGX -DCURSOR_SUPPORT -D__ppc__ -DNO_PNG -DHAVE_ZUTIL_H \
 				-DBLARGG_NONPORTABLE -DBLARGG_BIG_ENDIAN -DBLARGG_CPU_POWERPC \
 				-D_SZ_ONE_DIRECTORY -D_LZMA_IN_CB -D_LZMA_OUT_READ \
 				-fomit-frame-pointer -fno-strict-aliasing -ffunction-sections -fdata-sections

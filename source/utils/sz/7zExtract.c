@@ -126,7 +126,7 @@ SZ_RESULT SzExtract2(
     size_t *outBufferSize,
     size_t *offset,
     size_t *outSizeProcessed,
-    ISzAlloc *allocMain,
+    ISzAlloc *,
     ISzAlloc *allocTemp)
 {
   UInt32 folderIndex = db->FileIndexToFolderIndexMap[fileIndex];
@@ -136,7 +136,7 @@ SZ_RESULT SzExtract2(
   if (folderIndex == (UInt32)-1)
   {
     *blockIndex = folderIndex;
-    #ifndef GEKKO
+    #ifndef VBAGX
     allocMain->Free(*outBuffer);
     *outBuffer = 0;
     #endif
@@ -154,7 +154,7 @@ SZ_RESULT SzExtract2(
     size_t processedSize;
     #endif
     *blockIndex = folderIndex;
-    #ifndef GEKKO
+    #ifndef VBAGX
     allocMain->Free(*outBuffer);
     *outBuffer = 0;
     #endif
@@ -184,7 +184,7 @@ SZ_RESULT SzExtract2(
       *outBufferSize = (size_t)fileItem->Size;
       if (unPackSize != 0)
       {
-		#ifndef GEKKO
+		#ifndef VBAGX
         *outBuffer = (Byte *)allocMain->Alloc((size_t)fileItem->Size);
         if (*outBuffer == 0)
           res = SZE_OUTOFMEMORY;
