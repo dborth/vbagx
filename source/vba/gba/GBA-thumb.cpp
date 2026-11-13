@@ -1171,7 +1171,6 @@ static INSN_REGPARM void thumbDD(u32 opcode) {
 
 // SWI #comment
 static INSN_REGPARM void thumbDF(u32 opcode) {
-	u32 address = 0;
 	clockTicks = 3;
 	busPrefetchCount = 0;
 	CPUSoftwareInterrupt(opcode & 0xFF);
@@ -1409,7 +1408,7 @@ int thumbExecute() {
 				PROFILER_START_TIMER(execJitStart);
 				PROFILER_INC(jitInvocations);
 
-				JITResult result = {0, 0, 0, 0};
+				JITResult result = {0, 0, 0, 0, 0, 0};
 
 				// Align reg[15].I to pc + 4 so that PC-relative reads
 				// inside the compiled JIT trace match authentic GBA pipeline values.
