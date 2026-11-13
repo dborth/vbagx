@@ -150,14 +150,13 @@ uint32_t TMNTInput(unsigned short pad) {
 
 uint32_t TMNT1Input(unsigned short pad) {
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
-	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
+	bool Jump=0, Attack=0, SpinKick=0, Pause=0, Select=0;
 
 	const LegacyWpad * wp = LegacyWpad_Data(pad);
 	if (wp->exp.type == LW_EXP_NUNCHUK) {
 		Jump = (wp->btns_h & LW_BUTTON_A);
 		Attack = (fabs(wp->gforce.x)> 1.5);
 		SpinKick = (fabs(wp->exp.nunchuk.gforce.x)> 0.5);
-		Roll = (wp->btns_h & LW_NUNCHUK_BUTTON_Z || wp->btns_h & LW_NUNCHUK_BUTTON_C);
 		Pause = (wp->btns_h & LW_BUTTON_PLUS);
 		Select = (wp->btns_h & LW_BUTTON_MINUS);
 		// Swap Turtles or super turtle summon
@@ -171,7 +170,6 @@ uint32_t TMNT1Input(unsigned short pad) {
 		SpinKick = (wp->btns_h & LW_CLASSIC_BUTTON_X);
 		Pause = (wp->btns_h & LW_CLASSIC_BUTTON_PLUS);
 		Select = (wp->btns_h & LW_CLASSIC_BUTTON_MINUS);
-		Roll = (wp->btns_h & (LW_CLASSIC_BUTTON_FULL_L | LW_CLASSIC_BUTTON_FULL_R | LW_CLASSIC_BUTTON_ZL | LW_CLASSIC_BUTTON_ZR));
 		// Swap Turtles or super turtle summon
 		if (wp->btns_h & LW_CLASSIC_BUTTON_Y) {
 			// N/A
@@ -186,7 +184,6 @@ uint32_t TMNT1Input(unsigned short pad) {
 			//N/A
 		}
 		SpinKick = (wp->btns_h & LW_BUTTON_1);
-		Roll = (wp->btns_h & LW_BUTTON_2);
 	}
 
 	uint32_t gc = LegacyPad_ButtonsHeld(pad);
@@ -213,8 +210,6 @@ uint32_t TMNT1Input(unsigned short pad) {
 	if (gc & LP_BUTTON_START) Pause = true;
 	// Select
 	if (gc & LP_TRIGGER_Z) Select = true;
-	// Roll
-	if (gc & LP_TRIGGER_L || gc & LP_TRIGGER_R) Roll = true;
 
 	if (Jump) J |= VBA_BUTTON_A;
 	if (Attack || SpinKick) J |= VBA_BUTTON_B;
@@ -389,10 +384,6 @@ uint32_t TMNTGBAInput(unsigned short pad) {
 		SpecialMove = (wp->btns_h & LW_NUNCHUK_BUTTON_Z);
 		Pause = (wp->btns_h & LW_BUTTON_PLUS);
 		Select = (wp->btns_h & LW_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & LW_BUTTON_B) {
-			//J |= VBA_BUTTON_START;
-		}
 	} else if (wp->exp.type == LW_EXP_CLASSIC) {
 		Jump = (wp->btns_h & LW_CLASSIC_BUTTON_B);
 		Attack = (wp->btns_h & LW_CLASSIC_BUTTON_A);
@@ -400,19 +391,11 @@ uint32_t TMNTGBAInput(unsigned short pad) {
 		Pause = (wp->btns_h & LW_CLASSIC_BUTTON_PLUS);
 		Select = (wp->btns_h & LW_CLASSIC_BUTTON_MINUS);
 		SpecialMove = (wp->btns_h & (LW_CLASSIC_BUTTON_FULL_L | LW_CLASSIC_BUTTON_FULL_R | LW_CLASSIC_BUTTON_ZL | LW_CLASSIC_BUTTON_ZR));
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & LW_CLASSIC_BUTTON_Y) {
-			//J |= VBA_BUTTON_START;
-		}
 	} else {
 		Jump = (wp->btns_h & LW_BUTTON_A);
 		Attack = (fabs(wp->gforce.x)> 1.5) || (wp->btns_h & LW_BUTTON_B);
 		Pause = (wp->btns_h & LW_BUTTON_PLUS);
 		Select = (wp->btns_h & LW_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & LW_BUTTON_B) {
-			//J |= VBA_BUTTON_START;
-		}
 		SpinKick = (wp->btns_h & LW_BUTTON_1);
 		SpecialMove = (wp->btns_h & LW_BUTTON_2);
 	}
@@ -429,10 +412,6 @@ uint32_t TMNTGBAInput(unsigned short pad) {
 		J |= VBA_RIGHT;
 	// Jump
 	if (gc & LP_BUTTON_A) J |= VBA_BUTTON_A;
-	// Swap turtles
-	if (gc & LP_BUTTON_B) {
-		//J |= VBA_BUTTON_B;
-	}
 	// Attack
 	if (gc & LP_BUTTON_X) Attack = true;
 	// Spin kick
@@ -458,9 +437,7 @@ uint32_t TMNTGBAInput(unsigned short pad) {
 
 uint32_t TMNTGBA2Input(unsigned short pad) {
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
-	//static bool wait = false;
-	//static int holdcount = 0;
-	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0, Look=0;
+	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0;
 
 	const LegacyWpad * wp = LegacyWpad_Data(pad);
 	if (wp->exp.type == LW_EXP_NUNCHUK) {
@@ -470,11 +447,6 @@ uint32_t TMNTGBA2Input(unsigned short pad) {
 		SpecialMove = (wp->btns_h & LW_NUNCHUK_BUTTON_Z);
 		Pause = (wp->btns_h & LW_BUTTON_PLUS);
 		Select = (wp->btns_h & LW_BUTTON_MINUS);
-		Look = (wp->btns_h & LW_NUNCHUK_BUTTON_C);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & LW_BUTTON_B) {
-			//J |= VBA_BUTTON_START;
-		}
 	} else if (wp->exp.type == LW_EXP_CLASSIC) {
 		Jump = (wp->btns_h & LW_CLASSIC_BUTTON_B);
 		Attack = (wp->btns_h & LW_CLASSIC_BUTTON_A);
@@ -482,20 +454,11 @@ uint32_t TMNTGBA2Input(unsigned short pad) {
 		Pause = (wp->btns_h & LW_CLASSIC_BUTTON_PLUS);
 		Select = (wp->btns_h & LW_CLASSIC_BUTTON_MINUS);
 		SpecialMove = (wp->btns_h & (LW_CLASSIC_BUTTON_FULL_L | LW_CLASSIC_BUTTON_FULL_R | LW_CLASSIC_BUTTON_ZR));
-		Look = (wp->btns_h & LW_CLASSIC_BUTTON_ZL);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & LW_CLASSIC_BUTTON_Y) {
-			//J |= VBA_BUTTON_START;
-		}
 	} else {
 		Jump = (wp->btns_h & LW_BUTTON_A);
 		Attack = (fabs(wp->gforce.x)> 1.5) || (wp->btns_h & LW_BUTTON_B);
 		Pause = (wp->btns_h & LW_BUTTON_PLUS);
 		Select = (wp->btns_h & LW_BUTTON_MINUS);
-		// Swap Turtles or super turtle summon
-		if (wp->btns_h & LW_BUTTON_B) {
-			Look = true;
-		}
 		SpinKick = (wp->btns_h & LW_BUTTON_1);
 		SpecialMove = (wp->btns_h & LW_BUTTON_2);
 	}
@@ -512,10 +475,6 @@ uint32_t TMNTGBA2Input(unsigned short pad) {
 		J |= VBA_RIGHT;
 	// Jump
 	if (gc & LP_BUTTON_A) J |= VBA_BUTTON_A;
-	// Swap turtles
-	if (gc & LP_BUTTON_B) {
-		Look = true;
-	}
 	// Attack
 	if (gc & LP_BUTTON_X) Attack = true;
 	// Spin kick
@@ -533,17 +492,14 @@ uint32_t TMNTGBA2Input(unsigned short pad) {
 	if (Pause) J |= VBA_BUTTON_START;
 	if (Select) J |= VBA_BUTTON_SELECT;
 	if (SpecialMove) {
-		J |= VBA_UP | VBA_BUTTON_A; // CAKTODO, currently works for Don and Mike
+		J |= VBA_UP | VBA_BUTTON_A;
 	}
 		
 	return J;
 }
 
 uint32_t HarryPotter1GBCInput(unsigned short pad) {
-	uint32_t J = StandardMovement(pad) | StandardDPad(pad) 
-			| DecodeGamecube(pad);
-	//uint8_t ScreenMode = gbReadMemory(0xFFCF);
-	//uint8_t CursorItem = gbReadMemory(0xFFD5);
+	uint32_t J = StandardMovement(pad) | StandardDPad(pad) | DecodeGamecube(pad);
 
 	const LegacyWpad * wp = LegacyWpad_Data(pad);
 
