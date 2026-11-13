@@ -1109,20 +1109,20 @@ void CPUSoftwareInterrupt()
 // -------------------------------------------------------------------------
 typedef void (*SWIHandler)(int);
 
-static void SWI_00_SoftReset(int c) { BIOS_SoftReset(); ARM_PREFETCH; }
-static void SWI_01_RegisterRamReset(int c) { BIOS_RegisterRamReset(); }
-static void SWI_02_Halt(int c) { holdState = true; holdType = -1; cpuNextEvent = cpuTotalTicks; }
-static void SWI_03_Stop(int c) { holdState = true; holdType = -1; stopState = true; cpuNextEvent = cpuTotalTicks; }
-static void SWI_04_07_Intr(int c) { CPUSoftwareInterrupt(); }
-static void SWI_08_Sqrt(int c) { BIOS_Sqrt(); }
-static void SWI_09_ArcTan(int c) { BIOS_ArcTan(); }
-static void SWI_0A_ArcTan2(int c) { BIOS_ArcTan2(); }
+static void SWI_00_SoftReset(int) { BIOS_SoftReset(); ARM_PREFETCH; }
+static void SWI_01_RegisterRamReset(int) { BIOS_RegisterRamReset(); }
+static void SWI_02_Halt(int) { holdState = true; holdType = -1; cpuNextEvent = cpuTotalTicks; }
+static void SWI_03_Stop(int) { holdState = true; holdType = -1; stopState = true; cpuNextEvent = cpuTotalTicks; }
+static void SWI_04_07_Intr(int) { CPUSoftwareInterrupt(); }
+static void SWI_08_Sqrt(int) { BIOS_Sqrt(); }
+static void SWI_09_ArcTan(int) { BIOS_ArcTan(); }
+static void SWI_0A_ArcTan2(int) { BIOS_ArcTan2(); }
 
 // -------------------------------------------------------------------------
 // WII OPTIMIZATION: Branchless Waitstate Math for SWI 0x0B (CpuSet)
 // Replaces nested if/else ternaries with 1-cycle bitwise masks.
 // -------------------------------------------------------------------------
-static void SWI_0B_CpuSet(int c) {
+static void SWI_0B_CpuSet(int) {
   u32 len = (reg[2].I & 0x1FFFFF) >> 1;
   u32 r0_hi = reg[0].I & 0xE000000;
   u32 r0_len_hi = (reg[0].I + len) & 0xE000000;
@@ -1157,7 +1157,7 @@ static void SWI_0B_CpuSet(int c) {
 // -------------------------------------------------------------------------
 // WII OPTIMIZATION: Branchless Waitstate Math for SWI 0x0C (CpuFastSet)
 // -------------------------------------------------------------------------
-static void SWI_0C_CpuFastSet(int c) {
+static void SWI_0C_CpuFastSet(int) {
   u32 len = (reg[2].I & 0x1FFFFF) >> 5;
   u32 r0_hi = reg[0].I & 0xE000000;
   u32 r0_len_hi = (reg[0].I + len) & 0xE000000;
@@ -1178,76 +1178,76 @@ static void SWI_0C_CpuFastSet(int c) {
   BIOS_CpuFastSet();
 }
 
-static void SWI_0D_GetBiosChecksum(int c) { BIOS_GetBiosChecksum(); }
-static void SWI_0E_BgAffineSet(int c) { BIOS_BgAffineSet(); }
-static void SWI_0F_ObjAffineSet(int c) { BIOS_ObjAffineSet(); }
+static void SWI_0D_GetBiosChecksum(int) { BIOS_GetBiosChecksum(); }
+static void SWI_0E_BgAffineSet(int) { BIOS_BgAffineSet(); }
+static void SWI_0F_ObjAffineSet(int) { BIOS_ObjAffineSet(); }
 
-static void SWI_10_BitUnPack(int c) {
+static void SWI_10_BitUnPack(int) {
   u32 len = CPUReadHalfWord(reg[2].I);
   if (!(((reg[0].I & 0xE000000) == 0) || ((reg[0].I + len) & 0xE000000) == 0))
     SWITicks = (32 + memoryWait[(reg[0].I >> 24) & 0xF]) * len;
   BIOS_BitUnPack();
 }
 
-static void SWI_11_LZ77UnCompWram(int c) {
+static void SWI_11_LZ77UnCompWram(int) {
   u32 len = CPUReadMemory(reg[0].I) >> 8;
   if (!(((reg[0].I & 0xE000000) == 0) || ((reg[0].I + (len & 0x1FFFFF)) & 0xE000000) == 0))
     SWITicks = (9 + memoryWait[(reg[1].I >> 24) & 0xF]) * len;
   BIOS_LZ77UnCompWram();
 }
 
-static void SWI_12_LZ77UnCompVram(int c) {
+static void SWI_12_LZ77UnCompVram(int) {
   u32 len = CPUReadMemory(reg[0].I) >> 8;
   if (!(((reg[0].I & 0xE000000) == 0) || ((reg[0].I + (len & 0x1FFFFF)) & 0xE000000) == 0))
     SWITicks = (19 + memoryWait[(reg[1].I >> 24) & 0xF]) * len;
   BIOS_LZ77UnCompVram();
 }
 
-static void SWI_13_HuffUnComp(int c) {
+static void SWI_13_HuffUnComp(int) {
   u32 len = CPUReadMemory(reg[0].I) >> 8;
   if (!(((reg[0].I & 0xE000000) == 0) || ((reg[0].I + (len & 0x1FFFFF)) & 0xE000000) == 0))
     SWITicks = (29 + (memoryWait[(reg[0].I >> 24) & 0xF] << 1)) * len;
   BIOS_HuffUnComp();
 }
 
-static void SWI_14_RLUnCompWram(int c) {
+static void SWI_14_RLUnCompWram(int) {
   u32 len = CPUReadMemory(reg[0].I) >> 8;
   if (!(((reg[0].I & 0xE000000) == 0) || ((reg[0].I + (len & 0x1FFFFF)) & 0xE000000) == 0))
     SWITicks = (11 + memoryWait[(reg[0].I >> 24) & 0xF] + memoryWait[(reg[1].I >> 24) & 0xF]) * len;
   BIOS_RLUnCompWram();
 }
 
-static void SWI_15_RLUnCompVram(int c) {
+static void SWI_15_RLUnCompVram(int) {
   u32 len = CPUReadMemory(reg[0].I) >> 9;
   if (!(((reg[0].I & 0xE000000) == 0) || ((reg[0].I + (len & 0x1FFFFF)) & 0xE000000) == 0))
     SWITicks = (34 + (memoryWait[(reg[0].I >> 24) & 0xF] << 1) + memoryWait[(reg[1].I >> 24) & 0xF]) * len;
   BIOS_RLUnCompVram();
 }
 
-static void SWI_16_Diff8bitUnFilterWram(int c) {
+static void SWI_16_Diff8bitUnFilterWram(int) {
   u32 len = CPUReadMemory(reg[0].I) >> 8;
   if (!(((reg[0].I & 0xE000000) == 0) || ((reg[0].I + (len & 0x1FFFFF)) & 0xE000000) == 0))
     SWITicks = (13 + memoryWait[(reg[0].I >> 24) & 0xF] + memoryWait[(reg[1].I >> 24) & 0xF]) * len;
   BIOS_Diff8bitUnFilterWram();
 }
 
-static void SWI_17_Diff8bitUnFilterVram(int c) {
+static void SWI_17_Diff8bitUnFilterVram(int) {
   u32 len = CPUReadMemory(reg[0].I) >> 9;
   if (!(((reg[0].I & 0xE000000) == 0) || ((reg[0].I + (len & 0x1FFFFF)) & 0xE000000) == 0))
     SWITicks = (39 + (memoryWait[(reg[0].I >> 24) & 0xF] << 1) + memoryWait[(reg[1].I >> 24) & 0xF]) * len;
   BIOS_Diff8bitUnFilterVram();
 }
 
-static void SWI_18_Diff16bitUnFilter(int c) {
+static void SWI_18_Diff16bitUnFilter(int) {
   u32 len = CPUReadMemory(reg[0].I) >> 9;
   if (!(((reg[0].I & 0xE000000) == 0) || ((reg[0].I + (len & 0x1FFFFF)) & 0xE000000) == 0))
     SWITicks = (13 + memoryWait[(reg[0].I >> 24) & 0xF] + memoryWait[(reg[1].I >> 24) & 0xF]) * len;
   BIOS_Diff16bitUnFilter();
 }
 
-static void SWI_19_SoundBiasSet(int c) { if (reg[0].I) soundPause(); else soundResume(); }
-static void SWI_1F_MidiKey2Freq(int c) { BIOS_MidiKey2Freq(); }
-static void SWI_2A_SndDriverJmpTableCopy(int c) { BIOS_SndDriverJmpTableCopy(); }
+static void SWI_19_SoundBiasSet(int) { if (reg[0].I) soundPause(); else soundResume(); }
+static void SWI_1F_MidiKey2Freq(int) { BIOS_MidiKey2Freq(); }
+static void SWI_2A_SndDriverJmpTableCopy(int) { BIOS_SndDriverJmpTableCopy(); }
 
 static void SWI_Default_Unsupported(int comment) {
   static bool disableMessage = false;
@@ -2177,7 +2177,7 @@ static inline void GBA_InitMemoryPages() {
     }
 }
 
-void CPUInit(const char *biosFileName, bool useBiosFile)
+void CPUInit(const char *, bool)
 {
   if(!cpuBiosSwapped) {
     for(unsigned int i = 0; i < sizeof(myROM)/4; i++) {

@@ -50,7 +50,7 @@ extern u32 RomIdCode;
 #define CPUReadMemoryQuick(addr) \
   READ32LE(((u32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 
-static inline u32 CPUReadOpenBus(u32 address)
+static inline u32 CPUReadOpenBus(u32)
 {
     if (!armState) {
         u32 reg15 = reg[15].I;

@@ -4793,7 +4793,7 @@ bool MemgbReadSaveMBC7(char *membuffer, int read) {
 	return false;
 }
 
-bool MemgbReadSaveTAMA5(char *membuffer, int read) {
+bool MemgbReadSaveTAMA5(char *membuffer, int) {
 	if (gbRam) {
 		if (gbRamSizeMask + gbTAMA5ramSize + 1)
 			return false;

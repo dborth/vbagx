@@ -20,7 +20,7 @@
 
 static int clockTicks;
 
-static INSN_REGPARM void armUnknownInsn(u32 opcode)
+static INSN_REGPARM void armUnknownInsn(u32)
 {
     CPUUndefinedException();
 }

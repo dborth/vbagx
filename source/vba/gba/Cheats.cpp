@@ -2798,12 +2798,12 @@ bool cheatsLoadCheatList(const char *file)
   return true;
 }
 
-void cheatsWriteMemory(u32 address, u32 value)
+void cheatsWriteMemory(u32, u32)
 {
 
 }
 
-void cheatsWriteHalfWord(u32 address, u16 value)
+void cheatsWriteHalfWord(u32, u16)
 {
 
 }

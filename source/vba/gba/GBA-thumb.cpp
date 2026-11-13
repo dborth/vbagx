@@ -23,7 +23,7 @@
 
 static int clockTicks;
 
-static INSN_REGPARM void thumbUnknownInsn(u32 opcode)
+static INSN_REGPARM void thumbUnknownInsn(u32)
 {
 	CPUUndefinedException();
 }
