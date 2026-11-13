@@ -228,10 +228,7 @@ local int memPrintf(MEMFILE *f, const char *format, ...)
    can be checked to distinguish the two cases (if errno is zero, the
    zlib error is Z_MEM_ERROR).
 */
-local gzFile gz_open (memory, available, mode)
-    char *memory;
-    const int available;
-    const char *mode;
+local gzFile gz_open(char *memory, const int available, const char *mode)
 {
     int err;
     int level = Z_DEFAULT_COMPRESSION; /* compression level */
@@ -331,10 +328,7 @@ local gzFile gz_open (memory, available, mode)
 /* ===========================================================================
      Opens a gzip (.gz) file for reading or writing.
 */
-gzFile ZEXPORT memgzopen (memory, available, mode)
-    char *memory;
-    int available;
-    const char *mode;
+gzFile ZEXPORT memgzopen(char *memory, int available, const char *mode)
 {
     return gz_open (memory, available, mode);
 }
@@ -344,8 +338,7 @@ gzFile ZEXPORT memgzopen (memory, available, mode)
    for end of file.
    IN assertion: the stream s has been sucessfully opened for reading.
 */
-local int get_byte(s)
-    mem_stream *s;
+local int get_byte(mem_stream *s)
 {
     if (s->z_eof) return EOF;
     if (s->stream.avail_in == 0) {
@@ -371,8 +364,7 @@ local int get_byte(s)
        s->stream.avail_in is zero for the first time, but may be non-zero
        for concatenated .gz files.
 */
-local void check_header(s)
-    mem_stream *s;
+local void check_header(mem_stream *s)
 {
     int method; /* method byte */
     int flags;  /* flags byte */
@@ -424,8 +416,7 @@ local void check_header(s)
  * Cleanup then free the given mem_stream. Return a zlib error code.
    Try freeing in the reverse order of allocations.
  */
-local int destroy (s)
-    mem_stream *s;
+local int destroy(mem_stream *s)
 {
     int err = Z_OK;
 
@@ -462,10 +453,7 @@ local int destroy (s)
      Reads the given number of uncompressed bytes from the compressed file.
    gzread returns the number of bytes actually read (0 for end of file).
 */
-int ZEXPORT memgzread (file, buf, len)
-    gzFile file;
-    voidp buf;
-    unsigned len;
+int ZEXPORT memgzread(gzFile file, voidp buf, unsigned len)
 {
     mem_stream *s = (mem_stream*)file;
     Bytef *start = (Bytef*)buf; /* starting point for crc computation */
@@ -556,10 +544,7 @@ int ZEXPORT memgzread (file, buf, len)
      Writes the given number of uncompressed bytes into the compressed file.
    gzwrite returns the number of bytes actually written (0 in case of error).
 */
-int ZEXPORT memgzwrite (file, buf, len)
-    gzFile file;
-    const voidp buf;
-    unsigned len;
+int ZEXPORT memgzwrite(gzFile file, const voidp buf, unsigned len)
 {
     mem_stream *s = (mem_stream*)file;
 
@@ -591,9 +576,7 @@ int ZEXPORT memgzwrite (file, buf, len)
      Flushes all pending output into the compressed file. The parameter
    flush is as in the deflate() function.
 */
-local int do_flush (file, flush)
-    gzFile file;
-    int flush;
+local int do_flush(gzFile file, int flush)
 {
     uInt len;
     int done = 0;
@@ -633,9 +616,7 @@ local int do_flush (file, flush)
 /* ===========================================================================
    Outputs a long in LSB order to the given file
 */
-local void putLong (file, x)
-    MEMFILE *file;
-    uLong x;
+local void putLong(MEMFILE *file, uLong x)
 {
     int n;
     for (n = 0; n < 4; n++) {
@@ -648,8 +629,7 @@ local void putLong (file, x)
    Reads a long in LSB order from the given mem_stream. Sets z_err in case
    of error.
 */
-local uLong getLong (s)
-    mem_stream *s;
+local uLong getLong(mem_stream *s)
 {
     uLong x = (uLong)get_byte(s);
     int c;
@@ -666,8 +646,7 @@ local uLong getLong (s)
      Flushes all pending output if necessary, closes the compressed file
    and deallocates all the (de)compression state.
 */
-int ZEXPORT memgzclose (file)
-    gzFile file;
+int ZEXPORT memgzclose(gzFile file)
 {
     int err;
     mem_stream *s = (mem_stream*)file;
@@ -688,8 +667,7 @@ int ZEXPORT memgzclose (file)
     return destroy((mem_stream*)file);
 }
 
-long ZEXPORT memtell(file)
-     gzFile file;
+long ZEXPORT memtell(gzFile file)
 {
     mem_stream *s = (mem_stream*)file;
 

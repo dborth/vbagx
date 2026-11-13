@@ -150,7 +150,6 @@ uint32_t TMNTInput(unsigned short pad) {
 
 uint32_t TMNT1Input(unsigned short pad) {
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
-	static uint32_t LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
 	const LegacyWpad * wp = LegacyWpad_Data(pad);
@@ -222,14 +221,11 @@ uint32_t TMNT1Input(unsigned short pad) {
 	if (Pause) J |= VBA_BUTTON_START;
 	if (Select) J |= VBA_BUTTON_SELECT;
 		
-	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
-	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
 	return J;
 }
 
 uint32_t TMNT2Input(unsigned short pad) {
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
-	static uint32_t LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
 	const LegacyWpad * wp = LegacyWpad_Data(pad);
@@ -302,14 +298,11 @@ uint32_t TMNT2Input(unsigned short pad) {
 	if (Pause) J |= VBA_BUTTON_START;
 	if (Select) J |= VBA_BUTTON_SELECT;
 		
-	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
-	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
 	return J;
 }
 
 uint32_t TMNT3Input(unsigned short pad) {
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
-	static uint32_t LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, Roll=0, Pause=0, Select=0;
 
 	const LegacyWpad * wp = LegacyWpad_Data(pad);
@@ -381,14 +374,11 @@ uint32_t TMNT3Input(unsigned short pad) {
 	if (Pause) J |= VBA_BUTTON_SELECT;
 	if (Select) J |= VBA_BUTTON_START;
 		
-	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
-	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
 	return J;
 }
 
 uint32_t TMNTGBAInput(unsigned short pad) {
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
-	static uint32_t LastDir = VBA_RIGHT;
 	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0;
 
 	const LegacyWpad * wp = LegacyWpad_Data(pad);
@@ -463,14 +453,11 @@ uint32_t TMNTGBAInput(unsigned short pad) {
 		J |= VBA_BUTTON_R | VBA_BUTTON_A; // CAKTODO
 	}
 		
-	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
-	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
 	return J;
 }
 
 uint32_t TMNTGBA2Input(unsigned short pad) {
 	uint32_t J = StandardMovement(pad) | StandardDPad(pad);
-	static uint32_t LastDir = VBA_RIGHT;
 	//static bool wait = false;
 	//static int holdcount = 0;
 	bool Jump=0, Attack=0, SpinKick=0, SpecialMove=0, Pause=0, Select=0, Look=0;
@@ -549,8 +536,6 @@ uint32_t TMNTGBA2Input(unsigned short pad) {
 		J |= VBA_UP | VBA_BUTTON_A; // CAKTODO, currently works for Don and Mike
 	}
 		
-	if (J & VBA_RIGHT) LastDir = VBA_RIGHT;
-	else if (J & VBA_LEFT) LastDir = VBA_LEFT;
 	return J;
 }
 
@@ -816,8 +801,6 @@ uint32_t HarryPotter5Input(unsigned short pad) {
 	// Wand cursor, normally controlled by DPad, now controlled by Wiimote!
 	int cx = 0;
 	int cy = 0;
-	static int oldcx = 0;
-	static int oldcy = 0;
 	uint8_t WandOut = CPUReadByte(0x200e0dd);
 	if (WandOut && CursorValid) {
 		cx = (CursorX * 268)/640;
@@ -829,8 +812,6 @@ uint32_t HarryPotter5Input(unsigned short pad) {
 		CPUWriteByte(0x200e0fe, cx);
 		CPUWriteByte(0x200e102, cy);
 	}
-	oldcx = cx;
-	oldcy = cy;
 
 	// DPad works in the map
 	if (wp->btns_h & LW_BUTTON_RIGHT)

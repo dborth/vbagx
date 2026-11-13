@@ -146,7 +146,7 @@ const char* stateheader_summary_str(const stateheader* sh) {
 
 int stateheader_plausible(const stateheader* sh) {
 	uint16_t type = F16(sh->type);
-	if (type < 0 || type == 3 || type == 4 || type > 5) return 0;
+	if (type == 3 || type == 4 || type > 5) return 0;
 	return F16(sh->size) >= sizeof(stateheader) && // check size (at least 48)
 		(F16(sh->type) == GOOMBA_CONFIGSAVE || sh->uncompressed_size != 0); // check uncompressed_size, but not for configsave
 	// when checking for whether something equals 0, endian conversion is not necessary

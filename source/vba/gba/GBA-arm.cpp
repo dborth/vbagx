@@ -74,22 +74,29 @@ static INSN_REGPARM void armUnknownInsn(u32)
               (POS(rhs) & POS(res)));
 
 #define ALU_INIT_C \
-    int dest = (opcode>>12) & 15;                       \
-    bool C_OUT = (gbaFlags.C != 0);                                \
+    bool C_OUT = (gbaFlags.C != 0);                     \
     u32 value;
 
+// The non-carry version does not track the shifter carry-out at all.
+#define ALU_INIT_NC \
+    u32 value;
+
+// Destination register, for the operations that write one (not TST/TEQ/CMP/CMN).
+#define ALU_DEST \
+    int dest = (opcode >> 12) & 15;
+
 // OP Rd,Rb,Rm LSL #
-#define VALUE_LSL_IMM_C \
+#define VALUE_LSL_IMM(SETC) \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (LIKELY(!shift)) {  /* LSL #0 most common? */    \
         value = reg[opcode & 0x0F].I;                   \
     } else {                                            \
         u32 v = reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (32 - shift)) & 1;                \
+        SETC((v >> (32 - shift)) & 1);                  \
         value = v << shift;                             \
     }
 // OP Rd,Rb,Rm LSL Rs
- #define VALUE_LSL_REG_C \
+ #define VALUE_LSL_REG(SETC) \
     u32 shift = reg[(opcode >> 8)&15].B.B0;                  \
 	u32 rm = reg[opcode & 0x0F].I;                           \
 	if((opcode & 0x0F) == 15) {                              \
@@ -98,31 +105,31 @@ static INSN_REGPARM void armUnknownInsn(u32)
     if (LIKELY(shift)) {                                     \
         if (shift == 32) {                                   \
             value = 0;                                       \
-            C_OUT = (rm & 1);                                \
+            SETC(rm & 1);                                    \
         } else if (LIKELY(shift < 32)) {                     \
             u32 v = rm;                                      \
-            C_OUT = (v >> (32 - shift)) & 1;                 \
+            SETC((v >> (32 - shift)) & 1);                   \
             value = v << shift;                              \
         } else {                                             \
             value = 0;                                       \
-            C_OUT = false;                                   \
+            SETC(false);                                     \
         }                                                    \
     } else {                                                 \
         value = rm;                                          \
     }
 // OP Rd,Rb,Rm LSR #
-#define VALUE_LSR_IMM_C \
+#define VALUE_LSR_IMM(SETC) \
     u32 shift = (opcode >> 7) & 0x1F;                   \
     if (LIKELY(shift)) {                                \
         u32 v = reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (shift - 1)) & 1;                 \
+        SETC((v >> (shift - 1)) & 1);                   \
         value = v >> shift;                             \
     } else {                                            \
         value = 0;                                      \
-        C_OUT = (reg[opcode & 0x0F].I >> 31);           \
+        SETC(reg[opcode & 0x0F].I >> 31);               \
     }
 // OP Rd,Rb,Rm LSR Rs
- #define VALUE_LSR_REG_C \
+ #define VALUE_LSR_REG(SETC) \
     unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
 	u32 rm = reg[opcode & 0x0F].I;                      \
 	if((opcode & 0x0F) == 15) {                         \
@@ -131,36 +138,36 @@ static INSN_REGPARM void armUnknownInsn(u32)
     if (LIKELY(shift)) {                                \
         if (shift == 32) {                              \
             value = 0;                                  \
-            C_OUT = (rm >> 31);                         \
+            SETC(rm >> 31);                             \
         } else if (LIKELY(shift < 32)) {                \
             u32 v = rm;                                 \
-            C_OUT = (v >> (shift - 1)) & 1;             \
+            SETC((v >> (shift - 1)) & 1);               \
             value = v >> shift;                         \
         } else {                                        \
             value = 0;                                  \
-            C_OUT = false;                              \
+            SETC(false);                                \
         }                                               \
     } else {                                            \
         value = rm;                                     \
     }
 // OP Rd,Rb,Rm ASR #
-#define VALUE_ASR_IMM_C \
+#define VALUE_ASR_IMM(SETC) \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (LIKELY(shift)) {                                \
         s32 v = reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (int)(shift - 1)) & 1;            \
+        SETC((v >> (int)(shift - 1)) & 1);              \
         value = v >> (int)shift;                        \
     } else {                                            \
         if (reg[opcode & 0x0F].I & 0x80000000) {        \
             value = 0xFFFFFFFF;                         \
-            C_OUT = 1;                                  \
+            SETC(1);                                    \
         } else {                                        \
             value = 0;                                  \
-            C_OUT = 0;                                  \
+            SETC(0);                                    \
         }                                               \
     }
 // OP Rd,Rb,Rm ASR Rs
-#define VALUE_ASR_REG_C \
+#define VALUE_ASR_REG(SETC) \
     unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
     u32 rm = reg[opcode & 0x0F].I;                      \
     if((opcode & 0x0F) == 15) {                         \
@@ -169,7 +176,7 @@ static INSN_REGPARM void armUnknownInsn(u32)
     if (LIKELY(shift < 32)) {                           \
         if (LIKELY(shift)) {                            \
             s32 v = rm;                                 \
-            C_OUT = (v >> (int)(shift - 1)) & 1;        \
+            SETC((v >> (int)(shift - 1)) & 1);          \
             value = v >> (int)shift;                    \
         } else {                                        \
             value = rm;                                 \
@@ -177,28 +184,28 @@ static INSN_REGPARM void armUnknownInsn(u32)
     } else {                                            \
         if (reg[opcode & 0x0F].I & 0x80000000) {        \
             value = 0xFFFFFFFF;                         \
-            C_OUT = 1;                                  \
+            SETC(1);                                    \
         } else {                                        \
             value = 0;                                  \
-            C_OUT = 0;                                  \
+            SETC(0);                                    \
         }                                               \
     }
 // OP Rd,Rb,Rm ROR #
-#define VALUE_ROR_IMM_C \
+#define VALUE_ROR_IMM(SETC) \
     unsigned int shift = (opcode >> 7) & 0x1F;          \
     if (LIKELY(shift)) {                                \
         u32 v = reg[opcode & 0x0F].I;                   \
-        C_OUT = (v >> (shift - 1)) & 1;                 \
+        SETC((v >> (shift - 1)) & 1);                   \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
         u32 v = reg[opcode & 0x0F].I;                   \
-        C_OUT = v & 1;                                  \
+        SETC(v & 1);                                    \
         value = ((v >> 1) |                             \
                  (gbaFlags.C << 31));                  \
     }
 // OP Rd,Rb,Rm ROR Rs
-#define VALUE_ROR_REG_C \
+#define VALUE_ROR_REG(SETC) \
     unsigned int shift = reg[(opcode >> 8)&15].B.B0;    \
     u32 rm = reg[opcode & 0x0F].I;                      \
     if((opcode & 0x0F) == 15) {                         \
@@ -206,54 +213,68 @@ static INSN_REGPARM void armUnknownInsn(u32)
     }                                                   \
     if (LIKELY(shift & 0x1F)) {                         \
         u32 v = rm;                                     \
-        C_OUT = (v >> (shift - 1)) & 1;                 \
+        SETC((v >> (shift - 1)) & 1);                   \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
         value = rm;                                     \
-        if (shift)                                      \
-            C_OUT = (value >> 31);                      \
+        if (shift) {                                    \
+            SETC(value >> 31);                          \
+        }                                               \
     }
 // OP Rd,Rb,# ROR #
-#define VALUE_IMM_C \
+#define VALUE_IMM(SETC) \
     int shift = (opcode & 0xF00) >> 7;                  \
     if (UNLIKELY(shift)) {                              \
         u32 v = opcode & 0xFF;                          \
-        C_OUT = (v >> (shift - 1)) & 1;                 \
+        SETC((v >> (shift - 1)) & 1);                   \
         value = ((v << (32 - shift)) |                  \
                  (v >> shift));                         \
     } else {                                            \
         value = opcode & 0xFF;                          \
     }
 
-// Make the non-carry versions default to the carry versions
-// (this is fine for C--the compiler will optimize the dead code out)
+// Shifter carry-out: the _C versions of the VALUE macros record it in C_OUT,
+// the _NC versions (used by instructions that do not use it) leave it out.
+#define C_OUT_SET(x)  C_OUT = (x)
+#define C_OUT_NONE(x) /*nothing*/
 
-#define ALU_INIT_NC ALU_INIT_C
-#define VALUE_LSL_IMM_NC VALUE_LSL_IMM_C
-#define VALUE_LSL_REG_NC VALUE_LSL_REG_C
-#define VALUE_LSR_IMM_NC VALUE_LSR_IMM_C
-#define VALUE_LSR_REG_NC VALUE_LSR_REG_C
-#define VALUE_ASR_IMM_NC VALUE_ASR_IMM_C
-#define VALUE_ASR_REG_NC VALUE_ASR_REG_C
-#define VALUE_ROR_IMM_NC VALUE_ROR_IMM_C
-#define VALUE_ROR_REG_NC VALUE_ROR_REG_C
-#define VALUE_IMM_NC VALUE_IMM_C
+#define VALUE_LSL_IMM_C  VALUE_LSL_IMM(C_OUT_SET)
+#define VALUE_LSL_REG_C  VALUE_LSL_REG(C_OUT_SET)
+#define VALUE_LSR_IMM_C  VALUE_LSR_IMM(C_OUT_SET)
+#define VALUE_LSR_REG_C  VALUE_LSR_REG(C_OUT_SET)
+#define VALUE_ASR_IMM_C  VALUE_ASR_IMM(C_OUT_SET)
+#define VALUE_ASR_REG_C  VALUE_ASR_REG(C_OUT_SET)
+#define VALUE_ROR_IMM_C  VALUE_ROR_IMM(C_OUT_SET)
+#define VALUE_ROR_REG_C  VALUE_ROR_REG(C_OUT_SET)
+#define VALUE_IMM_C      VALUE_IMM(C_OUT_SET)
+#define VALUE_LSL_IMM_NC VALUE_LSL_IMM(C_OUT_NONE)
+#define VALUE_LSL_REG_NC VALUE_LSL_REG(C_OUT_NONE)
+#define VALUE_LSR_IMM_NC VALUE_LSR_IMM(C_OUT_NONE)
+#define VALUE_LSR_REG_NC VALUE_LSR_REG(C_OUT_NONE)
+#define VALUE_ASR_IMM_NC VALUE_ASR_IMM(C_OUT_NONE)
+#define VALUE_ASR_REG_NC VALUE_ASR_REG(C_OUT_NONE)
+#define VALUE_ROR_IMM_NC VALUE_ROR_IMM(C_OUT_NONE)
+#define VALUE_ROR_REG_NC VALUE_ROR_REG(C_OUT_NONE)
+#define VALUE_IMM_NC     VALUE_IMM(C_OUT_NONE)
 #define C_CHECK_PC(SETCOND) if (LIKELY(dest != 15)) { SETCOND }
 
 #define OP_AND \
+ALU_DEST                                            \
 u32 res = reg[(opcode>>16)&15].I & value;           \
 reg[dest].I = res;
 
 #define OP_ANDS   OP_AND C_CHECK_PC(C_SETCOND_LOGICAL)
 
 #define OP_EOR \
+ALU_DEST                                            \
 u32 res = reg[(opcode>>16)&15].I ^ value;           \
 reg[dest].I = res;
 
 #define OP_EORS   OP_EOR C_CHECK_PC(C_SETCOND_LOGICAL)
 
 #define OP_SUB \
+ALU_DEST                                            \
 u32 lhs = reg[(opcode>>16)&15].I;                   \
 u32 rhs = value;                                    \
 u32 res = lhs - rhs;                                \
@@ -262,6 +283,7 @@ reg[dest].I = res;
 #define OP_SUBS   OP_SUB C_CHECK_PC(C_SETCOND_SUB)
 
 #define OP_RSB \
+ALU_DEST                                            \
 u32 lhs = value;                                    \
 u32 rhs = reg[(opcode>>16)&15].I;                   \
 u32 res = lhs - rhs;                                \
@@ -270,6 +292,7 @@ reg[dest].I = res;
 #define OP_RSBS   OP_RSB C_CHECK_PC(C_SETCOND_SUB)
 
 #define OP_ADD \
+ALU_DEST                                            \
 u32 lhs = reg[(opcode>>16)&15].I;                   \
 u32 rhs = value;                                    \
 u32 res = lhs + rhs;                                \
@@ -278,6 +301,7 @@ reg[dest].I = res;
 #define OP_ADDS   OP_ADD C_CHECK_PC(C_SETCOND_ADD)
 
 #define OP_ADC \
+ALU_DEST                                            \
 u32 lhs = reg[(opcode>>16)&15].I;                   \
 u32 rhs = value;                                    \
 u32 res = lhs + rhs + gbaFlags.C;                  \
@@ -286,6 +310,7 @@ reg[dest].I = res;
 #define OP_ADCS   OP_ADC C_CHECK_PC(C_SETCOND_ADD)
 
 #define OP_SBC \
+ALU_DEST                                            \
 u32 lhs = reg[(opcode>>16)&15].I;                   \
 u32 rhs = value;                                    \
 u32 res = lhs - rhs - (gbaFlags.C ^ 1);               \
@@ -294,6 +319,7 @@ reg[dest].I = res;
 #define OP_SBCS   OP_SBC C_CHECK_PC(C_SETCOND_SUB)
 
 #define OP_RSC \
+ALU_DEST                                            \
 u32 lhs = value;                                    \
 u32 rhs = reg[(opcode>>16)&15].I;                   \
 u32 res = lhs - rhs - (gbaFlags.C ^ 1);               \
@@ -322,24 +348,28 @@ u32 res = lhs + rhs;                                \
 C_SETCOND_ADD;
 
 #define OP_ORR \
+ALU_DEST                                            \
 u32 res = reg[(opcode >> 16) & 0x0F].I | value;     \
 reg[dest].I = res;
 
 #define OP_ORRS   OP_ORR C_CHECK_PC(C_SETCOND_LOGICAL)
 
 #define OP_MOV \
+ALU_DEST                                            \
 u32 res = value;                                    \
 reg[dest].I = res;
 
 #define OP_MOVS   OP_MOV C_CHECK_PC(C_SETCOND_LOGICAL)
 
 #define OP_BIC \
+ALU_DEST                                            \
 u32 res = reg[(opcode >> 16) & 0x0F].I & (~value);  \
 reg[dest].I = res;
 
 #define OP_BICS   OP_BIC C_CHECK_PC(C_SETCOND_LOGICAL)
 
 #define OP_MVN \
+ALU_DEST                                            \
 u32 res = ~value;                                   \
 reg[dest].I = res;
 
@@ -502,7 +532,6 @@ DEFINE_ALU_INSN_C (1F, 3F, MVNS, YES)
 #define MUL_INSN(OP, SETCOND, CYCLES) \
     int mult = (opcode & 0x0F);                         \
     u32 rs = reg[(opcode >> 8) & 0x0F].I;               \
-    int acc = (opcode >> 12) & 0x0F;   /* or destLo */  \
     int dest = (opcode >> 16) & 0x0F;  /* or destHi */  \
     OP;                                                 \
     SETCOND;                                            \
@@ -517,13 +546,16 @@ DEFINE_ALU_INSN_C (1F, 3F, MVNS, YES)
 #define OP_MUL \
     reg[dest].I = reg[mult].I * rs;
 #define OP_MLA \
+    int acc = (opcode >> 12) & 0x0F;   /* or destLo */  \
     reg[dest].I = reg[mult].I * rs + reg[acc].I;
 #define OP_MULL(SIGN) \
+    int acc = (opcode >> 12) & 0x0F;   /* or destLo */  \
     SIGN##64 res = (SIGN##64)(SIGN##32)reg[mult].I      \
                  * (SIGN##64)(SIGN##32)rs;              \
     reg[acc].I = (u32)res;                              \
     reg[dest].I = (u32)(res >> 32);
 #define OP_MLAL(SIGN) \
+    int acc = (opcode >> 12) & 0x0F;   /* or destLo */  \
     SIGN##64 res = ((SIGN##64)reg[dest].I<<32 | reg[acc].I)\
                  + ((SIGN##64)(SIGN##32)reg[mult].I     \
                     * (SIGN##64)(SIGN##32)rs);          \

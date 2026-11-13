@@ -61,7 +61,7 @@ void gbSgbReset()
   gbSgbNextController = 0x0f;
   gbSgbReadingController = 0;
 
-  memset(gbSgbSCPPalette, 0, 512*4);
+  memset(gbSgbSCPPalette, 0, sizeof(gbSgbSCPPalette));
   memset(gbSgbATF, 0, 20*18);
   memset(gbSgbATFList, 0, 45 * 20 * 18);
   memset(gbSgbPacket, 0, 16 * 7);
@@ -153,8 +153,6 @@ void gbSgbRenderScreenToBuffer()
 void gbSgbDrawBorderTile(int x, int y, int tile, int attr)
 {
   u16 *dest = (u16*)pix + (y * (256+2)) + x;
-  u8 *dest8 = (u8*)pix + ((y*256)+x)*3;
-  u32 *dest32 = (u32*)pix + (y*257) + x;
 
   u8 *tileAddress = &gbSgbBorderChar[tile * 32];
   u8 *tileAddress2 = &gbSgbBorderChar[tile * 32 + 16];

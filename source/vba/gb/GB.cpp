@@ -4814,7 +4814,7 @@ bool MemgbReadSaveTAMA5(char *membuffer, int) {
 			swap_endian_32(&gbDataTAMA5.mapperSeconds, sizeof(int) * 14 + sizeof(time_t));
 			if (gbDataTAMA5.mapperSeconds > 60) {
 				// Reset the clock
-				memset(&gbDataMBC3.mapperSeconds, 0, sizeof(int) * 14 + sizeof(time_t));
+				memset(&gbDataTAMA5.mapperSeconds, 0, sizeof(int) * 14 + sizeof(time_t));
 			}
 		}
 

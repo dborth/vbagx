@@ -460,12 +460,10 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
 
   // The monochrome gameboy has 2 sprite palettes, because each palette only contains 3 colours
   // out of a possible 4. Here we are colourising the two palettes seperately.
-  u8 *pal;
   u8 ObjPal = 0;
   u8 PalOffset = 8;
   if(!gbCgbMode) {
     if(flags & 0x10) {
-      pal = gbObp1;
 	  ObjPal = gbObp1Line[x+11+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)];
 	  if (ObjPal!=oldObj1Pal && !gbSgbMode) {
 		gbSetObj1Palette(ObjPal);
@@ -473,7 +471,6 @@ void gbDrawSpriteTile(int tile, int x,int y,int t, int flags,
 	  }
 	  PalOffset = 12;
     } else {
-      pal = gbObp0;
 	  ObjPal = gbObp0Line[x+11+gbSpritesTicks[x]*(gbSpeed ? 2 : 4)];
 	  if (ObjPal!=oldObj0Pal && !gbSgbMode) {
 		gbSetObj0Palette(ObjPal);

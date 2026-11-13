@@ -344,9 +344,8 @@ static void gbSoundReadGameOld(int version,gzFile gzFile)
 
 	utilReadData( gzFile, gbsound_format3 );
 
-	int quality = 1;
 	if ( version >= 7 )
-		quality = utilReadInt( gzFile );
+		utilReadInt( gzFile ); // quality, no longer used
 
 	// Convert to format Gb_Apu uses
 	gb_apu_state_t& s = state.apu;

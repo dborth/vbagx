@@ -2459,12 +2459,12 @@ void cheatsAddCBACode(const char *code, const char *desc)
   sscanf(buffer, "%x", &value);
 
   u8 array[8] = {
-    address & 255,
-    (address >> 8) & 255,
-    (address >> 16) & 255,
-    (address >> 24) & 255,
-    (value & 255),
-    (value >> 8) & 255,
+    (u8)(address & 255),
+    (u8)((address >> 8) & 255),
+    (u8)((address >> 16) & 255),
+    (u8)((address >> 24) & 255),
+    (u8)(value & 255),
+    (u8)((value >> 8) & 255),
     0,
     0
   };

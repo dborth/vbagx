@@ -88,7 +88,6 @@ void gbPrinterShowData()
 
 void gbPrinterReceiveData()
 {
-    int i = gbPrinterDataCount;
   if(gbPrinterPacket[3]) { // compressed
     u8 *data = &gbPrinterPacket[6];
     u8 *dest = &gbPrinterData[gbPrinterDataCount];
