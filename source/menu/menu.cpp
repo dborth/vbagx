@@ -1623,7 +1623,7 @@ static int MenuGame()
 		if (newtime->tm_hour > 21 || newtime->tm_hour < 5)
 			sprintf(s, "Weather: Night Time");
 		else
-			snprintf(s, sizeof(s), "%s", TrMessage<>("Weather: %d%% sun", SunBars*10).c_str());
+			TrFormatTo(s, sizeof(s), "Weather: %d%% sun", SunBars*10);
 	};
 	if (isBoktai)
 		sunText();

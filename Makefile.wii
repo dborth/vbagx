@@ -56,7 +56,7 @@ LDFLAGS		+=	-L../buildtools
 JIT_ARENA_MB	?=	16
 CFLAGS		+=	-DJIT_ARENA_MB=$(JIT_ARENA_MB)
 WII_LD		?=	rvl.ld
-OGC_LD		:=	$(shell $(CC) $(MACHDEP) -print-file-name=$(WII_LD))
+OGC_LD		=	$(shell $(CC) $(MACHDEP) -print-file-name=$(WII_LD))
 LDFLAGS		+=	-Wl,--defsym,__jit_region_size=$(JIT_ARENA_MB)M -T $(WII_MEM_LD) -T $(OGC_LD)
 
 #---------------------------------------------------------------------------------

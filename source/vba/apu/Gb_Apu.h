@@ -18,7 +18,7 @@ public:
 	// Sets buffer(s) to generate sound into. If left and right are NULL, output is mono.
 	// If all are NULL, no output is generated but other emulation still runs.
 	// If chan is specified, only that channel's output is changed, otherwise all are.
-	enum { osc_count = 4 }; // 0: Square 1, 1: Square 2, 2: Wave, 3: Noise
+	static constexpr int osc_count = 4; // 0: Square 1, 1: Square 2, 2: Wave, 3: Noise
 	void set_output( Blip_Buffer* center, Blip_Buffer* left = NULL, Blip_Buffer* right = NULL,
 			int chan = osc_count );
 
@@ -33,9 +33,7 @@ public:
 
 	// Reads and writes must be within the start_addr to end_addr range, inclusive.
 	// Addresses outside this range are not mapped to the sound hardware.
-	enum { start_addr = 0xFF10 };
-	enum { end_addr   = 0xFF3F };
-	enum { register_count = end_addr - start_addr + 1 };
+	enum { start_addr = 0xFF10, end_addr = 0xFF3F, register_count = end_addr - start_addr + 1 };
 
 	// Times are specified as the number of clocks since the beginning of the
 	// current time frame.

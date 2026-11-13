@@ -106,8 +106,7 @@ public:
 		Gb_Square::reset();
 	}
 private:
-	enum { period_mask = 0x70 };
-	enum { shift_mask  = 0x07 };
+	enum { period_mask = 0x70, shift_mask = 0x07 };
 
 	void calc_sweep( bool update );
 	void reload_sweep_timer();

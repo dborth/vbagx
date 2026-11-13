@@ -38,13 +38,10 @@ Blip_Buffer::Blip_Buffer()
 	length_       = 0;
 
 	// assumptions code makes about implementation-defined features
-	#ifndef NDEBUG
-		// right shift of negative value preserves sign
-		buf_t_ i = -0x7FFFFFFE;
-
-		// casting to short truncates to 16 bits and sign-extends
-		i = 0x18000;
-	#endif
+	// right shift of negative value preserves sign
+	static_assert( ((buf_t_) -0x7FFFFFFE >> 1) == -0x3FFFFFFF, "right shift must preserve the sign" );
+	// casting to short truncates to 16 bits and sign-extends
+	static_assert( (short) (buf_t_) 0x18000 == -0x8000, "casting to short must truncate to 16 bits and sign-extend" );
 
 	clear();
 }

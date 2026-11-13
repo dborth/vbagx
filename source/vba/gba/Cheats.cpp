@@ -1091,9 +1091,9 @@ int cheatsCheckKeys(u32 keys, u32 extended)
       case GSA_32_BIT_WRITE_IOREGS:
         if (cheatsList[i].address<=0x3FF)
         {
-          if (((cheatsList[i].address & 0x3FC) != 0x6) && ((cheatsList[i].address & 0x3FC) != 0x130))
+          if ((cheatsList[i].address & 0x3FC) != 0x130)
             ioMem[cheatsList[i].address & 0x3FC]= (cheatsList[i].value & 0xFFFF);
-          if ((((cheatsList[i].address & 0x3FC)+2) != 0x6) && ((cheatsList[i].address & 0x3FC) +2) != 0x130)
+          if (((cheatsList[i].address & 0x3FC) + 2) != 0x6)
             ioMem[(cheatsList[i].address & 0x3FC) + 2 ]= ((cheatsList[i].value>>16 ) & 0xFFFF);
         }
         break;

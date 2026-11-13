@@ -289,6 +289,8 @@ static inline u32 CPUReadHalfWord(u32 address)
 			  value = rtcRead(alignedAddress & 0xFFFFFFE);
 			  break;
 			}
+			value = READ16LE(((u16 *)&rom[alignedAddress & 0x1FFFFFE]));
+			break;
 		case 9:
 		case 10:
 		case 11:
