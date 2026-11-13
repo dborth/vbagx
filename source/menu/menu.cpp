@@ -1639,6 +1639,7 @@ static int MenuGame()
 	MenuButton mainmenuBtn(MenuButtonShape::NORMAL, EmuSettings.autoloadGame ? "Exit" : "Main Menu", ALIGN_H::CENTRE, ALIGN_V::BOTTOM, 0, -35);
 
 	MenuButton closeBtn(MenuButtonShape::SMALL, "Close", ALIGN_H::RIGHT, ALIGN_V::TOP, -50, 35, &trigHome, 20);
+	closeBtn.setSoundClick(nullptr);
 
 	#ifndef HW_DOL
 	ControllerStatus controllerStatus(trigA);
@@ -2501,6 +2502,7 @@ static int MenuGameSaves()
 	closeBtn.setImage(&closeBtnImg);
 	closeBtn.setTrigger(trigA);
 	closeBtn.setTrigger(&trigHome);
+	closeBtn.setSoundClick(nullptr);
 	closeBtn.setEffectGrow();
 
 	// Save Mode: what is saved and loaded on its own. A button as tall as Go Back, beside it, that opens a list of
@@ -3040,6 +3042,7 @@ static int MenuGameSettings()
 		cheatsBtn.labelTxt.setColor((PixelColor){110, 110, 110, 255});
 
 	MenuButton closeBtn(MenuButtonShape::SMALL, "Close", ALIGN_H::RIGHT, ALIGN_V::TOP, -50, 35, &trigHome, 20);
+	closeBtn.setSoundClick(nullptr);
 
 	MenuButton backBtn(MenuButtonShape::NORMAL, "Go Back", ALIGN_H::LEFT, ALIGN_V::BOTTOM, 50, -35);
 
@@ -4746,6 +4749,7 @@ static int MenuPalette()
 	importBtn.setEffectGrow();
 
 	MenuButton closeBtn(MenuButtonShape::SMALL, "Close", ALIGN_H::RIGHT, ALIGN_V::TOP, -50, 35, &trigHome, 20);
+	closeBtn.setSoundClick(nullptr);
 
 	MenuButton backBtn(MenuButtonShape::NORMAL, "Go Back", ALIGN_H::LEFT, ALIGN_V::BOTTOM, 100, -35);
 
