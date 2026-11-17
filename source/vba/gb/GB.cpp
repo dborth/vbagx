@@ -4149,6 +4149,8 @@ void gbEmulate(int ticksToStop) {
 					int framesToSkip = 0;
 					if (turboMode)
 						framesToSkip = 9; // try 6 FPS during turboMode
+					else if (!frameToRender)
+						framesToSkip = 1; // timed pacing (50Hz output) asked to drop this frame - see systemFrame()
 					//gbLcdTicksDelayed = gbLcdTicks+1;
 					gbLCDChangeHappened = false;
 					switch (gbLcdModeDelayed) {
@@ -4366,6 +4368,8 @@ void gbEmulate(int ticksToStop) {
 						int framesToSkip = 0;
 						if (turboMode)
 							framesToSkip = 9; // try 6 FPS during turboMode
+						else if (!frameToRender)
+							framesToSkip = 1; // timed pacing (50Hz output) asked to drop this frame - see systemFrame()
 						if ((gbFrameSkipCount >= framesToSkip) || (gbWhiteScreen == 1)) {
 							gbWhiteScreen = 2;
 

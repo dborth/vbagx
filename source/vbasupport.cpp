@@ -61,10 +61,11 @@
 
 #define THREAD_SLEEP			50
 #define USEC_PER_SEC			1000000
-#define FRAME_PERIOD_US			16742	// GBA hardware timing (~59.7275 Hz)
+#define FRAME_PERIOD_NS			16742706 // GB/GBC/GBA hardware frame time: 280896 cycles @ 16.777216 MHz (~59.7275 Hz)
 #define MAX_FRAME_SKIP			2		// non-turbo consecutive-skip cap (== old MAX_FRAME_SKIP)
 #define TURBO_MAX_FRAME_SKIP	9		// turbo consecutive-skip cap
-#define MAX_PACE_DEBT_US		(FRAME_PERIOD_US * MAX_FRAME_SKIP) // cap on banked "behind schedule" debt after a pause/loadstate.
+#define MAX_PACE_DEBT_NS		(FRAME_PERIOD_NS * 2) // cap on banked "behind schedule" debt after a pause/loadstate.
+#define PACE_SKIP_LAG_NS		(FRAME_PERIOD_NS / 2) // schedule lag at which wall-clock alone asks for a frame drop (timed pacing)
 
 // -- Weighted skip-pressure model --
 // Mirrors OgcEmulatorAudio.cpp's UNPLAYED_LOW_RELEASE/UNPLAYED_LOW_WATER breakpoints,
@@ -78,6 +79,13 @@
 #define SKIP_PRESSURE_THRESHOLD		1.0f
 
 static int timerstyle = 0;
+
+// Timed pacing (timerstyle 1) state: how far the emulated game is behind the
+// real GBA clock (negative never persists: being ahead is slept off). Accumulated
+// from EVERY frame's real elapsed time, rendered or not, so time lost blocking
+// on the display's VSync inside presentFrame() is counted.
+static int64_t paceLagNs = 0;
+static Ticks lastPaceTime = 0;
 
 // -- Render decision --
 // Read directly by GBA.cpp: this single flag gates both this frame's
@@ -154,6 +162,8 @@ void systemResetPacer()
 
 	frameToRender   = true;
 	skippedFrames   = 0;
+	paceLagNs       = 0;
+	lastPaceTime    = SystemTime::now();
 
 	coreFrameCount = 0;
 	coreFPS = 0.0f;
@@ -215,7 +225,14 @@ void systemFrame()
 {
 	coreFrameCount++;
 
-	if(cartridgeType == CARTRIDGE_GB) {
+	const bool isGB = (cartridgeType == CARTRIDGE_GB);
+
+	// GB/GBC: on a 60Hz output the display's VSync is the throttle (as always),
+	// and turbo uses the core's own skip counter. Only timed pacing (50Hz
+	// output) needs a decision here; GB.cpp acts on frameToRender.
+	if(isGB && (timerstyle == 0 || turboMode)) {
+		frameToRender = true;
+		skippedFrames = 0;
 		return;
 	}
 
@@ -251,7 +268,8 @@ void systemFrame()
 	// used to be the same flag; a JIT-fast core with frameskip disabled
 	// could run unthrottled (e.g. ~180fps) because the old code skipped
 	// pacing entirely rather than just skipping the *render-drop* option.
-	int skipFrms = MAX_FRAME_SKIP;
+	// (The GB core can only drop one frame at a time - see framesToSkip in GB.cpp.)
+	int skipFrms = isGB ? 1 : MAX_FRAME_SKIP;
 
 	// Audio urgency, as a continuous 0..1 reading rather than two booleans
 	float audioDeficit = AudioDeficit(platform->getAudio()->getEmulatorAudio()->getUnplayed());
@@ -301,18 +319,47 @@ void systemFrame()
 	}
 	else
 	{
-		// Time-driven pacing. Nothing here blocks on real hardware, so
-		// this is the only thing standing between a fast JIT core and
-		// running ahead of true GBA time.
-		uint32_t usecSinceLastFrame = SystemTime::diffMicrosecs(lastRenderFrameTime, SystemTime::now());
+		// Time-driven pacing, used when the display refresh (50Hz PAL) does not
+		// match the ROM's ~59.73Hz. Nothing here can rely on VSync: every rendered
+		// frame blocks in presentFrame() until the next 50Hz vblank, so at most 50
+		// frames/s can be PRESENTED. To still run at full game speed, emulation must
+		// be paced against a fixed real-time schedule and ~1 render in 6 dropped.
+		//
+		// The schedule is tracked as accumulated lag: every call adds the real time
+		// the last emulated frame took (including any VSync block inside the draw)
+		// and subtracts one hardware frame period. It must NOT be measured from
+		// the end of the last render: that re-anchors the clock after each VSync
+		// wait, hides the lost time, and the pacer never sees it is behind.
+		Ticks now = SystemTime::now();
+		paceLagNs += (int64_t)SystemTime::diffMicrosecs(lastPaceTime, now) * 1000 - FRAME_PERIOD_NS;
+		lastPaceTime = now;
 
-		// SKIP PRESSURE: blend how far behind real time we are with audio urgency
-		float wallDeficit = clampf((float)usecSinceLastFrame / (float)MAX_PACE_DEBT_US, 0.0f, 1.0f);
-		bool behindSchedule = SkipPressureCrossed(audioDeficit, wallDeficit);
+		if (paceLagNs < 0)
+		{
+			// Ahead of schedule -- LWP-safe micro-sleep loop. Any overshoot
+			// stays in paceLagNs so the long-term rate is exact.
+			while (paceLagNs < 0)
+			{
+				usleep(THREAD_SLEEP);
+				now = SystemTime::now();
+				paceLagNs += (int64_t)SystemTime::diffMicrosecs(lastPaceTime, now) * 1000;
+				lastPaceTime = now;
+			}
+			skippedFrames = 0;
+			frameToRender = true;
+			PROFILER_COMMIT_FRAMESKIP();
+		}
+		else
+		{
+			// Behind (or exactly on) schedule. Forgive anything beyond the cap
+			// (long stall: loadstate, save, etc.) rather than skip for ages.
+			if (paceLagNs > MAX_PACE_DEBT_NS)
+				paceLagNs = MAX_PACE_DEBT_NS;
 
-		if(behindSchedule) {
-			// 1. Should we drop a render to catch up?
-			// We ONLY drop if the skip pressure crossed the threshold (behindSchedule).
+			// SKIP PRESSURE: blend schedule lag with audio urgency
+			float wallDeficit = clampf((float)paceLagNs / (float)PACE_SKIP_LAG_NS, 0.0f, 1.0f);
+			bool behindSchedule = SkipPressureCrossed(audioDeficit, wallDeficit);
+
 			if (EmuSettings.gbaFrameSkip && behindSchedule && (skippedFrames < skipFrms))
 			{
 				skippedFrames++;
@@ -322,22 +369,11 @@ void systemFrame()
 			}
 			else
 			{
+				// Also covers "not behind enough yet": frameToRender must be
+				// re-armed, or a skip would stick until the cap forced a render
 				skippedFrames = 0;
 				frameToRender = true;
 				PROFILER_COMMIT_FRAMESKIP();
-			}
-		}
-		else {
-			// Ahead of schedule -- LWP-safe micro-sleep loop
-			while (usecSinceLastFrame < FRAME_PERIOD_US)
-			{
-				if (usecSinceLastFrame > THREAD_SLEEP) {
-					usleep(THREAD_SLEEP);
-					usecSinceLastFrame = SystemTime::diffMicrosecs(lastRenderFrameTime, SystemTime::now());
-				}
-				else {
-					break;
-				}
 			}
 		}
 	}
