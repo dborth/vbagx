@@ -920,7 +920,11 @@ size_t LoadFile (char * rbuffer, char *filepath, size_t length, size_t buffersiz
 	int device;
 
 	if(!FindDevice(filepath, &device))
+	{
+		if(!silent)
+			ErrorPrompt("Device not found!");
 		return 0;
+	}
 
 	HaltParseThread();
 
@@ -965,7 +969,11 @@ size_t LoadFile (char * rbuffer, char *filepath, size_t length, size_t buffersiz
 
 			if (IsZipFile (zipbuffer))
 			{
-				size = UnZipBuffer (fp, (unsigned char *)rbuffer, buffersize); // unzip
+				const char * zipError = nullptr;
+				size = UnZipBuffer (fp, (unsigned char *)rbuffer, buffersize, &zipError); // unzip
+
+				if(!size && zipError && !silent)
+					ErrorPrompt(zipError);
 			}
 			else
 			{
@@ -975,6 +983,8 @@ size_t LoadFile (char * rbuffer, char *filepath, size_t length, size_t buffersiz
 
 				if(size > buffersize) {
 					size = 0;
+					if(!silent)
+						ErrorPrompt("Unsupported file size!");
 				}
 				else {
 					while(!feof(fp))

@@ -1551,32 +1551,23 @@ int LoadROMToVM(const char* filepath) {
 				continue;
 			}
 
-			uint32_t uncompSize = ((uint8_t)zipbuffer[22]) |
-							 ((uint8_t)zipbuffer[23] << 8) |
-							 ((uint8_t)zipbuffer[24] << 16) |
-							 ((uint8_t)zipbuffer[25] << 24);
-
-			if(uncompSize > ARAM_SIZE) {
-				ErrorPrompt("Compressed ROM file is too large to decompress!");
-				fclose(fp);
-				fp = nullptr;
-				CancelAction();
-				return 0;
-			}
-
+			const char * zipError = nullptr;
 			VMPager_StartPreload();
-			size = UnZipBuffer(fp, (unsigned char*)romPtr, ARAM_SIZE);
+			size = UnZipBuffer(fp, (unsigned char*)romPtr, ARAM_SIZE, &zipError);
 
-			if (size > 0 && (uint32_t)size == uncompSize) {
+			if (size > 0) {
 				uint32_t pages = (size + 4095) / 4096;
 				VMPager_CommitPageRange(0, pages);
-				retry = 0;
 			} else {
-				retry = ErrorPromptRetry("Error extracting ZIP file!");
+				size = 0;
 			}
+			retry = 0; // a bad ZIP won't get better by trying again
 			fclose(fp);
 			fp = nullptr;
 			VMPager_EndPreload();
+
+			if (size == 0)
+				ErrorPrompt(zipError ? zipError : "Error extracting ZIP file!");
 		} else {
 			fseeko(fp, 0, SEEK_END);
 			size = ftello(fp);

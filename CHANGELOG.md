@@ -2,6 +2,9 @@
 
 All notable changes to Visual Boy Advance GX are recorded here, newest first. For the current features and setup instructions, see [README.md](README.md).
 
+## Unreleased
+* Fixed ZIP file loading failures (from archives created from some tools), and ZIP load errors are now reported consistently
+
 ## 3.0.6 - November 18, 2026
 * Fixed GB, GBC and GBA games running slow on PAL (576i) 50Hz output
 * Fixed JIT IRQ latency bug causing graphical artifacts
