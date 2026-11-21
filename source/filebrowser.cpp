@@ -749,8 +749,6 @@ int BrowserLoadSz()
 		browser.numEntries = szfiles;
 		inSz = true;
 	}
-	else
-		ErrorPrompt("Error opening archive!");
 
 	return szfiles;
 }
@@ -772,7 +770,10 @@ int BrowserLoadFile()
 	int device;
 
 	if(!FindDevice(browser.dir, &device))
+	{
+		ErrorPrompt("Device not found!");
 		return 0;
+	}
 
 	// store the filename (w/o ext) - used for Cartridge Save/Snapshot naming
 	StripExt(ROMFilename, browserList[browser.selIndex].filename);

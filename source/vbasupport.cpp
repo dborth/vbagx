@@ -1519,6 +1519,7 @@ static bool utilIsZipFile(const char* file)
 }
 
 #ifdef HW_DOL
+// Returns the size loaded
 int LoadROMToVM(const char* filepath) {
 	int size = 0;
 	char zipbuffer[2048];
@@ -1526,7 +1527,10 @@ int LoadROMToVM(const char* filepath) {
 	int device;
 
 	if(!FindDevice((char*)filepath, &device))
+	{
+		ErrorPrompt("Device not found!");
 		return 0;
+	}
 
 	HaltParseThread();
 	VMPager_CloseFile();
@@ -1573,6 +1577,14 @@ int LoadROMToVM(const char* filepath) {
 			size = ftello(fp);
 			fseeko(fp, 0, SEEK_SET);
 
+			if (size == 0) {
+				platform->getFileSystem()->invalidateStorageDevice(device);
+				retry = ErrorPromptRetry("Error reading file!");
+				fclose(fp);
+				fp = nullptr;
+				continue;
+			}
+
 			if (size > MAX_GBA_ROM_SIZE) {
 				ErrorPrompt("Unsupported file size!");
 				fclose(fp);
@@ -1588,6 +1600,16 @@ int LoadROMToVM(const char* filepath) {
 
 			size_t offset = 0;
 			uint8_t* chunk_buf = (uint8_t*)memspace_malloc(65536);
+
+			if (!chunk_buf) {
+				fclose(fp);
+				fp = nullptr;
+				VMPager_EndPreload();
+				ErrorPrompt("Out of memory!");
+				size = 0;
+				retry = 0;
+				continue;
+			}
 
 			size_t readsize;
 
@@ -1660,7 +1682,10 @@ bool LoadGBROM()
 	{
 		gbRomSize = LoadSzFile(szpath, (unsigned char *)gbRom);
 	}
-	
+
+	if(gbRomSize <= 0)
+		return false;
+
 	const void* firstRom = gb_first_rom(gbRom, gbRomSize);
 	const void* secondRom = gb_next_rom(gbRom, gbRomSize, firstRom);
 	if (firstRom != nullptr && firstRom != gbRom) {
@@ -1681,9 +1706,6 @@ bool LoadGBROM()
 			return false;
 		}
 	}
-
-	if(gbRomSize <= 0)
-		return false;
 
 	if(!gbUpdateSizes()) {
 		ErrorPrompt(lastSystemMessage);
@@ -1773,6 +1795,9 @@ static int GBAROMLoad()
 		GBAROMSize = LoadSzFile(szpath, (unsigned char *)rom);
 	}
 
+	if(GBAROMSize == 0)
+		return 0;
+
 	if(gb_first_rom(rom, GBAROMSize)) {
 		int r = YesNoPrompt("This file contains uncompressed Game Boy (Color) ROMs. Do you want to run these?", true);
 		if (r) {
@@ -1786,13 +1811,10 @@ static int GBAROMLoad()
 		return 0;
 	}
 
-	if(GBAROMSize) {
-		flashInit();
-		eepromInit();
-		CPUUpdateRenderBuffers(true);
-		return 1;
-	}
-	return 0;
+	flashInit();
+	eepromInit();
+	CPUUpdateRenderBuffers(true);
+	return 1;
 }
 
 void InitGBGame() {
@@ -1819,11 +1841,8 @@ bool LoadVBAROM()
 		// we need to check the file extension of the first file in the archive
 		char * zippedFilename = GetFirstZipFilename ();
 
-		if(zippedFilename == nullptr) // loading the file failed
-		{
-			ErrorPrompt("Empty or invalid ZIP file!");
+		if(zippedFilename == nullptr)
 			return false;
-		}
 
 		if(utilIsGBAImage(zippedFilename))
 		{
